@@ -27,6 +27,7 @@ serde = ["dep:serde", "dep:serde_derive", "dep:serde_with"]
 rand = ["dep:rand_core"]
 
 [dependencies]
+bs58 = "0.5.0"
 hex = "0.4.3"
 
 # Serialization and Deserialization support
