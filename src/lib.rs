@@ -2,6 +2,9 @@
 
 pub mod types;
 
+#[cfg(feature = "hash")]
+pub mod hash;
+
 #[cfg(feature = "serde")]
 mod _serde {
     pub(crate) type ReadableDisplay =

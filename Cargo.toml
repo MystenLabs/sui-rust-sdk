@@ -25,6 +25,7 @@ rustdoc-args = [
 default = []
 serde = ["dep:serde", "dep:serde_derive", "dep:serde_with"]
 rand = ["dep:rand_core"]
+hash = ["dep:blake2"]
 
 [dependencies]
 bs58 = "0.5.0"
@@ -37,6 +38,9 @@ serde_with = { version = "3.6.1", default-features = false, optional = true }
 
 # RNG support
 rand_core = { version = "0.6.4", optional = true }
+
+# Hash support
+blake2 = { version = "0.10.6", optional = true }
 
 [dev-dependencies]
 serde_json = "1.0.114"
