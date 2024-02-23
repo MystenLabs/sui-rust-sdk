@@ -100,6 +100,9 @@ impl From<[u8; Self::LENGTH]> for Digest {
 
 impl std::fmt::Display for Digest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // output size is determined via the following formula:
+        //      N * log(256) / log(58) + 1 (round up)
+        // where N = 32 this results in a value of 45
         let mut buf = [0; 45];
 
         let len = bs58::encode(&self.0).onto(&mut buf[..]).unwrap();
