@@ -23,10 +23,23 @@ rustdoc-args = [
 
 [features]
 default = []
+serde = ["dep:serde", "dep:serde_derive", "dep:serde_with"]
+rand = ["dep:rand_core"]
 
 [dependencies]
+hex = "0.4.3"
+
+# Serialization and Deserialization support
+serde = { version = "1.0.197", optional = true }
+serde_derive = { version = "1.0.197", optional = true }
+serde_with = { version = "3.6.1", default-features = false, optional = true }
+
+# RNG support
+rand_core = { version = "0.6.4", optional = true }
 
 [dev-dependencies]
+serde_json = "1.0.114"
+bcs = "0.1.6"
 
 [target.wasm32-unknown-unknown.dev-dependencies]
 wasm-bindgen-test = "0.3"
