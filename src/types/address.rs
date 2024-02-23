@@ -3,6 +3,7 @@
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub struct Address(
     #[cfg_attr(
         feature = "serde",
@@ -197,5 +198,14 @@ mod test {
         println!("{:?}", bcs::to_bytes(&actual).unwrap());
         let a: Address = serde_json::from_str("\"0x2\"").unwrap();
         println!("{a}");
+    }
+
+    proptest::proptest! {
+        #[test]
+        fn roundtrip_display_fromstr(address: Address) {
+            let s = address.to_string();
+            let a = s.parse::<Address>().unwrap();
+            assert_eq!(address, a);
+        }
     }
 }

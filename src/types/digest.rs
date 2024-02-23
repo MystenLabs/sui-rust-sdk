@@ -4,6 +4,7 @@
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub struct Digest(
     #[cfg_attr(
         feature = "serde",
@@ -184,6 +185,7 @@ macro_rules! impl_digest {
             feature = "serde",
             derive(serde_derive::Serialize, serde_derive::Deserialize)
         )]
+        #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
         pub struct $t(Digest);
 
         impl $t {
@@ -301,3 +303,20 @@ impl_digest!(TransactionDigest);
 impl_digest!(TransactionEffectsDigest);
 impl_digest!(TransactionEventsDigest);
 impl_digest!(ObjectDigest);
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::wasm_bindgen_test as test;
+
+    proptest::proptest! {
+        #[test]
+        fn roundtrip_display_fromstr(digest: Digest) {
+            let s = digest.to_string();
+            let d = s.parse::<Digest>().unwrap();
+            assert_eq!(digest, d);
+        }
+    }
+}

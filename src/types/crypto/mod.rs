@@ -25,7 +25,7 @@ const fn base64_encoded_length(len: usize) -> usize {
 }
 
 macro_rules! impl_base64_helper {
-    ($base:ident, $display:ident, $fromstr:ident, $array_length:literal) => {
+    ($base:ident, $display:ident, $fromstr:ident, $test_module:ident, $array_length:literal) => {
         struct $base;
 
         impl $base {
@@ -44,6 +44,8 @@ macro_rules! impl_base64_helper {
             }
         }
 
+        #[derive(Debug, PartialEq)]
+        #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
         struct $fromstr([u8; $base::LENGTH]);
 
         impl std::str::FromStr for $fromstr {
@@ -84,12 +86,28 @@ macro_rules! impl_base64_helper {
             }
         }
 
-        // TODO add tests
+        #[cfg(test)]
+        mod $test_module {
+            use super::$fromstr;
+            use super::$display;
+
+            #[cfg(target_arch = "wasm32")]
+            use wasm_bindgen_test::wasm_bindgen_test as test;
+
+            proptest::proptest! {
+                #[test]
+                fn roundtrip_display_fromstr(array: $fromstr) {
+                    let s = $display(&array.0).to_string();
+                    let a = s.parse::<$fromstr>().unwrap();
+                    assert_eq!(array, a);
+                }
+            }
+        }
     };
 }
 
-impl_base64_helper!(Base64Array32, Base64Display32, Base64FromStr32, 32);
-impl_base64_helper!(Base64Array33, Base64Display33, Base64FromStr33, 33);
-impl_base64_helper!(Base64Array48, Base64Display48, Base64FromStr48, 48);
-impl_base64_helper!(Base64Array64, Base64Display64, Base64FromStr64, 64);
-impl_base64_helper!(Base64Array96, Base64Display96, Base64FromStr96, 96);
+impl_base64_helper!(Base64Array32, Base64Display32, Base64FromStr32, test32, 32);
+impl_base64_helper!(Base64Array33, Base64Display33, Base64FromStr33, test33, 33);
+impl_base64_helper!(Base64Array48, Base64Display48, Base64FromStr48, test48, 48);
+impl_base64_helper!(Base64Array64, Base64Display64, Base64FromStr64, test64, 64);
+impl_base64_helper!(Base64Array96, Base64Display96, Base64FromStr96, test96, 96);

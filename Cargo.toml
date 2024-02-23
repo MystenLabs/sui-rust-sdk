@@ -44,8 +44,15 @@ rand_core = { version = "0.6.4", optional = true }
 blake2 = { version = "0.10.6", optional = true }
 
 [dev-dependencies]
-serde_json = "1.0.114"
 bcs = "0.1.6"
+serde_json = "1.0.114"
+
+# proptest support in tests
+#
+# Pin to this specific commit in order to work around an issue where proptest doesn't build properly in wasm environments
+# see https://github.com/proptest-rs/proptest/pull/270 for more info
+proptest = { git = "https://github.com/bmwill/proptest.git", rev = "1a0fe8676aeb61a83f67731404363972c8462424", default-features = false, features = ["std"] }
+proptest-derive = { version = "0.4.0" }
 
 [target.wasm32-unknown-unknown.dev-dependencies]
 wasm-bindgen-test = "0.3"
