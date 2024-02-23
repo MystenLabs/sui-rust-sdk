@@ -1,0 +1,33 @@
+name: rustdoc
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+env:
+  RUSTFLAGS: -D warnings
+
+jobs:
+  rustdoc:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: rustdoc
+        env:
+          RUSTDOCFLAGS: "--cfg=doc_cfg -Zunstable-options --generate-link-to-definition"
+          RUSTC_BOOTSTRAP: 1
+        run: cargo doc --all-features --no-deps
+
+      - name: Deploy Docs
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./target/doc
+          force_orphan: true
