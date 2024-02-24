@@ -36,6 +36,66 @@ pub struct Secp256k1PublicKey(
 impl Secp256k1PublicKey {
     /// The length of an secp256k1 public key in bytes.
     pub const LENGTH: usize = 33;
+
+    pub const fn new(bytes: [u8; Self::LENGTH]) -> Self {
+        Self(bytes)
+    }
+
+    #[cfg(feature = "rand")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "rand")))]
+    pub fn generate<R>(mut rng: R) -> Self
+    where
+        R: rand_core::RngCore + rand_core::CryptoRng,
+    {
+        let mut buf: [u8; Self::LENGTH] = [0; Self::LENGTH];
+        rng.fill_bytes(&mut buf);
+        Self::new(buf)
+    }
+
+    /// Return the underlying byte array of an Secp256k1PublicKey.
+    pub const fn into_inner(self) -> [u8; Self::LENGTH] {
+        self.0
+    }
+
+    pub const fn inner(&self) -> &[u8; Self::LENGTH] {
+        &self.0
+    }
+
+    pub const fn as_bytes(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl std::str::FromStr for Secp256k1PublicKey {
+    type Err = base64ct::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        super::Base64FromStr33::from_str(s).map(|a| Self::new(a.0))
+    }
+}
+
+impl AsRef<[u8]> for Secp256k1PublicKey {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl AsRef<[u8; Self::LENGTH]> for Secp256k1PublicKey {
+    fn as_ref(&self) -> &[u8; Self::LENGTH] {
+        &self.0
+    }
+}
+
+impl From<Secp256k1PublicKey> for [u8; Secp256k1PublicKey::LENGTH] {
+    fn from(public_key: Secp256k1PublicKey) -> Self {
+        public_key.into_inner()
+    }
+}
+
+impl From<[u8; Self::LENGTH]> for Secp256k1PublicKey {
+    fn from(public_key: [u8; Self::LENGTH]) -> Self {
+        Self::new(public_key)
+    }
 }
 
 impl std::fmt::Display for Secp256k1PublicKey {
@@ -70,6 +130,66 @@ pub struct Secp256k1Signature(
 impl Secp256k1Signature {
     /// The length of an secp256k1 signature key in bytes.
     pub const LENGTH: usize = 64;
+
+    pub const fn new(bytes: [u8; Self::LENGTH]) -> Self {
+        Self(bytes)
+    }
+
+    #[cfg(feature = "rand")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "rand")))]
+    pub fn generate<R>(mut rng: R) -> Self
+    where
+        R: rand_core::RngCore + rand_core::CryptoRng,
+    {
+        let mut buf: [u8; Self::LENGTH] = [0; Self::LENGTH];
+        rng.fill_bytes(&mut buf);
+        Self::new(buf)
+    }
+
+    /// Return the underlying byte array of an Secp256k1Signature.
+    pub const fn into_inner(self) -> [u8; Self::LENGTH] {
+        self.0
+    }
+
+    pub const fn inner(&self) -> &[u8; Self::LENGTH] {
+        &self.0
+    }
+
+    pub const fn as_bytes(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl std::str::FromStr for Secp256k1Signature {
+    type Err = base64ct::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        super::Base64FromStr64::from_str(s).map(|a| Self::new(a.0))
+    }
+}
+
+impl AsRef<[u8]> for Secp256k1Signature {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl AsRef<[u8; Self::LENGTH]> for Secp256k1Signature {
+    fn as_ref(&self) -> &[u8; Self::LENGTH] {
+        &self.0
+    }
+}
+
+impl From<Secp256k1Signature> for [u8; Secp256k1Signature::LENGTH] {
+    fn from(signature: Secp256k1Signature) -> Self {
+        signature.into_inner()
+    }
+}
+
+impl From<[u8; Self::LENGTH]> for Secp256k1Signature {
+    fn from(signature: [u8; Self::LENGTH]) -> Self {
+        Self::new(signature)
+    }
 }
 
 impl std::fmt::Display for Secp256k1Signature {
