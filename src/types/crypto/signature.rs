@@ -290,3 +290,146 @@ pub enum UserSignature {
     Multisig(MultisigAggregatedSignature),
     // ZkLoginAuthenticator,
 }
+
+#[cfg(feature = "serde")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
+mod serialization {
+    use super::*;
+
+    #[derive(serde_derive::Serialize)]
+    #[serde(tag = "scheme")]
+    #[serde(rename_all = "lowercase")]
+    enum ReadableUserSignatureRef<'a> {
+        Ed25519 {
+            signature: &'a Ed25519Signature,
+            public_key: &'a Ed25519PublicKey,
+        },
+        Secp256k1 {
+            signature: &'a Secp256k1Signature,
+            public_key: &'a Secp256k1PublicKey,
+        },
+        Secp256r1 {
+            signature: &'a Secp256r1Signature,
+            public_key: &'a Secp256r1PublicKey,
+        },
+        Multisig(&'a MultisigAggregatedSignature),
+    }
+
+    #[derive(serde_derive::Deserialize)]
+    #[serde(tag = "scheme")]
+    #[serde(rename_all = "lowercase")]
+    enum ReadableUserSignature {
+        Ed25519 {
+            signature: Ed25519Signature,
+            public_key: Ed25519PublicKey,
+        },
+        Secp256k1 {
+            signature: Secp256k1Signature,
+            public_key: Secp256k1PublicKey,
+        },
+        Secp256r1 {
+            signature: Secp256r1Signature,
+            public_key: Secp256r1PublicKey,
+        },
+        Multisig(MultisigAggregatedSignature),
+    }
+
+    impl serde::Serialize for UserSignature {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            if serializer.is_human_readable() {
+                let readable = match self {
+                    UserSignature::Simple(SimpleSignature::Ed25519 {
+                        signature,
+                        public_key,
+                    }) => ReadableUserSignatureRef::Ed25519 {
+                        signature,
+                        public_key,
+                    },
+                    UserSignature::Simple(SimpleSignature::Secp256k1 {
+                        signature,
+                        public_key,
+                    }) => ReadableUserSignatureRef::Secp256k1 {
+                        signature,
+                        public_key,
+                    },
+                    UserSignature::Simple(SimpleSignature::Secp256r1 {
+                        signature,
+                        public_key,
+                    }) => ReadableUserSignatureRef::Secp256r1 {
+                        signature,
+                        public_key,
+                    },
+                    UserSignature::Multisig(multisig) => {
+                        ReadableUserSignatureRef::Multisig(multisig)
+                    }
+                };
+                readable.serialize(serializer)
+            } else {
+                match self {
+                    UserSignature::Simple(simple) => simple.serialize(serializer),
+                    UserSignature::Multisig(multisig) => multisig.serialize(serializer),
+                }
+            }
+        }
+    }
+
+    impl<'de> serde::Deserialize<'de> for UserSignature {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            if deserializer.is_human_readable() {
+                let readable = ReadableUserSignature::deserialize(deserializer)?;
+                Ok(match readable {
+                    ReadableUserSignature::Ed25519 {
+                        signature,
+                        public_key,
+                    } => Self::Simple(SimpleSignature::Ed25519 {
+                        signature,
+                        public_key,
+                    }),
+                    ReadableUserSignature::Secp256k1 {
+                        signature,
+                        public_key,
+                    } => Self::Simple(SimpleSignature::Secp256k1 {
+                        signature,
+                        public_key,
+                    }),
+                    ReadableUserSignature::Secp256r1 {
+                        signature,
+                        public_key,
+                    } => Self::Simple(SimpleSignature::Secp256r1 {
+                        signature,
+                        public_key,
+                    }),
+                    ReadableUserSignature::Multisig(_) => todo!(),
+                })
+            } else {
+                use serde_with::DeserializeAs;
+
+                let bytes: std::borrow::Cow<'de, [u8]> =
+                    serde_with::Bytes::deserialize_as(deserializer)?;
+                let flag =
+                    SignatureScheme::from_byte(bytes[0]).map_err(serde::de::Error::custom)?;
+                match flag {
+                    SignatureScheme::Ed25519
+                    | SignatureScheme::Secp256k1
+                    | SignatureScheme::Secp256r1 => {
+                        let simple = SimpleSignature::from_serialized_bytes(bytes)?;
+                        Ok(Self::Simple(simple))
+                    }
+                    SignatureScheme::Multisig => {
+                        let multisig = MultisigAggregatedSignature::from_serialized_bytes(bytes)?;
+                        Ok(Self::Multisig(multisig))
+                    }
+                    SignatureScheme::BLS12381 | SignatureScheme::ZkLoginAuthenticator => {
+                        Err(serde::de::Error::custom("invalid signature scheme"))
+                    }
+                }
+            }
+        }
+    }
+}

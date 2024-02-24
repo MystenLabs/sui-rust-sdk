@@ -257,14 +257,21 @@ mod serialization {
         }
     }
 
-    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
+    #[derive(serde_derive::Deserialize)]
     pub struct Multisig {
         signatures: Vec<MultisigMemberSignature>,
         bitmap: BitmapUnit,
         committee: MultisigCommittee,
     }
 
-    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
+    #[derive(serde_derive::Serialize)]
+    pub struct MultisigRef<'a> {
+        signatures: &'a [MultisigMemberSignature],
+        bitmap: BitmapUnit,
+        committee: &'a MultisigCommittee,
+    }
+
+    #[derive(serde_derive::Deserialize)]
     pub struct LegacyMultisig {
         signatures: Vec<MultisigMemberSignature>,
         #[serde(with = "::serde_with::As::<BinaryRoaringBitmap>")]
@@ -272,16 +279,29 @@ mod serialization {
         committee: LegacyMultisigCommittee,
     }
 
-    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
+    #[derive(serde_derive::Serialize)]
+    pub struct LegacyMultisigRef<'a> {
+        signatures: &'a [MultisigMemberSignature],
+        #[serde(with = "::serde_with::As::<BinaryRoaringBitmap>")]
+        bitmap: &'a roaring::RoaringBitmap,
+        committee: LegacyMultisigCommitteeRef<'a>,
+    }
+
+    #[derive(serde_derive::Deserialize)]
     struct LegacyMultisigCommittee {
-        /// A list of committee members and their corresponding weight.
         #[serde(with = "::serde_with::As::<Vec<(Base64MultisigMember, ::serde_with::Same)>>")]
         members: Vec<(MultisigMember, WeightUnit)>,
-        /// If the total weight of the public keys corresponding to verified signatures is larger than threshold, the Multisig is verified.
         threshold: ThresholdUnit,
     }
 
-    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
+    #[derive(serde_derive::Serialize)]
+    struct LegacyMultisigCommitteeRef<'a> {
+        #[serde(with = "::serde_with::As::<&[(Base64MultisigMember, ::serde_with::Same)]>")]
+        members: &'a [(MultisigMember, WeightUnit)],
+        threshold: ThresholdUnit,
+    }
+
+    #[derive(serde_derive::Deserialize)]
     struct ReadableMultisigAggregatedSignature {
         signatures: Vec<MultisigMemberSignature>,
         bitmap: BitmapUnit,
@@ -291,17 +311,27 @@ mod serialization {
         committee: MultisigCommittee,
     }
 
+    #[derive(serde_derive::Serialize)]
+    struct ReadableMultisigAggregatedSignatureRef<'a> {
+        signatures: &'a [MultisigMemberSignature],
+        bitmap: BitmapUnit,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        #[serde(with = "::serde_with::As::<Option<Base64RoaringBitmap>>")]
+        legacy_bitmap: &'a Option<roaring::RoaringBitmap>,
+        committee: &'a MultisigCommittee,
+    }
+
     impl Serialize for MultisigAggregatedSignature {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: Serializer,
         {
             if serializer.is_human_readable() {
-                let readable = ReadableMultisigAggregatedSignature {
-                    signatures: self.signatures.clone(),
+                let readable = ReadableMultisigAggregatedSignatureRef {
+                    signatures: &self.signatures,
                     bitmap: self.bitmap,
-                    legacy_bitmap: self.legacy_bitmap.clone(),
-                    committee: self.committee.clone(),
+                    legacy_bitmap: &self.legacy_bitmap,
+                    committee: &self.committee,
                 };
                 readable.serialize(serializer)
             } else {
@@ -309,21 +339,21 @@ mod serialization {
                 buf.push(SignatureScheme::Multisig as u8);
 
                 if let Some(bitmap) = &self.legacy_bitmap {
-                    let legacy = LegacyMultisig {
-                        signatures: self.signatures.clone(),
-                        bitmap: bitmap.clone(),
-                        committee: LegacyMultisigCommittee {
-                            members: self.committee.members.clone(),
+                    let legacy = LegacyMultisigRef {
+                        signatures: &self.signatures,
+                        bitmap,
+                        committee: LegacyMultisigCommitteeRef {
+                            members: &self.committee.members,
                             threshold: self.committee.threshold,
                         },
                     };
 
                     bcs::serialize_into(&mut buf, &legacy).expect("serialization cannot fail");
                 } else {
-                    let multisig = Multisig {
-                        signatures: self.signatures.clone(),
+                    let multisig = MultisigRef {
+                        signatures: &self.signatures,
                         bitmap: self.bitmap,
-                        committee: self.committee.clone(),
+                        committee: &self.committee,
                     };
                     bcs::serialize_into(&mut buf, &multisig).expect("serialization cannot fail");
                 }
@@ -347,39 +377,47 @@ mod serialization {
                 })
             } else {
                 let bytes: Cow<'de, [u8]> = Bytes::deserialize_as(deserializer)?;
-                let flag =
-                    SignatureScheme::from_byte(bytes[0]).map_err(serde::de::Error::custom)?;
-                if flag != SignatureScheme::Multisig {
-                    return Err(serde::de::Error::custom("invalid multisig flag"));
-                }
-                let bcs_bytes = &bytes[1..];
+                Self::from_serialized_bytes(bytes)
+            }
+        }
+    }
 
-                // Unfortunately we have no information in the serialized form of a Multisig to be
-                // able to determine if its a Legacy format or the new standard format so we just
-                // need to try each.
-                //
-                // We'll start with the newer format as that should be more prevalent.
-                if let Ok(multisig) = bcs::from_bytes::<Multisig>(bcs_bytes) {
-                    Ok(Self {
-                        signatures: multisig.signatures,
-                        bitmap: multisig.bitmap,
-                        legacy_bitmap: None,
-                        committee: multisig.committee,
-                    })
-                } else if let Ok(legacy) = bcs::from_bytes::<LegacyMultisig>(bcs_bytes) {
-                    Ok(Self {
-                        signatures: legacy.signatures,
-                        bitmap: roaring_bitmap_to_u16(&legacy.bitmap)
-                            .map_err(serde::de::Error::custom)?,
-                        legacy_bitmap: Some(legacy.bitmap),
-                        committee: MultisigCommittee {
-                            members: legacy.committee.members,
-                            threshold: legacy.committee.threshold,
-                        },
-                    })
-                } else {
-                    Err(serde::de::Error::custom("invalid multisig"))
-                }
+    impl MultisigAggregatedSignature {
+        pub(crate) fn from_serialized_bytes<T: AsRef<[u8]>, E: serde::de::Error>(
+            bytes: T,
+        ) -> Result<Self, E> {
+            let bytes = bytes.as_ref();
+            let flag = SignatureScheme::from_byte(bytes[0]).map_err(serde::de::Error::custom)?;
+            if flag != SignatureScheme::Multisig {
+                return Err(serde::de::Error::custom("invalid multisig flag"));
+            }
+            let bcs_bytes = &bytes[1..];
+
+            // Unfortunately we have no information in the serialized form of a Multisig to be
+            // able to determine if its a Legacy format or the new standard format so we just
+            // need to try each.
+            //
+            // We'll start with the newer format as that should be more prevalent.
+            if let Ok(multisig) = bcs::from_bytes::<Multisig>(bcs_bytes) {
+                Ok(Self {
+                    signatures: multisig.signatures,
+                    bitmap: multisig.bitmap,
+                    legacy_bitmap: None,
+                    committee: multisig.committee,
+                })
+            } else if let Ok(legacy) = bcs::from_bytes::<LegacyMultisig>(bcs_bytes) {
+                Ok(Self {
+                    signatures: legacy.signatures,
+                    bitmap: roaring_bitmap_to_u16(&legacy.bitmap)
+                        .map_err(serde::de::Error::custom)?,
+                    legacy_bitmap: Some(legacy.bitmap),
+                    committee: MultisigCommittee {
+                        members: legacy.committee.members,
+                        threshold: legacy.committee.threshold,
+                    },
+                })
+            } else {
+                Err(serde::de::Error::custom("invalid multisig"))
             }
         }
     }
