@@ -207,5 +207,21 @@ mod test {
             let a = s.parse::<Address>().unwrap();
             assert_eq!(address, a);
         }
+
+        #[test]
+        #[cfg(feature = "serde")]
+        fn roundtrip_bcs(address: Address) {
+            let b = bcs::to_bytes(&address).unwrap();
+            let a = bcs::from_bytes(&b).unwrap();
+            assert_eq!(address, a);
+        }
+
+        #[test]
+        #[cfg(feature = "serde")]
+        fn roundtrip_json(address: Address) {
+            let s = serde_json::to_string(&address).unwrap();
+            let a = serde_json::from_str(&s).unwrap();
+            assert_eq!(address, a);
+        }
     }
 }
