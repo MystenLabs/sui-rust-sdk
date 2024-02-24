@@ -321,5 +321,21 @@ mod test {
             let d = s.parse::<Digest>().unwrap();
             assert_eq!(digest, d);
         }
+
+        #[test]
+        #[cfg(feature = "serde")]
+        fn roundtrip_bcs(digest: Digest) {
+            let b = bcs::to_bytes(&digest).unwrap();
+            let d = bcs::from_bytes(&b).unwrap();
+            assert_eq!(digest, d);
+        }
+
+        #[test]
+        #[cfg(feature = "serde")]
+        fn roundtrip_json(digest: Digest) {
+            let s = serde_json::to_string(&digest).unwrap();
+            let d = serde_json::from_str(&s).unwrap();
+            assert_eq!(digest, d);
+        }
     }
 }
