@@ -1,11 +1,15 @@
 mod bls12381;
 mod ed25519;
+mod multisig;
 mod secp256k1;
 mod secp256r1;
 mod signature;
 
 pub use bls12381::{Bls12381PrivateKey, Bls12381PublicKey, Bls12381Signature};
 pub use ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature};
+pub use multisig::{
+    MultisigAggregatedSignature, MultisigCommittee, MultisigMember, MultisigMemberSignature,
+};
 pub use secp256k1::{Secp256k1PrivateKey, Secp256k1PublicKey, Secp256k1Signature};
 pub use secp256r1::{Secp256r1PrivateKey, Secp256r1PublicKey, Secp256r1Signature};
 pub use signature::{SignatureScheme, SimpleSignature, UserSignature};
@@ -108,6 +112,7 @@ macro_rules! impl_base64_helper {
 
 impl_base64_helper!(Base64Array32, Base64Display32, Base64FromStr32, test32, 32);
 impl_base64_helper!(Base64Array33, Base64Display33, Base64FromStr33, test33, 33);
+impl_base64_helper!(Base64Array34, Base64Display34, Base64FromStr34, test34, 34);
 impl_base64_helper!(Base64Array48, Base64Display48, Base64FromStr48, test48, 48);
 impl_base64_helper!(Base64Array64, Base64Display64, Base64FromStr64, test64, 64);
 impl_base64_helper!(Base64Array96, Base64Display96, Base64FromStr96, test96, 96);

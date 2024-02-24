@@ -9,7 +9,8 @@ pub use address::Address;
 pub use checkpoint::{CheckpointCommitment, CheckpointSummary, EndOfEpochData};
 pub use crypto::{
     Bls12381PrivateKey, Bls12381PublicKey, Bls12381Signature, Ed25519PrivateKey, Ed25519PublicKey,
-    Ed25519Signature, Secp256k1PrivateKey, Secp256k1PublicKey, Secp256k1Signature,
+    Ed25519Signature, MultisigAggregatedSignature, MultisigCommittee, MultisigMember,
+    MultisigMemberSignature, Secp256k1PrivateKey, Secp256k1PublicKey, Secp256k1Signature,
     Secp256r1PrivateKey, Secp256r1PublicKey, Secp256r1Signature, SignatureScheme, SimpleSignature,
     UserSignature,
 };

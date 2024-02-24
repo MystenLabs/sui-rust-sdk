@@ -1,5 +1,6 @@
 use super::Ed25519PublicKey;
 use super::Ed25519Signature;
+use super::MultisigAggregatedSignature;
 use super::Secp256k1PublicKey;
 use super::Secp256k1Signature;
 use super::Secp256r1PublicKey;
@@ -82,7 +83,7 @@ impl SimpleSignature {
                     public_key: Secp256r1PublicKey::new(public_key),
                 })
             }
-            SignatureScheme::MultiSig
+            SignatureScheme::Multisig
             | SignatureScheme::BLS12381
             | SignatureScheme::ZkLoginAuthenticator => {
                 Err(serde::de::Error::custom("invalid signature scheme"))
@@ -245,7 +246,7 @@ pub enum SignatureScheme {
     Ed25519 = 0x00,
     Secp256k1 = 0x01,
     Secp256r1 = 0x02,
-    MultiSig = 0x03,
+    Multisig = 0x03,
     BLS12381 = 0x04, // This is currently not supported for user addresses
     ZkLoginAuthenticator = 0x05,
 }
@@ -256,7 +257,7 @@ impl SignatureScheme {
             SignatureScheme::Ed25519 => "ed25519",
             SignatureScheme::Secp256k1 => "secp256k1",
             SignatureScheme::Secp256r1 => "secp256r1",
-            SignatureScheme::MultiSig => "multisig",
+            SignatureScheme::Multisig => "multisig",
             SignatureScheme::BLS12381 => "bls12381",
             SignatureScheme::ZkLoginAuthenticator => "zklogin",
         }
@@ -267,7 +268,7 @@ impl SignatureScheme {
             0x00 => Ok(Self::Ed25519),
             0x01 => Ok(Self::Secp256k1),
             0x02 => Ok(Self::Secp256r1),
-            0x03 => Ok(Self::MultiSig),
+            0x03 => Ok(Self::Multisig),
             0x04 => Ok(Self::BLS12381),
             0x05 => Ok(Self::ZkLoginAuthenticator),
             invalid => Err(InvalidSignatureScheme(invalid)),
@@ -283,10 +284,9 @@ impl std::fmt::Display for InvalidSignatureScheme {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum UserSignature {
     Simple(SimpleSignature),
-    // MultiSigLegacy,
-    // MultiSig,
+    Multisig(MultisigAggregatedSignature),
     // ZkLoginAuthenticator,
 }

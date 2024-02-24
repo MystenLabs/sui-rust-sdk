@@ -23,19 +23,21 @@ rustdoc-args = [
 
 [features]
 default = []
-serde = ["dep:serde", "dep:serde_derive", "dep:serde_with"]
+serde = ["dep:serde", "dep:serde_derive", "dep:serde_with", "dep:bcs", "roaring/std"]
 rand = ["dep:rand_core"]
 hash = ["dep:blake2"]
 
 [dependencies]
-base64ct = "1.6.0"
+base64ct = { version = "1.6.0", features = ["alloc"] }
 bs58 = "0.5.0"
 hex = "0.4.3"
+roaring = { version = "0.10.3", default-features = false }
 
 # Serialization and Deserialization support
 serde = { version = "1.0.197", optional = true }
 serde_derive = { version = "1.0.197", optional = true }
-serde_with = { version = "3.6.1", default-features = false, optional = true }
+serde_with = { version = "3.6.1", default-features = false, features = ["alloc"], optional = true }
+bcs = { version = "0.1.6", optional = true }
 
 # RNG support
 rand_core = { version = "0.6.4", optional = true }
