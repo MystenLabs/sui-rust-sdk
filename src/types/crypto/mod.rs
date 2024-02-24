@@ -88,8 +88,8 @@ macro_rules! impl_base64_helper {
 
         #[cfg(test)]
         mod $test_module {
-            use super::$fromstr;
             use super::$display;
+            use super::$fromstr;
 
             #[cfg(target_arch = "wasm32")]
             use wasm_bindgen_test::wasm_bindgen_test as test;
