@@ -64,6 +64,10 @@ impl Secp256k1PublicKey {
     pub const fn as_bytes(&self) -> &[u8] {
         &self.0
     }
+
+    pub fn from_bytes<T: AsRef<[u8]>>(bytes: T) -> Result<Self, std::array::TryFromSliceError> {
+        <[u8; Self::LENGTH]>::try_from(bytes.as_ref()).map(Self)
+    }
 }
 
 impl std::str::FromStr for Secp256k1PublicKey {
@@ -157,6 +161,10 @@ impl Secp256k1Signature {
 
     pub const fn as_bytes(&self) -> &[u8] {
         &self.0
+    }
+
+    pub fn from_bytes<T: AsRef<[u8]>>(bytes: T) -> Result<Self, std::array::TryFromSliceError> {
+        <[u8; Self::LENGTH]>::try_from(bytes.as_ref()).map(Self)
     }
 }
 
