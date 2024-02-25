@@ -24,6 +24,16 @@ pub enum SimpleSignature {
 }
 
 impl SimpleSignature {
+    pub fn scheme(&self) -> SignatureScheme {
+        match self {
+            SimpleSignature::Ed25519 { .. } => SignatureScheme::Ed25519,
+            SimpleSignature::Secp256k1 { .. } => SignatureScheme::Secp256k1,
+            SimpleSignature::Secp256r1 { .. } => SignatureScheme::Secp256r1,
+        }
+    }
+}
+
+impl SimpleSignature {
     #[cfg(feature = "serde")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
     fn from_serialized_bytes<T: AsRef<[u8]>, E: serde::de::Error>(bytes: T) -> Result<Self, E> {
@@ -293,6 +303,15 @@ pub enum UserSignature {
     // ZkLoginAuthenticator,
 }
 
+impl UserSignature {
+    pub fn scheme(&self) -> SignatureScheme {
+        match self {
+            UserSignature::Simple(simple) => simple.scheme(),
+            UserSignature::Multisig(_) => SignatureScheme::Multisig,
+        }
+    }
+}
+
 #[cfg(feature = "serde")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
 mod serialization {
@@ -459,6 +478,28 @@ mod serialization {
         }
 
         #[test]
+        fn simple_fixtures() {
+            const FIXTURES: &[(SignatureScheme, &str)]  = &[
+                (SignatureScheme::Ed25519, "YQDaeO4w2ULMy5eqHBzP0oalr1YhDX/9uJS9MntKnW3d55q4aqZYYnoEloaBmXKc6FoD5bTwONdwS9CwdMQGhIcPDX2rNYyNrapO+gBJp1sHQ2VVsQo2ghm7aA9wVxNJ13U="),
+                (SignatureScheme::Secp256k1, "YgErcT6WUSQXGD1DaIwls5rWq648akDMlvL41ugUUhyIPWnqURl+daQLG+ILNemARKHYVNOikKJJ8jqu+HzlRa5rAg4XzVk55GsZZkGWjNdZkQuiV34n+nP944dtub7FvOsr"),
+                (SignatureScheme::Secp256r1, "YgLp1p4K9dSQTt2AeR05yK1MkXmtLm6Sieb9yfkpW1gOBiqnO9ZKZiWUrLJQav2Mxw64zM37g3IVdsB/To6qfl8IA0f7ryPwOKvEwwiicRF6Kkz/rt28X/gcdRe8bHSn7bQw"),
+            ];
+
+            for (scheme, fixture) in FIXTURES {
+                let bcs = <base64ct::Base64 as base64ct::Encoding>::decode_vec(fixture).unwrap();
+
+                let sig: UserSignature = bcs::from_bytes(&bcs).unwrap();
+                assert_eq!(*scheme, sig.scheme());
+                let bytes = bcs::to_bytes(&sig).unwrap();
+                assert_eq!(bcs, bytes);
+
+                let json = serde_json::to_string_pretty(&sig).unwrap();
+                println!("{json}");
+                assert_eq!(sig, serde_json::from_str(&json).unwrap());
+            }
+        }
+
+        #[test]
         fn legacy_multisig_fixtures() {
             const FIXTURE1: &str = "rgIDAgAnwUSyrALP8m0eEPZE6aPggBELk72n1u3LU+i4nx5kqzhahcICbskEYzHJrbarvFr/RQITgDMoorqpDhN8dgsKATyrN3CD8g37D60dYiGW6sOBqIcf3E1mdMsKvX2pbOZsYQv8VNL+2Jz3vnMXcwEZF32PplKjcnmyUGRhV11M7n4UOjAAAAEAAAAAAAEAEAAAAAAAAQADLEFBMTlxeldNamEycVR2b0FTYWRiQjBObFZiRUtOb0ladTJnUGNGY1RTZGQxATBBUUlPRjgxWk9lUnJHV1pCbG96WFdaRUxvbGQrSi9wei9lT0hiYm0reGJ6ckt3PT0BMEFnTkgrNjhqOERpcnhNTUlvbkVSZWlwTS82N2R2Ri80SEhVWHZHeDBwKzIwTUE9PQECAA==";
 
@@ -468,6 +509,7 @@ mod serialization {
                 let bcs = <base64ct::Base64 as base64ct::Encoding>::decode_vec(fixture).unwrap();
 
                 let sig: UserSignature = bcs::from_bytes(&bcs).unwrap();
+                assert_eq!(SignatureScheme::Multisig, sig.scheme());
                 let bytes = bcs::to_bytes(&sig).unwrap();
                 assert_eq!(bcs, bytes);
 
@@ -487,6 +529,7 @@ mod serialization {
                 let bcs = <base64ct::Base64 as base64ct::Encoding>::decode_vec(fixture).unwrap();
 
                 let sig: UserSignature = bcs::from_bytes(&bcs).unwrap();
+                assert_eq!(SignatureScheme::Multisig, sig.scheme());
                 let bytes = bcs::to_bytes(&sig).unwrap();
                 assert_eq!(bcs, bytes);
 
