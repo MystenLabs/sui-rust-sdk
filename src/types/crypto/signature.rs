@@ -5,6 +5,7 @@ use super::Secp256k1PublicKey;
 use super::Secp256k1Signature;
 use super::Secp256r1PublicKey;
 use super::Secp256r1Signature;
+use super::ZkLoginAuthenticator;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
@@ -298,7 +299,8 @@ impl std::fmt::Display for InvalidSignatureScheme {
 pub enum UserSignature {
     Simple(SimpleSignature),
     Multisig(MultisigAggregatedSignature),
-    // ZkLoginAuthenticator,
+    #[cfg_attr(test, proptest(skip))]
+    ZkLogin(ZkLoginAuthenticator),
 }
 
 impl UserSignature {
@@ -306,6 +308,7 @@ impl UserSignature {
         match self {
             UserSignature::Simple(simple) => simple.scheme(),
             UserSignature::Multisig(_) => SignatureScheme::Multisig,
+            UserSignature::ZkLogin(_) => SignatureScheme::ZkLogin,
         }
     }
 }
@@ -331,6 +334,7 @@ mod serialization {
             public_key: &'a Secp256r1PublicKey,
         },
         Multisig(&'a MultisigAggregatedSignature),
+        ZkLogin(&'a ZkLoginAuthenticator),
     }
 
     #[derive(serde_derive::Deserialize)]
@@ -349,6 +353,7 @@ mod serialization {
             public_key: Secp256r1PublicKey,
         },
         Multisig(MultisigAggregatedSignature),
+        ZkLogin(ZkLoginAuthenticator),
     }
 
     impl serde::Serialize for UserSignature {
@@ -382,12 +387,14 @@ mod serialization {
                     UserSignature::Multisig(multisig) => {
                         ReadableUserSignatureRef::Multisig(multisig)
                     }
+                    UserSignature::ZkLogin(zklogin) => ReadableUserSignatureRef::ZkLogin(zklogin),
                 };
                 readable.serialize(serializer)
             } else {
                 match self {
                     UserSignature::Simple(simple) => simple.serialize(serializer),
                     UserSignature::Multisig(multisig) => multisig.serialize(serializer),
+                    UserSignature::ZkLogin(zklogin) => zklogin.serialize(serializer),
                 }
             }
         }
@@ -423,6 +430,7 @@ mod serialization {
                         public_key,
                     }),
                     ReadableUserSignature::Multisig(multisig) => Self::Multisig(multisig),
+                    ReadableUserSignature::ZkLogin(zklogin) => Self::ZkLogin(zklogin),
                 })
             } else {
                 use serde_with::DeserializeAs;
@@ -442,8 +450,12 @@ mod serialization {
                         let multisig = MultisigAggregatedSignature::from_serialized_bytes(bytes)?;
                         Ok(Self::Multisig(multisig))
                     }
-                    SignatureScheme::Bls12381 | SignatureScheme::ZkLogin => {
-                        Err(serde::de::Error::custom("invalid signature scheme"))
+                    SignatureScheme::Bls12381 => Err(serde::de::Error::custom(
+                        "bls not supported for user signatures",
+                    )),
+                    SignatureScheme::ZkLogin => {
+                        let multisig = ZkLoginAuthenticator::from_serialized_bytes(bytes)?;
+                        Ok(Self::ZkLogin(multisig))
                     }
                 }
             }
@@ -553,6 +565,30 @@ mod serialization {
             let json = serde_json::to_string_pretty(&sig).unwrap();
             println!("{json}");
             assert_eq!(sig, serde_json::from_str(&json).unwrap());
+        }
+
+        #[test]
+        fn zklogin_fixtures() {
+            const FIXTURES: &[&str]  = &[
+                "mAcFA00yMTM0MzA3MTg2NDQ3ODc4NTU1OTU1OTY2Njg3NDQ3Njg0MzYyODQxNjA4OTQ4ODEyMTk4MjQ0OTY0ODk4OTg3OTkxMTI1MTY2OTA2N0w1MzYyMzAzOTQxMzk3NzQ1MTk2MTQxNjgxNjA5MDk0MDI4MTg3NzgxMzY2ODc3ODA5NTA2NTU0NzA3MjQ4MzcwNzM4OTcwOTI5MzYwATEDAk0xOTAzMjkyNDMyMDAxODEyNjcyNzEyMDYzMjYzMzM2OTE1NTg2MDc4NDA0NjY2MDcyMzIzMjU0MTAwMjQyODAxODA4ODQ4MTI3MzA5N0sxOTM0MDEzODQwOTcyNjc5OTM0MzgxMTI2ODg3OTQ2MTk1NDk5NTczMjY3NTE5ODAxNDA4MzQ2MzA3NDA2NzI3NjIxNzI0MTA4ODUCTDQxMTc0OTU3NjIwNzc2NjE4OTk2Njk5ODU1MTUzMzc2MDcwMTkzNTgwMjc2MjUxNTc4MDQwMTc0NTI2OTM1MTY5ODY1MDU1NDcyMTdNMTI3MDM0MzkzNTYyNTQ3NTM4NDA5NzAxMjA3MDAxMjM5MjcxOTU1OTI4OTE0MDgxMzY5NzQ0ODkwMzkzMzgyOTgzODYwODQxODYyNzYCATEBMANMNjAyNTg2MDg4MjI2OTUxNTE2NDY3MjY1NjU3OTU4MDE1OTMyMTI2ODY4MDM1NjU0NTkxOTA1NDkwNzkzNTM4MzY1NDYwNzA5MTIyOE0xNTUxNzY4ODA2NDc3NTgzMDI3NzAwNjY2NzE2OTM2NzAxNjU4Nzk5NDIyNjc1MTQ0Nzg5ODMzNjg0MDk5NjU4MDczNzg0NDY0NDExNQExMXdpYVhOeklqb2lhSFIwY0hNNkx5OXBaQzUwZDJsMFkyZ3VkSFl2YjJGMWRHZ3lJaXcCMmV5SmhiR2NpT2lKU1V6STFOaUlzSW5SNWNDSTZJa3BYVkNJc0ltdHBaQ0k2SWpFaWZRTDIwMjIzNjc3MTc2ODYwNzEyNzk5MTIwNjA0MTY1NTc3MDEyMjMyOTk3NTc0MjQwNjg2MDUwMzc1OTc1MTI1NzUzNDA0NDU0MTY4MTAKAAAAAAAAAGICUv1c+GW7/G0rKAO5QgQrqs3ujZALi4GWTkqgEjfTqMs53H1MeeRJdWzJW104/97F1VJyjm01ozKRasbRJGSsRwKi14vTFJZpnOkPlaKtNt4cGpY4PpaoeXb289IzLDx1Gg==",
+                "mwcFA00xMDE2MjI2MTYwOTg0NDYxNDI1OTY3MjA3OTg1MTYyNzUxNTQyNjEzMzM1OTEzMTc5NDQ3ODc4MDgzNDA3NTkxNDc5ODcxNzMzNzUzNU0xNjUwMTEzNTg2OTk2NDUwMDk1Njk2MDE2NzI0NzgwMzY3MzkyNDI4NDI0NTU3MDIyODMyODc4MDYxNjE4NzE0MzY2MzgzNzA0MjMyNAExAwJMNjAyMjIxMDk3ODA0MDA5MTgyMjQ1MDM2NjM2NjkyMzE1Mjg2NDAzMDQzNjY2ODg5NTUzNzYwNTM5MTM4MDA3OTAxMzIzMjE5OTk2NU0xNjEwNjE0MDY4NzEwMDc3MzQyNDIyNTI0NjEyNzM3ODIyNTgwOTIxMTQxMTYwMjQzMTIwMzI3NDM2MjM1NjEwOTI5NDk5Mjg2MjM4NgJMNzQwNDE3NTg3NDgyOTU3NDM0NTk1NDk1MTU0NDkxODY2ODI5ODQ0OTYxNjMzMDAyMzE4MzE4MzcwMTgxNjEwOTg3OTAwOTY5MTcxMUw3MzAwNzMwODk0MDQzNjM0NjI0NzIwNzkzNDIxNTM1NTUxODI3NDU4NjE4NzU5NjE2OTEzMjU0ODY4MzUzODE1MzM5ODg3MjIzMTA5AgExATADTTExNDA2NTA2NzUyNTkyODQ5NDk4MzcyNzYxODIyNzM4MjA2NTY0ODc4ODM3NTE3NzkxNTY2MzQ3NDk0NDkyNDQyMTI4MDExMTQwMzU3TTE1Njk5MzYzODA5ODg4MDc3MDcxNjM1NTg1MTA2NzA2MjE0NTcxMDI3NDU3ODE5MTE4NTE1NTk2MjA4MDgzODUzODcyOTM3NzQxNDczATExd2lhWE56SWpvaWFIUjBjSE02THk5cFpDNTBkMmwwWTJndWRIWXZiMkYxZEdneUlpdwIyZXlKaGJHY2lPaUpTVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0lzSW10cFpDSTZJakVpZlFNMTc1NzI2MTY4NDgyNzU4OTMzODIyMTc0ODE3OTM5MTkwMDYzNjYzNzY4NTk4MTcwNDA1NDYwNDk4MzU5NTgxODc0NjEyOTg2NjkyNzAKAAAAAAAAAGICl9lwjktCQkH7GqGGV6EdbjHv4Go6MIDmr6EIvtg/2h5IuXKJF5GoVLuykxWwkSdNr9iRUZaz3Z0p/Z9nPJlW/gNaiwdVCMdfShJHSZgqfSH4DZpfaJPkGp6VX+TIIeDevg==",
+                "mgcFA00xOTUwNDI1NDE5MzgxMzM3OTA5NDA1MzkyODkyNTQwMjAxMjIxMTg4ODY5MDAzOTQ3ODM0MjYzOTk4OTcwMjA4MjAxNjY2MDkyNzg4MU0xODEwMjYxODU0NjY0NjY3MDgyMjI5MjczMjIwMDgzMzU0OTk4NDAxMTkxMDI1MDY2MjQ4Mjk5MjMzODgzNjA1NTc1MzMyNTUyMTUzMwExAwJMNTI0MzA1OTQ2MTI1NDQxOTM0NzgzOTMxMjI4ODQ5NjY4OTI0Njk4NzIyMTMyMDcxMDcyNzc2NzgzNzc3NDc4ODI4Mzc1NjgzMTAyOE0xMjA3MDIwMzk2MzAzNjY0NTY2NjAyMzUwNDMyNDM3NDY1OTYwMTY1NzY2NDAzOTU4MzE0MDU2Njc2MDExOTcwMTA3MjI5MjA0NzkxMQJNMTYzNjc2NDUxMTMxNzA1OTkxMTgwNzc1NjgxOTUyMjA5ODY1NjcxNjE0ODk2MDcyNDI1NzQ2ODg5ODQ0NzI4NTk0MzE2Mzk4MzQxNzhMNTg5MTQ4MzY3MjI1MTQyMzgzODE5NTQxNDg0NjEwNTY0Nzk4MDE2NjAyODIyNjcwMzE2ODE1Njg2MzkzNjUxNjk1OTkzMjE4MzExNQIBMQEwA0w2NDc2MTA0MzAwODgxNTQ2NTk3NjUwODk0NjEzNTUyMDc1NDg4Mjk5NjA4NjM5MTY4MzE3MjgzNTg2ODI3MDA3MTUzODg5MjI1MTI2TDQ3NjgzNjQxMTE1NjM0NzI0MDI1NzA4NDE0ODEyMDMzMTgzMDQzMTQ1MDQ4NjcxMzk1NzQ0MzAzODI2NzA4MDcwMTkwNDgxMTQyNzEBMTF3aWFYTnpJam9pYUhSMGNITTZMeTlwWkM1MGQybDBZMmd1ZEhZdmIyRjFkR2d5SWl3AjJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSXNJbXRwWkNJNklqRWlmUU0xMDc0MzE4MDg0MjY5ODE2Mzk0ODQ5NzAyMjkwMDE0Mzc4NjI0MTEwOTYyMzMyMDgzNzYxNzUzMDY5NzUxNDA1MzIwODA1NjEwNzgzNAoAAAAAAAAAYgLL7Jn3QV4USqVbuv97w4LqA12BAwU95fsUrvymgAUPtiepsG6kCVnX903PFZBusNM07tgWJ4/5ypb5mbJQhijJA+3BG7HM6kM2jZ0NPldx4AR5zvu+l4ZXRC4lo39h/K5s",
+                "mgcFA0wxNjY4NTEwOTQ1NDY2OTQ2OTYyODUxODAzOTg1MTA3Mjk2NTM1OTM3MzI1NzI5OTMzNDE1MzAzOTcwNjI2MjE3NzAwOTM0NjE4MjY1TDc5ODAxMjUwNTYxMTA2NzczMjY0NjA1MjI0MjgyNTk1OTM4NzQzOTg5MjE3Nzg1Mzk1MTUxODY3MTkwMzk3OTc1MTQ0NDA4ODQ1NTEBMQMCTTEyODA2ODY2NjkyMTUxODMxMTI1MzExMTk3Nzc1NTAxNDU1MTIwNzQwNjg2Mzk2OTQ4NDIxMjAyODI0MjkwODMwNzQzMzM4NTE1MjMxTTE4NzY2Mzc4MTcwNzE4MDMzMzk0ODQxMTYxMTU0MjA0NDA2ODc0MDM0ODk4NjA1NTk4MTgzMDM5NjM2NjQ1NjU3Mjk3NTIzMTU4ODU1Ak0xNzYyNTIzNTA0NzgxNDg2NDg1OTY1NTA1MTkyNTUyMzYxNjkwNzg2MDk3MjM3ODE1OTU1NjA4NDMyNDM5NTQxODk5MzI4NzQwMzk0M00xNjQ3MTA2MDIyOTUzMDIyNjEwOTk0Mzc3MTU3NzQ1NjIzMDM2NTM5NTMxNzM0NDk3OTAwNjAwMTE1NTgxNzM5ODE1NjczMjIwMjcxMwIBMQEwA00xODU1NzU4NTE1MjgxMTk5Mzk1MTY2NDY4NDA1ODg4MTg0NDE2MjY4NTk1NzAxMDY1MzIyNjg5ODkyOTgwNjA1Njc4NjMyMzg5MzA0M0wyNDQ2NDI2NDg4NTQwNzcwNzE5NTIyMjk1NTY3Njc2OTU3MzYzNjIxNTQ0MDUwMTg5OTAxMTk0MTY3NDY1NDE3OTA0Njk2NDQ3NDA1ATExd2lhWE56SWpvaWFIUjBjSE02THk5cFpDNTBkMmwwWTJndWRIWXZiMkYxZEdneUlpdwIyZXlKaGJHY2lPaUpTVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0lzSW10cFpDSTZJakVpZlFMODQ2ODk2NzMyOTAyOTgzNjU0MjM3MzIzMjc4Njc3NzgyNDA5MTgyOTM1OTA4MjczNzA5MjQ3MjM1NDEwODEzNTkwOTE0MTM4MjEwNAoAAAAAAAAAYgEaWZZP7C934LS3vgsXYQk85BBiG6E285TY0C6U59qaUxlCUQWACVbxyEej193U4uIIP71lZ6KwvfT7lqOsUUIvAoa8xwWZ68Qgs7iXfsxg5ZS7VnSb6qVi1/gKm9//yqod",
+                "lgcFA0w2MjczOTkyOTQ0MjgyNjU2MjQxNjQzMjQ5OTY3NTQ2NDM2NDE1NjgzNTM4MzMwMDczMzA5MDM4Mjk1MDkwMDIwNDM3MDMyNzM0NDE3TTEzOTI1MTMxOTE1MzgzODQzMDk5Mzg1NTU1NjI2MjcyMDMyOTYxOTIzNzI2NTgwMjI2Njk3MDE1MzE5MTk3MTMyMTg5MTE4NjA1MjU3ATEDAkw3NzA0MDA3NjE0MTIwMjQ0NDI4MjAzMjM0MDMyNzc0Njg5MDgxMDc4NjM4ODY5MzE3MjQzNTUxMjUzMDEwNzI2MzM4NTEwNDM2MTI3TDQ3MzM2OTE1NjYwMDgxOTEyMDQwMTI3MDU3OTkwNjIyNzU5NjI2NDczMDE1MjQ1NzAyMTIzNDM3MzI3NTExNzE0MjI2NjMxMzU3NTICTDk2MzIxMTY1Mzc0MTE0NzI5ODE0NjQxNDc2NDAzOTM5MTc0MTg0MjAyODc4MDk1MTg2MjE5OTkzNDIyMDY3Njg4MzI4NDc2OTU4OTZMODQzNjI4NzE1MDMyMTIxNjU1MDkyMTU0ODg4NDIyNjAzODI3MzE5NDIwMjQ0MDU3NDcyOTAzODE5NjQwMTQwMzAyNDM4NDExMzg5OAIBMQEwA0w1MTcyMTg0MjA1NDg5MTQ4ODMxMDU4MTg5MTQyMDYyNzY3NTUzNzIzMTA5MzcyMjA5ODcyNDQwMTMwNTE4NDM2Mzg0MTc1MTI2NTI0TDUxNTE0MzIwNjYxMzg3NDcyMDkxMjA2ODc1MjIyMDg1NTQwNDE1NjQ4MjcwODA3OTcwNTA3MTY5Mjc3Njk2NDM0NDc0MjIxMjMyNzABMTF3aWFYTnpJam9pYUhSMGNITTZMeTlwWkM1MGQybDBZMmd1ZEhZdmIyRjFkR2d5SWl3AjJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSXNJbXRwWkNJNklqRWlmUU0yMDY4NzY0MjUxNzYzMDczMzI3MzY4Nzc5NTQ3NjI0NzQzNzc0MzgzNDYwMTEwMTU2NjY4NDk2Nzk2NzcwNTgwOTk4NTI0MTA2NTUzOQoAAAAAAAAAYQBn1v6x7RD9EyaiubLQ8qQkJSNI2Mr1GFHXZyOUJ+eCphFkwjYKBo44TMAbryd405BY+MHYTFLZOD06UTycKHgKucbuFjDvPnERRKZI2wa7sihPcnTPvuU//O5QPMGkkgA=",
+            ];
+
+            for fixture in FIXTURES {
+                let bcs = Base64::decode_vec(fixture).unwrap();
+
+                let sig: UserSignature = bcs::from_bytes(&bcs).unwrap();
+                assert_eq!(SignatureScheme::ZkLogin, sig.scheme());
+                let bytes = bcs::to_bytes(&sig).unwrap();
+                assert_eq!(bcs, bytes);
+
+                let json = serde_json::to_string_pretty(&sig).unwrap();
+                println!("{json}");
+                assert_eq!(sig, serde_json::from_str(&json).unwrap());
+            }
         }
     }
 }
