@@ -15,14 +15,18 @@ const MAX_COMMITTEE_SIZE: usize = 10;
 // const MAX_BITMAP_VALUE: BitmapUnit = 0b1111111111;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde_derive::Serialize, serde_derive::Deserialize)
-)]
-pub enum MultisigMember {
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+pub enum MultisigMemberPublicKey {
     Ed25519(Ed25519PublicKey),
     Secp256k1(Secp256k1PublicKey),
     Secp256r1(Secp256r1PublicKey),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+pub struct MultisigMember {
+    public_key: MultisigMemberPublicKey,
+    weight: WeightUnit,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -30,15 +34,22 @@ pub enum MultisigMember {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub struct MultisigCommittee {
     /// A list of committee members and their corresponding weight.
-    members: Vec<(MultisigMember, WeightUnit)>,
+    #[cfg_attr(
+        test,
+        proptest(
+            strategy = "proptest::collection::vec(proptest::arbitrary::any::<MultisigMember>(), 0..10)"
+        )
+    )]
+    members: Vec<MultisigMember>,
     /// If the total weight of the public keys corresponding to verified signatures is larger than threshold, the Multisig is verified.
     threshold: ThresholdUnit,
 }
 
 impl MultisigCommittee {
-    pub fn members(&self) -> &[(MultisigMember, WeightUnit)] {
+    pub fn members(&self) -> &[MultisigMember] {
         &self.members
     }
 
@@ -49,14 +60,23 @@ impl MultisigCommittee {
 
 /// The struct that contains signatures and public keys necessary for authenticating a Multisig.
 #[derive(Debug, Clone)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub struct MultisigAggregatedSignature {
     /// The plain signature encoded with signature scheme.
+    #[cfg_attr(
+        test,
+        proptest(
+            strategy = "proptest::collection::vec(proptest::arbitrary::any::<MultisigMemberSignature>(), 0..10)"
+        )
+    )]
     signatures: Vec<MultisigMemberSignature>,
     /// A bitmap that indicates the position of which public key the signature should be authenticated with.
     bitmap: BitmapUnit,
     /// Legacy encoding for the bitmap.
     // TODO remove the allow(dead_code) attr once the public interface has been fleshed out more
     #[cfg_attr(not(feature = "serde"), allow(dead_code))]
+    //TODO implement a strategy for legacy bitmap
+    #[cfg_attr(test, proptest(value = "None"))]
     legacy_bitmap: Option<roaring::RoaringBitmap>,
     /// The public key encoded with each public key with its signature scheme used along with the corresponding weight.
     committee: MultisigCommittee,
@@ -101,10 +121,7 @@ fn roaring_bitmap_to_u16(roaring: &roaring::RoaringBitmap) -> Result<BitmapUnit,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde_derive::Serialize, serde_derive::Deserialize)
-)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub enum MultisigMemberSignature {
     Ed25519(Ed25519Signature),
     Secp256k1(Secp256k1Signature),
@@ -193,27 +210,30 @@ mod serialization {
         }
     }
 
-    pub struct Base64MultisigMember;
+    pub struct Base64MultisigMemberPublicKey;
 
-    impl SerializeAs<MultisigMember> for Base64MultisigMember {
-        fn serialize_as<S>(source: &MultisigMember, serializer: S) -> Result<S::Ok, S::Error>
+    impl SerializeAs<MultisigMemberPublicKey> for Base64MultisigMemberPublicKey {
+        fn serialize_as<S>(
+            source: &MultisigMemberPublicKey,
+            serializer: S,
+        ) -> Result<S::Ok, S::Error>
         where
             S: Serializer,
         {
             match source {
-                MultisigMember::Ed25519(public_key) => {
+                MultisigMemberPublicKey::Ed25519(public_key) => {
                     let mut buf = [0; 1 + Ed25519PublicKey::LENGTH];
                     buf[0] = SignatureScheme::Ed25519 as u8;
                     buf[1..].copy_from_slice(public_key.as_ref());
                     Base64Array33::serialize_as(&buf, serializer)
                 }
-                MultisigMember::Secp256k1(public_key) => {
+                MultisigMemberPublicKey::Secp256k1(public_key) => {
                     let mut buf = [0; 1 + Secp256k1PublicKey::LENGTH];
                     buf[0] = SignatureScheme::Secp256k1 as u8;
                     buf[1..].copy_from_slice(public_key.as_ref());
                     Base64Array34::serialize_as(&buf, serializer)
                 }
-                MultisigMember::Secp256r1(public_key) => {
+                MultisigMemberPublicKey::Secp256r1(public_key) => {
                     let mut buf = [0; 1 + Secp256r1PublicKey::LENGTH];
                     buf[0] = SignatureScheme::Secp256r1 as u8;
                     buf[1..].copy_from_slice(public_key.as_ref());
@@ -223,8 +243,8 @@ mod serialization {
         }
     }
 
-    impl<'de> DeserializeAs<'de, MultisigMember> for Base64MultisigMember {
-        fn deserialize_as<D>(deserializer: D) -> Result<MultisigMember, D::Error>
+    impl<'de> DeserializeAs<'de, MultisigMemberPublicKey> for Base64MultisigMemberPublicKey {
+        fn deserialize_as<D>(deserializer: D) -> Result<MultisigMemberPublicKey, D::Error>
         where
             D: Deserializer<'de>,
         {
@@ -236,17 +256,17 @@ mod serialization {
                 SignatureScheme::Ed25519 => {
                     let public_key = Ed25519PublicKey::from_bytes(public_key_bytes)
                         .map_err(serde::de::Error::custom)?;
-                    Ok(MultisigMember::Ed25519(public_key))
+                    Ok(MultisigMemberPublicKey::Ed25519(public_key))
                 }
                 SignatureScheme::Secp256k1 => {
                     let public_key = Secp256k1PublicKey::from_bytes(public_key_bytes)
                         .map_err(serde::de::Error::custom)?;
-                    Ok(MultisigMember::Secp256k1(public_key))
+                    Ok(MultisigMemberPublicKey::Secp256k1(public_key))
                 }
                 SignatureScheme::Secp256r1 => {
                     let public_key = Secp256r1PublicKey::from_bytes(public_key_bytes)
                         .map_err(serde::de::Error::custom)?;
-                    Ok(MultisigMember::Secp256r1(public_key))
+                    Ok(MultisigMemberPublicKey::Secp256r1(public_key))
                 }
                 SignatureScheme::Multisig
                 | SignatureScheme::BLS12381
@@ -254,6 +274,50 @@ mod serialization {
                     Err(serde::de::Error::custom("invalid public key type"))
                 }
             }
+        }
+    }
+
+    pub struct LegacyMultisigMember;
+
+    impl SerializeAs<MultisigMember> for LegacyMultisigMember {
+        fn serialize_as<S>(source: &MultisigMember, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            #[derive(serde_derive::Serialize)]
+            struct LegacyMember<'a> {
+                #[serde(with = "::serde_with::As::<Base64MultisigMemberPublicKey>")]
+                public_key: &'a MultisigMemberPublicKey,
+                weight: WeightUnit,
+            }
+
+            let legacy = LegacyMember {
+                public_key: &source.public_key,
+                weight: source.weight,
+            };
+
+            legacy.serialize(serializer)
+        }
+    }
+
+    impl<'de> DeserializeAs<'de, MultisigMember> for LegacyMultisigMember {
+        fn deserialize_as<D>(deserializer: D) -> Result<MultisigMember, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            #[derive(serde_derive::Deserialize)]
+            struct LegacyMember {
+                #[serde(with = "::serde_with::As::<Base64MultisigMemberPublicKey>")]
+                public_key: MultisigMemberPublicKey,
+                weight: WeightUnit,
+            }
+
+            let legacy = LegacyMember::deserialize(deserializer)?;
+
+            Ok(MultisigMember {
+                public_key: legacy.public_key,
+                weight: legacy.weight,
+            })
         }
     }
 
@@ -289,15 +353,15 @@ mod serialization {
 
     #[derive(serde_derive::Deserialize)]
     struct LegacyMultisigCommittee {
-        #[serde(with = "::serde_with::As::<Vec<(Base64MultisigMember, ::serde_with::Same)>>")]
-        members: Vec<(MultisigMember, WeightUnit)>,
+        #[serde(with = "::serde_with::As::<Vec<LegacyMultisigMember>>")]
+        members: Vec<MultisigMember>,
         threshold: ThresholdUnit,
     }
 
     #[derive(serde_derive::Serialize)]
     struct LegacyMultisigCommitteeRef<'a> {
-        #[serde(with = "::serde_with::As::<&[(Base64MultisigMember, ::serde_with::Same)]>")]
-        members: &'a [(MultisigMember, WeightUnit)],
+        #[serde(with = "::serde_with::As::<&[LegacyMultisigMember]>")]
+        members: &'a [MultisigMember],
         threshold: ThresholdUnit,
     }
 
@@ -305,7 +369,7 @@ mod serialization {
     struct ReadableMultisigAggregatedSignature {
         signatures: Vec<MultisigMemberSignature>,
         bitmap: BitmapUnit,
-        #[serde(skip_serializing_if = "Option::is_none")]
+        #[serde(default)]
         #[serde(with = "::serde_with::As::<Option<Base64RoaringBitmap>>")]
         legacy_bitmap: Option<roaring::RoaringBitmap>,
         committee: MultisigCommittee,
@@ -418,6 +482,223 @@ mod serialization {
                 })
             } else {
                 Err(serde::de::Error::custom("invalid multisig"))
+            }
+        }
+    }
+
+    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
+    enum MemberPublicKey {
+        Ed25519(Ed25519PublicKey),
+        Secp256k1(Secp256k1PublicKey),
+        Secp256r1(Secp256r1PublicKey),
+    }
+
+    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
+    #[serde(tag = "scheme", rename_all = "lowercase")]
+    enum ReadableMemberPublicKey {
+        Ed25519 { public_key: Ed25519PublicKey },
+        Secp256k1 { public_key: Secp256k1PublicKey },
+        Secp256r1 { public_key: Secp256r1PublicKey },
+    }
+
+    impl Serialize for MultisigMemberPublicKey {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            if serializer.is_human_readable() {
+                let readable = match self {
+                    MultisigMemberPublicKey::Ed25519(public_key) => {
+                        ReadableMemberPublicKey::Ed25519 {
+                            public_key: *public_key,
+                        }
+                    }
+                    MultisigMemberPublicKey::Secp256k1(public_key) => {
+                        ReadableMemberPublicKey::Secp256k1 {
+                            public_key: *public_key,
+                        }
+                    }
+                    MultisigMemberPublicKey::Secp256r1(public_key) => {
+                        ReadableMemberPublicKey::Secp256r1 {
+                            public_key: *public_key,
+                        }
+                    }
+                };
+                readable.serialize(serializer)
+            } else {
+                let binary = match self {
+                    MultisigMemberPublicKey::Ed25519(public_key) => {
+                        MemberPublicKey::Ed25519(*public_key)
+                    }
+                    MultisigMemberPublicKey::Secp256k1(public_key) => {
+                        MemberPublicKey::Secp256k1(*public_key)
+                    }
+                    MultisigMemberPublicKey::Secp256r1(public_key) => {
+                        MemberPublicKey::Secp256r1(*public_key)
+                    }
+                };
+                binary.serialize(serializer)
+            }
+        }
+    }
+
+    impl<'de> Deserialize<'de> for MultisigMemberPublicKey {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            if deserializer.is_human_readable() {
+                let readable = ReadableMemberPublicKey::deserialize(deserializer)?;
+                Ok(match readable {
+                    ReadableMemberPublicKey::Ed25519 { public_key } => Self::Ed25519(public_key),
+                    ReadableMemberPublicKey::Secp256k1 { public_key } => {
+                        Self::Secp256k1(public_key)
+                    }
+                    ReadableMemberPublicKey::Secp256r1 { public_key } => {
+                        Self::Secp256r1(public_key)
+                    }
+                })
+            } else {
+                let binary = MemberPublicKey::deserialize(deserializer)?;
+                Ok(match binary {
+                    MemberPublicKey::Ed25519(public_key) => Self::Ed25519(public_key),
+                    MemberPublicKey::Secp256k1(public_key) => Self::Secp256k1(public_key),
+                    MemberPublicKey::Secp256r1(public_key) => Self::Secp256r1(public_key),
+                })
+            }
+        }
+    }
+
+    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
+    enum MemberSignature {
+        Ed25519(Ed25519Signature),
+        Secp256k1(Secp256k1Signature),
+        Secp256r1(Secp256r1Signature),
+    }
+
+    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
+    #[serde(tag = "scheme", rename_all = "lowercase")]
+    enum ReadableMemberSignature {
+        Ed25519 { signature: Ed25519Signature },
+        Secp256k1 { signature: Secp256k1Signature },
+        Secp256r1 { signature: Secp256r1Signature },
+    }
+
+    impl Serialize for MultisigMemberSignature {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            if serializer.is_human_readable() {
+                let readable = match self {
+                    MultisigMemberSignature::Ed25519(signature) => {
+                        ReadableMemberSignature::Ed25519 {
+                            signature: *signature,
+                        }
+                    }
+                    MultisigMemberSignature::Secp256k1(signature) => {
+                        ReadableMemberSignature::Secp256k1 {
+                            signature: *signature,
+                        }
+                    }
+                    MultisigMemberSignature::Secp256r1(signature) => {
+                        ReadableMemberSignature::Secp256r1 {
+                            signature: *signature,
+                        }
+                    }
+                };
+                readable.serialize(serializer)
+            } else {
+                let binary = match self {
+                    MultisigMemberSignature::Ed25519(signature) => {
+                        MemberSignature::Ed25519(*signature)
+                    }
+                    MultisigMemberSignature::Secp256k1(signature) => {
+                        MemberSignature::Secp256k1(*signature)
+                    }
+                    MultisigMemberSignature::Secp256r1(signature) => {
+                        MemberSignature::Secp256r1(*signature)
+                    }
+                };
+                binary.serialize(serializer)
+            }
+        }
+    }
+
+    impl<'de> Deserialize<'de> for MultisigMemberSignature {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            if deserializer.is_human_readable() {
+                let readable = ReadableMemberSignature::deserialize(deserializer)?;
+                Ok(match readable {
+                    ReadableMemberSignature::Ed25519 { signature } => Self::Ed25519(signature),
+                    ReadableMemberSignature::Secp256k1 { signature } => Self::Secp256k1(signature),
+                    ReadableMemberSignature::Secp256r1 { signature } => Self::Secp256r1(signature),
+                })
+            } else {
+                let binary = MemberSignature::deserialize(deserializer)?;
+                Ok(match binary {
+                    MemberSignature::Ed25519(signature) => Self::Ed25519(signature),
+                    MemberSignature::Secp256k1(signature) => Self::Secp256k1(signature),
+                    MemberSignature::Secp256r1(signature) => Self::Secp256r1(signature),
+                })
+            }
+        }
+    }
+
+    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
+    struct Member {
+        public_key: MultisigMemberPublicKey,
+        weight: WeightUnit,
+    }
+
+    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
+    struct ReadableMember {
+        #[cfg_attr(feature = "serde", serde(flatten))]
+        public_key: MultisigMemberPublicKey,
+        weight: WeightUnit,
+    }
+
+    impl Serialize for MultisigMember {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            if serializer.is_human_readable() {
+                let readable = ReadableMember {
+                    public_key: self.public_key.clone(),
+                    weight: self.weight,
+                };
+                readable.serialize(serializer)
+            } else {
+                let binary = Member {
+                    public_key: self.public_key.clone(),
+                    weight: self.weight,
+                };
+                binary.serialize(serializer)
+            }
+        }
+    }
+
+    impl<'de> Deserialize<'de> for MultisigMember {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            if deserializer.is_human_readable() {
+                let readable = ReadableMember::deserialize(deserializer)?;
+                Ok(Self {
+                    public_key: readable.public_key,
+                    weight: readable.weight,
+                })
+            } else {
+                let binary = Member::deserialize(deserializer)?;
+                Ok(Self {
+                    public_key: binary.public_key,
+                    weight: binary.weight,
+                })
             }
         }
     }

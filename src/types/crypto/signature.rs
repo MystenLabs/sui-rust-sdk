@@ -6,7 +6,8 @@ use super::Secp256k1Signature;
 use super::Secp256r1PublicKey;
 use super::Secp256r1Signature;
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub enum SimpleSignature {
     Ed25519 {
         signature: Ed25519Signature,
@@ -284,7 +285,8 @@ impl std::fmt::Display for InvalidSignatureScheme {
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub enum UserSignature {
     Simple(SimpleSignature),
     Multisig(MultisigAggregatedSignature),
@@ -297,8 +299,7 @@ mod serialization {
     use super::*;
 
     #[derive(serde_derive::Serialize)]
-    #[serde(tag = "scheme")]
-    #[serde(rename_all = "lowercase")]
+    #[serde(tag = "scheme", rename_all = "lowercase")]
     enum ReadableUserSignatureRef<'a> {
         Ed25519 {
             signature: &'a Ed25519Signature,
@@ -316,8 +317,7 @@ mod serialization {
     }
 
     #[derive(serde_derive::Deserialize)]
-    #[serde(tag = "scheme")]
-    #[serde(rename_all = "lowercase")]
+    #[serde(tag = "scheme", rename_all = "lowercase")]
     enum ReadableUserSignature {
         Ed25519 {
             signature: Ed25519Signature,
@@ -405,7 +405,7 @@ mod serialization {
                         signature,
                         public_key,
                     }),
-                    ReadableUserSignature::Multisig(_) => todo!(),
+                    ReadableUserSignature::Multisig(multisig) => Self::Multisig(multisig),
                 })
             } else {
                 use serde_with::DeserializeAs;
@@ -429,6 +429,70 @@ mod serialization {
                         Err(serde::de::Error::custom("invalid signature scheme"))
                     }
                 }
+            }
+        }
+    }
+
+    #[cfg(test)]
+    mod test {
+        use super::*;
+
+        #[cfg(target_arch = "wasm32")]
+        use wasm_bindgen_test::wasm_bindgen_test as test;
+
+        proptest::proptest! {
+            #[test]
+            #[cfg(feature = "serde")]
+            fn roundtrip_bcs(signature: UserSignature) {
+                let b = bcs::to_bytes(&signature).unwrap();
+                let s = bcs::from_bytes(&b).unwrap();
+                assert_eq!(signature, s);
+            }
+
+            #[test]
+            #[cfg(feature = "serde")]
+            fn roundtrip_json(signature: UserSignature) {
+                let s = serde_json::to_string(&signature).unwrap();
+                let sig = serde_json::from_str(&s).unwrap();
+                assert_eq!(signature, sig);
+            }
+        }
+
+        #[test]
+        fn legacy_multisig_fixtures() {
+            const FIXTURE1: &str = "rgIDAgAnwUSyrALP8m0eEPZE6aPggBELk72n1u3LU+i4nx5kqzhahcICbskEYzHJrbarvFr/RQITgDMoorqpDhN8dgsKATyrN3CD8g37D60dYiGW6sOBqIcf3E1mdMsKvX2pbOZsYQv8VNL+2Jz3vnMXcwEZF32PplKjcnmyUGRhV11M7n4UOjAAAAEAAAAAAAEAEAAAAAAAAQADLEFBMTlxeldNamEycVR2b0FTYWRiQjBObFZiRUtOb0ladTJnUGNGY1RTZGQxATBBUUlPRjgxWk9lUnJHV1pCbG96WFdaRUxvbGQrSi9wei9lT0hiYm0reGJ6ckt3PT0BMEFnTkgrNjhqOERpcnhNTUlvbkVSZWlwTS82N2R2Ri80SEhVWHZHeDBwKzIwTUE9PQECAA==";
+
+            const FIXTURE2: &str = "8QIDAwDYAAra4KQGp2Oq1TCOgWfH8IxC4UA5wJB/NqOcNmMh54Y5d5pnVQfTlqgq4J17a8+W+y3+jk9h4YMB9LzPDYcLAaJJBH+WLPfPaQ7T3Cv8nqpZ1TbPrT8E61FrSgeIbN4OTJeijjguv1pd3ImvTeo4AMYZczf5OH6+5yBaur7R6YACiooT5J36agjUk0TpVcTKMGwykIwD7NBkZ0gbinHxuVJwdi1tSbqhMpqvNgP+CFO6F7FSTe+xiHh0MDOKyYQItxY6MAAAAQAAAAAAAgAQAAAAAAABAAIAAyxBQTE5cXpXTWphMnFUdm9BU2FkYkIwTmxWYkVLTm9JWnUyZ1BjRmNUU2RkMQEwQVFJT0Y4MVpPZVJyR1daQmxvelhXWkVMb2xkK0ovcHovZU9IYmJtK3hienJLdz09ATBBZ05IKzY4ajhEaXJ4TU1Jb25FUmVpcE0vNjdkdkYvNEhIVVh2R3gwcCsyME1BPT0BAgA=";
+
+            for fixture in [FIXTURE1, FIXTURE2] {
+                let bcs = <base64ct::Base64 as base64ct::Encoding>::decode_vec(fixture).unwrap();
+
+                let sig: UserSignature = bcs::from_bytes(&bcs).unwrap();
+                let bytes = bcs::to_bytes(&sig).unwrap();
+                assert_eq!(bcs, bytes);
+
+                let json = serde_json::to_string_pretty(&sig).unwrap();
+                println!("{json}");
+                assert_eq!(sig, serde_json::from_str(&json).unwrap());
+            }
+        }
+
+        #[test]
+        fn multisig_fixtures() {
+            const FIXTURE1: &str = "sgIDAwCTLgVngjC4yeuvpAGKVkgcvIKVFUJnL1r6oFZScQVE5DNIz6kfxAGDRcVUczE9CUb7/sN/EuFJ8ot86Sdb8pAFASoQ91stRHXdW5dLy0BQ6v+7XWptawy2ItMyPk508p+PHdtZcm2aKl3lZGIvXe6MPY73E+1Hakv/xJbTYsw5SPMC5dx3gBwxds2GV12c7VUSqkyXamliSF1W/QBMufqrlmdIOZ1ox9gbsvIPtXYahfvKm8ozA7rsZWwRv8atsnyfYgcAAwANfas1jI2tqk76AEmnWwdDZVWxCjaCGbtoD3BXE0nXdQEBAg4XzVk55GsZZkGWjNdZkQuiV34n+nP944dtub7FvOsrAQIDR/uvI/A4q8TDCKJxEXoqTP+u3bxf+Bx1F7xsdKfttDABAgA=";
+
+            const FIXTURE2: &str = "8QEDAgBMW4Oq7XMjO5c6HLgTBJrWDZsCEcZF2EPOf68fdf1aY3e3pvA3cmk0tjMmXFB9+A6J2NohCpTFb/CsXEBjtCcMAfraaMMOMzG815145jlrY44Rbp0d1JQJOJ3hjgEe2xVBFP3QR94IVZk6ssyYxsecpBA+re5eqVRacvZGSobNPkMDAAMADX2rNYyNrapO+gBJp1sHQ2VVsQo2ghm7aA9wVxNJ13UBAQIOF81ZOeRrGWZBlozXWZELold+J/pz/eOHbbm+xbzrKwECA0f7ryPwOKvEwwiicRF6Kkz/rt28X/gcdRe8bHSn7bQwAQIA";
+
+            for fixture in [FIXTURE1, FIXTURE2] {
+                let bcs = <base64ct::Base64 as base64ct::Encoding>::decode_vec(fixture).unwrap();
+
+                let sig: UserSignature = bcs::from_bytes(&bcs).unwrap();
+                let bytes = bcs::to_bytes(&sig).unwrap();
+                assert_eq!(bcs, bytes);
+
+                let json = serde_json::to_string_pretty(&sig).unwrap();
+                println!("{json}");
+                assert_eq!(sig, serde_json::from_str(&json).unwrap());
             }
         }
     }

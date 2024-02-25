@@ -23,6 +23,7 @@ impl Secp256k1PrivateKey {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub struct Secp256k1PublicKey(
     #[cfg_attr(
         feature = "serde",
@@ -121,6 +122,7 @@ impl std::fmt::Debug for Secp256k1PublicKey {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub struct Secp256k1Signature(
     #[cfg_attr(
         feature = "serde",

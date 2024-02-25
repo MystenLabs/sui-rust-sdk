@@ -23,6 +23,7 @@ impl Ed25519PrivateKey {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub struct Ed25519PublicKey(
     #[cfg_attr(
         feature = "serde",
@@ -119,6 +120,7 @@ impl std::fmt::Debug for Ed25519PublicKey {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub struct Ed25519Signature(
     #[cfg_attr(
         feature = "serde",
