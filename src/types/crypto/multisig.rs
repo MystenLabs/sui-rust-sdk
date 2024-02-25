@@ -1,3 +1,5 @@
+use super::zklogin::ZkLoginAuthenticator;
+use super::zklogin::ZkLoginPublicIdentifier;
 use super::Ed25519PublicKey;
 use super::Ed25519Signature;
 use super::Secp256k1PublicKey;
@@ -20,6 +22,8 @@ pub enum MultisigMemberPublicKey {
     Ed25519(Ed25519PublicKey),
     Secp256k1(Secp256k1PublicKey),
     Secp256r1(Secp256r1PublicKey),
+    #[cfg_attr(test, proptest(skip))]
+    ZkLogin(ZkLoginPublicIdentifier),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -126,6 +130,8 @@ pub enum MultisigMemberSignature {
     Ed25519(Ed25519Signature),
     Secp256k1(Secp256k1Signature),
     Secp256r1(Secp256r1Signature),
+    #[cfg_attr(test, proptest(skip))]
+    ZkLogin(ZkLoginAuthenticator),
 }
 
 #[cfg(feature = "serde")]
@@ -239,6 +245,9 @@ mod serialization {
                     buf[1..].copy_from_slice(public_key.as_ref());
                     Base64Array34::serialize_as(&buf, serializer)
                 }
+                MultisigMemberPublicKey::ZkLogin(_) => Err(serde::ser::Error::custom(
+                    "zklogin not supported in legacy multisig",
+                )),
             }
         }
     }
@@ -491,6 +500,7 @@ mod serialization {
         Ed25519(Ed25519PublicKey),
         Secp256k1(Secp256k1PublicKey),
         Secp256r1(Secp256r1PublicKey),
+        ZkLogin(ZkLoginPublicIdentifier),
     }
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
@@ -499,6 +509,7 @@ mod serialization {
         Ed25519 { public_key: Ed25519PublicKey },
         Secp256k1 { public_key: Secp256k1PublicKey },
         Secp256r1 { public_key: Secp256r1PublicKey },
+        ZkLogin(ZkLoginPublicIdentifier),
     }
 
     impl Serialize for MultisigMemberPublicKey {
@@ -523,6 +534,9 @@ mod serialization {
                             public_key: *public_key,
                         }
                     }
+                    MultisigMemberPublicKey::ZkLogin(public_id) => {
+                        ReadableMemberPublicKey::ZkLogin(public_id.clone())
+                    }
                 };
                 readable.serialize(serializer)
             } else {
@@ -535,6 +549,9 @@ mod serialization {
                     }
                     MultisigMemberPublicKey::Secp256r1(public_key) => {
                         MemberPublicKey::Secp256r1(*public_key)
+                    }
+                    MultisigMemberPublicKey::ZkLogin(public_id) => {
+                        MemberPublicKey::ZkLogin(public_id.clone())
                     }
                 };
                 binary.serialize(serializer)
@@ -557,6 +574,7 @@ mod serialization {
                     ReadableMemberPublicKey::Secp256r1 { public_key } => {
                         Self::Secp256r1(public_key)
                     }
+                    ReadableMemberPublicKey::ZkLogin(public_id) => Self::ZkLogin(public_id),
                 })
             } else {
                 let binary = MemberPublicKey::deserialize(deserializer)?;
@@ -564,6 +582,7 @@ mod serialization {
                     MemberPublicKey::Ed25519(public_key) => Self::Ed25519(public_key),
                     MemberPublicKey::Secp256k1(public_key) => Self::Secp256k1(public_key),
                     MemberPublicKey::Secp256r1(public_key) => Self::Secp256r1(public_key),
+                    MemberPublicKey::ZkLogin(public_id) => Self::ZkLogin(public_id),
                 })
             }
         }
@@ -574,6 +593,7 @@ mod serialization {
         Ed25519(Ed25519Signature),
         Secp256k1(Secp256k1Signature),
         Secp256r1(Secp256r1Signature),
+        ZkLogin(ZkLoginAuthenticator),
     }
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
@@ -582,6 +602,7 @@ mod serialization {
         Ed25519 { signature: Ed25519Signature },
         Secp256k1 { signature: Secp256k1Signature },
         Secp256r1 { signature: Secp256r1Signature },
+        ZkLogin(ZkLoginAuthenticator),
     }
 
     impl Serialize for MultisigMemberSignature {
@@ -606,6 +627,9 @@ mod serialization {
                             signature: *signature,
                         }
                     }
+                    MultisigMemberSignature::ZkLogin(authenticator) => {
+                        ReadableMemberSignature::ZkLogin(authenticator.clone())
+                    }
                 };
                 readable.serialize(serializer)
             } else {
@@ -618,6 +642,9 @@ mod serialization {
                     }
                     MultisigMemberSignature::Secp256r1(signature) => {
                         MemberSignature::Secp256r1(*signature)
+                    }
+                    MultisigMemberSignature::ZkLogin(authenticator) => {
+                        MemberSignature::ZkLogin(authenticator.clone())
                     }
                 };
                 binary.serialize(serializer)
@@ -636,6 +663,7 @@ mod serialization {
                     ReadableMemberSignature::Ed25519 { signature } => Self::Ed25519(signature),
                     ReadableMemberSignature::Secp256k1 { signature } => Self::Secp256k1(signature),
                     ReadableMemberSignature::Secp256r1 { signature } => Self::Secp256r1(signature),
+                    ReadableMemberSignature::ZkLogin(authenticator) => Self::ZkLogin(authenticator),
                 })
             } else {
                 let binary = MemberSignature::deserialize(deserializer)?;
@@ -643,6 +671,7 @@ mod serialization {
                     MemberSignature::Ed25519(signature) => Self::Ed25519(signature),
                     MemberSignature::Secp256k1(signature) => Self::Secp256k1(signature),
                     MemberSignature::Secp256r1(signature) => Self::Secp256r1(signature),
+                    MemberSignature::ZkLogin(authenticator) => Self::ZkLogin(authenticator),
                 })
             }
         }

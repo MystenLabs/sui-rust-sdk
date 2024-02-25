@@ -453,6 +453,8 @@ mod serialization {
     #[cfg(test)]
     mod test {
         use super::*;
+        use base64ct::Base64;
+        use base64ct::Encoding;
 
         #[cfg(target_arch = "wasm32")]
         use wasm_bindgen_test::wasm_bindgen_test as test;
@@ -484,7 +486,7 @@ mod serialization {
             ];
 
             for (scheme, fixture) in FIXTURES {
-                let bcs = <base64ct::Base64 as base64ct::Encoding>::decode_vec(fixture).unwrap();
+                let bcs = Base64::decode_vec(fixture).unwrap();
 
                 let sig: UserSignature = bcs::from_bytes(&bcs).unwrap();
                 assert_eq!(*scheme, sig.scheme());
@@ -504,7 +506,7 @@ mod serialization {
             const FIXTURE2: &str = "8QIDAwDYAAra4KQGp2Oq1TCOgWfH8IxC4UA5wJB/NqOcNmMh54Y5d5pnVQfTlqgq4J17a8+W+y3+jk9h4YMB9LzPDYcLAaJJBH+WLPfPaQ7T3Cv8nqpZ1TbPrT8E61FrSgeIbN4OTJeijjguv1pd3ImvTeo4AMYZczf5OH6+5yBaur7R6YACiooT5J36agjUk0TpVcTKMGwykIwD7NBkZ0gbinHxuVJwdi1tSbqhMpqvNgP+CFO6F7FSTe+xiHh0MDOKyYQItxY6MAAAAQAAAAAAAgAQAAAAAAABAAIAAyxBQTE5cXpXTWphMnFUdm9BU2FkYkIwTmxWYkVLTm9JWnUyZ1BjRmNUU2RkMQEwQVFJT0Y4MVpPZVJyR1daQmxvelhXWkVMb2xkK0ovcHovZU9IYmJtK3hienJLdz09ATBBZ05IKzY4ajhEaXJ4TU1Jb25FUmVpcE0vNjdkdkYvNEhIVVh2R3gwcCsyME1BPT0BAgA=";
 
             for fixture in [FIXTURE1, FIXTURE2] {
-                let bcs = <base64ct::Base64 as base64ct::Encoding>::decode_vec(fixture).unwrap();
+                let bcs = Base64::decode_vec(fixture).unwrap();
 
                 let sig: UserSignature = bcs::from_bytes(&bcs).unwrap();
                 assert_eq!(SignatureScheme::Multisig, sig.scheme());
@@ -524,7 +526,7 @@ mod serialization {
             const FIXTURE2: &str = "8QEDAgBMW4Oq7XMjO5c6HLgTBJrWDZsCEcZF2EPOf68fdf1aY3e3pvA3cmk0tjMmXFB9+A6J2NohCpTFb/CsXEBjtCcMAfraaMMOMzG815145jlrY44Rbp0d1JQJOJ3hjgEe2xVBFP3QR94IVZk6ssyYxsecpBA+re5eqVRacvZGSobNPkMDAAMADX2rNYyNrapO+gBJp1sHQ2VVsQo2ghm7aA9wVxNJ13UBAQIOF81ZOeRrGWZBlozXWZELold+J/pz/eOHbbm+xbzrKwECA0f7ryPwOKvEwwiicRF6Kkz/rt28X/gcdRe8bHSn7bQwAQIA";
 
             for fixture in [FIXTURE1, FIXTURE2] {
-                let bcs = <base64ct::Base64 as base64ct::Encoding>::decode_vec(fixture).unwrap();
+                let bcs = Base64::decode_vec(fixture).unwrap();
 
                 let sig: UserSignature = bcs::from_bytes(&bcs).unwrap();
                 assert_eq!(SignatureScheme::Multisig, sig.scheme());
@@ -535,6 +537,22 @@ mod serialization {
                 println!("{json}");
                 assert_eq!(sig, serde_json::from_str(&json).unwrap());
             }
+        }
+
+        #[test]
+        fn mutisig_with_zklogin() {
+            const FIXTURE: &str = "xwgDAQOWBwUDTDYyNzM5OTI5NDQyODI2NTYyNDE2NDMyNDk5Njc1NDY0MzY0MTU2ODM1MzgzMzAwNzMzMDkwMzgyOTUwOTAwMjA0MzcwMzI3MzQ0MTdNMTM5MjUxMzE5MTUzODM4NDMwOTkzODU1NTU2MjYyNzIwMzI5NjE5MjM3MjY1ODAyMjY2OTcwMTUzMTkxOTcxMzIxODkxMTg2MDUyNTcBMQMCTDc3MDQwMDc2MTQxMjAyNDQ0MjgyMDMyMzQwMzI3NzQ2ODkwODEwNzg2Mzg4NjkzMTcyNDM1NTEyNTMwMTA3MjYzMzg1MTA0MzYxMjdMNDczMzY5MTU2NjAwODE5MTIwNDAxMjcwNTc5OTA2MjI3NTk2MjY0NzMwMTUyNDU3MDIxMjM0MzczMjc1MTE3MTQyMjY2MzEzNTc1MgJMOTYzMjExNjUzNzQxMTQ3Mjk4MTQ2NDE0NzY0MDM5MzkxNzQxODQyMDI4NzgwOTUxODYyMTk5OTM0MjIwNjc2ODgzMjg0NzY5NTg5Nkw4NDM2Mjg3MTUwMzIxMjE2NTUwOTIxNTQ4ODg0MjI2MDM4MjczMTk0MjAyNDQwNTc0NzI5MDM4MTk2NDAxNDAzMDI0Mzg0MTEzODk4AgExATADTDUxNzIxODQyMDU0ODkxNDg4MzEwNTgxODkxNDIwNjI3Njc1NTM3MjMxMDkzNzIyMDk4NzI0NDAxMzA1MTg0MzYzODQxNzUxMjY1MjRMNTE1MTQzMjA2NjEzODc0NzIwOTEyMDY4NzUyMjIwODU1NDA0MTU2NDgyNzA4MDc5NzA1MDcxNjkyNzc2OTY0MzQ0NzQyMjEyMzI3MAExMXdpYVhOeklqb2lhSFIwY0hNNkx5OXBaQzUwZDJsMFkyZ3VkSFl2YjJGMWRHZ3lJaXcCMmV5SmhiR2NpT2lKU1V6STFOaUlzSW5SNWNDSTZJa3BYVkNJc0ltdHBaQ0k2SWpFaWZRTTIwNjg3NjQyNTE3NjMwNzMzMjczNjg3Nzk1NDc2MjQ3NDM3NzQzODM0NjAxMTAxNTY2Njg0OTY3OTY3NzA1ODA5OTg1MjQxMDY1NTM5CgAAAAAAAABhANFnRWP0VWDZA6kp8ltYtndCLMp70+CQMkW4CKPMOF5fGqTuUIKzqHJysBK8jS3rgHHBc5ZDqn0YUG0W2SH5gQC5xu4WMO8+cRFEpkjbBruyKE9ydM++5T/87lA8waSSAAgABAANfas1jI2tqk76AEmnWwdDZVWxCjaCGbtoD3BXE0nXdQEBAg4XzVk55GsZZkGWjNdZkQuiV34n+nP944dtub7FvOsrAQIDR/uvI/A4q8TDCKJxEXoqTP+u3bxf+Bx1F7xsdKfttDABAzwbaHR0cHM6Ly9pZC50d2l0Y2gudHYvb2F1dGgyLbzKbLI5Mq4c7y9X5gf73CthASNbTN9llO2Okr5TqEMBAQA=";
+
+            let bcs = Base64::decode_vec(FIXTURE).unwrap();
+
+            let sig: UserSignature = bcs::from_bytes(&bcs).unwrap();
+            assert_eq!(SignatureScheme::Multisig, sig.scheme());
+            let bytes = bcs::to_bytes(&sig).unwrap();
+            assert_eq!(bcs, bytes);
+
+            let json = serde_json::to_string_pretty(&sig).unwrap();
+            println!("{json}");
+            assert_eq!(sig, serde_json::from_str(&json).unwrap());
         }
     }
 }
