@@ -269,8 +269,8 @@ mod serialization {
                     Ok(MultisigMemberPublicKey::Secp256r1(public_key))
                 }
                 SignatureScheme::Multisig
-                | SignatureScheme::BLS12381
-                | SignatureScheme::ZkLoginAuthenticator => {
+                | SignatureScheme::Bls12381
+                | SignatureScheme::ZkLogin => {
                     Err(serde::de::Error::custom("invalid public key type"))
                 }
             }

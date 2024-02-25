@@ -94,9 +94,7 @@ impl SimpleSignature {
                     public_key: Secp256r1PublicKey::new(public_key),
                 })
             }
-            SignatureScheme::Multisig
-            | SignatureScheme::BLS12381
-            | SignatureScheme::ZkLoginAuthenticator => {
+            SignatureScheme::Multisig | SignatureScheme::Bls12381 | SignatureScheme::ZkLogin => {
                 Err(serde::de::Error::custom("invalid signature scheme"))
             }
         }
@@ -258,8 +256,8 @@ pub enum SignatureScheme {
     Secp256k1 = 0x01,
     Secp256r1 = 0x02,
     Multisig = 0x03,
-    BLS12381 = 0x04, // This is currently not supported for user addresses
-    ZkLoginAuthenticator = 0x05,
+    Bls12381 = 0x04, // This is currently not supported for user addresses
+    ZkLogin = 0x05,
 }
 
 impl SignatureScheme {
@@ -269,8 +267,8 @@ impl SignatureScheme {
             SignatureScheme::Secp256k1 => "secp256k1",
             SignatureScheme::Secp256r1 => "secp256r1",
             SignatureScheme::Multisig => "multisig",
-            SignatureScheme::BLS12381 => "bls12381",
-            SignatureScheme::ZkLoginAuthenticator => "zklogin",
+            SignatureScheme::Bls12381 => "bls12381",
+            SignatureScheme::ZkLogin => "zklogin",
         }
     }
 
@@ -280,8 +278,8 @@ impl SignatureScheme {
             0x01 => Ok(Self::Secp256k1),
             0x02 => Ok(Self::Secp256r1),
             0x03 => Ok(Self::Multisig),
-            0x04 => Ok(Self::BLS12381),
-            0x05 => Ok(Self::ZkLoginAuthenticator),
+            0x04 => Ok(Self::Bls12381),
+            0x05 => Ok(Self::ZkLogin),
             invalid => Err(InvalidSignatureScheme(invalid)),
         }
     }
@@ -444,7 +442,7 @@ mod serialization {
                         let multisig = MultisigAggregatedSignature::from_serialized_bytes(bytes)?;
                         Ok(Self::Multisig(multisig))
                     }
-                    SignatureScheme::BLS12381 | SignatureScheme::ZkLoginAuthenticator => {
+                    SignatureScheme::Bls12381 | SignatureScheme::ZkLogin => {
                         Err(serde::de::Error::custom("invalid signature scheme"))
                     }
                 }
