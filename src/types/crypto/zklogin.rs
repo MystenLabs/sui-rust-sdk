@@ -21,7 +21,7 @@ pub struct ZkLoginInputs {
     header_base64: String,
     address_seed: String,
     // #[serde(skip)]
-    // jwt_details: JWTDetails,
+    // jwt_details: JwtDetails,
 }
 
 /// A claim consists of value and index_mod_4.
@@ -41,7 +41,7 @@ pub struct Claim {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
-pub struct JWTDetails {
+pub struct JwtDetails {
     kid: String,
     header: String,
     iss: String,
@@ -75,6 +75,38 @@ pub struct ZkLoginPublicIdentifier {
     iss: String,
     //TODO bigint support
     address_seed: [u8; 32],
+}
+
+/// Struct that contains info for a JWK. A list of them for different kids can
+/// be retrieved from the JWK endpoint (e.g. <https://www.googleapis.com/oauth2/v3/certs>).
+/// The JWK is used to verify the JWT token.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+pub struct Jwk {
+    /// Key type parameter, https://datatracker.ietf.org/doc/html/rfc7517#section-4.1
+    pub kty: String,
+    /// RSA public exponent, https://datatracker.ietf.org/doc/html/rfc7517#section-9.3
+    pub e: String,
+    /// RSA modulus, https://datatracker.ietf.org/doc/html/rfc7517#section-9.3
+    pub n: String,
+    /// Algorithm parameter, https://datatracker.ietf.org/doc/html/rfc7517#section-4.4
+    pub alg: String,
+}
+
+/// Key to identify a JWK, consists of iss and kid.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+pub struct JwkId {
+    /// iss string that identifies the OIDC provider.
+    pub iss: String,
+    /// kid string that identifies the JWK.
+    pub kid: String,
 }
 
 #[cfg(feature = "serde")]

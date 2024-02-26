@@ -16,7 +16,8 @@ pub use secp256k1::{Secp256k1PrivateKey, Secp256k1PublicKey, Secp256k1Signature}
 pub use secp256r1::{Secp256r1PrivateKey, Secp256r1PublicKey, Secp256r1Signature};
 pub use signature::{SignatureScheme, SimpleSignature, UserSignature};
 pub use zklogin::{
-    Claim, JWTDetails, ZkLoginAuthenticator, ZkLoginInputs, ZkLoginProof, ZkLoginPublicIdentifier,
+    Claim, Jwk, JwkId, JwtDetails, ZkLoginAuthenticator, ZkLoginInputs, ZkLoginProof,
+    ZkLoginPublicIdentifier,
 };
 
 //
