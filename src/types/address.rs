@@ -177,6 +177,7 @@ impl std::error::Error for AddressParseError {}
 #[cfg(test)]
 mod test {
     use super::*;
+    use test_strategy::proptest;
 
     #[cfg(target_arch = "wasm32")]
     use wasm_bindgen_test::wasm_bindgen_test as test;
@@ -200,28 +201,26 @@ mod test {
         println!("{a}");
     }
 
-    proptest::proptest! {
-        #[test]
-        fn roundtrip_display_fromstr(address: Address) {
-            let s = address.to_string();
-            let a = s.parse::<Address>().unwrap();
-            assert_eq!(address, a);
-        }
+    #[proptest]
+    fn roundtrip_display_fromstr(address: Address) {
+        let s = address.to_string();
+        let a = s.parse::<Address>().unwrap();
+        assert_eq!(address, a);
+    }
 
-        #[test]
-        #[cfg(feature = "serde")]
-        fn roundtrip_bcs(address: Address) {
-            let b = bcs::to_bytes(&address).unwrap();
-            let a = bcs::from_bytes(&b).unwrap();
-            assert_eq!(address, a);
-        }
+    #[proptest]
+    #[cfg(feature = "serde")]
+    fn roundtrip_bcs(address: Address) {
+        let b = bcs::to_bytes(&address).unwrap();
+        let a = bcs::from_bytes(&b).unwrap();
+        assert_eq!(address, a);
+    }
 
-        #[test]
-        #[cfg(feature = "serde")]
-        fn roundtrip_json(address: Address) {
-            let s = serde_json::to_string(&address).unwrap();
-            let a = serde_json::from_str(&s).unwrap();
-            assert_eq!(address, a);
-        }
+    #[proptest]
+    #[cfg(feature = "serde")]
+    fn roundtrip_json(address: Address) {
+        let s = serde_json::to_string(&address).unwrap();
+        let a = serde_json::from_str(&s).unwrap();
+        assert_eq!(address, a);
     }
 }

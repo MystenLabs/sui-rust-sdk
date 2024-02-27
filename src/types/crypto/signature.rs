@@ -467,26 +467,25 @@ mod serialization {
         use super::*;
         use base64ct::Base64;
         use base64ct::Encoding;
+        use test_strategy::proptest;
 
         #[cfg(target_arch = "wasm32")]
         use wasm_bindgen_test::wasm_bindgen_test as test;
 
-        proptest::proptest! {
-            #[test]
-            #[cfg(feature = "serde")]
-            fn roundtrip_bcs(signature: UserSignature) {
-                let b = bcs::to_bytes(&signature).unwrap();
-                let s = bcs::from_bytes(&b).unwrap();
-                assert_eq!(signature, s);
-            }
+        #[proptest]
+        #[cfg(feature = "serde")]
+        fn roundtrip_bcs(signature: UserSignature) {
+            let b = bcs::to_bytes(&signature).unwrap();
+            let s = bcs::from_bytes(&b).unwrap();
+            assert_eq!(signature, s);
+        }
 
-            #[test]
-            #[cfg(feature = "serde")]
-            fn roundtrip_json(signature: UserSignature) {
-                let s = serde_json::to_string(&signature).unwrap();
-                let sig = serde_json::from_str(&s).unwrap();
-                assert_eq!(signature, sig);
-            }
+        #[proptest]
+        #[cfg(feature = "serde")]
+        fn roundtrip_json(signature: UserSignature) {
+            let s = serde_json::to_string(&signature).unwrap();
+            let sig = serde_json::from_str(&s).unwrap();
+            assert_eq!(signature, sig);
         }
 
         #[test]

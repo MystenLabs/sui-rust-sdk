@@ -310,32 +310,31 @@ impl_digest!(ObjectDigest);
 #[cfg(test)]
 mod test {
     use super::*;
+    use test_strategy::proptest;
 
     #[cfg(target_arch = "wasm32")]
     use wasm_bindgen_test::wasm_bindgen_test as test;
 
-    proptest::proptest! {
-        #[test]
-        fn roundtrip_display_fromstr(digest: Digest) {
-            let s = digest.to_string();
-            let d = s.parse::<Digest>().unwrap();
-            assert_eq!(digest, d);
-        }
+    #[proptest]
+    fn roundtrip_display_fromstr(digest: Digest) {
+        let s = digest.to_string();
+        let d = s.parse::<Digest>().unwrap();
+        assert_eq!(digest, d);
+    }
 
-        #[test]
-        #[cfg(feature = "serde")]
-        fn roundtrip_bcs(digest: Digest) {
-            let b = bcs::to_bytes(&digest).unwrap();
-            let d = bcs::from_bytes(&b).unwrap();
-            assert_eq!(digest, d);
-        }
+    #[proptest]
+    #[cfg(feature = "serde")]
+    fn roundtrip_bcs(digest: Digest) {
+        let b = bcs::to_bytes(&digest).unwrap();
+        let d = bcs::from_bytes(&b).unwrap();
+        assert_eq!(digest, d);
+    }
 
-        #[test]
-        #[cfg(feature = "serde")]
-        fn roundtrip_json(digest: Digest) {
-            let s = serde_json::to_string(&digest).unwrap();
-            let d = serde_json::from_str(&s).unwrap();
-            assert_eq!(digest, d);
-        }
+    #[proptest]
+    #[cfg(feature = "serde")]
+    fn roundtrip_json(digest: Digest) {
+        let s = serde_json::to_string(&digest).unwrap();
+        let d = serde_json::from_str(&s).unwrap();
+        assert_eq!(digest, d);
     }
 }

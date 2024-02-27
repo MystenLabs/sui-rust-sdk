@@ -167,6 +167,7 @@ mod test {
     use num_bigint::BigUint;
     use proptest::prelude::*;
     use std::str::FromStr;
+    use test_strategy::proptest;
 
     #[cfg(target_arch = "wasm32")]
     use wasm_bindgen_test::wasm_bindgen_test as test;
@@ -182,30 +183,28 @@ mod test {
         assert_eq!(seed.unpadded(), [1; 31].as_slice());
     }
 
-    proptest! {
-        #[test]
-        fn dont_crash_on_large_inputs(
-            bytes in proptest::collection::vec(any::<u8>(), 33..1024)
-        ) {
-            let big_int = BigUint::from_bytes_be(&bytes);
-            let radix10 = big_int.to_str_radix(10);
+    #[proptest]
+    fn dont_crash_on_large_inputs(
+        #[strategy(proptest::collection::vec(any::<u8>(), 33..1024))] bytes: Vec<u8>,
+    ) {
+        let big_int = BigUint::from_bytes_be(&bytes);
+        let radix10 = big_int.to_str_radix(10);
 
-            // doesn't crash
-            let _ = AddressSeed::from_str(&radix10);
-        }
+        // doesn't crash
+        let _ = AddressSeed::from_str(&radix10);
+    }
 
-        #[test]
-        fn valid_address_seeds(
-            bytes in proptest::collection::vec(any::<u8>(), 1..=32)
-        ) {
-            let big_int = BigUint::from_bytes_be(&bytes);
-            let radix10 = big_int.to_str_radix(10);
+    #[proptest]
+    fn valid_address_seeds(
+        #[strategy(proptest::collection::vec(any::<u8>(), 1..=32))] bytes: Vec<u8>,
+    ) {
+        let big_int = BigUint::from_bytes_be(&bytes);
+        let radix10 = big_int.to_str_radix(10);
 
-            let seed = AddressSeed::from_str(&radix10).unwrap();
-            assert_eq!(radix10, seed.to_string());
-            // Ensure unpadded doesn't crash
-            seed.unpadded();
-        }
+        let seed = AddressSeed::from_str(&radix10).unwrap();
+        assert_eq!(radix10, seed.to_string());
+        // Ensure unpadded doesn't crash
+        seed.unpadded();
     }
 }
 

@@ -100,17 +100,16 @@ macro_rules! impl_base64_helper {
         mod $test_module {
             use super::$display;
             use super::$fromstr;
+            use test_strategy::proptest;
 
             #[cfg(target_arch = "wasm32")]
             use wasm_bindgen_test::wasm_bindgen_test as test;
 
-            proptest::proptest! {
-                #[test]
-                fn roundtrip_display_fromstr(array: $fromstr) {
-                    let s = $display(&array.0).to_string();
-                    let a = s.parse::<$fromstr>().unwrap();
-                    assert_eq!(array, a);
-                }
+            #[proptest]
+            fn roundtrip_display_fromstr(array: $fromstr) {
+                let s = $display(&array.0).to_string();
+                let a = s.parse::<$fromstr>().unwrap();
+                assert_eq!(array, a);
             }
         }
     };
