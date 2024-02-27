@@ -85,13 +85,13 @@ pub struct ZkLoginPublicIdentifier {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 pub struct Jwk {
-    /// Key type parameter, https://datatracker.ietf.org/doc/html/rfc7517#section-4.1
+    /// Key type parameter, <https://datatracker.ietf.org/doc/html/rfc7517#section-4.1>
     pub kty: String,
-    /// RSA public exponent, https://datatracker.ietf.org/doc/html/rfc7517#section-9.3
+    /// RSA public exponent, <https://datatracker.ietf.org/doc/html/rfc7517#section-9.3>
     pub e: String,
-    /// RSA modulus, https://datatracker.ietf.org/doc/html/rfc7517#section-9.3
+    /// RSA modulus, <https://datatracker.ietf.org/doc/html/rfc7517#section-9.3>
     pub n: String,
-    /// Algorithm parameter, https://datatracker.ietf.org/doc/html/rfc7517#section-4.4
+    /// Algorithm parameter, <https://datatracker.ietf.org/doc/html/rfc7517#section-4.4>
     pub alg: String,
 }
 
