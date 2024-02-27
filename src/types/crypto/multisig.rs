@@ -260,7 +260,12 @@ mod serialization {
         {
             let b64: Cow<'de, str> = Deserialize::deserialize(deserializer)?;
             let bytes = Base64::decode_vec(&b64).map_err(serde::de::Error::custom)?;
-            let flag = SignatureScheme::from_byte(bytes[0]).map_err(serde::de::Error::custom)?;
+            let flag = SignatureScheme::from_byte(
+                *bytes
+                    .first()
+                    .ok_or_else(|| serde::de::Error::custom("missing signature scheme falg"))?,
+            )
+            .map_err(serde::de::Error::custom)?;
             let public_key_bytes = &bytes[1..];
             match flag {
                 SignatureScheme::Ed25519 => {
@@ -461,7 +466,12 @@ mod serialization {
             bytes: T,
         ) -> Result<Self, E> {
             let bytes = bytes.as_ref();
-            let flag = SignatureScheme::from_byte(bytes[0]).map_err(serde::de::Error::custom)?;
+            let flag = SignatureScheme::from_byte(
+                *bytes
+                    .first()
+                    .ok_or_else(|| serde::de::Error::custom("missing signature scheme falg"))?,
+            )
+            .map_err(serde::de::Error::custom)?;
             if flag != SignatureScheme::Multisig {
                 return Err(serde::de::Error::custom("invalid multisig flag"));
             }
@@ -732,6 +742,47 @@ mod serialization {
                     weight: binary.weight,
                 })
             }
+        }
+    }
+
+    #[cfg(test)]
+    mod test {
+        use super::*;
+        use test_strategy::proptest;
+
+        #[cfg(target_arch = "wasm32")]
+        use wasm_bindgen_test::wasm_bindgen_test as test;
+
+        #[proptest]
+        fn fuzz_deserialization_multisig_member_public_key(
+            #[strategy(proptest::collection::vec(proptest::arbitrary::any::<u8>(), 0..=2048))]
+            bytes: Vec<u8>,
+        ) {
+            let _: Result<MultisigMemberPublicKey, _> = bcs::from_bytes(&bytes);
+        }
+
+        #[proptest]
+        fn fuzz_deserialization_multisig_member(
+            #[strategy(proptest::collection::vec(proptest::arbitrary::any::<u8>(), 0..=2048))]
+            bytes: Vec<u8>,
+        ) {
+            let _: Result<MultisigMember, _> = bcs::from_bytes(&bytes);
+        }
+
+        #[proptest]
+        fn fuzz_deserialization_multisig_committee(
+            #[strategy(proptest::collection::vec(proptest::arbitrary::any::<u8>(), 0..=2048))]
+            bytes: Vec<u8>,
+        ) {
+            let _: Result<MultisigCommittee, _> = bcs::from_bytes(&bytes);
+        }
+
+        #[proptest]
+        fn fuzz_deserialization_multisig_member_signature(
+            #[strategy(proptest::collection::vec(proptest::arbitrary::any::<u8>(), 0..=2048))]
+            bytes: Vec<u8>,
+        ) {
+            let _: Result<MultisigMemberSignature, _> = bcs::from_bytes(&bytes);
         }
     }
 }

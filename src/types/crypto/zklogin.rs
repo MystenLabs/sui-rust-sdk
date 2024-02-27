@@ -269,7 +269,9 @@ mod serialization {
                 Ok(Self { iss, address_seed })
             } else {
                 let bytes: Cow<'de, [u8]> = Bytes::deserialize_as(deserializer)?;
-                let iss_len = bytes[0];
+                let iss_len = *bytes
+                    .first()
+                    .ok_or_else(|| serde::de::Error::custom("invalid zklogin public identifier"))?;
                 let iss_bytes = bytes
                     .get(1..(1 + iss_len as usize))
                     .ok_or_else(|| serde::de::Error::custom("invalid zklogin public identifier"))?;

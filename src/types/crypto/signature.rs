@@ -39,7 +39,12 @@ impl SimpleSignature {
     #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
     fn from_serialized_bytes<T: AsRef<[u8]>, E: serde::de::Error>(bytes: T) -> Result<Self, E> {
         let bytes = bytes.as_ref();
-        let flag = SignatureScheme::from_byte(bytes[0]).map_err(serde::de::Error::custom)?;
+        let flag = SignatureScheme::from_byte(
+            *bytes
+                .first()
+                .ok_or_else(|| serde::de::Error::custom("missing signature scheme falg"))?,
+        )
+        .map_err(serde::de::Error::custom)?;
         match flag {
             SignatureScheme::Ed25519 => {
                 let expected_length = 1 + Ed25519Signature::LENGTH + Ed25519PublicKey::LENGTH;
@@ -438,7 +443,10 @@ mod serialization {
                 let bytes: std::borrow::Cow<'de, [u8]> =
                     serde_with::Bytes::deserialize_as(deserializer)?;
                 let flag =
-                    SignatureScheme::from_byte(bytes[0]).map_err(serde::de::Error::custom)?;
+                    SignatureScheme::from_byte(*bytes.first().ok_or_else(|| {
+                        serde::de::Error::custom("missing signature scheme falg")
+                    })?)
+                    .map_err(serde::de::Error::custom)?;
                 match flag {
                     SignatureScheme::Ed25519
                     | SignatureScheme::Secp256k1
@@ -473,7 +481,6 @@ mod serialization {
         use wasm_bindgen_test::wasm_bindgen_test as test;
 
         #[proptest]
-        #[cfg(feature = "serde")]
         fn roundtrip_bcs(signature: UserSignature) {
             let b = bcs::to_bytes(&signature).unwrap();
             let s = bcs::from_bytes(&b).unwrap();
@@ -481,11 +488,26 @@ mod serialization {
         }
 
         #[proptest]
-        #[cfg(feature = "serde")]
         fn roundtrip_json(signature: UserSignature) {
             let s = serde_json::to_string(&signature).unwrap();
             let sig = serde_json::from_str(&s).unwrap();
             assert_eq!(signature, sig);
+        }
+
+        #[proptest]
+        fn fuzz_deserialization_user_signature(
+            #[strategy(proptest::collection::vec(proptest::arbitrary::any::<u8>(), 0..=2048))]
+            bytes: Vec<u8>,
+        ) {
+            let _: Result<UserSignature, _> = bcs::from_bytes(&bytes);
+        }
+
+        #[proptest]
+        fn fuzz_deserialization_simple_signature(
+            #[strategy(proptest::collection::vec(proptest::arbitrary::any::<u8>(), 0..=2048))]
+            bytes: Vec<u8>,
+        ) {
+            let _: Result<SimpleSignature, _> = bcs::from_bytes(&bytes);
         }
 
         #[test]
