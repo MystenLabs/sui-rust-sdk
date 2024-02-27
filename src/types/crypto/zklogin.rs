@@ -1,5 +1,5 @@
 use super::SimpleSignature;
-use crate::types::checkpoint::EpochId;
+use crate::types::{checkpoint::EpochId, u256::U256};
 
 /// An zk login authenticator with all the necessary fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -19,7 +19,7 @@ pub struct ZkLoginInputs {
     proof_points: ZkLoginProof,
     iss_base64_details: Claim,
     header_base64: String,
-    address_seed: String,
+    address_seed: AddressSeed,
     // #[serde(skip)]
     // jwt_details: JwtDetails,
 }
@@ -73,8 +73,7 @@ pub type CircomG2 = Vec<Vec<String>>;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ZkLoginPublicIdentifier {
     iss: String,
-    //TODO bigint support
-    address_seed: [u8; 32],
+    address_seed: AddressSeed,
 }
 
 /// Struct that contains info for a JWK. A list of them for different kids can
@@ -109,6 +108,107 @@ pub struct JwkId {
     pub kid: String,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AddressSeed([u8; 32]);
+
+impl AddressSeed {
+    pub fn unpadded(&self) -> &[u8] {
+        let mut buf = self.0.as_slice();
+
+        while !buf.is_empty() && buf[0] == 0 {
+            buf = &buf[1..];
+        }
+
+        // If the value is '0' then just return a slice of length 1 of the final byte
+        if buf.is_empty() {
+            &self.0[31..]
+        } else {
+            buf
+        }
+    }
+
+    pub fn padded(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl std::fmt::Display for AddressSeed {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let u256 = U256::from_be(U256::from_digits(self.0));
+        let radix10 = u256.to_str_radix(10);
+        f.write_str(&radix10)
+    }
+}
+
+#[derive(Debug)]
+pub struct AddressSeedParseError(bnum::errors::ParseIntError);
+
+impl std::fmt::Display for AddressSeedParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "unable to parse radix10 encoded value {}", self.0)
+    }
+}
+
+impl std::error::Error for AddressSeedParseError {}
+
+impl std::str::FromStr for AddressSeed {
+    type Err = AddressSeedParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let u256 = U256::from_str_radix(s, 10).map_err(AddressSeedParseError)?;
+        let be = u256.to_be();
+        Ok(Self(*be.digits()))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::AddressSeed;
+    use num_bigint::BigUint;
+    use proptest::prelude::*;
+    use std::str::FromStr;
+
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::wasm_bindgen_test as test;
+
+    #[test]
+    fn unpadded_slice() {
+        let seed = AddressSeed([0; 32]);
+        let zero: [u8; 1] = [0];
+        assert_eq!(seed.unpadded(), zero.as_slice());
+
+        let mut seed = AddressSeed([1; 32]);
+        seed.0[0] = 0;
+        assert_eq!(seed.unpadded(), [1; 31].as_slice());
+    }
+
+    proptest! {
+        #[test]
+        fn dont_crash_on_large_inputs(
+            bytes in proptest::collection::vec(any::<u8>(), 33..1024)
+        ) {
+            let big_int = BigUint::from_bytes_be(&bytes);
+            let radix10 = big_int.to_str_radix(10);
+
+            // doesn't crash
+            let _ = AddressSeed::from_str(&radix10);
+        }
+
+        #[test]
+        fn valid_address_seeds(
+            bytes in proptest::collection::vec(any::<u8>(), 1..=32)
+        ) {
+            let big_int = BigUint::from_bytes_be(&bytes);
+            let radix10 = big_int.to_str_radix(10);
+
+            let seed = AddressSeed::from_str(&radix10).unwrap();
+            assert_eq!(radix10, seed.to_string());
+            // Ensure unpadded doesn't crash
+            seed.unpadded();
+        }
+    }
+}
+
 #[cfg(feature = "serde")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
 mod serialization {
@@ -121,6 +221,7 @@ mod serialization {
     use serde::Serializer;
     use serde_with::Bytes;
     use serde_with::DeserializeAs;
+    use serde_with::SerializeAs;
     use std::borrow::Cow;
 
     // Serialized format is: iss_bytes_len || iss_bytes || padded_32_byte_address_seed.
@@ -133,16 +234,11 @@ mod serialization {
                 #[derive(serde_derive::Serialize)]
                 struct Readable<'a> {
                     iss: &'a str,
-                    //TODO this needs to be encoded as a Decimal u256 instead of in base64
-                    #[cfg_attr(
-                        feature = "serde",
-                        serde(with = "::serde_with::As::<crate::types::crypto::Base64Array32>")
-                    )]
-                    address_seed: [u8; 32],
+                    address_seed: &'a AddressSeed,
                 }
                 let readable = Readable {
                     iss: &self.iss,
-                    address_seed: self.address_seed,
+                    address_seed: &self.address_seed,
                 };
                 readable.serialize(serializer)
             } else {
@@ -151,7 +247,7 @@ mod serialization {
                 buf.push(iss_bytes.len() as u8);
                 buf.extend(iss_bytes);
 
-                buf.extend(&self.address_seed);
+                buf.extend(&self.address_seed.0);
 
                 serializer.serialize_bytes(&buf)
             }
@@ -167,12 +263,7 @@ mod serialization {
                 #[derive(serde_derive::Deserialize)]
                 struct Readable {
                     iss: String,
-                    //TODO this needs to be encoded as a Decimal u256 instead of in base64
-                    #[cfg_attr(
-                        feature = "serde",
-                        serde(with = "::serde_with::As::<crate::types::crypto::Base64Array32>")
-                    )]
-                    address_seed: [u8; 32],
+                    address_seed: AddressSeed,
                 }
 
                 let Readable { iss, address_seed } = Deserialize::deserialize(deserializer)?;
@@ -188,8 +279,9 @@ mod serialization {
                     .get((1 + iss_len as usize)..)
                     .ok_or_else(|| serde::de::Error::custom("invalid zklogin public identifier"))?;
 
-                let address_seed =
-                    <[u8; 32]>::try_from(address_seed_bytes).map_err(serde::de::Error::custom)?;
+                let address_seed = <[u8; 32]>::try_from(address_seed_bytes)
+                    .map_err(serde::de::Error::custom)
+                    .map(AddressSeed)?;
 
                 Ok(Self {
                     iss: iss.into(),
@@ -280,6 +372,25 @@ mod serialization {
                 max_epoch,
                 signature,
             })
+        }
+    }
+
+    // AddressSeed's serialized format is as a radix10 encoded string
+    impl Serialize for AddressSeed {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            serde_with::DisplayFromStr::serialize_as(self, serializer)
+        }
+    }
+
+    impl<'de> Deserialize<'de> for AddressSeed {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            serde_with::DisplayFromStr::deserialize_as(deserializer)
         }
     }
 }

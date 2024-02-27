@@ -126,6 +126,7 @@ fn roaring_bitmap_to_u16(roaring: &roaring::RoaringBitmap) -> Result<BitmapUnit,
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+#[allow(clippy::large_enum_variant)]
 pub enum MultisigMemberSignature {
     Ed25519(Ed25519Signature),
     Secp256k1(Secp256k1Signature),
@@ -589,6 +590,7 @@ mod serialization {
     }
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
+    #[allow(clippy::large_enum_variant)]
     enum MemberSignature {
         Ed25519(Ed25519Signature),
         Secp256k1(Secp256k1Signature),
@@ -598,6 +600,7 @@ mod serialization {
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
     #[serde(tag = "scheme", rename_all = "lowercase")]
+    #[allow(clippy::large_enum_variant)]
     enum ReadableMemberSignature {
         Ed25519 { signature: Ed25519Signature },
         Secp256k1 { signature: Secp256k1Signature },
