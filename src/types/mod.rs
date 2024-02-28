@@ -8,7 +8,8 @@ mod u256;
 
 pub use address::Address;
 pub use checkpoint::{
-    CheckpointCommitment, CheckpointSummary, EndOfEpochData, SignedCheckpointSummary,
+    CheckpointCommitment, CheckpointContents, CheckpointSummary, CheckpointTransactionInfo,
+    EndOfEpochData, SignedCheckpointSummary,
 };
 pub use crypto::{
     AddressSeed, Bls12381PrivateKey, Bls12381PublicKey, Bls12381Signature, Claim,
