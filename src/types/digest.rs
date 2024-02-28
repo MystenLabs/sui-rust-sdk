@@ -6,11 +6,7 @@
 )]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub struct Digest(
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "::serde_with::As::<::serde_with::IfIsHumanReadable<ReadableDigest>>")
-    )]
-    [u8; Self::LENGTH],
+    #[cfg_attr(feature = "serde", serde(with = "DigestSerialization"))] [u8; Self::LENGTH],
 );
 
 impl Digest {
@@ -133,6 +129,12 @@ impl std::fmt::LowerHex for Digest {
         Ok(())
     }
 }
+
+// Unfortunately sui's binary representation of digests is prefixed with its length meaning its
+// serialized binary form is 33 bytes long (in bcs) vs a more compact 32 bytes.
+#[cfg(feature = "serde")]
+type DigestSerialization =
+    ::serde_with::As<::serde_with::IfIsHumanReadable<ReadableDigest, ::serde_with::Bytes>>;
 
 #[cfg(feature = "serde")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
