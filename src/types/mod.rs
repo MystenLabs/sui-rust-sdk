@@ -7,7 +7,9 @@ mod object_id;
 mod u256;
 
 pub use address::Address;
-pub use checkpoint::{CheckpointCommitment, CheckpointSummary, EndOfEpochData};
+pub use checkpoint::{
+    CheckpointCommitment, CheckpointSummary, EndOfEpochData, SignedCheckpointSummary,
+};
 pub use crypto::{
     AddressSeed, Bls12381PrivateKey, Bls12381PublicKey, Bls12381Signature, Claim,
     Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature, Jwk, JwkId, JwtDetails,

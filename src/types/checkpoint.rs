@@ -2,6 +2,7 @@ use super::CheckpointContentsDigest;
 use super::CheckpointDigest;
 use super::Digest;
 use super::GasCostSummary;
+use super::ValidatorAggregatedSignature;
 use super::ValidatorCommitteeMember;
 
 pub type CheckpointSequenceNumber = u64;
@@ -75,6 +76,15 @@ pub struct CheckpointSummary {
     /// opaque data to be added to checkpoints which can be deserialized based on the current
     /// protocol version.
     pub version_specific_data: Vec<u8>,
+}
+
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+pub struct SignedCheckpointSummary {
+    pub checkpoint: CheckpointSummary,
+    pub signature: ValidatorAggregatedSignature,
 }
 
 #[cfg(feature = "serde")]
@@ -266,6 +276,32 @@ mod serialization {
                     end_of_epoch_data,
                     version_specific_data,
                 })
+            }
+        }
+    }
+
+    #[cfg(test)]
+    mod test {
+        use super::*;
+
+        #[cfg(target_arch = "wasm32")]
+        use wasm_bindgen_test::wasm_bindgen_test as test;
+
+        #[test]
+        fn signed_checkpoint_fixture() {
+            use base64ct::Base64;
+            use base64ct::Encoding;
+            const FIXTURES: &[&str] = &[
+                "CgAAAAAAAAAUAAAAAAAAABUAAAAAAAAAIJ6CIMG/6Un4MKNM8h+R9r8bQ6dNTk0WZxBMUQH1XFQBASCWUVucdQkje+4YbXVpvQZcg74nndL1NK7ccj1dDR04agAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACwAAAAAAAAAAAAAKAAAAAAAAAKOonlp6Vf8dJEjQYa/VyigZruaZwSwu3u/ZZVCsdrS1iaGPIAERZcNnfM75tOh10hI6MAAAAQAAAAAAAAAQAAAAAAA=",
+                "AgAAAAAAAAAFAAAAAAAAAAYAAAAAAAAAIINaPEm+WRQV2vGcPR9fe6fYhxl48GpqB+DqDYQqRHkuASBe+6BDLHSRCMiWqBkvVMqWXPWUsZnpc2gbOVdre3vnowAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwAAAAAAAAAAAQFgqGJldzxWMt2CZow1QiLmDf0RdLE6udu0bVdc1xaExX37NByF27rDH5C1DF+mkpLdA6YZnXMvuUw+zoWo71qe2DTdIDU4AcNaSUE3OoEHceuT+fBa6dMib3yDkkhmOZLyECcAAAAAAAAkAAAAAAAAAAAAAgAAAAAAAACvljn+1LWFSpu3PGx4BlIlVZq7blFK+fV7SOPEU0z9nz7lgkv8a12EA9R0tGm8hEYSOjAAAAEAAAAAAAAAEAAAAAAA",
+            ];
+
+            for fixture in FIXTURES {
+                let bcs = Base64::decode_vec(fixture).unwrap();
+
+                let checkpoint: SignedCheckpointSummary = bcs::from_bytes(&bcs).unwrap();
+                let bytes = bcs::to_bytes(&checkpoint).unwrap();
+                assert_eq!(bcs, bytes);
             }
         }
     }
