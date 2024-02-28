@@ -1,8 +1,8 @@
-use super::Bls12381PublicKey;
 use super::CheckpointContentsDigest;
 use super::CheckpointDigest;
 use super::Digest;
 use super::GasCostSummary;
+use super::ValidatorCommitteeMember;
 
 pub type CheckpointSequenceNumber = u64;
 pub type CheckpointTimestamp = u64;
@@ -26,17 +26,6 @@ pub enum CheckpointCommitment {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
-pub struct CommitteeMember {
-    pub public_key: Bls12381PublicKey,
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
-    pub stake: StakeUnit,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde_derive::Serialize, serde_derive::Deserialize)
-)]
 pub struct EndOfEpochData {
     /// next_epoch_committee is `Some` if and only if the current checkpoint is
     /// the last checkpoint of an epoch.
@@ -45,7 +34,7 @@ pub struct EndOfEpochData {
     /// or the total number of transactions from genesis to the end of an epoch.
     /// The committee is stored as a vector of validator pub key and stake pairs. The vector
     /// should be sorted based on the Committee data structure.
-    pub next_epoch_committee: Vec<CommitteeMember>,
+    pub next_epoch_committee: Vec<ValidatorCommitteeMember>,
 
     /// The protocol version that is in effect during the epoch that starts immediately after this
     /// checkpoint.

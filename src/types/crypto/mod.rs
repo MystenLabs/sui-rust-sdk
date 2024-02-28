@@ -4,6 +4,7 @@ mod multisig;
 mod secp256k1;
 mod secp256r1;
 mod signature;
+mod validator;
 mod zklogin;
 
 pub use bls12381::{Bls12381PrivateKey, Bls12381PublicKey, Bls12381Signature};
@@ -15,6 +16,9 @@ pub use multisig::{
 pub use secp256k1::{Secp256k1PrivateKey, Secp256k1PublicKey, Secp256k1Signature};
 pub use secp256r1::{Secp256r1PrivateKey, Secp256r1PublicKey, Secp256r1Signature};
 pub use signature::{SignatureScheme, SimpleSignature, UserSignature};
+pub use validator::{
+    ValidatorAggregatedSignature, ValidatorCommittee, ValidatorCommitteeMember, ValidatorSignature,
+};
 pub use zklogin::{
     AddressSeed, Claim, Jwk, JwkId, JwtDetails, ZkLoginAuthenticator, ZkLoginInputs, ZkLoginProof,
     ZkLoginPublicIdentifier,

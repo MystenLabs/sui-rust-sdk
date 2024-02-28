@@ -14,7 +14,8 @@ pub use crypto::{
     MultisigAggregatedSignature, MultisigCommittee, MultisigMember, MultisigMemberPublicKey,
     MultisigMemberSignature, Secp256k1PrivateKey, Secp256k1PublicKey, Secp256k1Signature,
     Secp256r1PrivateKey, Secp256r1PublicKey, Secp256r1Signature, SignatureScheme, SimpleSignature,
-    UserSignature, ZkLoginAuthenticator, ZkLoginInputs, ZkLoginProof, ZkLoginPublicIdentifier,
+    UserSignature, ValidatorAggregatedSignature, ValidatorCommittee, ValidatorCommitteeMember,
+    ValidatorSignature, ZkLoginAuthenticator, ZkLoginInputs, ZkLoginProof, ZkLoginPublicIdentifier,
 };
 pub use digest::{
     CheckpointContentsDigest, CheckpointDigest, Digest, DigestParseError, TransactionDigest,
