@@ -1,7 +1,7 @@
-check-features:
+check:
 	cargo hack check --feature-powerset --no-dev-deps
 
-check-fmt:
+fmt-check:
 	cargo fmt -- --check
 
 clippy:
@@ -19,7 +19,7 @@ doc:
 doc-open:
 	RUSTDOCFLAGS="--cfg=doc_cfg -Zunstable-options --generate-link-to-definition" RUSTC_BOOTSTRAP=1 cargo doc --all-features --no-deps --open
 
-ci: check-features check-fmt clippy test wasm
+ci: check fmt-check clippy test wasm
 
 ci-full: ci doc
 
