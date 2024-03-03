@@ -15,13 +15,8 @@ pub type StakeUnit = u64;
 pub type ProtocolVersion = u64;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde_derive::Serialize, serde_derive::Deserialize)
-)]
-//TODO maybe do a tag?
 pub enum CheckpointCommitment {
-    EcmhLiveObjectSet(Digest),
+    EcmhLiveObjectSet { digest: Digest },
     // Other commitment types (e.g. merkle roots) go here.
 }
 
@@ -411,6 +406,61 @@ mod serialization {
                         )
                         .collect(),
                 ))
+            }
+        }
+    }
+
+    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
+    #[serde(tag = "type", rename_all = "snake_case")]
+    enum ReadableCommitment {
+        EcmhLiveObjectSet { digest: Digest },
+    }
+
+    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
+    enum BinaryCommitment {
+        EcmhLiveObjectSet { digest: Digest },
+    }
+
+    impl Serialize for CheckpointCommitment {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            if serializer.is_human_readable() {
+                let readable = match *self {
+                    CheckpointCommitment::EcmhLiveObjectSet { digest } => {
+                        ReadableCommitment::EcmhLiveObjectSet { digest }
+                    }
+                };
+                readable.serialize(serializer)
+            } else {
+                let binary = match *self {
+                    CheckpointCommitment::EcmhLiveObjectSet { digest } => {
+                        BinaryCommitment::EcmhLiveObjectSet { digest }
+                    }
+                };
+                binary.serialize(serializer)
+            }
+        }
+    }
+
+    impl<'de> Deserialize<'de> for CheckpointCommitment {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            if deserializer.is_human_readable() {
+                Ok(match ReadableCommitment::deserialize(deserializer)? {
+                    ReadableCommitment::EcmhLiveObjectSet { digest } => {
+                        Self::EcmhLiveObjectSet { digest }
+                    }
+                })
+            } else {
+                Ok(match BinaryCommitment::deserialize(deserializer)? {
+                    BinaryCommitment::EcmhLiveObjectSet { digest } => {
+                        Self::EcmhLiveObjectSet { digest }
+                    }
+                })
             }
         }
     }
