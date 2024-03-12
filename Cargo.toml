@@ -33,6 +33,7 @@ bs58 = "0.5.0"
 hex = "0.4.3"
 roaring = { version = "0.10.3", default-features = false }
 bnum = "0.10.0"
+winnow = "0.6.5"
 
 # Serialization and Deserialization support
 serde = { version = "1.0.197", optional = true }
