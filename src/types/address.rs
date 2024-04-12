@@ -120,6 +120,12 @@ impl From<[u8; 32]> for Address {
     }
 }
 
+impl From<Address> for Vec<u8> {
+    fn from(value: Address) -> Self {
+        value.0.to_vec()
+    }
+}
+
 impl std::fmt::Display for Address {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "0x")?;
