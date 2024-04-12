@@ -15,6 +15,9 @@ mod _serde {
     pub(crate) type ReadableDisplay =
         ::serde_with::As<::serde_with::IfIsHumanReadable<::serde_with::DisplayFromStr>>;
 
+    pub(crate) type ReadableBase64Encoded =
+        ::serde_with::As<::serde_with::IfIsHumanReadable<Base64Encoded, ::serde_with::Bytes>>;
+
     pub(crate) struct Base64Encoded;
 
     impl<T: AsRef<[u8]>> SerializeAs<T> for Base64Encoded {

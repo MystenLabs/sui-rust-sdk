@@ -5,13 +5,15 @@ mod digest;
 mod gas;
 mod object;
 mod object_id;
+mod transaction;
 mod type_tag;
 mod u256;
 
 pub use address::Address;
 pub use checkpoint::{
-    CheckpointCommitment, CheckpointContents, CheckpointSummary, CheckpointTransactionInfo,
-    EndOfEpochData, SignedCheckpointSummary,
+    CheckpointCommitment, CheckpointContents, CheckpointSequenceNumber, CheckpointSummary,
+    CheckpointTimestamp, CheckpointTransactionInfo, EndOfEpochData, EpochId, ProtocolVersion,
+    SignedCheckpointSummary, StakeUnit,
 };
 pub use crypto::{
     AddressSeed, Bls12381PrivateKey, Bls12381PublicKey, Bls12381Signature, Claim,
@@ -33,4 +35,11 @@ pub use object::{
     Version,
 };
 pub use object_id::ObjectId;
+pub use transaction::{
+    ActiveJwk, Argument, AuthenticatorStateExpire, AuthenticatorStateUpdate, ChangeEpoch, Command,
+    ConsensusCommitPrologue, ConsensusCommitPrologueV2, EndOfEpochTransactionKind, GasPayment,
+    GenesisTransaction, InputArgument, MakeMoveVector, MergeCoins, MoveCall,
+    ProgrammableTransaction, Publish, RandomnessStateUpdate, SignedTransaction, SplitCoins,
+    SystemPackage, Transaction, TransactionExpiration, TransactionKind, TransferObjects, Upgrade,
+};
 pub use type_tag::{Identifier, StructTag, TypeParseError, TypeTag};
