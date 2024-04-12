@@ -102,6 +102,37 @@ pub struct StructTag {
     pub type_params: Vec<TypeTag>,
 }
 
+impl StructTag {
+    pub fn gas_coin() -> Self {
+        let sui = Self {
+            address: Address::TWO,
+            module: Identifier::new("sui").unwrap(),
+            name: Identifier::new("SUI").unwrap(),
+            type_params: vec![],
+        };
+
+        Self::coin(TypeTag::Struct(Box::new(sui)))
+    }
+
+    pub fn coin(type_tag: TypeTag) -> Self {
+        Self {
+            address: Address::TWO,
+            module: Identifier::new("coin").unwrap(),
+            name: Identifier::new("Coin").unwrap(),
+            type_params: vec![type_tag],
+        }
+    }
+
+    pub fn staked_sui() -> Self {
+        Self {
+            address: Address::THREE,
+            module: Identifier::new("staking_pool").unwrap(),
+            name: Identifier::new("StakedSui").unwrap(),
+            type_params: vec![],
+        }
+    }
+}
+
 impl std::fmt::Display for StructTag {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}::{}::{}", self.address, self.module, self.name)?;

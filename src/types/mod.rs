@@ -3,6 +3,7 @@ mod checkpoint;
 mod crypto;
 mod digest;
 mod gas;
+mod object;
 mod object_id;
 mod type_tag;
 mod u256;
@@ -27,5 +28,9 @@ pub use digest::{
     TransactionEventsDigest,
 };
 pub use gas::GasCostSummary;
+pub use object::{
+    GenesisObject, Object, ObjectData, ObjectReference, ObjectType, Owner, TypeOrigin, UpgradeInfo,
+    Version,
+};
 pub use object_id::ObjectId;
 pub use type_tag::{Identifier, StructTag, TypeParseError, TypeTag};
