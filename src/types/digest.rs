@@ -308,6 +308,8 @@ impl_digest!(TransactionDigest);
 impl_digest!(TransactionEffectsDigest);
 impl_digest!(TransactionEventsDigest);
 impl_digest!(ObjectDigest);
+impl_digest!(ConsensusCommitDigest);
+impl_digest!(EffectsAuxiliaryDataDigest);
 
 #[cfg(test)]
 mod test {

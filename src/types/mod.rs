@@ -22,8 +22,9 @@ pub use crypto::{
     ValidatorSignature, ZkLoginAuthenticator, ZkLoginInputs, ZkLoginProof, ZkLoginPublicIdentifier,
 };
 pub use digest::{
-    CheckpointContentsDigest, CheckpointDigest, Digest, DigestParseError, TransactionDigest,
-    TransactionEffectsDigest, TransactionEventsDigest,
+    CheckpointContentsDigest, CheckpointDigest, ConsensusCommitDigest, Digest, DigestParseError,
+    EffectsAuxiliaryDataDigest, ObjectDigest, TransactionDigest, TransactionEffectsDigest,
+    TransactionEventsDigest,
 };
 pub use gas::GasCostSummary;
 pub use object_id::ObjectId;
