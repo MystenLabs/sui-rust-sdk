@@ -15,9 +15,17 @@ pub struct Address(
 impl Address {
     pub const LENGTH: usize = 32;
     pub const ZERO: Self = Self([0u8; Self::LENGTH]);
+    pub const TWO: Self = Self::from_u8(2);
+    pub const THREE: Self = Self::from_u8(3);
 
     pub const fn new(bytes: [u8; Self::LENGTH]) -> Self {
         Self(bytes)
+    }
+
+    const fn from_u8(byte: u8) -> Self {
+        let mut address = Self::ZERO;
+        address.0[31] = byte;
+        address
     }
 
     #[cfg(feature = "rand")]
