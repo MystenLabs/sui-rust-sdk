@@ -64,6 +64,14 @@ impl std::error::Error for TypeParseError {}
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Identifier(Box<str>);
 
+impl Identifier {
+    pub fn new<T: AsRef<str>>(identifier: T) -> Result<Self, TypeParseError> {
+        parse::parse_identifier(identifier.as_ref())
+            .map(|ident| Self(ident.into()))
+            .map_err(|_| TypeParseError)
+    }
+}
+
 impl std::fmt::Display for Identifier {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.0)
