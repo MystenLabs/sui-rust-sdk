@@ -26,7 +26,7 @@ pub struct ValidatorCommitteeMember {
     pub stake: StakeUnit,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
