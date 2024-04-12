@@ -88,6 +88,12 @@ impl std::str::FromStr for Identifier {
     }
 }
 
+impl PartialEq<str> for Identifier {
+    fn eq(&self, other: &str) -> bool {
+        self.0.as_ref() == other
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct StructTag {
     pub address: Address,
