@@ -7,6 +7,12 @@ use super::{
 #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
 mod serialization;
 
+mod unresolved;
+pub use unresolved::{
+    UnresolvedGasPayment, UnresolvedInputArgument, UnresolvedObjectReference,
+    UnresolvedProgrammableTransaction, UnresolvedTransaction,
+};
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Transaction {
     pub kind: TransactionKind,

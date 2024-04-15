@@ -49,6 +49,8 @@ pub use transaction::{
     ConsensusCommitPrologue, ConsensusCommitPrologueV2, EndOfEpochTransactionKind, GasPayment,
     GenesisTransaction, InputArgument, MakeMoveVector, MergeCoins, MoveCall,
     ProgrammableTransaction, Publish, RandomnessStateUpdate, SignedTransaction, SplitCoins,
-    SystemPackage, Transaction, TransactionExpiration, TransactionKind, TransferObjects, Upgrade,
+    SystemPackage, Transaction, TransactionExpiration, TransactionKind, TransferObjects,
+    UnresolvedGasPayment, UnresolvedInputArgument, UnresolvedObjectReference,
+    UnresolvedProgrammableTransaction, UnresolvedTransaction, Upgrade,
 };
 pub use type_tag::{Identifier, StructTag, TypeParseError, TypeTag};
