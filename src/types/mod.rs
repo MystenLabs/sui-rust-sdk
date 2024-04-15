@@ -3,6 +3,7 @@ mod checkpoint;
 mod crypto;
 mod digest;
 mod effects;
+mod events;
 mod execution_status;
 mod gas;
 mod object;
@@ -32,6 +33,7 @@ pub use digest::{
     TransactionEventsDigest,
 };
 pub use effects::{TransactionEffects, TransactionEffectsV1, TransactionEffectsV2};
+pub use events::{Event, TransactionEvents};
 pub use execution_status::{
     CommandArgumentError, ExecutionError, ExecutionStatus, MoveLocation, PackageUpgradeError,
     TypeArgumentError,
