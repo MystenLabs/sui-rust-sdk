@@ -14,9 +14,9 @@ mod u256;
 
 pub use address::Address;
 pub use checkpoint::{
-    CheckpointCommitment, CheckpointContents, CheckpointSequenceNumber, CheckpointSummary,
-    CheckpointTimestamp, CheckpointTransactionInfo, EndOfEpochData, EpochId, ProtocolVersion,
-    SignedCheckpointSummary, StakeUnit,
+    CheckpointCommitment, CheckpointContents, CheckpointData, CheckpointSequenceNumber,
+    CheckpointSummary, CheckpointTimestamp, CheckpointTransaction, CheckpointTransactionInfo,
+    EndOfEpochData, EpochId, ProtocolVersion, SignedCheckpointSummary, StakeUnit,
 };
 pub use crypto::{
     AddressSeed, Bls12381PrivateKey, Bls12381PublicKey, Bls12381Signature, Claim,

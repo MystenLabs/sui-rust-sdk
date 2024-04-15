@@ -2,8 +2,12 @@ use super::CheckpointContentsDigest;
 use super::CheckpointDigest;
 use super::Digest;
 use super::GasCostSummary;
+use super::Object;
+use super::SignedTransaction;
 use super::TransactionDigest;
+use super::TransactionEffects;
 use super::TransactionEffectsDigest;
+use super::TransactionEvents;
 use super::UserSignature;
 use super::ValidatorAggregatedSignature;
 use super::ValidatorCommitteeMember;
@@ -76,6 +80,7 @@ pub struct CheckpointSummary {
     pub version_specific_data: Vec<u8>,
 }
 
+#[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
@@ -97,6 +102,27 @@ pub struct CheckpointTransactionInfo {
     pub transaction: TransactionDigest,
     pub effects: TransactionEffectsDigest,
     pub signatures: Vec<UserSignature>,
+}
+
+#[derive(Clone, Debug)]
+pub struct CheckpointData {
+    pub checkpoint_summary: SignedCheckpointSummary,
+    pub checkpoint_contents: CheckpointContents,
+    pub transactions: Vec<CheckpointTransaction>,
+}
+
+#[derive(Clone, Debug)]
+pub struct CheckpointTransaction {
+    /// The input Transaction
+    pub transaction: SignedTransaction,
+    /// The effects produced by executing this transaction
+    pub effects: TransactionEffects,
+    /// The events, if any, emitted by this transaciton during execution
+    pub events: Option<TransactionEvents>,
+    /// The state of all inputs to this transaction as they were prior to execution.
+    pub input_objects: Vec<Object>,
+    /// The state of all output objects created or mutated by this transaction.
+    pub output_objects: Vec<Object>,
 }
 
 #[cfg(feature = "serde")]
