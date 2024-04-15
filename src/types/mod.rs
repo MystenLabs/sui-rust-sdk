@@ -2,6 +2,7 @@ mod address;
 mod checkpoint;
 mod crypto;
 mod digest;
+mod execution_status;
 mod gas;
 mod object;
 mod object_id;
@@ -28,6 +29,10 @@ pub use digest::{
     CheckpointContentsDigest, CheckpointDigest, ConsensusCommitDigest, Digest, DigestParseError,
     EffectsAuxiliaryDataDigest, ObjectDigest, TransactionDigest, TransactionEffectsDigest,
     TransactionEventsDigest,
+};
+pub use execution_status::{
+    CommandArgumentError, ExecutionError, ExecutionStatus, MoveLocation, PackageUpgradeError,
+    TypeArgumentError,
 };
 pub use gas::GasCostSummary;
 pub use object::{
