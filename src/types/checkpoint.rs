@@ -105,6 +105,10 @@ pub struct CheckpointTransactionInfo {
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
 pub struct CheckpointData {
     pub checkpoint_summary: SignedCheckpointSummary,
     pub checkpoint_contents: CheckpointContents,
@@ -112,6 +116,10 @@ pub struct CheckpointData {
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
 pub struct CheckpointTransaction {
     /// The input Transaction
     pub transaction: SignedTransaction,
