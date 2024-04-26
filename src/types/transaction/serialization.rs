@@ -827,6 +827,195 @@ mod command {
     }
 }
 
+mod signed_transaction {
+    use serde::ser::SerializeSeq;
+
+    use super::*;
+    use crate::types::{
+        transaction::{SignedTransaction, Transaction},
+        UserSignature,
+    };
+
+    #[derive(serde_derive::Serialize)]
+    struct ReadableSignedTransactionRef<'a> {
+        #[serde(flatten)]
+        transaction: &'a Transaction,
+        signatures: &'a Vec<UserSignature>,
+    }
+
+    #[derive(serde_derive::Deserialize)]
+    struct ReadableSignedTransaction {
+        #[serde(flatten)]
+        transaction: Transaction,
+        signatures: Vec<UserSignature>,
+    }
+
+    #[derive(serde_derive::Serialize)]
+    struct BinarySignedTransactionRef<'a> {
+        #[serde(with = "::serde_with::As::<IntentMessageWrappedTransaction>")]
+        transaction: &'a Transaction,
+        signatures: &'a Vec<UserSignature>,
+    }
+
+    #[derive(serde_derive::Deserialize)]
+    struct BinarySignedTransaction {
+        #[serde(with = "::serde_with::As::<IntentMessageWrappedTransaction>")]
+        transaction: Transaction,
+        signatures: Vec<UserSignature>,
+    }
+
+    impl Serialize for SignedTransaction {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            let Self {
+                transaction,
+                signatures,
+            } = self;
+            if serializer.is_human_readable() {
+                let readable = ReadableSignedTransactionRef {
+                    transaction,
+                    signatures,
+                };
+                readable.serialize(serializer)
+            } else {
+                let binary = BinarySignedTransactionRef {
+                    transaction,
+                    signatures,
+                };
+
+                let mut s = serializer.serialize_seq(Some(1))?;
+                s.serialize_element(&binary)?;
+                s.end()
+            }
+        }
+    }
+
+    impl<'de> Deserialize<'de> for SignedTransaction {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            if deserializer.is_human_readable() {
+                let ReadableSignedTransaction {
+                    transaction,
+                    signatures,
+                } = Deserialize::deserialize(deserializer)?;
+
+                Ok(Self {
+                    transaction,
+                    signatures,
+                })
+            } else {
+                struct V;
+                impl<'de> serde::de::Visitor<'de> for V {
+                    type Value = SignedTransaction;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                        formatter.write_str("expected a sequence with length 1")
+                    }
+
+                    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+                    where
+                        A: serde::de::SeqAccess<'de>,
+                    {
+                        if seq.size_hint().is_some_and(|size| size != 1) {
+                            return Err(serde::de::Error::custom(
+                                "expected a sequence with length 1",
+                            ));
+                        }
+
+                        let BinarySignedTransaction {
+                            transaction,
+                            signatures,
+                        } = seq.next_element()?.ok_or_else(|| {
+                            serde::de::Error::custom("expected a sequence with length 1")
+                        })?;
+                        Ok(SignedTransaction {
+                            transaction,
+                            signatures,
+                        })
+                    }
+                }
+
+                deserializer.deserialize_seq(V)
+            }
+        }
+    }
+
+    /// Intents are defined as:
+    ///
+    /// ```
+    /// pub struct Intent {
+    ///     pub scope: IntentScope,
+    ///     pub version: IntentVersion,
+    ///     pub app_id: AppId,
+    /// }
+    ///
+    /// pub enum IntentVersion {
+    ///     V0 = 0,
+    /// }
+    ///
+    /// pub enum AppId {
+    ///     Sui = 0,
+    ///     Narwhal = 1,
+    ///     Consensus = 2,
+    /// }
+    ///
+    /// pub enum IntentScope {
+    ///     TransactionData = 0,         // Used for a user signature on a transaction data.
+    ///     TransactionEffects = 1,      // Used for an authority signature on transaction effects.
+    ///     CheckpointSummary = 2,       // Used for an authority signature on a checkpoint summary.
+    ///     PersonalMessage = 3,         // Used for a user signature on a personal message.
+    ///     SenderSignedTransaction = 4, // Used for an authority signature on a user signed transaction.
+    ///     ProofOfPossession = 5, // Used as a signature representing an authority's proof of possession of its authority protocol key.
+    ///     HeaderDigest = 6,      // Used for narwhal authority signature on header digest.
+    ///     BridgeEventUnused = 7, // for bridge purposes but it's currently not included in messages.
+    ///     ConsensusBlock = 8,    // Used for consensus authority signature on block's digest
+    /// }
+    /// ```
+    ///
+    /// So we need to serialize Transaction as (0, 0, 0, Transaction)
+    struct IntentMessageWrappedTransaction;
+
+    impl SerializeAs<Transaction> for IntentMessageWrappedTransaction {
+        fn serialize_as<S>(transaction: &Transaction, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            use serde::ser::SerializeTuple;
+
+            let mut s = serializer.serialize_tuple(4)?;
+            s.serialize_element(&0u8)?;
+            s.serialize_element(&0u8)?;
+            s.serialize_element(&0u8)?;
+            s.serialize_element(transaction)?;
+            s.end()
+        }
+    }
+
+    impl<'de> DeserializeAs<'de, Transaction> for IntentMessageWrappedTransaction {
+        fn deserialize_as<D>(deserializer: D) -> Result<Transaction, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let (scope, version, app, transaction): (u8, u8, u8, Transaction) =
+                Deserialize::deserialize(deserializer)?;
+            match (scope, version, app) {
+                (0, 0, 0) => {}
+                _ => {
+                    return Err(serde::de::Error::custom(format!(
+                        "invalid intent message ({scope}, {version}, {app})"
+                    )))
+                }
+            }
+
+            Ok(transaction)
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use base64ct::{Base64, Encoding};

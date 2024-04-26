@@ -22,12 +22,7 @@ pub struct Transaction {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde_derive::Serialize, serde_derive::Deserialize)
-)]
 pub struct SignedTransaction {
-    //TODO might have to worry about this being serialized by being wrapped in an intent message
     transaction: Transaction,
     signatures: Vec<UserSignature>,
 }
