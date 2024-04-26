@@ -62,7 +62,16 @@ impl std::fmt::Display for TypeParseError {
 impl std::error::Error for TypeParseError {}
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Identifier(Box<str>);
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+pub struct Identifier(
+    #[cfg_attr(
+        test,
+        proptest(
+            strategy = "proptest::strategy::Strategy::prop_map(\"[a-zA-Z][a-zA-Z0-9_]{0,127}\", Into::into)"
+        )
+    )]
+    Box<str>,
+);
 
 impl Identifier {
     pub fn new<T: AsRef<str>>(identifier: T) -> Result<Self, TypeParseError> {
