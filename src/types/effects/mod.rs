@@ -21,14 +21,18 @@ mod serialization {
     #[derive(serde_derive::Serialize)]
     #[serde(tag = "version")]
     enum ReadableEffectsRef<'a> {
+        #[serde(rename = "1")]
         V1(&'a TransactionEffectsV1),
+        #[serde(rename = "2")]
         V2(&'a TransactionEffectsV2),
     }
 
     #[derive(serde_derive::Deserialize)]
     #[serde(tag = "version")]
     pub enum ReadableEffects {
+        #[serde(rename = "1")]
         V1(Box<TransactionEffectsV1>),
+        #[serde(rename = "2")]
         V2(Box<TransactionEffectsV2>),
     }
 

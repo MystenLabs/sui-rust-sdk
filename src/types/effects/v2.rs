@@ -7,16 +7,11 @@ use crate::types::{
 
 /// The response from processing a transaction or a certified transaction
 #[derive(Eq, PartialEq, Clone, Debug)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde_derive::Serialize, serde_derive::Deserialize)
-)]
 pub struct TransactionEffectsV2 {
     /// The status of the execution
     status: ExecutionStatus,
     /// The epoch when this transaction was executed.
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
-    executed_epoch: EpochId,
+    epoch: EpochId,
     gas_used: GasCostSummary,
     /// The transaction digest
     transaction_digest: TransactionDigest,
@@ -31,7 +26,6 @@ pub struct TransactionEffectsV2 {
     dependencies: Vec<TransactionDigest>,
 
     /// The version number of all the written Move objects by this transaction.
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     lamport_version: Version,
     /// Objects whose state are changed in the object store.
     changed_objects: Vec<ChangedObject>,
@@ -145,6 +139,187 @@ mod serialization {
 
     use super::*;
 
+    #[derive(serde_derive::Serialize)]
+    struct ReadableTransactionEffectsV2Ref<'a> {
+        #[serde(flatten)]
+        status: &'a ExecutionStatus,
+        #[serde(with = "crate::_serde::ReadableDisplay")]
+        epoch: &'a EpochId,
+        gas_used: &'a GasCostSummary,
+        transaction_digest: &'a TransactionDigest,
+        gas_object_index: &'a Option<u32>,
+        events_digest: &'a Option<TransactionEventsDigest>,
+        dependencies: &'a Vec<TransactionDigest>,
+        #[serde(with = "crate::_serde::ReadableDisplay")]
+        lamport_version: &'a Version,
+        changed_objects: &'a Vec<ChangedObject>,
+        unchanged_shared_objects: &'a Vec<UnchangedSharedObject>,
+        auxiliary_data_digest: &'a Option<EffectsAuxiliaryDataDigest>,
+    }
+
+    #[derive(serde_derive::Deserialize)]
+    struct ReadableTransactionEffectsV2 {
+        #[serde(flatten)]
+        status: ExecutionStatus,
+        #[serde(with = "crate::_serde::ReadableDisplay")]
+        epoch: EpochId,
+        gas_used: GasCostSummary,
+        transaction_digest: TransactionDigest,
+        gas_object_index: Option<u32>,
+        events_digest: Option<TransactionEventsDigest>,
+        dependencies: Vec<TransactionDigest>,
+        #[serde(with = "crate::_serde::ReadableDisplay")]
+        lamport_version: Version,
+        changed_objects: Vec<ChangedObject>,
+        unchanged_shared_objects: Vec<UnchangedSharedObject>,
+        auxiliary_data_digest: Option<EffectsAuxiliaryDataDigest>,
+    }
+
+    #[derive(serde_derive::Serialize)]
+    struct BinaryTransactionEffectsV2Ref<'a> {
+        status: &'a ExecutionStatus,
+        epoch: &'a EpochId,
+        gas_used: &'a GasCostSummary,
+        transaction_digest: &'a TransactionDigest,
+        gas_object_index: &'a Option<u32>,
+        events_digest: &'a Option<TransactionEventsDigest>,
+        dependencies: &'a Vec<TransactionDigest>,
+        lamport_version: &'a Version,
+        changed_objects: &'a Vec<ChangedObject>,
+        unchanged_shared_objects: &'a Vec<UnchangedSharedObject>,
+        auxiliary_data_digest: &'a Option<EffectsAuxiliaryDataDigest>,
+    }
+
+    #[derive(serde_derive::Deserialize)]
+    struct BinaryTransactionEffectsV2 {
+        status: ExecutionStatus,
+        epoch: EpochId,
+        gas_used: GasCostSummary,
+        transaction_digest: TransactionDigest,
+        gas_object_index: Option<u32>,
+        events_digest: Option<TransactionEventsDigest>,
+        dependencies: Vec<TransactionDigest>,
+        lamport_version: Version,
+        changed_objects: Vec<ChangedObject>,
+        unchanged_shared_objects: Vec<UnchangedSharedObject>,
+        auxiliary_data_digest: Option<EffectsAuxiliaryDataDigest>,
+    }
+
+    impl Serialize for TransactionEffectsV2 {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            let Self {
+                status,
+                epoch,
+                gas_used,
+                transaction_digest,
+                gas_object_index,
+                events_digest,
+                dependencies,
+                lamport_version,
+                changed_objects,
+                unchanged_shared_objects,
+                auxiliary_data_digest,
+            } = self;
+            if serializer.is_human_readable() {
+                let readable = ReadableTransactionEffectsV2Ref {
+                    status,
+                    epoch,
+                    gas_used,
+                    transaction_digest,
+                    gas_object_index,
+                    events_digest,
+                    dependencies,
+                    lamport_version,
+                    changed_objects,
+                    unchanged_shared_objects,
+                    auxiliary_data_digest,
+                };
+                readable.serialize(serializer)
+            } else {
+                let binary = BinaryTransactionEffectsV2Ref {
+                    status,
+                    epoch,
+                    gas_used,
+                    transaction_digest,
+                    gas_object_index,
+                    events_digest,
+                    dependencies,
+                    lamport_version,
+                    changed_objects,
+                    unchanged_shared_objects,
+                    auxiliary_data_digest,
+                };
+                binary.serialize(serializer)
+            }
+        }
+    }
+
+    impl<'de> Deserialize<'de> for TransactionEffectsV2 {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            if deserializer.is_human_readable() {
+                let ReadableTransactionEffectsV2 {
+                    status,
+                    epoch,
+                    gas_used,
+                    transaction_digest,
+                    gas_object_index,
+                    events_digest,
+                    dependencies,
+                    lamport_version,
+                    changed_objects,
+                    unchanged_shared_objects,
+                    auxiliary_data_digest,
+                } = Deserialize::deserialize(deserializer)?;
+                Ok(Self {
+                    status,
+                    epoch,
+                    gas_used,
+                    transaction_digest,
+                    gas_object_index,
+                    events_digest,
+                    dependencies,
+                    lamport_version,
+                    changed_objects,
+                    unchanged_shared_objects,
+                    auxiliary_data_digest,
+                })
+            } else {
+                let BinaryTransactionEffectsV2 {
+                    status,
+                    epoch,
+                    gas_used,
+                    transaction_digest,
+                    gas_object_index,
+                    events_digest,
+                    dependencies,
+                    lamport_version,
+                    changed_objects,
+                    unchanged_shared_objects,
+                    auxiliary_data_digest,
+                } = Deserialize::deserialize(deserializer)?;
+                Ok(Self {
+                    status,
+                    epoch,
+                    gas_used,
+                    transaction_digest,
+                    gas_object_index,
+                    events_digest,
+                    dependencies,
+                    lamport_version,
+                    changed_objects,
+                    unchanged_shared_objects,
+                    auxiliary_data_digest,
+                })
+            }
+        }
+    }
+
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
     struct ReadableChangedObject {
         object_id: ObjectId,
@@ -192,14 +367,14 @@ mod serialization {
     }
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
-    pub struct ReadableUnchangedSharedObject {
+    struct ReadableUnchangedSharedObject {
         object_id: ObjectId,
         #[serde(flatten)]
         kind: UnchangedSharedKind,
     }
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
-    pub struct BinaryUnchangedSharedObject {
+    struct BinaryUnchangedSharedObject {
         object_id: ObjectId,
         kind: UnchangedSharedKind,
     }
