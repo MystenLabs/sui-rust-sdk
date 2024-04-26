@@ -1,6 +1,7 @@
 use super::{Digest, Identifier, ObjectId};
 
 #[derive(Eq, PartialEq, Clone, Debug)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub enum ExecutionStatus {
     Success,
     /// Gas used in the failed case, and the error.
@@ -8,6 +9,12 @@ pub enum ExecutionStatus {
         /// The error
         error: ExecutionError,
         /// Which command the error occurred
+        #[cfg_attr(
+            test,
+            proptest(
+                strategy = "proptest::strategy::Strategy::prop_map(proptest::arbitrary::any::<Option<u16>>(), |opt| opt.map(Into::into))"
+            )
+        )]
         command: Option<u64>,
     },
 }
@@ -17,6 +24,7 @@ pub enum ExecutionStatus {
 pub type TypeParameterIndex = u16;
 
 #[derive(Eq, PartialEq, Clone, Debug)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub enum ExecutionError {
     //
     // General transaction errors
@@ -148,6 +156,7 @@ pub enum ExecutionError {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub struct MoveLocation {
     pub package: ObjectId,
     pub module: Identifier,
@@ -159,6 +168,7 @@ pub struct MoveLocation {
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub enum CommandArgumentError {
     /// The type of the value does not match the expected type
     TypeMismatch,
@@ -194,6 +204,7 @@ pub enum CommandArgumentError {
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub enum PackageUpgradeError {
     /// Unable to fetch package
     UnableToFetchPackage { package_id: ObjectId },
@@ -215,9 +226,9 @@ pub enum PackageUpgradeError {
 #[derive(Eq, PartialEq, Clone, Copy, Debug)]
 #[cfg_attr(
     feature = "serde",
-    derive(serde_derive::Serialize, serde_derive::Deserialize),
-    serde(rename_all = "kebab-case")
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub enum TypeArgumentError {
     /// A type was not found in the module specified
     TypeNotFound,
@@ -236,14 +247,18 @@ mod serialization {
     use serde::Serializer;
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
-    #[serde(tag = "status")]
-    enum ReadableExecutionStatus {
-        Success,
-        Failure {
-            #[serde(flatten)]
-            error: ExecutionError,
-            command: Option<u16>,
-        },
+    struct ReadableExecutionStatus {
+        success: bool,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        status: Option<FailureStatus>,
+    }
+
+    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
+    struct FailureStatus {
+        #[serde(flatten)]
+        error: ExecutionError,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        command: Option<u16>,
     }
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
@@ -262,13 +277,17 @@ mod serialization {
         {
             if serializer.is_human_readable() {
                 let readable = match self.clone() {
-                    ExecutionStatus::Success => ReadableExecutionStatus::Success,
-                    ExecutionStatus::Failure { error, command } => {
-                        ReadableExecutionStatus::Failure {
+                    ExecutionStatus::Success => ReadableExecutionStatus {
+                        success: true,
+                        status: None,
+                    },
+                    ExecutionStatus::Failure { error, command } => ReadableExecutionStatus {
+                        success: false,
+                        status: Some(FailureStatus {
                             error,
                             command: command.map(|c| c as u16),
-                        }
-                    }
+                        }),
+                    },
                 };
                 readable.serialize(serializer)
             } else {
@@ -289,13 +308,21 @@ mod serialization {
             D: Deserializer<'de>,
         {
             if deserializer.is_human_readable() {
-                ReadableExecutionStatus::deserialize(deserializer).map(|readable| match readable {
-                    ReadableExecutionStatus::Success => Self::Success,
-                    ReadableExecutionStatus::Failure { error, command } => Self::Failure {
-                        error,
-                        command: command.map(Into::into),
-                    },
-                })
+                let ReadableExecutionStatus { success, status } =
+                    Deserialize::deserialize(deserializer)?;
+                match (success, status) {
+                    (true, None) => Ok(ExecutionStatus::Success),
+                    (false, Some(FailureStatus { error, command })) => {
+                        Ok(ExecutionStatus::Failure {
+                            error,
+                            command: command.map(Into::into),
+                        })
+                    }
+                    // invalid cases
+                    (true, Some(_)) | (false, None) => {
+                        Err(serde::de::Error::custom("invalid execution status"))
+                    }
+                }
             } else {
                 BinaryExecutionStatus::deserialize(deserializer).map(|readable| match readable {
                     BinaryExecutionStatus::Success => Self::Success,
@@ -315,11 +342,15 @@ mod serialization {
         InvariantViolation,
         FeatureNotYetSupported,
         ObjectTooBig {
+            #[serde(with = "crate::_serde::ReadableDisplay")]
             object_size: u64,
+            #[serde(with = "crate::_serde::ReadableDisplay")]
             max_object_size: u64,
         },
         PackageTooBig {
+            #[serde(with = "crate::_serde::ReadableDisplay")]
             object_size: u64,
+            #[serde(with = "crate::_serde::ReadableDisplay")]
             max_object_size: u64,
         },
         CircularObjectOwnership {
@@ -334,6 +365,7 @@ mod serialization {
         },
         MoveAbort {
             location: MoveLocation,
+            #[serde(with = "crate::_serde::ReadableDisplay")]
             code: u64,
         },
         VmVerificationOrDeserializationError,
@@ -360,14 +392,18 @@ mod serialization {
         },
         InvalidTransferObject,
         EffectsTooLarge {
+            #[serde(with = "crate::_serde::ReadableDisplay")]
             current_size: u64,
+            #[serde(with = "crate::_serde::ReadableDisplay")]
             max_size: u64,
         },
         PublishUpgradeMissingDependency,
         PublishUpgradeDependencyDowngrade,
         PackageUpgradeError(PackageUpgradeError),
         WrittenObjectsTooLarge {
+            #[serde(with = "crate::_serde::ReadableDisplay")]
             object_size: u64,
+            #[serde(with = "crate::_serde::ReadableDisplay")]
             max_object_size: u64,
         },
         CertificateDenied,
@@ -786,104 +822,110 @@ mod serialization {
                     }
                 })
             } else {
-                ExecutionError::deserialize(deserializer).map(|binary| match binary {
-                    ExecutionError::InsufficientGas => ExecutionError::InsufficientGas,
-                    ExecutionError::InvalidGasObject => ExecutionError::InvalidGasObject,
-                    ExecutionError::InvariantViolation => ExecutionError::InvariantViolation,
-                    ExecutionError::FeatureNotYetSupported => {
+                BinaryExecutionError::deserialize(deserializer).map(|binary| match binary {
+                    BinaryExecutionError::InsufficientGas => ExecutionError::InsufficientGas,
+                    BinaryExecutionError::InvalidGasObject => ExecutionError::InvalidGasObject,
+                    BinaryExecutionError::InvariantViolation => ExecutionError::InvariantViolation,
+                    BinaryExecutionError::FeatureNotYetSupported => {
                         ExecutionError::FeatureNotYetSupported
                     }
-                    ExecutionError::ObjectTooBig {
+                    BinaryExecutionError::ObjectTooBig {
                         object_size,
                         max_object_size,
                     } => ExecutionError::ObjectTooBig {
                         object_size,
                         max_object_size,
                     },
-                    ExecutionError::PackageTooBig {
+                    BinaryExecutionError::PackageTooBig {
                         object_size,
                         max_object_size,
                     } => ExecutionError::PackageTooBig {
                         object_size,
                         max_object_size,
                     },
-                    ExecutionError::CircularObjectOwnership { object } => {
+                    BinaryExecutionError::CircularObjectOwnership { object } => {
                         ExecutionError::CircularObjectOwnership { object }
                     }
-                    ExecutionError::InsufficientCoinBalance => {
+                    BinaryExecutionError::InsufficientCoinBalance => {
                         ExecutionError::InsufficientCoinBalance
                     }
-                    ExecutionError::CoinBalanceOverflow => ExecutionError::CoinBalanceOverflow,
-                    ExecutionError::PublishErrorNonZeroAddress => {
+                    BinaryExecutionError::CoinBalanceOverflow => {
+                        ExecutionError::CoinBalanceOverflow
+                    }
+                    BinaryExecutionError::PublishErrorNonZeroAddress => {
                         ExecutionError::PublishErrorNonZeroAddress
                     }
-                    ExecutionError::SuiMoveVerificationError => {
+                    BinaryExecutionError::SuiMoveVerificationError => {
                         ExecutionError::SuiMoveVerificationError
                     }
-                    ExecutionError::MovePrimitiveRuntimeError { location } => {
+                    BinaryExecutionError::MovePrimitiveRuntimeError { location } => {
                         ExecutionError::MovePrimitiveRuntimeError { location }
                     }
-                    ExecutionError::MoveAbort { location, code } => {
+                    BinaryExecutionError::MoveAbort { location, code } => {
                         ExecutionError::MoveAbort { location, code }
                     }
-                    ExecutionError::VmVerificationOrDeserializationError => {
+                    BinaryExecutionError::VmVerificationOrDeserializationError => {
                         ExecutionError::VmVerificationOrDeserializationError
                     }
-                    ExecutionError::VmInvariantViolation => ExecutionError::VmInvariantViolation,
-                    ExecutionError::FunctionNotFound => ExecutionError::FunctionNotFound,
-                    ExecutionError::ArityMismatch => ExecutionError::ArityMismatch,
-                    ExecutionError::TypeArityMismatch => ExecutionError::TypeArityMismatch,
-                    ExecutionError::NonEntryFunctionInvoked => {
+                    BinaryExecutionError::VmInvariantViolation => {
+                        ExecutionError::VmInvariantViolation
+                    }
+                    BinaryExecutionError::FunctionNotFound => ExecutionError::FunctionNotFound,
+                    BinaryExecutionError::ArityMismatch => ExecutionError::ArityMismatch,
+                    BinaryExecutionError::TypeArityMismatch => ExecutionError::TypeArityMismatch,
+                    BinaryExecutionError::NonEntryFunctionInvoked => {
                         ExecutionError::NonEntryFunctionInvoked
                     }
-                    ExecutionError::CommandArgumentError { argument, kind } => {
+                    BinaryExecutionError::CommandArgumentError { argument, kind } => {
                         ExecutionError::CommandArgumentError { argument, kind }
                     }
-                    ExecutionError::TypeArgumentError {
+                    BinaryExecutionError::TypeArgumentError {
                         type_argument,
                         kind,
                     } => ExecutionError::TypeArgumentError {
                         type_argument,
                         kind,
                     },
-                    ExecutionError::UnusedValueWithoutDrop { result, subresult } => {
+                    BinaryExecutionError::UnusedValueWithoutDrop { result, subresult } => {
                         ExecutionError::UnusedValueWithoutDrop { result, subresult }
                     }
-                    ExecutionError::InvalidPublicFunctionReturnType { index } => {
+                    BinaryExecutionError::InvalidPublicFunctionReturnType { index } => {
                         ExecutionError::InvalidPublicFunctionReturnType { index }
                     }
-                    ExecutionError::InvalidTransferObject => ExecutionError::InvalidTransferObject,
-                    ExecutionError::EffectsTooLarge {
+                    BinaryExecutionError::InvalidTransferObject => {
+                        ExecutionError::InvalidTransferObject
+                    }
+                    BinaryExecutionError::EffectsTooLarge {
                         current_size,
                         max_size,
                     } => ExecutionError::EffectsTooLarge {
                         current_size,
                         max_size,
                     },
-                    ExecutionError::PublishUpgradeMissingDependency => {
+                    BinaryExecutionError::PublishUpgradeMissingDependency => {
                         ExecutionError::PublishUpgradeMissingDependency
                     }
-                    ExecutionError::PublishUpgradeDependencyDowngrade => {
+                    BinaryExecutionError::PublishUpgradeDependencyDowngrade => {
                         ExecutionError::PublishUpgradeDependencyDowngrade
                     }
-                    ExecutionError::PackageUpgradeError(err) => {
+                    BinaryExecutionError::PackageUpgradeError(err) => {
                         ExecutionError::PackageUpgradeError(err)
                     }
-                    ExecutionError::WrittenObjectsTooLarge {
+                    BinaryExecutionError::WrittenObjectsTooLarge {
                         object_size,
                         max_object_size,
                     } => ExecutionError::WrittenObjectsTooLarge {
                         object_size,
                         max_object_size,
                     },
-                    ExecutionError::CertificateDenied => ExecutionError::CertificateDenied,
-                    ExecutionError::SuiMoveVerificationTimedout => {
+                    BinaryExecutionError::CertificateDenied => ExecutionError::CertificateDenied,
+                    BinaryExecutionError::SuiMoveVerificationTimedout => {
                         ExecutionError::SuiMoveVerificationTimedout
                     }
-                    ExecutionError::SharedObjectOperationNotAllowed => {
+                    BinaryExecutionError::SharedObjectOperationNotAllowed => {
                         ExecutionError::SharedObjectOperationNotAllowed
                     }
-                    ExecutionError::InputObjectDeleted => ExecutionError::InputObjectDeleted,
+                    BinaryExecutionError::InputObjectDeleted => ExecutionError::InputObjectDeleted,
                 })
             }
         }
@@ -1226,6 +1268,30 @@ mod serialization {
                     },
                 })
             }
+        }
+    }
+
+    #[cfg(test)]
+    mod test {
+        use super::*;
+        use test_strategy::proptest;
+
+        #[cfg(target_arch = "wasm32")]
+        use wasm_bindgen_test::wasm_bindgen_test as test;
+
+        #[proptest]
+        fn roundtrip_bcs(status: ExecutionStatus) {
+            let b = bcs::to_bytes(&status).unwrap();
+            let a = bcs::from_bytes(&b).unwrap();
+            assert_eq!(status, a);
+        }
+
+        #[proptest]
+        fn roundtrip_json(status: ExecutionStatus) {
+            let s = serde_json::to_string(&status).unwrap();
+            println!("{s}");
+            let a = serde_json::from_str(&s).unwrap();
+            assert_eq!(status, a);
         }
     }
 }
