@@ -17,6 +17,20 @@ mod transaction {
     };
 
     #[derive(serde_derive::Serialize)]
+    #[serde(tag = "version")]
+    enum ReadableTransactionDataRef<'a> {
+        #[serde(rename = "1")]
+        V1(ReadableTransactionRef<'a>),
+    }
+
+    #[derive(serde_derive::Deserialize)]
+    #[serde(tag = "version")]
+    enum ReadableTransactionData {
+        #[serde(rename = "1")]
+        V1(ReadableTransaction),
+    }
+
+    #[derive(serde_derive::Serialize)]
     struct ReadableTransactionRef<'a> {
         #[serde(flatten)]
         kind: &'a TransactionKind,
@@ -66,12 +80,12 @@ mod transaction {
             S: Serializer,
         {
             if serializer.is_human_readable() {
-                let readable = ReadableTransactionRef {
+                let readable = ReadableTransactionDataRef::V1(ReadableTransactionRef {
                     kind: &self.kind,
                     sender: &self.sender,
                     gas_payment: &self.gas_payment,
                     expiration: &self.expiration,
-                };
+                });
                 readable.serialize(serializer)
             } else {
                 let binary = BinaryTransactionDataRef::V1(BinaryTransactionRef {
@@ -91,12 +105,12 @@ mod transaction {
             D: Deserializer<'de>,
         {
             if deserializer.is_human_readable() {
-                let ReadableTransaction {
+                let ReadableTransactionData::V1(ReadableTransaction {
                     kind,
                     sender,
                     gas_payment,
                     expiration,
-                } = Deserialize::deserialize(deserializer)?;
+                }) = Deserialize::deserialize(deserializer)?;
 
                 Ok(Transaction {
                     kind,
