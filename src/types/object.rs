@@ -24,6 +24,28 @@ impl ObjectReference {
             digest,
         }
     }
+
+    pub fn object_id(&self) -> &ObjectId {
+        &self.object_id
+    }
+
+    pub fn version(&self) -> Version {
+        self.version
+    }
+
+    pub fn digest(&self) -> &ObjectDigest {
+        &self.digest
+    }
+
+    pub fn into_parts(self) -> (ObjectId, Version, ObjectDigest) {
+        let Self {
+            object_id,
+            version,
+            digest,
+        } = self;
+
+        (object_id, version, digest)
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
