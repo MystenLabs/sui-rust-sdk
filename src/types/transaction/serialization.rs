@@ -827,6 +827,8 @@ mod command {
     }
 }
 
+pub(crate) use signed_transaction::SignedTransactionWithIntentMessage;
+
 mod signed_transaction {
     use serde::ser::SerializeSeq;
 
@@ -852,14 +854,12 @@ mod signed_transaction {
 
     #[derive(serde_derive::Serialize)]
     struct BinarySignedTransactionRef<'a> {
-        #[serde(with = "::serde_with::As::<IntentMessageWrappedTransaction>")]
         transaction: &'a Transaction,
         signatures: &'a Vec<UserSignature>,
     }
 
     #[derive(serde_derive::Deserialize)]
     struct BinarySignedTransaction {
-        #[serde(with = "::serde_with::As::<IntentMessageWrappedTransaction>")]
         transaction: Transaction,
         signatures: Vec<UserSignature>,
     }
@@ -884,10 +884,7 @@ mod signed_transaction {
                     transaction,
                     signatures,
                 };
-
-                let mut s = serializer.serialize_seq(Some(1))?;
-                s.serialize_element(&binary)?;
-                s.end()
+                binary.serialize(serializer)
             }
         }
     }
@@ -908,38 +905,15 @@ mod signed_transaction {
                     signatures,
                 })
             } else {
-                struct V;
-                impl<'de> serde::de::Visitor<'de> for V {
-                    type Value = SignedTransaction;
+                let BinarySignedTransaction {
+                    transaction,
+                    signatures,
+                } = Deserialize::deserialize(deserializer)?;
 
-                    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                        formatter.write_str("expected a sequence with length 1")
-                    }
-
-                    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-                    where
-                        A: serde::de::SeqAccess<'de>,
-                    {
-                        if seq.size_hint().is_some_and(|size| size != 1) {
-                            return Err(serde::de::Error::custom(
-                                "expected a sequence with length 1",
-                            ));
-                        }
-
-                        let BinarySignedTransaction {
-                            transaction,
-                            signatures,
-                        } = seq.next_element()?.ok_or_else(|| {
-                            serde::de::Error::custom("expected a sequence with length 1")
-                        })?;
-                        Ok(SignedTransaction {
-                            transaction,
-                            signatures,
-                        })
-                    }
-                }
-
-                deserializer.deserialize_seq(V)
+                Ok(Self {
+                    transaction,
+                    signatures,
+                })
             }
         }
     }
@@ -1012,6 +986,105 @@ mod signed_transaction {
             }
 
             Ok(transaction)
+        }
+    }
+
+    pub(crate) struct SignedTransactionWithIntentMessage;
+
+    #[derive(serde_derive::Serialize)]
+    struct BinarySignedTransactionWithIntentMessageRef<'a> {
+        #[serde(with = "::serde_with::As::<IntentMessageWrappedTransaction>")]
+        transaction: &'a Transaction,
+        signatures: &'a Vec<UserSignature>,
+    }
+
+    #[derive(serde_derive::Deserialize)]
+    struct BinarySignedTransactionWithIntentMessage {
+        #[serde(with = "::serde_with::As::<IntentMessageWrappedTransaction>")]
+        transaction: Transaction,
+        signatures: Vec<UserSignature>,
+    }
+
+    impl SerializeAs<SignedTransaction> for SignedTransactionWithIntentMessage {
+        fn serialize_as<S>(
+            transaction: &SignedTransaction,
+            serializer: S,
+        ) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            let SignedTransaction {
+                transaction,
+                signatures,
+            } = transaction;
+            if serializer.is_human_readable() {
+                let readable = ReadableSignedTransactionRef {
+                    transaction,
+                    signatures,
+                };
+                readable.serialize(serializer)
+            } else {
+                let binary = BinarySignedTransactionWithIntentMessageRef {
+                    transaction,
+                    signatures,
+                };
+
+                let mut s = serializer.serialize_seq(Some(1))?;
+                s.serialize_element(&binary)?;
+                s.end()
+            }
+        }
+    }
+
+    impl<'de> DeserializeAs<'de, SignedTransaction> for SignedTransactionWithIntentMessage {
+        fn deserialize_as<D>(deserializer: D) -> Result<SignedTransaction, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            if deserializer.is_human_readable() {
+                let ReadableSignedTransaction {
+                    transaction,
+                    signatures,
+                } = Deserialize::deserialize(deserializer)?;
+
+                Ok(SignedTransaction {
+                    transaction,
+                    signatures,
+                })
+            } else {
+                struct V;
+                impl<'de> serde::de::Visitor<'de> for V {
+                    type Value = SignedTransaction;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                        formatter.write_str("expected a sequence with length 1")
+                    }
+
+                    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+                    where
+                        A: serde::de::SeqAccess<'de>,
+                    {
+                        if seq.size_hint().is_some_and(|size| size != 1) {
+                            return Err(serde::de::Error::custom(
+                                "expected a sequence with length 1",
+                            ));
+                        }
+
+                        let BinarySignedTransactionWithIntentMessage {
+                            transaction,
+                            signatures,
+                        } = seq.next_element()?.ok_or_else(|| {
+                            serde::de::Error::custom("expected a sequence with length 1")
+                        })?;
+                        Ok(SignedTransaction {
+                            transaction,
+                            signatures,
+                        })
+                    }
+                }
+
+                deserializer.deserialize_seq(V)
+            }
         }
     }
 }

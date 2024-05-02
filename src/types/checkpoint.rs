@@ -122,6 +122,10 @@ pub struct CheckpointData {
 )]
 pub struct CheckpointTransaction {
     /// The input Transaction
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "::serde_with::As::<crate::_serde::SignedTransactionWithIntentMessage>")
+    )]
     pub transaction: SignedTransaction,
     /// The effects produced by executing this transaction
     pub effects: TransactionEffects,

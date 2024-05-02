@@ -6,6 +6,9 @@ use super::{
 #[cfg(feature = "serde")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
 mod serialization;
+#[cfg(feature = "serde")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
+pub(crate) use serialization::SignedTransactionWithIntentMessage;
 
 mod unresolved;
 pub use unresolved::{

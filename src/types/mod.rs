@@ -54,3 +54,7 @@ pub use transaction::{
     UnresolvedProgrammableTransaction, UnresolvedTransaction, Upgrade,
 };
 pub use type_tag::{Identifier, StructTag, TypeParseError, TypeTag};
+
+#[cfg(feature = "serde")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
+pub(crate) use transaction::SignedTransactionWithIntentMessage;

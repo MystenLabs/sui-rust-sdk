@@ -111,4 +111,6 @@ mod _serde {
             roaring::RoaringBitmap::deserialize_from(&bytes[..]).map_err(serde::de::Error::custom)
         }
     }
+
+    pub(crate) use super::types::SignedTransactionWithIntentMessage;
 }
