@@ -26,8 +26,8 @@ pub struct Transaction {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SignedTransaction {
-    transaction: Transaction,
-    signatures: Vec<UserSignature>,
+    pub transaction: Transaction,
+    pub signatures: Vec<UserSignature>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
