@@ -346,7 +346,7 @@ pub enum Command {
 )]
 pub struct TransferObjects {
     objects: Vec<Argument>,
-    recipiet: Argument,
+    address: Argument,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -393,7 +393,7 @@ pub struct Publish {
 pub struct MakeMoveVector {
     #[cfg_attr(feature = "serde", serde(rename = "type"))]
     type_: Option<TypeTag>,
-    entires: Vec<Argument>,
+    elements: Vec<Argument>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -411,7 +411,7 @@ pub struct Upgrade {
     modules: Vec<Vec<u8>>,
     dependencies: Vec<ObjectId>,
     package: ObjectId,
-    upgrade_ticket: Argument,
+    ticket: Argument,
 }
 
 /// An argument to a programmable transaction command
