@@ -11,6 +11,23 @@ pub struct ObjectId(Address);
 impl ObjectId {
     pub const LENGTH: usize = Address::LENGTH;
     pub const ZERO: Self = Self(Address::ZERO);
+
+    pub const fn new(bytes: [u8; Self::LENGTH]) -> Self {
+        Self(Address::new(bytes))
+    }
+
+    /// Return the underlying byte array of an ObjectId
+    pub const fn into_inner(self) -> [u8; Self::LENGTH] {
+        self.0.into_inner()
+    }
+
+    pub const fn inner(&self) -> &[u8; Self::LENGTH] {
+        self.0.inner()
+    }
+
+    pub const fn as_bytes(&self) -> &[u8] {
+        self.0.as_bytes()
+    }
 }
 
 impl From<Address> for ObjectId {
