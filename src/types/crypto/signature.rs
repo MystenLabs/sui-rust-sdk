@@ -117,7 +117,7 @@ impl serde::Serialize for SimpleSignature {
         #[derive(serde_derive::Serialize)]
         #[serde(tag = "scheme")]
         #[serde(rename_all = "lowercase")]
-        pub enum Sig<'a> {
+        enum Sig<'a> {
             Ed25519 {
                 signature: &'a Ed25519Signature,
                 public_key: &'a Ed25519PublicKey,
@@ -208,7 +208,7 @@ impl<'de> serde::Deserialize<'de> for SimpleSignature {
         #[derive(serde_derive::Deserialize)]
         #[serde(tag = "scheme")]
         #[serde(rename_all = "lowercase")]
-        pub enum Sig {
+        enum Sig {
             Ed25519 {
                 signature: Ed25519Signature,
                 public_key: Ed25519PublicKey,

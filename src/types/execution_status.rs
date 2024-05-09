@@ -226,7 +226,8 @@ pub enum PackageUpgradeError {
 #[derive(Eq, PartialEq, Clone, Copy, Debug)]
 #[cfg_attr(
     feature = "serde",
-    derive(serde_derive::Serialize, serde_derive::Deserialize)
+    derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename_all = "snake_case")
 )]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub enum TypeArgumentError {
@@ -335,7 +336,7 @@ mod serialization {
     }
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
-    #[serde(tag = "error")]
+    #[serde(tag = "error", rename_all = "snake_case")]
     enum ReadableExecutionError {
         InsufficientGas,
         InvalidGasObject,
@@ -932,7 +933,7 @@ mod serialization {
     }
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
-    #[serde(tag = "kind")]
+    #[serde(tag = "kind", rename_all = "snake_case")]
     enum ReadableCommandArgumentError {
         TypeMismatch,
         InvalidBcsBytes,
@@ -1113,7 +1114,7 @@ mod serialization {
     }
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
-    #[serde(tag = "kind")]
+    #[serde(tag = "kind", rename_all = "snake_case")]
     enum ReadablePackageUpgradeError {
         UnableToFetchPackage {
             package_id: ObjectId,

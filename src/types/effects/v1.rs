@@ -49,18 +49,20 @@ pub struct TransactionEffectsV1 {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
-#[allow(dead_code)]
 pub struct ModifiedAtVersion {
-    object_id: ObjectId,
+    pub object_id: ObjectId,
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
-    version: Version,
+    pub version: Version,
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]
-#[allow(dead_code)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
 pub struct ObjectReferenceWithOwner {
-    object_ref: ObjectReference,
-    owner: Owner,
+    pub reference: ObjectReference,
+    pub owner: Owner,
 }
 
 #[cfg(feature = "serde")]
@@ -288,52 +290,6 @@ mod serialization {
                     events_digest,
                     dependencies,
                 })
-            }
-        }
-    }
-
-    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
-    struct ReadableObjectReferenceWithOwner {
-        #[serde(flatten)]
-        object_ref: ObjectReference,
-        owner: Owner,
-    }
-
-    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
-    struct BinaryObjectReferenceWithOwner {
-        object_ref: ObjectReference,
-        owner: Owner,
-    }
-
-    impl Serialize for ObjectReferenceWithOwner {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
-        {
-            let Self { object_ref, owner } = self.clone();
-            if serializer.is_human_readable() {
-                let readable = ReadableObjectReferenceWithOwner { object_ref, owner };
-                readable.serialize(serializer)
-            } else {
-                let binary = BinaryObjectReferenceWithOwner { object_ref, owner };
-                binary.serialize(serializer)
-            }
-        }
-    }
-
-    impl<'de> Deserialize<'de> for ObjectReferenceWithOwner {
-        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            if deserializer.is_human_readable() {
-                let ReadableObjectReferenceWithOwner { object_ref, owner } =
-                    Deserialize::deserialize(deserializer)?;
-                Ok(Self { object_ref, owner })
-            } else {
-                let BinaryObjectReferenceWithOwner { object_ref, owner } =
-                    Deserialize::deserialize(deserializer)?;
-                Ok(Self { object_ref, owner })
             }
         }
     }

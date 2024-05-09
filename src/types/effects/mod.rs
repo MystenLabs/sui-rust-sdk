@@ -1,8 +1,17 @@
 mod v1;
 mod v2;
 
+pub use v1::ModifiedAtVersion;
+pub use v1::ObjectReferenceWithOwner;
 pub use v1::TransactionEffectsV1;
+pub use v2::ChangedObject;
+pub use v2::EffectsObjectChange;
+pub use v2::IdOperation;
+pub use v2::ObjectIn;
+pub use v2::ObjectOut;
 pub use v2::TransactionEffectsV2;
+pub use v2::UnchangedSharedKind;
+pub use v2::UnchangedSharedObject;
 
 /// The response from processing a transaction or a certified transaction
 #[derive(Eq, PartialEq, Clone, Debug)]

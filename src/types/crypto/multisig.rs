@@ -77,8 +77,6 @@ pub struct MultisigAggregatedSignature {
     /// A bitmap that indicates the position of which public key the signature should be authenticated with.
     bitmap: BitmapUnit,
     /// Legacy encoding for the bitmap.
-    // TODO remove the allow(dead_code) attr once the public interface has been fleshed out more
-    #[cfg_attr(not(feature = "serde"), allow(dead_code))]
     //TODO implement a strategy for legacy bitmap
     #[cfg_attr(test, proptest(value = "None"))]
     legacy_bitmap: Option<roaring::RoaringBitmap>,
@@ -93,6 +91,10 @@ impl MultisigAggregatedSignature {
 
     pub fn bitmap(&self) -> BitmapUnit {
         self.bitmap
+    }
+
+    pub fn legacy_bitmap(&self) -> Option<&roaring::RoaringBitmap> {
+        self.legacy_bitmap.as_ref()
     }
 
     pub fn committee(&self) -> &MultisigCommittee {

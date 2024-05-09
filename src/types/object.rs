@@ -49,11 +49,6 @@ impl ObjectReference {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde_derive::Serialize, serde_derive::Deserialize),
-    serde(rename_all = "lowercase")
-)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub enum Owner {
     /// Object is exclusively owned by a single address, and is mutable.
@@ -63,7 +58,6 @@ pub enum Owner {
     /// Object is shared, can be used by any address, and is mutable.
     Shared {
         /// The version at which the object became shared
-        #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
         initial_shared_version: Version,
     },
     /// Object is immutable, and hence ownership doesn't matter.
@@ -310,6 +304,94 @@ mod serialization {
             })
             .unwrap()
         );
+    }
+
+    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
+    #[serde(tag = "owner", rename_all = "snake_case")]
+    enum ReadableOwner {
+        Address {
+            address: Address,
+        },
+        Object {
+            object: ObjectId,
+        },
+        Shared {
+            #[serde(with = "crate::_serde::ReadableDisplay")]
+            initial_shared_version: Version,
+        },
+        Immutable,
+    }
+
+    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
+    enum BinaryOwner {
+        Address(Address),
+        Object(ObjectId),
+        Shared { initial_shared_version: Version },
+        Immutable,
+    }
+
+    impl Serialize for Owner {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            if serializer.is_human_readable() {
+                let readable = match *self {
+                    Owner::Address(address) => ReadableOwner::Address { address },
+                    Owner::Object(object) => ReadableOwner::Object { object },
+                    Owner::Shared {
+                        initial_shared_version,
+                    } => ReadableOwner::Shared {
+                        initial_shared_version,
+                    },
+                    Owner::Immutable => ReadableOwner::Immutable,
+                };
+                readable.serialize(serializer)
+            } else {
+                let binary = match *self {
+                    Owner::Address(address) => BinaryOwner::Address(address),
+                    Owner::Object(object) => BinaryOwner::Object(object),
+                    Owner::Shared {
+                        initial_shared_version,
+                    } => BinaryOwner::Shared {
+                        initial_shared_version,
+                    },
+                    Owner::Immutable => BinaryOwner::Immutable,
+                };
+                binary.serialize(serializer)
+            }
+        }
+    }
+
+    impl<'de> Deserialize<'de> for Owner {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            if deserializer.is_human_readable() {
+                ReadableOwner::deserialize(deserializer).map(|readable| match readable {
+                    ReadableOwner::Address { address } => Self::Address(address),
+                    ReadableOwner::Object { object } => Self::Object(object),
+                    ReadableOwner::Shared {
+                        initial_shared_version,
+                    } => Self::Shared {
+                        initial_shared_version,
+                    },
+                    ReadableOwner::Immutable => Self::Immutable,
+                })
+            } else {
+                BinaryOwner::deserialize(deserializer).map(|binary| match binary {
+                    BinaryOwner::Address(address) => Self::Address(address),
+                    BinaryOwner::Object(object) => Self::Object(object),
+                    BinaryOwner::Shared {
+                        initial_shared_version,
+                    } => Self::Shared {
+                        initial_shared_version,
+                    },
+                    BinaryOwner::Immutable => Self::Immutable,
+                })
+            }
+        }
     }
 
     /// Wrapper around StructTag with a space-efficient representation for common types like coins

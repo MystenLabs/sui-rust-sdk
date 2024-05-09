@@ -146,7 +146,7 @@ mod transaction_kind {
     };
 
     #[derive(serde_derive::Serialize)]
-    #[serde(tag = "kind", rename_all = "kebab-case")]
+    #[serde(tag = "kind", rename_all = "snake_case")]
     enum ReadableTransactionKindRef<'a> {
         ProgrammableTransaction(&'a ProgrammableTransaction),
         ChangeEpoch(&'a ChangeEpoch),
@@ -161,7 +161,7 @@ mod transaction_kind {
     }
 
     #[derive(serde_derive::Deserialize)]
-    #[serde(tag = "kind", rename_all = "kebab-case")]
+    #[serde(tag = "kind", rename_all = "snake_case")]
     enum ReadableTransactionKind {
         ProgrammableTransaction(ProgrammableTransaction),
         ChangeEpoch(ChangeEpoch),
@@ -314,7 +314,7 @@ mod end_of_epoch {
     };
 
     #[derive(serde_derive::Serialize)]
-    #[serde(tag = "kind", rename_all = "kebab-case")]
+    #[serde(tag = "kind", rename_all = "snake_case")]
     enum ReadableEndOfEpochTransactionKindRef<'a> {
         ChangeEpoch(&'a ChangeEpoch),
         AuthenticatorStateCreate,
@@ -324,7 +324,7 @@ mod end_of_epoch {
     }
 
     #[derive(serde_derive::Deserialize)]
-    #[serde(tag = "kind", rename_all = "kebab-case")]
+    #[serde(tag = "kind", rename_all = "snake_case")]
     enum ReadableEndOfEpochTransactionKind {
         ChangeEpoch(ChangeEpoch),
         AuthenticatorStateCreate,
@@ -454,7 +454,7 @@ mod input_argument {
     use super::*;
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
-    #[serde(tag = "type", rename_all = "kebab-case")]
+    #[serde(tag = "type", rename_all = "snake_case")]
     enum ReadableInputArgument {
         Pure {
             #[serde(with = "::serde_with::As::<crate::_serde::Base64Encoded>")]
@@ -588,59 +588,16 @@ mod argument {
     use super::*;
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
-    #[serde(untagged)]
+    #[serde(tag = "type", rename_all = "snake_case")]
     enum ReadableArgument {
-        GasCoin(GasCoin),
-        Input {
-            input: u16,
-        },
-        Result {
-            result: u16,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            subresult: Option<u16>,
-        },
-    }
-
-    struct GasCoin;
-
-    impl std::fmt::Display for GasCoin {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            f.write_str("gas-coin")
-        }
-    }
-
-    impl std::str::FromStr for GasCoin {
-        type Err = &'static str;
-
-        fn from_str(s: &str) -> Result<Self, Self::Err> {
-            if s == "gas-coin" {
-                Ok(Self)
-            } else {
-                Err("expected 'gas-coin'")
-            }
-        }
-    }
-
-    impl Serialize for GasCoin {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
-        {
-            serde_with::DisplayFromStr::serialize_as(self, serializer)
-        }
-    }
-
-    impl<'de> Deserialize<'de> for GasCoin {
-        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            serde_with::DisplayFromStr::deserialize_as(deserializer)
-        }
+        GasCoin,
+        Input { input: u16 },
+        Result { result: u16 },
+        NestedResult { result: u16, subresult: u16 },
     }
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
-    pub enum BinaryArgument {
+    enum BinaryArgument {
         GasCoin,
         Input(u16),
         Result(u16),
@@ -654,16 +611,12 @@ mod argument {
         {
             if serializer.is_human_readable() {
                 let readable = match *self {
-                    Argument::GasCoin => ReadableArgument::GasCoin(GasCoin),
+                    Argument::GasCoin => ReadableArgument::GasCoin,
                     Argument::Input(input) => ReadableArgument::Input { input },
-                    Argument::Result(result) => ReadableArgument::Result {
-                        result,
-                        subresult: None,
-                    },
-                    Argument::NestedResult(result, subresult) => ReadableArgument::Result {
-                        result,
-                        subresult: Some(subresult),
-                    },
+                    Argument::Result(result) => ReadableArgument::Result { result },
+                    Argument::NestedResult(result, subresult) => {
+                        ReadableArgument::NestedResult { result, subresult }
+                    }
                 };
                 readable.serialize(serializer)
             } else {
@@ -687,16 +640,12 @@ mod argument {
         {
             if deserializer.is_human_readable() {
                 ReadableArgument::deserialize(deserializer).map(|readable| match readable {
-                    ReadableArgument::GasCoin(_) => Argument::GasCoin,
+                    ReadableArgument::GasCoin => Argument::GasCoin,
                     ReadableArgument::Input { input } => Argument::Input(input),
-                    ReadableArgument::Result {
-                        result,
-                        subresult: None,
-                    } => Argument::Result(result),
-                    ReadableArgument::Result {
-                        result,
-                        subresult: Some(sub),
-                    } => Argument::NestedResult(result, sub),
+                    ReadableArgument::Result { result } => Argument::Result(result),
+                    ReadableArgument::NestedResult { result, subresult } => {
+                        Argument::NestedResult(result, subresult)
+                    }
                 })
             } else {
                 BinaryArgument::deserialize(deserializer).map(|binary| match binary {
@@ -721,8 +670,8 @@ mod command {
     };
 
     #[derive(serde_derive::Serialize)]
-    #[serde(tag = "command", rename_all = "kebab-case")]
-    pub enum ReadableCommandRef<'a> {
+    #[serde(tag = "command", rename_all = "snake_case")]
+    enum ReadableCommandRef<'a> {
         MoveCall(&'a MoveCall),
         TransferObjects(&'a TransferObjects),
         SplitCoins(&'a SplitCoins),
@@ -733,8 +682,8 @@ mod command {
     }
 
     #[derive(serde_derive::Deserialize)]
-    #[serde(tag = "command", rename_all = "kebab-case")]
-    pub enum ReadableCommand {
+    #[serde(tag = "command", rename_all = "snake_case")]
+    enum ReadableCommand {
         MoveCall(MoveCall),
         TransferObjects(TransferObjects),
         SplitCoins(SplitCoins),
@@ -745,7 +694,7 @@ mod command {
     }
 
     #[derive(serde_derive::Serialize)]
-    pub enum BinaryCommandRef<'a> {
+    enum BinaryCommandRef<'a> {
         MoveCall(&'a MoveCall),
         TransferObjects(&'a TransferObjects),
         SplitCoins(&'a SplitCoins),
@@ -756,7 +705,7 @@ mod command {
     }
 
     #[derive(serde_derive::Deserialize)]
-    pub enum BinaryCommand {
+    enum BinaryCommand {
         MoveCall(MoveCall),
         TransferObjects(TransferObjects),
         SplitCoins(SplitCoins),
@@ -921,23 +870,23 @@ mod signed_transaction {
     /// Intents are defined as:
     ///
     /// ```
-    /// pub struct Intent {
-    ///     pub scope: IntentScope,
-    ///     pub version: IntentVersion,
-    ///     pub app_id: AppId,
+    /// struct Intent {
+    ///     scope: IntentScope,
+    ///     version: IntentVersion,
+    ///     app_id: AppId,
     /// }
     ///
-    /// pub enum IntentVersion {
+    /// enum IntentVersion {
     ///     V0 = 0,
     /// }
     ///
-    /// pub enum AppId {
+    /// enum AppId {
     ///     Sui = 0,
     ///     Narwhal = 1,
     ///     Consensus = 2,
     /// }
     ///
-    /// pub enum IntentScope {
+    /// enum IntentScope {
     ///     TransactionData = 0,         // Used for a user signature on a transaction data.
     ///     TransactionEffects = 1,      // Used for an authority signature on transaction effects.
     ///     CheckpointSummary = 2,       // Used for an authority signature on a checkpoint summary.
@@ -1104,12 +1053,18 @@ mod test {
     #[test]
     fn argument() {
         let test_cases = [
-            (Argument::GasCoin, serde_json::json!("gas-coin")),
-            (Argument::Input(1), serde_json::json!({"input": 1})),
-            (Argument::Result(2), serde_json::json!({"result": 2})),
+            (Argument::GasCoin, serde_json::json!({"type": "gas_coin"})),
+            (
+                Argument::Input(1),
+                serde_json::json!({"type": "input", "input": 1}),
+            ),
+            (
+                Argument::Result(2),
+                serde_json::json!({"type": "result", "result": 2}),
+            ),
             (
                 Argument::NestedResult(3, 4),
-                serde_json::json!({"result": 3, "subresult": 4}),
+                serde_json::json!({"type": "nested_result", "result": 3, "subresult": 4}),
             ),
         ];
 
@@ -1142,7 +1097,7 @@ mod test {
                     ObjectDigest::ZERO,
                 )),
                 serde_json::json!({
-                  "type": "immutable-or-owned",
+                  "type": "immutable_or_owned",
                   "object_id": "0x0000000000000000000000000000000000000000000000000000000000000000",
                   "version": "1",
                   "digest": "11111111111111111111111111111111"

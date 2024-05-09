@@ -33,7 +33,11 @@ pub use digest::{
     EffectsAuxiliaryDataDigest, ObjectDigest, TransactionDigest, TransactionEffectsDigest,
     TransactionEventsDigest,
 };
-pub use effects::{TransactionEffects, TransactionEffectsV1, TransactionEffectsV2};
+pub use effects::{
+    ChangedObject, EffectsObjectChange, IdOperation, ModifiedAtVersion, ObjectIn, ObjectOut,
+    ObjectReferenceWithOwner, TransactionEffects, TransactionEffectsV1, TransactionEffectsV2,
+    UnchangedSharedKind, UnchangedSharedObject,
+};
 pub use events::{BalanceChange, Event, TransactionEvents};
 pub use execution_status::{
     CommandArgumentError, ExecutionError, ExecutionStatus, MoveLocation, PackageUpgradeError,

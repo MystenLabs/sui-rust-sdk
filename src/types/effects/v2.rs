@@ -40,22 +40,24 @@ pub struct TransactionEffectsV2 {
     auxiliary_data_digest: Option<EffectsAuxiliaryDataDigest>,
 }
 
+//XXX Do we maybe want to just fold "EffectsObjectChange" into this struct?
 #[derive(Eq, PartialEq, Clone, Debug)]
-#[allow(dead_code)]
 pub struct ChangedObject {
-    object_id: ObjectId,
-    change: EffectsObjectChange,
+    pub object_id: ObjectId,
+    pub change: EffectsObjectChange,
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]
-#[allow(dead_code)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
 pub struct UnchangedSharedObject {
-    object_id: ObjectId,
-    kind: UnchangedSharedKind,
+    pub object_id: ObjectId,
+    pub kind: UnchangedSharedKind,
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]
-#[allow(dead_code)]
 pub enum UnchangedSharedKind {
     /// Read-only shared objects from the input. We don't really need ObjectDigest
     /// for protocol correctness, but it will make it easier to verify untrusted read.
@@ -74,26 +76,24 @@ pub enum UnchangedSharedKind {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
-#[allow(dead_code)]
 pub struct EffectsObjectChange {
     // input_state and output_state are the core fields that's required by
     // the protocol as it tells how an object changes on-chain.
     /// State of the object in the store prior to this transaction.
-    pub(crate) input_state: ObjectIn,
+    pub input_state: ObjectIn,
     /// State of the object in the store after this transaction.
-    pub(crate) output_state: ObjectOut,
+    pub output_state: ObjectOut,
 
     /// Whether this object ID is created or deleted in this transaction.
     /// This information isn't required by the protocol but is useful for providing more detailed
     /// semantics on object changes.
-    pub(crate) id_operation: IdOperation,
+    pub id_operation: IdOperation,
 }
 
 /// If an object exists (at root-level) in the store prior to this transaction,
 /// it should be Exist, otherwise it's NonExist, e.g. wrapped objects should be
 /// NonExist.
 #[derive(Eq, PartialEq, Clone, Debug)]
-#[allow(dead_code)]
 pub enum ObjectIn {
     NotExist,
     /// The old version, digest and owner.
@@ -105,7 +105,6 @@ pub enum ObjectIn {
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]
-#[allow(dead_code)]
 pub enum ObjectOut {
     /// Same definition as in ObjectIn.
     NotExist,
@@ -125,7 +124,6 @@ pub enum ObjectOut {
     derive(serde_derive::Serialize, serde_derive::Deserialize),
     serde(rename_all = "lowercase")
 )]
-#[allow(dead_code)]
 pub enum IdOperation {
     None,
     Created,
@@ -367,53 +365,7 @@ mod serialization {
     }
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
-    struct ReadableUnchangedSharedObject {
-        object_id: ObjectId,
-        #[serde(flatten)]
-        kind: UnchangedSharedKind,
-    }
-
-    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
-    struct BinaryUnchangedSharedObject {
-        object_id: ObjectId,
-        kind: UnchangedSharedKind,
-    }
-
-    impl Serialize for UnchangedSharedObject {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
-        {
-            let Self { object_id, kind } = self.clone();
-            if serializer.is_human_readable() {
-                let readable = ReadableUnchangedSharedObject { object_id, kind };
-                readable.serialize(serializer)
-            } else {
-                let binary = BinaryUnchangedSharedObject { object_id, kind };
-                binary.serialize(serializer)
-            }
-        }
-    }
-
-    impl<'de> Deserialize<'de> for UnchangedSharedObject {
-        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            if deserializer.is_human_readable() {
-                let ReadableUnchangedSharedObject { object_id, kind } =
-                    Deserialize::deserialize(deserializer)?;
-                Ok(Self { object_id, kind })
-            } else {
-                let BinaryUnchangedSharedObject { object_id, kind } =
-                    Deserialize::deserialize(deserializer)?;
-                Ok(Self { object_id, kind })
-            }
-        }
-    }
-
-    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
-    #[serde(tag = "kind", rename_all = "kebab-case")]
+    #[serde(tag = "kind", rename_all = "snake_case")]
     enum ReadableUnchangedSharedKind {
         ReadOnlyRoot {
             #[serde(with = "crate::_serde::ReadableDisplay")]
@@ -433,16 +385,13 @@ mod serialization {
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
     enum BinaryUnchangedSharedKind {
         ReadOnlyRoot {
-            #[serde(with = "crate::_serde::ReadableDisplay")]
             version: Version,
             digest: ObjectDigest,
         },
         MutateDeleted {
-            #[serde(with = "crate::_serde::ReadableDisplay")]
             version: Version,
         },
         ReadDeleted {
-            #[serde(with = "crate::_serde::ReadableDisplay")]
             version: Version,
         },
     }
@@ -518,7 +467,7 @@ mod serialization {
     }
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
-    #[serde(tag = "state", rename_all = "kebab-case")]
+    #[serde(tag = "state", rename_all = "snake_case")]
     enum ReadableObjectIn {
         NotExist,
         Exist {
@@ -533,7 +482,6 @@ mod serialization {
     enum BinaryObjectIn {
         NotExist,
         Exist {
-            #[serde(with = "crate::_serde::ReadableDisplay")]
             version: Version,
             digest: ObjectDigest,
             owner: Owner,
@@ -613,7 +561,7 @@ mod serialization {
     }
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
-    #[serde(tag = "state", rename_all = "kebab-case")]
+    #[serde(tag = "state", rename_all = "snake_case")]
     enum ReadableObjectOut {
         NotExist,
         ObjectWrite {
