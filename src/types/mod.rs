@@ -33,7 +33,7 @@ pub use digest::{
     TransactionEventsDigest,
 };
 pub use effects::{TransactionEffects, TransactionEffectsV1, TransactionEffectsV2};
-pub use events::{Event, TransactionEvents};
+pub use events::{BalanceChange, Event, TransactionEvents};
 pub use execution_status::{
     CommandArgumentError, ExecutionError, ExecutionStatus, MoveLocation, PackageUpgradeError,
     TypeArgumentError,
