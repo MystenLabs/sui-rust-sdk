@@ -126,6 +126,12 @@ impl From<Address> for Vec<u8> {
     }
 }
 
+impl From<super::ObjectId> for Address {
+    fn from(value: super::ObjectId) -> Self {
+        Self::new(value.into_inner())
+    }
+}
+
 impl std::fmt::Display for Address {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "0x")?;
