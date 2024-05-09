@@ -140,6 +140,23 @@ impl StructTag {
             type_params: vec![],
         }
     }
+
+    /// Checks if this is a Coin type
+    pub fn is_coin(&self) -> Option<&TypeTag> {
+        let Self {
+            address,
+            module,
+            name,
+            type_params,
+        } = self;
+
+        if address == &Address::TWO && module == "coin" && name == "Coin" && type_params.len() == 1
+        {
+            type_params.first()
+        } else {
+            None
+        }
+    }
 }
 
 impl std::fmt::Display for StructTag {
