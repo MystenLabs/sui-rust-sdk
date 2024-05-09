@@ -5,6 +5,7 @@ mod digest;
 mod effects;
 mod events;
 mod execution_status;
+pub mod framework;
 mod gas;
 mod object;
 mod object_id;

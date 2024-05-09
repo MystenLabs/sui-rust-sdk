@@ -159,7 +159,7 @@ pub struct MoveStruct {
         feature = "serde",
         serde(with = "::serde_with::As::<serialization::BinaryMoveStructType>")
     )]
-    type_: StructTag,
+    pub(crate) type_: StructTag,
     /// DEPRECATED this field is no longer used to determine whether a tx can transfer this
     /// object. Instead, it is always calculated from the objects type when loaded in execution
     has_public_transfer: bool,
@@ -172,7 +172,7 @@ pub struct MoveStruct {
         feature = "serde",
         serde(with = "::serde_with::As::<::serde_with::Bytes>")
     )]
-    contents: Vec<u8>,
+    pub(crate) contents: Vec<u8>,
 }
 
 /// Type of a Sui object
@@ -187,7 +187,7 @@ pub enum ObjectType {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Object {
     /// The meat of the object
-    data: ObjectData,
+    pub(crate) data: ObjectData,
     /// The owner that unlocks this object
     owner: Owner,
     /// The digest of the transaction that created or last mutated this object
@@ -218,6 +218,10 @@ impl Object {
             ObjectData::Struct(struct_) => ObjectType::Struct(struct_.type_.clone()),
             ObjectData::Package(_) => ObjectType::Package,
         }
+    }
+
+    pub fn owner(&self) -> &Owner {
+        &self.owner
     }
 }
 
@@ -336,14 +340,7 @@ mod serialization {
                 type_params,
             } = s;
 
-            if address == &Address::TWO
-                && module == "coin"
-                && name == "Coin"
-                && type_params.len() == 1
-            {
-                // unwrap safe because we've already checked length == 1 above
-                let coin_type = type_params.first().unwrap();
-
+            if let Some(coin_type) = s.is_coin() {
                 if let TypeTag::Struct(s_inner) = coin_type {
                     let StructTag {
                         address,
