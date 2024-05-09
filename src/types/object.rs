@@ -316,7 +316,7 @@ mod serialization {
     /// The StructTag for a gas coin is 84 bytes, so using 1 byte instead is a win.
     /// The inner representation is private to prevent incorrectly constructing an `Other` instead of
     /// one of the specialized variants, e.g. `Other(GasCoin::type_())` instead of `GasCoin`
-    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
+    #[derive(serde_derive::Deserialize)]
     enum MoveStructType {
         /// A type that is not `0x2::coin::Coin<T>`
         Other(StructTag),
@@ -331,8 +331,35 @@ mod serialization {
         // to make sure the new type and Other(_) are interpreted consistently.
     }
 
+    /// See `MoveStructType`
+    #[derive(serde_derive::Serialize)]
+    enum MoveStructTypeRef<'a> {
+        /// A type that is not `0x2::coin::Coin<T>`
+        Other(&'a StructTag),
+        /// A SUI coin (i.e., `0x2::coin::Coin<0x2::sui::SUI>`)
+        GasCoin,
+        /// A record of a staked SUI coin (i.e., `0x3::staking_pool::StakedSui`)
+        StakedSui,
+        /// A non-SUI coin type (i.e., `0x2::coin::Coin<T> where T != 0x2::sui::SUI`)
+        Coin(&'a TypeTag),
+        // NOTE: if adding a new type here, and there are existing on-chain objects of that
+        // type with Other(_), that is ok, but you must hand-roll PartialEq/Eq/Ord/maybe Hash
+        // to make sure the new type and Other(_) are interpreted consistently.
+    }
+
     impl MoveStructType {
-        fn from_struct_tag(s: &StructTag) -> Self {
+        fn into_struct_tag(self) -> StructTag {
+            match self {
+                MoveStructType::Other(tag) => tag,
+                MoveStructType::GasCoin => StructTag::gas_coin(),
+                MoveStructType::StakedSui => StructTag::staked_sui(),
+                MoveStructType::Coin(type_tag) => StructTag::coin(type_tag),
+            }
+        }
+    }
+
+    impl<'a> MoveStructTypeRef<'a> {
+        fn from_struct_tag(s: &'a StructTag) -> Self {
             let StructTag {
                 address,
                 module,
@@ -358,7 +385,7 @@ mod serialization {
                     }
                 }
 
-                Self::Coin(coin_type.to_owned())
+                Self::Coin(coin_type)
             } else if address == &Address::THREE
                 && module == "staking_pool"
                 && name == "StakedSui"
@@ -366,16 +393,7 @@ mod serialization {
             {
                 Self::StakedSui
             } else {
-                Self::Other(s.clone())
-            }
-        }
-
-        fn into_struct_tag(self) -> StructTag {
-            match self {
-                MoveStructType::Other(tag) => tag,
-                MoveStructType::GasCoin => StructTag::gas_coin(),
-                MoveStructType::StakedSui => StructTag::staked_sui(),
-                MoveStructType::Coin(type_tag) => StructTag::coin(type_tag),
+                Self::Other(s)
             }
         }
     }
@@ -387,7 +405,7 @@ mod serialization {
         where
             S: Serializer,
         {
-            let move_object_type = MoveStructType::from_struct_tag(source);
+            let move_object_type = MoveStructTypeRef::from_struct_tag(source);
             move_object_type.serialize(serializer)
         }
     }
