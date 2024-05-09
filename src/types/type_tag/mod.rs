@@ -79,6 +79,14 @@ impl Identifier {
             .map(|ident| Self(ident.into()))
             .map_err(|_| TypeParseError)
     }
+
+    pub fn into_inner(self) -> Box<str> {
+        self.0
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
 }
 
 impl std::fmt::Display for Identifier {
