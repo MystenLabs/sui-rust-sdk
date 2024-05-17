@@ -15,8 +15,15 @@ pub use v2::UnchangedSharedObject;
 
 /// The response from processing a transaction or a certified transaction
 #[derive(Eq, PartialEq, Clone, Debug)]
+#[cfg_attr(
+    feature = "schemars",
+    derive(schemars::JsonSchema),
+    schemars(tag = "version")
+)]
 pub enum TransactionEffects {
+    #[cfg_attr(feature = "schemars", schemars(rename = "1"))]
     V1(Box<TransactionEffectsV1>),
+    #[cfg_attr(feature = "schemars", schemars(rename = "2"))]
     V2(Box<TransactionEffectsV2>),
 }
 

@@ -27,8 +27,10 @@ pub enum MultisigMemberPublicKey {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub struct MultisigMember {
+    #[cfg_attr(feature = "schemars", schemars(flatten))]
     public_key: MultisigMemberPublicKey,
     weight: WeightUnit,
 }
@@ -38,6 +40,7 @@ pub struct MultisigMember {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub struct MultisigCommittee {
     /// A list of committee members and their corresponding weight.
@@ -64,6 +67,7 @@ impl MultisigCommittee {
 
 /// The struct that contains signatures and public keys necessary for authenticating a Multisig.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub struct MultisigAggregatedSignature {
     /// The plain signature encoded with signature scheme.
@@ -78,6 +82,13 @@ pub struct MultisigAggregatedSignature {
     bitmap: BitmapUnit,
     /// Legacy encoding for the bitmap.
     //TODO implement a strategy for legacy bitmap
+    #[cfg_attr(
+        feature = "schemars",
+        schemars(
+            skip_serializing_if = "Option::is_none",
+            with = "Option<crate::_schemars::Base64>",
+        )
+    )]
     #[cfg_attr(test, proptest(value = "None"))]
     legacy_bitmap: Option<roaring::RoaringBitmap>,
     /// The public key encoded with each public key with its signature scheme used along with the corresponding weight.
@@ -456,11 +467,24 @@ mod serialization {
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
     #[serde(tag = "scheme", rename_all = "lowercase")]
+    #[serde(rename = "MultisigMemberPublicKey")]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
     enum ReadableMemberPublicKey {
         Ed25519 { public_key: Ed25519PublicKey },
         Secp256k1 { public_key: Secp256k1PublicKey },
         Secp256r1 { public_key: Secp256r1PublicKey },
         ZkLogin(ZkLoginPublicIdentifier),
+    }
+
+    #[cfg(feature = "schemars")]
+    impl schemars::JsonSchema for MultisigMemberPublicKey {
+        fn schema_name() -> String {
+            ReadableMemberPublicKey::schema_name()
+        }
+
+        fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+            ReadableMemberPublicKey::json_schema(gen)
+        }
     }
 
     impl Serialize for MultisigMemberPublicKey {
@@ -550,12 +574,25 @@ mod serialization {
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
     #[serde(tag = "scheme", rename_all = "lowercase")]
+    #[serde(rename = "MultisigMemberSignature")]
     #[allow(clippy::large_enum_variant)]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
     enum ReadableMemberSignature {
         Ed25519 { signature: Ed25519Signature },
         Secp256k1 { signature: Secp256k1Signature },
         Secp256r1 { signature: Secp256r1Signature },
         ZkLogin(ZkLoginAuthenticator),
+    }
+
+    #[cfg(feature = "schemars")]
+    impl schemars::JsonSchema for MultisigMemberSignature {
+        fn schema_name() -> String {
+            ReadableMemberSignature::schema_name()
+        }
+
+        fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+            ReadableMemberSignature::json_schema(gen)
+        }
     }
 
     impl Serialize for MultisigMemberSignature {

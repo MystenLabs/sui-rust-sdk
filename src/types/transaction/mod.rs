@@ -25,7 +25,9 @@ pub struct Transaction {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct SignedTransaction {
+    #[cfg_attr(feature = "schemars", schemars(flatten))]
     pub transaction: Transaction,
     pub signatures: Vec<UserSignature>,
 }
@@ -36,13 +38,18 @@ pub struct SignedTransaction {
     derive(serde_derive::Serialize, serde_derive::Deserialize),
     serde(rename_all = "lowercase")
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub enum TransactionExpiration {
     /// The transaction has no expiration
     None,
     /// Validators wont sign a transaction unless the expiration Epoch
     /// is greater than or equal to the current epoch
-    Epoch(#[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))] EpochId),
+    Epoch(
+        #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+        #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
+        EpochId,
+    ),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -50,12 +57,15 @@ pub enum TransactionExpiration {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct GasPayment {
     pub objects: Vec<ObjectReference>,
     pub owner: Address,
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub price: u64,
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub budget: u64,
 }
 
@@ -64,21 +74,26 @@ pub struct GasPayment {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct RandomnessStateUpdate {
     /// Epoch of the randomness state update transaction
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub epoch: u64,
     /// Randomness round of the update
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub randomness_round: u64,
     /// Updated random bytes
     #[cfg_attr(
         feature = "serde",
         serde(with = "crate::_serde::ReadableBase64Encoded")
     )]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::Base64"))]
     pub random_bytes: Vec<u8>,
     /// The initial version of the randomness object that it was shared at.
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub randomness_obj_initial_shared_version: u64,
     // to version this struct, do not add new fields. Instead, add a RandomnessStateUpdateV2 to
     // TransactionKind.
@@ -116,6 +131,11 @@ pub enum TransactionKind {
 
 /// EndOfEpochTransactionKind
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "schemars",
+    derive(schemars::JsonSchema),
+    schemars(tag = "kind", rename_all = "snake_case")
+)]
 pub enum EndOfEpochTransactionKind {
     ChangeEpoch(ChangeEpoch),
     AuthenticatorStateCreate,
@@ -129,12 +149,15 @@ pub enum EndOfEpochTransactionKind {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct AuthenticatorStateExpire {
     /// expire JWKs that have a lower epoch than this
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub min_epoch: u64,
     /// The initial version of the authenticator object that it was shared at.
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub authenticator_obj_initial_shared_version: u64,
 }
 
@@ -143,17 +166,21 @@ pub struct AuthenticatorStateExpire {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct AuthenticatorStateUpdate {
     /// Epoch of the authenticator state update transaction
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub epoch: u64,
     /// Consensus round of the authenticator state update
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub round: u64,
     /// newly active jwks
     pub new_active_jwks: Vec<ActiveJwk>,
     /// The initial version of the authenticator object that it was shared at.
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub authenticator_obj_initial_shared_version: u64,
     // to version this struct, do not add new fields. Instead, add a AuthenticatorStateUpdateV2 to
     // TransactionKind.
@@ -164,11 +191,13 @@ pub struct AuthenticatorStateUpdate {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct ActiveJwk {
     pub jwk_id: JwkId,
     pub jwk: Jwk,
     // the most recent epoch in which the jwk was validated
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub epoch: u64,
 }
 
@@ -179,15 +208,19 @@ pub struct ActiveJwk {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct ConsensusCommitPrologue {
     /// Epoch of the commit prologue transaction
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub epoch: u64,
     /// Consensus round of the commit
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub round: u64,
     /// Unix timestamp from consensus
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub commit_timestamp_ms: CheckpointTimestamp,
 }
 
@@ -196,15 +229,19 @@ pub struct ConsensusCommitPrologue {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct ConsensusCommitPrologueV2 {
     /// Epoch of the commit prologue transaction
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub epoch: u64,
     /// Consensus round of the commit
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub round: u64,
     /// Unix timestamp from consensus
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub commit_timestamp_ms: CheckpointTimestamp,
     /// Digest of consensus output
     pub consensus_commit_digest: ConsensusCommitDigest,
@@ -215,27 +252,35 @@ pub struct ConsensusCommitPrologueV2 {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct ChangeEpoch {
     /// The next (to become) epoch ID.
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub epoch: EpochId,
     /// The protocol version in effect in the new epoch.
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub protocol_version: ProtocolVersion,
     /// The total amount of gas charged for storage during the epoch.
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub storage_charge: u64,
     /// The total amount of gas charged for computation during the epoch.
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub computation_charge: u64,
     /// The amount of storage rebate refunded to the txn senders.
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub storage_rebate: u64,
     /// The non-refundable storage fee.
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub non_refundable_storage_fee: u64,
     /// Unix timestamp when epoch started
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub epoch_start_timestamp_ms: u64,
     /// System packages (specifically framework and move stdlib) that are written before the new
     /// epoch starts. This tracks framework upgrades on chain. When executing the ChangeEpoch txn,
@@ -250,8 +295,10 @@ pub struct ChangeEpoch {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct SystemPackage {
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     version: Version,
     #[cfg_attr(
         feature = "serde",
@@ -259,6 +306,7 @@ pub struct SystemPackage {
             with = "::serde_with::As::<Vec<::serde_with::IfIsHumanReadable<crate::_serde::Base64Encoded, ::serde_with::Bytes>>>"
         )
     )]
+    #[cfg_attr(feature = "schemars", schemars(with = "Vec<crate::_schemars::Base64>"))]
     modules: Vec<Vec<u8>>,
     dependencies: Vec<ObjectId>,
 }
@@ -268,6 +316,7 @@ pub struct SystemPackage {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct GenesisTransaction {
     pub objects: Vec<GenesisObject>,
 }
@@ -279,6 +328,7 @@ pub struct GenesisTransaction {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct ProgrammableTransaction {
     /// Input objects or primitive values
     pub inputs: Vec<InputArgument>,
@@ -288,9 +338,11 @@ pub struct ProgrammableTransaction {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub enum InputArgument {
     // contains no structs or objects
     Pure {
+        #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::Base64"))]
         value: Vec<u8>,
     },
     // A Move object, either immutable, or owned mutable.
@@ -299,6 +351,7 @@ pub enum InputArgument {
     // SharedObject::mutable controls whether caller asks for a mutable reference to shared object.
     Shared {
         object_id: ObjectId,
+        #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
         initial_shared_version: u64,
         mutable: bool,
     },
@@ -308,6 +361,11 @@ pub enum InputArgument {
 
 /// A single command in a programmable transaction.
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "schemars",
+    derive(schemars::JsonSchema),
+    schemars(tag = "command", rename_all = "snake_case")
+)]
 pub enum Command {
     /// A call to either an entry or a public Move function
     MoveCall(MoveCall),
@@ -344,6 +402,7 @@ pub enum Command {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct TransferObjects {
     objects: Vec<Argument>,
     address: Argument,
@@ -354,6 +413,7 @@ pub struct TransferObjects {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct SplitCoins {
     coin: Argument,
     amounts: Vec<Argument>,
@@ -364,6 +424,7 @@ pub struct SplitCoins {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct MergeCoins {
     coin: Argument,
     coins_to_merge: Vec<Argument>,
@@ -374,6 +435,7 @@ pub struct MergeCoins {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct Publish {
     #[cfg_attr(
         feature = "serde",
@@ -381,6 +443,7 @@ pub struct Publish {
             with = "::serde_with::As::<Vec<::serde_with::IfIsHumanReadable<crate::_serde::Base64Encoded, ::serde_with::Bytes>>>"
         )
     )]
+    #[cfg_attr(feature = "schemars", schemars(with = "Vec<crate::_schemars::Base64>"))]
     modules: Vec<Vec<u8>>,
     dependencies: Vec<ObjectId>,
 }
@@ -390,6 +453,7 @@ pub struct Publish {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct MakeMoveVector {
     #[cfg_attr(feature = "serde", serde(rename = "type"))]
     type_: Option<TypeTag>,
@@ -401,6 +465,7 @@ pub struct MakeMoveVector {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct Upgrade {
     #[cfg_attr(
         feature = "serde",
@@ -408,6 +473,7 @@ pub struct Upgrade {
             with = "::serde_with::As::<Vec<::serde_with::IfIsHumanReadable<crate::_serde::Base64Encoded, ::serde_with::Bytes>>>"
         )
     )]
+    #[cfg_attr(feature = "schemars", schemars(with = "Vec<crate::_schemars::Base64>"))]
     modules: Vec<Vec<u8>>,
     dependencies: Vec<ObjectId>,
     package: ObjectId,
@@ -438,6 +504,7 @@ pub enum Argument {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct MoveCall {
     /// The package containing the module and function.
     pub package: ObjectId,

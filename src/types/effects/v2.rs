@@ -7,10 +7,13 @@ use crate::types::{
 
 /// The response from processing a transaction or a certified transaction
 #[derive(Eq, PartialEq, Clone, Debug)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct TransactionEffectsV2 {
     /// The status of the execution
+    #[cfg_attr(feature = "schemars", schemars(flatten))]
     status: ExecutionStatus,
     /// The epoch when this transaction was executed.
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     epoch: EpochId,
     gas_used: GasCostSummary,
     /// The transaction digest
@@ -26,6 +29,7 @@ pub struct TransactionEffectsV2 {
     dependencies: Vec<TransactionDigest>,
 
     /// The version number of all the written Move objects by this transaction.
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     lamport_version: Version,
     /// Objects whose state are changed in the object store.
     changed_objects: Vec<ChangedObject>,
@@ -42,8 +46,10 @@ pub struct TransactionEffectsV2 {
 
 //XXX Do we maybe want to just fold "EffectsObjectChange" into this struct?
 #[derive(Eq, PartialEq, Clone, Debug)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct ChangedObject {
     pub object_id: ObjectId,
+    #[cfg_attr(feature = "schemars", schemars(flatten))]
     pub change: EffectsObjectChange,
 }
 
@@ -52,23 +58,36 @@ pub struct ChangedObject {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct UnchangedSharedObject {
     pub object_id: ObjectId,
     pub kind: UnchangedSharedKind,
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]
+#[cfg_attr(
+    feature = "schemars",
+    derive(schemars::JsonSchema),
+    schemars(tag = "kind", rename_all = "snake_case")
+)]
 pub enum UnchangedSharedKind {
     /// Read-only shared objects from the input. We don't really need ObjectDigest
     /// for protocol correctness, but it will make it easier to verify untrusted read.
     ReadOnlyRoot {
+        #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
         version: Version,
         digest: ObjectDigest,
     },
     /// Deleted shared objects that appear mutably/owned in the input.
-    MutateDeleted { version: Version },
+    MutateDeleted {
+        #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
+        version: Version,
+    },
     /// Deleted shared objects that appear as read-only in the input.
-    ReadDeleted { version: Version },
+    ReadDeleted {
+        #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
+        version: Version,
+    },
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]
@@ -76,6 +95,7 @@ pub enum UnchangedSharedKind {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct EffectsObjectChange {
     // input_state and output_state are the core fields that's required by
     // the protocol as it tells how an object changes on-chain.
@@ -94,10 +114,16 @@ pub struct EffectsObjectChange {
 /// it should be Exist, otherwise it's NonExist, e.g. wrapped objects should be
 /// NonExist.
 #[derive(Eq, PartialEq, Clone, Debug)]
+#[cfg_attr(
+    feature = "schemars",
+    derive(schemars::JsonSchema),
+    schemars(tag = "state", rename_all = "snake_case")
+)]
 pub enum ObjectIn {
     NotExist,
     /// The old version, digest and owner.
     Exist {
+        #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
         version: Version,
         digest: ObjectDigest,
         owner: Owner,
@@ -105,6 +131,11 @@ pub enum ObjectIn {
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]
+#[cfg_attr(
+    feature = "schemars",
+    derive(schemars::JsonSchema),
+    schemars(tag = "state", rename_all = "snake_case")
+)]
 pub enum ObjectOut {
     /// Same definition as in ObjectIn.
     NotExist,
@@ -113,6 +144,7 @@ pub enum ObjectOut {
     /// Packages writes need to be tracked separately with version because
     /// we don't use lamport version for package publish and upgrades.
     PackageWrite {
+        #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
         version: Version,
         digest: ObjectDigest,
     },
@@ -124,6 +156,7 @@ pub enum ObjectOut {
     derive(serde_derive::Serialize, serde_derive::Deserialize),
     serde(rename_all = "lowercase")
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub enum IdOperation {
     None,
     Created,

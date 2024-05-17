@@ -3,8 +3,10 @@ use crate::types::{checkpoint::EpochId, u256::U256};
 
 /// An zk login authenticator with all the necessary fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct ZkLoginAuthenticator {
     inputs: ZkLoginInputs,
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     max_epoch: EpochId,
     signature: SimpleSignature,
 }
@@ -15,6 +17,7 @@ pub struct ZkLoginAuthenticator {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct ZkLoginInputs {
     proof_points: ZkLoginProof,
     iss_base64_details: Claim,
@@ -30,6 +33,7 @@ pub struct ZkLoginInputs {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct Claim {
     value: String,
     index_mod_4: u8,
@@ -41,6 +45,7 @@ pub struct Claim {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct JwtDetails {
     kid: String,
     header: String,
@@ -53,6 +58,7 @@ pub struct JwtDetails {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct ZkLoginProof {
     a: CircomG1,
     b: CircomG2,
@@ -73,6 +79,7 @@ pub type CircomG2 = Vec<Vec<Bn254FieldElement>>;
 /// A wrapper struct to retrofit in [enum PublicKey] for zkLogin.
 /// Useful to construct [struct MultiSigPublicKey].
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct ZkLoginPublicIdentifier {
     iss: String,
     address_seed: Bn254FieldElement,
@@ -86,6 +93,7 @@ pub struct ZkLoginPublicIdentifier {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct Jwk {
     /// Key type parameter, <https://datatracker.ietf.org/doc/html/rfc7517#section-4.1>
     pub kty: String,
@@ -103,6 +111,7 @@ pub struct Jwk {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct JwkId {
     /// iss string that identifies the OIDC provider.
     pub iss: String,
@@ -111,7 +120,10 @@ pub struct JwkId {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Bn254FieldElement([u8; 32]);
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+pub struct Bn254FieldElement(
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U256"))] [u8; 32],
+);
 
 impl Bn254FieldElement {
     pub fn unpadded(&self) -> &[u8] {

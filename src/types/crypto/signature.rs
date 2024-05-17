@@ -8,6 +8,11 @@ use super::Secp256r1Signature;
 use super::ZkLoginAuthenticator;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "schemars",
+    derive(schemars::JsonSchema),
+    schemars(tag = "scheme", rename_all = "lowercase")
+)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub enum SimpleSignature {
     Ed25519 {
@@ -344,6 +349,8 @@ mod serialization {
 
     #[derive(serde_derive::Deserialize)]
     #[serde(tag = "scheme", rename_all = "lowercase")]
+    #[serde(rename = "UserSignature")]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
     enum ReadableUserSignature {
         Ed25519 {
             signature: Ed25519Signature,
@@ -359,6 +366,17 @@ mod serialization {
         },
         Multisig(MultisigAggregatedSignature),
         ZkLogin(ZkLoginAuthenticator),
+    }
+
+    #[cfg(feature = "schemars")]
+    impl schemars::JsonSchema for UserSignature {
+        fn schema_name() -> String {
+            ReadableUserSignature::schema_name()
+        }
+
+        fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+            ReadableUserSignature::json_schema(gen)
+        }
     }
 
     impl serde::Serialize for UserSignature {
@@ -479,6 +497,16 @@ mod serialization {
 
         #[cfg(target_arch = "wasm32")]
         use wasm_bindgen_test::wasm_bindgen_test as test;
+
+        #[proptest]
+        fn simple_sig_schema(signature: SimpleSignature) {
+            crate::_schemars::assert_valid_json_schema(&signature);
+        }
+
+        #[proptest]
+        fn user_signature_schema(signature: UserSignature) {
+            crate::_schemars::assert_valid_json_schema(&signature);
+        }
 
         #[proptest]
         fn roundtrip_bcs(signature: UserSignature) {

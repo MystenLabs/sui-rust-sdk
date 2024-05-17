@@ -23,12 +23,14 @@ impl Ed25519PrivateKey {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub struct Ed25519PublicKey(
     #[cfg_attr(
         feature = "serde",
         serde(with = "::serde_with::As::<::serde_with::IfIsHumanReadable<super::Base64Array32>>")
     )]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::Base64"))]
     [u8; Self::LENGTH],
 );
 
@@ -120,6 +122,7 @@ impl std::fmt::Debug for Ed25519PublicKey {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub struct Ed25519Signature(
     #[cfg_attr(
@@ -128,6 +131,7 @@ pub struct Ed25519Signature(
             with = "::serde_with::As::<::serde_with::IfIsHumanReadable<super::Base64Array64, [::serde_with::Same; 64]>>"
         )
     )]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::Base64"))]
     [u8; Self::LENGTH],
 );
 

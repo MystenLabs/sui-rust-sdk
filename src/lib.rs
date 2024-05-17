@@ -114,3 +114,146 @@ mod _serde {
 
     pub(crate) use super::types::SignedTransactionWithIntentMessage;
 }
+
+#[cfg(feature = "schemars")]
+mod _schemars {
+    use schemars::schema::{InstanceType, Metadata, SchemaObject};
+    use schemars::JsonSchema;
+
+    pub(crate) struct U64;
+
+    impl JsonSchema for U64 {
+        fn schema_name() -> String {
+            "u64".to_owned()
+        }
+
+        fn json_schema(_: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+            SchemaObject {
+                metadata: Some(Box::new(Metadata {
+                    description: Some("Radix-10 encoded 64-bit unsigned integer".to_owned()),
+                    ..Default::default()
+                })),
+                instance_type: Some(InstanceType::String.into()),
+                format: Some("u64".to_owned()),
+                ..Default::default()
+            }
+            .into()
+        }
+
+        fn is_referenceable() -> bool {
+            false
+        }
+    }
+
+    pub(crate) struct I128;
+
+    impl JsonSchema for I128 {
+        fn schema_name() -> String {
+            "i128".to_owned()
+        }
+
+        fn json_schema(_: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+            SchemaObject {
+                metadata: Some(Box::new(Metadata {
+                    description: Some("Radix-10 encoded 128-bit signed integer".to_owned()),
+                    ..Default::default()
+                })),
+                instance_type: Some(InstanceType::String.into()),
+                format: Some("i128".to_owned()),
+                ..Default::default()
+            }
+            .into()
+        }
+
+        fn is_referenceable() -> bool {
+            false
+        }
+    }
+
+    pub(crate) struct U256;
+
+    impl JsonSchema for U256 {
+        fn schema_name() -> String {
+            "u256".to_owned()
+        }
+
+        fn json_schema(_: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+            SchemaObject {
+                metadata: Some(Box::new(Metadata {
+                    description: Some("Radix-10 encoded 256-bit unsigned integer".to_owned()),
+                    ..Default::default()
+                })),
+                instance_type: Some(InstanceType::String.into()),
+                format: Some("u256".to_owned()),
+                ..Default::default()
+            }
+            .into()
+        }
+
+        fn is_referenceable() -> bool {
+            false
+        }
+    }
+
+    pub(crate) struct Base64;
+
+    impl JsonSchema for Base64 {
+        fn schema_name() -> String {
+            "Base64".to_owned()
+        }
+
+        fn json_schema(_: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+            SchemaObject {
+                metadata: Some(Box::new(Metadata {
+                    description: Some("Base64 encoded data".to_owned()),
+                    ..Default::default()
+                })),
+                instance_type: Some(InstanceType::String.into()),
+                format: Some("base64".to_owned()),
+                ..Default::default()
+            }
+            .into()
+        }
+
+        fn is_referenceable() -> bool {
+            false
+        }
+    }
+
+    pub(crate) struct Base58;
+
+    impl JsonSchema for Base58 {
+        fn schema_name() -> String {
+            "Base58".to_owned()
+        }
+
+        fn json_schema(_: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+            SchemaObject {
+                metadata: Some(Box::new(Metadata {
+                    description: Some("Base58 encoded data".to_owned()),
+                    ..Default::default()
+                })),
+                instance_type: Some(InstanceType::String.into()),
+                format: Some("base58".to_owned()),
+                ..Default::default()
+            }
+            .into()
+        }
+
+        fn is_referenceable() -> bool {
+            false
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn assert_valid_json_schema<T>(instance: &T)
+    where
+        T: serde::Serialize + JsonSchema,
+    {
+        let root_schema = schemars::gen::SchemaGenerator::default().into_root_schema_for::<T>();
+        let schema = serde_json::json!(root_schema);
+        let compiled = jsonschema::JSONSchema::compile(&schema).unwrap();
+        let instance = serde_json::json!(instance);
+        assert!(compiled.is_valid(&instance));
+    }
+}

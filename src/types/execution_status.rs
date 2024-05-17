@@ -24,6 +24,11 @@ pub enum ExecutionStatus {
 pub type TypeParameterIndex = u16;
 
 #[derive(Eq, PartialEq, Clone, Debug)]
+#[cfg_attr(
+    feature = "schemars",
+    derive(schemars::JsonSchema),
+    schemars(tag = "error", rename_all = "snake_case")
+)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub enum ExecutionError {
     //
@@ -39,12 +44,16 @@ pub enum ExecutionError {
     FeatureNotYetSupported,
     /// Move object is larger than the maximum allowed size
     ObjectTooBig {
+        #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
         object_size: u64,
+        #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
         max_object_size: u64,
     },
     /// Package is larger than the maximum allowed size
     PackageTooBig {
+        #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
         object_size: u64,
+        #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
         max_object_size: u64,
     },
     /// Circular Object Ownership
@@ -76,7 +85,11 @@ pub enum ExecutionError {
     ///     Arithmetic error, stack overflow, max value depth, etc."
     MovePrimitiveRuntimeError { location: Option<MoveLocation> },
     /// Move runtime abort
-    MoveAbort { location: MoveLocation, code: u64 },
+    MoveAbort {
+        location: MoveLocation,
+        #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
+        code: u64,
+    },
     /// Bytecode verification error.
     VmVerificationOrDeserializationError,
     /// MoveVm invariant violation
@@ -98,6 +111,7 @@ pub enum ExecutionError {
     /// Invalid command argument
     CommandArgumentError {
         argument: u16,
+        #[cfg_attr(feature = "schemars", schemars(flatten))]
         kind: CommandArgumentError,
     },
     /// Type argument error
@@ -117,7 +131,12 @@ pub enum ExecutionError {
     // Post-execution errors
     //
     /// Effects from the transaction are too large
-    EffectsTooLarge { current_size: u64, max_size: u64 },
+    EffectsTooLarge {
+        #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
+        current_size: u64,
+        #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
+        max_size: u64,
+    },
 
     /// Publish or Upgrade is missing dependency
     PublishUpgradeMissingDependency,
@@ -134,7 +153,9 @@ pub enum ExecutionError {
 
     /// Indicates the transaction tried to write objects too large to storage
     WrittenObjectsTooLarge {
+        #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
         object_size: u64,
+        #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
         max_object_size: u64,
     },
 
@@ -156,6 +177,7 @@ pub enum ExecutionError {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub struct MoveLocation {
     pub package: ObjectId,
@@ -168,6 +190,11 @@ pub struct MoveLocation {
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]
+#[cfg_attr(
+    feature = "schemars",
+    derive(schemars::JsonSchema),
+    schemars(tag = "kind", rename_all = "snake_case")
+)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub enum CommandArgumentError {
     /// The type of the value does not match the expected type
@@ -204,6 +231,11 @@ pub enum CommandArgumentError {
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]
+#[cfg_attr(
+    feature = "schemars",
+    derive(schemars::JsonSchema),
+    schemars(tag = "kind", rename_all = "snake_case")
+)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub enum PackageUpgradeError {
     /// Unable to fetch package
@@ -229,6 +261,11 @@ pub enum PackageUpgradeError {
     derive(serde_derive::Serialize, serde_derive::Deserialize),
     serde(rename_all = "snake_case")
 )]
+#[cfg_attr(
+    feature = "schemars",
+    derive(schemars::JsonSchema),
+    schemars(rename_all = "snake_case")
+)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub enum TypeArgumentError {
     /// A type was not found in the module specified
@@ -248,13 +285,27 @@ mod serialization {
     use serde::Serializer;
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
+    #[serde(rename = "ExecutionStatus")]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
     struct ReadableExecutionStatus {
         success: bool,
         #[serde(skip_serializing_if = "Option::is_none")]
         status: Option<FailureStatus>,
     }
 
+    #[cfg(feature = "schemars")]
+    impl schemars::JsonSchema for ExecutionStatus {
+        fn schema_name() -> String {
+            ReadableExecutionStatus::schema_name()
+        }
+
+        fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+            ReadableExecutionStatus::json_schema(gen)
+        }
+    }
+
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
     struct FailureStatus {
         #[serde(flatten)]
         error: ExecutionError,
@@ -487,220 +538,196 @@ mod serialization {
         {
             if serializer.is_human_readable() {
                 let readable = match self.clone() {
-                    ExecutionError::InsufficientGas => ReadableExecutionError::InsufficientGas,
-                    ExecutionError::InvalidGasObject => ReadableExecutionError::InvalidGasObject,
-                    ExecutionError::InvariantViolation => {
-                        ReadableExecutionError::InvariantViolation
-                    }
-                    ExecutionError::FeatureNotYetSupported => {
-                        ReadableExecutionError::FeatureNotYetSupported
-                    }
-                    ExecutionError::ObjectTooBig {
+                    Self::InsufficientGas => ReadableExecutionError::InsufficientGas,
+                    Self::InvalidGasObject => ReadableExecutionError::InvalidGasObject,
+                    Self::InvariantViolation => ReadableExecutionError::InvariantViolation,
+                    Self::FeatureNotYetSupported => ReadableExecutionError::FeatureNotYetSupported,
+                    Self::ObjectTooBig {
                         object_size,
                         max_object_size,
                     } => ReadableExecutionError::ObjectTooBig {
                         object_size,
                         max_object_size,
                     },
-                    ExecutionError::PackageTooBig {
+                    Self::PackageTooBig {
                         object_size,
                         max_object_size,
                     } => ReadableExecutionError::PackageTooBig {
                         object_size,
                         max_object_size,
                     },
-                    ExecutionError::CircularObjectOwnership { object } => {
+                    Self::CircularObjectOwnership { object } => {
                         ReadableExecutionError::CircularObjectOwnership { object }
                     }
-                    ExecutionError::InsufficientCoinBalance => {
+                    Self::InsufficientCoinBalance => {
                         ReadableExecutionError::InsufficientCoinBalance
                     }
-                    ExecutionError::CoinBalanceOverflow => {
-                        ReadableExecutionError::CoinBalanceOverflow
-                    }
-                    ExecutionError::PublishErrorNonZeroAddress => {
+                    Self::CoinBalanceOverflow => ReadableExecutionError::CoinBalanceOverflow,
+                    Self::PublishErrorNonZeroAddress => {
                         ReadableExecutionError::PublishErrorNonZeroAddress
                     }
-                    ExecutionError::SuiMoveVerificationError => {
+                    Self::SuiMoveVerificationError => {
                         ReadableExecutionError::SuiMoveVerificationError
                     }
-                    ExecutionError::MovePrimitiveRuntimeError { location } => {
+                    Self::MovePrimitiveRuntimeError { location } => {
                         ReadableExecutionError::MovePrimitiveRuntimeError { location }
                     }
-                    ExecutionError::MoveAbort { location, code } => {
+                    Self::MoveAbort { location, code } => {
                         ReadableExecutionError::MoveAbort { location, code }
                     }
-                    ExecutionError::VmVerificationOrDeserializationError => {
+                    Self::VmVerificationOrDeserializationError => {
                         ReadableExecutionError::VmVerificationOrDeserializationError
                     }
-                    ExecutionError::VmInvariantViolation => {
-                        ReadableExecutionError::VmInvariantViolation
-                    }
-                    ExecutionError::FunctionNotFound => ReadableExecutionError::FunctionNotFound,
-                    ExecutionError::ArityMismatch => ReadableExecutionError::ArityMismatch,
-                    ExecutionError::TypeArityMismatch => ReadableExecutionError::TypeArityMismatch,
-                    ExecutionError::NonEntryFunctionInvoked => {
+                    Self::VmInvariantViolation => ReadableExecutionError::VmInvariantViolation,
+                    Self::FunctionNotFound => ReadableExecutionError::FunctionNotFound,
+                    Self::ArityMismatch => ReadableExecutionError::ArityMismatch,
+                    Self::TypeArityMismatch => ReadableExecutionError::TypeArityMismatch,
+                    Self::NonEntryFunctionInvoked => {
                         ReadableExecutionError::NonEntryFunctionInvoked
                     }
-                    ExecutionError::CommandArgumentError { argument, kind } => {
+                    Self::CommandArgumentError { argument, kind } => {
                         ReadableExecutionError::CommandArgumentError { argument, kind }
                     }
-                    ExecutionError::TypeArgumentError {
+                    Self::TypeArgumentError {
                         type_argument,
                         kind,
                     } => ReadableExecutionError::TypeArgumentError {
                         type_argument,
                         kind,
                     },
-                    ExecutionError::UnusedValueWithoutDrop { result, subresult } => {
+                    Self::UnusedValueWithoutDrop { result, subresult } => {
                         ReadableExecutionError::UnusedValueWithoutDrop { result, subresult }
                     }
-                    ExecutionError::InvalidPublicFunctionReturnType { index } => {
+                    Self::InvalidPublicFunctionReturnType { index } => {
                         ReadableExecutionError::InvalidPublicFunctionReturnType { index }
                     }
-                    ExecutionError::InvalidTransferObject => {
-                        ReadableExecutionError::InvalidTransferObject
-                    }
-                    ExecutionError::EffectsTooLarge {
+                    Self::InvalidTransferObject => ReadableExecutionError::InvalidTransferObject,
+                    Self::EffectsTooLarge {
                         current_size,
                         max_size,
                     } => ReadableExecutionError::EffectsTooLarge {
                         current_size,
                         max_size,
                     },
-                    ExecutionError::PublishUpgradeMissingDependency => {
+                    Self::PublishUpgradeMissingDependency => {
                         ReadableExecutionError::PublishUpgradeMissingDependency
                     }
-                    ExecutionError::PublishUpgradeDependencyDowngrade => {
+                    Self::PublishUpgradeDependencyDowngrade => {
                         ReadableExecutionError::PublishUpgradeDependencyDowngrade
                     }
-                    ExecutionError::PackageUpgradeError(err) => {
+                    Self::PackageUpgradeError(err) => {
                         ReadableExecutionError::PackageUpgradeError(err)
                     }
-                    ExecutionError::WrittenObjectsTooLarge {
+                    Self::WrittenObjectsTooLarge {
                         object_size,
                         max_object_size,
                     } => ReadableExecutionError::WrittenObjectsTooLarge {
                         object_size,
                         max_object_size,
                     },
-                    ExecutionError::CertificateDenied => ReadableExecutionError::CertificateDenied,
-                    ExecutionError::SuiMoveVerificationTimedout => {
+                    Self::CertificateDenied => ReadableExecutionError::CertificateDenied,
+                    Self::SuiMoveVerificationTimedout => {
                         ReadableExecutionError::SuiMoveVerificationTimedout
                     }
-                    ExecutionError::SharedObjectOperationNotAllowed => {
+                    Self::SharedObjectOperationNotAllowed => {
                         ReadableExecutionError::SharedObjectOperationNotAllowed
                     }
-                    ExecutionError::InputObjectDeleted => {
-                        ReadableExecutionError::InputObjectDeleted
-                    }
+                    Self::InputObjectDeleted => ReadableExecutionError::InputObjectDeleted,
                 };
                 readable.serialize(serializer)
             } else {
                 let binary = match self.clone() {
-                    ExecutionError::InsufficientGas => BinaryExecutionError::InsufficientGas,
-                    ExecutionError::InvalidGasObject => BinaryExecutionError::InvalidGasObject,
-                    ExecutionError::InvariantViolation => BinaryExecutionError::InvariantViolation,
-                    ExecutionError::FeatureNotYetSupported => {
-                        BinaryExecutionError::FeatureNotYetSupported
-                    }
-                    ExecutionError::ObjectTooBig {
+                    Self::InsufficientGas => BinaryExecutionError::InsufficientGas,
+                    Self::InvalidGasObject => BinaryExecutionError::InvalidGasObject,
+                    Self::InvariantViolation => BinaryExecutionError::InvariantViolation,
+                    Self::FeatureNotYetSupported => BinaryExecutionError::FeatureNotYetSupported,
+                    Self::ObjectTooBig {
                         object_size,
                         max_object_size,
                     } => BinaryExecutionError::ObjectTooBig {
                         object_size,
                         max_object_size,
                     },
-                    ExecutionError::PackageTooBig {
+                    Self::PackageTooBig {
                         object_size,
                         max_object_size,
                     } => BinaryExecutionError::PackageTooBig {
                         object_size,
                         max_object_size,
                     },
-                    ExecutionError::CircularObjectOwnership { object } => {
+                    Self::CircularObjectOwnership { object } => {
                         BinaryExecutionError::CircularObjectOwnership { object }
                     }
-                    ExecutionError::InsufficientCoinBalance => {
-                        BinaryExecutionError::InsufficientCoinBalance
-                    }
-                    ExecutionError::CoinBalanceOverflow => {
-                        BinaryExecutionError::CoinBalanceOverflow
-                    }
-                    ExecutionError::PublishErrorNonZeroAddress => {
+                    Self::InsufficientCoinBalance => BinaryExecutionError::InsufficientCoinBalance,
+                    Self::CoinBalanceOverflow => BinaryExecutionError::CoinBalanceOverflow,
+                    Self::PublishErrorNonZeroAddress => {
                         BinaryExecutionError::PublishErrorNonZeroAddress
                     }
-                    ExecutionError::SuiMoveVerificationError => {
+                    Self::SuiMoveVerificationError => {
                         BinaryExecutionError::SuiMoveVerificationError
                     }
-                    ExecutionError::MovePrimitiveRuntimeError { location } => {
+                    Self::MovePrimitiveRuntimeError { location } => {
                         BinaryExecutionError::MovePrimitiveRuntimeError { location }
                     }
-                    ExecutionError::MoveAbort { location, code } => {
+                    Self::MoveAbort { location, code } => {
                         BinaryExecutionError::MoveAbort { location, code }
                     }
-                    ExecutionError::VmVerificationOrDeserializationError => {
+                    Self::VmVerificationOrDeserializationError => {
                         BinaryExecutionError::VmVerificationOrDeserializationError
                     }
-                    ExecutionError::VmInvariantViolation => {
-                        BinaryExecutionError::VmInvariantViolation
-                    }
-                    ExecutionError::FunctionNotFound => BinaryExecutionError::FunctionNotFound,
-                    ExecutionError::ArityMismatch => BinaryExecutionError::ArityMismatch,
-                    ExecutionError::TypeArityMismatch => BinaryExecutionError::TypeArityMismatch,
-                    ExecutionError::NonEntryFunctionInvoked => {
-                        BinaryExecutionError::NonEntryFunctionInvoked
-                    }
-                    ExecutionError::CommandArgumentError { argument, kind } => {
+                    Self::VmInvariantViolation => BinaryExecutionError::VmInvariantViolation,
+                    Self::FunctionNotFound => BinaryExecutionError::FunctionNotFound,
+                    Self::ArityMismatch => BinaryExecutionError::ArityMismatch,
+                    Self::TypeArityMismatch => BinaryExecutionError::TypeArityMismatch,
+                    Self::NonEntryFunctionInvoked => BinaryExecutionError::NonEntryFunctionInvoked,
+                    Self::CommandArgumentError { argument, kind } => {
                         BinaryExecutionError::CommandArgumentError { argument, kind }
                     }
-                    ExecutionError::TypeArgumentError {
+                    Self::TypeArgumentError {
                         type_argument,
                         kind,
                     } => BinaryExecutionError::TypeArgumentError {
                         type_argument,
                         kind,
                     },
-                    ExecutionError::UnusedValueWithoutDrop { result, subresult } => {
+                    Self::UnusedValueWithoutDrop { result, subresult } => {
                         BinaryExecutionError::UnusedValueWithoutDrop { result, subresult }
                     }
-                    ExecutionError::InvalidPublicFunctionReturnType { index } => {
+                    Self::InvalidPublicFunctionReturnType { index } => {
                         BinaryExecutionError::InvalidPublicFunctionReturnType { index }
                     }
-                    ExecutionError::InvalidTransferObject => {
-                        BinaryExecutionError::InvalidTransferObject
-                    }
-                    ExecutionError::EffectsTooLarge {
+                    Self::InvalidTransferObject => BinaryExecutionError::InvalidTransferObject,
+                    Self::EffectsTooLarge {
                         current_size,
                         max_size,
                     } => BinaryExecutionError::EffectsTooLarge {
                         current_size,
                         max_size,
                     },
-                    ExecutionError::PublishUpgradeMissingDependency => {
+                    Self::PublishUpgradeMissingDependency => {
                         BinaryExecutionError::PublishUpgradeMissingDependency
                     }
-                    ExecutionError::PublishUpgradeDependencyDowngrade => {
+                    Self::PublishUpgradeDependencyDowngrade => {
                         BinaryExecutionError::PublishUpgradeDependencyDowngrade
                     }
-                    ExecutionError::PackageUpgradeError(err) => {
+                    Self::PackageUpgradeError(err) => {
                         BinaryExecutionError::PackageUpgradeError(err)
                     }
-                    ExecutionError::WrittenObjectsTooLarge {
+                    Self::WrittenObjectsTooLarge {
                         object_size,
                         max_object_size,
                     } => BinaryExecutionError::WrittenObjectsTooLarge {
                         object_size,
                         max_object_size,
                     },
-                    ExecutionError::CertificateDenied => BinaryExecutionError::CertificateDenied,
-                    ExecutionError::SuiMoveVerificationTimedout => {
+                    Self::CertificateDenied => BinaryExecutionError::CertificateDenied,
+                    Self::SuiMoveVerificationTimedout => {
                         BinaryExecutionError::SuiMoveVerificationTimedout
                     }
-                    ExecutionError::SharedObjectOperationNotAllowed => {
+                    Self::SharedObjectOperationNotAllowed => {
                         BinaryExecutionError::SharedObjectOperationNotAllowed
                     }
-                    ExecutionError::InputObjectDeleted => BinaryExecutionError::InputObjectDeleted,
+                    Self::InputObjectDeleted => BinaryExecutionError::InputObjectDeleted,
                 };
                 binary.serialize(serializer)
             }
@@ -714,219 +741,195 @@ mod serialization {
         {
             if deserializer.is_human_readable() {
                 ReadableExecutionError::deserialize(deserializer).map(|readable| match readable {
-                    ReadableExecutionError::InsufficientGas => ExecutionError::InsufficientGas,
-                    ReadableExecutionError::InvalidGasObject => ExecutionError::InvalidGasObject,
-                    ReadableExecutionError::InvariantViolation => {
-                        ExecutionError::InvariantViolation
-                    }
-                    ReadableExecutionError::FeatureNotYetSupported => {
-                        ExecutionError::FeatureNotYetSupported
-                    }
+                    ReadableExecutionError::InsufficientGas => Self::InsufficientGas,
+                    ReadableExecutionError::InvalidGasObject => Self::InvalidGasObject,
+                    ReadableExecutionError::InvariantViolation => Self::InvariantViolation,
+                    ReadableExecutionError::FeatureNotYetSupported => Self::FeatureNotYetSupported,
                     ReadableExecutionError::ObjectTooBig {
                         object_size,
                         max_object_size,
-                    } => ExecutionError::ObjectTooBig {
+                    } => Self::ObjectTooBig {
                         object_size,
                         max_object_size,
                     },
                     ReadableExecutionError::PackageTooBig {
                         object_size,
                         max_object_size,
-                    } => ExecutionError::PackageTooBig {
+                    } => Self::PackageTooBig {
                         object_size,
                         max_object_size,
                     },
                     ReadableExecutionError::CircularObjectOwnership { object } => {
-                        ExecutionError::CircularObjectOwnership { object }
+                        Self::CircularObjectOwnership { object }
                     }
                     ReadableExecutionError::InsufficientCoinBalance => {
-                        ExecutionError::InsufficientCoinBalance
+                        Self::InsufficientCoinBalance
                     }
-                    ReadableExecutionError::CoinBalanceOverflow => {
-                        ExecutionError::CoinBalanceOverflow
-                    }
+                    ReadableExecutionError::CoinBalanceOverflow => Self::CoinBalanceOverflow,
                     ReadableExecutionError::PublishErrorNonZeroAddress => {
-                        ExecutionError::PublishErrorNonZeroAddress
+                        Self::PublishErrorNonZeroAddress
                     }
                     ReadableExecutionError::SuiMoveVerificationError => {
-                        ExecutionError::SuiMoveVerificationError
+                        Self::SuiMoveVerificationError
                     }
                     ReadableExecutionError::MovePrimitiveRuntimeError { location } => {
-                        ExecutionError::MovePrimitiveRuntimeError { location }
+                        Self::MovePrimitiveRuntimeError { location }
                     }
                     ReadableExecutionError::MoveAbort { location, code } => {
-                        ExecutionError::MoveAbort { location, code }
+                        Self::MoveAbort { location, code }
                     }
                     ReadableExecutionError::VmVerificationOrDeserializationError => {
-                        ExecutionError::VmVerificationOrDeserializationError
+                        Self::VmVerificationOrDeserializationError
                     }
-                    ReadableExecutionError::VmInvariantViolation => {
-                        ExecutionError::VmInvariantViolation
-                    }
-                    ReadableExecutionError::FunctionNotFound => ExecutionError::FunctionNotFound,
-                    ReadableExecutionError::ArityMismatch => ExecutionError::ArityMismatch,
-                    ReadableExecutionError::TypeArityMismatch => ExecutionError::TypeArityMismatch,
+                    ReadableExecutionError::VmInvariantViolation => Self::VmInvariantViolation,
+                    ReadableExecutionError::FunctionNotFound => Self::FunctionNotFound,
+                    ReadableExecutionError::ArityMismatch => Self::ArityMismatch,
+                    ReadableExecutionError::TypeArityMismatch => Self::TypeArityMismatch,
                     ReadableExecutionError::NonEntryFunctionInvoked => {
-                        ExecutionError::NonEntryFunctionInvoked
+                        Self::NonEntryFunctionInvoked
                     }
                     ReadableExecutionError::CommandArgumentError { argument, kind } => {
-                        ExecutionError::CommandArgumentError { argument, kind }
+                        Self::CommandArgumentError { argument, kind }
                     }
                     ReadableExecutionError::TypeArgumentError {
                         type_argument,
                         kind,
-                    } => ExecutionError::TypeArgumentError {
+                    } => Self::TypeArgumentError {
                         type_argument,
                         kind,
                     },
                     ReadableExecutionError::UnusedValueWithoutDrop { result, subresult } => {
-                        ExecutionError::UnusedValueWithoutDrop { result, subresult }
+                        Self::UnusedValueWithoutDrop { result, subresult }
                     }
                     ReadableExecutionError::InvalidPublicFunctionReturnType { index } => {
-                        ExecutionError::InvalidPublicFunctionReturnType { index }
+                        Self::InvalidPublicFunctionReturnType { index }
                     }
-                    ReadableExecutionError::InvalidTransferObject => {
-                        ExecutionError::InvalidTransferObject
-                    }
+                    ReadableExecutionError::InvalidTransferObject => Self::InvalidTransferObject,
                     ReadableExecutionError::EffectsTooLarge {
                         current_size,
                         max_size,
-                    } => ExecutionError::EffectsTooLarge {
+                    } => Self::EffectsTooLarge {
                         current_size,
                         max_size,
                     },
                     ReadableExecutionError::PublishUpgradeMissingDependency => {
-                        ExecutionError::PublishUpgradeMissingDependency
+                        Self::PublishUpgradeMissingDependency
                     }
                     ReadableExecutionError::PublishUpgradeDependencyDowngrade => {
-                        ExecutionError::PublishUpgradeDependencyDowngrade
+                        Self::PublishUpgradeDependencyDowngrade
                     }
                     ReadableExecutionError::PackageUpgradeError(err) => {
-                        ExecutionError::PackageUpgradeError(err)
+                        Self::PackageUpgradeError(err)
                     }
                     ReadableExecutionError::WrittenObjectsTooLarge {
                         object_size,
                         max_object_size,
-                    } => ExecutionError::WrittenObjectsTooLarge {
+                    } => Self::WrittenObjectsTooLarge {
                         object_size,
                         max_object_size,
                     },
-                    ReadableExecutionError::CertificateDenied => ExecutionError::CertificateDenied,
+                    ReadableExecutionError::CertificateDenied => Self::CertificateDenied,
                     ReadableExecutionError::SuiMoveVerificationTimedout => {
-                        ExecutionError::SuiMoveVerificationTimedout
+                        Self::SuiMoveVerificationTimedout
                     }
                     ReadableExecutionError::SharedObjectOperationNotAllowed => {
-                        ExecutionError::SharedObjectOperationNotAllowed
+                        Self::SharedObjectOperationNotAllowed
                     }
-                    ReadableExecutionError::InputObjectDeleted => {
-                        ExecutionError::InputObjectDeleted
-                    }
+                    ReadableExecutionError::InputObjectDeleted => Self::InputObjectDeleted,
                 })
             } else {
                 BinaryExecutionError::deserialize(deserializer).map(|binary| match binary {
-                    BinaryExecutionError::InsufficientGas => ExecutionError::InsufficientGas,
-                    BinaryExecutionError::InvalidGasObject => ExecutionError::InvalidGasObject,
-                    BinaryExecutionError::InvariantViolation => ExecutionError::InvariantViolation,
-                    BinaryExecutionError::FeatureNotYetSupported => {
-                        ExecutionError::FeatureNotYetSupported
-                    }
+                    BinaryExecutionError::InsufficientGas => Self::InsufficientGas,
+                    BinaryExecutionError::InvalidGasObject => Self::InvalidGasObject,
+                    BinaryExecutionError::InvariantViolation => Self::InvariantViolation,
+                    BinaryExecutionError::FeatureNotYetSupported => Self::FeatureNotYetSupported,
                     BinaryExecutionError::ObjectTooBig {
                         object_size,
                         max_object_size,
-                    } => ExecutionError::ObjectTooBig {
+                    } => Self::ObjectTooBig {
                         object_size,
                         max_object_size,
                     },
                     BinaryExecutionError::PackageTooBig {
                         object_size,
                         max_object_size,
-                    } => ExecutionError::PackageTooBig {
+                    } => Self::PackageTooBig {
                         object_size,
                         max_object_size,
                     },
                     BinaryExecutionError::CircularObjectOwnership { object } => {
-                        ExecutionError::CircularObjectOwnership { object }
+                        Self::CircularObjectOwnership { object }
                     }
-                    BinaryExecutionError::InsufficientCoinBalance => {
-                        ExecutionError::InsufficientCoinBalance
-                    }
-                    BinaryExecutionError::CoinBalanceOverflow => {
-                        ExecutionError::CoinBalanceOverflow
-                    }
+                    BinaryExecutionError::InsufficientCoinBalance => Self::InsufficientCoinBalance,
+                    BinaryExecutionError::CoinBalanceOverflow => Self::CoinBalanceOverflow,
                     BinaryExecutionError::PublishErrorNonZeroAddress => {
-                        ExecutionError::PublishErrorNonZeroAddress
+                        Self::PublishErrorNonZeroAddress
                     }
                     BinaryExecutionError::SuiMoveVerificationError => {
-                        ExecutionError::SuiMoveVerificationError
+                        Self::SuiMoveVerificationError
                     }
                     BinaryExecutionError::MovePrimitiveRuntimeError { location } => {
-                        ExecutionError::MovePrimitiveRuntimeError { location }
+                        Self::MovePrimitiveRuntimeError { location }
                     }
                     BinaryExecutionError::MoveAbort { location, code } => {
-                        ExecutionError::MoveAbort { location, code }
+                        Self::MoveAbort { location, code }
                     }
                     BinaryExecutionError::VmVerificationOrDeserializationError => {
-                        ExecutionError::VmVerificationOrDeserializationError
+                        Self::VmVerificationOrDeserializationError
                     }
-                    BinaryExecutionError::VmInvariantViolation => {
-                        ExecutionError::VmInvariantViolation
-                    }
-                    BinaryExecutionError::FunctionNotFound => ExecutionError::FunctionNotFound,
-                    BinaryExecutionError::ArityMismatch => ExecutionError::ArityMismatch,
-                    BinaryExecutionError::TypeArityMismatch => ExecutionError::TypeArityMismatch,
-                    BinaryExecutionError::NonEntryFunctionInvoked => {
-                        ExecutionError::NonEntryFunctionInvoked
-                    }
+                    BinaryExecutionError::VmInvariantViolation => Self::VmInvariantViolation,
+                    BinaryExecutionError::FunctionNotFound => Self::FunctionNotFound,
+                    BinaryExecutionError::ArityMismatch => Self::ArityMismatch,
+                    BinaryExecutionError::TypeArityMismatch => Self::TypeArityMismatch,
+                    BinaryExecutionError::NonEntryFunctionInvoked => Self::NonEntryFunctionInvoked,
                     BinaryExecutionError::CommandArgumentError { argument, kind } => {
-                        ExecutionError::CommandArgumentError { argument, kind }
+                        Self::CommandArgumentError { argument, kind }
                     }
                     BinaryExecutionError::TypeArgumentError {
                         type_argument,
                         kind,
-                    } => ExecutionError::TypeArgumentError {
+                    } => Self::TypeArgumentError {
                         type_argument,
                         kind,
                     },
                     BinaryExecutionError::UnusedValueWithoutDrop { result, subresult } => {
-                        ExecutionError::UnusedValueWithoutDrop { result, subresult }
+                        Self::UnusedValueWithoutDrop { result, subresult }
                     }
                     BinaryExecutionError::InvalidPublicFunctionReturnType { index } => {
-                        ExecutionError::InvalidPublicFunctionReturnType { index }
+                        Self::InvalidPublicFunctionReturnType { index }
                     }
-                    BinaryExecutionError::InvalidTransferObject => {
-                        ExecutionError::InvalidTransferObject
-                    }
+                    BinaryExecutionError::InvalidTransferObject => Self::InvalidTransferObject,
                     BinaryExecutionError::EffectsTooLarge {
                         current_size,
                         max_size,
-                    } => ExecutionError::EffectsTooLarge {
+                    } => Self::EffectsTooLarge {
                         current_size,
                         max_size,
                     },
                     BinaryExecutionError::PublishUpgradeMissingDependency => {
-                        ExecutionError::PublishUpgradeMissingDependency
+                        Self::PublishUpgradeMissingDependency
                     }
                     BinaryExecutionError::PublishUpgradeDependencyDowngrade => {
-                        ExecutionError::PublishUpgradeDependencyDowngrade
+                        Self::PublishUpgradeDependencyDowngrade
                     }
                     BinaryExecutionError::PackageUpgradeError(err) => {
-                        ExecutionError::PackageUpgradeError(err)
+                        Self::PackageUpgradeError(err)
                     }
                     BinaryExecutionError::WrittenObjectsTooLarge {
                         object_size,
                         max_object_size,
-                    } => ExecutionError::WrittenObjectsTooLarge {
+                    } => Self::WrittenObjectsTooLarge {
                         object_size,
                         max_object_size,
                     },
-                    BinaryExecutionError::CertificateDenied => ExecutionError::CertificateDenied,
+                    BinaryExecutionError::CertificateDenied => Self::CertificateDenied,
                     BinaryExecutionError::SuiMoveVerificationTimedout => {
-                        ExecutionError::SuiMoveVerificationTimedout
+                        Self::SuiMoveVerificationTimedout
                     }
                     BinaryExecutionError::SharedObjectOperationNotAllowed => {
-                        ExecutionError::SharedObjectOperationNotAllowed
+                        Self::SharedObjectOperationNotAllowed
                     }
-                    BinaryExecutionError::InputObjectDeleted => ExecutionError::InputObjectDeleted,
+                    BinaryExecutionError::InputObjectDeleted => Self::InputObjectDeleted,
                 })
             }
         }

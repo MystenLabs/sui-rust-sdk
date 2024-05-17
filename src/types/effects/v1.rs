@@ -6,10 +6,13 @@ use crate::types::{
 
 /// The response from processing a transaction or a certified transaction
 #[derive(Eq, PartialEq, Clone, Debug)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct TransactionEffectsV1 {
     /// The status of the execution
+    #[cfg_attr(feature = "schemars", schemars(flatten))]
     status: ExecutionStatus,
     /// The epoch when this transaction was executed.
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     epoch: EpochId,
     gas_used: GasCostSummary,
     /// The version that every modified (mutated or deleted) object had before it was modified by
@@ -49,9 +52,11 @@ pub struct TransactionEffectsV1 {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct ModifiedAtVersion {
     pub object_id: ObjectId,
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub version: Version,
 }
 
@@ -60,6 +65,7 @@ pub struct ModifiedAtVersion {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct ObjectReferenceWithOwner {
     pub reference: ObjectReference,
     pub owner: Owner,

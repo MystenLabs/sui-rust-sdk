@@ -5,6 +5,7 @@ use super::{Address, Identifier, ObjectId, StructTag, TypeTag};
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct TransactionEvents(Vec<Event>);
 
 /// Specific type of event
@@ -13,16 +14,18 @@ pub struct TransactionEvents(Vec<Event>);
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct Event {
     pub package_id: ObjectId,
-    pub transaction_module: Identifier,
+    pub module: Identifier,
     pub sender: Address,
     #[cfg_attr(feature = "serde", serde(rename = "type"))]
     pub type_: StructTag,
     #[cfg_attr(
         feature = "serde",
-        serde(with = "::serde_with::As::<::serde_with::Bytes>")
+        serde(with = "crate::_serde::ReadableBase64Encoded")
     )]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::Base64"))]
     pub contents: Vec<u8>,
 }
 
@@ -31,6 +34,7 @@ pub struct Event {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct BalanceChange {
     /// Owner of the balance change
     pub address: Address,
@@ -40,5 +44,6 @@ pub struct BalanceChange {
     ///
     /// A negative amount means spending coin value and positive means receiving coin value.
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::I128"))]
     pub amount: i128,
 }

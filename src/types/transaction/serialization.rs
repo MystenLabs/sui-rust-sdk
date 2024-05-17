@@ -25,6 +25,8 @@ mod transaction {
 
     #[derive(serde_derive::Deserialize)]
     #[serde(tag = "version")]
+    #[serde(rename = "Transaction")]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
     enum ReadableTransactionData {
         #[serde(rename = "1")]
         V1(ReadableTransaction),
@@ -40,6 +42,8 @@ mod transaction {
     }
 
     #[derive(serde_derive::Deserialize)]
+    #[serde(rename = "TransactionV1")]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
     struct ReadableTransaction {
         #[serde(flatten)]
         kind: TransactionKind,
@@ -135,6 +139,17 @@ mod transaction {
             }
         }
     }
+
+    #[cfg(feature = "schemars")]
+    impl schemars::JsonSchema for Transaction {
+        fn schema_name() -> String {
+            ReadableTransactionData::schema_name()
+        }
+
+        fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+            ReadableTransactionData::json_schema(gen)
+        }
+    }
 }
 
 mod transaction_kind {
@@ -162,6 +177,8 @@ mod transaction_kind {
 
     #[derive(serde_derive::Deserialize)]
     #[serde(tag = "kind", rename_all = "snake_case")]
+    #[serde(rename = "TransactionKind")]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
     enum ReadableTransactionKind {
         ProgrammableTransaction(ProgrammableTransaction),
         ChangeEpoch(ChangeEpoch),
@@ -173,6 +190,17 @@ mod transaction_kind {
         },
         RandomnessStateUpdate(RandomnessStateUpdate),
         ConsensusCommitPrologueV2(ConsensusCommitPrologueV2),
+    }
+
+    #[cfg(feature = "schemars")]
+    impl schemars::JsonSchema for TransactionKind {
+        fn schema_name() -> String {
+            ReadableTransactionKind::schema_name()
+        }
+
+        fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+            ReadableTransactionKind::json_schema(gen)
+        }
     }
 
     #[derive(serde_derive::Serialize)]
@@ -589,11 +617,24 @@ mod argument {
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
     #[serde(tag = "type", rename_all = "snake_case")]
+    #[serde(rename = "Argument")]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
     enum ReadableArgument {
         GasCoin,
         Input { input: u16 },
         Result { result: u16 },
         NestedResult { result: u16, subresult: u16 },
+    }
+
+    #[cfg(feature = "schemars")]
+    impl schemars::JsonSchema for Argument {
+        fn schema_name() -> String {
+            ReadableArgument::schema_name()
+        }
+
+        fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+            ReadableArgument::json_schema(gen)
+        }
     }
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
