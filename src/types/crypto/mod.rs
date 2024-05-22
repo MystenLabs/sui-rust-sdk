@@ -40,13 +40,16 @@ const fn base64_encoded_length(len: usize) -> usize {
 
 macro_rules! impl_base64_helper {
     ($base:ident, $display:ident, $fromstr:ident, $test_module:ident, $array_length:literal) => {
+        #[allow(unused)]
         struct $base;
 
         impl $base {
             const LENGTH: usize = $array_length;
+            #[allow(unused)]
             const ENCODED_LENGTH: usize = base64_encoded_length(Self::LENGTH);
         }
 
+        #[allow(unused)]
         struct $display<'a>(&'a [u8; $base::LENGTH]);
 
         impl<'a> std::fmt::Display for $display<'a> {
@@ -58,6 +61,7 @@ macro_rules! impl_base64_helper {
             }
         }
 
+        #[allow(unused)]
         #[derive(Debug, PartialEq)]
         #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
         struct $fromstr([u8; $base::LENGTH]);
