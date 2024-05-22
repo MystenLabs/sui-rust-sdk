@@ -25,9 +25,7 @@ impl<'a> Coin<'a> {
     pub fn try_from_object(object: &'a Object) -> Option<Self> {
         match &object.data {
             super::ObjectData::Struct(move_struct) => {
-                let Some(coin_type) = move_struct.type_.is_coin() else {
-                    return None;
-                };
+                let coin_type = move_struct.type_.is_coin()?;
 
                 let contents = &move_struct.contents;
                 if contents.len() != ObjectId::LENGTH + std::mem::size_of::<u64>() {
