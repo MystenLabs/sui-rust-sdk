@@ -19,7 +19,7 @@ pub struct ZkLoginInputs {
     proof_points: ZkLoginProof,
     iss_base64_details: Claim,
     header_base64: String,
-    address_seed: AddressSeed,
+    address_seed: Bn254FieldElement,
     // #[serde(skip)]
     // jwt_details: JwtDetails,
 }
@@ -61,19 +61,21 @@ pub struct ZkLoginProof {
 
 /// A G1 point in BN254 serialized as a vector of three strings which is the canonical decimal
 /// representation of the projective coordinates in Fq.
-pub type CircomG1 = Vec<String>;
+//TODO redefine as [Bn254FieldElement; 3]
+pub type CircomG1 = Vec<Bn254FieldElement>;
 
 /// A G2 point in BN254 serialized as a vector of three vectors each being a vector of two strings
 /// which are the canonical decimal representation of the coefficients of the projective coordinates
 /// in Fq2.
-pub type CircomG2 = Vec<Vec<String>>;
+//TODO redefine as [[Bn254FieldElement; 2]; 3]
+pub type CircomG2 = Vec<Vec<Bn254FieldElement>>;
 
 /// A wrapper struct to retrofit in [enum PublicKey] for zkLogin.
 /// Useful to construct [struct MultiSigPublicKey].
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ZkLoginPublicIdentifier {
     iss: String,
-    address_seed: AddressSeed,
+    address_seed: Bn254FieldElement,
 }
 
 /// Struct that contains info for a JWK. A list of them for different kids can
@@ -109,9 +111,9 @@ pub struct JwkId {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct AddressSeed([u8; 32]);
+pub struct Bn254FieldElement([u8; 32]);
 
-impl AddressSeed {
+impl Bn254FieldElement {
     pub fn unpadded(&self) -> &[u8] {
         let mut buf = self.0.as_slice();
 
@@ -132,7 +134,7 @@ impl AddressSeed {
     }
 }
 
-impl std::fmt::Display for AddressSeed {
+impl std::fmt::Display for Bn254FieldElement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let u256 = U256::from_be(U256::from_digits(self.0));
         let radix10 = u256.to_str_radix(10);
@@ -141,21 +143,21 @@ impl std::fmt::Display for AddressSeed {
 }
 
 #[derive(Debug)]
-pub struct AddressSeedParseError(bnum::errors::ParseIntError);
+pub struct Bn254FieldElementParseError(bnum::errors::ParseIntError);
 
-impl std::fmt::Display for AddressSeedParseError {
+impl std::fmt::Display for Bn254FieldElementParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "unable to parse radix10 encoded value {}", self.0)
     }
 }
 
-impl std::error::Error for AddressSeedParseError {}
+impl std::error::Error for Bn254FieldElementParseError {}
 
-impl std::str::FromStr for AddressSeed {
-    type Err = AddressSeedParseError;
+impl std::str::FromStr for Bn254FieldElement {
+    type Err = Bn254FieldElementParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let u256 = U256::from_str_radix(s, 10).map_err(AddressSeedParseError)?;
+        let u256 = U256::from_str_radix(s, 10).map_err(Bn254FieldElementParseError)?;
         let be = u256.to_be();
         Ok(Self(*be.digits()))
     }
@@ -163,7 +165,7 @@ impl std::str::FromStr for AddressSeed {
 
 #[cfg(test)]
 mod test {
-    use super::AddressSeed;
+    use super::Bn254FieldElement;
     use num_bigint::BigUint;
     use proptest::prelude::*;
     use std::str::FromStr;
@@ -174,11 +176,11 @@ mod test {
 
     #[test]
     fn unpadded_slice() {
-        let seed = AddressSeed([0; 32]);
+        let seed = Bn254FieldElement([0; 32]);
         let zero: [u8; 1] = [0];
         assert_eq!(seed.unpadded(), zero.as_slice());
 
-        let mut seed = AddressSeed([1; 32]);
+        let mut seed = Bn254FieldElement([1; 32]);
         seed.0[0] = 0;
         assert_eq!(seed.unpadded(), [1; 31].as_slice());
     }
@@ -191,7 +193,7 @@ mod test {
         let radix10 = big_int.to_str_radix(10);
 
         // doesn't crash
-        let _ = AddressSeed::from_str(&radix10);
+        let _ = Bn254FieldElement::from_str(&radix10);
     }
 
     #[proptest]
@@ -201,7 +203,7 @@ mod test {
         let big_int = BigUint::from_bytes_be(&bytes);
         let radix10 = big_int.to_str_radix(10);
 
-        let seed = AddressSeed::from_str(&radix10).unwrap();
+        let seed = Bn254FieldElement::from_str(&radix10).unwrap();
         assert_eq!(radix10, seed.to_string());
         // Ensure unpadded doesn't crash
         seed.unpadded();
@@ -233,7 +235,7 @@ mod serialization {
                 #[derive(serde_derive::Serialize)]
                 struct Readable<'a> {
                     iss: &'a str,
-                    address_seed: &'a AddressSeed,
+                    address_seed: &'a Bn254FieldElement,
                 }
                 let readable = Readable {
                     iss: &self.iss,
@@ -262,7 +264,7 @@ mod serialization {
                 #[derive(serde_derive::Deserialize)]
                 struct Readable {
                     iss: String,
-                    address_seed: AddressSeed,
+                    address_seed: Bn254FieldElement,
                 }
 
                 let Readable { iss, address_seed } = Deserialize::deserialize(deserializer)?;
@@ -282,7 +284,7 @@ mod serialization {
 
                 let address_seed = <[u8; 32]>::try_from(address_seed_bytes)
                     .map_err(serde::de::Error::custom)
-                    .map(AddressSeed)?;
+                    .map(Bn254FieldElement)?;
 
                 Ok(Self {
                     iss: iss.into(),
@@ -377,7 +379,7 @@ mod serialization {
     }
 
     // AddressSeed's serialized format is as a radix10 encoded string
-    impl Serialize for AddressSeed {
+    impl Serialize for Bn254FieldElement {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: serde::Serializer,
@@ -386,7 +388,7 @@ mod serialization {
         }
     }
 
-    impl<'de> Deserialize<'de> for AddressSeed {
+    impl<'de> Deserialize<'de> for Bn254FieldElement {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where
             D: Deserializer<'de>,

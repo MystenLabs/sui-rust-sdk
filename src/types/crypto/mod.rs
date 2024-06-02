@@ -20,8 +20,8 @@ pub use validator::{
     ValidatorAggregatedSignature, ValidatorCommittee, ValidatorCommitteeMember, ValidatorSignature,
 };
 pub use zklogin::{
-    AddressSeed, Claim, Jwk, JwkId, JwtDetails, ZkLoginAuthenticator, ZkLoginInputs, ZkLoginProof,
-    ZkLoginPublicIdentifier,
+    Bn254FieldElement, Claim, Jwk, JwkId, JwtDetails, ZkLoginAuthenticator, ZkLoginInputs,
+    ZkLoginProof, ZkLoginPublicIdentifier,
 };
 
 //

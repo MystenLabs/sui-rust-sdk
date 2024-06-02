@@ -20,7 +20,7 @@ pub use checkpoint::{
     EndOfEpochData, EpochId, ProtocolVersion, SignedCheckpointSummary, StakeUnit,
 };
 pub use crypto::{
-    AddressSeed, Bls12381PrivateKey, Bls12381PublicKey, Bls12381Signature, Claim,
+    Bls12381PrivateKey, Bls12381PublicKey, Bls12381Signature, Bn254FieldElement, Claim,
     Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature, Jwk, JwkId, JwtDetails,
     MultisigAggregatedSignature, MultisigCommittee, MultisigMember, MultisigMemberPublicKey,
     MultisigMemberSignature, Secp256k1PrivateKey, Secp256k1PublicKey, Secp256k1Signature,
