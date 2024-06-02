@@ -147,6 +147,10 @@ mod tests {
             "0x1::M::S<vector<u64>>",
             "0x1::M::S<vector<u128>>",
             "0x1::M::S<vector<u256>>",
+            "0x1::_bar::_BAR",
+            "0x1::__::__",
+            "0x1::_bar::_BAR<0x2::_____::______fooo______>",
+            "0x1::__::__<0x2::_____::______fooo______, 0xff::Bar____::_______foo>",
         ] {
             assert!(parse_type_tag(s).is_ok(), "Failed to parse tag {}", s);
         }
@@ -178,6 +182,10 @@ mod tests {
         "0x1::Foo::Foo<u8 , bool  ,    vector<u8>,address,signer>",
         "0x1::Foo::Foo<vector<0x1::Foo::Struct<0x1::XYZ::XYZ>>>",
         "0x1::Foo::Foo<0x1::Foo::Struct<vector<0x1::XYZ::XYZ>, 0x1::Foo::Foo<vector<0x1::Foo::Struct<0x1::XYZ::XYZ>>>>>",
+        "0x1::_bar::_BAR",
+        "0x1::__::__",
+        "0x1::_bar::_BAR<0x2::_____::______fooo______>",
+        "0x1::__::__<0x2::_____::______fooo______, 0xff::Bar____::_______foo>",
         ];
         for s in valid {
             let mut input = s;
