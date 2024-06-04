@@ -17,18 +17,17 @@ const MAX_COMMITTEE_SIZE: usize = 10;
 // const MAX_BITMAP_VALUE: BitmapUnit = 0b1111111111;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub enum MultisigMemberPublicKey {
     Ed25519(Ed25519PublicKey),
     Secp256k1(Secp256k1PublicKey),
     Secp256r1(Secp256r1PublicKey),
-    #[cfg_attr(test, proptest(skip))]
     ZkLogin(ZkLoginPublicIdentifier),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct MultisigMember {
     #[cfg_attr(feature = "schemars", schemars(flatten))]
     public_key: MultisigMemberPublicKey,
@@ -41,15 +40,10 @@ pub struct MultisigMember {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct MultisigCommittee {
     /// A list of committee members and their corresponding weight.
-    #[cfg_attr(
-        test,
-        proptest(
-            strategy = "proptest::collection::vec(proptest::arbitrary::any::<MultisigMember>(), 0..10)"
-        )
-    )]
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=10).lift()))]
     members: Vec<MultisigMember>,
     /// If the total weight of the public keys corresponding to verified signatures is larger than threshold, the Multisig is verified.
     threshold: ThresholdUnit,
@@ -68,15 +62,10 @@ impl MultisigCommittee {
 /// The struct that contains signatures and public keys necessary for authenticating a Multisig.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct MultisigAggregatedSignature {
     /// The plain signature encoded with signature scheme.
-    #[cfg_attr(
-        test,
-        proptest(
-            strategy = "proptest::collection::vec(proptest::arbitrary::any::<MultisigMemberSignature>(), 0..10)"
-        )
-    )]
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=10).lift()))]
     signatures: Vec<MultisigMemberSignature>,
     /// A bitmap that indicates the position of which public key the signature should be authenticated with.
     bitmap: BitmapUnit,
@@ -89,7 +78,7 @@ pub struct MultisigAggregatedSignature {
             with = "Option<crate::_schemars::Base64>",
         )
     )]
-    #[cfg_attr(test, proptest(value = "None"))]
+    #[cfg_attr(test, strategy(proptest::strategy::Just(None)))]
     legacy_bitmap: Option<roaring::RoaringBitmap>,
     /// The public key encoded with each public key with its signature scheme used along with the corresponding weight.
     committee: MultisigCommittee,
@@ -138,13 +127,12 @@ fn roaring_bitmap_to_u16(roaring: &roaring::RoaringBitmap) -> Result<BitmapUnit,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 #[allow(clippy::large_enum_variant)]
 pub enum MultisigMemberSignature {
     Ed25519(Ed25519Signature),
     Secp256k1(Secp256k1Signature),
     Secp256r1(Secp256r1Signature),
-    #[cfg_attr(test, proptest(skip))]
     ZkLogin(ZkLoginAuthenticator),
 }
 
@@ -158,7 +146,8 @@ mod serialization {
     use crate::types::Secp256k1PublicKey;
     use crate::types::Secp256r1PublicKey;
     use crate::types::SignatureScheme;
-    use base64ct::{Base64, Encoding};
+    use base64ct::Base64;
+    use base64ct::Encoding;
     use serde::Deserialize;
     use serde::Deserializer;
     use serde::Serialize;
@@ -719,47 +708,6 @@ mod serialization {
                     weight: binary.weight,
                 })
             }
-        }
-    }
-
-    #[cfg(test)]
-    mod test {
-        use super::*;
-        use test_strategy::proptest;
-
-        #[cfg(target_arch = "wasm32")]
-        use wasm_bindgen_test::wasm_bindgen_test as test;
-
-        #[proptest]
-        fn fuzz_deserialization_multisig_member_public_key(
-            #[strategy(proptest::collection::vec(proptest::arbitrary::any::<u8>(), 0..=2048))]
-            bytes: Vec<u8>,
-        ) {
-            let _: Result<MultisigMemberPublicKey, _> = bcs::from_bytes(&bytes);
-        }
-
-        #[proptest]
-        fn fuzz_deserialization_multisig_member(
-            #[strategy(proptest::collection::vec(proptest::arbitrary::any::<u8>(), 0..=2048))]
-            bytes: Vec<u8>,
-        ) {
-            let _: Result<MultisigMember, _> = bcs::from_bytes(&bytes);
-        }
-
-        #[proptest]
-        fn fuzz_deserialization_multisig_committee(
-            #[strategy(proptest::collection::vec(proptest::arbitrary::any::<u8>(), 0..=2048))]
-            bytes: Vec<u8>,
-        ) {
-            let _: Result<MultisigCommittee, _> = bcs::from_bytes(&bytes);
-        }
-
-        #[proptest]
-        fn fuzz_deserialization_multisig_member_signature(
-            #[strategy(proptest::collection::vec(proptest::arbitrary::any::<u8>(), 0..=2048))]
-            bytes: Vec<u8>,
-        ) {
-            let _: Result<MultisigMemberSignature, _> = bcs::from_bytes(&bytes);
         }
     }
 }

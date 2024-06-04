@@ -7,6 +7,7 @@ mod serialization;
 use super::Address;
 
 #[derive(Eq, PartialEq, PartialOrd, Ord, Debug, Clone, Hash)]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub enum TypeTag {
     U8,
     U16,
@@ -17,6 +18,7 @@ pub enum TypeTag {
     Bool,
     Address,
     Signer,
+    #[cfg_attr(test, weight(0))]
     Vector(Box<TypeTag>),
     Struct(Box<StructTag>),
 }
@@ -62,13 +64,14 @@ impl std::fmt::Display for TypeParseError {
 impl std::error::Error for TypeParseError {}
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct Identifier(
     #[cfg_attr(
         test,
-        proptest(
-            strategy = "proptest::strategy::Strategy::prop_map(\"[a-zA-Z][a-zA-Z0-9_]{0,127}\", Into::into)"
-        )
+        strategy(proptest::strategy::Strategy::prop_map(
+            "[a-zA-Z][a-zA-Z0-9_]{0,127}",
+            Into::into
+        ))
     )]
     Box<str>,
 );
@@ -112,10 +115,12 @@ impl PartialEq<str> for Identifier {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct StructTag {
     pub address: Address,
     pub module: Identifier,
     pub name: Identifier,
+    #[cfg_attr(test, strategy(proptest::strategy::Just(Vec::new())))]
     pub type_params: Vec<TypeTag>,
 }
 

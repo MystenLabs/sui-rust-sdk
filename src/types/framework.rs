@@ -1,6 +1,8 @@
 //! Rust definitions of move/sui framework types.
 
-use super::{Object, ObjectId, TypeTag};
+use super::Object;
+use super::ObjectId;
+use super::TypeTag;
 
 #[derive(Debug, Clone)]
 pub struct Coin<'a> {

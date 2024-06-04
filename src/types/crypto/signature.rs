@@ -13,7 +13,7 @@ use super::ZkLoginAuthenticator;
     derive(schemars::JsonSchema),
     schemars(tag = "scheme", rename_all = "lowercase")
 )]
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub enum SimpleSignature {
     Ed25519 {
         signature: Ed25519Signature,
@@ -305,12 +305,11 @@ impl std::fmt::Display for InvalidSignatureScheme {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub enum UserSignature {
     Simple(SimpleSignature),
     Multisig(MultisigAggregatedSignature),
-    #[cfg_attr(test, proptest(skip))]
-    ZkLogin(ZkLoginAuthenticator),
+    ZkLogin(Box<ZkLoginAuthenticator>),
 }
 
 impl UserSignature {
@@ -365,7 +364,7 @@ mod serialization {
             public_key: Secp256r1PublicKey,
         },
         Multisig(MultisigAggregatedSignature),
-        ZkLogin(ZkLoginAuthenticator),
+        ZkLogin(Box<ZkLoginAuthenticator>),
     }
 
     #[cfg(feature = "schemars")]
@@ -481,7 +480,7 @@ mod serialization {
                     )),
                     SignatureScheme::ZkLogin => {
                         let multisig = ZkLoginAuthenticator::from_serialized_bytes(bytes)?;
-                        Ok(Self::ZkLogin(multisig))
+                        Ok(Self::ZkLogin(Box::new(multisig)))
                     }
                 }
             }
@@ -493,50 +492,9 @@ mod serialization {
         use super::*;
         use base64ct::Base64;
         use base64ct::Encoding;
-        use test_strategy::proptest;
 
         #[cfg(target_arch = "wasm32")]
         use wasm_bindgen_test::wasm_bindgen_test as test;
-
-        #[proptest]
-        fn simple_sig_schema(signature: SimpleSignature) {
-            crate::_schemars::assert_valid_json_schema(&signature);
-        }
-
-        #[proptest]
-        fn user_signature_schema(signature: UserSignature) {
-            crate::_schemars::assert_valid_json_schema(&signature);
-        }
-
-        #[proptest]
-        fn roundtrip_bcs(signature: UserSignature) {
-            let b = bcs::to_bytes(&signature).unwrap();
-            let s = bcs::from_bytes(&b).unwrap();
-            assert_eq!(signature, s);
-        }
-
-        #[proptest]
-        fn roundtrip_json(signature: UserSignature) {
-            let s = serde_json::to_string(&signature).unwrap();
-            let sig = serde_json::from_str(&s).unwrap();
-            assert_eq!(signature, sig);
-        }
-
-        #[proptest]
-        fn fuzz_deserialization_user_signature(
-            #[strategy(proptest::collection::vec(proptest::arbitrary::any::<u8>(), 0..=2048))]
-            bytes: Vec<u8>,
-        ) {
-            let _: Result<UserSignature, _> = bcs::from_bytes(&bytes);
-        }
-
-        #[proptest]
-        fn fuzz_deserialization_simple_signature(
-            #[strategy(proptest::collection::vec(proptest::arbitrary::any::<u8>(), 0..=2048))]
-            bytes: Vec<u8>,
-        ) {
-            let _: Result<SimpleSignature, _> = bcs::from_bytes(&bytes);
-        }
 
         #[test]
         fn simple_fixtures() {

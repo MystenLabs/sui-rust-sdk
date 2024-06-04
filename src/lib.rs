@@ -7,9 +7,15 @@ pub mod hash;
 
 #[cfg(feature = "serde")]
 mod _serde {
-    use base64ct::{Base64, Encoding};
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
-    use serde_with::{Bytes, DeserializeAs, SerializeAs};
+    use base64ct::Base64;
+    use base64ct::Encoding;
+    use serde::Deserialize;
+    use serde::Deserializer;
+    use serde::Serialize;
+    use serde::Serializer;
+    use serde_with::Bytes;
+    use serde_with::DeserializeAs;
+    use serde_with::SerializeAs;
     use std::borrow::Cow;
 
     pub(crate) type ReadableDisplay =
@@ -117,7 +123,9 @@ mod _serde {
 
 #[cfg(feature = "schemars")]
 mod _schemars {
-    use schemars::schema::{InstanceType, Metadata, SchemaObject};
+    use schemars::schema::InstanceType;
+    use schemars::schema::Metadata;
+    use schemars::schema::SchemaObject;
     use schemars::JsonSchema;
 
     pub(crate) struct U64;
@@ -243,17 +251,5 @@ mod _schemars {
         fn is_referenceable() -> bool {
             false
         }
-    }
-
-    #[cfg(test)]
-    pub(crate) fn assert_valid_json_schema<T>(instance: &T)
-    where
-        T: serde::Serialize + JsonSchema,
-    {
-        let root_schema = schemars::gen::SchemaGenerator::default().into_root_schema_for::<T>();
-        let schema = serde_json::json!(root_schema);
-        let compiled = jsonschema::JSONSchema::compile(&schema).unwrap();
-        let instance = serde_json::json!(instance);
-        assert!(compiled.is_valid(&instance));
     }
 }

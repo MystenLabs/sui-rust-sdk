@@ -7,22 +7,41 @@ mod signature;
 mod validator;
 mod zklogin;
 
-pub use bls12381::{Bls12381PrivateKey, Bls12381PublicKey, Bls12381Signature};
-pub use ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature};
-pub use multisig::{
-    MultisigAggregatedSignature, MultisigCommittee, MultisigMember, MultisigMemberPublicKey,
-    MultisigMemberSignature,
-};
-pub use secp256k1::{Secp256k1PrivateKey, Secp256k1PublicKey, Secp256k1Signature};
-pub use secp256r1::{Secp256r1PrivateKey, Secp256r1PublicKey, Secp256r1Signature};
-pub use signature::{SignatureScheme, SimpleSignature, UserSignature};
-pub use validator::{
-    ValidatorAggregatedSignature, ValidatorCommittee, ValidatorCommitteeMember, ValidatorSignature,
-};
-pub use zklogin::{
-    Bn254FieldElement, Claim, Jwk, JwkId, JwtDetails, ZkLoginAuthenticator, ZkLoginInputs,
-    ZkLoginProof, ZkLoginPublicIdentifier,
-};
+pub use bls12381::Bls12381PrivateKey;
+pub use bls12381::Bls12381PublicKey;
+pub use bls12381::Bls12381Signature;
+pub use ed25519::Ed25519PrivateKey;
+pub use ed25519::Ed25519PublicKey;
+pub use ed25519::Ed25519Signature;
+pub use multisig::MultisigAggregatedSignature;
+pub use multisig::MultisigCommittee;
+pub use multisig::MultisigMember;
+pub use multisig::MultisigMemberPublicKey;
+pub use multisig::MultisigMemberSignature;
+pub use secp256k1::Secp256k1PrivateKey;
+pub use secp256k1::Secp256k1PublicKey;
+pub use secp256k1::Secp256k1Signature;
+pub use secp256r1::Secp256r1PrivateKey;
+pub use secp256r1::Secp256r1PublicKey;
+pub use secp256r1::Secp256r1Signature;
+pub use signature::SignatureScheme;
+pub use signature::SimpleSignature;
+pub use signature::UserSignature;
+pub use validator::ValidatorAggregatedSignature;
+pub use validator::ValidatorCommittee;
+pub use validator::ValidatorCommitteeMember;
+pub use validator::ValidatorSignature;
+pub use zklogin::Bn254FieldElement;
+pub use zklogin::CircomG1;
+pub use zklogin::CircomG2;
+pub use zklogin::Claim;
+pub use zklogin::Jwk;
+pub use zklogin::JwkId;
+pub use zklogin::JwtDetails;
+pub use zklogin::ZkLoginAuthenticator;
+pub use zklogin::ZkLoginInputs;
+pub use zklogin::ZkLoginProof;
+pub use zklogin::ZkLoginPublicIdentifier;
 
 //
 // Implement various base64 fixed-size array helpers
@@ -63,7 +82,7 @@ macro_rules! impl_base64_helper {
 
         #[allow(unused)]
         #[derive(Debug, PartialEq)]
-        #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+        #[cfg_attr(test, derive(test_strategy::Arbitrary))]
         struct $fromstr([u8; $base::LENGTH]);
 
         impl std::str::FromStr for $fromstr {

@@ -1,9 +1,11 @@
 use super::SimpleSignature;
-use crate::types::{checkpoint::EpochId, u256::U256};
+use crate::types::checkpoint::EpochId;
+use crate::types::u256::U256;
 
 /// An zk login authenticator with all the necessary fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct ZkLoginAuthenticator {
     inputs: ZkLoginInputs,
     #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
@@ -18,6 +20,7 @@ pub struct ZkLoginAuthenticator {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct ZkLoginInputs {
     proof_points: ZkLoginProof,
     iss_base64_details: Claim,
@@ -34,6 +37,7 @@ pub struct ZkLoginInputs {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct Claim {
     value: String,
     index_mod_4: u8,
@@ -46,6 +50,7 @@ pub struct Claim {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct JwtDetails {
     kid: String,
     header: String,
@@ -59,6 +64,7 @@ pub struct JwtDetails {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct ZkLoginProof {
     a: CircomG1,
     b: CircomG2,
@@ -67,7 +73,6 @@ pub struct ZkLoginProof {
 
 /// A G1 point in BN254 serialized as a vector of three strings which is the canonical decimal
 /// representation of the projective coordinates in Fq.
-//TODO redefine as [Bn254FieldElement; 3]
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(test, derive(test_strategy::Arbitrary))]
@@ -76,7 +81,6 @@ pub struct CircomG1([Bn254FieldElement; 3]);
 /// A G2 point in BN254 serialized as a vector of three vectors each being a vector of two strings
 /// which are the canonical decimal representation of the coefficients of the projective coordinates
 /// in Fq2.
-//TODO redefine as [[Bn254FieldElement; 2]; 3]
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(test, derive(test_strategy::Arbitrary))]
@@ -86,6 +90,7 @@ pub struct CircomG2([[Bn254FieldElement; 2]; 3]);
 /// Useful to construct [struct MultiSigPublicKey].
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct ZkLoginPublicIdentifier {
     iss: String,
     address_seed: Bn254FieldElement,
@@ -100,6 +105,7 @@ pub struct ZkLoginPublicIdentifier {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct Jwk {
     /// Key type parameter, <https://datatracker.ietf.org/doc/html/rfc7517#section-4.1>
     pub kty: String,
@@ -118,6 +124,7 @@ pub struct Jwk {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct JwkId {
     /// iss string that identifies the OIDC provider.
     pub iss: String,
@@ -316,6 +323,7 @@ mod serialization {
     #[derive(serde_derive::Serialize)]
     struct AuthenticatorRef<'a> {
         inputs: &'a ZkLoginInputs,
+        #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
         max_epoch: EpochId,
         signature: &'a SimpleSignature,
     }
@@ -323,6 +331,7 @@ mod serialization {
     #[derive(serde_derive::Deserialize)]
     struct Authenticator {
         inputs: ZkLoginInputs,
+        #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
         max_epoch: EpochId,
         signature: SimpleSignature,
     }
@@ -378,7 +387,12 @@ mod serialization {
             bytes: T,
         ) -> Result<Self, E> {
             let bytes = bytes.as_ref();
-            let flag = SignatureScheme::from_byte(bytes[0]).map_err(serde::de::Error::custom)?;
+            let flag = SignatureScheme::from_byte(
+                *bytes
+                    .first()
+                    .ok_or_else(|| serde::de::Error::custom("missing signature scheme falg"))?,
+            )
+            .map_err(serde::de::Error::custom)?;
             if flag != SignatureScheme::ZkLogin {
                 return Err(serde::de::Error::custom("invalid zklogin flag"));
             }

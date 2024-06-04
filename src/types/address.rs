@@ -3,7 +3,7 @@
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct Address(
     #[cfg_attr(
         feature = "serde",
@@ -201,7 +201,10 @@ impl schemars::JsonSchema for Address {
     }
 
     fn json_schema(_: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
-        use schemars::schema::{InstanceType, Metadata, SchemaObject, StringValidation};
+        use schemars::schema::InstanceType;
+        use schemars::schema::Metadata;
+        use schemars::schema::SchemaObject;
+        use schemars::schema::StringValidation;
 
         let hex_length = Address::LENGTH * 2;
         SchemaObject {
@@ -255,22 +258,6 @@ mod test {
     fn roundtrip_display_fromstr(address: Address) {
         let s = address.to_string();
         let a = s.parse::<Address>().unwrap();
-        assert_eq!(address, a);
-    }
-
-    #[proptest]
-    #[cfg(feature = "serde")]
-    fn roundtrip_bcs(address: Address) {
-        let b = bcs::to_bytes(&address).unwrap();
-        let a = bcs::from_bytes(&b).unwrap();
-        assert_eq!(address, a);
-    }
-
-    #[proptest]
-    #[cfg(feature = "serde")]
-    fn roundtrip_json(address: Address) {
-        let s = serde_json::to_string(&address).unwrap();
-        let a = serde_json::from_str(&s).unwrap();
         assert_eq!(address, a);
     }
 }

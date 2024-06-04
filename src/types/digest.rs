@@ -5,7 +5,7 @@
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct Digest(
     #[cfg_attr(feature = "serde", serde(with = "DigestSerialization"))]
     #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::Base58"))]
@@ -194,7 +194,7 @@ macro_rules! impl_digest {
             derive(serde_derive::Serialize, serde_derive::Deserialize)
         )]
         #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-        #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+        #[cfg_attr(test, derive(test_strategy::Arbitrary))]
         pub struct $t(Digest);
 
         impl $t {
@@ -327,22 +327,6 @@ mod test {
     fn roundtrip_display_fromstr(digest: Digest) {
         let s = digest.to_string();
         let d = s.parse::<Digest>().unwrap();
-        assert_eq!(digest, d);
-    }
-
-    #[proptest]
-    #[cfg(feature = "serde")]
-    fn roundtrip_bcs(digest: Digest) {
-        let b = bcs::to_bytes(&digest).unwrap();
-        let d = bcs::from_bytes(&b).unwrap();
-        assert_eq!(digest, d);
-    }
-
-    #[proptest]
-    #[cfg(feature = "serde")]
-    fn roundtrip_json(digest: Digest) {
-        let s = serde_json::to_string(&digest).unwrap();
-        let d = serde_json::from_str(&s).unwrap();
         assert_eq!(digest, d);
     }
 }

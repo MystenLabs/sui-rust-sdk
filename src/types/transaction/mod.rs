@@ -1,7 +1,17 @@
-use super::{
-    Address, CheckpointTimestamp, ConsensusCommitDigest, EpochId, GenesisObject, Identifier, Jwk,
-    JwkId, ObjectId, ObjectReference, ProtocolVersion, TypeTag, UserSignature, Version,
-};
+use super::Address;
+use super::CheckpointTimestamp;
+use super::ConsensusCommitDigest;
+use super::EpochId;
+use super::GenesisObject;
+use super::Identifier;
+use super::Jwk;
+use super::JwkId;
+use super::ObjectId;
+use super::ObjectReference;
+use super::ProtocolVersion;
+use super::TypeTag;
+use super::UserSignature;
+use super::Version;
 
 #[cfg(feature = "serde")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
@@ -11,12 +21,14 @@ mod serialization;
 pub(crate) use serialization::SignedTransactionWithIntentMessage;
 
 mod unresolved;
-pub use unresolved::{
-    UnresolvedGasPayment, UnresolvedInputArgument, UnresolvedObjectReference,
-    UnresolvedProgrammableTransaction, UnresolvedTransaction,
-};
+pub use unresolved::UnresolvedGasPayment;
+pub use unresolved::UnresolvedInputArgument;
+pub use unresolved::UnresolvedObjectReference;
+pub use unresolved::UnresolvedProgrammableTransaction;
+pub use unresolved::UnresolvedTransaction;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct Transaction {
     pub kind: TransactionKind,
     pub sender: Address,
@@ -26,6 +38,7 @@ pub struct Transaction {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct SignedTransaction {
     #[cfg_attr(feature = "schemars", schemars(flatten))]
     pub transaction: Transaction,
@@ -39,7 +52,7 @@ pub struct SignedTransaction {
     serde(rename_all = "lowercase")
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub enum TransactionExpiration {
     /// The transaction has no expiration
     None,
@@ -58,6 +71,7 @@ pub enum TransactionExpiration {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct GasPayment {
     pub objects: Vec<ObjectReference>,
     pub owner: Address,
@@ -75,6 +89,7 @@ pub struct GasPayment {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct RandomnessStateUpdate {
     /// Epoch of the randomness state update transaction
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
@@ -100,6 +115,7 @@ pub struct RandomnessStateUpdate {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub enum TransactionKind {
     /// A transaction that allows the interleaving of native commands and Move calls
     ProgrammableTransaction(ProgrammableTransaction),
@@ -136,6 +152,7 @@ pub enum TransactionKind {
     derive(schemars::JsonSchema),
     schemars(tag = "kind", rename_all = "snake_case")
 )]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub enum EndOfEpochTransactionKind {
     ChangeEpoch(ChangeEpoch),
     AuthenticatorStateCreate,
@@ -150,6 +167,7 @@ pub enum EndOfEpochTransactionKind {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct AuthenticatorStateExpire {
     /// expire JWKs that have a lower epoch than this
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
@@ -167,6 +185,7 @@ pub struct AuthenticatorStateExpire {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct AuthenticatorStateUpdate {
     /// Epoch of the authenticator state update transaction
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
@@ -192,6 +211,7 @@ pub struct AuthenticatorStateUpdate {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct ActiveJwk {
     pub jwk_id: JwkId,
     pub jwk: Jwk,
@@ -209,6 +229,7 @@ pub struct ActiveJwk {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct ConsensusCommitPrologue {
     /// Epoch of the commit prologue transaction
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
@@ -230,6 +251,7 @@ pub struct ConsensusCommitPrologue {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct ConsensusCommitPrologueV2 {
     /// Epoch of the commit prologue transaction
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
@@ -253,6 +275,7 @@ pub struct ConsensusCommitPrologueV2 {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct ChangeEpoch {
     /// The next (to become) epoch ID.
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
@@ -287,6 +310,7 @@ pub struct ChangeEpoch {
     /// the validator must write out the modules below.  Modules are provided with the version they
     /// will be upgraded to, their modules in serialized form (which include their package ID), and
     /// a list of their transitive dependencies.
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=2).lift()))]
     pub system_packages: Vec<SystemPackage>,
 }
 
@@ -296,6 +320,7 @@ pub struct ChangeEpoch {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct SystemPackage {
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
@@ -307,6 +332,7 @@ pub struct SystemPackage {
         )
     )]
     #[cfg_attr(feature = "schemars", schemars(with = "Vec<crate::_schemars::Base64>"))]
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=2).lift()))]
     modules: Vec<Vec<u8>>,
     dependencies: Vec<ObjectId>,
 }
@@ -317,7 +343,9 @@ pub struct SystemPackage {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct GenesisTransaction {
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=2).lift()))]
     pub objects: Vec<GenesisObject>,
 }
 
@@ -329,16 +357,24 @@ pub struct GenesisTransaction {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct ProgrammableTransaction {
     /// Input objects or primitive values
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=10).lift()))]
     pub inputs: Vec<InputArgument>,
     /// The commands to be executed sequentially. A failure in any command will
     /// result in the failure of the entire transaction.
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=10).lift()))]
     pub commands: Vec<Command>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(
+    feature = "schemars",
+    derive(schemars::JsonSchema),
+    schemars(tag = "type", rename_all = "snake_case")
+)]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub enum InputArgument {
     // contains no structs or objects
     Pure {
@@ -366,6 +402,7 @@ pub enum InputArgument {
     derive(schemars::JsonSchema),
     schemars(tag = "command", rename_all = "snake_case")
 )]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub enum Command {
     /// A call to either an entry or a public Move function
     MoveCall(MoveCall),
@@ -403,7 +440,9 @@ pub enum Command {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct TransferObjects {
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=2).lift()))]
     objects: Vec<Argument>,
     address: Argument,
 }
@@ -414,8 +453,10 @@ pub struct TransferObjects {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct SplitCoins {
     coin: Argument,
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=2).lift()))]
     amounts: Vec<Argument>,
 }
 
@@ -425,8 +466,10 @@ pub struct SplitCoins {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct MergeCoins {
     coin: Argument,
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=2).lift()))]
     coins_to_merge: Vec<Argument>,
 }
 
@@ -436,6 +479,7 @@ pub struct MergeCoins {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct Publish {
     #[cfg_attr(
         feature = "serde",
@@ -454,9 +498,11 @@ pub struct Publish {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct MakeMoveVector {
     #[cfg_attr(feature = "serde", serde(rename = "type"))]
     type_: Option<TypeTag>,
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=2).lift()))]
     elements: Vec<Argument>,
 }
 
@@ -466,6 +512,7 @@ pub struct MakeMoveVector {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct Upgrade {
     #[cfg_attr(
         feature = "serde",
@@ -482,6 +529,7 @@ pub struct Upgrade {
 
 /// An argument to a programmable transaction command
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub enum Argument {
     /// The gas coin. The gas coin can only be used by-ref, except for with
     /// `TransferObjects`, which can use it by-value.
@@ -505,6 +553,7 @@ pub enum Argument {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct MoveCall {
     /// The package containing the module and function.
     pub package: ObjectId,
@@ -513,7 +562,9 @@ pub struct MoveCall {
     /// The function to be called.
     pub function: Identifier,
     /// The type arguments to the function.
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=2).lift()))]
     pub type_arguments: Vec<TypeTag>,
     /// The arguments to the function.
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=2).lift()))]
     pub arguments: Vec<Argument>,
 }

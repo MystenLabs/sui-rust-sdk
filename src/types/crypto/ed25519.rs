@@ -24,7 +24,7 @@ impl Ed25519PrivateKey {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct Ed25519PublicKey(
     #[cfg_attr(
         feature = "serde",
@@ -123,7 +123,7 @@ impl std::fmt::Debug for Ed25519PublicKey {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct Ed25519Signature(
     #[cfg_attr(
         feature = "serde",

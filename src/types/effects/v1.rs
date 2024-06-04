@@ -1,12 +1,17 @@
-use crate::types::{
-    execution_status::ExecutionStatus,
-    object::{Owner, Version},
-    EpochId, GasCostSummary, ObjectId, ObjectReference, TransactionDigest, TransactionEventsDigest,
-};
+use crate::types::execution_status::ExecutionStatus;
+use crate::types::object::Owner;
+use crate::types::object::Version;
+use crate::types::EpochId;
+use crate::types::GasCostSummary;
+use crate::types::ObjectId;
+use crate::types::ObjectReference;
+use crate::types::TransactionDigest;
+use crate::types::TransactionEventsDigest;
 
 /// The response from processing a transaction or a certified transaction
 #[derive(Eq, PartialEq, Clone, Debug)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct TransactionEffectsV1 {
     /// The status of the execution
     #[cfg_attr(feature = "schemars", schemars(flatten))]
@@ -17,25 +22,33 @@ pub struct TransactionEffectsV1 {
     gas_used: GasCostSummary,
     /// The version that every modified (mutated or deleted) object had before it was modified by
     /// this transaction.
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=5).lift()))]
     modified_at_versions: Vec<ModifiedAtVersion>,
     /// The object references of the shared objects used in this transaction. Empty if no shared objects were used.
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=5).lift()))]
     shared_objects: Vec<ObjectReference>,
     /// The transaction digest
     transaction_digest: TransactionDigest,
 
     /// ObjectReference and owner of new objects created.
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=5).lift()))]
     created: Vec<ObjectReferenceWithOwner>,
     /// ObjectReference and owner of mutated objects, including gas object.
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=5).lift()))]
     mutated: Vec<ObjectReferenceWithOwner>,
     /// ObjectReference and owner of objects that are unwrapped in this transaction.
     /// Unwrapped objects are objects that were wrapped into other objects in the past,
     /// and just got extracted out.
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=5).lift()))]
     unwrapped: Vec<ObjectReferenceWithOwner>,
     /// Object Refs of objects now deleted (the new refs).
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=5).lift()))]
     deleted: Vec<ObjectReference>,
     /// Object refs of objects previously wrapped in other objects but now deleted.
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=5).lift()))]
     unwrapped_then_deleted: Vec<ObjectReference>,
     /// Object refs of objects now wrapped in other objects.
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=5).lift()))]
     wrapped: Vec<ObjectReference>,
     /// The updated gas object reference. Have a dedicated field for convenient access.
     /// It's also included in mutated.
@@ -44,6 +57,7 @@ pub struct TransactionEffectsV1 {
     /// can be None if the transaction does not emit any event.
     events_digest: Option<TransactionEventsDigest>,
     /// The set of transaction digests this transaction depends on.
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=5).lift()))]
     dependencies: Vec<TransactionDigest>,
 }
 
@@ -53,6 +67,7 @@ pub struct TransactionEffectsV1 {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct ModifiedAtVersion {
     pub object_id: ObjectId,
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
@@ -66,6 +81,7 @@ pub struct ModifiedAtVersion {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct ObjectReferenceWithOwner {
     pub reference: ObjectReference,
     pub owner: Owner,
@@ -74,7 +90,10 @@ pub struct ObjectReferenceWithOwner {
 #[cfg(feature = "serde")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
 mod serialization {
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+    use serde::Deserialize;
+    use serde::Deserializer;
+    use serde::Serialize;
+    use serde::Serializer;
 
     use super::*;
 

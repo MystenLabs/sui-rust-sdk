@@ -24,6 +24,7 @@ impl Bls12381PrivateKey {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct Bls12381PublicKey(
     #[cfg_attr(
         feature = "serde",
@@ -124,6 +125,7 @@ impl std::fmt::Debug for Bls12381PublicKey {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct Bls12381Signature(
     #[cfg_attr(
         feature = "serde",

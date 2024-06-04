@@ -247,7 +247,10 @@ impl<'de> Deserialize<'de> for StructTag {
 #[cfg(feature = "schemars")]
 mod json_schema {
     use super::*;
-    use schemars::schema::{InstanceType, Metadata, SchemaObject, StringValidation};
+    use schemars::schema::InstanceType;
+    use schemars::schema::Metadata;
+    use schemars::schema::SchemaObject;
+    use schemars::schema::StringValidation;
     use schemars::JsonSchema;
 
     pub(crate) static ALLOWED_IDENTIFIERS: &str =

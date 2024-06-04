@@ -1,7 +1,9 @@
-use super::{Digest, Identifier, ObjectId};
+use super::Digest;
+use super::Identifier;
+use super::ObjectId;
 
 #[derive(Eq, PartialEq, Clone, Debug)]
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub enum ExecutionStatus {
     Success,
     /// Gas used in the failed case, and the error.
@@ -9,12 +11,7 @@ pub enum ExecutionStatus {
         /// The error
         error: ExecutionError,
         /// Which command the error occurred
-        #[cfg_attr(
-            test,
-            proptest(
-                strategy = "proptest::strategy::Strategy::prop_map(proptest::arbitrary::any::<Option<u16>>(), |opt| opt.map(Into::into))"
-            )
-        )]
+        #[cfg_attr(test, map(|x: Option<u16>| x.map(Into::into)))]
         command: Option<u64>,
     },
 }
@@ -29,7 +26,7 @@ pub type TypeParameterIndex = u16;
     derive(schemars::JsonSchema),
     schemars(tag = "error", rename_all = "snake_case")
 )]
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub enum ExecutionError {
     //
     // General transaction errors
@@ -178,7 +175,7 @@ pub enum ExecutionError {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct MoveLocation {
     pub package: ObjectId,
     pub module: Identifier,
@@ -195,7 +192,7 @@ pub struct MoveLocation {
     derive(schemars::JsonSchema),
     schemars(tag = "kind", rename_all = "snake_case")
 )]
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub enum CommandArgumentError {
     /// The type of the value does not match the expected type
     TypeMismatch,
@@ -236,7 +233,7 @@ pub enum CommandArgumentError {
     derive(schemars::JsonSchema),
     schemars(tag = "kind", rename_all = "snake_case")
 )]
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub enum PackageUpgradeError {
     /// Unable to fetch package
     UnableToFetchPackage { package_id: ObjectId },
@@ -266,7 +263,7 @@ pub enum PackageUpgradeError {
     derive(schemars::JsonSchema),
     schemars(rename_all = "snake_case")
 )]
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub enum TypeArgumentError {
     /// A type was not found in the module specified
     TypeNotFound,
@@ -1272,30 +1269,6 @@ mod serialization {
                     },
                 })
             }
-        }
-    }
-
-    #[cfg(test)]
-    mod test {
-        use super::*;
-        use test_strategy::proptest;
-
-        #[cfg(target_arch = "wasm32")]
-        use wasm_bindgen_test::wasm_bindgen_test as test;
-
-        #[proptest]
-        fn roundtrip_bcs(status: ExecutionStatus) {
-            let b = bcs::to_bytes(&status).unwrap();
-            let a = bcs::from_bytes(&b).unwrap();
-            assert_eq!(status, a);
-        }
-
-        #[proptest]
-        fn roundtrip_json(status: ExecutionStatus) {
-            let s = serde_json::to_string(&status).unwrap();
-            println!("{s}");
-            let a = serde_json::from_str(&s).unwrap();
-            assert_eq!(status, a);
         }
     }
 }

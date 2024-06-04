@@ -1,6 +1,11 @@
 use std::collections::BTreeMap;
 
-use super::{Address, Identifier, ObjectDigest, ObjectId, StructTag, TransactionDigest};
+use super::Address;
+use super::Identifier;
+use super::ObjectDigest;
+use super::ObjectId;
+use super::StructTag;
+use super::TransactionDigest;
 
 pub type Version = u64;
 
@@ -10,6 +15,7 @@ pub type Version = u64;
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct ObjectReference {
     object_id: ObjectId,
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
@@ -51,7 +57,7 @@ impl ObjectReference {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub enum Owner {
     /// Object is exclusively owned by a single address, and is mutable.
     Address(Address),
@@ -72,6 +78,7 @@ pub enum Owner {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[allow(clippy::large_enum_variant)]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 //TODO think about hiding this type and not exposing it
 pub enum ObjectData {
     /// An object whose governing logic lives in a published Move module
@@ -88,6 +95,7 @@ pub enum ObjectData {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct MovePackage {
     id: ObjectId,
     /// Most move packages are uniquely identified by their ID (i.e. there is only one version per
@@ -107,6 +115,12 @@ pub struct MovePackage {
         feature = "serde",
         serde(with = "::serde_with::As::<BTreeMap<::serde_with::Same, ::serde_with::Bytes>>")
     )]
+    #[cfg_attr(
+        test,
+        strategy(
+            proptest::collection::btree_map(proptest::arbitrary::any::<Identifier>(), proptest::collection::vec(proptest::arbitrary::any::<u8>(), 0..=1024), 0..=5)
+        )
+    )]
     modules: BTreeMap<Identifier, Vec<u8>>,
 
     /// Maps struct/module to a package version where it was first defined, stored as a vector for
@@ -115,6 +129,12 @@ pub struct MovePackage {
 
     // For each dependency, maps original package ID to the info about the (upgraded) dependency
     // version that this package is using
+    #[cfg_attr(
+        test,
+        strategy(
+            proptest::collection::btree_map(proptest::arbitrary::any::<ObjectId>(), proptest::arbitrary::any::<UpgradeInfo>(), 0..=5)
+        )
+    )]
     linkage_table: BTreeMap<ObjectId, UpgradeInfo>,
 }
 
@@ -125,6 +145,7 @@ pub struct MovePackage {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct TypeOrigin {
     pub module_name: Identifier,
     pub struct_name: Identifier,
@@ -138,6 +159,7 @@ pub struct TypeOrigin {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct UpgradeInfo {
     /// Id of the upgraded packages
     pub upgraded_id: ObjectId,
@@ -152,6 +174,7 @@ pub struct UpgradeInfo {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct MoveStruct {
     /// The type of this object. Immutable
     #[cfg_attr(
@@ -171,6 +194,7 @@ pub struct MoveStruct {
         feature = "serde",
         serde(with = "::serde_with::As::<::serde_with::Bytes>")
     )]
+    #[cfg_attr(test, any(proptest::collection::size_range(32..=1024).lift()))]
     pub(crate) contents: Vec<u8>,
 }
 
@@ -184,6 +208,7 @@ pub enum ObjectType {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct Object {
     /// The meat of the object
     pub(crate) data: ObjectData,
@@ -235,6 +260,7 @@ fn id_opt(contents: &[u8]) -> Option<ObjectId> {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct GenesisObject {
     data: ObjectData,
     owner: Owner,
@@ -267,10 +293,15 @@ impl GenesisObject {
 #[cfg(feature = "serde")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
 mod serialization {
-    use std::{borrow::Cow, str::FromStr};
+    use std::borrow::Cow;
+    use std::str::FromStr;
 
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
-    use serde_with::{DeserializeAs, SerializeAs};
+    use serde::Deserialize;
+    use serde::Deserializer;
+    use serde::Serialize;
+    use serde::Serializer;
+    use serde_with::DeserializeAs;
+    use serde_with::SerializeAs;
 
     use super::*;
     use crate::types::TypeTag;

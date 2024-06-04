@@ -1,52 +1,61 @@
-use crate::types::{
-    digest::EffectsAuxiliaryDataDigest,
-    execution_status::ExecutionStatus,
-    object::{Owner, Version},
-    EpochId, GasCostSummary, ObjectDigest, ObjectId, TransactionDigest, TransactionEventsDigest,
-};
+use crate::types::digest::EffectsAuxiliaryDataDigest;
+use crate::types::execution_status::ExecutionStatus;
+use crate::types::object::Owner;
+use crate::types::object::Version;
+use crate::types::EpochId;
+use crate::types::GasCostSummary;
+use crate::types::ObjectDigest;
+use crate::types::ObjectId;
+use crate::types::TransactionDigest;
+use crate::types::TransactionEventsDigest;
 
 /// The response from processing a transaction or a certified transaction
 #[derive(Eq, PartialEq, Clone, Debug)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct TransactionEffectsV2 {
     /// The status of the execution
     #[cfg_attr(feature = "schemars", schemars(flatten))]
-    status: ExecutionStatus,
+    pub status: ExecutionStatus,
     /// The epoch when this transaction was executed.
     #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
-    epoch: EpochId,
-    gas_used: GasCostSummary,
+    pub epoch: EpochId,
+    pub gas_used: GasCostSummary,
     /// The transaction digest
-    transaction_digest: TransactionDigest,
+    pub transaction_digest: TransactionDigest,
     /// The updated gas object reference, as an index into the `changed_objects` vector.
     /// Having a dedicated field for convenient access.
     /// System transaction that don't require gas will leave this as None.
-    gas_object_index: Option<u32>,
+    pub gas_object_index: Option<u32>,
     /// The digest of the events emitted during execution,
     /// can be None if the transaction does not emit any event.
-    events_digest: Option<TransactionEventsDigest>,
+    pub events_digest: Option<TransactionEventsDigest>,
     /// The set of transaction digests this transaction depends on.
-    dependencies: Vec<TransactionDigest>,
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=5).lift()))]
+    pub dependencies: Vec<TransactionDigest>,
 
     /// The version number of all the written Move objects by this transaction.
     #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
-    lamport_version: Version,
+    pub lamport_version: Version,
     /// Objects whose state are changed in the object store.
-    changed_objects: Vec<ChangedObject>,
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=2).lift()))]
+    pub changed_objects: Vec<ChangedObject>,
     /// Shared objects that are not mutated in this transaction. Unlike owned objects,
     /// read-only shared objects' version are not committed in the transaction,
     /// and in order for a node to catch up and execute it without consensus sequencing,
     /// the version needs to be committed in the effects.
-    unchanged_shared_objects: Vec<UnchangedSharedObject>,
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=2).lift()))]
+    pub unchanged_shared_objects: Vec<UnchangedSharedObject>,
     /// Auxiliary data that are not protocol-critical, generated as part of the effects but are stored separately.
     /// Storing it separately allows us to avoid bloating the effects with data that are not critical.
     /// It also provides more flexibility on the format and type of the data.
-    auxiliary_data_digest: Option<EffectsAuxiliaryDataDigest>,
+    pub auxiliary_data_digest: Option<EffectsAuxiliaryDataDigest>,
 }
 
 //XXX Do we maybe want to just fold "EffectsObjectChange" into this struct?
 #[derive(Eq, PartialEq, Clone, Debug)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct ChangedObject {
     pub object_id: ObjectId,
     #[cfg_attr(feature = "schemars", schemars(flatten))]
@@ -59,6 +68,7 @@ pub struct ChangedObject {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct UnchangedSharedObject {
     pub object_id: ObjectId,
     pub kind: UnchangedSharedKind,
@@ -70,6 +80,7 @@ pub struct UnchangedSharedObject {
     derive(schemars::JsonSchema),
     schemars(tag = "kind", rename_all = "snake_case")
 )]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub enum UnchangedSharedKind {
     /// Read-only shared objects from the input. We don't really need ObjectDigest
     /// for protocol correctness, but it will make it easier to verify untrusted read.
@@ -96,6 +107,7 @@ pub enum UnchangedSharedKind {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct EffectsObjectChange {
     // input_state and output_state are the core fields that's required by
     // the protocol as it tells how an object changes on-chain.
@@ -119,6 +131,7 @@ pub struct EffectsObjectChange {
     derive(schemars::JsonSchema),
     schemars(tag = "state", rename_all = "snake_case")
 )]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub enum ObjectIn {
     NotExist,
     /// The old version, digest and owner.
@@ -136,6 +149,7 @@ pub enum ObjectIn {
     derive(schemars::JsonSchema),
     schemars(tag = "state", rename_all = "snake_case")
 )]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub enum ObjectOut {
     /// Same definition as in ObjectIn.
     NotExist,
@@ -157,6 +171,7 @@ pub enum ObjectOut {
     serde(rename_all = "lowercase")
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub enum IdOperation {
     None,
     Created,
@@ -166,7 +181,10 @@ pub enum IdOperation {
 #[cfg(feature = "serde")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
 mod serialization {
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+    use serde::Deserialize;
+    use serde::Deserializer;
+    use serde::Serialize;
+    use serde::Serializer;
 
     use super::*;
 

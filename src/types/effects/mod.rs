@@ -20,6 +20,7 @@ pub use v2::UnchangedSharedObject;
     derive(schemars::JsonSchema),
     schemars(tag = "version")
 )]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub enum TransactionEffects {
     #[cfg_attr(feature = "schemars", schemars(rename = "1"))]
     V1(Box<TransactionEffectsV1>),
@@ -30,9 +31,14 @@ pub enum TransactionEffects {
 #[cfg(feature = "serde")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
 mod serialization {
-    use super::{TransactionEffects, TransactionEffectsV1, TransactionEffectsV2};
+    use super::TransactionEffects;
+    use super::TransactionEffectsV1;
+    use super::TransactionEffectsV2;
 
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+    use serde::Deserialize;
+    use serde::Deserializer;
+    use serde::Serialize;
+    use serde::Serializer;
 
     #[derive(serde_derive::Serialize)]
     #[serde(tag = "version")]
@@ -108,7 +114,8 @@ mod serialization {
     mod tests {
         use super::TransactionEffects;
 
-        use base64ct::{Base64, Encoding};
+        use base64ct::Base64;
+        use base64ct::Encoding;
 
         #[cfg(target_arch = "wasm32")]
         use wasm_bindgen_test::wasm_bindgen_test as test;

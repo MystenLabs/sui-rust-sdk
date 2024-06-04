@@ -57,14 +57,14 @@ bcs = "0.1.6"
 serde_json = "1.0.114"
 num-bigint = "0.4.4"
 jsonschema = { version = "0.18", default-features = false }
+paste = "1.0.15"
 
 # proptest support in tests
 #
 # Pin to this specific commit in order to work around an issue where proptest doesn't build properly in wasm environments
 # see https://github.com/proptest-rs/proptest/pull/270 for more info
-proptest = { git = "https://github.com/bmwill/proptest.git", rev = "1a0fe8676aeb61a83f67731404363972c8462424", default-features = false, features = ["std"] }
+proptest = { git = "https://github.com/bmwill/proptest.git", rev = "bc36db126183bce18c8bc595f0c0cfeac48b870c", default-features = false, features = ["std"] }
 test-strategy = "0.3.1"
-proptest-derive = { version = "0.4.0" }
 
 [target.wasm32-unknown-unknown.dev-dependencies]
 wasm-bindgen-test = "0.3"

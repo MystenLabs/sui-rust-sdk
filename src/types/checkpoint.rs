@@ -24,6 +24,7 @@ pub type ProtocolVersion = u64;
     derive(schemars::JsonSchema),
     schemars(tag = "type", rename_all = "snake_case")
 )]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub enum CheckpointCommitment {
     EcmhLiveObjectSet { digest: Digest },
     // Other commitment types (e.g. merkle roots) go here.
@@ -35,6 +36,7 @@ pub enum CheckpointCommitment {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct EndOfEpochData {
     /// next_epoch_committee is `Some` if and only if the current checkpoint is
     /// the last checkpoint of an epoch.
@@ -57,6 +59,7 @@ pub struct EndOfEpochData {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct CheckpointSummary {
     #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub epoch: EpochId,
@@ -67,10 +70,6 @@ pub struct CheckpointSummary {
     #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub network_total_transactions: u64,
     pub content_digest: CheckpointContentsDigest,
-    #[cfg_attr(
-        feature = "schemars",
-        schemars(skip_serializing_if = "Option::is_none")
-    )]
     pub previous_digest: Option<CheckpointDigest>,
     /// The running total gas costs of all transactions included in the current epoch so far
     /// until this checkpoint.
@@ -84,14 +83,13 @@ pub struct CheckpointSummary {
 
     /// Commitments to checkpoint-specific state (e.g. txns in checkpoint, objects read/written in
     /// checkpoint).
-    #[cfg_attr(feature = "schemars", schemars(skip_serializing_if = "Vec::is_empty"))]
+    #[cfg_attr(
+        feature = "schemars",
+        schemars(with = "Option<Vec<CheckpointCommitment>>")
+    )]
     pub checkpoint_commitments: Vec<CheckpointCommitment>,
 
     /// Present only on the final checkpoint of the epoch.
-    #[cfg_attr(
-        feature = "schemars",
-        schemars(skip_serializing_if = "Option::is_none")
-    )]
     pub end_of_epoch_data: Option<EndOfEpochData>,
 
     /// CheckpointSummary is not an evolvable structure - it must be readable by any version of the
@@ -100,10 +98,7 @@ pub struct CheckpointSummary {
     /// protocol version.
     #[cfg_attr(
         feature = "schemars",
-        schemars(
-            skip_serializing_if = "Vec::is_empty",
-            with = "crate::_schemars::Base64"
-        )
+        schemars(with = "Option<crate::_schemars::Base64>")
     )]
     pub version_specific_data: Vec<u8>,
 }
@@ -114,6 +109,7 @@ pub struct CheckpointSummary {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct SignedCheckpointSummary {
     pub checkpoint: CheckpointSummary,
     pub signature: ValidatorAggregatedSignature,
@@ -121,7 +117,11 @@ pub struct SignedCheckpointSummary {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-pub struct CheckpointContents(Vec<CheckpointTransactionInfo>);
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+pub struct CheckpointContents(
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=2).lift()))]
+    Vec<CheckpointTransactionInfo>,
+);
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
@@ -129,30 +129,35 @@ pub struct CheckpointContents(Vec<CheckpointTransactionInfo>);
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct CheckpointTransactionInfo {
     pub transaction: TransactionDigest,
     pub effects: TransactionEffectsDigest,
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=2).lift()))]
     pub signatures: Vec<UserSignature>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct CheckpointData {
     pub checkpoint_summary: SignedCheckpointSummary,
     pub checkpoint_contents: CheckpointContents,
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=1).lift()))]
     pub transactions: Vec<CheckpointTransaction>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct CheckpointTransaction {
     /// The input Transaction
     #[cfg_attr(
@@ -166,8 +171,10 @@ pub struct CheckpointTransaction {
     /// The events, if any, emitted by this transaciton during execution
     pub events: Option<TransactionEvents>,
     /// The state of all inputs to this transaction as they were prior to execution.
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=2).lift()))]
     pub input_objects: Vec<Object>,
     /// The state of all output objects created or mutated by this transaction.
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=2).lift()))]
     pub output_objects: Vec<Object>,
 }
 
