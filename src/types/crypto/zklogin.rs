@@ -68,13 +68,19 @@ pub struct ZkLoginProof {
 /// A G1 point in BN254 serialized as a vector of three strings which is the canonical decimal
 /// representation of the projective coordinates in Fq.
 //TODO redefine as [Bn254FieldElement; 3]
-pub type CircomG1 = Vec<Bn254FieldElement>;
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+pub struct CircomG1([Bn254FieldElement; 3]);
 
 /// A G2 point in BN254 serialized as a vector of three vectors each being a vector of two strings
 /// which are the canonical decimal representation of the coefficients of the projective coordinates
 /// in Fq2.
 //TODO redefine as [[Bn254FieldElement; 2]; 3]
-pub type CircomG2 = Vec<Vec<Bn254FieldElement>>;
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+pub struct CircomG2([[Bn254FieldElement; 2]; 3]);
 
 /// A wrapper struct to retrofit in [enum PublicKey] for zkLogin.
 /// Useful to construct [struct MultiSigPublicKey].
@@ -119,8 +125,9 @@ pub struct JwkId {
     pub kid: String,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct Bn254FieldElement(
     #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U256"))] [u8; 32],
 );
@@ -406,6 +413,92 @@ mod serialization {
             D: Deserializer<'de>,
         {
             serde_with::DisplayFromStr::deserialize_as(deserializer)
+        }
+    }
+
+    impl Serialize for CircomG1 {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            use serde::ser::SerializeSeq;
+            let mut seq = serializer.serialize_seq(Some(self.0.len()))?;
+            for element in &self.0 {
+                seq.serialize_element(element)?;
+            }
+            seq.end()
+        }
+    }
+
+    impl<'de> Deserialize<'de> for CircomG1 {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let inner = <Vec<_>>::deserialize(deserializer)?;
+            Ok(Self(inner.try_into().map_err(|_| {
+                serde::de::Error::custom("expected array of length 3")
+            })?))
+        }
+    }
+
+    impl Serialize for CircomG2 {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            use serde::ser::SerializeSeq;
+
+            struct Inner<'a>(&'a [Bn254FieldElement; 2]);
+
+            impl<'a> Serialize for Inner<'a> {
+                fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+                where
+                    S: serde::Serializer,
+                {
+                    let mut seq = serializer.serialize_seq(Some(self.0.len()))?;
+                    for element in self.0 {
+                        seq.serialize_element(element)?;
+                    }
+                    seq.end()
+                }
+            }
+
+            let mut seq = serializer.serialize_seq(Some(self.0.len()))?;
+            for element in &self.0 {
+                seq.serialize_element(&Inner(element))?;
+            }
+            seq.end()
+        }
+    }
+
+    impl<'de> Deserialize<'de> for CircomG2 {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let vecs = <Vec<Vec<Bn254FieldElement>>>::deserialize(deserializer)?;
+            let mut inner: [[Bn254FieldElement; 2]; 3] = Default::default();
+
+            if vecs.len() != 3 {
+                return Err(serde::de::Error::custom(
+                    "vector of three vectors each being a vector of two strings",
+                ));
+            }
+
+            for (i, v) in vecs.into_iter().enumerate() {
+                if v.len() != 2 {
+                    return Err(serde::de::Error::custom(
+                        "vector of three vectors each being a vector of two strings",
+                    ));
+                }
+
+                for (j, point) in v.into_iter().enumerate() {
+                    inner[i][j] = point;
+                }
+            }
+
+            Ok(Self(inner))
         }
     }
 }
