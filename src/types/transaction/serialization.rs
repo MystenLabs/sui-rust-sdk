@@ -346,6 +346,7 @@ mod end_of_epoch {
     use crate::types::transaction::AuthenticatorStateExpire;
     use crate::types::transaction::ChangeEpoch;
     use crate::types::transaction::EndOfEpochTransactionKind;
+    use crate::types::CheckpointDigest;
 
     #[derive(serde_derive::Serialize)]
     #[serde(tag = "kind", rename_all = "snake_case")]
@@ -355,6 +356,13 @@ mod end_of_epoch {
         AuthenticatorStateExpire(&'a AuthenticatorStateExpire),
         RandomnessStateCreate,
         DenyListStateCreate,
+        BridgeStateCreate {
+            chain_id: &'a CheckpointDigest,
+        },
+        BridgeCommitteeInit {
+            #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+            bridge_object_version: u64,
+        },
     }
 
     #[derive(serde_derive::Deserialize)]
@@ -365,6 +373,13 @@ mod end_of_epoch {
         AuthenticatorStateExpire(AuthenticatorStateExpire),
         RandomnessStateCreate,
         DenyListStateCreate,
+        BridgeStateCreate {
+            chain_id: CheckpointDigest,
+        },
+        BridgeCommitteeInit {
+            #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+            bridge_object_version: u64,
+        },
     }
 
     #[derive(serde_derive::Serialize)]
@@ -374,6 +389,8 @@ mod end_of_epoch {
         AuthenticatorStateExpire(&'a AuthenticatorStateExpire),
         RandomnessStateCreate,
         DenyListStateCreate,
+        BridgeStateCreate { chain_id: &'a CheckpointDigest },
+        BridgeCommitteeInit { bridge_object_version: u64 },
     }
 
     #[derive(serde_derive::Deserialize)]
@@ -383,6 +400,8 @@ mod end_of_epoch {
         AuthenticatorStateExpire(AuthenticatorStateExpire),
         RandomnessStateCreate,
         DenyListStateCreate,
+        BridgeStateCreate { chain_id: CheckpointDigest },
+        BridgeCommitteeInit { bridge_object_version: u64 },
     }
 
     impl Serialize for EndOfEpochTransactionKind {
@@ -392,40 +411,52 @@ mod end_of_epoch {
         {
             if serializer.is_human_readable() {
                 let readable = match self {
-                    EndOfEpochTransactionKind::ChangeEpoch(k) => {
-                        ReadableEndOfEpochTransactionKindRef::ChangeEpoch(k)
-                    }
-                    EndOfEpochTransactionKind::AuthenticatorStateCreate => {
+                    Self::ChangeEpoch(k) => ReadableEndOfEpochTransactionKindRef::ChangeEpoch(k),
+                    Self::AuthenticatorStateCreate => {
                         ReadableEndOfEpochTransactionKindRef::AuthenticatorStateCreate
                     }
-                    EndOfEpochTransactionKind::AuthenticatorStateExpire(k) => {
+                    Self::AuthenticatorStateExpire(k) => {
                         ReadableEndOfEpochTransactionKindRef::AuthenticatorStateExpire(k)
                     }
-                    EndOfEpochTransactionKind::RandomnessStateCreate => {
+                    Self::RandomnessStateCreate => {
                         ReadableEndOfEpochTransactionKindRef::RandomnessStateCreate
                     }
-                    EndOfEpochTransactionKind::DenyListStateCreate => {
+                    Self::DenyListStateCreate => {
                         ReadableEndOfEpochTransactionKindRef::DenyListStateCreate
                     }
+                    Self::BridgeStateCreate { chain_id } => {
+                        ReadableEndOfEpochTransactionKindRef::BridgeStateCreate { chain_id }
+                    }
+                    Self::BridgeCommitteeInit {
+                        bridge_object_version,
+                    } => ReadableEndOfEpochTransactionKindRef::BridgeCommitteeInit {
+                        bridge_object_version: *bridge_object_version,
+                    },
                 };
                 readable.serialize(serializer)
             } else {
                 let binary = match self {
-                    EndOfEpochTransactionKind::ChangeEpoch(k) => {
-                        BinaryEndOfEpochTransactionKindRef::ChangeEpoch(k)
-                    }
-                    EndOfEpochTransactionKind::AuthenticatorStateCreate => {
+                    Self::ChangeEpoch(k) => BinaryEndOfEpochTransactionKindRef::ChangeEpoch(k),
+                    Self::AuthenticatorStateCreate => {
                         BinaryEndOfEpochTransactionKindRef::AuthenticatorStateCreate
                     }
-                    EndOfEpochTransactionKind::AuthenticatorStateExpire(k) => {
+                    Self::AuthenticatorStateExpire(k) => {
                         BinaryEndOfEpochTransactionKindRef::AuthenticatorStateExpire(k)
                     }
-                    EndOfEpochTransactionKind::RandomnessStateCreate => {
+                    Self::RandomnessStateCreate => {
                         BinaryEndOfEpochTransactionKindRef::RandomnessStateCreate
                     }
-                    EndOfEpochTransactionKind::DenyListStateCreate => {
+                    Self::DenyListStateCreate => {
                         BinaryEndOfEpochTransactionKindRef::DenyListStateCreate
                     }
+                    Self::BridgeStateCreate { chain_id } => {
+                        BinaryEndOfEpochTransactionKindRef::BridgeStateCreate { chain_id }
+                    }
+                    Self::BridgeCommitteeInit {
+                        bridge_object_version,
+                    } => BinaryEndOfEpochTransactionKindRef::BridgeCommitteeInit {
+                        bridge_object_version: *bridge_object_version,
+                    },
                 };
                 binary.serialize(serializer)
             }
@@ -440,41 +471,53 @@ mod end_of_epoch {
             if deserializer.is_human_readable() {
                 ReadableEndOfEpochTransactionKind::deserialize(deserializer).map(|readable| {
                     match readable {
-                        ReadableEndOfEpochTransactionKind::ChangeEpoch(k) => {
-                            EndOfEpochTransactionKind::ChangeEpoch(k)
-                        }
+                        ReadableEndOfEpochTransactionKind::ChangeEpoch(k) => Self::ChangeEpoch(k),
                         ReadableEndOfEpochTransactionKind::AuthenticatorStateCreate => {
-                            EndOfEpochTransactionKind::AuthenticatorStateCreate
+                            Self::AuthenticatorStateCreate
                         }
                         ReadableEndOfEpochTransactionKind::AuthenticatorStateExpire(k) => {
-                            EndOfEpochTransactionKind::AuthenticatorStateExpire(k)
+                            Self::AuthenticatorStateExpire(k)
                         }
                         ReadableEndOfEpochTransactionKind::RandomnessStateCreate => {
-                            EndOfEpochTransactionKind::RandomnessStateCreate
+                            Self::RandomnessStateCreate
                         }
                         ReadableEndOfEpochTransactionKind::DenyListStateCreate => {
-                            EndOfEpochTransactionKind::DenyListStateCreate
+                            Self::DenyListStateCreate
                         }
+                        ReadableEndOfEpochTransactionKind::BridgeStateCreate { chain_id } => {
+                            Self::BridgeStateCreate { chain_id }
+                        }
+                        ReadableEndOfEpochTransactionKind::BridgeCommitteeInit {
+                            bridge_object_version,
+                        } => Self::BridgeCommitteeInit {
+                            bridge_object_version,
+                        },
                     }
                 })
             } else {
                 BinaryEndOfEpochTransactionKind::deserialize(deserializer).map(
                     |binary| match binary {
-                        BinaryEndOfEpochTransactionKind::ChangeEpoch(k) => {
-                            EndOfEpochTransactionKind::ChangeEpoch(k)
-                        }
+                        BinaryEndOfEpochTransactionKind::ChangeEpoch(k) => Self::ChangeEpoch(k),
                         BinaryEndOfEpochTransactionKind::AuthenticatorStateCreate => {
-                            EndOfEpochTransactionKind::AuthenticatorStateCreate
+                            Self::AuthenticatorStateCreate
                         }
                         BinaryEndOfEpochTransactionKind::AuthenticatorStateExpire(k) => {
-                            EndOfEpochTransactionKind::AuthenticatorStateExpire(k)
+                            Self::AuthenticatorStateExpire(k)
                         }
                         BinaryEndOfEpochTransactionKind::RandomnessStateCreate => {
-                            EndOfEpochTransactionKind::RandomnessStateCreate
+                            Self::RandomnessStateCreate
                         }
                         BinaryEndOfEpochTransactionKind::DenyListStateCreate => {
-                            EndOfEpochTransactionKind::DenyListStateCreate
+                            Self::DenyListStateCreate
                         }
+                        BinaryEndOfEpochTransactionKind::BridgeStateCreate { chain_id } => {
+                            Self::BridgeStateCreate { chain_id }
+                        }
+                        BinaryEndOfEpochTransactionKind::BridgeCommitteeInit {
+                            bridge_object_version,
+                        } => Self::BridgeCommitteeInit {
+                            bridge_object_version,
+                        },
                     },
                 )
             }
