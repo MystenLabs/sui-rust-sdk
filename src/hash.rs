@@ -150,8 +150,9 @@ impl crate::types::MultisigCommittee {
 /// to ensure no hashing collision for any ObjectId vs Address which is derived
 /// as the hash of `flag || pubkey`.
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 #[repr(u8)]
-enum HashingIntentScope {
+enum HashingIntent {
     #[cfg(feature = "serde")]
     ChildObjectId = 0xf0,
     RegularObjectId = 0xf1,
@@ -163,7 +164,7 @@ impl crate::types::ObjectId {
     /// `count` is the number of objects that have been created during a transactions.
     pub fn derive_id(digest: crate::types::TransactionDigest, count: u64) -> Self {
         let mut hasher = Hasher::new();
-        hasher.update([HashingIntentScope::RegularObjectId as u8]);
+        hasher.update([HashingIntent::RegularObjectId as u8]);
         hasher.update(digest);
         hasher.update(count.to_le_bytes());
         let digest = hasher.finalize();
@@ -181,7 +182,7 @@ impl crate::types::ObjectId {
         key_bytes: &[u8],
     ) -> Self {
         let mut hasher = Hasher::new();
-        hasher.update([HashingIntentScope::ChildObjectId as u8]);
+        hasher.update([HashingIntent::ChildObjectId as u8]);
         hasher.update(self);
         hasher.update(
             u64::try_from(key_bytes.len())
@@ -194,5 +195,40 @@ impl crate::types::ObjectId {
         let digest = hasher.finalize();
 
         Self::new(digest.into_inner())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::HashingIntent;
+    use crate::types::SignatureScheme;
+    use test_strategy::proptest;
+
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::wasm_bindgen_test as test;
+
+    impl HashingIntent {
+        fn from_byte(byte: u8) -> Result<Self, u8> {
+            match byte {
+                0xf0 => Ok(Self::ChildObjectId),
+                0xf1 => Ok(Self::RegularObjectId),
+                invalid => Err(invalid),
+            }
+        }
+    }
+
+    #[proptest]
+    fn hashing_intent_does_not_overlap_with_signature_scheme(intent: HashingIntent) {
+        SignatureScheme::from_byte(intent as u8).unwrap_err();
+    }
+
+    #[proptest]
+    fn signature_scheme_does_not_overlap_with_hashing_intent(scheme: SignatureScheme) {
+        HashingIntent::from_byte(scheme.to_u8()).unwrap_err();
+    }
+
+    #[proptest]
+    fn roundtrip_hashing_intent(intent: HashingIntent) {
+        assert_eq!(Ok(intent), HashingIntent::from_byte(intent as u8));
     }
 }

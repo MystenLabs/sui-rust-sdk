@@ -261,6 +261,7 @@ impl<'de> serde::Deserialize<'de> for SimpleSignature {
 }
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
 #[repr(u8)]
 pub enum SignatureScheme {
     Ed25519 = 0x00,
@@ -324,6 +325,7 @@ impl super::ZkLoginPublicIdentifier {
     }
 }
 
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub struct InvalidSignatureScheme(u8);
 
 impl std::fmt::Display for InvalidSignatureScheme {
@@ -520,9 +522,15 @@ mod serialization {
         use super::*;
         use base64ct::Base64;
         use base64ct::Encoding;
+        use test_strategy::proptest;
 
         #[cfg(target_arch = "wasm32")]
         use wasm_bindgen_test::wasm_bindgen_test as test;
+
+        #[proptest]
+        fn roundtrip_signature_scheme(scheme: SignatureScheme) {
+            assert_eq!(Ok(scheme), SignatureScheme::from_byte(scheme.to_u8()));
+        }
 
         #[test]
         fn simple_fixtures() {
