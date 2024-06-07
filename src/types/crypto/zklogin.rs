@@ -91,9 +91,20 @@ pub struct CircomG2([[Bn254FieldElement; 2]; 3]);
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(test, derive(test_strategy::Arbitrary))]
+//TODO ensure iss is less than 255 bytes long
 pub struct ZkLoginPublicIdentifier {
     iss: String,
     address_seed: Bn254FieldElement,
+}
+
+impl ZkLoginPublicIdentifier {
+    pub fn iss(&self) -> &str {
+        &self.iss
+    }
+
+    pub fn address_seed(&self) -> &Bn254FieldElement {
+        &self.address_seed
+    }
 }
 
 /// Struct that contains info for a JWK. A list of them for different kids can

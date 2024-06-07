@@ -6,6 +6,7 @@ use super::Secp256k1PublicKey;
 use super::Secp256k1Signature;
 use super::Secp256r1PublicKey;
 use super::Secp256r1Signature;
+use super::SignatureScheme;
 
 pub type WeightUnit = u8;
 pub type ThresholdUnit = u16;
@@ -34,6 +35,16 @@ pub struct MultisigMember {
     weight: WeightUnit,
 }
 
+impl MultisigMember {
+    pub fn public_key(&self) -> &MultisigMemberPublicKey {
+        &self.public_key
+    }
+
+    pub fn weight(&self) -> WeightUnit {
+        self.weight
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(
     feature = "serde",
@@ -56,6 +67,10 @@ impl MultisigCommittee {
 
     pub fn threshold(&self) -> ThresholdUnit {
         self.threshold
+    }
+
+    pub fn scheme(&self) -> SignatureScheme {
+        SignatureScheme::Multisig
     }
 }
 

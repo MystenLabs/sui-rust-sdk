@@ -3,6 +3,7 @@
 pub mod types;
 
 #[cfg(feature = "hash")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "hash")))]
 pub mod hash;
 
 #[cfg(feature = "serde")]

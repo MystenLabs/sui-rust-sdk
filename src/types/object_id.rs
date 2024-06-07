@@ -35,6 +35,30 @@ impl ObjectId {
     }
 }
 
+impl AsRef<[u8]> for ObjectId {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_ref()
+    }
+}
+
+impl AsRef<[u8; 32]> for ObjectId {
+    fn as_ref(&self) -> &[u8; 32] {
+        self.0.as_ref()
+    }
+}
+
+impl From<ObjectId> for [u8; 32] {
+    fn from(object_id: ObjectId) -> Self {
+        object_id.into_inner()
+    }
+}
+
+impl From<[u8; 32]> for ObjectId {
+    fn from(object_id: [u8; 32]) -> Self {
+        Self::new(object_id)
+    }
+}
+
 impl From<Address> for ObjectId {
     fn from(value: Address) -> Self {
         Self(value)

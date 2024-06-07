@@ -294,6 +294,34 @@ impl SignatureScheme {
             invalid => Err(InvalidSignatureScheme(invalid)),
         }
     }
+
+    pub fn to_u8(self) -> u8 {
+        self as u8
+    }
+}
+
+impl Ed25519PublicKey {
+    pub fn scheme(&self) -> SignatureScheme {
+        SignatureScheme::Ed25519
+    }
+}
+
+impl Secp256k1PublicKey {
+    pub fn scheme(&self) -> SignatureScheme {
+        SignatureScheme::Secp256k1
+    }
+}
+
+impl Secp256r1PublicKey {
+    pub fn scheme(&self) -> SignatureScheme {
+        SignatureScheme::Secp256r1
+    }
+}
+
+impl super::ZkLoginPublicIdentifier {
+    pub fn scheme(&self) -> SignatureScheme {
+        SignatureScheme::ZkLogin
+    }
 }
 
 pub struct InvalidSignatureScheme(u8);
