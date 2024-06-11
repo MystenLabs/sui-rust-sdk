@@ -9,6 +9,7 @@ use super::JwkId;
 use super::ObjectId;
 use super::ObjectReference;
 use super::ProtocolVersion;
+use super::TransactionDigest;
 use super::TypeTag;
 use super::UserSignature;
 use super::Version;
@@ -142,6 +143,8 @@ pub enum TransactionKind {
     RandomnessStateUpdate(RandomnessStateUpdate),
     // V2 ConsensusCommitPrologue also includes the digest of the current consensus output.
     ConsensusCommitPrologueV2(ConsensusCommitPrologueV2),
+
+    ConsensusCommitPrologueV3(ConsensusCommitPrologueV3),
     // .. more transaction types go here
 }
 
@@ -274,6 +277,82 @@ pub struct ConsensusCommitPrologueV2 {
     pub commit_timestamp_ms: CheckpointTimestamp,
     /// Digest of consensus output
     pub consensus_commit_digest: ConsensusCommitDigest,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "schemars",
+    derive(schemars::JsonSchema),
+    schemars(tag = "kind", rename_all = "snake_case")
+)]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+pub enum ConsensusDeterminedVersionAssignments {
+    /// Cancelled transaction version assignment.
+    CancelledTransactions {
+        #[cfg_attr(test, any(proptest::collection::size_range(0..=2).lift()))]
+        cancelled_transactions: Vec<CancelledTransaction>,
+    },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+pub struct CancelledTransaction {
+    digest: TransactionDigest,
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=2).lift()))]
+    version_assignments: Vec<VersionAssignment>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+pub struct VersionAssignment {
+    object_id: ObjectId,
+    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
+    version: Version,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+pub struct ConsensusCommitPrologueV3 {
+    /// Epoch of the commit prologue transaction
+    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
+    pub epoch: u64,
+    /// Consensus round of the commit
+    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
+    pub round: u64,
+    /// The sub DAG index of the consensus commit. This field will be populated if there
+    /// are multiple consensus commits per round.
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "crate::_serde::OptionReadableDisplay")
+    )]
+    #[cfg_attr(feature = "schemars", schemars(with = "Option<crate::_schemars::U64>"))]
+    pub sub_dag_index: Option<u64>,
+    /// Unix timestamp from consensus
+    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
+    pub commit_timestamp_ms: CheckpointTimestamp,
+    /// Digest of consensus output
+    pub consensus_commit_digest: ConsensusCommitDigest,
+    /// Stores consensus handler determined shared object version assignments.
+    pub consensus_determined_version_assignments: ConsensusDeterminedVersionAssignments,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

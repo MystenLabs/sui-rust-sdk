@@ -160,6 +160,7 @@ mod transaction_kind {
     use crate::types::transaction::ChangeEpoch;
     use crate::types::transaction::ConsensusCommitPrologue;
     use crate::types::transaction::ConsensusCommitPrologueV2;
+    use crate::types::transaction::ConsensusCommitPrologueV3;
     use crate::types::transaction::EndOfEpochTransactionKind;
     use crate::types::transaction::GenesisTransaction;
     use crate::types::transaction::ProgrammableTransaction;
@@ -179,6 +180,7 @@ mod transaction_kind {
         },
         RandomnessStateUpdate(&'a RandomnessStateUpdate),
         ConsensusCommitPrologueV2(&'a ConsensusCommitPrologueV2),
+        ConsensusCommitPrologueV3(&'a ConsensusCommitPrologueV3),
     }
 
     #[derive(serde_derive::Deserialize)]
@@ -196,6 +198,7 @@ mod transaction_kind {
         },
         RandomnessStateUpdate(RandomnessStateUpdate),
         ConsensusCommitPrologueV2(ConsensusCommitPrologueV2),
+        ConsensusCommitPrologueV3(ConsensusCommitPrologueV3),
     }
 
     #[cfg(feature = "schemars")]
@@ -219,6 +222,7 @@ mod transaction_kind {
         EndOfEpoch(&'a Vec<EndOfEpochTransactionKind>),
         RandomnessStateUpdate(&'a RandomnessStateUpdate),
         ConsensusCommitPrologueV2(&'a ConsensusCommitPrologueV2),
+        ConsensusCommitPrologueV3(&'a ConsensusCommitPrologueV3),
     }
     #[derive(serde_derive::Deserialize)]
     enum BinaryTransactionKind {
@@ -230,6 +234,7 @@ mod transaction_kind {
         EndOfEpoch(Vec<EndOfEpochTransactionKind>),
         RandomnessStateUpdate(RandomnessStateUpdate),
         ConsensusCommitPrologueV2(ConsensusCommitPrologueV2),
+        ConsensusCommitPrologueV3(ConsensusCommitPrologueV3),
     }
 
     impl Serialize for TransactionKind {
@@ -239,47 +244,53 @@ mod transaction_kind {
         {
             if serializer.is_human_readable() {
                 let readable = match self {
-                    TransactionKind::ProgrammableTransaction(k) => {
+                    Self::ProgrammableTransaction(k) => {
                         ReadableTransactionKindRef::ProgrammableTransaction(k)
                     }
-                    TransactionKind::ChangeEpoch(k) => ReadableTransactionKindRef::ChangeEpoch(k),
-                    TransactionKind::Genesis(k) => ReadableTransactionKindRef::Genesis(k),
-                    TransactionKind::ConsensusCommitPrologue(k) => {
+                    Self::ChangeEpoch(k) => ReadableTransactionKindRef::ChangeEpoch(k),
+                    Self::Genesis(k) => ReadableTransactionKindRef::Genesis(k),
+                    Self::ConsensusCommitPrologue(k) => {
                         ReadableTransactionKindRef::ConsensusCommitPrologue(k)
                     }
-                    TransactionKind::AuthenticatorStateUpdate(k) => {
+                    Self::AuthenticatorStateUpdate(k) => {
                         ReadableTransactionKindRef::AuthenticatorStateUpdate(k)
                     }
-                    TransactionKind::EndOfEpoch(commands) => {
+                    Self::EndOfEpoch(commands) => {
                         ReadableTransactionKindRef::EndOfEpoch { commands }
                     }
-                    TransactionKind::RandomnessStateUpdate(k) => {
+                    Self::RandomnessStateUpdate(k) => {
                         ReadableTransactionKindRef::RandomnessStateUpdate(k)
                     }
-                    TransactionKind::ConsensusCommitPrologueV2(k) => {
+                    Self::ConsensusCommitPrologueV2(k) => {
                         ReadableTransactionKindRef::ConsensusCommitPrologueV2(k)
+                    }
+                    Self::ConsensusCommitPrologueV3(k) => {
+                        ReadableTransactionKindRef::ConsensusCommitPrologueV3(k)
                     }
                 };
                 readable.serialize(serializer)
             } else {
                 let binary = match self {
-                    TransactionKind::ProgrammableTransaction(k) => {
+                    Self::ProgrammableTransaction(k) => {
                         BinaryTransactionKindRef::ProgrammableTransaction(k)
                     }
-                    TransactionKind::ChangeEpoch(k) => BinaryTransactionKindRef::ChangeEpoch(k),
-                    TransactionKind::Genesis(k) => BinaryTransactionKindRef::Genesis(k),
-                    TransactionKind::ConsensusCommitPrologue(k) => {
+                    Self::ChangeEpoch(k) => BinaryTransactionKindRef::ChangeEpoch(k),
+                    Self::Genesis(k) => BinaryTransactionKindRef::Genesis(k),
+                    Self::ConsensusCommitPrologue(k) => {
                         BinaryTransactionKindRef::ConsensusCommitPrologue(k)
                     }
-                    TransactionKind::AuthenticatorStateUpdate(k) => {
+                    Self::AuthenticatorStateUpdate(k) => {
                         BinaryTransactionKindRef::AuthenticatorStateUpdate(k)
                     }
-                    TransactionKind::EndOfEpoch(k) => BinaryTransactionKindRef::EndOfEpoch(k),
-                    TransactionKind::RandomnessStateUpdate(k) => {
+                    Self::EndOfEpoch(k) => BinaryTransactionKindRef::EndOfEpoch(k),
+                    Self::RandomnessStateUpdate(k) => {
                         BinaryTransactionKindRef::RandomnessStateUpdate(k)
                     }
-                    TransactionKind::ConsensusCommitPrologueV2(k) => {
+                    Self::ConsensusCommitPrologueV2(k) => {
                         BinaryTransactionKindRef::ConsensusCommitPrologueV2(k)
+                    }
+                    Self::ConsensusCommitPrologueV3(k) => {
+                        BinaryTransactionKindRef::ConsensusCommitPrologueV3(k)
                     }
                 };
                 binary.serialize(serializer)
@@ -295,45 +306,49 @@ mod transaction_kind {
             if deserializer.is_human_readable() {
                 ReadableTransactionKind::deserialize(deserializer).map(|readable| match readable {
                     ReadableTransactionKind::ProgrammableTransaction(k) => {
-                        TransactionKind::ProgrammableTransaction(k)
+                        Self::ProgrammableTransaction(k)
                     }
-                    ReadableTransactionKind::ChangeEpoch(k) => TransactionKind::ChangeEpoch(k),
-                    ReadableTransactionKind::Genesis(k) => TransactionKind::Genesis(k),
+                    ReadableTransactionKind::ChangeEpoch(k) => Self::ChangeEpoch(k),
+                    ReadableTransactionKind::Genesis(k) => Self::Genesis(k),
                     ReadableTransactionKind::ConsensusCommitPrologue(k) => {
-                        TransactionKind::ConsensusCommitPrologue(k)
+                        Self::ConsensusCommitPrologue(k)
                     }
                     ReadableTransactionKind::AuthenticatorStateUpdate(k) => {
-                        TransactionKind::AuthenticatorStateUpdate(k)
+                        Self::AuthenticatorStateUpdate(k)
                     }
-                    ReadableTransactionKind::EndOfEpoch { commands } => {
-                        TransactionKind::EndOfEpoch(commands)
-                    }
+                    ReadableTransactionKind::EndOfEpoch { commands } => Self::EndOfEpoch(commands),
                     ReadableTransactionKind::RandomnessStateUpdate(k) => {
-                        TransactionKind::RandomnessStateUpdate(k)
+                        Self::RandomnessStateUpdate(k)
                     }
                     ReadableTransactionKind::ConsensusCommitPrologueV2(k) => {
-                        TransactionKind::ConsensusCommitPrologueV2(k)
+                        Self::ConsensusCommitPrologueV2(k)
+                    }
+                    ReadableTransactionKind::ConsensusCommitPrologueV3(k) => {
+                        Self::ConsensusCommitPrologueV3(k)
                     }
                 })
             } else {
                 BinaryTransactionKind::deserialize(deserializer).map(|binary| match binary {
                     BinaryTransactionKind::ProgrammableTransaction(k) => {
-                        TransactionKind::ProgrammableTransaction(k)
+                        Self::ProgrammableTransaction(k)
                     }
-                    BinaryTransactionKind::ChangeEpoch(k) => TransactionKind::ChangeEpoch(k),
-                    BinaryTransactionKind::Genesis(k) => TransactionKind::Genesis(k),
+                    BinaryTransactionKind::ChangeEpoch(k) => Self::ChangeEpoch(k),
+                    BinaryTransactionKind::Genesis(k) => Self::Genesis(k),
                     BinaryTransactionKind::ConsensusCommitPrologue(k) => {
-                        TransactionKind::ConsensusCommitPrologue(k)
+                        Self::ConsensusCommitPrologue(k)
                     }
                     BinaryTransactionKind::AuthenticatorStateUpdate(k) => {
-                        TransactionKind::AuthenticatorStateUpdate(k)
+                        Self::AuthenticatorStateUpdate(k)
                     }
-                    BinaryTransactionKind::EndOfEpoch(k) => TransactionKind::EndOfEpoch(k),
+                    BinaryTransactionKind::EndOfEpoch(k) => Self::EndOfEpoch(k),
                     BinaryTransactionKind::RandomnessStateUpdate(k) => {
-                        TransactionKind::RandomnessStateUpdate(k)
+                        Self::RandomnessStateUpdate(k)
                     }
                     BinaryTransactionKind::ConsensusCommitPrologueV2(k) => {
-                        TransactionKind::ConsensusCommitPrologueV2(k)
+                        Self::ConsensusCommitPrologueV2(k)
+                    }
+                    BinaryTransactionKind::ConsensusCommitPrologueV3(k) => {
+                        Self::ConsensusCommitPrologueV3(k)
                     }
                 })
             }
@@ -517,6 +532,98 @@ mod end_of_epoch {
                             bridge_object_version,
                         } => Self::BridgeCommitteeInit {
                             bridge_object_version,
+                        },
+                    },
+                )
+            }
+        }
+    }
+}
+
+mod version_assignments {
+    use super::*;
+    use crate::types::transaction::CancelledTransaction;
+    use crate::types::transaction::ConsensusDeterminedVersionAssignments;
+
+    #[derive(serde_derive::Serialize)]
+    #[serde(tag = "kind", rename_all = "snake_case")]
+    enum ReadableConsensusDeterminedVersionAssignmentsRef<'a> {
+        CancelledTransactions {
+            cancelled_transactions: &'a Vec<CancelledTransaction>,
+        },
+    }
+
+    #[derive(serde_derive::Deserialize)]
+    #[serde(tag = "kind", rename_all = "snake_case")]
+    enum ReadableConsensusDeterminedVersionAssignments {
+        CancelledTransactions {
+            cancelled_transactions: Vec<CancelledTransaction>,
+        },
+    }
+
+    #[derive(serde_derive::Serialize)]
+    enum BinaryConsensusDeterminedVersionAssignmentsRef<'a> {
+        CancelledTransactions {
+            cancelled_transactions: &'a Vec<CancelledTransaction>,
+        },
+    }
+
+    #[derive(serde_derive::Deserialize)]
+    enum BinaryConsensusDeterminedVersionAssignments {
+        CancelledTransactions {
+            cancelled_transactions: Vec<CancelledTransaction>,
+        },
+    }
+
+    impl Serialize for ConsensusDeterminedVersionAssignments {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            if serializer.is_human_readable() {
+                let readable = match self {
+                    Self::CancelledTransactions {
+                        cancelled_transactions,
+                    } => ReadableConsensusDeterminedVersionAssignmentsRef::CancelledTransactions {
+                        cancelled_transactions,
+                    },
+                };
+                readable.serialize(serializer)
+            } else {
+                let binary = match self {
+                    Self::CancelledTransactions {
+                        cancelled_transactions,
+                    } => BinaryConsensusDeterminedVersionAssignmentsRef::CancelledTransactions {
+                        cancelled_transactions,
+                    },
+                };
+                binary.serialize(serializer)
+            }
+        }
+    }
+
+    impl<'de> Deserialize<'de> for ConsensusDeterminedVersionAssignments {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            if deserializer.is_human_readable() {
+                ReadableConsensusDeterminedVersionAssignments::deserialize(deserializer).map(
+                    |readable| match readable {
+                        ReadableConsensusDeterminedVersionAssignments::CancelledTransactions {
+                            cancelled_transactions,
+                        } => Self::CancelledTransactions {
+                            cancelled_transactions,
+                        },
+                    },
+                )
+            } else {
+                BinaryConsensusDeterminedVersionAssignments::deserialize(deserializer).map(
+                    |binary| match binary {
+                        BinaryConsensusDeterminedVersionAssignments::CancelledTransactions {
+                            cancelled_transactions,
+                        } => Self::CancelledTransactions {
+                            cancelled_transactions,
                         },
                     },
                 )
