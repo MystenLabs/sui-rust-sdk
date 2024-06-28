@@ -108,7 +108,6 @@ pub enum ExecutionError {
     /// Invalid command argument
     CommandArgumentError {
         argument: u16,
-        #[cfg_attr(feature = "schemars", schemars(flatten))]
         kind: CommandArgumentError,
     },
     /// Type argument error
@@ -304,7 +303,6 @@ mod serialization {
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
     #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
     struct FailureStatus {
-        #[serde(flatten)]
         error: ExecutionError,
         #[serde(skip_serializing_if = "Option::is_none")]
         command: Option<u16>,
@@ -425,7 +423,6 @@ mod serialization {
         NonEntryFunctionInvoked,
         CommandArgumentError {
             argument: u16,
-            #[serde(flatten)]
             kind: CommandArgumentError,
         },
         TypeArgumentError {

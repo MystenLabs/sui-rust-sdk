@@ -20,23 +20,38 @@ mod transaction {
 
     #[derive(serde_derive::Serialize)]
     #[serde(tag = "version")]
-    enum ReadableTransactionDataRef<'a> {
+    #[serde(rename = "Transaction")]
+    enum TransactionDataRef<'a> {
         #[serde(rename = "1")]
-        V1(ReadableTransactionRef<'a>),
+        V1(TransactionV1Ref<'a>),
     }
 
     #[derive(serde_derive::Deserialize)]
     #[serde(tag = "version")]
     #[serde(rename = "Transaction")]
     #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-    enum ReadableTransactionData {
+    enum TransactionData {
         #[serde(rename = "1")]
-        V1(ReadableTransaction),
+        V1(TransactionV1),
     }
 
     #[derive(serde_derive::Serialize)]
-    struct ReadableTransactionRef<'a> {
-        #[serde(flatten)]
+    #[serde(rename = "Transaction")]
+    enum BinaryTransactionDataRef<'a> {
+        #[serde(rename = "1")]
+        V1(TransactionV1Ref<'a>),
+    }
+
+    #[derive(serde_derive::Deserialize)]
+    #[serde(rename = "Transaction")]
+    enum BinaryTransactionData {
+        #[serde(rename = "1")]
+        V1(TransactionV1),
+    }
+
+    #[derive(serde_derive::Serialize)]
+    #[serde(rename = "TransactionV1")]
+    struct TransactionV1Ref<'a> {
         kind: &'a TransactionKind,
         sender: &'a Address,
         gas_payment: &'a GasPayment,
@@ -46,38 +61,11 @@ mod transaction {
     #[derive(serde_derive::Deserialize)]
     #[serde(rename = "TransactionV1")]
     #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-    struct ReadableTransaction {
-        #[serde(flatten)]
+    struct TransactionV1 {
         kind: TransactionKind,
         sender: Address,
         gas_payment: GasPayment,
         expiration: TransactionExpiration,
-    }
-
-    #[derive(serde_derive::Serialize)]
-    struct BinaryTransactionRef<'a> {
-        kind: &'a TransactionKind,
-        sender: &'a Address,
-        gas_payment: &'a GasPayment,
-        expiration: &'a TransactionExpiration,
-    }
-
-    #[derive(serde_derive::Deserialize)]
-    struct BinaryTransaction {
-        kind: TransactionKind,
-        sender: Address,
-        gas_payment: GasPayment,
-        expiration: TransactionExpiration,
-    }
-
-    #[derive(serde_derive::Serialize)]
-    enum BinaryTransactionDataRef<'a> {
-        V1(BinaryTransactionRef<'a>),
-    }
-
-    #[derive(serde_derive::Deserialize)]
-    enum BinaryTransactionData {
-        V1(BinaryTransaction),
     }
 
     impl Serialize for Transaction {
@@ -85,22 +73,17 @@ mod transaction {
         where
             S: Serializer,
         {
+            let transaction = TransactionV1Ref {
+                kind: &self.kind,
+                sender: &self.sender,
+                gas_payment: &self.gas_payment,
+                expiration: &self.expiration,
+            };
+
             if serializer.is_human_readable() {
-                let readable = ReadableTransactionDataRef::V1(ReadableTransactionRef {
-                    kind: &self.kind,
-                    sender: &self.sender,
-                    gas_payment: &self.gas_payment,
-                    expiration: &self.expiration,
-                });
-                readable.serialize(serializer)
+                TransactionDataRef::V1(transaction).serialize(serializer)
             } else {
-                let binary = BinaryTransactionDataRef::V1(BinaryTransactionRef {
-                    kind: &self.kind,
-                    sender: &self.sender,
-                    gas_payment: &self.gas_payment,
-                    expiration: &self.expiration,
-                });
-                binary.serialize(serializer)
+                BinaryTransactionDataRef::V1(transaction).serialize(serializer)
             }
         }
     }
@@ -110,46 +93,37 @@ mod transaction {
         where
             D: Deserializer<'de>,
         {
-            if deserializer.is_human_readable() {
-                let ReadableTransactionData::V1(ReadableTransaction {
-                    kind,
-                    sender,
-                    gas_payment,
-                    expiration,
-                }) = Deserialize::deserialize(deserializer)?;
-
-                Ok(Transaction {
-                    kind,
-                    sender,
-                    gas_payment,
-                    expiration,
-                })
+            let TransactionV1 {
+                kind,
+                sender,
+                gas_payment,
+                expiration,
+            } = if deserializer.is_human_readable() {
+                let TransactionData::V1(transaction) = Deserialize::deserialize(deserializer)?;
+                transaction
             } else {
-                let BinaryTransactionData::V1(BinaryTransaction {
-                    kind,
-                    sender,
-                    gas_payment,
-                    expiration,
-                }) = Deserialize::deserialize(deserializer)?;
+                let BinaryTransactionData::V1(transaction) =
+                    Deserialize::deserialize(deserializer)?;
+                transaction
+            };
 
-                Ok(Transaction {
-                    kind,
-                    sender,
-                    gas_payment,
-                    expiration,
-                })
-            }
+            Ok(Transaction {
+                kind,
+                sender,
+                gas_payment,
+                expiration,
+            })
         }
     }
 
     #[cfg(feature = "schemars")]
     impl schemars::JsonSchema for Transaction {
         fn schema_name() -> String {
-            ReadableTransactionData::schema_name()
+            TransactionData::schema_name()
         }
 
         fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
-            ReadableTransactionData::json_schema(gen)
+            TransactionData::json_schema(gen)
         }
     }
 }
@@ -987,86 +961,6 @@ mod signed_transaction {
     use crate::types::transaction::Transaction;
     use crate::types::UserSignature;
 
-    #[derive(serde_derive::Serialize)]
-    struct ReadableSignedTransactionRef<'a> {
-        #[serde(flatten)]
-        transaction: &'a Transaction,
-        signatures: &'a Vec<UserSignature>,
-    }
-
-    #[derive(serde_derive::Deserialize)]
-    struct ReadableSignedTransaction {
-        #[serde(flatten)]
-        transaction: Transaction,
-        signatures: Vec<UserSignature>,
-    }
-
-    #[derive(serde_derive::Serialize)]
-    struct BinarySignedTransactionRef<'a> {
-        transaction: &'a Transaction,
-        signatures: &'a Vec<UserSignature>,
-    }
-
-    #[derive(serde_derive::Deserialize)]
-    struct BinarySignedTransaction {
-        transaction: Transaction,
-        signatures: Vec<UserSignature>,
-    }
-
-    impl Serialize for SignedTransaction {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
-        {
-            let Self {
-                transaction,
-                signatures,
-            } = self;
-            if serializer.is_human_readable() {
-                let readable = ReadableSignedTransactionRef {
-                    transaction,
-                    signatures,
-                };
-                readable.serialize(serializer)
-            } else {
-                let binary = BinarySignedTransactionRef {
-                    transaction,
-                    signatures,
-                };
-                binary.serialize(serializer)
-            }
-        }
-    }
-
-    impl<'de> Deserialize<'de> for SignedTransaction {
-        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            if deserializer.is_human_readable() {
-                let ReadableSignedTransaction {
-                    transaction,
-                    signatures,
-                } = Deserialize::deserialize(deserializer)?;
-
-                Ok(Self {
-                    transaction,
-                    signatures,
-                })
-            } else {
-                let BinarySignedTransaction {
-                    transaction,
-                    signatures,
-                } = Deserialize::deserialize(deserializer)?;
-
-                Ok(Self {
-                    transaction,
-                    signatures,
-                })
-            }
-        }
-    }
-
     /// Intents are defined as:
     ///
     /// ```
@@ -1162,17 +1056,13 @@ mod signed_transaction {
         where
             S: Serializer,
         {
-            let SignedTransaction {
-                transaction,
-                signatures,
-            } = transaction;
             if serializer.is_human_readable() {
-                let readable = ReadableSignedTransactionRef {
+                transaction.serialize(serializer)
+            } else {
+                let SignedTransaction {
                     transaction,
                     signatures,
-                };
-                readable.serialize(serializer)
-            } else {
+                } = transaction;
                 let binary = BinarySignedTransactionWithIntentMessageRef {
                     transaction,
                     signatures,
@@ -1191,15 +1081,7 @@ mod signed_transaction {
             D: Deserializer<'de>,
         {
             if deserializer.is_human_readable() {
-                let ReadableSignedTransaction {
-                    transaction,
-                    signatures,
-                } = Deserialize::deserialize(deserializer)?;
-
-                Ok(SignedTransaction {
-                    transaction,
-                    signatures,
-                })
+                SignedTransaction::deserialize(deserializer)
             } else {
                 struct V;
                 impl<'de> serde::de::Visitor<'de> for V {
