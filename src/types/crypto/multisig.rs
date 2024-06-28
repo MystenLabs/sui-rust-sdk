@@ -27,10 +27,13 @@ pub enum MultisigMemberPublicKey {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct MultisigMember {
-    #[cfg_attr(feature = "schemars", schemars(flatten))]
     public_key: MultisigMemberPublicKey,
     weight: WeightUnit,
 }
@@ -666,61 +669,6 @@ mod serialization {
                     MemberSignature::Secp256k1(signature) => Self::Secp256k1(signature),
                     MemberSignature::Secp256r1(signature) => Self::Secp256r1(signature),
                     MemberSignature::ZkLogin(authenticator) => Self::ZkLogin(authenticator),
-                })
-            }
-        }
-    }
-
-    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
-    struct Member {
-        public_key: MultisigMemberPublicKey,
-        weight: WeightUnit,
-    }
-
-    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
-    struct ReadableMember {
-        #[cfg_attr(feature = "serde", serde(flatten))]
-        public_key: MultisigMemberPublicKey,
-        weight: WeightUnit,
-    }
-
-    impl Serialize for MultisigMember {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
-        {
-            if serializer.is_human_readable() {
-                let readable = ReadableMember {
-                    public_key: self.public_key.clone(),
-                    weight: self.weight,
-                };
-                readable.serialize(serializer)
-            } else {
-                let binary = Member {
-                    public_key: self.public_key.clone(),
-                    weight: self.weight,
-                };
-                binary.serialize(serializer)
-            }
-        }
-    }
-
-    impl<'de> Deserialize<'de> for MultisigMember {
-        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            if deserializer.is_human_readable() {
-                let readable = ReadableMember::deserialize(deserializer)?;
-                Ok(Self {
-                    public_key: readable.public_key,
-                    weight: readable.weight,
-                })
-            } else {
-                let binary = Member::deserialize(deserializer)?;
-                Ok(Self {
-                    public_key: binary.public_key,
-                    weight: binary.weight,
                 })
             }
         }
