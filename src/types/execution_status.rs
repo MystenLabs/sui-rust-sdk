@@ -145,7 +145,8 @@ pub enum ExecutionError {
     PublishUpgradeDependencyDowngrade,
 
     /// Invalid package upgrade
-    PackageUpgradeError(PackageUpgradeError),
+    #[cfg_attr(feature = "schemars", schemars(title = "PackageUpgradeError"))]
+    PackageUpgradeError { kind: PackageUpgradeError },
 
     /// Indicates the transaction tried to write objects too large to storage
     WrittenObjectsTooLarge {
@@ -445,7 +446,9 @@ mod serialization {
         },
         PublishUpgradeMissingDependency,
         PublishUpgradeDependencyDowngrade,
-        PackageUpgradeError(PackageUpgradeError),
+        PackageUpgradeError {
+            kind: PackageUpgradeError,
+        },
         WrittenObjectsTooLarge {
             #[serde(with = "crate::_serde::ReadableDisplay")]
             object_size: u64,
@@ -514,7 +517,9 @@ mod serialization {
         },
         PublishUpgradeMissingDependency,
         PublishUpgradeDependencyDowngrade,
-        PackageUpgradeError(PackageUpgradeError),
+        PackageUpgradeError {
+            kind: PackageUpgradeError,
+        },
         WrittenObjectsTooLarge {
             object_size: u64,
             max_object_size: u64,
@@ -609,8 +614,8 @@ mod serialization {
                     Self::PublishUpgradeDependencyDowngrade => {
                         ReadableExecutionError::PublishUpgradeDependencyDowngrade
                     }
-                    Self::PackageUpgradeError(err) => {
-                        ReadableExecutionError::PackageUpgradeError(err)
+                    Self::PackageUpgradeError { kind } => {
+                        ReadableExecutionError::PackageUpgradeError { kind }
                     }
                     Self::WrittenObjectsTooLarge {
                         object_size,
@@ -704,8 +709,8 @@ mod serialization {
                     Self::PublishUpgradeDependencyDowngrade => {
                         BinaryExecutionError::PublishUpgradeDependencyDowngrade
                     }
-                    Self::PackageUpgradeError(err) => {
-                        BinaryExecutionError::PackageUpgradeError(err)
+                    Self::PackageUpgradeError { kind } => {
+                        BinaryExecutionError::PackageUpgradeError { kind }
                     }
                     Self::WrittenObjectsTooLarge {
                         object_size,
@@ -812,8 +817,8 @@ mod serialization {
                     ReadableExecutionError::PublishUpgradeDependencyDowngrade => {
                         Self::PublishUpgradeDependencyDowngrade
                     }
-                    ReadableExecutionError::PackageUpgradeError(err) => {
-                        Self::PackageUpgradeError(err)
+                    ReadableExecutionError::PackageUpgradeError { kind } => {
+                        Self::PackageUpgradeError { kind }
                     }
                     ReadableExecutionError::WrittenObjectsTooLarge {
                         object_size,
@@ -906,8 +911,8 @@ mod serialization {
                     BinaryExecutionError::PublishUpgradeDependencyDowngrade => {
                         Self::PublishUpgradeDependencyDowngrade
                     }
-                    BinaryExecutionError::PackageUpgradeError(err) => {
-                        Self::PackageUpgradeError(err)
+                    BinaryExecutionError::PackageUpgradeError { kind } => {
+                        Self::PackageUpgradeError { kind }
                     }
                     BinaryExecutionError::WrittenObjectsTooLarge {
                         object_size,
