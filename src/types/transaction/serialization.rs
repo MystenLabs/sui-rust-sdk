@@ -746,14 +746,42 @@ mod argument {
     use super::*;
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
-    #[serde(tag = "type", rename_all = "snake_case")]
-    #[serde(rename = "Argument")]
+    #[serde(rename = "Argument", untagged, rename_all = "lowercase")]
     #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
     enum ReadableArgument {
-        GasCoin,
+        /// # Gas
+        Gas(Gas),
+        /// # Input
         Input { input: u16 },
+        /// # Result
         Result { result: u16 },
-        NestedResult { result: u16, subresult: u16 },
+        /// # NestedResult
+        NestedResult { result: (u16, u16) },
+    }
+
+    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
+    #[serde(rename_all = "lowercase")]
+    enum Gas {
+        Gas,
+    }
+
+    #[cfg(feature = "schemars")]
+    impl schemars::JsonSchema for Gas {
+        fn schema_name() -> std::string::String {
+            "GasArgument".to_owned()
+        }
+
+        fn json_schema(_gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+            schemars::schema::Schema::Object(schemars::schema::SchemaObject {
+                instance_type: Some(schemars::schema::InstanceType::String.into()),
+                enum_values: Some(vec!["gas".into()]),
+                ..Default::default()
+            })
+        }
+
+        fn is_referenceable() -> bool {
+            false
+        }
     }
 
     #[cfg(feature = "schemars")]
@@ -769,7 +797,7 @@ mod argument {
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
     enum BinaryArgument {
-        GasCoin,
+        Gas,
         Input(u16),
         Result(u16),
         NestedResult(u16, u16),
@@ -782,17 +810,17 @@ mod argument {
         {
             if serializer.is_human_readable() {
                 let readable = match *self {
-                    Argument::GasCoin => ReadableArgument::GasCoin,
+                    Argument::Gas => ReadableArgument::Gas(Gas::Gas),
                     Argument::Input(input) => ReadableArgument::Input { input },
                     Argument::Result(result) => ReadableArgument::Result { result },
-                    Argument::NestedResult(result, subresult) => {
-                        ReadableArgument::NestedResult { result, subresult }
-                    }
+                    Argument::NestedResult(result, subresult) => ReadableArgument::NestedResult {
+                        result: (result, subresult),
+                    },
                 };
                 readable.serialize(serializer)
             } else {
                 let binary = match *self {
-                    Argument::GasCoin => BinaryArgument::GasCoin,
+                    Argument::Gas => BinaryArgument::Gas,
                     Argument::Input(input) => BinaryArgument::Input(input),
                     Argument::Result(result) => BinaryArgument::Result(result),
                     Argument::NestedResult(result, subresult) => {
@@ -811,16 +839,16 @@ mod argument {
         {
             if deserializer.is_human_readable() {
                 ReadableArgument::deserialize(deserializer).map(|readable| match readable {
-                    ReadableArgument::GasCoin => Argument::GasCoin,
+                    ReadableArgument::Gas(_) => Argument::Gas,
                     ReadableArgument::Input { input } => Argument::Input(input),
                     ReadableArgument::Result { result } => Argument::Result(result),
-                    ReadableArgument::NestedResult { result, subresult } => {
-                        Argument::NestedResult(result, subresult)
-                    }
+                    ReadableArgument::NestedResult {
+                        result: (result, subresult),
+                    } => Argument::NestedResult(result, subresult),
                 })
             } else {
                 BinaryArgument::deserialize(deserializer).map(|binary| match binary {
-                    BinaryArgument::GasCoin => Argument::GasCoin,
+                    BinaryArgument::Gas => Argument::Gas,
                     BinaryArgument::Input(input) => Argument::Input(input),
                     BinaryArgument::Result(result) => Argument::Result(result),
                     BinaryArgument::NestedResult(result, subresult) => {
@@ -1235,18 +1263,12 @@ mod test {
     #[test]
     fn argument() {
         let test_cases = [
-            (Argument::GasCoin, serde_json::json!({"type": "gas_coin"})),
-            (
-                Argument::Input(1),
-                serde_json::json!({"type": "input", "input": 1}),
-            ),
-            (
-                Argument::Result(2),
-                serde_json::json!({"type": "result", "result": 2}),
-            ),
+            (Argument::Gas, serde_json::json!("gas")),
+            (Argument::Input(1), serde_json::json!({"input": 1})),
+            (Argument::Result(2), serde_json::json!({"result": 2})),
             (
                 Argument::NestedResult(3, 4),
-                serde_json::json!({"type": "nested_result", "result": 3, "subresult": 4}),
+                serde_json::json!({"result": [3, 4]}),
             ),
         ];
 

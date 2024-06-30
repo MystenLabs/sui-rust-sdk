@@ -612,7 +612,7 @@ pub struct Upgrade {
 pub enum Argument {
     /// The gas coin. The gas coin can only be used by-ref, except for with
     /// `TransferObjects`, which can use it by-value.
-    GasCoin,
+    Gas,
     /// One of the input objects or primitive values (from
     /// `ProgrammableTransaction` inputs)
     Input(u16),
