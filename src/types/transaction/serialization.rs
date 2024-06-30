@@ -1120,6 +1120,103 @@ mod signed_transaction {
     }
 }
 
+mod transaction_expiration {
+    use crate::types::{EpochId, TransactionExpiration};
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
+    #[serde(rename = "TransactionExpiration")]
+    #[serde(rename_all = "lowercase")]
+    enum ReadableTransactionExpiration {
+        /// Validators wont sign a transaction unless the expiration Epoch
+        /// is greater than or equal to the current epoch
+        Epoch(
+            #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))] EpochId,
+        ),
+    }
+
+    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
+    pub enum BinaryTransactionExpiration {
+        /// The transaction has no expiration
+        None,
+        /// Validators wont sign a transaction unless the expiration Epoch
+        /// is greater than or equal to the current epoch
+        Epoch(EpochId),
+    }
+
+    impl Serialize for TransactionExpiration {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            if serializer.is_human_readable() {
+                match *self {
+                    Self::None => None,
+                    Self::Epoch(epoch) => Some(ReadableTransactionExpiration::Epoch(epoch)),
+                }
+                .serialize(serializer)
+            } else {
+                match *self {
+                    Self::None => BinaryTransactionExpiration::None,
+                    Self::Epoch(epoch) => BinaryTransactionExpiration::Epoch(epoch),
+                }
+                .serialize(serializer)
+            }
+        }
+    }
+
+    impl<'de> Deserialize<'de> for TransactionExpiration {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            if deserializer.is_human_readable() {
+                Option::<ReadableTransactionExpiration>::deserialize(deserializer).map(|readable| {
+                    match readable {
+                        None => Self::None,
+                        Some(ReadableTransactionExpiration::Epoch(epoch)) => Self::Epoch(epoch),
+                    }
+                })
+            } else {
+                BinaryTransactionExpiration::deserialize(deserializer).map(|binary| match binary {
+                    BinaryTransactionExpiration::None => Self::None,
+                    BinaryTransactionExpiration::Epoch(epoch) => Self::Epoch(epoch),
+                })
+            }
+        }
+    }
+
+    #[cfg(feature = "schemars")]
+    impl schemars::JsonSchema for TransactionExpiration {
+        fn schema_name() -> String {
+            "TransactionExpiration".into()
+        }
+
+        fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+            use schemars::schema::{Schema, SchemaObject};
+            schemars::schema::Schema::Object(schemars::schema::SchemaObject {
+                subschemas: Some(Box::new(schemars::schema::SubschemaValidation {
+                    one_of: Some(vec![
+                        schemars::_private::metadata::add_description(
+                            schemars::_private::new_externally_tagged_enum(
+                                "epoch",
+                                gen.subschema_for::<crate::_schemars::U64>(),
+                            ),
+                            "Validators wont sign a transaction unless the expiration Epoch is greater than or equal to the current epoch",
+                        ),
+                        Schema::Object(SchemaObject {
+                            instance_type: Some(schemars::schema::InstanceType::Null.into()),
+                            ..SchemaObject::default()
+                        }),
+                    ]),
+                    ..Default::default()
+                })),
+                ..Default::default()
+            })
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use base64ct::Base64;
