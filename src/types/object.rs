@@ -57,17 +57,29 @@ impl ObjectReference {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename_all = "lowercase")
+)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub enum Owner {
+    /// # Address Owned
     /// Object is exclusively owned by a single address, and is mutable.
     Address(Address),
+    /// # Object Owned
     /// Object is exclusively owned by a single object, and is mutable.
     Object(ObjectId),
+    /// # Shared Object
     /// Object is shared, can be used by any address, and is mutable.
-    Shared {
+    Shared(
         /// The version at which the object became shared
-        initial_shared_version: Version,
-    },
+        #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+        #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
+        Version,
+    ),
+    /// # Immutable
     /// Object is immutable, and hence ownership doesn't matter.
     Immutable,
 }
@@ -340,107 +352,6 @@ mod serialization {
             })
             .unwrap()
         );
-    }
-
-    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
-    #[serde(rename = "Owner", tag = "owner", rename_all = "snake_case")]
-    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-    pub enum ReadableOwner {
-        Address {
-            address: Address,
-        },
-        Object {
-            object: ObjectId,
-        },
-        Shared {
-            #[serde(with = "crate::_serde::ReadableDisplay")]
-            #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
-            initial_shared_version: Version,
-        },
-        Immutable,
-    }
-
-    #[cfg(feature = "schemars")]
-    impl schemars::JsonSchema for Owner {
-        fn schema_name() -> String {
-            ReadableOwner::schema_name()
-        }
-
-        fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
-            ReadableOwner::json_schema(gen)
-        }
-    }
-
-    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
-    enum BinaryOwner {
-        Address(Address),
-        Object(ObjectId),
-        Shared { initial_shared_version: Version },
-        Immutable,
-    }
-
-    impl Serialize for Owner {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
-        {
-            if serializer.is_human_readable() {
-                let readable = match *self {
-                    Owner::Address(address) => ReadableOwner::Address { address },
-                    Owner::Object(object) => ReadableOwner::Object { object },
-                    Owner::Shared {
-                        initial_shared_version,
-                    } => ReadableOwner::Shared {
-                        initial_shared_version,
-                    },
-                    Owner::Immutable => ReadableOwner::Immutable,
-                };
-                readable.serialize(serializer)
-            } else {
-                let binary = match *self {
-                    Owner::Address(address) => BinaryOwner::Address(address),
-                    Owner::Object(object) => BinaryOwner::Object(object),
-                    Owner::Shared {
-                        initial_shared_version,
-                    } => BinaryOwner::Shared {
-                        initial_shared_version,
-                    },
-                    Owner::Immutable => BinaryOwner::Immutable,
-                };
-                binary.serialize(serializer)
-            }
-        }
-    }
-
-    impl<'de> Deserialize<'de> for Owner {
-        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            if deserializer.is_human_readable() {
-                ReadableOwner::deserialize(deserializer).map(|readable| match readable {
-                    ReadableOwner::Address { address } => Self::Address(address),
-                    ReadableOwner::Object { object } => Self::Object(object),
-                    ReadableOwner::Shared {
-                        initial_shared_version,
-                    } => Self::Shared {
-                        initial_shared_version,
-                    },
-                    ReadableOwner::Immutable => Self::Immutable,
-                })
-            } else {
-                BinaryOwner::deserialize(deserializer).map(|binary| match binary {
-                    BinaryOwner::Address(address) => Self::Address(address),
-                    BinaryOwner::Object(object) => Self::Object(object),
-                    BinaryOwner::Shared {
-                        initial_shared_version,
-                    } => Self::Shared {
-                        initial_shared_version,
-                    },
-                    BinaryOwner::Immutable => Self::Immutable,
-                })
-            }
-        }
     }
 
     /// Wrapper around StructTag with a space-efficient representation for common types like coins
