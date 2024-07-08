@@ -522,8 +522,8 @@ pub enum Command {
 #[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct TransferObjects {
     #[cfg_attr(test, any(proptest::collection::size_range(0..=2).lift()))]
-    objects: Vec<Argument>,
-    address: Argument,
+    pub objects: Vec<Argument>,
+    pub address: Argument,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -534,9 +534,9 @@ pub struct TransferObjects {
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct SplitCoins {
-    coin: Argument,
+    pub coin: Argument,
     #[cfg_attr(test, any(proptest::collection::size_range(0..=2).lift()))]
-    amounts: Vec<Argument>,
+    pub amounts: Vec<Argument>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -547,9 +547,9 @@ pub struct SplitCoins {
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct MergeCoins {
-    coin: Argument,
+    pub coin: Argument,
     #[cfg_attr(test, any(proptest::collection::size_range(0..=2).lift()))]
-    coins_to_merge: Vec<Argument>,
+    pub coins_to_merge: Vec<Argument>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -567,8 +567,8 @@ pub struct Publish {
         )
     )]
     #[cfg_attr(feature = "schemars", schemars(with = "Vec<crate::_schemars::Base64>"))]
-    modules: Vec<Vec<u8>>,
-    dependencies: Vec<ObjectId>,
+    pub modules: Vec<Vec<u8>>,
+    pub dependencies: Vec<ObjectId>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -580,9 +580,9 @@ pub struct Publish {
 #[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct MakeMoveVector {
     #[cfg_attr(feature = "serde", serde(rename = "type"))]
-    type_: Option<TypeTag>,
+    pub type_: Option<TypeTag>,
     #[cfg_attr(test, any(proptest::collection::size_range(0..=2).lift()))]
-    elements: Vec<Argument>,
+    pub elements: Vec<Argument>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -600,10 +600,10 @@ pub struct Upgrade {
         )
     )]
     #[cfg_attr(feature = "schemars", schemars(with = "Vec<crate::_schemars::Base64>"))]
-    modules: Vec<Vec<u8>>,
-    dependencies: Vec<ObjectId>,
-    package: ObjectId,
-    ticket: Argument,
+    pub modules: Vec<Vec<u8>>,
+    pub dependencies: Vec<ObjectId>,
+    pub package: ObjectId,
+    pub ticket: Argument,
 }
 
 /// An argument to a programmable transaction command
