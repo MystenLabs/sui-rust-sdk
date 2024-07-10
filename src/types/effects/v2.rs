@@ -99,6 +99,8 @@ pub enum UnchangedSharedKind {
         #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
         version: Version,
     },
+    /// Read of a per-epoch config object that should remain the same during an epoch.
+    PerEpochConfig,
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]
@@ -431,6 +433,7 @@ mod serialization {
             #[serde(with = "crate::_serde::ReadableDisplay")]
             version: Version,
         },
+        PerEpochConfig,
     }
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
@@ -445,6 +448,7 @@ mod serialization {
         ReadDeleted {
             version: Version,
         },
+        PerEpochConfig,
     }
 
     impl Serialize for UnchangedSharedKind {
@@ -463,6 +467,9 @@ mod serialization {
                     UnchangedSharedKind::ReadDeleted { version } => {
                         ReadableUnchangedSharedKind::ReadDeleted { version }
                     }
+                    UnchangedSharedKind::PerEpochConfig => {
+                        ReadableUnchangedSharedKind::PerEpochConfig
+                    }
                 };
                 readable.serialize(serializer)
             } else {
@@ -475,6 +482,9 @@ mod serialization {
                     }
                     UnchangedSharedKind::ReadDeleted { version } => {
                         BinaryUnchangedSharedKind::ReadDeleted { version }
+                    }
+                    UnchangedSharedKind::PerEpochConfig => {
+                        BinaryUnchangedSharedKind::PerEpochConfig
                     }
                 };
                 binary.serialize(serializer)
@@ -499,6 +509,7 @@ mod serialization {
                         ReadableUnchangedSharedKind::ReadDeleted { version } => {
                             Self::ReadDeleted { version }
                         }
+                        ReadableUnchangedSharedKind::PerEpochConfig => Self::PerEpochConfig,
                     },
                 )
             } else {
@@ -512,6 +523,7 @@ mod serialization {
                     BinaryUnchangedSharedKind::ReadDeleted { version } => {
                         Self::ReadDeleted { version }
                     }
+                    BinaryUnchangedSharedKind::PerEpochConfig => Self::PerEpochConfig,
                 })
             }
         }
