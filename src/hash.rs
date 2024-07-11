@@ -146,6 +146,72 @@ impl crate::types::MultisigCommittee {
     }
 }
 
+#[cfg(feature = "serde")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
+mod type_digest {
+    use super::Hasher;
+    use crate::types::{
+        CheckpointContents, CheckpointContentsDigest, CheckpointDigest, CheckpointSummary, Digest,
+        Object, ObjectDigest, Transaction, TransactionDigest, TransactionEffects,
+        TransactionEffectsDigest, TransactionEvents, TransactionEventsDigest,
+    };
+
+    impl Object {
+        pub fn digest(&self) -> ObjectDigest {
+            const SALT: &str = "Object::";
+            let digest = type_digest(SALT, self);
+            ObjectDigest::new(digest.into_inner())
+        }
+    }
+
+    impl CheckpointSummary {
+        pub fn digest(&self) -> CheckpointDigest {
+            const SALT: &str = "CheckpointSummary::";
+            let digest = type_digest(SALT, self);
+            CheckpointDigest::new(digest.into_inner())
+        }
+    }
+
+    impl CheckpointContents {
+        pub fn digest(&self) -> CheckpointContentsDigest {
+            const SALT: &str = "CheckpointContents::";
+            let digest = type_digest(SALT, self);
+            CheckpointContentsDigest::new(digest.into_inner())
+        }
+    }
+
+    impl Transaction {
+        pub fn digest(&self) -> TransactionDigest {
+            const SALT: &str = "TransactionData::";
+            let digest = type_digest(SALT, self);
+            TransactionDigest::new(digest.into_inner())
+        }
+    }
+
+    impl TransactionEffects {
+        pub fn digest(&self) -> TransactionEffectsDigest {
+            const SALT: &str = "TransactionEffects::";
+            let digest = type_digest(SALT, self);
+            TransactionEffectsDigest::new(digest.into_inner())
+        }
+    }
+
+    impl TransactionEvents {
+        pub fn digest(&self) -> TransactionEventsDigest {
+            const SALT: &str = "TransactionEvents::";
+            let digest = type_digest(SALT, self);
+            TransactionEventsDigest::new(digest.into_inner())
+        }
+    }
+
+    fn type_digest<T: serde::Serialize>(salt: &str, ty: &T) -> Digest {
+        let mut hasher = Hasher::new();
+        hasher.update(salt);
+        bcs::serialize_into(&mut hasher, ty).unwrap();
+        hasher.finalize()
+    }
+}
+
 /// A 1-byte domain separator for hashing Object ID in Sui. It is starting from 0xf0
 /// to ensure no hashing collision for any ObjectId vs Address which is derived
 /// as the hash of `flag || pubkey`.

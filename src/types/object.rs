@@ -500,8 +500,6 @@ mod serialization {
         #[serde(with = "crate::_serde::ReadableDisplay")]
         #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
         version: Version,
-        //TODO include digest in output
-        // digest: ObjectDigest,
         owner: Owner,
 
         #[serde(with = "::serde_with::As::<ReadableObjectType>")]
