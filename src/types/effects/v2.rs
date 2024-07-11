@@ -99,6 +99,11 @@ pub enum UnchangedSharedKind {
         #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
         version: Version,
     },
+    /// Shared objects in cancelled transaction. The sequence number embed cancellation reason.
+    Cancelled {
+        #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
+        version: Version,
+    },
     /// Read of a per-epoch config object that should remain the same during an epoch.
     PerEpochConfig,
 }
@@ -433,6 +438,10 @@ mod serialization {
             #[serde(with = "crate::_serde::ReadableDisplay")]
             version: Version,
         },
+        Cancelled {
+            #[serde(with = "crate::_serde::ReadableDisplay")]
+            version: Version,
+        },
         PerEpochConfig,
     }
 
@@ -446,6 +455,9 @@ mod serialization {
             version: Version,
         },
         ReadDeleted {
+            version: Version,
+        },
+        Cancelled {
             version: Version,
         },
         PerEpochConfig,
@@ -467,6 +479,9 @@ mod serialization {
                     UnchangedSharedKind::ReadDeleted { version } => {
                         ReadableUnchangedSharedKind::ReadDeleted { version }
                     }
+                    UnchangedSharedKind::Cancelled { version } => {
+                        ReadableUnchangedSharedKind::Cancelled { version }
+                    }
                     UnchangedSharedKind::PerEpochConfig => {
                         ReadableUnchangedSharedKind::PerEpochConfig
                     }
@@ -482,6 +497,9 @@ mod serialization {
                     }
                     UnchangedSharedKind::ReadDeleted { version } => {
                         BinaryUnchangedSharedKind::ReadDeleted { version }
+                    }
+                    UnchangedSharedKind::Cancelled { version } => {
+                        BinaryUnchangedSharedKind::Cancelled { version }
                     }
                     UnchangedSharedKind::PerEpochConfig => {
                         BinaryUnchangedSharedKind::PerEpochConfig
@@ -509,6 +527,9 @@ mod serialization {
                         ReadableUnchangedSharedKind::ReadDeleted { version } => {
                             Self::ReadDeleted { version }
                         }
+                        ReadableUnchangedSharedKind::Cancelled { version } => {
+                            Self::Cancelled { version }
+                        }
                         ReadableUnchangedSharedKind::PerEpochConfig => Self::PerEpochConfig,
                     },
                 )
@@ -523,6 +544,7 @@ mod serialization {
                     BinaryUnchangedSharedKind::ReadDeleted { version } => {
                         Self::ReadDeleted { version }
                     }
+                    BinaryUnchangedSharedKind::Cancelled { version } => Self::Cancelled { version },
                     BinaryUnchangedSharedKind::PerEpochConfig => Self::PerEpochConfig,
                 })
             }
