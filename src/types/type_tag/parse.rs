@@ -19,7 +19,7 @@ use winnow::Parser;
 static MAX_IDENTIFIER_LENGTH: usize = 128;
 
 pub(super) fn parse_identifier(mut input: &str) -> PResult<&str> {
-    (identifier, eof).recognize().parse_next(&mut input)
+    (identifier, eof).take().parse_next(&mut input)
 }
 
 fn identifier<'s>(input: &mut &'s str) -> PResult<&'s str> {
@@ -27,7 +27,7 @@ fn identifier<'s>(input: &mut &'s str) -> PResult<&'s str> {
         (one_of(|c: char| c.is_alpha()), valid_remainder(0)),
         ('_', valid_remainder(1)),
     ))
-    .recognize()
+    .take()
     .parse_next(input)
 }
 
@@ -46,7 +46,7 @@ fn valid_remainder<'a>(
 
 fn parse_address<'s>(input: &mut &'s str) -> PResult<&'s str> {
     ("0x", take_while(1..=64, AsChar::is_hex_digit))
-        .recognize()
+        .take()
         .parse_next(input)
 }
 
