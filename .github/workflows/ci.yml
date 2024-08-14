@@ -26,24 +26,22 @@ jobs:
           cargo --version
 
       - uses: taiki-e/install-action@cargo-hack
+      - uses: taiki-e/install-action@cargo-nextest
 
       - name: feature compatibility
-        run: cargo hack check --feature-powerset --no-dev-deps
+        run: make check-features
 
       - name: rustfmt
         run: cargo fmt -- --check
 
       - name: clippy
-        run: cargo clippy --all-features --all-targets
-
-      - name: rustdoc
-        env:
-          RUSTDOCFLAGS: "--cfg=doc_cfg -Zunstable-options --generate-link-to-definition"
-          RUSTC_BOOTSTRAP: 1
-        run: cargo doc --all-features --no-deps
+        run: make clippy
 
       - name: Run tests
-        run: cargo test --all-features
+        run: make test
+
+      - name: rustdoc
+        run: make doc
 
   wasm:
     runs-on: ubuntu-latest
@@ -63,6 +61,4 @@ jobs:
         run: sudo apt-get install -y clang
 
       - name: Run tests in wasm
-        env:
-          CC: clang
-        run: wasm-pack test --node --all-features
+        run: make wasm

@@ -1,13 +1,13 @@
 # Set the default target of this Makefile
 .PHONY: all
-all:: ci-full
+all:: ci
 
-.PHONY: check
-check:
-	cargo hack check --feature-powerset --no-dev-deps
+.PHONY: check-features
+check-features:
+	$(MAKE) -C crates/sui-sdk check-features
 
-.PHONY: fmt-check
-fmt-check:
+.PHONY: check-fmt
+check-fmt:
 	cargo fmt -- --check
 
 .PHONY: clippy
@@ -16,11 +16,12 @@ clippy:
 
 .PHONY: test
 test:
-	cargo test --all-features
+	cargo nextest run --all-features
+	cargo test --doc
 
 .PHONY: wasm
 wasm:
-	CC=clang wasm-pack test --node --all-features
+	$(MAKE) -C crates/sui-sdk wasm
 
 .PHONY: doc
 doc:
@@ -31,7 +32,7 @@ doc-open:
 	RUSTDOCFLAGS="--cfg=doc_cfg -Zunstable-options --generate-link-to-definition" RUSTC_BOOTSTRAP=1 cargo doc --all-features --no-deps --open
 
 .PHONY: ci
-ci: check fmt-check clippy test wasm
+ci: check-features check-fmt test wasm
 
 .PHONY: ci-full
 ci-full: ci doc
