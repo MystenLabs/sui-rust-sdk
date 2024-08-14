@@ -30,7 +30,7 @@ hash = ["dep:blake2"]
 
 [dependencies]
 base64ct = { version = "1.6.0", features = ["alloc"] }
-bs58 = "0.5.0"
+bs58 = "0.5.1"
 hex = "0.4.3"
 roaring = { version = "0.10.6", default-features = false }
 bnum = "0.10.0"
