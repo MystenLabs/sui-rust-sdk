@@ -39,7 +39,7 @@ winnow = "0.6.18"
 # Serialization and Deserialization support
 serde = { version = "1.0.190", optional = true }
 serde_derive = { version = "1.0.190", optional = true }
-serde_with = { version = "3.6.1", default-features = false, features = ["alloc"], optional = true }
+serde_with = { version = "3.9", default-features = false, features = ["alloc"], optional = true }
 bcs = { version = "0.1.6", optional = true }
 serde_json = { version = "1.0.114", optional = true }
 
