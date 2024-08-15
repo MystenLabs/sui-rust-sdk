@@ -1,0 +1,18 @@
+[package]
+name = "sui-graphql-client"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+
+
+[dependencies]
+cynic = { version = "3.7.3", features = ["rkyv"] }
+sui-types = { package= "sui-sdk", path = "../sui-sdk" }
+reqwest = { version = "0.12", features = ["json", "blocking"] }
+anyhow = "1.0.86"
+chrono = { version = "0.4.38", features = ["rkyv"] }
+
+[build-dependencies]
+cynic-codegen = { version = "3.7.3", features = ["rkyv"] }
