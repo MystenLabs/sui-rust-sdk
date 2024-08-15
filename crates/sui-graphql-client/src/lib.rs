@@ -1,7 +1,6 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-pub mod client;
 pub mod graphql_types;
 
 use graphql_types::{
@@ -17,28 +16,9 @@ use anyhow::{ensure, Error};
 use cynic::QueryBuilder;
 use reqwest::Client;
 
-#[derive(Clone, Debug)]
-pub struct GraphQLClient {
-    rpc_server: String,
-    rpc_version: Option<String>,
-    url: String,
-    http_client: Client,
-}
-
-#[derive(Clone, Debug)]
-pub struct Api {
-    graphql_client: GraphQLClient,
-}
-
-pub struct WriteApi<'a> {
-    graphql_client: &'a GraphQLClient,
-}
-
-impl<'a> WriteApi<'a> {
-    pub(crate) fn new(graphql_client: &'a GraphQLClient) -> Self {
-        Self { graphql_client }
-    }
-}
+const MAINNET_RPC_SERVER_HOST: &str = "https://sui-mainnet.mystenlabs.com/graphql";
+const TESTNET_RPC_SERVER_HOST: &str = "https://sui-tesnet.mystenlabs.com/graphql";
+const DEVNET_RPC_SERVER_HOST: &str = "https://sui-devnet.mystenlabs.com/graphql";
 
 /// Call the RPC service with the typed query information and additional arguments as needed.
 ///
@@ -82,7 +62,7 @@ macro_rules! execute_graphql_query {
         let operation = <$type>::build($operation);
 
         let response = $self
-            .http_client()
+            .inner
             .post(&$self.url())
             .json(&operation)
             .send()
@@ -94,21 +74,85 @@ macro_rules! execute_graphql_query {
     }};
 }
 
-impl Api {
-    pub(crate) fn new(graphql_client: GraphQLClient) -> Self {
-        Self { graphql_client }
+#[derive(Clone, Debug)]
+pub struct SuiClient {
+    rpc: String,
+    rpc_version: String,
+    inner: reqwest::Client,
+}
+
+pub trait DefaultConfigs {
+    fn set_localnet(&mut self) -> &Self;
+    fn set_devnet(&mut self) -> &Self;
+    fn set_testnet(&mut self) -> &Self;
+    fn set_mainnet(&mut self) -> &Self;
+}
+
+impl DefaultConfigs for SuiClient {
+    fn set_localnet(&mut self) -> &Self {
+        let url = "http://localhost:9125/graphql";
+        // self.api_mut().set_rpc_server(url);
+        self.rpc = url.to_string();
+        self
     }
 
-    pub fn graphql_client(&self) -> &GraphQLClient {
-        &self.graphql_client
+    fn set_devnet(&mut self) -> &Self {
+        let url = "https://sui-devnet.mystenlabs.com/graphql";
+        self.rpc = url.to_string();
+        // self.api_mut().set_rpc_server(url);
+        self
     }
 
-    pub fn http_client(&self) -> &Client {
-        &self.graphql_client.http_client
+    fn set_testnet(&mut self) -> &Self {
+        let url = "https://sui-testnet.mystenlabs.com/graphql";
+        self.rpc = url.to_string();
+        // self.api_mut().set_rpc_server(url);
+        self
+    }
+
+    fn set_mainnet(&mut self) -> &Self {
+        let url = "https://sui-mainnet.mystenlabs.com/graphql";
+        self.rpc = url.to_string();
+        // self.api_mut().set_rpc_server(url);
+        self
+    }
+}
+
+impl Default for SuiClient {
+    fn default() -> Self {
+        Self {
+            rpc: TESTNET_RPC_SERVER_HOST
+                .parse()
+                .expect("Cannot parse RPC server host"),
+            rpc_version: "".to_string(),
+            inner: Client::new(),
+        }
+    }
+}
+
+impl SuiClient {
+    /// Initialize a new SuiClient with testnet as the default network and no fullnode.
+    /// In this mode, the client can only execute read queries.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set the server address for the GraphQL RPC client. It should be a valid URL with a host and
+    /// port number.
+    pub fn set_rpc_server(&mut self, server: &str) -> Result<(), anyhow::Error> {
+        self.rpc = server.parse::<String>()?;
+        Ok(())
+    }
+
+    /// Set the version for the GraphQL RPC client. The default version is stable.
+    ///
+    /// By default, the GraphQL service can serve three versions: stable, beta, and legacy.
+    pub fn set_version(&mut self, version: &str) {
+        self.rpc_version = version.to_string();
     }
 
     pub fn url(&self) -> String {
-        self.graphql_client.url()
+        self.rpc.clone()
     }
 
     // ===========================================================================
@@ -305,47 +349,4 @@ impl Api {
     //         .map(|bcs| from_bytes::<SignedTransaction>(bcs.0.as_bytes()).unwrap());
     //     Ok(signed_tx)
     // }
-}
-
-impl GraphQLClient {
-    /// Initialize the GraphQL client with the testnet server and stable version.
-    pub fn new(
-        rpc_server: String,
-        rpc_version: Option<String>,
-        http_client: reqwest::Client,
-    ) -> Self {
-        let url = if let Some(version) = &rpc_version {
-            format!("{}/{}", rpc_server, version)
-        } else {
-            rpc_server.clone()
-        };
-        GraphQLClient {
-            rpc_server,
-            rpc_version,
-            url,
-            http_client,
-        }
-    }
-
-    fn url(&self) -> String {
-        if let Some(version) = &self.rpc_version {
-            format!("{}/{}", self.rpc_server, version)
-        } else {
-            self.rpc_server.clone()
-        }
-    }
-
-    /// Set the server address for the GraphQL client.
-    pub(crate) fn set_rpc_server(&mut self, server: &str) {
-        self.rpc_server = server.to_string();
-    }
-
-    /// Set the version for the GraphQL client. The default version is stable.
-    ///
-    /// By default, the GraphQL service can serve three versions: stable, beta, and legacy. Stable
-    /// version does not receive schema updates, legacy only receives critical bug-fixes, and beta
-    /// corresponds to the devnet network and it is deployed with latest changes every week.
-    pub(crate) fn set_version(&mut self, version: &str) {
-        self.rpc_version = Some(version.to_string());
-    }
 }
