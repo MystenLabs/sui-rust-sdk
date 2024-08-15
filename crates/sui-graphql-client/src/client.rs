@@ -9,7 +9,6 @@ const RPC_SERVER_HOST: &str = "https://sui-devnet.mystenlabs.com/graphql/beta";
 pub struct SuiClient {
     rpc: String,
     rpc_version: String,
-    graphql_client: GraphQLClient,
     api: Api,
     // write_api: WriteApi,
 }
@@ -98,7 +97,6 @@ impl Default for SuiClient {
                 .parse()
                 .expect("Cannot parse RPC server host"),
             rpc_version: "".to_string(),
-            graphql_client: graphql_client.clone(),
             api: Api::new(graphql_client),
         }
     }

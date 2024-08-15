@@ -82,7 +82,6 @@ macro_rules! execute_graphql_query {
         let operation = <$type>::build($operation);
 
         let response = $self
-            // .graphql_client()
             .http_client()
             .post(&$self.url())
             .json(&operation)
