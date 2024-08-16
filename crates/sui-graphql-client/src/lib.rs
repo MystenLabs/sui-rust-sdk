@@ -438,12 +438,20 @@ impl<C: HttpClient> SuiClient<C> {
             let nodes = ec
                 .nodes
                 .iter()
-                .map(|e| base64ct::Base64::decode_vec(e.bcs.0.as_str()).unwrap())
+                .map(|e| base64ct::Base64::decode_vec(e.bcs.0.as_str()))
+                .collect::<Result<Vec<_>, base64ct::Error>>()
+                .map_err(|e| {
+                    Error::msg(format!(
+                        "Cannot decode Base64 event bcs bytes: {}",
+                        e.to_string()
+                    ))
+                })?
+                .iter()
                 .map(|b| bcs::from_bytes::<Event>(&b))
                 .collect::<Result<Vec<_>, bcs::Error>>()
                 .map_err(|e| {
                     Error::msg(format!(
-                        "Cannot decode event bytes into bcs and into Event: {}",
+                        "Cannot decode bcs bytes into Event: {}",
                         e.to_string()
                     ))
                 })?;
