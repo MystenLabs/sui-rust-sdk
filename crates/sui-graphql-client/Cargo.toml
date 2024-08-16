@@ -1,7 +1,12 @@
 [package]
 name = "sui-graphql-client"
 version = "0.1.0"
+authors = ["Stefan Stanciulescu <stefan@mystenlabs.com>"]
+license = "Apache-2.0"
 edition = "2021"
+publish = false
+readme = "README.md"
+description = "Sui GraphQL RPC Client for the Sui Blockchain"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

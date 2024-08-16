@@ -6,9 +6,10 @@
 pub mod graphql_types;
 
 use graphql_types::{
-    ChainIdentifierQuery, CheckpointArgs, CheckpointId, CheckpointQuery, EpochSummaryArgs,
-    EpochSummaryQuery, ProtocolConfigQuery, ProtocolConfigs, ProtocolVersionArgs, ServiceConfig,
-    ServiceConfigQuery, TransactionBlockArgs, TransactionBlockQuery, Uint53,
+    ChainIdentifierQuery, CheckpointArgs, CheckpointId, CheckpointQuery, CoinMetadata,
+    CoinMetadataArgs, EpochSummaryArgs, EpochSummaryQuery, ProtocolConfigQuery, ProtocolConfigs,
+    ProtocolVersionArgs, ServiceConfig, ServiceConfigQuery, TransactionBlockArgs,
+    TransactionBlockQuery, Uint53,
 };
 use sui_types::types::{
     Address, CheckpointSequenceNumber, CheckpointSummary, ObjectId, SignedTransaction,
@@ -19,6 +20,8 @@ use async_trait::async_trait;
 use cynic::{serde, GraphQlResponse, Operation, QueryBuilder};
 use reqwest::Client;
 
+use crate::graphql_types::CoinMetadataQuery;
+
 const MAINNET_HOST: &str = "https://sui-mainnet.mystenlabs.com/graphql";
 const TESTNET_HOST: &str = "https://sui-testnet.mystenlabs.com/graphql";
 const DEVNET_HOST: &str = "https://sui-devnet.mystenlabs.com/graphql";
@@ -28,7 +31,7 @@ const LOCAL_HOST: &str = "http://localhost:9125/graphql";
 /// requests to the GraphQL server.
 #[async_trait]
 pub trait HttpClient {
-    /// Send a POST request to the GraphQL server with the provided URL and operation data.
+    /// Send a POST request to the GraphQL server with the provided URL and query data.
     ///
     /// The response is deserialized into a [`cynic::GraphQlResponse`] object.
     async fn post<
@@ -37,7 +40,7 @@ pub trait HttpClient {
     >(
         &self,
         url: &str,
-        body: &Operation<T, V>,
+        operation: &Operation<T, V>,
     ) -> Result<GraphQlResponse<T>>;
 }
 
@@ -80,9 +83,10 @@ impl HttpClient for ReqwestHttpClient {
 /// By default, it uses Reqwest as the HTTP client but a custom client can be provided by
 /// implementing the `HttpClient` trait.
 pub struct SuiClient<C: HttpClient> {
+    /// The URL of the GraphQL server.
     rpc: String,
     /// GraphQL supports multiple versions of the service. By default, the client uses the stable
-    ///
+    /// version of the service.
     rpc_version: Option<String>,
     inner: C,
 }
@@ -91,9 +95,7 @@ impl Default for SuiClient<ReqwestHttpClient> {
     /// Create a new [`SuiClient`] with testnet as the default GraphQL server.
     fn default() -> Self {
         Self {
-            rpc: TESTNET_HOST
-                .parse()
-                .expect("Cannot parse GraphQL server host"),
+            rpc: TESTNET_HOST.to_string(),
             rpc_version: None,
             inner: ReqwestHttpClient::new(),
         }
@@ -101,6 +103,10 @@ impl Default for SuiClient<ReqwestHttpClient> {
 }
 
 impl<C: HttpClient> SuiClient<C> {
+    // ===========================================================================
+    // Client Misc API
+    // ===========================================================================
+
     /// Create a new SuiClient with a custom HTTP client.
     pub fn new_with_http_client(http_client: C) -> Self {
         Self {
@@ -137,34 +143,34 @@ impl<C: HttpClient> SuiClient<C> {
         }
     }
 
-    /// Set the GraphQL server to localhost and port 9125.
+    /// Set the GraphQL to localhost and port 9125.
     pub fn set_localhost(&mut self) -> &Self {
         self.rpc = LOCAL_HOST.to_string();
         self
     }
 
-    /// Set GraphQL server to devnet.
+    /// Set GraphQL client to devnet.
     pub fn set_devnet(&mut self) -> &Self {
         self.rpc = DEVNET_HOST.to_string();
         self.set_version(None);
         self
     }
 
-    /// Set GraphQL server to testnet.
+    /// Set GraphQL client to testnet.
     pub fn set_testnet(&mut self) -> &Self {
         self.rpc = TESTNET_HOST.to_string();
         self
     }
 
-    /// Set GraphQL server to mainnet.
+    /// Set GraphQL client to mainnet.
     pub fn set_mainnet(&mut self) -> &Self {
         self.rpc = MAINNET_HOST.to_string();
         self
     }
 
     /// Run a query on the GraphQL server and return the response.
-    /// This method is generic over the response type `T` and the variables type `V`, and is
-    /// recommended to be used with custom queries.
+    /// This method returns an [`cynic::GraphQlResponse`]  over the query type `T`, and it is
+    /// intended to be used with custom queries.
     pub async fn run_query<
         T: serde::de::DeserializeOwned + Send,
         V: serde::Serialize + Send + std::marker::Sync,
@@ -172,7 +178,7 @@ impl<C: HttpClient> SuiClient<C> {
         &self,
         operation: &Operation<T, V>,
     ) -> Result<GraphQlResponse<T>> {
-        self.inner.post(&self.url(), operation).await
+        self.inner.post(&self.url(), &operation).await
     }
 
     // ===========================================================================
@@ -197,7 +203,7 @@ impl<C: HttpClient> SuiClient<C> {
     /// Get the chain identifier.
     pub async fn chain_id(&self) -> Result<String, Error> {
         let operation = ChainIdentifierQuery::build(());
-        let response = self.inner.post(&self.url(), &operation).await?;
+        let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
             return Err(Error::msg(format!("{:?}", errors)));
@@ -223,7 +229,7 @@ impl<C: HttpClient> SuiClient<C> {
         let operation = EpochSummaryQuery::build(EpochSummaryArgs {
             id: epoch.map(Uint53),
         });
-        let response = self.inner.post(&self.url(), &operation).await?;
+        let response = self.run_query(&operation).await?;
 
         if let Some(data) = response.data {
             data.epoch
@@ -244,7 +250,7 @@ impl<C: HttpClient> SuiClient<C> {
         let operation = ProtocolConfigQuery::build(ProtocolVersionArgs {
             id: version.map(Uint53),
         });
-        let response = self.inner.post(&self.url(), &operation).await?;
+        let response = self.run_query(&operation).await?;
         Ok(response.data.map(|p| p.protocol_config))
     }
 
@@ -252,12 +258,38 @@ impl<C: HttpClient> SuiClient<C> {
     /// supported versions, and others.
     pub async fn service_config(&self) -> Result<ServiceConfig, Error> {
         let operation = ServiceConfigQuery::build(());
-        let response = self.inner.post(&self.url(), &operation).await?;
+        let response = self.run_query(&operation).await?;
 
         response
             .data
             .map(|s| s.service_config)
             .ok_or_else(|| Error::msg("No data in response"))
+    }
+
+    // ===========================================================================
+    // Balance API
+    // ===========================================================================
+
+    // TODO: implement
+    /// Get the total balance of an address.
+    ///
+    pub async fn total_balance(&self, _address: Address) -> Result<Option<u64>, Error> {
+        todo!()
+    }
+
+    // ===========================================================================
+    // Coin API
+    // ===========================================================================
+
+    pub async fn coin_metadata(&self, coin_type: &str) -> Result<Option<CoinMetadata>, Error> {
+        let operation = CoinMetadataQuery::build(CoinMetadataArgs { coin_type });
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        Ok(response.data.map(|x| x.coin_metadata).flatten())
     }
 
     // ===========================================================================
@@ -282,7 +314,7 @@ impl<C: HttpClient> SuiClient<C> {
                 sequence_number: seq_num.map(Uint53),
             },
         });
-        let response = self.inner.post(&self.url(), &operation).await?;
+        let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
             return Err(Error::msg(format!("{:?}", errors)));
@@ -361,7 +393,7 @@ impl<C: HttpClient> SuiClient<C> {
         let operation = EpochSummaryQuery::build(EpochSummaryArgs {
             id: epoch.map(Uint53),
         });
-        self.inner.post(&self.url(), &operation).await
+        self.run_query(&operation).await
     }
 
     // ===========================================================================
@@ -373,7 +405,7 @@ impl<C: HttpClient> SuiClient<C> {
         let operation = TransactionBlockQuery::build(TransactionBlockArgs {
             digest: digest.to_string(),
         });
-        let response = self.inner.post(&self.url(), &operation).await?;
+        let response = self.run_query(&operation).await?;
 
         let signed_tx = response
             .data

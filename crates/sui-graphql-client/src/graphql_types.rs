@@ -48,6 +48,13 @@ pub struct ChainIdentifierQuery {
 }
 
 #[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "Query", variables = "CoinMetadataArgs")]
+pub struct CoinMetadataQuery {
+    #[arguments(coinType: $coin_type)]
+    pub coin_metadata: Option<CoinMetadata>,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "Query", variables = "CheckpointArgs")]
 pub struct CheckpointQuery {
     #[arguments(id: $id)]
@@ -111,6 +118,11 @@ pub struct ProtocolVersionArgs {
 #[derive(cynic::QueryVariables, Debug)]
 pub struct TransactionBlockArgs {
     pub digest: String,
+}
+
+#[derive(cynic::QueryVariables, Debug)]
+pub struct CoinMetadataArgs<'a> {
+    pub coin_type: &'a str,
 }
 
 // ===========================================================================
@@ -180,6 +192,18 @@ pub enum Feature {
     NameService,
     Subscriptions,
     SystemState,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "CoinMetadata")]
+pub struct CoinMetadata {
+    pub decimals: Option<i32>,
+    pub description: Option<String>,
+    pub icon_url: Option<String>,
+    pub name: Option<String>,
+    pub symbol: Option<String>,
+    pub supply: Option<BigInt>,
+    pub version: Uint53,
 }
 
 #[derive(cynic::InputObject, Debug)]
