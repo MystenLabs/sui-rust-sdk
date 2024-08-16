@@ -96,6 +96,13 @@ pub struct TransactionBlockQuery {
     pub transaction_block: Option<TransactionBlock>,
 }
 
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "Query", variables = "EventsArgs")]
+pub struct EventsQuery {
+    #[arguments(after: $after, before: $before, filter: $filter, first: $first, last: $last)]
+    pub events: EventConnection,
+}
+
 // ===========================================================================
 // Variables
 // ===========================================================================
@@ -123,6 +130,24 @@ pub struct TransactionBlockArgs {
 #[derive(cynic::QueryVariables, Debug)]
 pub struct CoinMetadataArgs<'a> {
     pub coin_type: &'a str,
+}
+
+#[derive(cynic::QueryVariables, Debug)]
+pub struct EventsArgs {
+    pub after: Option<String>,
+    pub before: Option<String>,
+    pub filter: Option<EventFilter>,
+    pub first: Option<i32>,
+    pub last: Option<i32>,
+}
+
+#[derive(cynic::InputObject, Debug)]
+#[cynic(schema = "rpc", graphql_type = "EventFilter")]
+pub struct EventFilter {
+    pub emitting_module: Option<String>,
+    pub event_type: Option<String>,
+    pub sender: Option<SuiAddress>,
+    pub transaction_digest: Option<String>,
 }
 
 // ===========================================================================
@@ -257,6 +282,19 @@ pub struct Epoch {
 }
 
 #[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "EventConnection")]
+pub struct EventConnection {
+    pub page_info: PageInfo,
+    pub nodes: Vec<Event>,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "Event")]
+pub struct Event {
+    pub bcs: Base64,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "ValidatorSet")]
 pub struct ValidatorSet {
     pub inactive_pools_id: Option<SuiAddress>,
@@ -306,6 +344,19 @@ pub struct ProtocolConfigAttr {
 #[cynic(schema = "rpc", graphql_type = "TransactionBlock")]
 pub struct TransactionBlock {
     pub bcs: Option<Base64>,
+}
+
+// ===========================================================================
+// Utility Types
+// ===========================================================================
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "PageInfo")]
+pub struct PageInfo {
+    pub end_cursor: Option<String>,
+    pub has_next_page: bool,
+    pub has_previous_page: bool,
+    pub start_cursor: Option<String>,
 }
 
 // ===========================================================================

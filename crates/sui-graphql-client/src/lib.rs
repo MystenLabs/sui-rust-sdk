@@ -5,14 +5,15 @@
 
 pub mod graphql_types;
 
+use base64ct::Encoding;
 use graphql_types::{
     ChainIdentifierQuery, CheckpointArgs, CheckpointId, CheckpointQuery, CoinMetadata,
-    CoinMetadataArgs, EpochSummaryArgs, EpochSummaryQuery, ProtocolConfigQuery, ProtocolConfigs,
-    ProtocolVersionArgs, ServiceConfig, ServiceConfigQuery, TransactionBlockArgs,
-    TransactionBlockQuery, Uint53,
+    CoinMetadataArgs, EpochSummaryArgs, EpochSummaryQuery, EventFilter, PageInfo,
+    ProtocolConfigQuery, ProtocolConfigs, ProtocolVersionArgs, ServiceConfig, ServiceConfigQuery,
+    TransactionBlockArgs, TransactionBlockQuery, Uint53,
 };
 use sui_types::types::{
-    Address, CheckpointSequenceNumber, CheckpointSummary, ObjectId, SignedTransaction,
+    Address, CheckpointSequenceNumber, CheckpointSummary, Event, ObjectId, SignedTransaction,
 };
 
 use anyhow::{ensure, Error, Result};
@@ -20,7 +21,7 @@ use async_trait::async_trait;
 use cynic::{serde, GraphQlResponse, Operation, QueryBuilder};
 use reqwest::Client;
 
-use crate::graphql_types::CoinMetadataQuery;
+use crate::graphql_types::{CoinMetadataQuery, EventsArgs, EventsQuery};
 
 const MAINNET_HOST: &str = "https://sui-mainnet.mystenlabs.com/graphql";
 const TESTNET_HOST: &str = "https://sui-testnet.mystenlabs.com/graphql";
@@ -77,6 +78,12 @@ impl HttpClient for ReqwestHttpClient {
             .await?;
         Ok(res)
     }
+}
+
+#[derive(Debug)]
+pub struct Page<T> {
+    page_info: PageInfo,
+    nodes: Vec<T>,
 }
 
 /// The SuiClient is a GraphQL client for interacting with the Sui blockchain.
@@ -397,9 +404,61 @@ impl<C: HttpClient> SuiClient<C> {
     }
 
     // ===========================================================================
+    // Events API
+    // ===========================================================================
+
+    pub async fn events(
+        &self,
+        after: Option<String>,
+        before: Option<String>,
+        filter: Option<EventFilter>,
+        first: Option<i32>,
+        last: Option<i32>,
+    ) -> Result<Option<Page<Event>>, Error> {
+        let operation = EventsQuery::build(EventsArgs {
+            after,
+            before,
+            filter,
+            first,
+            last,
+        });
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        println!("{:?}", response.data);
+
+        // TODO bcs from bytes into Event fails due to custom type parser error
+        // called `Result::unwrap()` on an `Err` value: Custom("TypeParseError")
+        if let Some(events) = response.data {
+            let ec = events.events;
+            let page_info = ec.page_info;
+            let nodes = ec
+                .nodes
+                .iter()
+                .map(|e| base64ct::Base64::decode_vec(e.bcs.0.as_str()).unwrap())
+                .map(|b| bcs::from_bytes::<Event>(&b))
+                .collect::<Result<Vec<_>, bcs::Error>>()
+                .map_err(|e| {
+                    Error::msg(format!(
+                        "Cannot decode event bytes into bcs and into Event: {}",
+                        e.to_string()
+                    ))
+                })?;
+
+            Ok(Some(Page { page_info, nodes }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    // ===========================================================================
     // Transaction API
     // ===========================================================================
 
+    // TODO: From Brandon: this fails due to SignedTransaction in Sui core type being technically inaccurate but it is fixed in this SDK here. in particular core incorrectly appends the signing intent when it shouldn't so my guess is that's whats wrong
     /// Get a transaction by its digest.
     pub async fn transaction(&self, digest: &str) -> Result<Option<SignedTransaction>, Error> {
         let operation = TransactionBlockQuery::build(TransactionBlockArgs {
