@@ -1,6 +1,8 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
+#![doc = include_str!("../README.md")]
+
 pub mod graphql_types;
 
 use graphql_types::{
@@ -12,147 +14,165 @@ use sui_types::types::{
     Address, CheckpointSequenceNumber, CheckpointSummary, ObjectId, SignedTransaction,
 };
 
-use anyhow::{ensure, Error};
-use cynic::QueryBuilder;
+use anyhow::{ensure, Error, Result};
+use async_trait::async_trait;
+use cynic::{serde, GraphQlResponse, Operation, QueryBuilder};
 use reqwest::Client;
 
-const MAINNET_RPC_SERVER_HOST: &str = "https://sui-mainnet.mystenlabs.com/graphql";
-const TESTNET_RPC_SERVER_HOST: &str = "https://sui-tesnet.mystenlabs.com/graphql";
-const DEVNET_RPC_SERVER_HOST: &str = "https://sui-devnet.mystenlabs.com/graphql";
+const MAINNET_HOST: &str = "https://sui-mainnet.mystenlabs.com/graphql";
+const TESTNET_HOST: &str = "https://sui-testnet.mystenlabs.com/graphql";
+const DEVNET_HOST: &str = "https://sui-devnet.mystenlabs.com/graphql";
+const LOCAL_HOST: &str = "http://localhost:9125/graphql";
 
-/// Call the RPC service with the typed query information and additional arguments as needed.
-///
-/// Examples
-/// ```rust
-///
-/// #[derive(cynic::QueryFragment, Debug)]
-/// #[cynic(schema = "rpc", graphql_type = "Query")]
-/// pub struct ChainIdentifierQuery {
-///    pub chain_identifier: String,
-/// }
-///
-/// #[derive(cynic::QueryVariables, Debug)]
-/// pub struct EpochSummaryArgs {
-///     pub id: Option<Uint53>,
-/// }
-///
-/// #[derive(cynic::QueryFragment, Debug)]
-/// #[cynic(schema = "rpc", graphql_type = "Query", variables = "EpochSummaryArgs")]
-/// pub struct EpochSummaryQuery {
-///     #[arguments(id: $id)]
-///     pub epoch: Option<EpochSummary>,
-/// }
-///
-/// fn main() {
-///     let client = SuiClient::new();
-///     let api = client.read_api();
-///     let chain_id = execute_graphql_query(&api, ChainIdentifierQuery, ());
-///     let epoch = execute_graphql_query!(
-///         &api,
-///         EpochSummaryQuery,
-///         EpochSummaryArgs {
-///             id: epoch.map(Uint53)
-///         }
-///     );
-/// }
-/// ```
-#[macro_export]
-macro_rules! execute_graphql_query {
-    ($self:ident, $type:ty, $operation:expr) => {{
-        let operation = <$type>::build($operation);
-
-        let response = $self
-            .inner
-            .post(&$self.url())
-            .json(&operation)
-            .send()
-            .await?
-            .json::<cynic::GraphQlResponse<$type>>()
-            .await?;
-
-        response
-    }};
+/// The `HttpClient` trait defines the interface for the HTTP client used by the SuiClient to make
+/// requests to the GraphQL server.
+#[async_trait]
+pub trait HttpClient {
+    /// Send a POST request to the GraphQL server with the provided URL and operation data.
+    ///
+    /// The response is deserialized into a [`cynic::GraphQlResponse`] object.
+    async fn post<
+        T: serde::de::DeserializeOwned + Send,
+        V: serde::Serialize + Send + std::marker::Sync,
+    >(
+        &self,
+        url: &str,
+        body: &Operation<T, V>,
+    ) -> Result<GraphQlResponse<T>>;
 }
 
-#[derive(Clone, Debug)]
-pub struct SuiClient {
-    rpc: String,
-    rpc_version: String,
-    inner: reqwest::Client,
+/// An HTTP client based on reqwest
+pub struct ReqwestHttpClient {
+    inner: Client,
 }
 
-pub trait DefaultConfigs {
-    fn set_localnet(&mut self) -> &Self;
-    fn set_devnet(&mut self) -> &Self;
-    fn set_testnet(&mut self) -> &Self;
-    fn set_mainnet(&mut self) -> &Self;
-}
-
-impl DefaultConfigs for SuiClient {
-    fn set_localnet(&mut self) -> &Self {
-        let url = "http://localhost:9125/graphql";
-        // self.api_mut().set_rpc_server(url);
-        self.rpc = url.to_string();
-        self
-    }
-
-    fn set_devnet(&mut self) -> &Self {
-        let url = "https://sui-devnet.mystenlabs.com/graphql";
-        self.rpc = url.to_string();
-        // self.api_mut().set_rpc_server(url);
-        self
-    }
-
-    fn set_testnet(&mut self) -> &Self {
-        let url = "https://sui-testnet.mystenlabs.com/graphql";
-        self.rpc = url.to_string();
-        // self.api_mut().set_rpc_server(url);
-        self
-    }
-
-    fn set_mainnet(&mut self) -> &Self {
-        let url = "https://sui-mainnet.mystenlabs.com/graphql";
-        self.rpc = url.to_string();
-        // self.api_mut().set_rpc_server(url);
-        self
-    }
-}
-
-impl Default for SuiClient {
-    fn default() -> Self {
+impl ReqwestHttpClient {
+    fn new() -> Self {
         Self {
-            rpc: TESTNET_RPC_SERVER_HOST
-                .parse()
-                .expect("Cannot parse RPC server host"),
-            rpc_version: "".to_string(),
             inner: Client::new(),
         }
     }
 }
 
-impl SuiClient {
-    /// Initialize a new SuiClient with testnet as the default network and no fullnode.
-    /// In this mode, the client can only execute read queries.
-    pub fn new() -> Self {
-        Self::default()
+#[async_trait::async_trait]
+impl HttpClient for ReqwestHttpClient {
+    async fn post<
+        T: serde::de::DeserializeOwned + Send,
+        V: serde::Serialize + Send + std::marker::Sync,
+    >(
+        &self,
+        url: &str,
+        operation: &Operation<T, V>,
+    ) -> Result<GraphQlResponse<T>> {
+        let res = self
+            .inner
+            .post(url)
+            .json(&operation)
+            .send()
+            .await?
+            .json::<GraphQlResponse<T>>()
+            .await?;
+        Ok(res)
+    }
+}
+
+/// The SuiClient is a GraphQL client for interacting with the Sui blockchain.
+/// By default, it uses Reqwest as the HTTP client but a custom client can be provided by
+/// implementing the `HttpClient` trait.
+pub struct SuiClient<C: HttpClient> {
+    rpc: String,
+    /// GraphQL supports multiple versions of the service. By default, the client uses the stable
+    ///
+    rpc_version: Option<String>,
+    inner: C,
+}
+
+impl Default for SuiClient<ReqwestHttpClient> {
+    /// Create a new [`SuiClient`] with testnet as the default GraphQL server.
+    fn default() -> Self {
+        Self {
+            rpc: TESTNET_HOST
+                .parse()
+                .expect("Cannot parse GraphQL server host"),
+            rpc_version: None,
+            inner: ReqwestHttpClient::new(),
+        }
+    }
+}
+
+impl<C: HttpClient> SuiClient<C> {
+    /// Create a new SuiClient with a custom HTTP client.
+    pub fn new_with_http_client(http_client: C) -> Self {
+        Self {
+            rpc: TESTNET_HOST
+                .parse()
+                .expect("Cannot parse GraphQL server host"),
+            rpc_version: None,
+            inner: http_client,
+        }
     }
 
-    /// Set the server address for the GraphQL RPC client. It should be a valid URL with a host and
-    /// port number.
+    /// Set the server address for the GraphQL GraphQL client. It should be a valid URL with a host and
+    /// optionally a port number.
     pub fn set_rpc_server(&mut self, server: &str) -> Result<(), anyhow::Error> {
-        self.rpc = server.parse::<String>()?;
+        reqwest::Url::parse(server)?;
+        self.rpc = server.to_string();
         Ok(())
     }
 
-    /// Set the version for the GraphQL RPC client. The default version is stable.
+    /// Set the version for the GraphQL GraphQL client. The default set version is stable.
     ///
-    /// By default, the GraphQL service can serve three versions: stable, beta, and legacy.
-    pub fn set_version(&mut self, version: &str) {
-        self.rpc_version = version.to_string();
+    /// Use the `service_config` API to get the `available_versions` field to know which versions
+    /// are supported by this service.
+    pub fn set_version(&mut self, version: Option<&str>) {
+        self.rpc_version = version.map(|v| v.to_string());
     }
 
-    pub fn url(&self) -> String {
-        self.rpc.clone()
+    /// Return the URL for the GraphQL GraphQL client after checking if the version is set.
+    fn url(&self) -> String {
+        if let Some(version) = &self.rpc_version {
+            return format!("{}/{}", self.rpc, version);
+        } else {
+            return self.rpc.to_string();
+        }
+    }
+
+    /// Set the GraphQL server to localhost and port 9125.
+    pub fn set_localhost(&mut self) -> &Self {
+        self.rpc = LOCAL_HOST.to_string();
+        self
+    }
+
+    /// Set GraphQL server to devnet.
+    pub fn set_devnet(&mut self) -> &Self {
+        self.rpc = DEVNET_HOST.to_string();
+        self.set_version(None);
+        self
+    }
+
+    /// Set GraphQL server to testnet.
+    pub fn set_testnet(&mut self) -> &Self {
+        self.rpc = TESTNET_HOST.to_string();
+        self
+    }
+
+    /// Set GraphQL server to mainnet.
+    pub fn set_mainnet(&mut self) -> &Self {
+        self.rpc = MAINNET_HOST.to_string();
+        self
+    }
+
+    /// Run a query on the GraphQL server and return the response.
+    /// This method is generic over the response type `T` and the variables type `V`, and is
+    /// recommended to be used with custom queries.
+    pub async fn run_query<
+        T: serde::de::DeserializeOwned + Send,
+        V: serde::Serialize + Send + std::marker::Sync,
+    >(
+        &self,
+        operation: &Operation<T, V>,
+    ) -> Result<GraphQlResponse<T>> {
+        self.inner.post(&self.url(), operation).await
     }
 
     // ===========================================================================
@@ -161,12 +181,12 @@ impl SuiClient {
 
     // TODO: implement
     /// Return An object's bcs content [`Vec<u8>`] based on the provided [ObjectID], or an error upon failure.
-    pub async fn move_object_bcs(&self, object_id: ObjectId) {
+    pub async fn move_object_bcs(&self, _object_id: ObjectId) {
         todo!()
     }
 
     // TODO: implement
-    pub async fn owned_objects(&self, address: Address) {
+    pub async fn owned_objects(&self, _address: Address) {
         todo!()
     }
 
@@ -176,35 +196,41 @@ impl SuiClient {
 
     /// Get the chain identifier.
     pub async fn chain_id(&self) -> Result<String, Error> {
-        execute_graphql_query!(self, ChainIdentifierQuery, ())
+        let operation = ChainIdentifierQuery::build(());
+        let response = self.inner.post(&self.url(), &operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        response
             .data
             .map(|e| e.chain_identifier)
             .ok_or_else(|| Error::msg("No data in response"))
     }
 
     // TODO: implement
-    pub async fn committee_info(&self, epoch: Option<u64>) {
+    pub async fn committee_info(&self, _epoch: Option<u64>) {
         todo!()
     }
 
     /// Get the reference gas price for the provided epoch or the last known one if no epoch is
     /// provided.
     ///
-    /// This will return `Ok(None)` if the epoch requested is not available in the RPC service
+    /// This will return `Ok(None)` if the epoch requested is not available in the GraphQL service
     /// (e.g., due to prunning).
     pub async fn reference_gas_price(&self, epoch: Option<u64>) -> Result<Option<u64>, Error> {
-        let response = execute_graphql_query!(
-            self,
-            EpochSummaryQuery,
-            EpochSummaryArgs {
-                id: epoch.map(Uint53)
-            }
-        );
+        let operation = EpochSummaryQuery::build(EpochSummaryArgs {
+            id: epoch.map(Uint53),
+        });
+        let response = self.inner.post(&self.url(), &operation).await?;
 
         if let Some(data) = response.data {
             data.epoch
                 .and_then(|e| e.reference_gas_price.map(|x| x.try_into()))
                 .transpose()
+        } else if let Some(errors) = response.errors {
+            Err(Error::msg(format!("{:?}", errors)))
         } else {
             Err(Error::msg("No data in response"))
         }
@@ -215,21 +241,20 @@ impl SuiClient {
         &self,
         version: Option<u64>,
     ) -> Result<Option<ProtocolConfigs>, Error> {
-        Ok(execute_graphql_query!(
-            self,
-            ProtocolConfigQuery,
-            ProtocolVersionArgs {
-                id: version.map(Uint53)
-            }
-        )
-        .data
-        .map(|p| p.protocol_config))
+        let operation = ProtocolConfigQuery::build(ProtocolVersionArgs {
+            id: version.map(Uint53),
+        });
+        let response = self.inner.post(&self.url(), &operation).await?;
+        Ok(response.data.map(|p| p.protocol_config))
     }
 
-    /// Get the RPC service configuration, including complexity limits, read and mutation limits,
+    /// Get the GraphQL service configuration, including complexity limits, read and mutation limits,
     /// supported versions, and others.
     pub async fn service_config(&self) -> Result<ServiceConfig, Error> {
-        execute_graphql_query!(self, ServiceConfigQuery, ())
+        let operation = ServiceConfigQuery::build(());
+        let response = self.inner.post(&self.url(), &operation).await?;
+
+        response
             .data
             .map(|s| s.service_config)
             .ok_or_else(|| Error::msg("No data in response"))
@@ -251,22 +276,22 @@ impl SuiClient {
             "Either digest or seq_num must be provided"
         );
 
-        let response = execute_graphql_query!(
-            self,
-            CheckpointQuery,
-            CheckpointArgs {
-                id: CheckpointId {
-                    digest,
-                    sequence_number: seq_num.map(Uint53)
-                }
-            }
-        );
+        let operation = CheckpointQuery::build(CheckpointArgs {
+            id: CheckpointId {
+                digest,
+                sequence_number: seq_num.map(Uint53),
+            },
+        });
+        let response = self.inner.post(&self.url(), &operation).await?;
 
-        if let Some(data) = response.data {
-            data.checkpoint.map(|c| c.try_into()).transpose()
-        } else {
-            Ok(None)
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
         }
+
+        response
+            .data
+            .map(|c| c.checkpoint.map(|c| c.try_into()).transpose())
+            .ok_or_else(|| Error::msg("No data in response"))?
     }
 
     // TODO: implement
@@ -289,64 +314,74 @@ impl SuiClient {
     // ===========================================================================
 
     /// Return the number of checkpoints in this epoch. This will return `Ok(None)` if the epoch
-    /// requested is not available in the RPC service (e.g., due to prunning).
+    /// requested is not available in the GraphQL service (e.g., due to prunning).
     pub async fn epoch_total_checkpoints(&self, epoch: Option<u64>) -> Result<Option<u64>, Error> {
         let response = self.epoch_summary(epoch).await?;
 
-        if let Some(data) = response {
-            Ok(data
-                .epoch
-                .and_then(|e| e.total_checkpoints.map(|x| x.into())))
-        } else {
-            Ok(None)
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
         }
+
+        Ok(response
+            .data
+            .map(|d| d.epoch)
+            .flatten()
+            .map(|e| e.total_checkpoints)
+            .flatten()
+            .map(|x| x.into()))
     }
 
     /// Return the number of transaction blocks in this epoch. This will return `Ok(None)` if the
-    /// epoch requested is not available in the RPC service (e.g., due to prunning).
+    /// epoch requested is not available in the GraphQL service (e.g., due to prunning).
     pub async fn epoch_total_transaction_blocks(
         &self,
         epoch: Option<u64>,
     ) -> Result<Option<u64>, Error> {
         let response = self.epoch_summary(epoch).await?;
 
-        if let Some(data) = response {
-            Ok(data
-                .epoch
-                .and_then(|e| e.total_transactions.map(|x| x.into())))
-        } else {
-            Ok(None)
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
         }
+
+        Ok(response
+            .data
+            .map(|d| d.epoch)
+            .flatten()
+            .map(|e| e.total_transactions)
+            .flatten()
+            .map(|x| x.into()))
     }
 
     /// Internal method for getting the epoch summary that is called in a few other APIs for
     /// convenience.
-    async fn epoch_summary(&self, epoch: Option<u64>) -> Result<Option<EpochSummaryQuery>, Error> {
-        Ok(execute_graphql_query!(
-            self,
-            EpochSummaryQuery,
-            EpochSummaryArgs {
-                id: epoch.map(Uint53)
-            }
-        )
-        .data)
+    async fn epoch_summary(
+        &self,
+        epoch: Option<u64>,
+    ) -> Result<GraphQlResponse<EpochSummaryQuery>, Error> {
+        let operation = EpochSummaryQuery::build(EpochSummaryArgs {
+            id: epoch.map(Uint53),
+        });
+        self.inner.post(&self.url(), &operation).await
     }
 
     // ===========================================================================
     // Transaction API
     // ===========================================================================
 
-    // pub async fn transaction(&self, digest: String) -> Result<Option<SignedTransaction>, Error> {
-    //     let response =
-    //         execute_graphql_query!(self, TransactionBlockQuery, TransactionBlockArgs { digest });
-    //
-    //     let signed_tx = response
-    //         .data
-    //         .map(|tbq| tbq.transaction_block)
-    //         .flatten()
-    //         .map(|tb| tb.bcs)
-    //         .flatten()
-    //         .map(|bcs| from_bytes::<SignedTransaction>(bcs.0.as_bytes()).unwrap());
-    //     Ok(signed_tx)
-    // }
+    /// Get a transaction by its digest.
+    pub async fn transaction(&self, digest: &str) -> Result<Option<SignedTransaction>, Error> {
+        let operation = TransactionBlockQuery::build(TransactionBlockArgs {
+            digest: digest.to_string(),
+        });
+        let response = self.inner.post(&self.url(), &operation).await?;
+
+        let signed_tx = response
+            .data
+            .map(|tbq| tbq.transaction_block)
+            .flatten()
+            .map(|tb| tb.bcs)
+            .flatten()
+            .map(|bcs| bcs::from_bytes::<SignedTransaction>(bcs.0.as_bytes()).unwrap());
+        Ok(signed_tx)
+    }
 }
