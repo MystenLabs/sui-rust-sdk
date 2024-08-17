@@ -97,10 +97,17 @@ pub struct TransactionBlockQuery {
 }
 
 #[derive(cynic::QueryFragment, Debug)]
-#[cynic(schema = "rpc", graphql_type = "Query", variables = "EventsArgs")]
+#[cynic(schema = "rpc", graphql_type = "Query", variables = "EventsQueryArgs")]
 pub struct EventsQuery {
     #[arguments(after: $after, before: $before, filter: $filter, first: $first, last: $last)]
     pub events: EventConnection,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "Query", variables = "ObjectsQueryArgs")]
+pub struct ObjectsQuery {
+    #[arguments(after: $after, before: $before, filter: $filter, first: $first, last: $last)]
+    pub objects: ObjectConnection,
 }
 
 // ===========================================================================
@@ -133,7 +140,16 @@ pub struct CoinMetadataArgs<'a> {
 }
 
 #[derive(cynic::QueryVariables, Debug)]
-pub struct EventsArgs {
+pub struct ObjectsQueryArgs<'a> {
+    pub after: Option<&'a str>,
+    pub before: Option<&'a str>,
+    pub filter: Option<ObjectFilter<'a>>,
+    pub first: Option<i32>,
+    pub last: Option<i32>,
+}
+
+#[derive(cynic::QueryVariables, Debug)]
+pub struct EventsQueryArgs {
     pub after: Option<String>,
     pub before: Option<String>,
     pub filter: Option<EventFilter>,
@@ -292,6 +308,36 @@ pub struct EventConnection {
 #[cynic(schema = "rpc", graphql_type = "Event")]
 pub struct Event {
     pub bcs: Base64,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "ObjectConnection")]
+pub struct ObjectConnection {
+    pub page_info: PageInfo,
+    pub nodes: Vec<Object>,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "Object")]
+pub struct Object {
+    pub bcs: Option<Base64>,
+}
+
+#[derive(cynic::InputObject, Debug)]
+#[cynic(schema = "rpc", graphql_type = "ObjectFilter")]
+pub struct ObjectFilter<'a> {
+    #[cynic(rename = "type")]
+    pub type_: Option<&'a str>,
+    pub owner: Option<SuiAddress>,
+    pub object_ids: Option<Vec<SuiAddress>>,
+    pub object_keys: Option<Vec<ObjectKey>>,
+}
+
+#[derive(cynic::InputObject, Debug)]
+#[cynic(schema = "rpc", graphql_type = "ObjectKey")]
+pub struct ObjectKey {
+    pub object_id: SuiAddress,
+    pub version: Uint53,
 }
 
 #[derive(cynic::QueryFragment, Debug)]

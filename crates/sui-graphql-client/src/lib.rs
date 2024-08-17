@@ -8,7 +8,7 @@ pub mod graphql_types;
 use base64ct::Encoding;
 use graphql_types::{
     ChainIdentifierQuery, CheckpointArgs, CheckpointId, CheckpointQuery, CoinMetadata,
-    CoinMetadataArgs, EpochSummaryArgs, EpochSummaryQuery, EventFilter, PageInfo,
+    CoinMetadataArgs, EpochSummaryArgs, EpochSummaryQuery, EventFilter, ObjectFilter, PageInfo,
     ProtocolConfigQuery, ProtocolConfigs, ProtocolVersionArgs, ServiceConfig, ServiceConfigQuery,
     TransactionBlockArgs, TransactionBlockQuery, Uint53,
 };
@@ -21,7 +21,9 @@ use async_trait::async_trait;
 use cynic::{serde, GraphQlResponse, Operation, QueryBuilder};
 use reqwest::Client;
 
-use crate::graphql_types::{CoinMetadataQuery, EventsArgs, EventsQuery};
+use crate::graphql_types::{
+    CoinMetadataQuery, EventsQuery, EventsQueryArgs, ObjectsQuery, ObjectsQueryArgs,
+};
 
 const MAINNET_HOST: &str = "https://sui-mainnet.mystenlabs.com/graphql";
 const TESTNET_HOST: &str = "https://sui-testnet.mystenlabs.com/graphql";
@@ -415,7 +417,7 @@ impl<C: HttpClient> SuiClient<C> {
         first: Option<i32>,
         last: Option<i32>,
     ) -> Result<Option<Page<Event>>, Error> {
-        let operation = EventsQuery::build(EventsArgs {
+        let operation = EventsQuery::build(EventsQueryArgs {
             after,
             before,
             filter,
@@ -457,6 +459,70 @@ impl<C: HttpClient> SuiClient<C> {
                 })?;
 
             Ok(Some(Page { page_info, nodes }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    // ===========================================================================
+    // Objects API
+    // ===========================================================================
+
+    pub async fn objects(
+        &self,
+        after: Option<&str>,
+        before: Option<&str>,
+        filter: Option<ObjectFilter<'_>>,
+        first: Option<i32>,
+        last: Option<i32>,
+    ) -> Result<Option<Page<sui_types::types::Object>>, Error> {
+        let operation = ObjectsQuery::build(ObjectsQueryArgs {
+            after,
+            before,
+            filter,
+            first,
+            last,
+        });
+
+        let response = self.run_query(&operation).await?;
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        if let Some(objects) = response.data {
+            let oc = objects.objects;
+            let page_info = oc.page_info;
+            let bcs = oc
+                .nodes
+                .iter()
+                .map(|o| &o.bcs)
+                .map(|b64| {
+                    b64.as_ref()
+                        .map(|b| base64ct::Base64::decode_vec(b.0.as_str()))
+                })
+                .flatten()
+                .collect::<Result<Vec<_>, base64ct::Error>>()
+                .map_err(|e| {
+                    Error::msg(format!(
+                        "Cannot decode Base64 object bcs bytes: {}",
+                        e.to_string()
+                    ))
+                })?;
+            let objects = bcs
+                .iter()
+                .map(|b| bcs::from_bytes::<sui_types::types::Object>(&b))
+                .collect::<Result<Vec<_>, bcs::Error>>()
+                .map_err(|e| {
+                    Error::msg(format!(
+                        "Cannot decode bcs bytes into Object: {}",
+                        e.to_string()
+                    ))
+                })?;
+
+            Ok(Some(Page {
+                page_info,
+                nodes: objects,
+            }))
         } else {
             Ok(None)
         }
