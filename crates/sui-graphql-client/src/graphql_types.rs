@@ -7,7 +7,7 @@ use anyhow::{anyhow, Error};
 use chrono::DateTime as ChronoDT;
 
 use sui_types::types::{
-    CheckpointContentsDigest, CheckpointDigest, CheckpointSummary,
+    Address, CheckpointContentsDigest, CheckpointDigest, CheckpointSummary,
     GasCostSummary as NativeGasCostSummary,
 };
 
@@ -69,6 +69,20 @@ pub struct EpochSummaryQuery {
 }
 
 #[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "Query", variables = "EventsQueryArgs")]
+pub struct EventsQuery {
+    #[arguments(after: $after, before: $before, filter: $filter, first: $first, last: $last)]
+    pub events: EventConnection,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "Query", variables = "ObjectQueryArgs")]
+pub struct ObjectQuery {
+    #[arguments(address: $address, version: $version)]
+    pub object: Option<Object>,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
 #[cynic(
     schema = "rpc",
     graphql_type = "Query",
@@ -94,13 +108,6 @@ pub struct ServiceConfigQuery {
 pub struct TransactionBlockQuery {
     #[arguments(digest: $digest)]
     pub transaction_block: Option<TransactionBlock>,
-}
-
-#[derive(cynic::QueryFragment, Debug)]
-#[cynic(schema = "rpc", graphql_type = "Query", variables = "EventsQueryArgs")]
-pub struct EventsQuery {
-    #[arguments(after: $after, before: $before, filter: $filter, first: $first, last: $last)]
-    pub events: EventConnection,
 }
 
 #[derive(cynic::QueryFragment, Debug)]
@@ -137,6 +144,12 @@ pub struct TransactionBlockArgs {
 #[derive(cynic::QueryVariables, Debug)]
 pub struct CoinMetadataArgs<'a> {
     pub coin_type: &'a str,
+}
+
+#[derive(cynic::QueryVariables, Debug)]
+pub struct ObjectQueryArgs {
+    pub address: SuiAddress,
+    pub version: Option<Uint53>,
 }
 
 #[derive(cynic::QueryVariables, Debug)]
@@ -493,5 +506,20 @@ impl TryInto<NativeGasCostSummary> for GasCostSummary {
             storage_cost,
             storage_rebate,
         })
+    }
+}
+
+impl From<Address> for SuiAddress {
+    fn from(value: Address) -> Self {
+        SuiAddress(value.to_string())
+    }
+}
+
+impl TryFrom<SuiAddress> for Address {
+    type Error = anyhow::Error;
+
+    fn try_from(value: SuiAddress) -> Result<Self, Self::Error> {
+        Address::from_str(&value.0)
+            .map_err(|e| Error::msg(format!("Cannot convert SuiAddress into Address: {e}")))
     }
 }

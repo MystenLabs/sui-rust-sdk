@@ -8,12 +8,12 @@ pub mod graphql_types;
 use base64ct::Encoding;
 use graphql_types::{
     ChainIdentifierQuery, CheckpointArgs, CheckpointId, CheckpointQuery, CoinMetadata,
-    CoinMetadataArgs, EpochSummaryArgs, EpochSummaryQuery, EventFilter, ObjectFilter, PageInfo,
-    ProtocolConfigQuery, ProtocolConfigs, ProtocolVersionArgs, ServiceConfig, ServiceConfigQuery,
-    TransactionBlockArgs, TransactionBlockQuery, Uint53,
+    CoinMetadataArgs, EpochSummaryArgs, EpochSummaryQuery, EventFilter, ObjectFilter, ObjectQuery,
+    ObjectQueryArgs, PageInfo, ProtocolConfigQuery, ProtocolConfigs, ProtocolVersionArgs,
+    ServiceConfig, ServiceConfigQuery, TransactionBlockArgs, TransactionBlockQuery, Uint53,
 };
 use sui_types::types::{
-    Address, CheckpointSequenceNumber, CheckpointSummary, Event, ObjectId, SignedTransaction,
+    Address, CheckpointSequenceNumber, CheckpointSummary, Event, Object, SignedTransaction,
 };
 
 use anyhow::{ensure, Error, Result};
@@ -188,21 +188,6 @@ impl<C: HttpClient> SuiClient<C> {
         operation: &Operation<T, V>,
     ) -> Result<GraphQlResponse<T>> {
         self.inner.post(&self.url(), &operation).await
-    }
-
-    // ===========================================================================
-    // Objects API
-    // ===========================================================================
-
-    // TODO: implement
-    /// Return An object's bcs content [`Vec<u8>`] based on the provided [ObjectID], or an error upon failure.
-    pub async fn move_object_bcs(&self, _object_id: ObjectId) {
-        todo!()
-    }
-
-    // TODO: implement
-    pub async fn owned_objects(&self, _address: Address) {
-        todo!()
     }
 
     // ===========================================================================
@@ -468,6 +453,72 @@ impl<C: HttpClient> SuiClient<C> {
     // Objects API
     // ===========================================================================
 
+    /// Return an object based on the provided [`Address`].
+    ///
+    /// If the object does not exist (e.g., due to prunning), this will return `Ok(None)`.
+    /// Similarly, if this is not an object but an address, it will return `Ok(None)`.
+    pub async fn object(
+        &self,
+        address: Address,
+        version: Option<u64>,
+    ) -> Result<Option<Object>, Error> {
+        let operation = ObjectQuery::build(ObjectQueryArgs {
+            address: address.into(),
+            version: version.map(Uint53),
+        });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        if let Some(object) = response.data {
+            let obj = object.object;
+            let bcs = obj
+                .map(|o| o.bcs)
+                .flatten()
+                .map(|bcs| base64ct::Base64::decode_vec(bcs.0.as_str()))
+                .transpose()
+                .map_err(|e| {
+                    Error::msg(format!(
+                        "Cannot decode Base64 object bcs bytes: {}",
+                        e.to_string()
+                    ))
+                })?;
+            let object = bcs
+                .map(|b| bcs::from_bytes::<sui_types::types::Object>(&b))
+                .transpose()
+                .map_err(|e| {
+                    Error::msg(format!(
+                        "Cannot decode bcs bytes into Object: {}",
+                        e.to_string()
+                    ))
+                })?;
+
+            Ok(object)
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Return a page of objects based on the provided parameters.
+    ///
+    /// Use this function together with the [`ObjectFilter::owner`] to get the objects owned by an
+    /// address.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// let filter = ObjectFilter {
+    ///     type_: None,
+    ///     owner: Some(Address::from_str("test").unwrap().into()),
+    ///     object_ids: None,
+    ///     object_keys: None,
+    /// };
+    ///
+    /// let owned_objects = client.objects(None, None, Some(filter), None, None).await;
+    /// ```
     pub async fn objects(
         &self,
         after: Option<&str>,
@@ -475,7 +526,7 @@ impl<C: HttpClient> SuiClient<C> {
         filter: Option<ObjectFilter<'_>>,
         first: Option<i32>,
         last: Option<i32>,
-    ) -> Result<Option<Page<sui_types::types::Object>>, Error> {
+    ) -> Result<Option<Page<Object>>, Error> {
         let operation = ObjectsQuery::build(ObjectsQueryArgs {
             after,
             before,
@@ -523,6 +574,36 @@ impl<C: HttpClient> SuiClient<C> {
                 page_info,
                 nodes: objects,
             }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Return the object's bcs content [`Vec<u8>`] based on the provided [`Address`].
+    pub async fn move_object_bcs(&self, object_id: Address) -> Result<Option<Vec<u8>>, Error> {
+        let operation = ObjectQuery::build(ObjectQueryArgs {
+            address: object_id.into(),
+            version: None,
+        });
+
+        let response = self.run_query(&operation).await.unwrap();
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        if let Some(object) = response.data.map(|d| d.object) {
+            object
+                .map(|o| o.bcs)
+                .flatten()
+                .map(|bcs| base64ct::Base64::decode_vec(bcs.0.as_str()))
+                .transpose()
+                .map_err(|e| {
+                    Error::msg(format!(
+                        "Cannot decode Base64 object bcs bytes: {}",
+                        e.to_string()
+                    ))
+                })
         } else {
             Ok(None)
         }

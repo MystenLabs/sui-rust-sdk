@@ -1,5 +1,9 @@
+use std::str::FromStr;
+
 use base64ct::Encoding;
+use sui_graphql_client::graphql_types::ObjectFilter;
 use sui_graphql_client::SuiClient;
+use sui_types::types::Address;
 use sui_types::types::Event;
 use sui_types::types::SignedTransaction;
 #[tokio::main]
@@ -10,8 +14,8 @@ async fn main() {
     client.set_version(Some("beta"));
     let total_checkpoints = client.epoch_total_checkpoints(None).await;
     let epoch_summary = client.epoch_total_transaction_blocks(None).await;
-    println!("{:?}", total_checkpoints);
-    println!("{:?}", epoch_summary);
+    println!("Total Checkpoints {:?}", total_checkpoints);
+    println!("Epoch summary {:?}", epoch_summary);
 
     // let tx = client
     // .transaction("6u6UHNpBX1qiesAL3fhhGzCfSmCzfV3VyrgJXkEcNAAM")
@@ -20,10 +24,34 @@ async fn main() {
     // println!("{:?}", tx);
     //
     let coin_metadata = client.coin_metadata("0x2::sui::SUI").await;
-    println!("{:?}", coin_metadata);
+    println!("Coin metadata {:?}", coin_metadata);
 
-    let objects = client.objects(None, None, None, None, None).await;
-    println!("{:?}", objects);
+    // let objects = client.objects(None, None, None, None, None).await;
+    // println!("{:?}", objects);
+
+    let object = client
+        .object(
+            Address::from_str("0x003dc99ca9f8bb1c4351136fa6e941774340572e6478927270bdcd42b7efbdcc")
+                .unwrap(),
+            // Address::from_str("0x0000000000000000000000000000000000000000000000000000000000000000")
+            //     .unwrap(),
+            None,
+        )
+        .await;
+
+    println!("{:?}", object);
+    let filter = ObjectFilter {
+        type_: None,
+        owner: Some(
+            Address::from_str("0x9eea5b53d1e30e07555b5e67619bfd649df752585aa0828dc3a73ed46816a8a4")
+                .unwrap()
+                .into(),
+        ),
+        object_ids: None,
+        object_keys: None,
+    };
+    let owned_objects = client.objects(None, None, Some(filter), None, None).await;
+    println!("{:?}", owned_objects);
 
     // let events = client.events(None, None, None, None, None).await;
 
