@@ -31,7 +31,7 @@ use anyhow::Result;
 async fn main() -> Result<()> {
 
    // Connect to default testnet GraphQL server
-   let mut client = SuiClient::default();
+   let client = SuiClient::default();
    let chain_id = client.chain_id().await?;
    println!("{:?}", chain_id);
 
@@ -57,14 +57,14 @@ async fn main() -> Result<()> {
 
    Ok(())
 }
-
-````
+```
 
 
 ## Custom HTTP Client
 To use a custom HTTP client, implement the `HttpClient` trait. The `post` method should
 be implemented to send a POST request to the GraphQL server. A `SuiClient` should be created
 using the [`SuiClient::new_with_http_client`] method.
+
 ```rust
 
 use anyhow::Result;
