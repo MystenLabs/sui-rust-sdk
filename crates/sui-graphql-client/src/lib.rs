@@ -580,7 +580,7 @@ impl<C: HttpClient> SuiClient<C> {
     }
 
     /// Return the object's bcs content [`Vec<u8>`] based on the provided [`Address`].
-    pub async fn move_object_bcs(&self, object_id: Address) -> Result<Option<Vec<u8>>, Error> {
+    pub async fn object_bcs(&self, object_id: Address) -> Result<Option<Vec<u8>>, Error> {
         let operation = ObjectQuery::build(ObjectQueryArgs {
             address: object_id.into(),
             version: None,
