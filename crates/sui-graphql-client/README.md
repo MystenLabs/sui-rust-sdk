@@ -17,9 +17,11 @@ By default, if you are using the SDK from `crates.io` or from `main` branch, it 
 Please note that the legacy versions are not supported out of the box and you would likely need to use the `cynic` library to generate the types for the legacy version.
 
 # Usage
-For convenience, a `reqwest` based HTTP client can be used by default. When calling `SuiClient::default()`, the client sets testnet as the default network.
 
-To connect to mainnet or devnet, use the `client.set_mainnet()` or `client.set_devnet()` methods respectively.
+## Connecting to a GraphQL server
+For convenience, a `reqwest` based HTTP client can be used by default. When calling [`SuiClient::default()`], the client sets `testnet` as the default network.
+To connect to `mainnet`  use the [`SuiClient::set_mainnet()`]. Similarly, to connect to `devnet` use [`SuiClient::set_devnet()`].
+
 
 ```rust
 use sui_graphql_client::SuiClient;
@@ -37,10 +39,32 @@ async fn main() -> Result<()> {
 }
 ```
 
+To connect to a custom GraphQL server, first use the [`SuiClient::default()`] and then set the URL of the server using the [`SuiClient::set_rpc_server()`] method.
+
+```rust
+use sui_graphql_client::SuiClient;
+use anyhow::Result;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+
+   // Connect to default testnet GraphQL server
+   let mut client = SuiClient::default();
+   // Change the GraphQL server URL
+   client.set_url("http://localhost:8000/graphql");
+   let chain_id = client.chain_id().await?;
+   println!("{:?}", chain_id);
+
+   Ok(())
+}
+
+````
+
+
 ## Custom HTTP Client
 To use a custom HTTP client, implement the `HttpClient` trait. The `post` method should
 be implemented to send a POST request to the GraphQL server. A `SuiClient` should be created
-using the [`sui_client::SuiClient::new_with_http_client`] method.
+using the [`SuiClient::new_with_http_client`] method.
 ```rust
 
 use anyhow::Result;
@@ -104,6 +128,7 @@ Below is an example that uses the `cynic querygen` CLI to generate the query typ
 cynic querygen --schema rpc.graphql --query custom_query.graphql
 ```
 where `custom_query.graphql` contains the following query:
+
 ```graphql
 query CustomQuery($id: Uint53) {
   epoch(id: $id) {
@@ -115,9 +140,11 @@ query CustomQuery($id: Uint53) {
 }
 ```
 
-The generated query types are defined below. Note that the `id` variable is optional (to make it mandatory change the schema to $id: Uint53! -- note the ! character which indicates a mandatory field).
+The generated query types are defined below. Note that the `id` variable is optional (to make it mandatory change the schema to $id: Uint53! -- note the ! character which indicates a mandatory field). That means that if the `id` variable is not provided, the query will return the data for the last known epoch.
+
+
 ```rust
-cynic querygen ueryVariables, Debug)]
+#[derive(QueryVariables, Debug)]
 pub struct CustomQueryVariables {
     pub id: Option<Uint53>,
 }
@@ -143,7 +170,7 @@ pub struct BigInt(pub String);
 
 #[derive(cynic::Scalar, Debug, Clone)]
 #[cynic(graphql_type = "UInt53")]
-pub struct Uint53(pub String);
+pub struct Uint53(pub u64);
 ```
 
 The complete example is shown below:
