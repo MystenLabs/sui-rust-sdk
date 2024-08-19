@@ -16,9 +16,8 @@ use sui_types::types::{
     Address, CheckpointSequenceNumber, CheckpointSummary, Event, Object, SignedTransaction,
 };
 
-use anyhow::{ensure, Error, Result};
+use anyhow::{anyhow, ensure, Error, Result};
 use cynic::{serde, GraphQlResponse, Operation, QueryBuilder};
-use reqwest::Client;
 
 use crate::graphql_types::{
     CoinMetadataQuery, EventsQuery, EventsQueryArgs, ObjectsQuery, ObjectsQueryArgs,
@@ -29,15 +28,96 @@ const TESTNET_HOST: &str = "https://sui-testnet.mystenlabs.com/graphql";
 const DEVNET_HOST: &str = "https://sui-devnet.mystenlabs.com/graphql";
 const DEFAULT_LOCAL_HOST: &str = "http://localhost:9125/graphql";
 
-/// An HTTP client based on reqwest
-struct ReqwestHttpClient {
-    inner: Client,
+#[derive(Debug)]
+/// A page of items returned by the GraphQL server.
+pub struct Page<T> {
+    /// Information about the page, such as the cursor and whether there are more pages.
+    page_info: PageInfo,
+    /// The data returned by the server.
+    data: Vec<T>,
 }
 
-impl ReqwestHttpClient {
-    fn new() -> Self {
-        Self {
-            inner: Client::new(),
+impl<T> Page<T> {
+    pub fn page_info(&self) -> &PageInfo {
+        &self.page_info
+    }
+
+    pub fn data(&self) -> &[T] {
+        &self.data
+    }
+
+    fn new(page_info: PageInfo, data: Vec<T>) -> Self {
+        Self { page_info, data }
+    }
+}
+
+/// The Client is a GraphQL client for interacting with the Sui blockchain.
+/// By default, it uses Reqwest as the HTTP client.
+pub struct Client {
+    /// The URL of the GraphQL server.
+    rpc: String,
+    /// GraphQL supports multiple versions of the service. By default, the client uses the stable
+    /// version of the service.
+    rpc_version: Option<String>,
+    inner: reqwest::Client,
+}
+
+impl Client {
+    // ===========================================================================
+    // Client Misc API
+    // ===========================================================================
+
+    pub fn new(server: &str) -> Result<Client, Error> {
+        reqwest::Url::parse(server).map_err(|_| anyhow!("Invalid URL: {}", server))?;
+
+        let client = Client {
+            rpc: server.to_string(),
+            rpc_version: None,
+            inner: reqwest::Client::new(),
+        };
+        Ok(client)
+    }
+
+    pub fn new_mainnet() -> Result<Client, Error> {
+        Self::new(MAINNET_HOST)
+    }
+
+    pub fn new_testnet() -> Result<Client, Error> {
+        Self::new(TESTNET_HOST)
+    }
+
+    pub fn new_devnet() -> Result<Client, Error> {
+        Self::new(DEVNET_HOST)
+    }
+
+    /// Set the GraphQL to localhost and port 9125.
+    pub fn new_localhost(&mut self) -> Result<Self, Error> {
+        Self::new(DEFAULT_LOCAL_HOST)
+    }
+
+    /// Set the version for the GraphQL GraphQL client. The default set version is stable.
+    ///
+    /// Use the `service_config` API to get the `available_versions` field to know which versions
+    /// are supported by this service.
+    pub fn set_version(&mut self, version: Option<&str>) -> &mut Self {
+        self.rpc_version = version.map(|v| v.to_string());
+        self
+    }
+
+    /// Set the server address for the GraphQL GraphQL client. It should be a valid URL with a host and
+    /// optionally a port number.
+    pub fn set_rpc_server(&mut self, server: &str) -> Result<&mut Self, Error> {
+        reqwest::Url::parse(server)?;
+        self.rpc = server.to_string();
+        Ok(self)
+    }
+
+    /// Return the URL for the GraphQL GraphQL client after checking if the version is set.
+    fn url(&self) -> String {
+        if let Some(version) = &self.rpc_version {
+            format!("{}/{}", self.rpc, version)
+        } else {
+            self.rpc.to_string()
         }
     }
 
@@ -59,119 +139,16 @@ impl ReqwestHttpClient {
             .await?;
         Ok(res)
     }
-}
-
-#[derive(Debug)]
-/// A page of items returned by the GraphQL server.
-pub struct Page<T> {
-    /// Information about the page, such as the cursor and whether there are more pages.
-    page_info: PageInfo,
-    /// The data returned by the server.
-    nodes: Vec<T>,
-}
-
-impl<T> Page<T> {
-    pub fn page_info(&self) -> &PageInfo {
-        &self.page_info
-    }
-
-    pub fn nodes(&self) -> &Vec<T> {
-        &self.nodes
-    }
-
-    fn new(page_info: PageInfo, nodes: Vec<T>) -> Self {
-        Self { page_info, nodes }
-    }
-}
-
-/// The SuiClient is a GraphQL client for interacting with the Sui blockchain.
-/// By default, it uses Reqwest as the HTTP client.
-pub struct SuiClient {
-    /// The URL of the GraphQL server.
-    rpc: String,
-    /// GraphQL supports multiple versions of the service. By default, the client uses the stable
-    /// version of the service.
-    rpc_version: Option<String>,
-    inner: ReqwestHttpClient,
-}
-
-impl Default for SuiClient {
-    /// Create a new [`SuiClient`] with testnet as the default GraphQL server.
-    fn default() -> Self {
-        Self {
-            rpc: TESTNET_HOST.to_string(),
-            rpc_version: None,
-            inner: ReqwestHttpClient::new(),
-        }
-    }
-}
-
-impl SuiClient {
-    // ===========================================================================
-    // Client Misc API
-    // ===========================================================================
-
-    /// Set the server address for the GraphQL GraphQL client. It should be a valid URL with a host and
-    /// optionally a port number.
-    pub fn set_rpc_server(&mut self, server: &str) -> Result<(), anyhow::Error> {
-        reqwest::Url::parse(server)?;
-        self.rpc = server.to_string();
-        Ok(())
-    }
-
-    /// Set the version for the GraphQL GraphQL client. The default set version is stable.
-    ///
-    /// Use the `service_config` API to get the `available_versions` field to know which versions
-    /// are supported by this service.
-    pub fn set_version(&mut self, version: Option<&str>) {
-        self.rpc_version = version.map(|v| v.to_string());
-    }
-
-    /// Return the URL for the GraphQL GraphQL client after checking if the version is set.
-    fn url(&self) -> String {
-        if let Some(version) = &self.rpc_version {
-            format!("{}/{}", self.rpc, version)
-        } else {
-            self.rpc.to_string()
-        }
-    }
-
-    /// Set the GraphQL to localhost and port 9125.
-    pub fn set_localhost(&mut self) -> &Self {
-        self.rpc = DEFAULT_LOCAL_HOST.to_string();
-        self
-    }
-
-    /// Set GraphQL client to devnet.
-    pub fn set_devnet(&mut self) -> &Self {
-        self.rpc = DEVNET_HOST.to_string();
-        self.set_version(None);
-        self
-    }
-
-    /// Set GraphQL client to testnet.
-    pub fn set_testnet(&mut self) -> &Self {
-        self.rpc = TESTNET_HOST.to_string();
-        self
-    }
-
-    /// Set GraphQL client to mainnet.
-    pub fn set_mainnet(&mut self) -> &Self {
-        self.rpc = MAINNET_HOST.to_string();
-        self
-    }
 
     /// Run a query on the GraphQL server and return the response.
     /// This method returns an [`cynic::GraphQlResponse`]  over the query type `T`, and it is
     /// intended to be used with custom queries.
-    pub async fn run_query<
-        T: serde::de::DeserializeOwned + Send,
-        V: serde::Serialize + Send + std::marker::Sync,
-    >(
-        &self,
-        operation: &Operation<T, V>,
-    ) -> Result<GraphQlResponse<T>> {
-        self.inner.post(&self.url(), operation).await
+    pub async fn run_query<T, V>(&self, operation: &Operation<T, V>) -> Result<GraphQlResponse<T>>
+    where
+        T: serde::de::DeserializeOwned + std::marker::Send,
+        V: serde::Serialize + std::marker::Sync + std::marker::Send,
+    {
+        self.post(&self.url(), operation).await
     }
 
     // ===========================================================================

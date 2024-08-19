@@ -2,7 +2,7 @@ use anyhow::Result;
 use cynic::QueryBuilder;
 
 use sui_graphql_client::graphql_types::{schema, BigInt, Uint53};
-use sui_graphql_client::SuiClient;
+use sui_graphql_client::Client;
 
 // The data returned by the custom query.
 #[derive(cynic::QueryFragment, Debug)]
@@ -39,9 +39,7 @@ pub struct ChainIdQuery {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let mut client = SuiClient::default();
-    // client.set_localhost();
-    client.set_devnet();
+    let mut client = Client::new_devnet()?;
     client.set_version(Some("beta"));
 
     // Query the data for the last known epoch. Note that id variable is None, so last epoch data

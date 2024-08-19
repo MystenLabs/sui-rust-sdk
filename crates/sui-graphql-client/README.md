@@ -3,9 +3,6 @@ It provides a set of APIs for querying the blockchain for information such as ch
 reference gas price, protocol configuration, service configuration, checkpoint, epoch,
 executing transactions and more.
 
-The Sui Client is designed to be flexible and can be used with different HTTP clients by
-implementing the `HttpClient` trait.
-
 # Design Principles
 
 1. **Type Safety**: The client uses the `cynic` library to generate types from the schema. This ensures that the queries are type-safe.
@@ -16,21 +13,21 @@ implementing the `HttpClient` trait.
 # Usage
 
 ## Connecting to a GraphQL server
-Instantiate [`SuiClient`] with [`SuiClient::default()`], which sets `testnet` as the default network. After instantiating a new `SuiClient`, change to a different network as needed:
-- `mainnet` use [`SuiClient::set_mainnet()`]
-- `testnet` use [`SuiClient::set_testnet()`]
-- `devnet`  use [`SuiClient::set_devnet()`]
-- `custom_server` use [`SuiClient::set_rpc_server()`]
+Instantiate [`Client`] with [`Client::default()`], which sets `testnet` as the default network. After instantiating a new `Client`, change to a different network as needed:
+- `mainnet` use [`Client::set_mainnet()`]
+- `testnet` use [`Client::set_testnet()`]
+- `devnet`  use [`Client::set_devnet()`]
+- `custom_server` use [`Client::set_rpc_server()`]
 
 ```rust
-use sui_graphql_client::SuiClient;
+use sui_graphql_client::Client;
 use anyhow::Result;
 
 #[tokio::main]
 async fn main() -> Result<()> {
 
    // Connect to default testnet GraphQL server
-   let client = SuiClient::default();
+   let client = Client::default();
    let chain_id = client.chain_id().await?;
    println!("{:?}", chain_id);
 
@@ -105,7 +102,7 @@ use anyhow::Result;
 use cynic::QueryBuilder;
 
 use sui_graphql_client::graphql_types::{schema, BigInt, Uint53};
-use sui_graphql_client::SuiClient;
+use sui_graphql_client::Client;
 
 // The data returned by the custom query.
 #[derive(cynic::QueryFragment, Debug)]
@@ -142,7 +139,7 @@ pub struct ChainIdQuery {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let mut client = SuiClient::default();
+    let mut client = Client::default();
     client.set_devnet();
     client.set_version(Some("beta"));
 
