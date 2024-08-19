@@ -56,7 +56,7 @@ cynic querygen --schema rpc.graphql --query custom_query.graphql
 where `custom_query.graphql` contains the following query:
 
 ```graphql
-query CustomQuery($id: Uint53) {
+query CustomQuery($id: UInt53) {
   epoch(id: $id) {
     referenceGasPrice
     totalGasFees
