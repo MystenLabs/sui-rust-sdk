@@ -26,7 +26,6 @@ anyhow = "1.0.86"
 cynic = { version = "3.7.3" }
 serde = { version = "1.0.208", features = ["serde_derive"] }
 serde_json = "1.0.70"
-surf = "2.3.2"
 tokio = { version = "1.39.2", features = ["full"] }
 
 [build-dependencies]
