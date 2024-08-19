@@ -8,8 +8,6 @@ publish = false
 readme = "README.md"
 description = "Sui GraphQL RPC Client for the Sui Blockchain"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 anyhow = "1.0.86"
 async-trait = "0.1.81"
@@ -19,13 +17,6 @@ chrono = { version = "0.4.38", features = ["rkyv"] }
 cynic = { version = "3.7.3", features = ["rkyv"] }
 reqwest = { version = "0.12", features = ["json", "blocking"] }
 sui-types = { package= "sui-sdk", path = "../sui-sdk", features = ["serde"] }
-tokio = { version = "1.39.2", features = ["full"] }
-
-[dev-dependencies]
-anyhow = "1.0.86"
-cynic = { version = "3.7.3" }
-serde = { version = "1.0.208", features = ["serde_derive"] }
-serde_json = "1.0.70"
 tokio = { version = "1.39.2", features = ["full"] }
 
 [build-dependencies]
