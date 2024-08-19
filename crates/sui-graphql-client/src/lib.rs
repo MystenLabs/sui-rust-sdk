@@ -67,7 +67,8 @@ impl Client {
     // Client Misc API
     // ===========================================================================
 
-    pub fn new(server: &str) -> Result<Client, Error> {
+    /// Create a new GraphQL client with the provided server address.
+    pub fn new(server: &str) -> Result<Self, Error> {
         reqwest::Url::parse(server).map_err(|_| anyhow!("Invalid URL: {}", server))?;
 
         let client = Client {
@@ -78,19 +79,23 @@ impl Client {
         Ok(client)
     }
 
-    pub fn new_mainnet() -> Result<Client, Error> {
+    /// Create a new GraphQL client connected to the `mainnet` GraphQL server: {MAINNET_HOST}.
+    pub fn new_mainnet() -> Result<Self, Error> {
         Self::new(MAINNET_HOST)
     }
 
-    pub fn new_testnet() -> Result<Client, Error> {
+    /// Create a new GraphQL client connected to the `testnet` GraphQL server: {TESTNET_HOST}.
+    pub fn new_testnet() -> Result<Self, Error> {
         Self::new(TESTNET_HOST)
     }
 
-    pub fn new_devnet() -> Result<Client, Error> {
+    /// Create a new GraphQL client connected to the `devnet` GraphQL server: {DEVNET_HOST}.
+    pub fn new_devnet() -> Result<Self, Error> {
         Self::new(DEVNET_HOST)
     }
 
-    /// Set the GraphQL to localhost and port 9125.
+    /// Create a new GraphQL client connected to the `localhost` GraphQL server:
+    /// {DEFAULT_LOCAL_HOST}.
     pub fn new_localhost(&mut self) -> Result<Self, Error> {
         Self::new(DEFAULT_LOCAL_HOST)
     }
@@ -141,7 +146,7 @@ impl Client {
     }
 
     /// Run a query on the GraphQL server and return the response.
-    /// This method returns an [`cynic::GraphQlResponse`]  over the query type `T`, and it is
+    /// This method returns [`cynic::GraphQlResponse`]  over the query type `T`, and it is
     /// intended to be used with custom queries.
     pub async fn run_query<T, V>(&self, operation: &Operation<T, V>) -> Result<GraphQlResponse<T>>
     where
@@ -443,7 +448,7 @@ impl Client {
     ///
     /// # Example
     ///
-    /// ```rust,no_run
+    /// ```rust,ignore
     /// let filter = ObjectFilter {
     ///     type_: None,
     ///     owner: Some(Address::from_str("test").unwrap().into()),

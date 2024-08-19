@@ -13,11 +13,7 @@ executing transactions and more.
 # Usage
 
 ## Connecting to a GraphQL server
-Instantiate [`Client`] with [`Client::default()`], which sets `testnet` as the default network. After instantiating a new `Client`, change to a different network as needed:
-- `mainnet` use [`Client::set_mainnet()`]
-- `testnet` use [`Client::set_testnet()`]
-- `devnet`  use [`Client::set_devnet()`]
-- `custom_server` use [`Client::set_rpc_server()`]
+Instantiate [`Client`] with [`Client::new(server: &str)`] or use one of the predefined functions for different networks [`Client`].
 
 ```rust
 use sui_graphql_client::Client;
@@ -27,12 +23,7 @@ use anyhow::Result;
 async fn main() -> Result<()> {
 
    // Connect to default testnet GraphQL server
-   let client = Client::default();
-   let chain_id = client.chain_id().await?;
-   println!("{:?}", chain_id);
-
-   // Change the GraphQL server URL
-   client.set_rpc_server("http://localhost:8000/graphql");
+   let client = Client::new_mainnet()?;
    let chain_id = client.chain_id().await?;
    println!("{:?}", chain_id);
 
@@ -66,8 +57,8 @@ query CustomQuery($id: UInt53) {
 The generated query types are defined below. Note that the `id` variable is optional (to make it mandatory change the schema to $id: Uint53! -- note the ! character which indicates a mandatory field). That means that if the `id` variable is not provided, the query will return the data for the last known epoch.
 
 
-```rust
-#[derive(QueryVariables, Debug)]
+```rust,ignore
+#[derive(cynic::QueryVariables, Debug)]
 pub struct CustomQueryVariables {
     pub id: Option<Uint53>,
 }
@@ -101,8 +92,9 @@ The complete example is shown below:
 use anyhow::Result;
 use cynic::QueryBuilder;
 
-use sui_graphql_client::graphql_types::{schema, BigInt, Uint53};
+use sui_graphql_client::graphql_types::{schema, BigInt, Uint53, ObjectFilter};
 use sui_graphql_client::Client;
+use sui_types::types::Address;
 
 // The data returned by the custom query.
 #[derive(cynic::QueryFragment, Debug)]
@@ -139,8 +131,7 @@ pub struct ChainIdQuery {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let mut client = Client::default();
-    client.set_devnet();
+    let mut client = Client::new_devnet()?;
     client.set_version(Some("beta"));
 
     // Query the data for the last known epoch. Note that id variable is None, so last epoch data
