@@ -62,8 +62,11 @@ impl ReqwestHttpClient {
 }
 
 #[derive(Debug)]
+/// A page of items returned by the GraphQL server.
 pub struct Page<T> {
+    /// Information about the page, such as the cursor and whether there are more pages.
     page_info: PageInfo,
+    /// The data returned by the server.
     nodes: Vec<T>,
 }
 

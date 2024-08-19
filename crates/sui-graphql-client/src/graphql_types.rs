@@ -410,11 +410,16 @@ pub struct TransactionBlock {
 
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "PageInfo")]
+/// Information about pagination in a connection.
 pub struct PageInfo {
-    pub end_cursor: Option<String>,
-    pub has_next_page: bool,
+    /// When paginating backwards, are there more items?
     pub has_previous_page: bool,
+    /// Are there more items when paginating forwards?
+    pub has_next_page: bool,
+    /// When paginating backwards, the cursor to continue.
     pub start_cursor: Option<String>,
+    /// When paginating forwards, the cursor to continue.
+    pub end_cursor: Option<String>,
 }
 
 // ===========================================================================
