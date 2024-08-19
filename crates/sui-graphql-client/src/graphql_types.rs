@@ -199,14 +199,13 @@ pub struct ServiceConfig {
     /// Maximum nesting allowed in struct fields when calculating the layout of a single Move Type.
     pub max_move_value_depth: i32,
     /// The maximum number of output nodes in a GraphQL response.
-    ///
-    ///	Non-connection nodes have a count of 1, while connection nodes are counted as
-    ///	the specified 'first' or 'last' number of items, or the default_page_size
-    ///	as set by the server if those arguments are not set.
-    ///	Counts accumulate multiplicatively down the query tree. For example, if a query starts
-    ///	with a connection of first: 10 and has a field to a connection with last: 20, the count
-    ///	at the second level would be 200 nodes. This is then summed to the count of 10 nodes
-    ///	at the first level, for a total of 210 nodes.
+    /// Non-connection nodes have a count of 1, while connection nodes are counted as
+    /// the specified 'first' or 'last' number of items, or the default_page_size
+    /// as set by the server if those arguments are not set.
+    /// Counts accumulate multiplicatively down the query tree. For example, if a query starts
+    /// with a connection of first: 10 and has a field to a connection with last: 20, the count
+    /// at the second level would be 200 nodes. This is then summed to the count of 10 nodes
+    /// at the first level, for a total of 210 nodes.
     pub max_output_nodes: i32,
     /// Maximum number of elements allowed on a single page of a connection.
     pub max_page_size: i32,

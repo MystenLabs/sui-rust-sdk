@@ -12,9 +12,7 @@ implementing the `HttpClient` trait.
 2. **Type Safety**: The client uses the `cynic` library to generate types from the schema. This ensures that the queries are type-safe.
 3. **Convenience**: The client provides a set of APIs for common queries such as chain identifier, reference gas price, protocol configuration, service configuration, checkpoint, epoch, executing transactions and more.
 4. **Custom Queries**: The client provides a way to run custom queries using the `cynic` library.
-5. **Version Support**: The Sui GraphQL RPC server supports several versions for each network (at least for Mysten's public nodes). The client provides a way to set the version of the server to connect to. The schema used is the schema defined in main branch of the [Sui](https://github.com/mystenlabs/sui) repository. Fields that are only supported in the beta version are marked with the `#[cfg(feature = "beta")]` attribute and will be available in the `next` branch of the repository.
-By default, if you are using the SDK from `crates.io` or from `main` branch, it will support the stable version of the service.
-Please note that the legacy versions are not supported out of the box and you would likely need to use the `cynic` library to generate the types for the legacy version.
+5. **Version Support**: The Sui GraphQL RPC server supports several versions for each network (at least for Mysten's public nodes). The client provides a way to set the version of the server to connect to. By default, if you are using the SDK it will support the stable version of the service. Please note that the legacy and beta versions are not supported out of the box and you would likely need to build your own custom queries.
 
 # Usage
 

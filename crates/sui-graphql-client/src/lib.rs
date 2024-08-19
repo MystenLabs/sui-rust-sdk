@@ -88,6 +88,20 @@ pub struct Page<T> {
     nodes: Vec<T>,
 }
 
+impl<T> Page<T> {
+    pub fn page_info(&self) -> &PageInfo {
+        &self.page_info
+    }
+
+    pub fn nodes(&self) -> &Vec<T> {
+        &self.nodes
+    }
+
+    fn new(page_info: PageInfo, nodes: Vec<T>) -> Self {
+        Self { page_info, nodes }
+    }
+}
+
 /// The SuiClient is a GraphQL client for interacting with the Sui blockchain.
 /// By default, it uses Reqwest as the HTTP client but a custom client can be provided by
 /// implementing the `HttpClient` trait.
@@ -146,9 +160,9 @@ impl<C: HttpClient> SuiClient<C> {
     /// Return the URL for the GraphQL GraphQL client after checking if the version is set.
     fn url(&self) -> String {
         if let Some(version) = &self.rpc_version {
-            return format!("{}/{}", self.rpc, version);
+            format!("{}/{}", self.rpc, version)
         } else {
-            return self.rpc.to_string();
+            self.rpc.to_string()
         }
     }
 
@@ -187,7 +201,7 @@ impl<C: HttpClient> SuiClient<C> {
         &self,
         operation: &Operation<T, V>,
     ) -> Result<GraphQlResponse<T>> {
-        self.inner.post(&self.url(), &operation).await
+        self.inner.post(&self.url(), operation).await
     }
 
     // ===========================================================================
@@ -283,7 +297,7 @@ impl<C: HttpClient> SuiClient<C> {
             return Err(Error::msg(format!("{:?}", errors)));
         }
 
-        Ok(response.data.map(|x| x.coin_metadata).flatten())
+        Ok(response.data.and_then(|x| x.coin_metadata))
     }
 
     // ===========================================================================
@@ -350,10 +364,8 @@ impl<C: HttpClient> SuiClient<C> {
 
         Ok(response
             .data
-            .map(|d| d.epoch)
-            .flatten()
-            .map(|e| e.total_checkpoints)
-            .flatten()
+            .and_then(|d| d.epoch)
+            .and_then(|e| e.total_checkpoints)
             .map(|x| x.into()))
     }
 
@@ -371,10 +383,8 @@ impl<C: HttpClient> SuiClient<C> {
 
         Ok(response
             .data
-            .map(|d| d.epoch)
-            .flatten()
-            .map(|e| e.total_transactions)
-            .flatten()
+            .and_then(|d| d.epoch)
+            .and_then(|e| e.total_transactions)
             .map(|x| x.into()))
     }
 
@@ -415,8 +425,6 @@ impl<C: HttpClient> SuiClient<C> {
             return Err(Error::msg(format!("{:?}", errors)));
         }
 
-        println!("{:?}", response.data);
-
         // TODO bcs from bytes into Event fails due to custom type parser error
         // called `Result::unwrap()` on an `Err` value: Custom("TypeParseError")
         if let Some(events) = response.data {
@@ -427,23 +435,13 @@ impl<C: HttpClient> SuiClient<C> {
                 .iter()
                 .map(|e| base64ct::Base64::decode_vec(e.bcs.0.as_str()))
                 .collect::<Result<Vec<_>, base64ct::Error>>()
-                .map_err(|e| {
-                    Error::msg(format!(
-                        "Cannot decode Base64 event bcs bytes: {}",
-                        e.to_string()
-                    ))
-                })?
+                .map_err(|e| Error::msg(format!("Cannot decode Base64 event bcs bytes: {e}",)))?
                 .iter()
-                .map(|b| bcs::from_bytes::<Event>(&b))
+                .map(|b| bcs::from_bytes::<Event>(b))
                 .collect::<Result<Vec<_>, bcs::Error>>()
-                .map_err(|e| {
-                    Error::msg(format!(
-                        "Cannot decode bcs bytes into Event: {}",
-                        e.to_string()
-                    ))
-                })?;
+                .map_err(|e| Error::msg(format!("Cannot decode bcs bytes into Event: {e}",)))?;
 
-            Ok(Some(Page { page_info, nodes }))
+            Ok(Some(Page::new(page_info, nodes)))
         } else {
             Ok(None)
         }
@@ -476,25 +474,14 @@ impl<C: HttpClient> SuiClient<C> {
         if let Some(object) = response.data {
             let obj = object.object;
             let bcs = obj
-                .map(|o| o.bcs)
-                .flatten()
+                .and_then(|o| o.bcs)
                 .map(|bcs| base64ct::Base64::decode_vec(bcs.0.as_str()))
                 .transpose()
-                .map_err(|e| {
-                    Error::msg(format!(
-                        "Cannot decode Base64 object bcs bytes: {}",
-                        e.to_string()
-                    ))
-                })?;
+                .map_err(|e| Error::msg(format!("Cannot decode Base64 object bcs bytes: {e}",)))?;
             let object = bcs
                 .map(|b| bcs::from_bytes::<sui_types::types::Object>(&b))
                 .transpose()
-                .map_err(|e| {
-                    Error::msg(format!(
-                        "Cannot decode bcs bytes into Object: {}",
-                        e.to_string()
-                    ))
-                })?;
+                .map_err(|e| Error::msg(format!("Cannot decode bcs bytes into Object: {e}",)))?;
 
             Ok(object)
         } else {
@@ -547,33 +534,19 @@ impl<C: HttpClient> SuiClient<C> {
                 .nodes
                 .iter()
                 .map(|o| &o.bcs)
-                .map(|b64| {
+                .filter_map(|b64| {
                     b64.as_ref()
                         .map(|b| base64ct::Base64::decode_vec(b.0.as_str()))
                 })
-                .flatten()
                 .collect::<Result<Vec<_>, base64ct::Error>>()
-                .map_err(|e| {
-                    Error::msg(format!(
-                        "Cannot decode Base64 object bcs bytes: {}",
-                        e.to_string()
-                    ))
-                })?;
+                .map_err(|e| Error::msg(format!("Cannot decode Base64 object bcs bytes: {e}")))?;
             let objects = bcs
                 .iter()
-                .map(|b| bcs::from_bytes::<sui_types::types::Object>(&b))
+                .map(|b| bcs::from_bytes::<sui_types::types::Object>(b))
                 .collect::<Result<Vec<_>, bcs::Error>>()
-                .map_err(|e| {
-                    Error::msg(format!(
-                        "Cannot decode bcs bytes into Object: {}",
-                        e.to_string()
-                    ))
-                })?;
+                .map_err(|e| Error::msg(format!("Cannot decode bcs bytes into Object: {e}")))?;
 
-            Ok(Some(Page {
-                page_info,
-                nodes: objects,
-            }))
+            Ok(Some(Page::new(page_info, objects)))
         } else {
             Ok(None)
         }
@@ -594,16 +567,10 @@ impl<C: HttpClient> SuiClient<C> {
 
         if let Some(object) = response.data.map(|d| d.object) {
             object
-                .map(|o| o.bcs)
-                .flatten()
+                .and_then(|o| o.bcs)
                 .map(|bcs| base64ct::Base64::decode_vec(bcs.0.as_str()))
                 .transpose()
-                .map_err(|e| {
-                    Error::msg(format!(
-                        "Cannot decode Base64 object bcs bytes: {}",
-                        e.to_string()
-                    ))
-                })
+                .map_err(|e| Error::msg(format!("Cannot decode Base64 object bcs bytes: {e}")))
         } else {
             Ok(None)
         }
@@ -623,10 +590,8 @@ impl<C: HttpClient> SuiClient<C> {
 
         let signed_tx = response
             .data
-            .map(|tbq| tbq.transaction_block)
-            .flatten()
-            .map(|tb| tb.bcs)
-            .flatten()
+            .and_then(|tbq| tbq.transaction_block)
+            .and_then(|tb| tb.bcs)
             .map(|bcs| bcs::from_bytes::<SignedTransaction>(bcs.0.as_bytes()).unwrap());
         Ok(signed_tx)
     }

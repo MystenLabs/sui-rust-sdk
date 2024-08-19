@@ -8,6 +8,12 @@ pub struct SurfHttpClient {
     client: SurfClient,
 }
 
+impl Default for SurfHttpClient {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SurfHttpClient {
     pub fn new() -> Self {
         Self {
