@@ -8,18 +8,19 @@ implementing the `HttpClient` trait.
 
 # Design Principles
 
-1. **Flexibility**: The client is designed to be flexible and can be used with different HTTP clients by implementing the `HttpClient` trait.
-2. **Type Safety**: The client uses the `cynic` library to generate types from the schema. This ensures that the queries are type-safe.
-3. **Convenience**: The client provides a set of APIs for common queries such as chain identifier, reference gas price, protocol configuration, service configuration, checkpoint, epoch, executing transactions and more.
-4. **Custom Queries**: The client provides a way to run custom queries using the `cynic` library.
-5. **Version Support**: The Sui GraphQL RPC server supports several versions for each network (at least for Mysten's public nodes). The client provides a way to set the version of the server to connect to. By default, if you are using the SDK it will support the stable version of the service. Please note that the legacy and beta versions are not supported out of the box and you would likely need to build your own custom queries.
+1. **Type Safety**: The client uses the `cynic` library to generate types from the schema. This ensures that the queries are type-safe.
+1. **Convenience**: The client provides a set of APIs for common queries such as chain identifier, reference gas price, protocol configuration, service configuration, checkpoint, epoch, executing transactions and more.
+1. **Custom Queries**: The client provides a way to run custom queries using the `cynic` library.
+1. **Version Support**: The Sui GraphQL RPC server supports several versions for each network (at least for Mysten's public nodes). The client provides a way to set the version of the server to connect to. By default, if you are using the SDK it will support the stable version of the service. Please note that the legacy and beta versions are not supported out of the box and you would likely need to build your own custom queries.
 
 # Usage
 
 ## Connecting to a GraphQL server
-For convenience, a `reqwest` based HTTP client can be used by default. When calling [`SuiClient::default()`], the client sets `testnet` as the default network.
-To connect to `mainnet`  use the [`SuiClient::set_mainnet()`]. Similarly, to connect to `devnet` use [`SuiClient::set_devnet()`].
-
+Instantiate [`SuiClient`] with [`SuiClient::default()`], which sets `testnet` as the default network. After instantiating a new `SuiClient`, change to a different network as needed:
+- `mainnet` use [`SuiClient::set_mainnet()`]
+- `testnet` use [`SuiClient::set_testnet()`]
+- `devnet`  use [`SuiClient::set_devnet()`]
+- `custom_server` use [`SuiClient::set_rpc_server()`]
 
 ```rust
 use sui_graphql_client::SuiClient;
@@ -33,85 +34,12 @@ async fn main() -> Result<()> {
    let chain_id = client.chain_id().await?;
    println!("{:?}", chain_id);
 
-   Ok(())
-}
-```
-
-To connect to a custom GraphQL server, first use the [`SuiClient::default()`] and then set the URL of the server using the [`SuiClient::set_rpc_server()`] method.
-
-```rust
-use sui_graphql_client::SuiClient;
-use anyhow::Result;
-
-#[tokio::main]
-async fn main() -> Result<()> {
-
-   // Connect to default testnet GraphQL server
-   let mut client = SuiClient::default();
    // Change the GraphQL server URL
-   client.set_url("http://localhost:8000/graphql");
+   client.set_rpc_server("http://localhost:8000/graphql");
    let chain_id = client.chain_id().await?;
    println!("{:?}", chain_id);
 
    Ok(())
-}
-```
-
-
-## Custom HTTP Client
-To use a custom HTTP client, implement the `HttpClient` trait. The `post` method should
-be implemented to send a POST request to the GraphQL server. A `SuiClient` should be created
-using the [`SuiClient::new_with_http_client`] method.
-
-```rust
-
-use anyhow::Result;
-use async_trait::async_trait;
-use cynic::{serde, GraphQlResponse, Operation};
-use sui_graphql_client::{HttpClient, SuiClient};
-use surf::Client as SurfClient;
-
-pub struct SurfHttpClient {
-    client: SurfClient,
-}
-
-impl SurfHttpClient {
-    pub fn new() -> Self {
-        Self {
-            client: SurfClient::new(),
-        }
-    }
-}
-
-#[async_trait]
-impl HttpClient for SurfHttpClient {
-    async fn post<
-        T: serde::de::DeserializeOwned + Send,
-        V: serde::Serialize + Send + std::marker::Sync,
-    >(
-        &self,
-        url: &str,
-        operation: &Operation<T, V>,
-    ) -> Result<GraphQlResponse<T>> {
-        let mut res = self
-            .client
-            .post(url)
-            .header("Content-Type", "application/json")
-            .body(surf::Body::from_json(&operation).expect("Failed to serialize operation"))
-            .await
-            .expect("Failed to send request");
-        let graphql_response: cynic::GraphQlResponse<T> =
-            res.body_json().await.expect("Failed to parse response");
-
-        Ok(graphql_response)
-    }
-}
-
-#[tokio::main]
-async fn main() {
-    let client = SuiClient::new_with_http_client(SurfHttpClient::new());
-    let chain_id = client.chain_id().await;
-    println!("{:?}", chain_id);
 }
 ```
 
@@ -215,7 +143,6 @@ pub struct ChainIdQuery {
 #[tokio::main]
 async fn main() -> Result<()> {
     let mut client = SuiClient::default();
-    // client.set_localhost();
     client.set_devnet();
     client.set_version(Some("beta"));
 

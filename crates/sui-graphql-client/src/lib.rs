@@ -17,7 +17,6 @@ use sui_types::types::{
 };
 
 use anyhow::{ensure, Error, Result};
-use async_trait::async_trait;
 use cynic::{serde, GraphQlResponse, Operation, QueryBuilder};
 use reqwest::Client;
 
@@ -28,27 +27,10 @@ use crate::graphql_types::{
 const MAINNET_HOST: &str = "https://sui-mainnet.mystenlabs.com/graphql";
 const TESTNET_HOST: &str = "https://sui-testnet.mystenlabs.com/graphql";
 const DEVNET_HOST: &str = "https://sui-devnet.mystenlabs.com/graphql";
-const LOCAL_HOST: &str = "http://localhost:9125/graphql";
-
-/// The `HttpClient` trait defines the interface for the HTTP client used by the SuiClient to make
-/// requests to the GraphQL server.
-#[async_trait]
-pub trait HttpClient {
-    /// Send a POST request to the GraphQL server with the provided URL and query data.
-    ///
-    /// The response is deserialized into a [`cynic::GraphQlResponse`] object.
-    async fn post<
-        T: serde::de::DeserializeOwned + Send,
-        V: serde::Serialize + Send + std::marker::Sync,
-    >(
-        &self,
-        url: &str,
-        operation: &Operation<T, V>,
-    ) -> Result<GraphQlResponse<T>>;
-}
+const DEFAULT_LOCAL_HOST: &str = "http://localhost:9125/graphql";
 
 /// An HTTP client based on reqwest
-pub struct ReqwestHttpClient {
+struct ReqwestHttpClient {
     inner: Client,
 }
 
@@ -58,10 +40,7 @@ impl ReqwestHttpClient {
             inner: Client::new(),
         }
     }
-}
 
-#[async_trait::async_trait]
-impl HttpClient for ReqwestHttpClient {
     async fn post<
         T: serde::de::DeserializeOwned + Send,
         V: serde::Serialize + Send + std::marker::Sync,
@@ -103,18 +82,17 @@ impl<T> Page<T> {
 }
 
 /// The SuiClient is a GraphQL client for interacting with the Sui blockchain.
-/// By default, it uses Reqwest as the HTTP client but a custom client can be provided by
-/// implementing the `HttpClient` trait.
-pub struct SuiClient<C: HttpClient> {
+/// By default, it uses Reqwest as the HTTP client.
+pub struct SuiClient {
     /// The URL of the GraphQL server.
     rpc: String,
     /// GraphQL supports multiple versions of the service. By default, the client uses the stable
     /// version of the service.
     rpc_version: Option<String>,
-    inner: C,
+    inner: ReqwestHttpClient,
 }
 
-impl Default for SuiClient<ReqwestHttpClient> {
+impl Default for SuiClient {
     /// Create a new [`SuiClient`] with testnet as the default GraphQL server.
     fn default() -> Self {
         Self {
@@ -125,21 +103,10 @@ impl Default for SuiClient<ReqwestHttpClient> {
     }
 }
 
-impl<C: HttpClient> SuiClient<C> {
+impl SuiClient {
     // ===========================================================================
     // Client Misc API
     // ===========================================================================
-
-    /// Create a new SuiClient with a custom HTTP client.
-    pub fn new_with_http_client(http_client: C) -> Self {
-        Self {
-            rpc: TESTNET_HOST
-                .parse()
-                .expect("Cannot parse GraphQL server host"),
-            rpc_version: None,
-            inner: http_client,
-        }
-    }
 
     /// Set the server address for the GraphQL GraphQL client. It should be a valid URL with a host and
     /// optionally a port number.
@@ -168,7 +135,7 @@ impl<C: HttpClient> SuiClient<C> {
 
     /// Set the GraphQL to localhost and port 9125.
     pub fn set_localhost(&mut self) -> &Self {
-        self.rpc = LOCAL_HOST.to_string();
+        self.rpc = DEFAULT_LOCAL_HOST.to_string();
         self
     }
 
