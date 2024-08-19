@@ -111,6 +111,17 @@ pub struct TransactionBlockQuery {
 }
 
 #[derive(cynic::QueryFragment, Debug)]
+#[cynic(
+    schema = "rpc",
+    graphql_type = "Query",
+    variables = "TransactionBlocksQueryArgs"
+)]
+pub struct TransactionBlocksQuery {
+    #[arguments(first: $first, after: $after, last: $last, before: $before, filter: $filter)]
+    pub transaction_blocks: TransactionBlockConnection,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "Query", variables = "ObjectsQueryArgs")]
 pub struct ObjectsQuery {
     #[arguments(after: $after, before: $before, filter: $filter, first: $first, last: $last)]
@@ -170,13 +181,13 @@ pub struct EventsQueryArgs {
     pub last: Option<i32>,
 }
 
-#[derive(cynic::InputObject, Debug)]
-#[cynic(schema = "rpc", graphql_type = "EventFilter")]
-pub struct EventFilter {
-    pub emitting_module: Option<String>,
-    pub event_type: Option<String>,
-    pub sender: Option<SuiAddress>,
-    pub transaction_digest: Option<String>,
+#[derive(cynic::QueryVariables, Debug)]
+pub struct TransactionBlocksQueryArgs {
+    pub first: Option<i32>,
+    pub after: Option<String>,
+    pub last: Option<i32>,
+    pub before: Option<String>,
+    pub filter: Option<TransactionsFilter>,
 }
 
 // ===========================================================================
@@ -402,6 +413,44 @@ pub struct ProtocolConfigAttr {
 #[cynic(schema = "rpc", graphql_type = "TransactionBlock")]
 pub struct TransactionBlock {
     pub bcs: Option<Base64>,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "TransactionBlockConnection")]
+pub struct TransactionBlockConnection {
+    pub nodes: Vec<TransactionBlock>,
+    pub page_info: PageInfo,
+}
+
+#[derive(cynic::Enum, Clone, Copy, Debug)]
+#[cynic(
+    schema = "rpc",
+    graphql_type = "TransactionBlockKindInput",
+    rename_all = "SCREAMING_SNAKE_CASE"
+)]
+pub enum TransactionBlockKindInput {
+    SystemTx,
+    ProgrammableTx,
+}
+
+#[derive(cynic::InputObject, Debug)]
+#[cynic(schema = "rpc", graphql_type = "TransactionBlockFilter")]
+pub struct TransactionsFilter {
+    pub function: Option<String>,
+    pub kind: Option<TransactionBlockKindInput>,
+    pub at_checkpoint: Option<Uint53>,
+    pub before_checkpoint: Option<Uint53>,
+    pub changed_object: Option<SuiAddress>,
+    pub input_object: Option<SuiAddress>,
+    pub recv_address: Option<SuiAddress>,
+}
+#[derive(cynic::InputObject, Debug)]
+#[cynic(schema = "rpc", graphql_type = "EventFilter")]
+pub struct EventFilter {
+    pub emitting_module: Option<String>,
+    pub event_type: Option<String>,
+    pub sender: Option<SuiAddress>,
+    pub transaction_digest: Option<String>,
 }
 
 // ===========================================================================

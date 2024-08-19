@@ -10,7 +10,8 @@ use graphql_types::{
     ChainIdentifierQuery, CheckpointArgs, CheckpointId, CheckpointQuery, CoinMetadata,
     CoinMetadataArgs, EpochSummaryArgs, EpochSummaryQuery, EventFilter, ObjectFilter, ObjectQuery,
     ObjectQueryArgs, PageInfo, ProtocolConfigQuery, ProtocolConfigs, ProtocolVersionArgs,
-    ServiceConfig, ServiceConfigQuery, TransactionBlockArgs, TransactionBlockQuery, Uint53,
+    ServiceConfig, ServiceConfigQuery, TransactionBlockArgs, TransactionBlockQuery,
+    TransactionBlocksQuery, TransactionBlocksQueryArgs, TransactionsFilter, Uint53,
 };
 use sui_types::types::{
     Address, CheckpointSequenceNumber, CheckpointSummary, Event, Object, SignedTransaction,
@@ -546,5 +547,51 @@ impl Client {
             .and_then(|tb| tb.bcs)
             .map(|bcs| bcs::from_bytes::<SignedTransaction>(bcs.0.as_bytes()).unwrap());
         Ok(signed_tx)
+    }
+
+    pub async fn transactions(
+        &self,
+        after: Option<String>,
+        before: Option<String>,
+        first: Option<i32>,
+        last: Option<i32>,
+        filter: Option<TransactionsFilter>,
+    ) -> Result<Option<Page<SignedTransaction>>, Error> {
+        let operation = TransactionBlocksQuery::build(TransactionBlocksQueryArgs {
+            after,
+            before,
+            filter,
+            first,
+            last,
+        });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(txb) = response.data {
+            let txc = txb.transaction_blocks;
+            let page_info = txc.page_info;
+            let bcs = txc
+                .nodes
+                .iter()
+                .map(|tx| &tx.bcs)
+                .filter_map(|b64| {
+                    b64.as_ref()
+                        .map(|b| base64ct::Base64::decode_vec(b.0.as_str()))
+                })
+                .collect::<Result<Vec<_>, base64ct::Error>>()
+                .map_err(|e| {
+                    Error::msg(format!("Cannot decode Base64 transaction bcs bytes: {e}"))
+                })?;
+
+            let transactions = bcs
+                .iter()
+                .map(|tx| bcs::from_bytes::<SignedTransaction>(tx))
+                .collect::<Result<Vec<_>, bcs::Error>>()
+                .map_err(|e| Error::msg(format!("Cannot decode bcs bytes into Object: {e}")))?;
+            let page = Page::new(page_info, transactions);
+            Ok(Some(page))
+        } else {
+            Ok(None)
+        }
     }
 }
