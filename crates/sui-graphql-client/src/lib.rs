@@ -127,34 +127,23 @@ impl Client {
         }
     }
 
-    async fn post<
-        T: serde::de::DeserializeOwned + Send,
-        V: serde::Serialize + Send + std::marker::Sync,
-    >(
-        &self,
-        url: &str,
-        operation: &Operation<T, V>,
-    ) -> Result<GraphQlResponse<T>> {
+    /// Run a query on the GraphQL server and return the response.
+    /// This method returns [`cynic::GraphQlResponse`]  over the query type `T`, and it is
+    /// intended to be used with custom queries.
+    pub async fn run_query<T, V>(&self, operation: &Operation<T, V>) -> Result<GraphQlResponse<T>>
+    where
+        T: serde::de::DeserializeOwned,
+        V: serde::Serialize,
+    {
         let res = self
             .inner
-            .post(url)
+            .post(&self.url())
             .json(&operation)
             .send()
             .await?
             .json::<GraphQlResponse<T>>()
             .await?;
         Ok(res)
-    }
-
-    /// Run a query on the GraphQL server and return the response.
-    /// This method returns [`cynic::GraphQlResponse`]  over the query type `T`, and it is
-    /// intended to be used with custom queries.
-    pub async fn run_query<T, V>(&self, operation: &Operation<T, V>) -> Result<GraphQlResponse<T>>
-    where
-        T: serde::de::DeserializeOwned + std::marker::Send,
-        V: serde::Serialize + std::marker::Sync + std::marker::Send,
-    {
-        self.post(&self.url(), operation).await
     }
 
     // ===========================================================================
