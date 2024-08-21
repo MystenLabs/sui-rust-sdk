@@ -47,13 +47,14 @@ impl std::str::FromStr for TypeTag {
     type Err = TypeParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        parse::parse_type_tag(s).map_err(|_| TypeParseError)
+        parse::parse_type_tag(s).map_err(|_| TypeParseError { source: s.into() })
     }
 }
 
-//TODO flesh out this error type
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct TypeParseError;
+pub struct TypeParseError {
+    source: String,
+}
 
 impl std::fmt::Display for TypeParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -80,7 +81,9 @@ impl Identifier {
     pub fn new<T: AsRef<str>>(identifier: T) -> Result<Self, TypeParseError> {
         parse::parse_identifier(identifier.as_ref())
             .map(|ident| Self(ident.into()))
-            .map_err(|_| TypeParseError)
+            .map_err(|_| TypeParseError {
+                source: identifier.as_ref().into(),
+            })
     }
 
     pub fn into_inner(self) -> Box<str> {
@@ -104,7 +107,7 @@ impl std::str::FromStr for Identifier {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         parse::parse_identifier(s)
             .map(|ident| Self(ident.into()))
-            .map_err(|_| TypeParseError)
+            .map_err(|_| TypeParseError { source: s.into() })
     }
 }
 
@@ -192,6 +195,6 @@ impl std::str::FromStr for StructTag {
     type Err = TypeParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        parse::parse_struct_tag(s).map_err(|_| TypeParseError)
+        parse::parse_struct_tag(s).map_err(|_| TypeParseError { source: s.into() })
     }
 }
