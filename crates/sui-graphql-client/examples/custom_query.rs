@@ -1,8 +1,13 @@
+// Copyright (c) Mysten Labs, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
 use anyhow::Result;
 use cynic::QueryBuilder;
 
-use sui_graphql_client::graphql_types::{schema, BigInt, Uint53};
-use sui_graphql_client::Client;
+use sui_graphql_client::{
+    query_types::{schema, BigInt, Uint53},
+    Client,
+};
 
 // The data returned by the custom query.
 #[derive(cynic::QueryFragment, Debug)]
@@ -22,6 +27,7 @@ pub struct EpochData {
 pub struct CustomVariables {
     pub id: Option<Uint53>,
 }
+
 // The custom query. Note that the variables need to be explicitly declared.
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "Query", variables = "CustomVariables")]

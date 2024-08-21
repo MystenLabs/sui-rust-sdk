@@ -3,13 +3,14 @@
 
 #![doc = include_str!("../README.md")]
 
-pub mod graphql_types;
+pub mod query_types;
 
 use base64ct::Encoding;
-use graphql_types::{
+use query_types::{
     ChainIdentifierQuery, CheckpointArgs, CheckpointId, CheckpointQuery, CoinMetadata,
-    CoinMetadataArgs, EpochSummaryArgs, EpochSummaryQuery, EventFilter, ObjectFilter, ObjectQuery,
-    ObjectQueryArgs, PageInfo, ProtocolConfigQuery, ProtocolConfigs, ProtocolVersionArgs,
+    CoinMetadataArgs, CoinMetadataQuery, EpochSummaryArgs, EpochSummaryQuery, EventFilter,
+    EventsQuery, EventsQueryArgs, ObjectFilter, ObjectQuery, ObjectQueryArgs, ObjectsQuery,
+    ObjectsQueryArgs, PageInfo, ProtocolConfigQuery, ProtocolConfigs, ProtocolVersionArgs,
     ServiceConfig, ServiceConfigQuery, TransactionBlockArgs, TransactionBlockQuery,
     TransactionBlocksQuery, TransactionBlocksQueryArgs, TransactionsFilter, Uint53,
 };
@@ -19,10 +20,6 @@ use sui_types::types::{
 
 use anyhow::{anyhow, ensure, Error, Result};
 use cynic::{serde, GraphQlResponse, Operation, QueryBuilder};
-
-use crate::graphql_types::{
-    CoinMetadataQuery, EventsQuery, EventsQueryArgs, ObjectsQuery, ObjectsQueryArgs,
-};
 
 const MAINNET_HOST: &str = "https://sui-mainnet.mystenlabs.com/graphql";
 const TESTNET_HOST: &str = "https://sui-testnet.mystenlabs.com/graphql";
@@ -192,7 +189,7 @@ impl Client {
         }
     }
 
-    // TODO: implement
+    /// Get the protocol configuration.
     pub async fn protocol_config(
         &self,
         version: Option<u64>,
@@ -276,7 +273,7 @@ impl Client {
             .ok_or_else(|| Error::msg("No data in response"))?
     }
 
-    // TODO: implement
+    // TODO: implement, does not have bcs field in GraphQL
     pub async fn checkpoints(&self) {
         todo!()
     }
@@ -538,6 +535,7 @@ impl Client {
         Ok(signed_tx)
     }
 
+    /// Get a page of transactions based on the provided filters.
     pub async fn transactions(
         &self,
         after: Option<String>,
