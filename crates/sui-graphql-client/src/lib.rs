@@ -134,7 +134,7 @@ impl Client {
     {
         let res = self
             .inner
-            .post(&self.url())
+            .post(self.url())
             .json(&operation)
             .send()
             .await?
