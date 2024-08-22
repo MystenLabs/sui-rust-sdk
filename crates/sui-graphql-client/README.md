@@ -23,7 +23,7 @@ use anyhow::Result;
 async fn main() -> Result<()> {
 
    // Connect to the mainnet GraphQL server
-   let client = Client::new_mainnet()?;
+   let client = Client::new_mainnet();
    let chain_id = client.chain_id().await?;
    println!("{:?}", chain_id);
 
@@ -134,8 +134,8 @@ pub struct ChainIdQuery {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let mut client = Client::new_devnet()?;
-    client.set_version(Some("beta"));
+    let mut client = Client::new_devnet();
+    client.set_version(Some("beta"))?;
 
     // Query the data for the last known epoch. Note that id variable is None, so last epoch data
     // will be returned.

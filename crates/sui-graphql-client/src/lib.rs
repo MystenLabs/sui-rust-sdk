@@ -14,6 +14,7 @@ use query_types::{
     ServiceConfig, ServiceConfigQuery, TransactionBlockArgs, TransactionBlockQuery,
     TransactionBlocksQuery, TransactionBlocksQueryArgs, TransactionsFilter, Uint53,
 };
+use reqwest::Url;
 use sui_types::types::{
     Address, CheckpointSequenceNumber, CheckpointSummary, Event, Object, SignedTransaction,
 };
@@ -25,6 +26,7 @@ const MAINNET_HOST: &str = "https://sui-mainnet.mystenlabs.com/graphql";
 const TESTNET_HOST: &str = "https://sui-testnet.mystenlabs.com/graphql";
 const DEVNET_HOST: &str = "https://sui-devnet.mystenlabs.com/graphql";
 const DEFAULT_LOCAL_HOST: &str = "http://localhost:9125/graphql";
+static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
 #[derive(Debug)]
 /// A page of items returned by the GraphQL server.
@@ -53,7 +55,7 @@ impl<T> Page<T> {
 /// By default, it uses Reqwest as the HTTP client.
 pub struct Client {
     /// The URL of the GraphQL server.
-    rpc: String,
+    rpc: Url,
     /// GraphQL supports multiple versions of the service. By default, the client uses the stable
     /// version of the service.
     rpc_version: Option<String>,
@@ -67,61 +69,88 @@ impl Client {
 
     /// Create a new GraphQL client with the provided server address.
     pub fn new(server: &str) -> Result<Self, Error> {
-        reqwest::Url::parse(server).map_err(|_| anyhow!("Invalid URL: {}", server))?;
+        let rpc = reqwest::Url::parse(server).map_err(|_| anyhow!("Invalid URL: {}", server))?;
 
         let client = Client {
-            rpc: server.to_string(),
+            rpc,
             rpc_version: None,
-            inner: reqwest::Client::new(),
+            inner: reqwest::Client::builder().user_agent(USER_AGENT).build()?,
         };
         Ok(client)
     }
 
     /// Create a new GraphQL client connected to the `mainnet` GraphQL server: {MAINNET_HOST}.
-    pub fn new_mainnet() -> Result<Self, Error> {
-        Self::new(MAINNET_HOST)
+    pub fn new_mainnet() -> Self {
+        Self::new(MAINNET_HOST).expect("Invalid mainnet URL")
     }
 
     /// Create a new GraphQL client connected to the `testnet` GraphQL server: {TESTNET_HOST}.
-    pub fn new_testnet() -> Result<Self, Error> {
-        Self::new(TESTNET_HOST)
+    pub fn new_testnet() -> Self {
+        Self::new(TESTNET_HOST).expect("Invalid testnet URL")
     }
 
     /// Create a new GraphQL client connected to the `devnet` GraphQL server: {DEVNET_HOST}.
-    pub fn new_devnet() -> Result<Self, Error> {
-        Self::new(DEVNET_HOST)
+    pub fn new_devnet() -> Self {
+        Self::new(DEVNET_HOST).expect("Invalid devnet URL")
     }
 
     /// Create a new GraphQL client connected to the `localhost` GraphQL server:
     /// {DEFAULT_LOCAL_HOST}.
-    pub fn new_localhost(&mut self) -> Result<Self, Error> {
-        Self::new(DEFAULT_LOCAL_HOST)
+    pub fn new_localhost(&mut self) -> Self {
+        Self::new(DEFAULT_LOCAL_HOST).expect("Invalid localhost URL")
     }
 
     /// Set the version for the GraphQL GraphQL client. The default set version is stable.
     ///
     /// Use the `service_config` API to get the `available_versions` field to know which versions
     /// are supported by this service.
-    pub fn set_version(&mut self, version: Option<&str>) -> &mut Self {
+    pub fn set_version(&mut self, version: Option<&str>) -> Result<&mut Self, Error> {
+        match (&self.rpc_version, version) {
+            // prev version needs to be switched with the new requested version
+            (Some(_), Some(new_v)) => {
+                let mut segments = self.rpc.path_segments_mut().map_err(|_| {
+                    anyhow!("Cannot get the path segments to add a version to the rpc URL")
+                })?;
+                segments.pop();
+                segments.push(new_v);
+            }
+            // no previous set version, just set the requested version
+            (None, Some(new_v)) => {
+                println!("New version: {}", new_v);
+                let mut segments = self.rpc.path_segments_mut().map_err(|_| {
+                    anyhow!("Cannot get the path segments to add a version to the rpc URL")
+                })?;
+                segments.push(new_v);
+            }
+            // request to set version to nothing
+            (Some(_), None) => {
+                let mut segments = self.rpc.path_segments_mut().map_err(|_| {
+                    anyhow!("Cannot get the path segments to add a version to the rpc URL")
+                })?;
+                segments.pop();
+            }
+            (None, None) => { /* no_op */ }
+        }
         self.rpc_version = version.map(|v| v.to_string());
-        self
+        Ok(self)
     }
 
     /// Set the server address for the GraphQL GraphQL client. It should be a valid URL with a host and
     /// optionally a port number.
     pub fn set_rpc_server(&mut self, server: &str) -> Result<&mut Self, Error> {
-        reqwest::Url::parse(server)?;
-        self.rpc = server.to_string();
+        let rpc = reqwest::Url::parse(server)?;
+        self.rpc = rpc;
         Ok(self)
     }
 
-    /// Return the URL for the GraphQL GraphQL client after checking if the version is set.
-    fn url(&self) -> String {
-        if let Some(version) = &self.rpc_version {
-            format!("{}/{}", self.rpc, version)
-        } else {
-            self.rpc.to_string()
-        }
+    /// Get the version if it is set, or None otherwise.
+    pub fn version(&self) -> Option<&str> {
+        self.rpc_version.as_deref()
+    }
+
+    /// Return the URL for the GraphQL server.
+    fn rpc_server(&self) -> &str {
+        self.rpc.as_str()
     }
 
     /// Run a query on the GraphQL server and return the response.
@@ -134,7 +163,7 @@ impl Client {
     {
         let res = self
             .inner
-            .post(self.url())
+            .post(self.rpc_server())
             .json(&operation)
             .send()
             .await?
@@ -218,15 +247,32 @@ impl Client {
     // ===========================================================================
 
     // TODO: implement
-    /// Get the total balance of an address.
-    ///
-    pub async fn total_balance(&self, _address: Address) -> Result<Option<u64>, Error> {
+    /// Get the total balance of an address for a coin type.
+    pub async fn balance(
+        &self,
+        _address: Address,
+        _coin_type: Option<&str>,
+    ) -> Result<Option<u128>, Error> {
         todo!()
     }
 
     // ===========================================================================
     // Coin API
     // ===========================================================================
+
+    // TODO: implement
+    pub async fn coins(
+        &self,
+        _address: Address,
+        _coin_type: Option<&str>,
+    ) -> Result<Option<Page<Object>>, Error> {
+        Ok(None)
+    }
+
+    // TODO: implement
+    pub async fn all_coins(&self, _address: Address) -> Result<Option<Page<Object>>, Error> {
+        Ok(None)
+    }
 
     pub async fn coin_metadata(&self, coin_type: &str) -> Result<Option<CoinMetadata>, Error> {
         let operation = CoinMetadataQuery::build(CoinMetadataArgs { coin_type });
@@ -580,5 +626,33 @@ impl Client {
         } else {
             Ok(None)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{Client, DEVNET_HOST, MAINNET_HOST, TESTNET_HOST};
+
+    #[test]
+    fn test_rpc_server() {
+        let mut client = Client::new_mainnet();
+        assert_eq!(client.rpc_server(), MAINNET_HOST);
+        client.set_rpc_server(TESTNET_HOST).unwrap();
+        assert_eq!(client.rpc_server(), TESTNET_HOST);
+        client.set_rpc_server(DEVNET_HOST).unwrap();
+        assert_eq!(client.rpc_server(), DEVNET_HOST);
+    }
+
+    #[test]
+    fn test_rpc_version() {
+        let mut client = Client::new_mainnet();
+
+        client.set_version(Some("beta")).unwrap();
+        assert_eq!(client.rpc_version, Some("beta".to_string()));
+        assert_eq!(client.rpc_server(), vec![MAINNET_HOST, "beta"].join("/"));
+
+        client.set_version(None).unwrap();
+        assert_eq!(client.rpc_version, None);
+        assert_eq!(client.rpc_server(), MAINNET_HOST);
     }
 }
