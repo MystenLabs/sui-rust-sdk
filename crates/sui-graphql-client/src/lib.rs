@@ -51,8 +51,8 @@ impl<T> Page<T> {
     }
 }
 
-/// The Client is a GraphQL client for interacting with the Sui blockchain.
-/// By default, it uses Reqwest as the HTTP client.
+/// The GraphQL client for interacting with the Sui blockchain.
+/// By default, it uses the `reqwest` crate as the HTTP client.
 pub struct Client {
     /// The URL of the GraphQL server.
     rpc: Url,
