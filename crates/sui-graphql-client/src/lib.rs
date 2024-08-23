@@ -649,7 +649,7 @@ mod tests {
 
         client.set_version(Some("beta")).unwrap();
         assert_eq!(client.rpc_version, Some("beta".to_string()));
-        assert_eq!(client.rpc_server(), vec![MAINNET_HOST, "beta"].join("/"));
+        assert_eq!(client.rpc_server(), [MAINNET_HOST, "beta"].join("/"));
 
         client.set_version(None).unwrap();
         assert_eq!(client.rpc_version, None);
