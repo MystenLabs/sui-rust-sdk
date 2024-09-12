@@ -56,9 +56,7 @@ impl<T> Page<T> {
 pub struct Client {
     /// The URL of the GraphQL server.
     rpc: Url,
-    /// GraphQL supports multiple versions of the service. By default, the client uses the stable
-    /// version of the service.
-    rpc_version: Option<String>,
+    /// The reqwest client.
     inner: reqwest::Client,
 }
 
@@ -73,7 +71,6 @@ impl Client {
 
         let client = Client {
             rpc,
-            rpc_version: None,
             inner: reqwest::Client::builder().user_agent(USER_AGENT).build()?,
         };
         Ok(client)
@@ -96,56 +93,16 @@ impl Client {
 
     /// Create a new GraphQL client connected to the `localhost` GraphQL server:
     /// {DEFAULT_LOCAL_HOST}.
-    pub fn new_localhost(&mut self) -> Self {
+    pub fn new_localhost() -> Self {
         Self::new(DEFAULT_LOCAL_HOST).expect("Invalid localhost URL")
-    }
-
-    /// Set the version for the GraphQL GraphQL client. The default set version is stable.
-    ///
-    /// Use the `service_config` API to get the `available_versions` field to know which versions
-    /// are supported by this service.
-    pub fn set_version(&mut self, version: Option<&str>) -> Result<&mut Self, Error> {
-        match (&self.rpc_version, version) {
-            // prev version needs to be switched with the new requested version
-            (Some(_), Some(new_v)) => {
-                let mut segments = self.rpc.path_segments_mut().map_err(|_| {
-                    anyhow!("Cannot get the path segments to add a version to the rpc URL")
-                })?;
-                segments.pop();
-                segments.push(new_v);
-            }
-            // no previous set version, just set the requested version
-            (None, Some(new_v)) => {
-                println!("New version: {}", new_v);
-                let mut segments = self.rpc.path_segments_mut().map_err(|_| {
-                    anyhow!("Cannot get the path segments to add a version to the rpc URL")
-                })?;
-                segments.push(new_v);
-            }
-            // request to set version to nothing
-            (Some(_), None) => {
-                let mut segments = self.rpc.path_segments_mut().map_err(|_| {
-                    anyhow!("Cannot get the path segments to add a version to the rpc URL")
-                })?;
-                segments.pop();
-            }
-            (None, None) => { /* no_op */ }
-        }
-        self.rpc_version = version.map(|v| v.to_string());
-        Ok(self)
     }
 
     /// Set the server address for the GraphQL GraphQL client. It should be a valid URL with a host and
     /// optionally a port number.
-    pub fn set_rpc_server(&mut self, server: &str) -> Result<&mut Self, Error> {
+    pub fn set_rpc_server(&mut self, server: &str) -> Result<(), Error> {
         let rpc = reqwest::Url::parse(server)?;
         self.rpc = rpc;
-        Ok(self)
-    }
-
-    /// Get the version if it is set, or None otherwise.
-    pub fn version(&self) -> Option<&str> {
-        self.rpc_version.as_deref()
+        Ok(())
     }
 
     /// Return the URL for the GraphQL server.
@@ -631,7 +588,7 @@ impl Client {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Client, DEVNET_HOST, MAINNET_HOST, TESTNET_HOST};
+    use crate::{Client, DEFAULT_LOCAL_HOST, DEVNET_HOST, MAINNET_HOST, TESTNET_HOST};
 
     #[test]
     fn test_rpc_server() {
@@ -641,18 +598,10 @@ mod tests {
         assert_eq!(client.rpc_server(), TESTNET_HOST);
         client.set_rpc_server(DEVNET_HOST).unwrap();
         assert_eq!(client.rpc_server(), DEVNET_HOST);
-    }
+        client.set_rpc_server(DEFAULT_LOCAL_HOST).unwrap();
+        assert_eq!(client.rpc_server(), DEFAULT_LOCAL_HOST);
 
-    #[test]
-    fn test_rpc_version() {
-        let mut client = Client::new_mainnet();
-
-        client.set_version(Some("beta")).unwrap();
-        assert_eq!(client.rpc_version, Some("beta".to_string()));
-        assert_eq!(client.rpc_server(), [MAINNET_HOST, "beta"].join("/"));
-
-        client.set_version(None).unwrap();
-        assert_eq!(client.rpc_version, None);
-        assert_eq!(client.rpc_server(), MAINNET_HOST);
+        assert!(client.set_rpc_server("localhost:9125/graphql").is_ok());
+        assert!(client.set_rpc_server("9125/graphql").is_err());
     }
 }

@@ -8,7 +8,6 @@ executing transactions and more.
 1. **Type Safety**: The client uses the `cynic` library to generate types from the schema. This ensures that the queries are type-safe.
 1. **Convenience**: The client provides a set of APIs for common queries such as chain identifier, reference gas price, protocol configuration, service configuration, checkpoint, epoch, executing transactions and more.
 1. **Custom Queries**: The client provides a way to run custom queries using the `cynic` library.
-1. **Version Support**: The Sui GraphQL RPC server supports several versions for each network (at least for Mysten's public nodes). The client provides a way to set the version of the server to connect to. By default, if you are using the SDK it will support the stable version of the service. Please note that the legacy and beta versions are not supported out of the box and you would likely need to build your own custom queries.
 
 # Usage
 
@@ -135,7 +134,6 @@ pub struct ChainIdQuery {
 #[tokio::main]
 async fn main() -> Result<()> {
     let mut client = Client::new_devnet();
-    client.set_version(Some("beta"))?;
 
     // Query the data for the last known epoch. Note that id variable is None, so last epoch data
     // will be returned.
