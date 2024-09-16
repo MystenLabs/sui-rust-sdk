@@ -1,0 +1,5 @@
+query EpochTotalCheckpoints($id: UInt53){
+  epoch(id: $id) {
+    totalCheckpoints
+  }
+}

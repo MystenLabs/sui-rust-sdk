@@ -1,0 +1,23 @@
+[package]
+name = "sui-graphql-client"
+version = "0.1.0"
+authors = ["Stefan Stanciulescu <stefan@mystenlabs.com>", "Brandon Williams <brandon@mystenlabs.com>"]
+license = "Apache-2.0"
+edition = "2021"
+publish = false
+readme = "README.md"
+description = "Sui GraphQL RPC Client for the Sui Blockchain"
+
+[dependencies]
+anyhow = "1.0.86"
+async-trait = "0.1.81"
+base64ct = { version = "1.6.0", features = ["alloc"] }
+bcs = "0.1.6"
+chrono = { version = "0.4.38" }
+cynic = { version = "3.7.3" }
+reqwest = { version = "0.12", features = ["json"] }
+sui-types = { package= "sui-sdk", path = "../sui-sdk", features = ["serde"] }
+tokio = { version = "1.39.2", features = ["full"] }
+
+[build-dependencies]
+cynic-codegen = { version = "3.7.3" }

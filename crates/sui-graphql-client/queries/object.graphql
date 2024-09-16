@@ -1,0 +1,6 @@
+query ObjectQuery($address: SuiAddress!, $version: UInt53) {
+  object(address: $address, version: $version) {
+    bcs
+  }
+}
+
