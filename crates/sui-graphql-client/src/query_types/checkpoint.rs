@@ -61,6 +61,7 @@ pub struct GasCostSummary {
     pub storage_rebate: Option<BigInt>,
 }
 
+// TODO need bcs in GraphQL Checkpoint to avoid this conversion
 impl TryInto<CheckpointSummary> for Checkpoint {
     type Error = anyhow::Error;
 

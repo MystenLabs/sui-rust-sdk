@@ -148,11 +148,6 @@ impl Client {
             .ok_or_else(|| Error::msg("No data in response"))
     }
 
-    // TODO: implement
-    pub async fn committee_info(&self, _epoch: Option<u64>) {
-        todo!()
-    }
-
     /// Get the reference gas price for the provided epoch or the last known one if no epoch is
     /// provided.
     ///
@@ -200,36 +195,8 @@ impl Client {
     }
 
     // ===========================================================================
-    // Balance API
-    // ===========================================================================
-
-    // TODO: implement
-    /// Get the total balance of an address for a coin type.
-    pub async fn balance(
-        &self,
-        _address: Address,
-        _coin_type: Option<&str>,
-    ) -> Result<Option<u128>, Error> {
-        todo!()
-    }
-
-    // ===========================================================================
     // Coin API
     // ===========================================================================
-
-    // TODO: implement
-    pub async fn coins(
-        &self,
-        _address: Address,
-        _coin_type: Option<&str>,
-    ) -> Result<Option<Page<Object>>, Error> {
-        Ok(None)
-    }
-
-    // TODO: implement
-    pub async fn all_coins(&self, _address: Address) -> Result<Option<Page<Object>>, Error> {
-        Ok(None)
-    }
 
     pub async fn coin_metadata(&self, coin_type: &str) -> Result<Option<CoinMetadata>, Error> {
         let operation = CoinMetadataQuery::build(CoinMetadataArgs { coin_type });
@@ -274,11 +241,6 @@ impl Client {
             .data
             .map(|c| c.checkpoint.map(|c| c.try_into()).transpose())
             .ok_or_else(|| Error::msg("No data in response"))?
-    }
-
-    // TODO: implement, does not have bcs field in GraphQL
-    pub async fn checkpoints(&self) {
-        todo!()
     }
 
     /// Return the sequence number of the latest checkpoint that has been executed.  
