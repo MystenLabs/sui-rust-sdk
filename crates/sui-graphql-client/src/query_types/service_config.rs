@@ -21,8 +21,6 @@ pub struct ServiceConfigQuery {
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "ServiceConfig")]
 pub struct ServiceConfig {
-    /// List the available versions for this GraphQL service.
-    pub available_versions: Vec<String>,
     /// Default number of elements allowed on a single page of a connection.
     pub default_page_size: i32,
     /// List of all features that are enabled on this RPC service.
@@ -80,4 +78,5 @@ pub enum Feature {
     NameService,
     Subscriptions,
     SystemState,
+    MoveRegistry,
 }
