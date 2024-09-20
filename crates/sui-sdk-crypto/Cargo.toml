@@ -1,0 +1,55 @@
+[package]
+name = "sui-sdk-crypto"
+version = "0.0.0"
+authors = ["Brandon Williams <brandon@mystenlabs.com>"]
+license = "Apache-2.0"
+edition = "2021"
+publish = false
+
+[package.metadata.docs.rs]
+# To build locally:
+# RUSTDOCFLAGS="--cfg=doc_cfg -Zunstable-options --generate-link-to-definition" RUSTC_BOOTSTRAP=1 cargo doc --all-features --no-deps --open
+all-features = true
+rustdoc-args = [
+    # Enable doc_cfg showing the required features.
+    "--cfg=doc_cfg",
+
+    # Generate links to definition in rustdoc source code pages
+    # https://github.com/rust-lang/rust/pull/84176
+    "-Zunstable-options", "--generate-link-to-definition"
+]
+
+[features]
+default = []
+rand = ["dep:rand_core"]
+ed25519 = ["dep:ed25519-dalek"]
+
+[dependencies]
+base64ct = { version = "1.6.0", features = ["alloc"] }
+bcs = { version = "0.1.6" }
+hex = "0.4.3"
+serde_json = { version = "1.0.114" }
+signature = "2.2"
+sui-sdk = { version = "0.0.0", path = "../sui-sdk", features = ["hash", "serde"] }
+
+# RNG support
+rand_core = { version = "0.6.4", optional = true }
+
+# ed25519 support
+ed25519-dalek = { version = "2.1.1", optional = true }
+
+[dev-dependencies]
+
+# proptest support in tests
+#
+# Pin to this specific commit in order to work around an issue where proptest doesn't build properly in wasm environments
+# see https://github.com/proptest-rs/proptest/pull/270 for more info
+proptest = { git = "https://github.com/bmwill/proptest.git", rev = "bc36db126183bce18c8bc595f0c0cfeac48b870c", default-features = false, features = ["std"] }
+test-strategy = "0.3.1"
+
+[target.wasm32-unknown-unknown.dev-dependencies]
+wasm-bindgen-test = "0.3"
+getrandom = { version = "0.2", features = ["js"] }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(doc_cfg)'] }
