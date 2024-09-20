@@ -5,6 +5,7 @@ all:: ci
 .PHONY: check-features
 check-features:
 	$(MAKE) -C crates/sui-sdk check-features
+	$(MAKE) -C crates/sui-sdk-crypto check-features
 
 .PHONY: check-fmt
 check-fmt:
@@ -22,6 +23,7 @@ test:
 .PHONY: wasm
 wasm:
 	$(MAKE) -C crates/sui-sdk wasm
+	$(MAKE) -C crates/sui-sdk-crypto wasm
 
 .PHONY: doc
 doc:
