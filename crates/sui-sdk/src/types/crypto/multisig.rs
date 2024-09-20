@@ -373,29 +373,8 @@ mod serialization {
                 };
                 readable.serialize(serializer)
             } else {
-                let mut buf = Vec::new();
-                buf.push(SignatureScheme::Multisig as u8);
-
-                if let Some(bitmap) = &self.legacy_bitmap {
-                    let legacy = LegacyMultisigRef {
-                        signatures: &self.signatures,
-                        bitmap,
-                        committee: LegacyMultisigCommitteeRef {
-                            members: &self.committee.members,
-                            threshold: self.committee.threshold,
-                        },
-                    };
-
-                    bcs::serialize_into(&mut buf, &legacy).expect("serialization cannot fail");
-                } else {
-                    let multisig = MultisigRef {
-                        signatures: &self.signatures,
-                        bitmap: self.bitmap,
-                        committee: &self.committee,
-                    };
-                    bcs::serialize_into(&mut buf, &multisig).expect("serialization cannot fail");
-                }
-                serializer.serialize_bytes(&buf)
+                let bytes = self.to_bytes();
+                serializer.serialize_bytes(&bytes)
             }
         }
     }
@@ -421,6 +400,32 @@ mod serialization {
     }
 
     impl MultisigAggregatedSignature {
+        pub(crate) fn to_bytes(&self) -> Vec<u8> {
+            let mut buf = Vec::new();
+            buf.push(SignatureScheme::Multisig as u8);
+
+            if let Some(bitmap) = &self.legacy_bitmap {
+                let legacy = LegacyMultisigRef {
+                    signatures: &self.signatures,
+                    bitmap,
+                    committee: LegacyMultisigCommitteeRef {
+                        members: &self.committee.members,
+                        threshold: self.committee.threshold,
+                    },
+                };
+
+                bcs::serialize_into(&mut buf, &legacy).expect("serialization cannot fail");
+            } else {
+                let multisig = MultisigRef {
+                    signatures: &self.signatures,
+                    bitmap: self.bitmap,
+                    committee: &self.committee,
+                };
+                bcs::serialize_into(&mut buf, &multisig).expect("serialization cannot fail");
+            }
+            buf
+        }
+
         pub(crate) fn from_serialized_bytes<T: AsRef<[u8]>, E: serde::de::Error>(
             bytes: T,
         ) -> Result<Self, E> {

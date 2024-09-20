@@ -352,20 +352,17 @@ mod serialization {
         where
             S: Serializer,
         {
-            let authenticator_ref = AuthenticatorRef {
-                inputs: &self.inputs,
-                max_epoch: self.max_epoch,
-                signature: &self.signature,
-            };
             if serializer.is_human_readable() {
+                let authenticator_ref = AuthenticatorRef {
+                    inputs: &self.inputs,
+                    max_epoch: self.max_epoch,
+                    signature: &self.signature,
+                };
+
                 authenticator_ref.serialize(serializer)
             } else {
-                let mut buf = Vec::new();
-                buf.push(SignatureScheme::ZkLogin as u8);
-
-                bcs::serialize_into(&mut buf, &authenticator_ref)
-                    .expect("serialization cannot fail");
-                serializer.serialize_bytes(&buf)
+                let bytes = self.to_bytes();
+                serializer.serialize_bytes(&bytes)
             }
         }
     }
@@ -394,6 +391,20 @@ mod serialization {
     }
 
     impl ZkLoginAuthenticator {
+        pub(crate) fn to_bytes(&self) -> Vec<u8> {
+            let authenticator_ref = AuthenticatorRef {
+                inputs: &self.inputs,
+                max_epoch: self.max_epoch,
+                signature: &self.signature,
+            };
+
+            let mut buf = Vec::new();
+            buf.push(SignatureScheme::ZkLogin as u8);
+
+            bcs::serialize_into(&mut buf, &authenticator_ref).expect("serialization cannot fail");
+            buf
+        }
+
         pub(crate) fn from_serialized_bytes<T: AsRef<[u8]>, E: serde::de::Error>(
             bytes: T,
         ) -> Result<Self, E> {
