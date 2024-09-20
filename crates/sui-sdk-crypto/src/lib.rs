@@ -14,8 +14,10 @@ pub mod ed25519;
 
 #[allow(unused)]
 mod bls12381;
-#[allow(unused)]
-mod secp256k1;
+
+#[cfg(feature = "secp256k1")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "secp256k1")))]
+pub mod secp256k1;
 
 #[cfg(feature = "secp256r1")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "secp256r1")))]
