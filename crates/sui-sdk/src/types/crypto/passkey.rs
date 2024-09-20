@@ -89,24 +89,20 @@ mod serialization {
         where
             S: Serializer,
         {
-            let authenticator_ref = AuthenticatorRef {
-                authenticator_data: &self.authenticator_data,
-                client_data_json: &self.client_data_json,
-                signature: SimpleSignature::Secp256r1 {
-                    signature: self.signature,
-                    public_key: self.public_key,
-                },
-            };
-
             if serializer.is_human_readable() {
+                let authenticator_ref = AuthenticatorRef {
+                    authenticator_data: &self.authenticator_data,
+                    client_data_json: &self.client_data_json,
+                    signature: SimpleSignature::Secp256r1 {
+                        signature: self.signature,
+                        public_key: self.public_key,
+                    },
+                };
+
                 authenticator_ref.serialize(serializer)
             } else {
-                let mut buf = Vec::new();
-                buf.push(SignatureScheme::Passkey as u8);
-
-                bcs::serialize_into(&mut buf, &authenticator_ref)
-                    .expect("serialization cannot fail");
-                serializer.serialize_bytes(&buf)
+                let bytes = self.to_bytes();
+                serializer.serialize_bytes(&bytes)
             }
         }
     }
@@ -196,6 +192,23 @@ mod serialization {
             let authenticator = bcs::from_bytes(bcs_bytes).map_err(serde::de::Error::custom)?;
 
             Self::try_from_raw(authenticator)
+        }
+
+        pub(crate) fn to_bytes(&self) -> Vec<u8> {
+            let authenticator_ref = AuthenticatorRef {
+                authenticator_data: &self.authenticator_data,
+                client_data_json: &self.client_data_json,
+                signature: SimpleSignature::Secp256r1 {
+                    signature: self.signature,
+                    public_key: self.public_key,
+                },
+            };
+
+            let mut buf = Vec::new();
+            buf.push(SignatureScheme::Passkey as u8);
+
+            bcs::serialize_into(&mut buf, &authenticator_ref).expect("serialization cannot fail");
+            buf
         }
     }
 
