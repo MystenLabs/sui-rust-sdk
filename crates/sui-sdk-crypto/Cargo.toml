@@ -23,6 +23,7 @@ rustdoc-args = [
 default = []
 rand = ["dep:rand_core"]
 ed25519 = ["dep:ed25519-dalek"]
+secp256r1 = ["dep:p256"]
 
 [dependencies]
 base64ct = { version = "1.6.0", features = ["alloc"] }
@@ -37,6 +38,9 @@ rand_core = { version = "0.6.4", optional = true }
 
 # ed25519 support
 ed25519-dalek = { version = "2.1.1", optional = true }
+
+# secp256r1 support
+p256 = { version = "0.13.2", default-features = false, features = ["ecdsa", "std"], optional = true }
 
 [dev-dependencies]
 
