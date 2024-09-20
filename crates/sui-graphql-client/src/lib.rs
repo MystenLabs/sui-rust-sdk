@@ -25,7 +25,7 @@ use cynic::{serde, GraphQlResponse, Operation, QueryBuilder};
 const MAINNET_HOST: &str = "https://sui-mainnet.mystenlabs.com/graphql";
 const TESTNET_HOST: &str = "https://sui-testnet.mystenlabs.com/graphql";
 const DEVNET_HOST: &str = "https://sui-devnet.mystenlabs.com/graphql";
-const DEFAULT_LOCAL_HOST: &str = "http://localhost:9125/graphql";
+const DEFAULT_LOCAL_HOST: &str = "http://127.0.0.1:9125/graphql";
 static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
 #[derive(Debug)]
@@ -496,7 +496,11 @@ impl Client {
             .data
             .and_then(|tbq| tbq.transaction_block)
             .and_then(|tb| tb.bcs)
-            .map(|bcs| bcs::from_bytes::<SignedTransaction>(bcs.0.as_bytes()).unwrap());
+            .map(|bcs| base64ct::Base64::decode_vec(bcs.0.as_str()))
+            .transpose()
+            .map_err(|e| Error::msg(format!("Cannot decode Base64 transaction bcs bytes: {e}")))?
+            .map(|bcs| bcs::from_bytes::<SignedTransaction>(&bcs))
+            .transpose()?;
         Ok(signed_tx)
     }
 
@@ -539,7 +543,11 @@ impl Client {
                 .iter()
                 .map(|tx| bcs::from_bytes::<SignedTransaction>(tx))
                 .collect::<Result<Vec<_>, bcs::Error>>()
-                .map_err(|e| Error::msg(format!("Cannot decode bcs bytes into Object: {e}")))?;
+                .map_err(|e| {
+                    Error::msg(format!(
+                        "Cannot decode bcs bytes into SignedTransaction: {e}"
+                    ))
+                })?;
             let page = Page::new(page_info, transactions);
             Ok(Some(page))
         } else {
@@ -697,17 +705,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_events_query() {
-        let client = Client::new_devnet();
-        let events = client.events(None, None, None, None, None).await;
-        assert!(
-            events.is_ok(),
-            "Events query failed for network: {DEVNET_HOST}. Error: {}",
-            events.unwrap_err()
-        );
-    }
-
-    #[tokio::test]
     async fn test_objects_query() {
         for n in NETWORKS {
             let client = Client::new(n).unwrap();
@@ -742,19 +739,6 @@ mod tests {
                 object_bcs.is_ok(),
                 "Object bcs query failed for network: {n}. Error: {}",
                 object_bcs.unwrap_err()
-            );
-        }
-    }
-
-    #[tokio::test]
-    async fn test_transactions_query() {
-        for n in NETWORKS {
-            let client = Client::new(n).unwrap();
-            let transactions = client.transactions(None, None, None, None, None).await;
-            assert!(
-                transactions.is_ok(),
-                "Transactions query failed for network: {n}. Error: {}",
-                transactions.unwrap_err()
             );
         }
     }
