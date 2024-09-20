@@ -156,3 +156,6 @@ pub(crate) use transaction::SignedTransactionWithIntentMessage;
 
 #[cfg(test)]
 mod serialization_proptests;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PersonalMessage<'a>(pub std::borrow::Cow<'a, [u8]>);
