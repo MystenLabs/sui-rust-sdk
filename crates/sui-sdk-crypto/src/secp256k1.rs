@@ -1,10 +1,9 @@
 use crate::SignatureError;
 use crate::SuiSigner;
 use crate::SuiVerifier;
-use secp256k1::ecdsa::Signature;
-use secp256k1::Message;
-use secp256k1::PublicKey;
-use secp256k1::SecretKey;
+use k256::ecdsa::SigningKey;
+use k256::ecdsa::VerifyingKey;
+use k256::elliptic_curve::group::GroupEncoding;
 use signature::Signer;
 use signature::Verifier;
 use sui_sdk::types::PersonalMessage;
@@ -14,7 +13,7 @@ use sui_sdk::types::SimpleSignature;
 use sui_sdk::types::Transaction;
 use sui_sdk::types::UserSignature;
 
-pub struct Secp256k1PrivateKey(SecretKey);
+pub struct Secp256k1PrivateKey(SigningKey);
 
 impl std::fmt::Debug for Secp256k1PrivateKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -44,34 +43,30 @@ impl Secp256k1PrivateKey {
     pub const LENGTH: usize = 32;
 
     pub fn new(bytes: [u8; Self::LENGTH]) -> Result<Self, SignatureError> {
-        SecretKey::from_slice(&bytes)
-            .map_err(SignatureError::from_source)
-            .map(Self)
+        SigningKey::from_bytes(&bytes.into()).map(Self)
     }
 
     pub fn verifying_key(&self) -> Secp256k1VerifyingKey {
-        Secp256k1VerifyingKey(PublicKey::from_secret_key_global(&self.0))
+        let verifying_key = self.0.verifying_key();
+        Secp256k1VerifyingKey(*verifying_key)
     }
 
     pub fn public_key(&self) -> Secp256k1PublicKey {
-        self.verifying_key().public_key()
+        Secp256k1PublicKey::new(self.0.verifying_key().as_ref().to_bytes().into())
     }
 
-    #[cfg(feature = "rand")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "rand")))]
     pub fn generate<R>(mut rng: R) -> Self
     where
         R: rand_core::RngCore + rand_core::CryptoRng,
     {
-        Self(SecretKey::new(&mut rng))
+        Self(SigningKey::random(&mut rng))
     }
 }
 
 impl Signer<Secp256k1Signature> for Secp256k1PrivateKey {
     fn try_sign(&self, message: &[u8]) -> Result<Secp256k1Signature, SignatureError> {
-        let message = to_message(message);
-        let signature = self.0.sign_ecdsa(message);
-        Ok(Secp256k1Signature::new(signature.serialize_compact()))
+        let signature: k256::ecdsa::Signature = self.0.try_sign(message)?;
+        Ok(Secp256k1Signature::new(signature.to_bytes().into()))
     }
 }
 
@@ -102,28 +97,22 @@ impl SuiSigner for Secp256k1PrivateKey {
     }
 }
 
-pub struct Secp256k1VerifyingKey(PublicKey);
+pub struct Secp256k1VerifyingKey(VerifyingKey);
 
 impl Secp256k1VerifyingKey {
     pub fn new(public_key: &Secp256k1PublicKey) -> Result<Self, SignatureError> {
-        PublicKey::from_slice(public_key.inner().as_ref())
-            .map_err(SignatureError::from_source)
-            .map(Self)
+        VerifyingKey::try_from(public_key.inner().as_ref()).map(Self)
     }
 
     pub fn public_key(&self) -> Secp256k1PublicKey {
-        Secp256k1PublicKey::new(self.0.serialize())
+        Secp256k1PublicKey::new(self.0.as_ref().to_bytes().into())
     }
 }
 
 impl Verifier<Secp256k1Signature> for Secp256k1VerifyingKey {
     fn verify(&self, message: &[u8], signature: &Secp256k1Signature) -> Result<(), SignatureError> {
-        let signature =
-            Signature::from_compact(signature.inner()).map_err(SignatureError::from_source)?;
-        let message = to_message(message);
-        signature
-            .verify(&message, &self.0)
-            .map_err(SignatureError::from_source)
+        let signature = k256::ecdsa::Signature::from_bytes(signature.inner().into())?;
+        self.0.verify(message, &signature)
     }
 }
 
@@ -165,15 +154,6 @@ impl SuiVerifier for Secp256k1VerifyingKey {
         let message = message.signing_digest();
         self.verify(&message, signature)
     }
-}
-
-fn to_message(message: &[u8]) -> Message {
-    use sha2::Digest;
-
-    let mut hasher = sha2::Sha256::new();
-    hasher.update(message);
-    let digest = hasher.finalize();
-    Message::from_digest(digest.into())
 }
 
 #[derive(Default, Clone, Debug)]
