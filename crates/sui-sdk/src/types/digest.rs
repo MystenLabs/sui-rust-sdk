@@ -315,6 +315,9 @@ impl_digest!(ObjectDigest);
 impl_digest!(ConsensusCommitDigest);
 impl_digest!(EffectsAuxiliaryDataDigest);
 
+// Don't implement like the other digest types since this isn't intended to be serialized
+pub type SigningDigest = [u8; Digest::LENGTH];
+
 #[cfg(test)]
 mod test {
     use super::*;

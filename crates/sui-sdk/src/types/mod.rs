@@ -75,6 +75,7 @@ pub use digest::Digest;
 pub use digest::DigestParseError;
 pub use digest::EffectsAuxiliaryDataDigest;
 pub use digest::ObjectDigest;
+pub use digest::SigningDigest;
 pub use digest::TransactionDigest;
 pub use digest::TransactionEffectsDigest;
 pub use digest::TransactionEventsDigest;
