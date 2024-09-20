@@ -22,16 +22,12 @@ rustdoc-args = [
 [features]
 default = []
 rand = ["dep:rand_core"]
-ed25519 = ["dep:ed25519-dalek"]
-secp256r1 = ["dep:p256"]
+ed25519 = ["dep:ed25519-dalek", "sui-sdk/hash", "sui-sdk/serde"]
+secp256r1 = ["dep:p256", "sui-sdk/hash", "sui-sdk/serde"]
 
 [dependencies]
-base64ct = { version = "1.6.0", features = ["alloc"] }
-bcs = { version = "0.1.6" }
-hex = "0.4.3"
-serde_json = { version = "1.0.114" }
 signature = "2.2"
-sui-sdk = { version = "0.0.0", path = "../sui-sdk", features = ["hash", "serde"] }
+sui-sdk = { version = "0.0.0", path = "../sui-sdk", default-features = false }
 
 # RNG support
 rand_core = { version = "0.6.4", optional = true }
@@ -43,6 +39,10 @@ ed25519-dalek = { version = "2.1.1", optional = true }
 p256 = { version = "0.13.2", default-features = false, features = ["ecdsa", "std"], optional = true }
 
 [dev-dependencies]
+base64ct = { version = "1.6.0", features = ["alloc"] }
+bcs = { version = "0.1.6" }
+hex = "0.4.3"
+serde_json = { version = "1.0.114" }
 
 # proptest support in tests
 #
