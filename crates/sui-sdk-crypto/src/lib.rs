@@ -16,8 +16,10 @@ pub mod ed25519;
 mod bls12381;
 #[allow(unused)]
 mod secp256k1;
-#[allow(unused)]
-mod secp256r1;
+
+#[cfg(feature = "secp256r1")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "secp256r1")))]
+pub mod secp256r1;
 
 pub trait SuiSigner {
     fn sign_transaction(&self, transaction: &Transaction) -> Result<UserSignature, SignatureError>;
