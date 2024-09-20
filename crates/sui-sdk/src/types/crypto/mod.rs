@@ -1,5 +1,6 @@
 mod bls12381;
 mod ed25519;
+mod intent;
 mod multisig;
 mod passkey;
 mod secp256k1;
@@ -14,6 +15,10 @@ pub use bls12381::Bls12381Signature;
 pub use ed25519::Ed25519PrivateKey;
 pub use ed25519::Ed25519PublicKey;
 pub use ed25519::Ed25519Signature;
+pub use intent::Intent;
+pub use intent::IntentAppId;
+pub use intent::IntentScope;
+pub use intent::IntentVersion;
 pub use multisig::MultisigAggregatedSignature;
 pub use multisig::MultisigCommittee;
 pub use multisig::MultisigMember;
