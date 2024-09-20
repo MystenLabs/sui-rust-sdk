@@ -5,24 +5,6 @@
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
-pub struct Bls12381PrivateKey(
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "::serde_with::As::<::serde_with::IfIsHumanReadable<super::Base64Array32>>")
-    )]
-    [u8; Self::LENGTH],
-);
-
-impl Bls12381PrivateKey {
-    /// The length of an bls12381 private key in bytes.
-    pub const LENGTH: usize = 32;
-}
-
-#[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde_derive::Serialize, serde_derive::Deserialize)
-)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct Bls12381PublicKey(
