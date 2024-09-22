@@ -68,15 +68,20 @@ impl Signer<Ed25519Signature> for Ed25519PrivateKey {
     }
 }
 
-impl Signer<UserSignature> for Ed25519PrivateKey {
-    fn try_sign(&self, msg: &[u8]) -> Result<UserSignature, SignatureError> {
+impl Signer<SimpleSignature> for Ed25519PrivateKey {
+    fn try_sign(&self, msg: &[u8]) -> Result<SimpleSignature, SignatureError> {
         <Self as Signer<Ed25519Signature>>::try_sign(self, msg).map(|signature| {
-            let signature = SimpleSignature::Ed25519 {
+            SimpleSignature::Ed25519 {
                 signature,
                 public_key: self.public_key(),
-            };
-            UserSignature::Simple(signature)
+            }
         })
+    }
+}
+
+impl Signer<UserSignature> for Ed25519PrivateKey {
+    fn try_sign(&self, msg: &[u8]) -> Result<UserSignature, SignatureError> {
+        <Self as Signer<SimpleSignature>>::try_sign(self, msg).map(UserSignature::Simple)
     }
 }
 
@@ -114,12 +119,12 @@ impl Verifier<Ed25519Signature> for Ed25519VerifyingKey {
     }
 }
 
-impl Verifier<UserSignature> for Ed25519VerifyingKey {
-    fn verify(&self, message: &[u8], signature: &UserSignature) -> Result<(), SignatureError> {
-        let UserSignature::Simple(SimpleSignature::Ed25519 {
+impl Verifier<SimpleSignature> for Ed25519VerifyingKey {
+    fn verify(&self, message: &[u8], signature: &SimpleSignature) -> Result<(), SignatureError> {
+        let SimpleSignature::Ed25519 {
             signature,
             public_key,
-        }) = signature
+        } = signature
         else {
             return Err(SignatureError::from_source("not an ed25519 signature"));
         };
@@ -131,6 +136,16 @@ impl Verifier<UserSignature> for Ed25519VerifyingKey {
         }
 
         <Self as Verifier<Ed25519Signature>>::verify(self, message, signature)
+    }
+}
+
+impl Verifier<UserSignature> for Ed25519VerifyingKey {
+    fn verify(&self, message: &[u8], signature: &UserSignature) -> Result<(), SignatureError> {
+        let UserSignature::Simple(signature) = signature else {
+            return Err(SignatureError::from_source("not an ed25519 signature"));
+        };
+
+        <Self as Verifier<SimpleSignature>>::verify(self, message, signature)
     }
 }
 
@@ -163,12 +178,12 @@ impl Ed25519Verifier {
     }
 }
 
-impl Verifier<UserSignature> for Ed25519Verifier {
-    fn verify(&self, message: &[u8], signature: &UserSignature) -> Result<(), SignatureError> {
-        let UserSignature::Simple(SimpleSignature::Ed25519 {
+impl Verifier<SimpleSignature> for Ed25519Verifier {
+    fn verify(&self, message: &[u8], signature: &SimpleSignature) -> Result<(), SignatureError> {
+        let SimpleSignature::Ed25519 {
             signature,
             public_key,
-        }) = signature
+        } = signature
         else {
             return Err(SignatureError::from_source("not an ed25519 signature"));
         };
@@ -176,6 +191,16 @@ impl Verifier<UserSignature> for Ed25519Verifier {
         let verifying_key = Ed25519VerifyingKey::new(public_key)?;
 
         verifying_key.verify(message, signature)
+    }
+}
+
+impl Verifier<UserSignature> for Ed25519Verifier {
+    fn verify(&self, message: &[u8], signature: &UserSignature) -> Result<(), SignatureError> {
+        let UserSignature::Simple(signature) = signature else {
+            return Err(SignatureError::from_source("not an ed25519 signature"));
+        };
+
+        <Self as Verifier<SimpleSignature>>::verify(self, message, signature)
     }
 }
 

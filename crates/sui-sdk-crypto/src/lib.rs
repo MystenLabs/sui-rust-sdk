@@ -23,6 +23,27 @@ pub mod secp256k1;
 #[cfg_attr(doc_cfg, doc(cfg(feature = "secp256r1")))]
 pub mod secp256r1;
 
+#[cfg(feature = "zklogin")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "zklogin")))]
+pub mod zklogin;
+
+#[cfg(any(
+    feature = "ed25519",
+    feature = "secp256r1",
+    feature = "secp256k1",
+    feature = "zklogin"
+))]
+#[cfg_attr(
+    doc_cfg,
+    doc(cfg(any(
+        feature = "ed25519",
+        feature = "secp256r1",
+        feature = "secp256k1",
+        feature = "zklogin"
+    )))
+)]
+pub mod simple;
+
 pub trait SuiSigner {
     fn sign_transaction(&self, transaction: &Transaction) -> Result<UserSignature, SignatureError>;
     fn sign_personal_message(
