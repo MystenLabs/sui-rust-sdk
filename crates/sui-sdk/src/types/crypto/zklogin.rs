@@ -7,10 +7,10 @@ use crate::types::u256::U256;
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct ZkLoginAuthenticator {
-    inputs: ZkLoginInputs,
+    pub inputs: ZkLoginInputs,
     #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
-    max_epoch: EpochId,
-    signature: SimpleSignature,
+    pub max_epoch: EpochId,
+    pub signature: SimpleSignature,
 }
 
 /// All inputs required for the zk login proof verification and other public inputs.
@@ -22,12 +22,10 @@ pub struct ZkLoginAuthenticator {
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct ZkLoginInputs {
-    proof_points: ZkLoginProof,
-    iss_base64_details: Claim,
-    header_base64: String,
-    address_seed: Bn254FieldElement,
-    // #[serde(skip)]
-    // jwt_details: JwtDetails,
+    pub proof_points: ZkLoginProof,
+    pub iss_base64_details: Claim,
+    pub header_base64: String,
+    pub address_seed: Bn254FieldElement,
 }
 
 /// A claim consists of value and index_mod_4.
@@ -39,22 +37,8 @@ pub struct ZkLoginInputs {
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct Claim {
-    value: String,
-    index_mod_4: u8,
-}
-
-/// A structed of parsed JWT details, consists of kid, header, iss.
-#[derive(Default, Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde_derive::Serialize, serde_derive::Deserialize)
-)]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
-pub struct JwtDetails {
-    kid: String,
-    header: String,
-    iss: String,
+    pub value: String,
+    pub index_mod_4: u8,
 }
 
 /// The struct for zk login proof.
@@ -66,9 +50,9 @@ pub struct JwtDetails {
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct ZkLoginProof {
-    a: CircomG1,
-    b: CircomG2,
-    c: CircomG1,
+    pub a: CircomG1,
+    pub b: CircomG2,
+    pub c: CircomG1,
 }
 
 /// A G1 point in BN254 serialized as a vector of three strings which is the canonical decimal
@@ -76,7 +60,7 @@ pub struct ZkLoginProof {
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(test, derive(test_strategy::Arbitrary))]
-pub struct CircomG1([Bn254FieldElement; 3]);
+pub struct CircomG1(pub [Bn254FieldElement; 3]);
 
 /// A G2 point in BN254 serialized as a vector of three vectors each being a vector of two strings
 /// which are the canonical decimal representation of the coefficients of the projective coordinates
@@ -84,7 +68,7 @@ pub struct CircomG1([Bn254FieldElement; 3]);
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(test, derive(test_strategy::Arbitrary))]
-pub struct CircomG2([[Bn254FieldElement; 2]; 3]);
+pub struct CircomG2(pub [[Bn254FieldElement; 2]; 3]);
 
 /// A wrapper struct to retrofit in [enum PublicKey] for zkLogin.
 /// Useful to construct [struct MultiSigPublicKey].
@@ -151,6 +135,19 @@ pub struct Bn254FieldElement(
 );
 
 impl Bn254FieldElement {
+    pub const fn new(bytes: [u8; 32]) -> Self {
+        Self(bytes)
+    }
+
+    pub const fn from_str_radix_10(s: &str) -> Result<Self, Bn254FieldElementParseError> {
+        let u256 = match U256::from_str_radix(s, 10) {
+            Ok(u256) => u256,
+            Err(e) => return Err(Bn254FieldElementParseError(e)),
+        };
+        let be = u256.to_be();
+        Ok(Self(*be.digits()))
+    }
+
     pub fn unpadded(&self) -> &[u8] {
         let mut buf = self.0.as_slice();
 

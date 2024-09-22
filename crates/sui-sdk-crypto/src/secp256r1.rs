@@ -70,15 +70,20 @@ impl Signer<Secp256r1Signature> for Secp256r1PrivateKey {
     }
 }
 
-impl Signer<UserSignature> for Secp256r1PrivateKey {
-    fn try_sign(&self, msg: &[u8]) -> Result<UserSignature, SignatureError> {
+impl Signer<SimpleSignature> for Secp256r1PrivateKey {
+    fn try_sign(&self, msg: &[u8]) -> Result<SimpleSignature, SignatureError> {
         <Self as Signer<Secp256r1Signature>>::try_sign(self, msg).map(|signature| {
-            let signature = SimpleSignature::Secp256r1 {
+            SimpleSignature::Secp256r1 {
                 signature,
                 public_key: self.public_key(),
-            };
-            UserSignature::Simple(signature)
+            }
         })
+    }
+}
+
+impl Signer<UserSignature> for Secp256r1PrivateKey {
+    fn try_sign(&self, msg: &[u8]) -> Result<UserSignature, SignatureError> {
+        <Self as Signer<SimpleSignature>>::try_sign(self, msg).map(UserSignature::Simple)
     }
 }
 
@@ -116,12 +121,12 @@ impl Verifier<Secp256r1Signature> for Secp256r1VerifyingKey {
     }
 }
 
-impl Verifier<UserSignature> for Secp256r1VerifyingKey {
-    fn verify(&self, message: &[u8], signature: &UserSignature) -> Result<(), SignatureError> {
-        let UserSignature::Simple(SimpleSignature::Secp256r1 {
+impl Verifier<SimpleSignature> for Secp256r1VerifyingKey {
+    fn verify(&self, message: &[u8], signature: &SimpleSignature) -> Result<(), SignatureError> {
+        let SimpleSignature::Secp256r1 {
             signature,
             public_key,
-        }) = signature
+        } = signature
         else {
             return Err(SignatureError::from_source("not a secp256r1 signature"));
         };
@@ -133,6 +138,16 @@ impl Verifier<UserSignature> for Secp256r1VerifyingKey {
         }
 
         <Self as Verifier<Secp256r1Signature>>::verify(self, message, signature)
+    }
+}
+
+impl Verifier<UserSignature> for Secp256r1VerifyingKey {
+    fn verify(&self, message: &[u8], signature: &UserSignature) -> Result<(), SignatureError> {
+        let UserSignature::Simple(signature) = signature else {
+            return Err(SignatureError::from_source("not a secp256r1 signature"));
+        };
+
+        <Self as Verifier<SimpleSignature>>::verify(self, message, signature)
     }
 }
 
@@ -165,12 +180,12 @@ impl Secp256r1Verifier {
     }
 }
 
-impl Verifier<UserSignature> for Secp256r1Verifier {
-    fn verify(&self, message: &[u8], signature: &UserSignature) -> Result<(), SignatureError> {
-        let UserSignature::Simple(SimpleSignature::Secp256r1 {
+impl Verifier<SimpleSignature> for Secp256r1Verifier {
+    fn verify(&self, message: &[u8], signature: &SimpleSignature) -> Result<(), SignatureError> {
+        let SimpleSignature::Secp256r1 {
             signature,
             public_key,
-        }) = signature
+        } = signature
         else {
             return Err(SignatureError::from_source("not a secp256r1 signature"));
         };
@@ -178,6 +193,16 @@ impl Verifier<UserSignature> for Secp256r1Verifier {
         let verifying_key = Secp256r1VerifyingKey::new(public_key)?;
 
         verifying_key.verify(message, signature)
+    }
+}
+
+impl Verifier<UserSignature> for Secp256r1Verifier {
+    fn verify(&self, message: &[u8], signature: &UserSignature) -> Result<(), SignatureError> {
+        let UserSignature::Simple(signature) = signature else {
+            return Err(SignatureError::from_source("not a secp256r1 signature"));
+        };
+
+        <Self as Verifier<SimpleSignature>>::verify(self, message, signature)
     }
 }
 
@@ -232,5 +257,20 @@ mod test {
         verifier
             .verify_personal_message(&message, &signature)
             .unwrap();
+    }
+
+    #[test]
+    fn personal_message_signing_fixture() {
+        let key = [
+            167, 44, 116, 0, 51, 221, 254, 179, 210, 44, 93, 196, 125, 155, 85, 94, 29, 41, 13, 60,
+            59, 132, 69, 84, 176, 217, 77, 49, 25, 113, 118, 125,
+        ];
+        let signer = Secp256r1PrivateKey::new(key);
+
+        let message = PersonalMessage(b"hello".into());
+        let sig = signer.sign_personal_message(&message).unwrap();
+        let external_sig = "AlqWPdkIE2bZAUquKv2Tdh9i+Ih+rVSQXH/YsgvwkmeOJR0YLjL/kadivoPtiQkvZBQ1ZI8eDZxe8SaLniwoT88Dh+/vAuGf1UrouFTdefpBEWn3apy8x3EexN5c5ESzGDc=";
+        let b64 = sig.to_base64();
+        assert_eq!(external_sig, b64);
     }
 }

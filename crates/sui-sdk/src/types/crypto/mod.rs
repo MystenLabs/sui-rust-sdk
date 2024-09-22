@@ -41,7 +41,6 @@ pub use zklogin::CircomG2;
 pub use zklogin::Claim;
 pub use zklogin::Jwk;
 pub use zklogin::JwkId;
-pub use zklogin::JwtDetails;
 pub use zklogin::ZkLoginAuthenticator;
 pub use zklogin::ZkLoginInputs;
 pub use zklogin::ZkLoginProof;

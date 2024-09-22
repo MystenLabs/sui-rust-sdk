@@ -41,7 +41,6 @@ pub use crypto::IntentScope;
 pub use crypto::IntentVersion;
 pub use crypto::Jwk;
 pub use crypto::JwkId;
-pub use crypto::JwtDetails;
 pub use crypto::MultisigAggregatedSignature;
 pub use crypto::MultisigCommittee;
 pub use crypto::MultisigMember;

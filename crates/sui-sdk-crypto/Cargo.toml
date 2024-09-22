@@ -24,6 +24,22 @@ default = []
 ed25519 = ["dep:ed25519-dalek", "dep:rand_core", "sui-sdk/hash", "sui-sdk/serde"]
 secp256r1 = ["dep:p256", "dep:rand_core", "sui-sdk/hash", "sui-sdk/serde"]
 secp256k1 = ["dep:k256", "dep:rand_core", "signature/std", "sui-sdk/hash", "sui-sdk/serde"]
+zklogin = [
+    "dep:ark-bn254",
+    "dep:ark-ff",
+    "dep:ark-groth16",
+    "dep:ark-snark",
+    "dep:ark-std",
+    "dep:base64ct",
+    "dep:bnum",
+    "dep:itertools",
+    "dep:serde",
+    "dep:serde_derive",
+    "dep:serde_json",
+    "signature/std",
+    "sui-sdk/hash",
+    "sui-sdk/serde",
+]
 
 [dependencies]
 signature = "2.2"
@@ -41,8 +57,20 @@ p256 = { version = "0.13.2", default-features = false, features = ["ecdsa", "std
 # secp256k1 support
 k256 = { version = "0.13.4", default-features = false, features = ["ecdsa"], optional = true }
 
+# zklogin verification support
+ark-bn254 = { version = "0.4.0", optional = true }
+ark-ff = { version = "0.4.1", features = ["asm"], optional = true }
+ark-groth16 = { version = "0.4.0", default-features = false, optional = true }
+ark-snark = { version = "0.4.0", optional = true }
+ark-std = { version = "0.4.0", optional = true }
+base64ct = { version = "1.6.0", features = ["alloc"], optional = true }
+bnum = { version = "0.11.0", optional = true }
+itertools = { version = "0.10.5", optional = true }
+serde = { version = "1.0.190", optional = true }
+serde_derive = { version = "1.0.190", optional = true }
+serde_json = { version = "1.0.114", optional = true }
+
 [dev-dependencies]
-base64ct = { version = "1.6.0", features = ["alloc"] }
 bcs = { version = "0.1.6" }
 hex = "0.4.3"
 serde_json = { version = "1.0.114" }
