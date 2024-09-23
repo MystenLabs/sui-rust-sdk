@@ -221,7 +221,7 @@ impl Client {
         seq_num: Option<u64>,
     ) -> Result<Option<CheckpointSummary>, Error> {
         ensure!(
-            digest.is_some() != seq_num.is_some(),
+            !(digest.is_some() && seq_num.is_some()),
             "Either digest or seq_num must be provided"
         );
 
@@ -496,7 +496,11 @@ impl Client {
             .data
             .and_then(|tbq| tbq.transaction_block)
             .and_then(|tb| tb.bcs)
-            .map(|bcs| bcs::from_bytes::<SignedTransaction>(bcs.0.as_bytes()).unwrap());
+            .map(|bcs| base64ct::Base64::decode_vec(bcs.0.as_str()))
+            .transpose()
+            .map_err(|e| Error::msg(format!("Cannot decode Base64 transaction bcs bytes: {e}")))?
+            .map(|bcs| bcs::from_bytes::<SignedTransaction>(&bcs))
+            .transpose()?;
         Ok(signed_tx)
     }
 
@@ -539,7 +543,11 @@ impl Client {
                 .iter()
                 .map(|tx| bcs::from_bytes::<SignedTransaction>(tx))
                 .collect::<Result<Vec<_>, bcs::Error>>()
-                .map_err(|e| Error::msg(format!("Cannot decode bcs bytes into Object: {e}")))?;
+                .map_err(|e| {
+                    Error::msg(format!(
+                        "Cannot decode bcs bytes into SignedTransaction: {e}"
+                    ))
+                })?;
             let page = Page::new(page_info, transactions);
             Ok(Some(page))
         } else {
@@ -551,6 +559,7 @@ impl Client {
 #[cfg(test)]
 mod tests {
     use crate::{Client, DEFAULT_LOCAL_HOST, DEVNET_HOST, MAINNET_HOST, TESTNET_HOST};
+    const NETWORKS: [(&str, &str); 2] = [(MAINNET_HOST, "35834a8a"), (TESTNET_HOST, "4c78adac")];
 
     #[test]
     fn test_rpc_server() {
@@ -565,5 +574,170 @@ mod tests {
 
         assert!(client.set_rpc_server("localhost:9125/graphql").is_ok());
         assert!(client.set_rpc_server("9125/graphql").is_err());
+    }
+
+    #[tokio::test]
+    async fn test_chain_id() {
+        for (n, id) in NETWORKS.iter() {
+            let client = Client::new(n).unwrap();
+            let chain_id = client.chain_id().await;
+            assert!(chain_id.is_ok());
+            assert_eq!(&chain_id.unwrap(), id);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_reference_gas_price_query() {
+        for (n, _) in NETWORKS.iter() {
+            let client = Client::new(n).unwrap();
+            let rgp = client.reference_gas_price(None).await;
+            assert!(
+                rgp.is_ok(),
+                "Reference gas price query failed for network: {n}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_protocol_config_query() {
+        for (n, _) in NETWORKS {
+            let client = Client::new(n).unwrap();
+            let pc = client.protocol_config(None).await;
+            assert!(pc.is_ok());
+
+            // test specific version
+            let pc = client.protocol_config(Some(50)).await;
+            assert!(pc.is_ok());
+            let pc = pc.unwrap();
+            if let Some(pc) = pc {
+                assert_eq!(
+                    pc.protocol_version.0, 50,
+                    "Protocol version query mismatch for network: {n}. Expected: 50, received: {}",
+                    pc.protocol_version.0
+                );
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_service_config_query() {
+        for (n, _) in NETWORKS {
+            let client = Client::new(n).unwrap();
+            let sc = client.service_config().await;
+            assert!(sc.is_ok(), "Service config query failed for network: {n}");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_coin_metadata_query() {
+        for (n, _) in NETWORKS {
+            let client = Client::new(n).unwrap();
+            let cm = client.coin_metadata("0x2::sui::SUI").await;
+            assert!(cm.is_ok(), "Coin metadata query failed for network: {n}");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_checkpoint_query() {
+        for (n, _) in NETWORKS {
+            let client = Client::new(n).unwrap();
+            let c = client.checkpoint(None, None).await;
+            assert!(
+                c.is_ok(),
+                "Checkpoint query failed for network: {n}. Error: {}",
+                c.unwrap_err()
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_latest_checkpoint_sequence_number_query() {
+        for (n, _) in NETWORKS {
+            let client = Client::new(n).unwrap();
+            let last_checkpoint = client.latest_checkpoint_sequence_number().await;
+            assert!(
+                last_checkpoint.is_ok(),
+                "Latest checkpoint sequence number query failed for network: {n}. Error: {}",
+                last_checkpoint.unwrap_err()
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_epoch_total_checkpoints_query() {
+        for (n, _) in NETWORKS {
+            let client = Client::new(n).unwrap();
+            let e = client.epoch_total_checkpoints(None).await;
+            assert!(
+                e.is_ok(),
+                "Epoch total checkpoints query failed for network: {n}. Error: {}",
+                e.unwrap_err()
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_epoch_total_transaction_blocks_query() {
+        for (n, _) in NETWORKS {
+            let client = Client::new(n).unwrap();
+            let e = client.epoch_total_transaction_blocks(None).await;
+            assert!(
+                e.is_ok(),
+                "Epoch total transaction blocks query failed for network: {n}. Error: {}",
+                e.unwrap_err()
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_epoch_summary_query() {
+        for (n, _) in NETWORKS {
+            let client = Client::new(n).unwrap();
+            let e = client.epoch_summary(None).await;
+            assert!(
+                e.is_ok(),
+                "Epoch summary query failed for network: {n}. Error: {}",
+                e.unwrap_err()
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_objects_query() {
+        for (n, _) in NETWORKS {
+            let client = Client::new(n).unwrap();
+            let objects = client.objects(None, None, None, None, None).await;
+            assert!(
+                objects.is_ok(),
+                "Objects query failed for network: {n}. Error: {}",
+                objects.unwrap_err()
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_object_query() {
+        for (n, _) in NETWORKS {
+            let client = Client::new(n).unwrap();
+            let object = client.object("0x5".parse().unwrap(), None).await;
+            assert!(
+                object.is_ok(),
+                "Object query failed for network: {n}. Error: {}",
+                object.unwrap_err()
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_object_bcs_query() {
+        for (n, _) in NETWORKS {
+            let client = Client::new(n).unwrap();
+            let object_bcs = client.object_bcs("0x5".parse().unwrap()).await;
+            assert!(
+                object_bcs.is_ok(),
+                "Object bcs query failed for network: {n}. Error: {}",
+                object_bcs.unwrap_err()
+            );
+        }
     }
 }
