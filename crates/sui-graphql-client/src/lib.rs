@@ -25,7 +25,7 @@ use cynic::{serde, GraphQlResponse, Operation, QueryBuilder};
 const MAINNET_HOST: &str = "https://sui-mainnet.mystenlabs.com/graphql";
 const TESTNET_HOST: &str = "https://sui-testnet.mystenlabs.com/graphql";
 const DEVNET_HOST: &str = "https://sui-devnet.mystenlabs.com/graphql";
-const DEFAULT_LOCAL_HOST: &str = "http://127.0.0.1:9125/graphql";
+const DEFAULT_LOCAL_HOST: &str = "http://localhost:9125/graphql";
 static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
 #[derive(Debug)]
@@ -559,7 +559,7 @@ impl Client {
 #[cfg(test)]
 mod tests {
     use crate::{Client, DEFAULT_LOCAL_HOST, DEVNET_HOST, MAINNET_HOST, TESTNET_HOST};
-    const NETWORKS: [&str; 3] = [MAINNET_HOST, TESTNET_HOST, DEVNET_HOST];
+    const NETWORKS: [(&str, &str); 2] = [(MAINNET_HOST, "35834a8a"), (TESTNET_HOST, "4c78adac")];
 
     #[test]
     fn test_rpc_server() {
@@ -578,19 +578,17 @@ mod tests {
 
     #[tokio::test]
     async fn test_chain_id() {
-        for n in NETWORKS.iter() {
+        for (n, id) in NETWORKS.iter() {
             let client = Client::new(n).unwrap();
             let chain_id = client.chain_id().await;
             assert!(chain_id.is_ok());
-            if *n == "http://sui-mainnet.mystenlabs.com/graphql" {
-                assert!(chain_id.unwrap() == "35834a8a");
-            }
+            assert_eq!(&chain_id.unwrap(), id);
         }
     }
 
     #[tokio::test]
     async fn test_reference_gas_price_query() {
-        for n in NETWORKS.iter() {
+        for (n, _) in NETWORKS.iter() {
             let client = Client::new(n).unwrap();
             let rgp = client.reference_gas_price(None).await;
             assert!(
@@ -602,7 +600,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_protocol_config_query() {
-        for n in NETWORKS {
+        for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();
             let pc = client.protocol_config(None).await;
             assert!(pc.is_ok());
@@ -623,7 +621,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_service_config_query() {
-        for n in NETWORKS {
+        for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();
             let sc = client.service_config().await;
             assert!(sc.is_ok(), "Service config query failed for network: {n}");
@@ -632,7 +630,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_coin_metadata_query() {
-        for n in NETWORKS {
+        for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();
             let cm = client.coin_metadata("0x2::sui::SUI").await;
             assert!(cm.is_ok(), "Coin metadata query failed for network: {n}");
@@ -641,7 +639,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_checkpoint_query() {
-        for n in NETWORKS {
+        for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();
             let c = client.checkpoint(None, None).await;
             assert!(
@@ -654,7 +652,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_latest_checkpoint_sequence_number_query() {
-        for n in NETWORKS {
+        for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();
             let last_checkpoint = client.latest_checkpoint_sequence_number().await;
             assert!(
@@ -667,7 +665,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_epoch_total_checkpoints_query() {
-        for n in NETWORKS {
+        for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();
             let e = client.epoch_total_checkpoints(None).await;
             assert!(
@@ -680,7 +678,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_epoch_total_transaction_blocks_query() {
-        for n in NETWORKS {
+        for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();
             let e = client.epoch_total_transaction_blocks(None).await;
             assert!(
@@ -693,7 +691,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_epoch_summary_query() {
-        for n in NETWORKS {
+        for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();
             let e = client.epoch_summary(None).await;
             assert!(
@@ -706,7 +704,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_objects_query() {
-        for n in NETWORKS {
+        for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();
             let objects = client.objects(None, None, None, None, None).await;
             assert!(
@@ -719,7 +717,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_object_query() {
-        for n in NETWORKS {
+        for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();
             let object = client.object("0x5".parse().unwrap(), None).await;
             assert!(
@@ -732,7 +730,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_object_bcs_query() {
-        for n in NETWORKS {
+        for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();
             let object_bcs = client.object_bcs("0x5".parse().unwrap()).await;
             assert!(
