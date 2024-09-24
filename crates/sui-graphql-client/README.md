@@ -36,6 +36,32 @@ async fn main() -> Result<()> {
 }
 ```
 
+## Requesting gas from the faucet
+The client provides an API to request gas from the faucet. The `request_and_wait` function sends a request to the faucet and waits until the transaction is confirmed. The function returns the transaction details if the request is successful.
+Note that the faucet is chosen automatically based on the network (if the public RPC endpoint is used). For custom faucet service, use the `faucet::request_url` function.
+```rust, no_run
+use sui_graphql_client::Client;
+use anyhow::Result;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let client = Client::new_devnet();
+    let address = "SUI_ADDRESS_HERE";
+    // Request gas from the faucet and wait until a coin is received
+    // As the client is set to devnet, faucet will use the devnet faucet.
+    let faucet_req = client.faucet().request_and_wait(address).await?;
+    if let some(resp) = faucet_req {
+        let coins = resp.sent;
+        for coin in coins {
+            println!("coin: {:?}", coin);
+        }
+    }
+
+    // Request gas from the testnet faucet by explicitly setting the faucet to testnet
+    let faucet_req = client.faucet().testnet().request_and_wait(address).await?;
+
+```
+
 ## Custom Queries
 There are several options for running custom queries.
 1) Use a GraphQL client library of your choosing.
