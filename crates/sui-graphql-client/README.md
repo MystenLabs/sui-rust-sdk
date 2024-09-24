@@ -59,7 +59,7 @@ async fn main() -> Result<()> {
 
     // Request gas from the testnet faucet by explicitly setting the faucet to testnet
     let faucet_req = client.faucet().testnet().request_and_wait(address).await?;
-
+}
 ```
 
 ## Custom Queries
