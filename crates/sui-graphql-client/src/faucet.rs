@@ -15,6 +15,9 @@ const FAUCET_DEVNET_HOST: &str = "https://faucet.devnet.sui.io/v1/gas";
 const FAUCET_TESTNET_HOST: &str = "https://faucet.testnet.sui.io/v1/gas";
 const FAUCET_LOCAL_HOST: &str = "http://localhost:9123/v1/gas";
 
+const FAUCET_REQUEST_TIMEOUT: Duration = Duration::from_secs(120);
+const FAUCET_POLL_INTERVAL: Duration = Duration::from_secs(2);
+
 pub struct FaucetClient {
     faucet_url: Url,
     inner: reqwest::Client,
@@ -37,7 +40,6 @@ pub struct FaucetResponse {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct BatchStatusFaucetResponse {
-    // This string is the Uuid for the req
     pub status: Option<BatchSendStatus>,
     pub error: Option<String>,
 }
@@ -45,9 +47,9 @@ pub struct BatchStatusFaucetResponse {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum BatchSendStatusType {
-    INPROGRESS,
-    SUCCEEDED,
-    DISCARDED,
+    Inprogress,
+    Succeeded,
+    Discarded,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -170,8 +172,8 @@ impl FaucetClient {
             )
             .expect("Invalid faucet status URL");
 
-            let poll_response = tokio::time::timeout(Duration::from_secs(120), async {
-                let mut interval = tokio::time::interval(Duration::from_secs(2));
+            let poll_response = tokio::time::timeout(FAUCET_REQUEST_TIMEOUT, async {
+                let mut interval = tokio::time::interval(FAUCET_POLL_INTERVAL);
                 loop {
                     interval.tick().await;
                     eprint!("Polling faucet status...");
@@ -182,16 +184,16 @@ impl FaucetClient {
                     if let Ok(Some(poll_response)) = req {
                         eprintln!("response: {:?}", poll_response);
                         match poll_response.status {
-                            BatchSendStatusType::SUCCEEDED => {
+                            BatchSendStatusType::Succeeded => {
                                 break Ok(poll_response);
                             }
-                            BatchSendStatusType::DISCARDED => {
+                            BatchSendStatusType::Discarded => {
                                 break Ok(BatchSendStatus {
-                                    status: BatchSendStatusType::DISCARDED,
+                                    status: BatchSendStatusType::Discarded,
                                     transferred_gas_objects: None,
                                 });
                             }
-                            BatchSendStatusType::INPROGRESS => {
+                            BatchSendStatusType::Inprogress => {
                                 continue;
                             }
                         }
