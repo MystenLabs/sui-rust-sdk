@@ -17,7 +17,8 @@ use query_types::{
 };
 use reqwest::Url;
 use sui_types::types::{
-    Address, CheckpointSequenceNumber, CheckpointSummary, Event, Object, SignedTransaction,
+    framework::Coin, Address, CheckpointSequenceNumber, CheckpointSummary, Event, Object,
+    SignedTransaction,
 };
 
 use anyhow::{anyhow, ensure, Error, Result};
@@ -230,6 +231,45 @@ impl Client {
     // ===========================================================================
     // Coin API
     // ===========================================================================
+
+    /// Get the list of coins for the specified address.
+    ///
+    /// If `coin_type` is not provided, it will default to `0x2::coin::Coin`, which will return all
+    /// coins. For SUI coin, pass in the coin type: `0x2::coin::Coin<0x2::sui::SUI>`.
+    pub async fn coins(
+        &self,
+        owner: Address,
+        after: Option<&str>,
+        before: Option<&str>,
+        first: Option<i32>,
+        last: Option<i32>,
+        coin_type: Option<&str>,
+    ) -> Result<Option<Page<Coin>>, Error> {
+        let response = self
+            .objects(
+                after,
+                before,
+                Some(ObjectFilter {
+                    type_: Some(coin_type.unwrap_or_else(|| "0x2::coin::Coin")),
+                    owner: Some(owner.into()),
+                    object_ids: None,
+                    object_keys: None,
+                }),
+                first,
+                last,
+            )
+            .await?;
+
+        Ok(response.map(|x| {
+            Page::new(
+                x.page_info,
+                x.data
+                    .iter()
+                    .flat_map(|c| Coin::try_from_object(c))
+                    .collect::<Vec<_>>(),
+            )
+        }))
+    }
 
     pub async fn coin_metadata(&self, coin_type: &str) -> Result<Option<CoinMetadata>, Error> {
         let operation = CoinMetadataQuery::build(CoinMetadataArgs { coin_type });
