@@ -88,6 +88,12 @@ impl FaucetClient {
         FaucetClient { faucet_url, inner }
     }
 
+    /// Set to local faucet.
+    pub fn local(mut self) -> Self {
+        self.faucet_url = Url::parse(FAUCET_LOCAL_HOST).expect("Invalid faucet URL");
+        self
+    }
+
     /// Set to devnet faucet.
     pub fn devnet(mut self) -> Self {
         self.faucet_url = Url::parse(FAUCET_DEVNET_HOST).expect("Invalid faucet URL");
@@ -106,7 +112,7 @@ impl FaucetClient {
         self.request_impl(address, &self.faucet_url).await
     }
 
-    /// Intenral implementation of a faucet request. It returns the task UUID.
+    /// Internal implementation of a faucet request. It returns the task Uuid as a String.
     async fn request_impl(
         &self,
         address: Address,
@@ -211,9 +217,9 @@ impl FaucetClient {
         self.request_impl(address, &url).await
     }
 
-    /// Check on the status of a request to the faucet.
+    /// Check the faucet request status.
     ///
-    /// Possible statuses are: `INPROGRESS`, `SUCCEEDED`, `DISCARDED`.
+    /// Possible statuses are defined by: `[BatchSendStatusType]`
     pub async fn request_status(
         &self,
         id: String,
