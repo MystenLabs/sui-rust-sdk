@@ -219,7 +219,7 @@ impl FaucetClient {
 
     /// Check the faucet request status.
     ///
-    /// Possible statuses are defined by: `[BatchSendStatusType]`
+    /// Possible statuses are defined in: [`BatchSendStatusType`]
     pub async fn request_status(
         &self,
         id: String,
