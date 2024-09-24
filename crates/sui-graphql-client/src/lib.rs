@@ -16,7 +16,8 @@ use query_types::{
 };
 use reqwest::Url;
 use sui_types::types::{
-    Address, CheckpointSequenceNumber, CheckpointSummary, Event, Object, SignedTransaction,
+    framework::Coin, Address, CheckpointSequenceNumber, CheckpointSummary, Event, Object,
+    SignedTransaction,
 };
 
 use anyhow::{anyhow, ensure, Error, Result};
@@ -192,6 +193,81 @@ impl Client {
             .data
             .map(|s| s.service_config)
             .ok_or_else(|| Error::msg("No data in response"))
+    }
+
+    // ===========================================================================
+    // Balance API
+    // ===========================================================================
+
+    /// Get the balance of all the coins owned by address for the provided coin type.
+    /// Coin type will default to `0x2::coin::Coin<0x2::sui::SUI>` if not provided.
+    pub async fn balance(
+        &self,
+        address: Address,
+        coin_type: Option<&str>,
+    ) -> Result<Option<u128>, Error> {
+        let obj_filter = Some(ObjectFilter {
+            type_: Some(coin_type.unwrap_or_else(|| "0x2::coin::Coin<0x2::sui::SUI>")),
+            owner: Some(address.into()),
+            object_ids: None,
+            object_keys: None,
+        });
+        let mut balance = 0;
+        let mut current_cursor = None;
+
+        let objects = self
+            .objects(
+                current_cursor.as_deref(),
+                None,
+                obj_filter.clone(),
+                None,
+                None,
+            )
+            .await?;
+
+        // If there are no coins (e.g., type passed is wrong or there's no coins of that type),
+        // return None
+        if let Some(objects) = objects {
+            current_cursor = objects.page_info().end_cursor.clone();
+            if objects.data().is_empty() {
+                return Ok(None);
+            } else {
+                for coin in objects.data() {
+                    if let Some(coin) = Coin::try_from_object(coin) {
+                        balance += coin.balance() as u128;
+                    }
+                }
+            }
+        } else {
+            return Ok(None);
+        }
+
+        loop {
+            let objects = self
+                .objects(
+                    current_cursor.as_deref(),
+                    None,
+                    obj_filter.clone(),
+                    None,
+                    None,
+                )
+                .await?;
+
+            if let Some(objects) = objects {
+                let coins = objects.data();
+                for coin in coins {
+                    if let Some(coin) = Coin::try_from_object(coin) {
+                        balance += coin.balance() as u128;
+                    }
+                }
+
+                if objects.page_info().has_next_page {
+                    current_cursor = objects.page_info().end_cursor.clone();
+                } else {
+                    break Ok(Some(balance));
+                }
+            }
+        }
     }
 
     // ===========================================================================
