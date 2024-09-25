@@ -1,5 +1,5 @@
 [package]
-name = "sui-sdk-crypto"
+name = "sui-crypto"
 version = "0.0.0"
 authors = ["Brandon Williams <brandon@mystenlabs.com>"]
 license = "Apache-2.0"
