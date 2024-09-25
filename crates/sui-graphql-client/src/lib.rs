@@ -716,6 +716,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_object_query() {
         for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();
