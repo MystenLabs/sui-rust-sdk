@@ -7,17 +7,17 @@ pub mod query_types;
 
 use base64ct::Encoding;
 use query_types::{
-    ChainIdentifierQuery, CheckpointArgs, CheckpointId, CheckpointQuery, CoinMetadata,
-    CoinMetadataArgs, CoinMetadataQuery, EpochSummaryArgs, EpochSummaryQuery, EventFilter,
-    EventsQuery, EventsQueryArgs, ObjectFilter, ObjectQuery, ObjectQueryArgs, ObjectsQuery,
-    ObjectsQueryArgs, PageInfo, ProtocolConfigQuery, ProtocolConfigs, ProtocolVersionArgs,
-    ServiceConfig, ServiceConfigQuery, TransactionBlockArgs, TransactionBlockQuery,
-    TransactionBlocksQuery, TransactionBlocksQueryArgs, TransactionsFilter, Uint53,
+    BalanceArgs, BalanceQuery, ChainIdentifierQuery, CheckpointArgs, CheckpointId, CheckpointQuery,
+    CoinMetadata, CoinMetadataArgs, CoinMetadataQuery, EpochSummaryArgs, EpochSummaryQuery,
+    EventFilter, EventsQuery, EventsQueryArgs, ObjectFilter, ObjectQuery, ObjectQueryArgs,
+    ObjectsQuery, ObjectsQueryArgs, PageInfo, ProtocolConfigQuery, ProtocolConfigs,
+    ProtocolVersionArgs, ServiceConfig, ServiceConfigQuery, TransactionBlockArgs,
+    TransactionBlockQuery, TransactionBlocksQuery, TransactionBlocksQueryArgs, TransactionsFilter,
+    Uint53,
 };
 use reqwest::Url;
 use sui_types::types::{
-    framework::Coin, Address, CheckpointSequenceNumber, CheckpointSummary, Event, Object,
-    SignedTransaction,
+    Address, CheckpointSequenceNumber, CheckpointSummary, Event, Object, SignedTransaction,
 };
 
 use anyhow::{anyhow, ensure, Error, Result};
@@ -206,68 +206,25 @@ impl Client {
         address: Address,
         coin_type: Option<&str>,
     ) -> Result<Option<u128>, Error> {
-        let obj_filter = Some(ObjectFilter {
-            type_: Some(coin_type.unwrap_or_else(|| "0x2::coin::Coin<0x2::sui::SUI>")),
-            owner: Some(address.into()),
-            object_ids: None,
-            object_keys: None,
+        let operation = BalanceQuery::build(BalanceArgs {
+            address: address.into(),
+            coin_type: coin_type.map(|x| x.to_string()),
         });
-        let mut balance = 0;
-        let mut current_cursor = None;
+        let response = self.run_query(&operation).await?;
 
-        let objects = self
-            .objects(
-                current_cursor.as_deref(),
-                None,
-                obj_filter.clone(),
-                None,
-                None,
-            )
-            .await?;
-
-        // If there are no coins (e.g., type passed is wrong or there's no coins of that type),
-        // return None
-        if let Some(objects) = objects {
-            current_cursor = objects.page_info().end_cursor.clone();
-            if objects.data().is_empty() {
-                return Ok(None);
-            } else {
-                for coin in objects.data() {
-                    if let Some(coin) = Coin::try_from_object(coin) {
-                        balance += coin.balance() as u128;
-                    }
-                }
-            }
-        } else {
-            return Ok(None);
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
         }
 
-        loop {
-            let objects = self
-                .objects(
-                    current_cursor.as_deref(),
-                    None,
-                    obj_filter.clone(),
-                    None,
-                    None,
-                )
-                .await?;
-
-            if let Some(objects) = objects {
-                let coins = objects.data();
-                for coin in coins {
-                    if let Some(coin) = Coin::try_from_object(coin) {
-                        balance += coin.balance() as u128;
-                    }
-                }
-
-                if objects.page_info().has_next_page {
-                    current_cursor = objects.page_info().end_cursor.clone();
-                } else {
-                    break Ok(Some(balance));
-                }
-            }
-        }
+        let total_balance = response
+            .data
+            .map(|b| b.owner.and_then(|o| o.balance.map(|b| b.total_balance)))
+            .ok_or_else(|| Error::msg("No data in response"))?
+            .flatten()
+            .map(|x| x.0.parse::<u128>())
+            .transpose()
+            .map_err(|e| Error::msg(format!("Cannot parse balance into u128: {e}")))?;
+        Ok(total_balance)
     }
 
     // ===========================================================================
