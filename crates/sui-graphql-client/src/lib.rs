@@ -23,6 +23,10 @@ use sui_types::types::{
 
 use anyhow::{anyhow, ensure, Error, Result};
 use cynic::{serde, GraphQlResponse, Operation, QueryBuilder};
+#[cfg(feature = "stream")]
+use futures::Stream;
+#[cfg(feature = "stream")]
+use std::pin::Pin;
 
 const MAINNET_HOST: &str = "https://sui-mainnet.mystenlabs.com/graphql";
 const TESTNET_HOST: &str = "https://sui-testnet.mystenlabs.com/graphql";
@@ -269,6 +273,48 @@ impl Client {
                     .collect::<Vec<_>>(),
             )
         }))
+    }
+
+    /// Stream of coins for the specified address and coin type.
+    #[cfg(feature = "stream")]
+    pub fn coins_stream<'a>(
+        &'a self,
+        owner: Address,
+        coin_type: Option<&'a str>,
+    ) -> Pin<Box<dyn Stream<Item = Result<Coin, Error>> + 'a>> {
+        Box::pin(async_stream::try_stream! {
+            let mut after = None;
+            loop {
+                let response = self.objects(
+                    after.as_deref(),
+                    None,
+                    Some(ObjectFilter {
+                        type_: Some(coin_type.unwrap_or("0x2::coin::Coin")),
+                        owner: Some(owner.into()),
+                        object_ids: None,
+                        object_keys: None,
+                    }),
+                    None,
+                    None,
+                ).await?;
+
+                if let Some(page) = response {
+                    for object in page.data {
+                        if let Some(coin) = Coin::try_from_object(&object) {
+                            yield coin;
+                        }
+                    }
+
+                    if let Some(end_cursor) = page.page_info.end_cursor {
+                        after = Some(end_cursor);
+                    } else {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            }
+        })
     }
 
     pub async fn coin_metadata(&self, coin_type: &str) -> Result<Option<CoinMetadata>, Error> {

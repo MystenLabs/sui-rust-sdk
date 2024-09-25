@@ -8,13 +8,19 @@ publish = false
 readme = "README.md"
 description = "Sui GraphQL RPC Client for the Sui Blockchain"
 
+[features]
+default = []
+stream = ["dep:async-stream", "dep:futures"]
+
 [dependencies]
-anyhow = "1.0.8"
-async-trait = "0.1.8"
+anyhow = "1.0.86"
+async-stream = {version = "0.3.5", optional = true }
+async-trait = "0.1.81"
 base64ct = { version = "1.6.0", features = ["alloc"] }
 bcs = "0.1.6"
 chrono = { version = "0.4.38" }
-cynic = { version = "3.8.0" }
+cynic = { version = "3.7.3" }
+futures = {version = "0.3.30", optional = true }
 reqwest = { version = "0.12", features = ["json"] }
 sui-types = { package = "sui-sdk-types", path = "../sui-sdk-types", features = ["serde"] }
 tokio = { version = "1.40.0", features = ["full"] }
