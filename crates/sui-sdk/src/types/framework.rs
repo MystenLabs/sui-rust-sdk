@@ -3,17 +3,18 @@
 use super::Object;
 use super::ObjectId;
 use super::TypeTag;
+use std::borrow::Cow;
 
 #[derive(Debug, Clone)]
 pub struct Coin<'a> {
-    coin_type: &'a TypeTag,
+    coin_type: Cow<'a, TypeTag>,
     id: ObjectId,
     balance: u64,
 }
 
 impl<'a> Coin<'a> {
-    pub fn coin_type(&self) -> &'a TypeTag {
-        self.coin_type
+    pub fn coin_type(&self) -> &TypeTag {
+        &self.coin_type
     }
 
     pub fn id(&self) -> &ObjectId {
@@ -39,12 +40,20 @@ impl<'a> Coin<'a> {
                     u64::from_le_bytes((&contents[ObjectId::LENGTH..]).try_into().unwrap());
 
                 Some(Self {
-                    coin_type,
+                    coin_type: Cow::Borrowed(coin_type),
                     id,
                     balance,
                 })
             }
             _ => None, // package
+        }
+    }
+
+    pub fn into_owned(self) -> Coin<'static> {
+        Coin {
+            coin_type: Cow::Owned(self.coin_type.into_owned()),
+            id: self.id,
+            balance: self.balance,
         }
     }
 }
