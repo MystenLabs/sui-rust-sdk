@@ -23,9 +23,7 @@ use sui_types::types::{
 
 use anyhow::{anyhow, ensure, Error, Result};
 use cynic::{serde, GraphQlResponse, Operation, QueryBuilder};
-#[cfg(feature = "stream")]
 use futures::Stream;
-#[cfg(feature = "stream")]
 use std::pin::Pin;
 
 const MAINNET_HOST: &str = "https://sui-mainnet.mystenlabs.com/graphql";
@@ -270,13 +268,13 @@ impl Client {
                 x.data
                     .iter()
                     .flat_map(|c| Coin::try_from_object(c))
+                    .map(|c| c.into_owned())
                     .collect::<Vec<_>>(),
             )
         }))
     }
 
     /// Stream of coins for the specified address and coin type.
-    #[cfg(feature = "stream")]
     pub fn coins_stream<'a>(
         &'a self,
         owner: Address,
@@ -301,7 +299,7 @@ impl Client {
                 if let Some(page) = response {
                     for object in page.data {
                         if let Some(coin) = Coin::try_from_object(&object) {
-                            yield coin;
+                            yield coin.into_owned();
                         }
                     }
 
