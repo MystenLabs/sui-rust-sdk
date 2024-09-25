@@ -50,7 +50,7 @@ pub struct BigInt(pub String);
 #[cynic(graphql_type = "DateTime")]
 pub struct DateTime(pub String);
 
-#[derive(Clone, cynic::Scalar, Debug)]
+#[derive(cynic::Scalar, Debug)]
 pub struct SuiAddress(pub String);
 
 #[derive(cynic::Scalar, Debug, Clone)]
