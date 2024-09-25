@@ -1,5 +1,5 @@
 [package]
-name = "sui-sdk"
+name = "sui-sdk-types"
 version = "0.0.0"
 authors = ["Brandon Williams <brandon@mystenlabs.com>"]
 license = "Apache-2.0"

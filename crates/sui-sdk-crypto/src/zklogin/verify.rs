@@ -11,16 +11,16 @@ use ark_bn254::G2Projective;
 use ark_ff::PrimeField;
 use ark_groth16::PreparedVerifyingKey;
 use ark_groth16::Proof;
-use sui_sdk::types::Bn254FieldElement;
-use sui_sdk::types::CircomG1;
-use sui_sdk::types::CircomG2;
-use sui_sdk::types::Ed25519PublicKey;
-use sui_sdk::types::Jwk;
-use sui_sdk::types::Secp256k1PublicKey;
-use sui_sdk::types::Secp256r1PublicKey;
-use sui_sdk::types::SimpleSignature;
-use sui_sdk::types::ZkLoginInputs;
-use sui_sdk::types::ZkLoginProof;
+use sui_sdk_types::types::Bn254FieldElement;
+use sui_sdk_types::types::CircomG1;
+use sui_sdk_types::types::CircomG2;
+use sui_sdk_types::types::Ed25519PublicKey;
+use sui_sdk_types::types::Jwk;
+use sui_sdk_types::types::Secp256k1PublicKey;
+use sui_sdk_types::types::Secp256r1PublicKey;
+use sui_sdk_types::types::SimpleSignature;
+use sui_sdk_types::types::ZkLoginInputs;
+use sui_sdk_types::types::ZkLoginProof;
 
 use super::POSEIDON;
 
@@ -520,7 +520,7 @@ pub(crate) fn gen_address_seed_with_salt_hash(
 #[cfg(test)]
 mod test {
     use super::*;
-    use sui_sdk::types::Ed25519Signature;
+    use sui_sdk_types::types::Ed25519Signature;
 
     #[cfg(test)]
     #[cfg(target_arch = "wasm32")]
