@@ -1,6 +1,6 @@
 use crate::{SignatureError, SuiVerifier};
 use signature::Verifier;
-use sui_sdk::types::{SimpleSignature, UserSignature};
+use sui_sdk_types::types::{SimpleSignature, UserSignature};
 
 pub struct SimpleVerifier;
 
@@ -63,7 +63,7 @@ impl Verifier<UserSignature> for SimpleVerifier {
 impl SuiVerifier for SimpleVerifier {
     fn verify_transaction(
         &self,
-        transaction: &sui_sdk::types::Transaction,
+        transaction: &sui_sdk_types::types::Transaction,
         signature: &UserSignature,
     ) -> Result<(), SignatureError> {
         let message = transaction.signing_digest();
@@ -72,7 +72,7 @@ impl SuiVerifier for SimpleVerifier {
 
     fn verify_personal_message(
         &self,
-        message: &sui_sdk::types::PersonalMessage<'_>,
+        message: &sui_sdk_types::types::PersonalMessage<'_>,
         signature: &UserSignature,
     ) -> Result<(), SignatureError> {
         let message = message.signing_digest();

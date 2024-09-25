@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{SignatureError, SuiVerifier};
 use poseidon::POSEIDON;
 use signature::Verifier;
-use sui_sdk::types::{Claim, Jwk, JwkId, UserSignature, ZkLoginAuthenticator, ZkLoginInputs};
+use sui_sdk_types::types::{Claim, Jwk, JwkId, UserSignature, ZkLoginAuthenticator, ZkLoginInputs};
 
 mod poseidon;
 mod verify;
@@ -82,7 +82,7 @@ impl Verifier<UserSignature> for ZkloginVerifier {
 impl SuiVerifier for ZkloginVerifier {
     fn verify_transaction(
         &self,
-        transaction: &sui_sdk::types::Transaction,
+        transaction: &sui_sdk_types::types::Transaction,
         signature: &UserSignature,
     ) -> Result<(), SignatureError> {
         let message = transaction.signing_digest();
@@ -91,7 +91,7 @@ impl SuiVerifier for ZkloginVerifier {
 
     fn verify_personal_message(
         &self,
-        message: &sui_sdk::types::PersonalMessage<'_>,
+        message: &sui_sdk_types::types::PersonalMessage<'_>,
         signature: &UserSignature,
     ) -> Result<(), SignatureError> {
         let message = message.signing_digest();

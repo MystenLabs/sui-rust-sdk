@@ -3,12 +3,12 @@ use crate::Signer;
 use crate::SuiSigner;
 use crate::SuiVerifier;
 use crate::Verifier;
-use sui_sdk::types::Ed25519PublicKey;
-use sui_sdk::types::Ed25519Signature;
-use sui_sdk::types::PersonalMessage;
-use sui_sdk::types::SimpleSignature;
-use sui_sdk::types::Transaction;
-use sui_sdk::types::UserSignature;
+use sui_sdk_types::types::Ed25519PublicKey;
+use sui_sdk_types::types::Ed25519Signature;
+use sui_sdk_types::types::PersonalMessage;
+use sui_sdk_types::types::SimpleSignature;
+use sui_sdk_types::types::Transaction;
+use sui_sdk_types::types::UserSignature;
 
 pub struct Ed25519PrivateKey(ed25519_dalek::SigningKey);
 

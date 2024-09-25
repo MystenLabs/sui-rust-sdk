@@ -6,12 +6,12 @@ use p256::ecdsa::VerifyingKey;
 use p256::elliptic_curve::group::GroupEncoding;
 use signature::Signer;
 use signature::Verifier;
-use sui_sdk::types::PersonalMessage;
-use sui_sdk::types::Secp256r1PublicKey;
-use sui_sdk::types::Secp256r1Signature;
-use sui_sdk::types::SimpleSignature;
-use sui_sdk::types::Transaction;
-use sui_sdk::types::UserSignature;
+use sui_sdk_types::types::PersonalMessage;
+use sui_sdk_types::types::Secp256r1PublicKey;
+use sui_sdk_types::types::Secp256r1Signature;
+use sui_sdk_types::types::SimpleSignature;
+use sui_sdk_types::types::Transaction;
+use sui_sdk_types::types::UserSignature;
 
 pub struct Secp256r1PrivateKey(SigningKey);
 
