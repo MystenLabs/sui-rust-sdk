@@ -1,12 +1,12 @@
 [package]
 name = "sui-sdk-types"
-version = "0.0.0"
+version = "0.0.1"
 authors = ["Brandon Williams <brandon@mystenlabs.com>"]
+repository = "https://github.com/mystenlabs/sui-rust-sdk/"
 license = "Apache-2.0"
 edition = "2021"
-publish = false
 readme = "README.md"
-description = "Sdk for the Sui Blockchain"
+description = "Core types for the Sui Sdk"
 
 [package.metadata.docs.rs]
 # To build locally:

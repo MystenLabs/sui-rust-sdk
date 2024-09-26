@@ -1,3 +1,9 @@
+# sui-graphql-client
+
+[![sui-graphql-client on crates.io](https://img.shields.io/crates/v/sui-graphql-client)](https://crates.io/crates/sui-graphql-client)
+[![Documentation (latest release)](https://img.shields.io/badge/docs-latest-brightgreen)](https://docs.rs/sui-graphql-client)
+[![Documentation (master)](https://img.shields.io/badge/docs-master-59f)](https://mystenlabs.github.io/sui-rust-sdk/sui-graphql-client/)
+
 The Sui GraphQL client is a client for interacting with the Sui blockchain via GraphQL.
 It provides a set of APIs for querying the blockchain for information such as chain identifier,
 reference gas price, protocol configuration, service configuration, checkpoint, epoch,
