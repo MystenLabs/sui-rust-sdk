@@ -42,11 +42,14 @@ The client provides an API to request gas from the faucet. The `request_and_wait
 ### Example for standard devnet/testnet/local networks.
 ```rust, no_run
 use sui_graphql_client::faucet::FaucetClient;
+use sui_sdk_types::types::Address;
+
 use anyhow::Result;
+use std::str::FromStr;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let address = "SUI_ADDRESS_HERE";
+    let address = Address::from_str("SUI_ADDRESS_HERE")?;
     // Request gas from the faucet and wait until a coin is received
     // As the client is set to devnet, faucet will use the devnet faucet.
     let faucet = FaucetClient::devnet().request_and_wait(address).await?;
@@ -67,11 +70,14 @@ async fn main() -> Result<()> {
 Note that this [`FaucetClient`] is explicitly designed to work with two endpoints: `v1/gas`, and `v1/status`. When passing in the custom faucet URL, skip the final endpoint and only pass in the top-level url (e.g., `https://faucet.devnet.sui.io`).
 ```rust, no_run
 use sui_graphql_client::faucet::FaucetClient;
+use sui_sdk_types::types::Address;
+
 use anyhow::Result;
+use std::str::FromStr;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let address = "SUI_ADDRESS_HERE";
+    let address = Address::from_str("SUI_ADDRESS_HERE")?;
     // Request gas from the faucet and wait until a coin is received
     // As the client is set to devnet, faucet will use the devnet faucet.
     let faucet = FaucetClient::new("https://myfaucet_testnet.com").request_and_wait(address).await?;
