@@ -21,6 +21,9 @@ reqwest = { version = "0.12", features = ["json"] }
 sui-types = { package = "sui-sdk-types", path = "../sui-sdk-types", features = ["serde"] }
 tokio = { version = "1.40.0", features = ["full"] }
 
+[dev-dependencies]
+tokio = { version = "1.39.2", features = ["full"] }
+
 [build-dependencies]
 cynic-codegen = { version = "3.8.0" }
 
