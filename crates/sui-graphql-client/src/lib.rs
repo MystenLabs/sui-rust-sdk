@@ -252,7 +252,7 @@ impl Client {
                 after,
                 before,
                 Some(ObjectFilter {
-                    type_: Some(coin_type.unwrap_or_else(|| "0x2::coin::Coin")),
+                    type_: Some(coin_type.unwrap_or("0x2::coin::Coin")),
                     owner: Some(owner.into()),
                     object_ids: None,
                     object_keys: None,
@@ -267,7 +267,7 @@ impl Client {
                 x.page_info,
                 x.data
                     .iter()
-                    .flat_map(|c| Coin::try_from_object(c))
+                    .flat_map(Coin::try_from_object)
                     .map(|c| c.into_owned())
                     .collect::<Vec<_>>(),
             )
