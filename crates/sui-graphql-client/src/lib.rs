@@ -610,6 +610,15 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_balance_query() {
+        for (n, _) in NETWORKS.iter() {
+            let client = Client::new(n).unwrap();
+            let balance = client.balance("0x1".parse().unwrap(), None).await;
+            assert!(balance.is_ok(), "Balance query failed for network: {n}");
+        }
+    }
+
+    #[tokio::test]
     async fn test_chain_id() {
         for (n, id) in NETWORKS.iter() {
             let client = Client::new(n).unwrap();
