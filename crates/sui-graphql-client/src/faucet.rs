@@ -1,19 +1,18 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::time::Duration;
+use sui_types::types::{Address, ObjectId, TransactionDigest};
 
-use anyhow::bail;
+use anyhow::{anyhow, bail};
 use reqwest::{StatusCode, Url};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use sui_types::types::{Address, ObjectId, TransactionDigest};
+use std::time::Duration;
+use tracing::{error, info};
 
-use crate::{DEVNET_HOST, LOCAL_HOST};
-
-const FAUCET_DEVNET_HOST: &str = "https://faucet.devnet.sui.io/v1/gas";
-const FAUCET_TESTNET_HOST: &str = "https://faucet.testnet.sui.io/v1/gas";
-const FAUCET_LOCAL_HOST: &str = "http://localhost:9123/v1/gas";
+pub const FAUCET_DEVNET_HOST: &str = "https://faucet.devnet.sui.io";
+pub const FAUCET_TESTNET_HOST: &str = "https://faucet.testnet.sui.io";
+pub const FAUCET_LOCAL_HOST: &str = "http://localhost:9123";
 
 const FAUCET_REQUEST_TIMEOUT: Duration = Duration::from_secs(120);
 const FAUCET_POLL_INTERVAL: Duration = Duration::from_secs(2);
@@ -77,58 +76,64 @@ pub struct CoinInfo {
 }
 
 impl FaucetClient {
-    /// Construct a new `FaucetClient` with the given `reqwest::Client`. Defaults to Testnet
-    /// faucet.
-    pub(crate) fn new(inner: reqwest::Client, rpc: &Url) -> Self {
-        let faucet_url = if rpc.as_str() == LOCAL_HOST {
-            Url::parse(FAUCET_LOCAL_HOST).expect("Invalid faucet URL")
-        } else if rpc.as_str() == DEVNET_HOST {
-            Url::parse(FAUCET_DEVNET_HOST).expect("Invalid faucet URL")
-        } else {
-            Url::parse(FAUCET_TESTNET_HOST).expect("Invalid faucet URL")
-        };
+    /// Construct a new `FaucetClient` with the given faucet service URL. This [`FaucetClient`]
+    /// expects that the service provides two endpoints: /v1/gas and /v1/status. As such, do not
+    /// provide the request endpoint, just the top level service endpoint.
+    ///
+    /// - /v1/gas is used to request gas
+    /// - /v1/status/taks-uuid is used to check the status of the request
+    pub fn new(faucet_url: &str) -> Self {
+        let inner = reqwest::Client::new();
+        let faucet_url = Url::parse(faucet_url).expect("Invalid faucet URL");
         FaucetClient { faucet_url, inner }
     }
 
     /// Set to local faucet.
-    pub fn local(mut self) -> Self {
-        self.faucet_url = Url::parse(FAUCET_LOCAL_HOST).expect("Invalid faucet URL");
-        self
+    pub fn local() -> Self {
+        Self {
+            faucet_url: Url::parse(FAUCET_LOCAL_HOST).expect("Invalid faucet URL"),
+            inner: reqwest::Client::new(),
+        }
     }
 
     /// Set to devnet faucet.
-    pub fn devnet(mut self) -> Self {
-        self.faucet_url = Url::parse(FAUCET_DEVNET_HOST).expect("Invalid faucet URL");
-        self
+    pub fn devnet() -> Self {
+        Self {
+            faucet_url: Url::parse(FAUCET_DEVNET_HOST).expect("Invalid faucet URL"),
+            inner: reqwest::Client::new(),
+        }
     }
 
     /// Set to testnet faucet.
-    pub fn testnet(mut self) -> Self {
-        self.faucet_url = Url::parse(FAUCET_TESTNET_HOST).expect("Invalid faucet URL");
-        self
+    pub fn testnet() -> Self {
+        Self {
+            faucet_url: Url::parse(FAUCET_TESTNET_HOST).expect("Invalid faucet URL"),
+            inner: reqwest::Client::new(),
+        }
     }
 
     /// Request gas from the faucet. Note that this will return the UUID of the request and not
     /// wait until the token is received. Use `request_and_wait` to wait for the token.
     pub async fn request(&self, address: Address) -> Result<Option<String>, anyhow::Error> {
-        self.request_impl(address, &self.faucet_url).await
+        self.request_impl(address).await
     }
 
     /// Internal implementation of a faucet request. It returns the task Uuid as a String.
-    async fn request_impl(
-        &self,
-        address: Address,
-        faucet_url: &Url,
-    ) -> Result<Option<String>, anyhow::Error> {
+    async fn request_impl(&self, address: Address) -> Result<Option<String>, anyhow::Error> {
         let address = address.to_string();
         let json_body = json![{
             "FixedAmountRequest": {
                 "recipient": &address
             }
         }];
+        let url = format!("{}v1/gas", self.faucet_url);
+        info!(
+            "Requesting gas from faucet for address {} : {}",
+            address, url
+        );
         let resp = self
             .inner
-            .post(faucet_url.as_ref())
+            .post(url)
             .header("content-type", "application/json")
             .json(&json_body)
             .send()
@@ -138,18 +143,23 @@ impl FaucetClient {
                 let faucet_resp: FaucetResponse = resp.json().await?;
 
                 if let Some(err) = faucet_resp.error {
+                    error!("Faucet request was unsuccessful: {err}");
                     bail!("Faucet request was unsuccessful: {err}")
                 } else {
+                    info!("Request succesful: {:?}", faucet_resp.task);
                     Ok(faucet_resp.task)
                 }
             }
             StatusCode::TOO_MANY_REQUESTS => {
+                error!("Faucet service received too many requests from this IP address.");
                 bail!("Faucet service received too many requests from this IP address. Please try again after 60 minutes.");
             }
             StatusCode::SERVICE_UNAVAILABLE => {
+                error!("Faucet service is currently overloaded or unavailable.");
                 bail!("Faucet service is currently overloaded or unavailable. Please try again later.");
             }
             status_code => {
+                error!("Faucet request was unsuccessful: {status_code}");
                 bail!("Faucet request was unsuccessful: {status_code}");
             }
         }
@@ -164,25 +174,13 @@ impl FaucetClient {
     ) -> Result<Option<FaucetReceipt>, anyhow::Error> {
         let request_id = self.request(address).await?;
         if let Some(request_id) = request_id {
-            let status_url = Url::parse(
-                self.faucet_url
-                    .to_string()
-                    .replace("gas", "status")
-                    .as_str(),
-            )
-            .expect("Invalid faucet status URL");
-
             let poll_response = tokio::time::timeout(FAUCET_REQUEST_TIMEOUT, async {
                 let mut interval = tokio::time::interval(FAUCET_POLL_INTERVAL);
                 loop {
                     interval.tick().await;
-                    eprint!("Polling faucet status...");
-                    let req = self
-                        .request_status(request_id.clone(), status_url.clone())
-                        .await;
+                    let req = self.request_status(request_id.clone()).await;
 
                     if let Ok(Some(poll_response)) = req {
-                        eprintln!("response: {:?}", poll_response);
                         match poll_response.status {
                             BatchSendStatusType::Succeeded => {
                                 break Ok(poll_response);
@@ -198,25 +196,16 @@ impl FaucetClient {
                             }
                         }
                     } else if req.is_err() {
-                        break Err(anyhow::anyhow!("Faucet request failed. {:?}", req.err()));
+                        break Err(anyhow!("Faucet request failed. {:?}", req.err()));
                     }
                 }
             })
             .await
-            .map_err(|_| anyhow::anyhow!("Faucet request timed out"))??;
+            .map_err(|_| anyhow!("Faucet request timed out"))??;
             Ok(poll_response.transferred_gas_objects)
         } else {
             Ok(None)
         }
-    }
-
-    /// Request gas from a custom faucet service.
-    pub async fn request_url(
-        &self,
-        address: Address,
-        url: Url,
-    ) -> Result<Option<String>, anyhow::Error> {
-        self.request_impl(address, &url).await
     }
 
     /// Check the faucet request status.
@@ -225,10 +214,10 @@ impl FaucetClient {
     pub async fn request_status(
         &self,
         id: String,
-        url: Url,
     ) -> Result<Option<BatchSendStatus>, anyhow::Error> {
-        let url = format!("{}/{}", url, id);
-        let response = self.inner.get(&url).send().await?;
+        let status_url = format!("{}v1/status/{}", self.faucet_url, id);
+        info!("Checking status of faucet request: {status_url}");
+        let response = self.inner.get(&status_url).send().await?;
         let json = response.json::<BatchStatusFaucetResponse>().await?;
         Ok(json.status)
     }

@@ -3,11 +3,10 @@
 
 #![doc = include_str!("../README.md")]
 
-mod faucet;
+pub mod faucet;
 pub mod query_types;
 
 use base64ct::Encoding;
-use faucet::FaucetClient;
 use query_types::{
     BalanceArgs, BalanceQuery, ChainIdentifierQuery, CheckpointArgs, CheckpointId, CheckpointQuery,
     CoinMetadata, CoinMetadataArgs, CoinMetadataQuery, EpochSummaryArgs, EpochSummaryQuery,
@@ -114,20 +113,6 @@ impl Client {
     /// Return the URL for the GraphQL server.
     fn rpc_server(&self) -> &str {
         self.rpc.as_str()
-    }
-
-    /// Return a new [`FaucetClient`] for interacting with the faucet. By default, it will use the
-    /// corresponding faucet for the selected network (based on the Client rpc, if a public Sui RPC
-    /// is used).
-    /// Use the [`FaucetClient::devnet`] and [`FaucetClient::testnet`] methods to switch
-    /// between the public devnet and testnet faucets.
-    ///
-    /// For a custom faucet service, use the [`FaucetClient::request_url`] method.
-    ///
-    /// Faucets on devnet and testnet are rate limited. If you run it too many times, you
-    /// surpass the limit and must wait to successfully run it again.
-    pub fn faucet(&self) -> FaucetClient {
-        FaucetClient::new(self.inner.clone(), &self.rpc)
     }
 
     /// Run a query on the GraphQL server and return the response.
