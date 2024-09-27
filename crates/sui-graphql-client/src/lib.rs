@@ -315,6 +315,7 @@ impl Client {
         })
     }
 
+    /// Get the coin metadata for the coin type.
     pub async fn coin_metadata(&self, coin_type: &str) -> Result<Option<CoinMetadata>, Error> {
         let operation = CoinMetadataQuery::build(CoinMetadataArgs { coin_type });
         let response = self.run_query(&operation).await?;
@@ -324,6 +325,17 @@ impl Client {
         }
 
         Ok(response.data.and_then(|x| x.coin_metadata))
+    }
+
+    /// Get total supply for the coin type.
+    pub async fn total_supply(&self, coin_type: &str) -> Result<Option<u64>, Error> {
+        let coin_metadata = self.coin_metadata(coin_type).await?;
+
+        coin_metadata
+            .map(|c| c.supply)
+            .flatten()
+            .map(|c| c.try_into())
+            .transpose()
     }
 
     // ===========================================================================
@@ -871,6 +883,7 @@ mod tests {
     }
 
     #[tokio::test]
+<<<<<<< HEAD
     async fn test_coins_query() {
         for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();
@@ -896,4 +909,22 @@ mod tests {
         }
         assert!(num_coins > 0);
     }
+=======
+    async fn test_total_supply() {
+        for (n, _) in NETWORKS {
+            let client = Client::new(n).unwrap();
+            let ts = client.total_supply("0x2::sui::SUI").await;
+            assert!(
+                ts.is_ok(),
+                "Total supply query failed for network: {n}. Error: {}",
+                ts.unwrap_err()
+            );
+            assert_eq!(
+                ts.unwrap().unwrap(),
+                10_000_000_000,
+                "Total supply mismatch for network: {n}"
+            );
+        }
+    }
+>>>>>>> a5494a16 (Add total supply function)
 }
