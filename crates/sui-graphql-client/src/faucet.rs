@@ -178,11 +178,13 @@ impl FaucetClient {
                 let mut interval = tokio::time::interval(FAUCET_POLL_INTERVAL);
                 loop {
                     interval.tick().await;
+                    info!("Polling faucet request status: {request_id}");
                     let req = self.request_status(request_id.clone()).await;
 
                     if let Ok(Some(poll_response)) = req {
                         match poll_response.status {
                             BatchSendStatusType::Succeeded => {
+                                info!("Faucet request {request_id} succeeded");
                                 break Ok(poll_response);
                             }
                             BatchSendStatusType::Discarded => {
@@ -195,13 +197,23 @@ impl FaucetClient {
                                 continue;
                             }
                         }
-                    } else if req.is_err() {
-                        break Err(anyhow!("Faucet request failed. {:?}", req.err()));
+                    } else if let Some(err) = req.err() {
+                        error!("Faucet request {request_id} failed. Error: {:?}", err);
+                        break Err(anyhow!(
+                            "Faucet request {request_id} failed. Error: {:?}",
+                            err
+                        ));
                     }
                 }
             })
             .await
-            .map_err(|_| anyhow!("Faucet request timed out"))??;
+            .map_err(|_| {
+                error!(
+                    "Faucet request {request_id} timed out. Timeout set to {} seconds",
+                    FAUCET_REQUEST_TIMEOUT.as_secs()
+                );
+                anyhow!("Faucet request timed out")
+            })??;
             Ok(poll_response.transferred_gas_objects)
         } else {
             Ok(None)
