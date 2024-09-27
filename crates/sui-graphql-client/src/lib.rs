@@ -675,6 +675,8 @@ impl Client {
 
 #[cfg(test)]
 mod tests {
+    use futures::StreamExt;
+
     use crate::{Client, DEFAULT_LOCAL_HOST, DEVNET_HOST, MAINNET_HOST, TESTNET_HOST};
     const NETWORKS: [(&str, &str); 2] = [(MAINNET_HOST, "35834a8a"), (TESTNET_HOST, "4c78adac")];
 
@@ -866,5 +868,32 @@ mod tests {
                 object_bcs.unwrap_err()
             );
         }
+    }
+
+    #[tokio::test]
+    async fn test_coins_query() {
+        for (n, _) in NETWORKS {
+            let client = Client::new(n).unwrap();
+            let coins = client
+                .coins("0x1".parse().unwrap(), None, None, None, None, None)
+                .await;
+            assert!(
+                coins.is_ok(),
+                "Coins query failed for network: {n}. Error: {}",
+                coins.unwrap_err()
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_coins_stream() {
+        let client = Client::new_testnet();
+        let mut stream = client.coins_stream("0x1".parse().unwrap(), None);
+        let mut num_coins = 0;
+        while let Some(result) = stream.next().await {
+            assert!(result.is_ok());
+            num_coins += 1;
+        }
+        assert!(num_coins > 0);
     }
 }
