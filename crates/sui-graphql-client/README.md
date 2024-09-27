@@ -101,7 +101,7 @@ use sui_graphql_client::{
     query_types::{schema, BigInt, Uint53},
     Client,
 };
-use sui_types::types::Address;
+use sui_sdk_types::types::Address;
 
 // The data returned by the custom query.
 #[derive(cynic::QueryFragment, Debug)]

@@ -4,8 +4,10 @@ use std::str::FromStr;
 
 use anyhow::Error;
 use chrono::DateTime as ChronoDT;
-use sui_types::types::GasCostSummary as NativeGasCostSummary;
-use sui_types::types::{CheckpointContentsDigest, CheckpointDigest, CheckpointSummary};
+use sui_sdk_types::types::{
+    CheckpointContentsDigest, CheckpointDigest, CheckpointSummary,
+    GasCostSummary as NativeGasCostSummary,
+};
 
 use crate::query_types::{schema, Base64, BigInt, DateTime, Epoch, Uint53};
 

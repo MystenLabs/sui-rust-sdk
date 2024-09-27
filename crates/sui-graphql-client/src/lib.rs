@@ -15,7 +15,7 @@ use query_types::{
     TransactionBlocksQuery, TransactionBlocksQueryArgs, TransactionsFilter, Uint53,
 };
 use reqwest::Url;
-use sui_types::types::{
+use sui_sdk_types::types::{
     Address, CheckpointSequenceNumber, CheckpointSummary, Event, Object, SignedTransaction,
 };
 
@@ -383,7 +383,7 @@ impl Client {
                 .transpose()
                 .map_err(|e| Error::msg(format!("Cannot decode Base64 object bcs bytes: {e}",)))?;
             let object = bcs
-                .map(|b| bcs::from_bytes::<sui_types::types::Object>(&b))
+                .map(|b| bcs::from_bytes::<sui_sdk_types::types::Object>(&b))
                 .transpose()
                 .map_err(|e| Error::msg(format!("Cannot decode bcs bytes into Object: {e}",)))?;
 
@@ -446,7 +446,7 @@ impl Client {
                 .map_err(|e| Error::msg(format!("Cannot decode Base64 object bcs bytes: {e}")))?;
             let objects = bcs
                 .iter()
-                .map(|b| bcs::from_bytes::<sui_types::types::Object>(b))
+                .map(|b| bcs::from_bytes::<sui_sdk_types::types::Object>(b))
                 .collect::<Result<Vec<_>, bcs::Error>>()
                 .map_err(|e| Error::msg(format!("Cannot decode bcs bytes into Object: {e}")))?;
 

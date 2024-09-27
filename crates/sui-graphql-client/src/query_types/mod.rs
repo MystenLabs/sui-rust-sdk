@@ -23,7 +23,7 @@ pub use object::{
 };
 pub use protocol_config::{ProtocolConfigQuery, ProtocolConfigs, ProtocolVersionArgs};
 pub use service_config::{Feature, ServiceConfig, ServiceConfigQuery};
-use sui_types::types::Address;
+use sui_sdk_types::types::Address;
 pub use transaction::{
     TransactionBlockArgs, TransactionBlockQuery, TransactionBlocksQuery,
     TransactionBlocksQueryArgs, TransactionsFilter,
