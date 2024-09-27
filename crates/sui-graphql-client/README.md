@@ -42,7 +42,7 @@ The client provides an API to request gas from the faucet. The `request_and_wait
 ### Example for standard devnet/testnet/local networks.
 ```rust, no_run
 use sui_graphql_client::faucet::FaucetClient;
-use sui_sdk_types::types::Address;
+use sui_types::types::Address;
 
 use anyhow::Result;
 use std::str::FromStr;
@@ -70,7 +70,7 @@ async fn main() -> Result<()> {
 Note that this [`FaucetClient`] is explicitly designed to work with two endpoints: `v1/gas`, and `v1/status`. When passing in the custom faucet URL, skip the final endpoint and only pass in the top-level url (e.g., `https://faucet.devnet.sui.io`).
 ```rust, no_run
 use sui_graphql_client::faucet::FaucetClient;
-use sui_sdk_types::types::Address;
+use sui_types::types::Address;
 
 use anyhow::Result;
 use std::str::FromStr;
