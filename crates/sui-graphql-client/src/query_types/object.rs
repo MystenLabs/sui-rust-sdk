@@ -4,6 +4,7 @@
 use crate::query_types::schema;
 use crate::query_types::Address;
 use crate::query_types::Base64;
+use crate::query_types::MoveObjectContents;
 use crate::query_types::PageInfo;
 
 // ===========================================================================
@@ -50,6 +51,7 @@ pub struct ObjectsQueryArgs<'a> {
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "Object")]
 pub struct Object {
+    pub as_move_object: Option<MoveObjectContents>,
     pub bcs: Option<Base64>,
 }
 
