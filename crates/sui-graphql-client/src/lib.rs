@@ -18,8 +18,13 @@ use query_types::CheckpointQuery;
 use query_types::CoinMetadata;
 use query_types::CoinMetadataArgs;
 use query_types::CoinMetadataQuery;
+<<<<<<< HEAD
 use query_types::DryRunArgs;
 use query_types::DryRunQuery;
+=======
+use query_types::DynamicFieldConnectionArgs;
+use query_types::DynamicFieldName;
+>>>>>>> fa9b47d9 (Add dynamic fields query)
 use query_types::EpochSummaryArgs;
 use query_types::EpochSummaryQuery;
 use query_types::EventFilter;
@@ -70,6 +75,8 @@ use cynic::QueryBuilder;
 use futures::Stream;
 use reqwest::Url;
 use std::pin::Pin;
+
+use crate::query_types::{DynamicFieldArgs, DynamicFieldQuery, DynamicFieldsQuery};
 
 const MAINNET_HOST: &str = "https://sui-mainnet.mystenlabs.com/graphql";
 const TESTNET_HOST: &str = "https://sui-testnet.mystenlabs.com/graphql";
@@ -479,6 +486,91 @@ impl Client {
     }
 
     // ===========================================================================
+    // Dynamic Field(s) API
+    // ===========================================================================
+
+    /// Access a dynamic field on an object using its name. Names are arbitrary Move values whose
+    /// type have copy, drop, and store, and are specified using their type, and their BCS
+    /// contents, Base64 encoded.
+    ///
+    /// This returns the value of the dynamic field as a JSON value.
+    ///
+    /// Dynamic fields on wrapped objects can be accessed by directly querying the wrapped object
+    /// using [`object`] function.
+    pub async fn dynamic_field(
+        &self,
+        address: Address,
+        type_: &str,
+        bcs: &[u8],
+    ) -> Result<Option<serde_json::Value>, Error> {
+        let operation = DynamicFieldQuery::build(DynamicFieldArgs {
+            address,
+            name: DynamicFieldName {
+                type_: type_.to_string(),
+                bcs: crate::query_types::Base64(base64ct::Base64::encode_string(bcs)),
+            },
+        });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        let json = response
+            .data
+            .and_then(|d| d.object)
+            .and_then(|o| o.dynamic_field)
+            .and_then(|df| df.field_value_json());
+
+        Ok(json)
+    }
+
+    /// Get a page of dynamic fields for the provided address.
+    ///
+    /// This returns [`Page`] of [`serde_json::Value`]s, representing the value field of the
+    /// dynamic field as a JSON value.
+    /// ```
+    pub async fn dynamic_fields(
+        &self,
+        address: Address,
+        after: Option<String>,
+        before: Option<String>,
+        first: Option<i32>,
+        last: Option<i32>,
+    ) -> Result<Option<Page<serde_json::Value>>, Error> {
+        let operation = DynamicFieldsQuery::build(DynamicFieldConnectionArgs {
+            address,
+            after,
+            before,
+            first,
+            last,
+        });
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        if let Some(dfs) = response.data {
+            if let Some(owner) = dfs.object {
+                let page_info = owner.dynamic_fields.page_info;
+                let nodes = owner.dynamic_fields.nodes;
+                let jsons = nodes
+                    .into_iter()
+                    .filter_map(|df| df.field_value_json())
+                    .collect::<Vec<_>>();
+
+                Ok(Some(Page::new(page_info, jsons)))
+            } else {
+                Ok(None)
+            }
+        } else {
+            Ok(None)
+        }
+    }
+
+    // ===========================================================================
     // Epoch API
     // ===========================================================================
 
@@ -878,6 +970,7 @@ impl Client {
 
 #[cfg(test)]
 mod tests {
+    use base64ct::Encoding;
     use futures::StreamExt;
 
     use crate::Client;
@@ -1182,5 +1275,31 @@ mod tests {
         let dry_run = client.dry_run(tx_bytes.to_string(), None, None).await;
 
         assert!(dry_run.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_dynamic_field_query() {
+        let client = Client::new_devnet();
+        let bcs = base64ct::Base64::decode_vec("AgAAAAAAAAA=").unwrap();
+        let dynamic_field = client
+            .dynamic_field("0x5".parse().unwrap(), "u64", &bcs)
+            .await;
+
+        assert!(dynamic_field.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_dynamic_fields_query() {
+        for (n, _) in NETWORKS {
+            let client = Client::new(n).unwrap();
+            let dynamic_fields = client
+                .dynamic_fields("0x5".parse().unwrap(), None, None, None, None)
+                .await;
+            assert!(
+                dynamic_fields.is_ok(),
+                "Dynamic fields query failed for network: {n}. Error: {}",
+                dynamic_fields.unwrap_err()
+            );
+        }
     }
 }

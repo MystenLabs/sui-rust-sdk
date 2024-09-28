@@ -1,0 +1,130 @@
+// Copyright (c) Mysten Labs, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
+use crate::query_types::{schema, Address, Base64, JsonValue, PageInfo};
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(
+    schema = "rpc",
+    graphql_type = "Query",
+    variables = "DynamicFieldConnectionArgs"
+)]
+pub struct DynamicFieldsQuery {
+    #[arguments(address: $address )]
+    pub object: Option<Object>,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "Query", variables = "DynamicFieldArgs")]
+pub struct DynamicFieldQuery {
+    #[arguments(address: $address)]
+    pub object: Option<ObjectField>,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(
+    schema = "rpc",
+    graphql_type = "Object",
+    variables = "DynamicFieldArgs"
+)]
+pub struct ObjectField {
+    #[arguments(name: $name)]
+    pub dynamic_field: Option<DynamicField>,
+}
+
+#[derive(cynic::QueryVariables, Debug)]
+pub struct DynamicFieldArgs {
+    pub address: Address,
+    pub name: DynamicFieldName,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(
+    schema = "rpc",
+    graphql_type = "Object",
+    variables = "DynamicFieldConnectionArgs"
+)]
+pub struct Object {
+    #[arguments(after: $after, before: $before, first: $first, last: $last)]
+    pub dynamic_fields: DynamicFieldConnection,
+}
+
+#[derive(cynic::QueryVariables, Debug)]
+pub struct DynamicFieldsQueryArgs {
+    pub address: Address,
+}
+
+#[derive(cynic::QueryVariables, Debug)]
+pub struct DynamicFieldConnectionArgs {
+    pub address: Address,
+    pub after: Option<String>,
+    pub before: Option<String>,
+    pub first: Option<i32>,
+    pub last: Option<i32>,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "MoveValue")]
+pub struct MoveValue {
+    pub __typename: String,
+    pub bcs: Base64,
+    pub json: Option<JsonValue>,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "MoveObject")]
+pub struct MoveObject {
+    pub bcs: Option<Base64>,
+    pub contents: Option<MoveValue>,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "DynamicFieldConnection")]
+pub struct DynamicFieldConnection {
+    pub nodes: Vec<DynamicField>,
+    pub page_info: PageInfo,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "DynamicField")]
+pub struct DynamicField {
+    pub value: Option<DynamicFieldValue>,
+    pub name: Option<MoveValue>,
+}
+
+#[derive(cynic::InlineFragments, Debug)]
+#[cynic(schema = "rpc", graphql_type = "DynamicFieldValue")]
+pub enum DynamicFieldValue {
+    MoveObject(MoveObject),
+    MoveValue(MoveValue),
+    #[cynic(fallback)]
+    Unknown,
+}
+
+#[derive(cynic::InputObject, Debug)]
+#[cynic(schema = "rpc", graphql_type = "DynamicFieldName")]
+pub struct DynamicFieldName {
+    #[cynic(rename = "type")]
+    pub type_: String,
+    pub bcs: Base64,
+}
+
+impl DynamicFieldValue {
+    /// Returns the JSON representation of the field value, if available.
+    pub fn field_value_json(&self) -> Option<JsonValue> {
+        match self {
+            DynamicFieldValue::MoveObject(mo) => {
+                mo.contents.as_ref().and_then(|mv| mv.json.clone())
+            }
+            DynamicFieldValue::MoveValue(mv) => mv.json.clone(),
+            _ => None,
+        }
+    }
+}
+
+impl DynamicField {
+    /// Returns the JSON representation of the field value, if available.
+    pub fn field_value_json(&self) -> Option<JsonValue> {
+        self.value.as_ref().and_then(|v| v.field_value_json())
+    }
+}
