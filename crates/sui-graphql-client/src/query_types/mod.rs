@@ -7,6 +7,7 @@ mod chain;
 mod checkpoint;
 mod coin;
 mod dry_run;
+mod dynamic_fields;
 mod epoch;
 mod events;
 mod execute_tx;
@@ -38,6 +39,11 @@ pub use dry_run::DryRunArgs;
 pub use dry_run::DryRunQuery;
 pub use dry_run::DryRunResult;
 pub use dry_run::TransactionMetadata;
+pub use dynamic_fields::DynamicFieldArgs;
+pub use dynamic_fields::DynamicFieldConnectionArgs;
+pub use dynamic_fields::DynamicFieldName;
+pub use dynamic_fields::DynamicFieldQuery;
+pub use dynamic_fields::DynamicFieldsQuery;
 pub use epoch::Epoch;
 pub use epoch::EpochSummaryArgs;
 pub use epoch::EpochSummaryQuery;
@@ -72,6 +78,7 @@ use sui_types::types::Address;
 
 use anyhow::anyhow;
 use cynic::impl_scalar;
+use serde_json::Value as JsonValue;
 
 #[cynic::schema("rpc")]
 pub mod schema {}
@@ -82,6 +89,7 @@ pub mod schema {}
 
 impl_scalar!(Address, schema::SuiAddress);
 impl_scalar!(u64, schema::UInt53);
+impl_scalar!(JsonValue, schema::JSON);
 
 #[derive(cynic::Scalar, Debug, Clone)]
 #[cynic(graphql_type = "Base64")]
