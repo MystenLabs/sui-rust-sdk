@@ -39,7 +39,7 @@ where
 {
     let root_schema = schemars::gen::SchemaGenerator::default().into_root_schema_for::<T>();
     let schema = serde_json::json!(root_schema);
-    let compiled = jsonschema::JSONSchema::compile(&schema).unwrap();
+    let compiled = jsonschema::Validator::new(&schema).unwrap();
     let instance = serde_json::json!(instance);
 
     let result = compiled.validate(&instance);

@@ -33,15 +33,15 @@ base64ct = { version = "1.6.0", features = ["alloc"] }
 bs58 = "0.5.1"
 hex = "0.4.3"
 roaring = { version = "0.10.6", default-features = false }
-bnum = "0.11.0"
-winnow = "0.6.18"
+bnum = "0.12.0"
+winnow = "0.6.20"
 
 # Serialization and Deserialization support
-serde = { version = "1.0.190", optional = true }
-serde_derive = { version = "1.0.190", optional = true }
+serde = { version = "1.0.210", optional = true }
+serde_derive = { version = "1.0.210", optional = true }
 serde_with = { version = "3.9", default-features = false, features = ["alloc"], optional = true }
 bcs = { version = "0.1.6", optional = true }
-serde_json = { version = "1.0.114", optional = true }
+serde_json = { version = "1.0.128", optional = true }
 
 # JsonSchema definitions for types, useful for generating an OpenAPI Specificaiton.
 schemars = { version = "0.8.21", optional = true }
@@ -54,9 +54,9 @@ blake2 = { version = "0.10.6", optional = true }
 
 [dev-dependencies]
 bcs = "0.1.6"
-serde_json = "1.0.114"
-num-bigint = "0.4.4"
-jsonschema = { version = "0.18", default-features = false }
+serde_json = "1.0.128"
+num-bigint = "0.4.6"
+jsonschema = { version = "0.20", default-features = false }
 paste = "1.0.15"
 
 # proptest support in tests
@@ -64,7 +64,7 @@ paste = "1.0.15"
 # Pin to this specific commit in order to work around an issue where proptest doesn't build properly in wasm environments
 # see https://github.com/proptest-rs/proptest/pull/270 for more info
 proptest = { git = "https://github.com/bmwill/proptest.git", rev = "bc36db126183bce18c8bc595f0c0cfeac48b870c", default-features = false, features = ["std"] }
-test-strategy = "0.3.1"
+test-strategy = "0.4"
 
 [target.wasm32-unknown-unknown.dev-dependencies]
 wasm-bindgen-test = "0.3"
