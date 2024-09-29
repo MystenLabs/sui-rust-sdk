@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 use std::str::FromStr;
 
+mod balance;
 mod chain;
 mod checkpoint;
 mod coin;
@@ -13,6 +14,7 @@ mod service_config;
 mod transaction;
 
 use anyhow::{anyhow, Error};
+pub use balance::{Balance, BalanceArgs, BalanceQuery, Owner};
 pub use chain::ChainIdentifierQuery;
 pub use checkpoint::{CheckpointArgs, CheckpointId, CheckpointQuery};
 pub use coin::{CoinMetadata, CoinMetadataArgs, CoinMetadataQuery};
@@ -48,7 +50,7 @@ pub struct BigInt(pub String);
 #[cynic(graphql_type = "DateTime")]
 pub struct DateTime(pub String);
 
-#[derive(cynic::Scalar, Debug, Clone)]
+#[derive(cynic::Scalar, Debug)]
 pub struct SuiAddress(pub String);
 
 #[derive(cynic::Scalar, Debug, Clone)]

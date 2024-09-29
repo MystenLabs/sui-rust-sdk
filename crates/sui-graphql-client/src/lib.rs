@@ -7,12 +7,13 @@ pub mod query_types;
 
 use base64ct::Encoding;
 use query_types::{
-    ChainIdentifierQuery, CheckpointArgs, CheckpointId, CheckpointQuery, CoinMetadata,
-    CoinMetadataArgs, CoinMetadataQuery, EpochSummaryArgs, EpochSummaryQuery, EventFilter,
-    EventsQuery, EventsQueryArgs, ObjectFilter, ObjectQuery, ObjectQueryArgs, ObjectsQuery,
-    ObjectsQueryArgs, PageInfo, ProtocolConfigQuery, ProtocolConfigs, ProtocolVersionArgs,
-    ServiceConfig, ServiceConfigQuery, TransactionBlockArgs, TransactionBlockQuery,
-    TransactionBlocksQuery, TransactionBlocksQueryArgs, TransactionsFilter, Uint53,
+    BalanceArgs, BalanceQuery, ChainIdentifierQuery, CheckpointArgs, CheckpointId, CheckpointQuery,
+    CoinMetadata, CoinMetadataArgs, CoinMetadataQuery, EpochSummaryArgs, EpochSummaryQuery,
+    EventFilter, EventsQuery, EventsQueryArgs, ObjectFilter, ObjectQuery, ObjectQueryArgs,
+    ObjectsQuery, ObjectsQueryArgs, PageInfo, ProtocolConfigQuery, ProtocolConfigs,
+    ProtocolVersionArgs, ServiceConfig, ServiceConfigQuery, TransactionBlockArgs,
+    TransactionBlockQuery, TransactionBlocksQuery, TransactionBlocksQueryArgs, TransactionsFilter,
+    Uint53,
 };
 use reqwest::Url;
 use sui_types::types::{
@@ -192,6 +193,38 @@ impl Client {
             .data
             .map(|s| s.service_config)
             .ok_or_else(|| Error::msg("No data in response"))
+    }
+
+    // ===========================================================================
+    // Balance API
+    // ===========================================================================
+
+    /// Get the balance of all the coins owned by address for the provided coin type.
+    /// Coin type will default to `0x2::coin::Coin<0x2::sui::SUI>` if not provided.
+    pub async fn balance(
+        &self,
+        address: Address,
+        coin_type: Option<&str>,
+    ) -> Result<Option<u128>, Error> {
+        let operation = BalanceQuery::build(BalanceArgs {
+            address: address.into(),
+            coin_type: coin_type.map(|x| x.to_string()),
+        });
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        let total_balance = response
+            .data
+            .map(|b| b.owner.and_then(|o| o.balance.map(|b| b.total_balance)))
+            .ok_or_else(|| Error::msg("No data in response"))?
+            .flatten()
+            .map(|x| x.0.parse::<u128>())
+            .transpose()
+            .map_err(|e| Error::msg(format!("Cannot parse balance into u128: {e}")))?;
+        Ok(total_balance)
     }
 
     // ===========================================================================
@@ -574,6 +607,15 @@ mod tests {
 
         assert!(client.set_rpc_server("localhost:9125/graphql").is_ok());
         assert!(client.set_rpc_server("9125/graphql").is_err());
+    }
+
+    #[tokio::test]
+    async fn test_balance_query() {
+        for (n, _) in NETWORKS.iter() {
+            let client = Client::new(n).unwrap();
+            let balance = client.balance("0x1".parse().unwrap(), None).await;
+            assert!(balance.is_ok(), "Balance query failed for network: {n}");
+        }
     }
 
     #[tokio::test]
