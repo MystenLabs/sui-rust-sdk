@@ -22,23 +22,15 @@ pub struct FaucetClient {
     inner: reqwest::Client,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct BatchFaucetResponse {
-    // This string is the Uuid for the req
-    pub task: Option<String>,
-    pub error: Option<String>,
-}
-
 #[derive(serde::Deserialize)]
-pub struct FaucetResponse {
+struct FaucetResponse {
     task: Option<String>,
     error: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct BatchStatusFaucetResponse {
+struct BatchStatusFaucetResponse {
     pub status: Option<BatchSendStatus>,
     pub error: Option<String>,
 }
@@ -63,7 +55,7 @@ pub struct FaucetReceipt {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct BatchFaucetReceipt {
+struct BatchFaucetReceipt {
     pub task: String,
 }
 
@@ -168,6 +160,9 @@ impl FaucetClient {
     /// Request gas from the faucet and wait until the request is completed and token is
     /// transferred. Returns `FaucetReceipt` if the request is successful, which contains the list
     /// of tokens transferred, and the transaction digest.
+    ///
+    /// Note that the faucet is heavily rate-limited, so calling repeatedly the faucet would likely
+    /// result in a 429 code or 502 code.
     pub async fn request_and_wait(
         &self,
         address: Address,
@@ -230,7 +225,18 @@ impl FaucetClient {
         let status_url = format!("{}v1/status/{}", self.faucet_url, id);
         info!("Checking status of faucet request: {status_url}");
         let response = self.inner.get(&status_url).send().await?;
-        let json = response.json::<BatchStatusFaucetResponse>().await?;
+        if response.status() == StatusCode::TOO_MANY_REQUESTS {
+            bail!("Cannot fetch request status due to too many requests from this IP address.");
+        } else if response.status() == StatusCode::BAD_GATEWAY {
+            bail!("Cannot fetch request status due to a bad gateway.")
+        }
+        let json = response
+            .json::<BatchStatusFaucetResponse>()
+            .await
+            .map_err(|e| {
+                error!("Failed to parse faucet response: {:?}", e);
+                anyhow!("Failed to parse faucet response: {:?}", e)
+            })?;
         Ok(json.status)
     }
 }
