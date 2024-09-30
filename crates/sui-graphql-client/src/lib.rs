@@ -674,9 +674,6 @@ impl Client {
     }
 
     /// Execute a transaction.
-    ///
-    /// The `signatures` should be a list of signatures for the transaction Base64 encoded.
-    /// The `tx_bytes` should be the transaction bytes Base64 encoded.
     pub async fn execute_tx(
         &self,
         signatures: Vec<UserSignature>,
