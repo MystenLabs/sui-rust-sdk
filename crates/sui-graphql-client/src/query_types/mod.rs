@@ -6,6 +6,7 @@ mod balance;
 mod chain;
 mod checkpoint;
 mod coin;
+mod dry_run;
 mod epoch;
 mod events;
 mod execute_tx;
@@ -20,7 +21,6 @@ pub use active_validators::EpochValidator;
 pub use active_validators::Validator;
 pub use active_validators::ValidatorConnection;
 pub use active_validators::ValidatorSet;
-use anyhow::anyhow;
 pub use balance::Balance;
 pub use balance::BalanceArgs;
 pub use balance::BalanceQuery;
@@ -32,6 +32,9 @@ pub use checkpoint::CheckpointQuery;
 pub use coin::CoinMetadata;
 pub use coin::CoinMetadataArgs;
 pub use coin::CoinMetadataQuery;
+pub use dry_run::DryRunArgs;
+pub use dry_run::DryRunQuery;
+pub use dry_run::TransactionMetadata;
 pub use epoch::Epoch;
 pub use epoch::EpochSummaryArgs;
 pub use epoch::EpochSummaryQuery;
@@ -55,13 +58,15 @@ pub use protocol_config::ProtocolVersionArgs;
 pub use service_config::Feature;
 pub use service_config::ServiceConfig;
 pub use service_config::ServiceConfigQuery;
-use sui_types::types::Address;
 pub use transaction::TransactionBlockArgs;
 pub use transaction::TransactionBlockQuery;
 pub use transaction::TransactionBlocksQuery;
 pub use transaction::TransactionBlocksQueryArgs;
 pub use transaction::TransactionsFilter;
 
+use sui_types::types::Address;
+
+use anyhow::anyhow;
 use cynic::impl_scalar;
 
 #[cynic::schema("rpc")]

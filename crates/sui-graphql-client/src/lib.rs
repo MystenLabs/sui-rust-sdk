@@ -18,6 +18,8 @@ use query_types::CheckpointQuery;
 use query_types::CoinMetadata;
 use query_types::CoinMetadataArgs;
 use query_types::CoinMetadataQuery;
+use query_types::DryRunArgs;
+use query_types::DryRunQuery;
 use query_types::EpochSummaryArgs;
 use query_types::EpochSummaryQuery;
 use query_types::EventFilter;
@@ -40,9 +42,10 @@ use query_types::TransactionBlockArgs;
 use query_types::TransactionBlockQuery;
 use query_types::TransactionBlocksQuery;
 use query_types::TransactionBlocksQueryArgs;
+use query_types::TransactionMetadata;
 use query_types::TransactionsFilter;
 use query_types::Validator;
-use reqwest::Url;
+
 use sui_types::types::framework::Coin;
 use sui_types::types::Address;
 use sui_types::types::CheckpointSequenceNumber;
@@ -64,6 +67,7 @@ use cynic::MutationBuilder;
 use cynic::Operation;
 use cynic::QueryBuilder;
 use futures::Stream;
+use reqwest::Url;
 use std::pin::Pin;
 
 const MAINNET_HOST: &str = "https://sui-mainnet.mystenlabs.com/graphql";
@@ -674,6 +678,55 @@ impl Client {
     // ===========================================================================
     // Transaction API
     // ===========================================================================
+
+    /// Dry run a transaction and return the transaction.
+    ///
+    /// `txBytes` is either a TransactionData struct or a [`TransactionKind`] struct, BCS-encoded
+    /// and then Base64-encoded. The expected type is controlled by the presence or absence of
+    /// `txMeta`:
+    ///
+    ///  - if present, txBytes is assumed to be a [`TransactionKind`],
+    ///  - if absent, txBytes is assumed to be [`Transaction`].
+    ///
+    /// `skipChecks` optional flag to disable the usual verification checks that prevent access to
+    /// objects that are owned by addresses other than the sender, and calling non-public,
+    /// non-entry functions, and some other checks. Defaults to false.
+    pub async fn dry_run(
+        &self,
+        tx_bytes: Vec<u8>,
+        skip_checks: Option<bool>,
+        tx_meta: Option<TransactionMetadata>,
+    ) -> Result<Option<Transaction>, Error> {
+        let skip_checks = skip_checks.unwrap_or(false);
+        let base64_tx = base64ct::Base64::encode_string(&tx_bytes.as_ref());
+        let operation = DryRunQuery::build(DryRunArgs {
+            tx_bytes: base64_tx,
+            skip_checks,
+            tx_meta,
+        });
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        if let Some(data) = response.data {
+            data.dry_run_transaction_block
+                .transaction
+                .and_then(|d| d.bcs)
+                .map(|bcs| {
+                    let bcs = base64ct::Base64::decode_vec(bcs.0.as_str()).map_err(|e| {
+                        Error::msg(format!("Cannot decode Base64 transaction bcs bytes: {e}"))
+                    })?;
+                    bcs::from_bytes::<Transaction>(&bcs).map_err(|e| {
+                        Error::msg(format!("Cannot decode bcs bytes into Transaction: {e}"))
+                    })
+                })
+                .transpose()
+        } else {
+            Ok(None)
+        }
+    }
 
     // TODO: From Brandon: this fails due to SignedTransaction in Sui core type being technically inaccurate but it is fixed in this SDK here. in particular core incorrectly appends the signing intent when it shouldn't so my guess is that's whats wrong
     /// Get a transaction by its digest.
