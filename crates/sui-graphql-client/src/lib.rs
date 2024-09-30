@@ -332,8 +332,7 @@ impl Client {
         let coin_metadata = self.coin_metadata(coin_type).await?;
 
         coin_metadata
-            .map(|c| c.supply)
-            .flatten()
+            .and_then(|c| c.supply)
             .map(|c| c.try_into())
             .transpose()
     }
@@ -883,7 +882,6 @@ mod tests {
     }
 
     #[tokio::test]
-<<<<<<< HEAD
     async fn test_coins_query() {
         for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();
@@ -909,7 +907,6 @@ mod tests {
         }
         assert!(num_coins > 0);
     }
-=======
     async fn test_total_supply() {
         for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();
@@ -926,5 +923,4 @@ mod tests {
             );
         }
     }
->>>>>>> a5494a16 (Add total supply function)
 }
