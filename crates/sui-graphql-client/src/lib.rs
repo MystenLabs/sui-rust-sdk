@@ -19,7 +19,7 @@ use query_types::{
 use reqwest::Url;
 use sui_types::types::{
     framework::Coin, Address, CheckpointSequenceNumber, CheckpointSummary, Event, Object,
-    SignedTransaction, TransactionEffects,
+    SignedTransaction, Transaction, TransactionEffects, UserSignature,
 };
 
 use anyhow::{anyhow, ensure, Error, Result};
@@ -679,12 +679,12 @@ impl Client {
     /// The `tx_bytes` should be the transaction bytes Base64 encoded.
     pub async fn execute_tx(
         &self,
-        signatures: Vec<&str>,
-        tx_bytes: &str,
+        signatures: Vec<UserSignature>,
+        tx: &Transaction,
     ) -> Result<Option<TransactionEffects>, Error> {
         let operation = ExecuteTransactionQuery::build(ExecuteTransactionArgs {
-            signatures: signatures.iter().map(|s| s.to_string()).collect(),
-            tx_bytes: tx_bytes.to_string(),
+            signatures: signatures.iter().map(|s| s.to_base64()).collect(),
+            tx_bytes: base64ct::Base64::encode_string(bcs::to_bytes(tx).unwrap().as_ref()),
         });
 
         let response = self.run_query(&operation).await?;
