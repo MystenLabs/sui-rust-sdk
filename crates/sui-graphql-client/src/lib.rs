@@ -907,6 +907,8 @@ mod tests {
         }
         assert!(num_coins > 0);
     }
+
+    #[tokio::test]
     async fn test_total_supply() {
         for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();
