@@ -3,6 +3,7 @@
 
 #![doc = include_str!("../README.md")]
 
+pub mod faucet;
 pub mod query_types;
 
 use base64ct::Encoding;
@@ -29,7 +30,7 @@ use std::pin::Pin;
 const MAINNET_HOST: &str = "https://sui-mainnet.mystenlabs.com/graphql";
 const TESTNET_HOST: &str = "https://sui-testnet.mystenlabs.com/graphql";
 const DEVNET_HOST: &str = "https://sui-devnet.mystenlabs.com/graphql";
-const DEFAULT_LOCAL_HOST: &str = "http://localhost:9125/graphql";
+const LOCAL_HOST: &str = "http://localhost:9125/graphql";
 static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
 #[derive(Debug)]
@@ -98,7 +99,7 @@ impl Client {
     /// Create a new GraphQL client connected to the `localhost` GraphQL server:
     /// {DEFAULT_LOCAL_HOST}.
     pub fn new_localhost() -> Self {
-        Self::new(DEFAULT_LOCAL_HOST).expect("Invalid localhost URL")
+        Self::new(LOCAL_HOST).expect("Invalid localhost URL")
     }
 
     /// Set the server address for the GraphQL GraphQL client. It should be a valid URL with a host and
@@ -677,7 +678,7 @@ impl Client {
 mod tests {
     use futures::StreamExt;
 
-    use crate::{Client, DEFAULT_LOCAL_HOST, DEVNET_HOST, MAINNET_HOST, TESTNET_HOST};
+    use crate::{Client, DEVNET_HOST, LOCAL_HOST, MAINNET_HOST, TESTNET_HOST};
     const NETWORKS: [(&str, &str); 2] = [(MAINNET_HOST, "35834a8a"), (TESTNET_HOST, "4c78adac")];
 
     #[test]
@@ -688,8 +689,8 @@ mod tests {
         assert_eq!(client.rpc_server(), TESTNET_HOST);
         client.set_rpc_server(DEVNET_HOST).unwrap();
         assert_eq!(client.rpc_server(), DEVNET_HOST);
-        client.set_rpc_server(DEFAULT_LOCAL_HOST).unwrap();
-        assert_eq!(client.rpc_server(), DEFAULT_LOCAL_HOST);
+        client.set_rpc_server(LOCAL_HOST).unwrap();
+        assert_eq!(client.rpc_server(), LOCAL_HOST);
 
         assert!(client.set_rpc_server("localhost:9125/graphql").is_ok());
         assert!(client.set_rpc_server("9125/graphql").is_err());
