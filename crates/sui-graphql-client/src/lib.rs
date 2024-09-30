@@ -10,20 +10,20 @@ use base64ct::Encoding;
 use query_types::{
     BalanceArgs, BalanceQuery, ChainIdentifierQuery, CheckpointArgs, CheckpointId, CheckpointQuery,
     CoinMetadata, CoinMetadataArgs, CoinMetadataQuery, EpochSummaryArgs, EpochSummaryQuery,
-    EventFilter, EventsQuery, EventsQueryArgs, ObjectFilter, ObjectQuery, ObjectQueryArgs,
-    ObjectsQuery, ObjectsQueryArgs, PageInfo, ProtocolConfigQuery, ProtocolConfigs,
-    ProtocolVersionArgs, ServiceConfig, ServiceConfigQuery, TransactionBlockArgs,
-    TransactionBlockQuery, TransactionBlocksQuery, TransactionBlocksQueryArgs, TransactionsFilter,
-    Uint53,
+    EventFilter, EventsQuery, EventsQueryArgs, ExecuteTransactionArgs, ExecuteTransactionQuery,
+    ObjectFilter, ObjectQuery, ObjectQueryArgs, ObjectsQuery, ObjectsQueryArgs, PageInfo,
+    ProtocolConfigQuery, ProtocolConfigs, ProtocolVersionArgs, ServiceConfig, ServiceConfigQuery,
+    TransactionBlockArgs, TransactionBlockQuery, TransactionBlocksQuery,
+    TransactionBlocksQueryArgs, TransactionsFilter, Uint53,
 };
 use reqwest::Url;
 use sui_types::types::{
     framework::Coin, Address, CheckpointSequenceNumber, CheckpointSummary, Event, Object,
-    SignedTransaction,
+    SignedTransaction, TransactionEffects,
 };
 
 use anyhow::{anyhow, ensure, Error, Result};
-use cynic::{serde, GraphQlResponse, Operation, QueryBuilder};
+use cynic::{serde, GraphQlResponse, MutationBuilder, Operation, QueryBuilder};
 use futures::Stream;
 use std::pin::Pin;
 
@@ -668,6 +668,41 @@ impl Client {
                 })?;
             let page = Page::new(page_info, transactions);
             Ok(Some(page))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Execute a transaction.
+    ///
+    /// The `signatures` should be a list of signatures for the transaction Base64 encoded.
+    /// The `tx_bytes` should be the transaction bytes Base64 encoded.
+    pub async fn execute_tx(
+        &self,
+        signatures: Vec<&str>,
+        tx_bytes: &str,
+    ) -> Result<Option<TransactionEffects>, Error> {
+        let operation = ExecuteTransactionQuery::build(ExecuteTransactionArgs {
+            signatures: signatures.iter().map(|s| s.to_string()).collect(),
+            tx_bytes: tx_bytes.to_string(),
+        });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        if let Some(data) = response.data {
+            let result = data.execute_transaction_block;
+            let bcs =
+                base64ct::Base64::decode_vec(result.effects.bcs.0.as_str()).map_err(|_| {
+                    Error::msg("Cannot decode bcs bytes from Base64 for transaction effects")
+                })?;
+            let effects: TransactionEffects = bcs::from_bytes(&bcs)
+                .map_err(|_| Error::msg("Cannot decode bcs bytes into TransactionEffects"))?;
+
+            Ok(Some(effects))
         } else {
             Ok(None)
         }
