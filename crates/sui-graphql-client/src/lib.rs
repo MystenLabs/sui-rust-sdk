@@ -698,7 +698,7 @@ impl Client {
         tx_meta: Option<TransactionMetadata>,
     ) -> Result<Option<Transaction>, Error> {
         let skip_checks = skip_checks.unwrap_or(false);
-        let base64_tx = base64ct::Base64::encode_string(&tx_bytes.as_ref());
+        let base64_tx = base64ct::Base64::encode_string(tx_bytes.as_ref());
         let operation = DryRunQuery::build(DryRunArgs {
             tx_bytes: base64_tx,
             skip_checks,
