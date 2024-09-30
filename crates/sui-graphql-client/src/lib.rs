@@ -8,13 +8,14 @@ pub mod query_types;
 
 use base64ct::Encoding;
 use query_types::{
-    BalanceArgs, BalanceQuery, ChainIdentifierQuery, CheckpointArgs, CheckpointId, CheckpointQuery,
-    CoinMetadata, CoinMetadataArgs, CoinMetadataQuery, EpochSummaryArgs, EpochSummaryQuery,
-    EventFilter, EventsQuery, EventsQueryArgs, ExecuteTransactionArgs, ExecuteTransactionQuery,
-    ObjectFilter, ObjectQuery, ObjectQueryArgs, ObjectsQuery, ObjectsQueryArgs, PageInfo,
-    ProtocolConfigQuery, ProtocolConfigs, ProtocolVersionArgs, ServiceConfig, ServiceConfigQuery,
-    TransactionBlockArgs, TransactionBlockQuery, TransactionBlocksQuery,
-    TransactionBlocksQueryArgs, TransactionsFilter, Uint53,
+    ActiveValidatorsArgs, ActiveValidatorsQuery, BalanceArgs, BalanceQuery, ChainIdentifierQuery,
+    CheckpointArgs, CheckpointId, CheckpointQuery, CoinMetadata, CoinMetadataArgs,
+    CoinMetadataQuery, EpochSummaryArgs, EpochSummaryQuery, EventFilter, EventsQuery,
+    EventsQueryArgs, ExecuteTransactionArgs, ExecuteTransactionQuery, ObjectFilter, ObjectQuery,
+    ObjectQueryArgs, ObjectsQuery, ObjectsQueryArgs, PageInfo, ProtocolConfigQuery,
+    ProtocolConfigs, ProtocolVersionArgs, ServiceConfig, ServiceConfigQuery, TransactionBlockArgs,
+    TransactionBlockQuery, TransactionBlocksQuery, TransactionBlocksQueryArgs, TransactionsFilter,
+    Uint53, Validator,
 };
 use reqwest::Url;
 use sui_types::types::{
@@ -197,6 +198,46 @@ impl Client {
             .data
             .map(|s| s.service_config)
             .ok_or_else(|| Error::msg("No data in response"))
+    }
+
+    /// Get the list of active validators for the provided epoch, including related metadata.
+    /// If no epoch is provided, it will return the active validators for the current epoch.
+    pub async fn active_validators(
+        &self,
+        epoch: Option<u64>,
+        after: Option<String>,
+        before: Option<String>,
+        first: Option<i32>,
+        last: Option<i32>,
+    ) -> Result<Option<Page<Validator>>, Error> {
+        let operation = ActiveValidatorsQuery::build(ActiveValidatorsArgs {
+            id: epoch.map(Uint53),
+            after,
+            before,
+            first,
+            last,
+        });
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        if let Some(validators) = response
+            .data
+            .and_then(|d| d.epoch)
+            .and_then(|v| v.validator_set)
+        {
+            let page_info = validators.active_validators.page_info;
+            let nodes = validators
+                .active_validators
+                .nodes
+                .into_iter()
+                .collect::<Vec<_>>();
+            Ok(Some(Page::new(page_info, nodes)))
+        } else {
+            Ok(None)
+        }
     }
 
     // ===========================================================================
@@ -791,6 +832,24 @@ mod tests {
             let client = Client::new(n).unwrap();
             let sc = client.service_config().await;
             assert!(sc.is_ok(), "Service config query failed for network: {n}");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_active_validators() {
+        for (n, _) in NETWORKS {
+            let client = Client::new(n).unwrap();
+            let av = client.active_validators(None, None, None, None, None).await;
+            assert!(
+                av.is_ok(),
+                "Active validators query failed for network: {n}. Error: {}",
+                av.unwrap_err()
+            );
+
+            assert!(
+                av.unwrap().is_some(),
+                "Active validators query returned None for network: {n}"
+            );
         }
     }
 
