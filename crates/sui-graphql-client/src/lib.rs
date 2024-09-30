@@ -17,11 +17,14 @@ use query_types::{
 };
 use reqwest::Url;
 use sui_types::types::{
-    Address, CheckpointSequenceNumber, CheckpointSummary, Event, Object, SignedTransaction,
+    framework::Coin, Address, CheckpointSequenceNumber, CheckpointSummary, Event, Object,
+    SignedTransaction,
 };
 
 use anyhow::{anyhow, ensure, Error, Result};
 use cynic::{serde, GraphQlResponse, Operation, QueryBuilder};
+use futures::Stream;
+use std::pin::Pin;
 
 const MAINNET_HOST: &str = "https://sui-mainnet.mystenlabs.com/graphql";
 const TESTNET_HOST: &str = "https://sui-testnet.mystenlabs.com/graphql";
@@ -230,6 +233,87 @@ impl Client {
     // ===========================================================================
     // Coin API
     // ===========================================================================
+
+    /// Get the list of coins for the specified address.
+    ///
+    /// If `coin_type` is not provided, it will default to `0x2::coin::Coin`, which will return all
+    /// coins. For SUI coin, pass in the coin type: `0x2::coin::Coin<0x2::sui::SUI>`.
+    pub async fn coins(
+        &self,
+        owner: Address,
+        after: Option<&str>,
+        before: Option<&str>,
+        first: Option<i32>,
+        last: Option<i32>,
+        coin_type: Option<&str>,
+    ) -> Result<Option<Page<Coin>>, Error> {
+        let response = self
+            .objects(
+                after,
+                before,
+                Some(ObjectFilter {
+                    type_: Some(coin_type.unwrap_or("0x2::coin::Coin")),
+                    owner: Some(owner.into()),
+                    object_ids: None,
+                    object_keys: None,
+                }),
+                first,
+                last,
+            )
+            .await?;
+
+        Ok(response.map(|x| {
+            Page::new(
+                x.page_info,
+                x.data
+                    .iter()
+                    .flat_map(Coin::try_from_object)
+                    .map(|c| c.into_owned())
+                    .collect::<Vec<_>>(),
+            )
+        }))
+    }
+
+    /// Stream of coins for the specified address and coin type.
+    pub fn coins_stream<'a>(
+        &'a self,
+        owner: Address,
+        coin_type: Option<&'a str>,
+    ) -> Pin<Box<dyn Stream<Item = Result<Coin, Error>> + 'a>> {
+        Box::pin(async_stream::try_stream! {
+            let mut after = None;
+            loop {
+                let response = self.objects(
+                    after.as_deref(),
+                    None,
+                    Some(ObjectFilter {
+                        type_: Some(coin_type.unwrap_or("0x2::coin::Coin")),
+                        owner: Some(owner.into()),
+                        object_ids: None,
+                        object_keys: None,
+                    }),
+                    None,
+                    None,
+                ).await?;
+
+                if let Some(page) = response {
+                    for object in page.data {
+                        if let Some(coin) = Coin::try_from_object(&object) {
+                            yield coin.into_owned();
+                        }
+                    }
+
+                    if let Some(end_cursor) = page.page_info.end_cursor {
+                        after = Some(end_cursor);
+                    } else {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            }
+        })
+    }
 
     pub async fn coin_metadata(&self, coin_type: &str) -> Result<Option<CoinMetadata>, Error> {
         let operation = CoinMetadataQuery::build(CoinMetadataArgs { coin_type });
@@ -591,6 +675,8 @@ impl Client {
 
 #[cfg(test)]
 mod tests {
+    use futures::StreamExt;
+
     use crate::{Client, DEFAULT_LOCAL_HOST, DEVNET_HOST, MAINNET_HOST, TESTNET_HOST};
     const NETWORKS: [(&str, &str); 2] = [(MAINNET_HOST, "35834a8a"), (TESTNET_HOST, "4c78adac")];
 
@@ -782,5 +868,32 @@ mod tests {
                 object_bcs.unwrap_err()
             );
         }
+    }
+
+    #[tokio::test]
+    async fn test_coins_query() {
+        for (n, _) in NETWORKS {
+            let client = Client::new(n).unwrap();
+            let coins = client
+                .coins("0x1".parse().unwrap(), None, None, None, None, None)
+                .await;
+            assert!(
+                coins.is_ok(),
+                "Coins query failed for network: {n}. Error: {}",
+                coins.unwrap_err()
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_coins_stream() {
+        let client = Client::new_testnet();
+        let mut stream = client.coins_stream("0x1".parse().unwrap(), None);
+        let mut num_coins = 0;
+        while let Some(result) = stream.next().await {
+            assert!(result.is_ok());
+            num_coins += 1;
+        }
+        assert!(num_coins > 0);
     }
 }
