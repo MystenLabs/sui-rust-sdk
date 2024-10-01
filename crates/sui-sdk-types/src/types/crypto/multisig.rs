@@ -12,7 +12,6 @@ pub type WeightUnit = u8;
 pub type ThresholdUnit = u16;
 pub type BitmapUnit = u16;
 
-#[cfg(feature = "serde")]
 const MAX_COMMITTEE_SIZE: usize = 10;
 // TODO validate sigs
 // const MAX_BITMAP_VALUE: BitmapUnit = 0b1111111111;
@@ -75,6 +74,34 @@ impl MultisigCommittee {
     pub fn scheme(&self) -> SignatureScheme {
         SignatureScheme::Multisig
     }
+
+    /// Checks if the Committee is valid.
+    ///
+    /// A valid committee is one that:
+    ///  - Has a nonzero threshold
+    ///  - Has at least one member
+    ///  - Has at most ten members
+    ///  - No member has weight 0
+    ///  - the sum of the weights of all members must be larger than the threshold
+    ///  - contains no duplicate members
+    pub fn is_valid(&self) -> bool {
+        self.threshold != 0
+            && !self.members.is_empty()
+            && self.members.len() <= MAX_COMMITTEE_SIZE
+            && !self.members.iter().any(|member| member.weight == 0)
+            && self
+                .members
+                .iter()
+                .map(|member| member.weight as ThresholdUnit)
+                .sum::<ThresholdUnit>()
+                >= self.threshold
+            && !self.members.iter().enumerate().any(|(i, member)| {
+                self.members
+                    .iter()
+                    .skip(i + 1)
+                    .any(|m| member.public_key == m.public_key)
+            })
+    }
 }
 
 /// The struct that contains signatures and public keys necessary for authenticating a Multisig.
@@ -83,6 +110,8 @@ impl MultisigCommittee {
 #[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct MultisigAggregatedSignature {
     /// The plain signature encoded with signature scheme.
+    ///
+    /// The signatures must be in the same order as they are listed in the committee.
     #[cfg_attr(test, any(proptest::collection::size_range(0..=10).lift()))]
     signatures: Vec<MultisigMemberSignature>,
     /// A bitmap that indicates the position of which public key the signature should be authenticated with.
@@ -103,6 +132,19 @@ pub struct MultisigAggregatedSignature {
 }
 
 impl MultisigAggregatedSignature {
+    pub fn new(
+        committee: MultisigCommittee,
+        signatures: Vec<MultisigMemberSignature>,
+        bitmap: BitmapUnit,
+    ) -> Self {
+        Self {
+            signatures,
+            bitmap,
+            legacy_bitmap: None,
+            committee,
+        }
+    }
+
     pub fn signatures(&self) -> &[MultisigMemberSignature] {
         &self.signatures
     }
@@ -146,12 +188,11 @@ fn roaring_bitmap_to_u16(roaring: &roaring::RoaringBitmap) -> Result<BitmapUnit,
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(test, derive(test_strategy::Arbitrary))]
-#[allow(clippy::large_enum_variant)]
 pub enum MultisigMemberSignature {
     Ed25519(Ed25519Signature),
     Secp256k1(Secp256k1Signature),
     Secp256r1(Secp256r1Signature),
-    ZkLogin(ZkLoginAuthenticator),
+    ZkLogin(Box<ZkLoginAuthenticator>),
 }
 
 #[cfg(feature = "serde")]
@@ -577,24 +618,22 @@ mod serialization {
     }
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
-    #[allow(clippy::large_enum_variant)]
     enum MemberSignature {
         Ed25519(Ed25519Signature),
         Secp256k1(Secp256k1Signature),
         Secp256r1(Secp256r1Signature),
-        ZkLogin(ZkLoginAuthenticator),
+        ZkLogin(Box<ZkLoginAuthenticator>),
     }
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
     #[serde(tag = "scheme", rename_all = "lowercase")]
     #[serde(rename = "MultisigMemberSignature")]
-    #[allow(clippy::large_enum_variant)]
     #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
     enum ReadableMemberSignature {
         Ed25519 { signature: Ed25519Signature },
         Secp256k1 { signature: Secp256k1Signature },
         Secp256r1 { signature: Secp256r1Signature },
-        ZkLogin(ZkLoginAuthenticator),
+        ZkLogin(Box<ZkLoginAuthenticator>),
     }
 
     #[cfg(feature = "schemars")]
