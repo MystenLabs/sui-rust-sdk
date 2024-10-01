@@ -1,13 +1,89 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::query_types::{schema, Address, Base64, Uint53};
+use std::str::FromStr;
+
+use sui_types::types::ObjectDigest;
+use sui_types::types::ObjectReference;
+
+use crate::query_types::schema;
+use crate::query_types::Address;
+use crate::query_types::Base64;
+use crate::query_types::Uint53;
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "Result")]
+pub struct GqlResult {
+    pub ix: Option<i32>,
+    pub cmd: i32,
+}
 
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "Query", variables = "DryRunArgs")]
 pub struct DryRunQuery {
     #[arguments(txBytes: $tx_bytes, skipChecks: $skip_checks, txMeta: $tx_meta)]
     pub dry_run_transaction_block: DryRunResult,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "Input")]
+pub struct Input {
+    pub __typename: String,
+    pub ix: i32,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "GasCoin")]
+pub struct GasCoin {
+    #[cynic(rename = "_")]
+    pub __underscore: Option<bool>,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "DryRunResult")]
+pub struct DryRunResult {
+    pub error: Option<String>,
+    pub results: Option<Vec<DryRunEffect>>,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "DryRunEffect")]
+pub struct DryRunEffect {
+    pub mutated_references: Option<Vec<DryRunMutation>>,
+    pub return_values: Option<Vec<DryRunReturn>>,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "DryRunReturn")]
+pub struct DryRunReturn {
+    pub bcs: Base64,
+    #[cynic(rename = "type")]
+    pub type_: MoveType,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "DryRunMutation")]
+pub struct DryRunMutation {
+    pub bcs: Base64,
+    pub input: TransactionArgument,
+    #[cynic(rename = "type")]
+    pub type_: MoveType,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "MoveType")]
+pub struct MoveType {
+    pub repr: String,
+}
+
+#[derive(cynic::InlineFragments, Debug)]
+#[cynic(schema = "rpc", graphql_type = "TransactionArgument")]
+pub enum TransactionArgument {
+    GasCoin(GasCoin),
+    Input(Input),
+    Result(GqlResult),
+    #[cynic(fallback)]
+    Unknown,
 }
 
 #[derive(cynic::QueryVariables, Debug)]
@@ -30,20 +106,20 @@ pub struct TransactionMetadata {
 #[derive(cynic::InputObject, Debug)]
 #[cynic(schema = "rpc", graphql_type = "ObjectRef")]
 pub struct ObjectRef {
-    address: Address,
-    digest: String,
-    version: Uint53,
+    pub address: Address,
+    pub digest: String,
+    pub version: Uint53,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
-#[cynic(schema = "rpc", graphql_type = "DryRunResult")]
-pub struct DryRunResult {
-    pub error: Option<String>,
-    pub transaction: Option<TransactionBlock>,
-}
+impl TryFrom<ObjectReference> for ObjectRef {
+    type Error = anyhow::Error;
 
-#[derive(cynic::QueryFragment, Debug)]
-#[cynic(schema = "rpc", graphql_type = "TransactionBlock")]
-pub struct TransactionBlock {
-    pub bcs: Option<Base64>,
+    fn try_from(value: ObjectReference) -> Result<Self, Self::Error> {
+        let address: Address = (*value.object_id()).into();
+        Ok(ObjectRef {
+            address,
+            version: Uint53(value.version()),
+            digest: value.digest().to_string(),
+        })
+    }
 }

@@ -34,6 +34,7 @@ pub use coin::CoinMetadataArgs;
 pub use coin::CoinMetadataQuery;
 pub use dry_run::DryRunArgs;
 pub use dry_run::DryRunQuery;
+pub use dry_run::DryRunResult;
 pub use dry_run::TransactionMetadata;
 pub use epoch::Epoch;
 pub use epoch::EpochSummaryArgs;

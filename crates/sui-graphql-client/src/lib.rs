@@ -20,6 +20,7 @@ use query_types::CoinMetadataArgs;
 use query_types::CoinMetadataQuery;
 use query_types::DryRunArgs;
 use query_types::DryRunQuery;
+use query_types::DryRunResult;
 use query_types::EpochSummaryArgs;
 use query_types::EpochSummaryQuery;
 use query_types::EventFilter;
@@ -689,7 +690,7 @@ impl Client {
         &self,
         tx: &Transaction,
         skip_checks: Option<bool>,
-    ) -> Result<Option<Transaction>, Error> {
+    ) -> Result<Option<DryRunResult>, Error> {
         let tx_bytes = base64ct::Base64::encode_string(
             &bcs::to_bytes(&tx).map_err(|_| Error::msg("Cannot encode Transaction as BCS"))?,
         );
@@ -708,7 +709,7 @@ impl Client {
         tx_kind: &TransactionKind,
         skip_checks: Option<bool>,
         tx_meta: TransactionMetadata,
-    ) -> Result<Option<Transaction>, Error> {
+    ) -> Result<Option<DryRunResult>, Error> {
         let tx_bytes = base64ct::Base64::encode_string(
             &bcs::to_bytes(&tx_kind).map_err(|_| Error::msg("Cannot encode Transaction as BCS"))?,
         );
@@ -721,7 +722,7 @@ impl Client {
         tx_bytes: String,
         skip_checks: Option<bool>,
         tx_meta: Option<TransactionMetadata>,
-    ) -> Result<Option<Transaction>, Error> {
+    ) -> Result<Option<DryRunResult>, Error> {
         let skip_checks = skip_checks.unwrap_or(false);
         let operation = DryRunQuery::build(DryRunArgs {
             tx_bytes,
@@ -733,23 +734,7 @@ impl Client {
         if let Some(errors) = response.errors {
             return Err(Error::msg(format!("{:?}", errors)));
         }
-
-        if let Some(data) = response.data {
-            data.dry_run_transaction_block
-                .transaction
-                .and_then(|d| d.bcs)
-                .map(|bcs| {
-                    let bcs = base64ct::Base64::decode_vec(bcs.0.as_str()).map_err(|e| {
-                        Error::msg(format!("Cannot decode Base64 transaction bcs bytes: {e}"))
-                    })?;
-                    bcs::from_bytes::<Transaction>(&bcs).map_err(|e| {
-                        Error::msg(format!("Cannot decode bcs bytes into Transaction: {e}"))
-                    })
-                })
-                .transpose()
-        } else {
-            Ok(None)
-        }
+        Ok(response.data.map(|d| d.dry_run_transaction_block))
     }
 
     // ===========================================================================
