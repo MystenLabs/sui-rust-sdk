@@ -164,11 +164,19 @@ impl crate::types::MultisigCommittee {
 #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
 mod type_digest {
     use super::Hasher;
-    use crate::types::{
-        CheckpointContents, CheckpointContentsDigest, CheckpointDigest, CheckpointSummary, Digest,
-        Object, ObjectDigest, Transaction, TransactionDigest, TransactionEffects,
-        TransactionEffectsDigest, TransactionEvents, TransactionEventsDigest,
-    };
+    use crate::types::CheckpointContents;
+    use crate::types::CheckpointContentsDigest;
+    use crate::types::CheckpointDigest;
+    use crate::types::CheckpointSummary;
+    use crate::types::Digest;
+    use crate::types::Object;
+    use crate::types::ObjectDigest;
+    use crate::types::Transaction;
+    use crate::types::TransactionDigest;
+    use crate::types::TransactionEffects;
+    use crate::types::TransactionEffectsDigest;
+    use crate::types::TransactionEvents;
+    use crate::types::TransactionEventsDigest;
 
     impl Object {
         pub fn digest(&self) -> ObjectDigest {

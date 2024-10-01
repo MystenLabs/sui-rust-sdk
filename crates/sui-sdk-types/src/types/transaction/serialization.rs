@@ -1120,8 +1120,12 @@ mod signed_transaction {
 }
 
 mod transaction_expiration {
-    use crate::types::{EpochId, TransactionExpiration};
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+    use crate::types::EpochId;
+    use crate::types::TransactionExpiration;
+    use serde::Deserialize;
+    use serde::Deserializer;
+    use serde::Serialize;
+    use serde::Serializer;
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
     #[serde(rename = "TransactionExpiration")]
@@ -1192,7 +1196,8 @@ mod transaction_expiration {
         }
 
         fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
-            use schemars::schema::{Schema, SchemaObject};
+            use schemars::schema::Schema;
+            use schemars::schema::SchemaObject;
             schemars::schema::Schema::Object(schemars::schema::SchemaObject {
                 subschemas: Some(Box::new(schemars::schema::SubschemaValidation {
                     one_of: Some(vec![

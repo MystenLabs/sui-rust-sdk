@@ -15,28 +15,54 @@ mod protocol_config;
 mod service_config;
 mod transaction;
 
-pub use active_validators::{
-    ActiveValidatorsArgs, ActiveValidatorsQuery, EpochValidator, Validator, ValidatorConnection,
-    ValidatorSet,
-};
-use anyhow::{anyhow, Error};
-pub use balance::{Balance, BalanceArgs, BalanceQuery, Owner};
+pub use active_validators::ActiveValidatorsArgs;
+pub use active_validators::ActiveValidatorsQuery;
+pub use active_validators::EpochValidator;
+pub use active_validators::Validator;
+pub use active_validators::ValidatorConnection;
+pub use active_validators::ValidatorSet;
+use anyhow::anyhow;
+use anyhow::Error;
+pub use balance::Balance;
+pub use balance::BalanceArgs;
+pub use balance::BalanceQuery;
+pub use balance::Owner;
 pub use chain::ChainIdentifierQuery;
-pub use checkpoint::{CheckpointArgs, CheckpointId, CheckpointQuery};
-pub use coin::{CoinMetadata, CoinMetadataArgs, CoinMetadataQuery};
-pub use epoch::{Epoch, EpochSummaryArgs, EpochSummaryQuery};
-pub use events::{Event, EventConnection, EventFilter, EventsQuery, EventsQueryArgs};
-pub use execute_tx::{ExecuteTransactionArgs, ExecuteTransactionQuery, ExecutionResult};
-pub use object::{
-    ObjectFilter, ObjectKey, ObjectQuery, ObjectQueryArgs, ObjectsQuery, ObjectsQueryArgs,
-};
-pub use protocol_config::{ProtocolConfigQuery, ProtocolConfigs, ProtocolVersionArgs};
-pub use service_config::{Feature, ServiceConfig, ServiceConfigQuery};
+pub use checkpoint::CheckpointArgs;
+pub use checkpoint::CheckpointId;
+pub use checkpoint::CheckpointQuery;
+pub use coin::CoinMetadata;
+pub use coin::CoinMetadataArgs;
+pub use coin::CoinMetadataQuery;
+pub use epoch::Epoch;
+pub use epoch::EpochSummaryArgs;
+pub use epoch::EpochSummaryQuery;
+pub use events::Event;
+pub use events::EventConnection;
+pub use events::EventFilter;
+pub use events::EventsQuery;
+pub use events::EventsQueryArgs;
+pub use execute_tx::ExecuteTransactionArgs;
+pub use execute_tx::ExecuteTransactionQuery;
+pub use execute_tx::ExecutionResult;
+pub use object::ObjectFilter;
+pub use object::ObjectKey;
+pub use object::ObjectQuery;
+pub use object::ObjectQueryArgs;
+pub use object::ObjectsQuery;
+pub use object::ObjectsQueryArgs;
+pub use protocol_config::ProtocolConfigQuery;
+pub use protocol_config::ProtocolConfigs;
+pub use protocol_config::ProtocolVersionArgs;
+pub use service_config::Feature;
+pub use service_config::ServiceConfig;
+pub use service_config::ServiceConfigQuery;
 use sui_types::types::Address as NativeAddress;
-pub use transaction::{
-    TransactionBlockArgs, TransactionBlockQuery, TransactionBlocksQuery,
-    TransactionBlocksQueryArgs, TransactionsFilter,
-};
+pub use transaction::TransactionBlockArgs;
+pub use transaction::TransactionBlockQuery;
+pub use transaction::TransactionBlocksQuery;
+pub use transaction::TransactionBlocksQueryArgs;
+pub use transaction::TransactionsFilter;
 
 #[cynic::schema("rpc")]
 pub mod schema {}

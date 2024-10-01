@@ -9,7 +9,8 @@ use ark_bn254::Fr;
 use ark_ff::fields::Field;
 use ark_std::str::FromStr;
 use ark_std::Zero;
-use core::ops::{AddAssign, MulAssign};
+use core::ops::AddAssign;
+use core::ops::MulAssign;
 
 mod constants;
 

@@ -1,7 +1,11 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 //
-use crate::query_types::{schema, BigInt, DateTime, SuiAddress, Uint53};
+use crate::query_types::schema;
+use crate::query_types::BigInt;
+use crate::query_types::DateTime;
+use crate::query_types::SuiAddress;
+use crate::query_types::Uint53;
 
 // ===========================================================================
 // Epoch Queries

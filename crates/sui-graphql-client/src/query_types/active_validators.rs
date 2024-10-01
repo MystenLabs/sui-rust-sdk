@@ -1,9 +1,14 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::query_types::{
-    schema, Address, Base64, BigInt, MoveObject, PageInfo, SuiAddress, Uint53,
-};
+use crate::query_types::schema;
+use crate::query_types::Address;
+use crate::query_types::Base64;
+use crate::query_types::BigInt;
+use crate::query_types::MoveObject;
+use crate::query_types::PageInfo;
+use crate::query_types::SuiAddress;
+use crate::query_types::Uint53;
 
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(

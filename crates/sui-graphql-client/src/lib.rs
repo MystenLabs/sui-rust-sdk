@@ -7,24 +7,63 @@ pub mod faucet;
 pub mod query_types;
 
 use base64ct::Encoding;
-use query_types::{
-    ActiveValidatorsArgs, ActiveValidatorsQuery, BalanceArgs, BalanceQuery, ChainIdentifierQuery,
-    CheckpointArgs, CheckpointId, CheckpointQuery, CoinMetadata, CoinMetadataArgs,
-    CoinMetadataQuery, EpochSummaryArgs, EpochSummaryQuery, EventFilter, EventsQuery,
-    EventsQueryArgs, ExecuteTransactionArgs, ExecuteTransactionQuery, ObjectFilter, ObjectQuery,
-    ObjectQueryArgs, ObjectsQuery, ObjectsQueryArgs, PageInfo, ProtocolConfigQuery,
-    ProtocolConfigs, ProtocolVersionArgs, ServiceConfig, ServiceConfigQuery, TransactionBlockArgs,
-    TransactionBlockQuery, TransactionBlocksQuery, TransactionBlocksQueryArgs, TransactionsFilter,
-    Uint53, Validator,
-};
+use query_types::ActiveValidatorsArgs;
+use query_types::ActiveValidatorsQuery;
+use query_types::BalanceArgs;
+use query_types::BalanceQuery;
+use query_types::ChainIdentifierQuery;
+use query_types::CheckpointArgs;
+use query_types::CheckpointId;
+use query_types::CheckpointQuery;
+use query_types::CoinMetadata;
+use query_types::CoinMetadataArgs;
+use query_types::CoinMetadataQuery;
+use query_types::EpochSummaryArgs;
+use query_types::EpochSummaryQuery;
+use query_types::EventFilter;
+use query_types::EventsQuery;
+use query_types::EventsQueryArgs;
+use query_types::ExecuteTransactionArgs;
+use query_types::ExecuteTransactionQuery;
+use query_types::ObjectFilter;
+use query_types::ObjectQuery;
+use query_types::ObjectQueryArgs;
+use query_types::ObjectsQuery;
+use query_types::ObjectsQueryArgs;
+use query_types::PageInfo;
+use query_types::ProtocolConfigQuery;
+use query_types::ProtocolConfigs;
+use query_types::ProtocolVersionArgs;
+use query_types::ServiceConfig;
+use query_types::ServiceConfigQuery;
+use query_types::TransactionBlockArgs;
+use query_types::TransactionBlockQuery;
+use query_types::TransactionBlocksQuery;
+use query_types::TransactionBlocksQueryArgs;
+use query_types::TransactionsFilter;
+use query_types::Uint53;
+use query_types::Validator;
 use reqwest::Url;
-use sui_types::types::{
-    framework::Coin, Address, CheckpointSequenceNumber, CheckpointSummary, Event, Object,
-    SignedTransaction, Transaction, TransactionEffects, UserSignature,
-};
+use sui_types::types::framework::Coin;
+use sui_types::types::Address;
+use sui_types::types::CheckpointSequenceNumber;
+use sui_types::types::CheckpointSummary;
+use sui_types::types::Event;
+use sui_types::types::Object;
+use sui_types::types::SignedTransaction;
+use sui_types::types::Transaction;
+use sui_types::types::TransactionEffects;
+use sui_types::types::UserSignature;
 
-use anyhow::{anyhow, ensure, Error, Result};
-use cynic::{serde, GraphQlResponse, MutationBuilder, Operation, QueryBuilder};
+use anyhow::anyhow;
+use anyhow::ensure;
+use anyhow::Error;
+use anyhow::Result;
+use cynic::serde;
+use cynic::GraphQlResponse;
+use cynic::MutationBuilder;
+use cynic::Operation;
+use cynic::QueryBuilder;
 use futures::Stream;
 use std::pin::Pin;
 
@@ -756,7 +795,11 @@ impl Client {
 mod tests {
     use futures::StreamExt;
 
-    use crate::{Client, DEVNET_HOST, LOCAL_HOST, MAINNET_HOST, TESTNET_HOST};
+    use crate::Client;
+    use crate::DEVNET_HOST;
+    use crate::LOCAL_HOST;
+    use crate::MAINNET_HOST;
+    use crate::TESTNET_HOST;
     const NETWORKS: [(&str, &str); 2] = [(MAINNET_HOST, "35834a8a"), (TESTNET_HOST, "4c78adac")];
 
     #[test]

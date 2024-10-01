@@ -1,7 +1,11 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::query_types::{schema, Base64, PageInfo, SuiAddress, Uint53};
+use crate::query_types::schema;
+use crate::query_types::Base64;
+use crate::query_types::PageInfo;
+use crate::query_types::SuiAddress;
+use crate::query_types::Uint53;
 
 // ===========================================================================
 // Object(s) Queries

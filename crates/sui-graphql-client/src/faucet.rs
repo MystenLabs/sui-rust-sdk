@@ -1,14 +1,20 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use sui_types::types::{Address, ObjectId, TransactionDigest};
+use sui_types::types::Address;
+use sui_types::types::ObjectId;
+use sui_types::types::TransactionDigest;
 
-use anyhow::{anyhow, bail};
-use reqwest::{StatusCode, Url};
-use serde::{Deserialize, Serialize};
+use anyhow::anyhow;
+use anyhow::bail;
+use reqwest::StatusCode;
+use reqwest::Url;
+use serde::Deserialize;
+use serde::Serialize;
 use serde_json::json;
 use std::time::Duration;
-use tracing::{error, info};
+use tracing::error;
+use tracing::info;
 
 pub const FAUCET_DEVNET_HOST: &str = "https://faucet.devnet.sui.io";
 pub const FAUCET_TESTNET_HOST: &str = "https://faucet.testnet.sui.io";
