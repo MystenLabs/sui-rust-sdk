@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::query_types::schema;
+use crate::query_types::Address;
 use crate::query_types::Base64;
 use crate::query_types::PageInfo;
-use crate::query_types::SuiAddress;
 use crate::query_types::Uint53;
 
 // ===========================================================================
@@ -31,7 +31,7 @@ pub struct ObjectsQuery {
 
 #[derive(cynic::QueryVariables, Debug)]
 pub struct ObjectQueryArgs {
-    pub address: SuiAddress,
+    pub address: Address,
     pub version: Option<Uint53>,
 }
 
@@ -59,15 +59,15 @@ pub struct Object {
 pub struct ObjectFilter<'a> {
     #[cynic(rename = "type")]
     pub type_: Option<&'a str>,
-    pub owner: Option<SuiAddress>,
-    pub object_ids: Option<Vec<SuiAddress>>,
+    pub owner: Option<Address>,
+    pub object_ids: Option<Vec<Address>>,
     pub object_keys: Option<Vec<ObjectKey>>,
 }
 
 #[derive(cynic::InputObject, Debug)]
 #[cynic(schema = "rpc", graphql_type = "ObjectKey")]
 pub struct ObjectKey {
-    pub object_id: SuiAddress,
+    pub object_id: Address,
     pub version: Uint53,
 }
 

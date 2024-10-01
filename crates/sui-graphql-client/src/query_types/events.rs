@@ -5,12 +5,12 @@ use std::str::FromStr;
 
 use base64ct::Encoding;
 use sui_types::types::Identifier;
-use sui_types::types::ObjectId;
 
 use crate::query_types::schema;
+use crate::query_types::Address;
 use crate::query_types::Base64;
+use crate::query_types::GQLAddress;
 use crate::query_types::PageInfo;
-use crate::query_types::SuiAddress;
 
 // ===========================================================================
 // Events Queries
@@ -52,7 +52,7 @@ pub struct EventConnection {
 pub struct EventFilter {
     pub emitting_module: Option<String>,
     pub event_type: Option<String>,
-    pub sender: Option<SuiAddress>,
+    pub sender: Option<Address>,
     pub transaction_digest: Option<String>,
 }
 
@@ -62,7 +62,7 @@ pub struct Event {
     #[cynic(rename = "type")]
     pub type_: MoveType,
     pub sending_module: Option<MoveModule>,
-    pub sender: Option<Address>,
+    pub sender: Option<GQLAddress>,
     pub bcs: Base64,
 }
 
@@ -76,19 +76,13 @@ pub struct MoveModule {
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "MovePackage")]
 pub struct MovePackage {
-    pub address: SuiAddress,
+    pub address: Address,
 }
 
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "MoveType")]
 pub struct MoveType {
     pub repr: Option<String>,
-}
-
-#[derive(cynic::QueryFragment, Debug)]
-#[cynic(schema = "rpc", graphql_type = "Address")]
-pub struct Address {
-    pub address: SuiAddress,
 }
 
 #[derive(cynic::Scalar, Debug, Clone)]
@@ -119,14 +113,10 @@ impl TryFrom<Event> for sui_types::types::Event {
         let (package_id, module) = sending_module
             .map(|module| (module.package.address, module.name))
             .ok_or_else(|| anyhow::anyhow!("Missing sending module in event"))?;
-        let package_id = ObjectId::from_str(&package_id.0)?;
+        let package_id = package_id.into();
         let module = Identifier::from_str(&module)?;
 
-        let sender = sender
-            .map(|x| x.address)
-            .unwrap_or_else(|| SuiAddress("0x0".to_string()))
-            .try_into()
-            .map_err(|e| anyhow::anyhow!("Invalid sender address in event: {}", e))?;
+        let sender = sender.map(|x| x.address).unwrap_or_else(|| Address::ZERO);
 
         let contents = base64ct::Base64::decode_vec(&bcs.0)
             .map_err(|_| anyhow::anyhow!("Invalid base64 in event"))?;

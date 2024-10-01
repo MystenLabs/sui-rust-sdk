@@ -1,9 +1,9 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use super::SuiAddress;
 use crate::query_types::schema;
 use crate::query_types::BigInt;
+use crate::Address;
 
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "Query", variables = "BalanceArgs")]
@@ -27,6 +27,6 @@ pub struct Balance {
 
 #[derive(cynic::QueryVariables, Debug)]
 pub struct BalanceArgs {
-    pub address: SuiAddress,
+    pub address: Address,
     pub coin_type: Option<String>,
 }

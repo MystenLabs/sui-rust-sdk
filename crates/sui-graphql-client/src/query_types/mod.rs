@@ -1,6 +1,5 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
-use std::str::FromStr;
 
 mod active_validators;
 mod balance;
@@ -22,7 +21,6 @@ pub use active_validators::Validator;
 pub use active_validators::ValidatorConnection;
 pub use active_validators::ValidatorSet;
 use anyhow::anyhow;
-use anyhow::Error;
 pub use balance::Balance;
 pub use balance::BalanceArgs;
 pub use balance::BalanceQuery;
@@ -57,12 +55,14 @@ pub use protocol_config::ProtocolVersionArgs;
 pub use service_config::Feature;
 pub use service_config::ServiceConfig;
 pub use service_config::ServiceConfigQuery;
-use sui_types::types::Address as NativeAddress;
+use sui_types::types::Address;
 pub use transaction::TransactionBlockArgs;
 pub use transaction::TransactionBlockQuery;
 pub use transaction::TransactionBlocksQuery;
 pub use transaction::TransactionBlocksQueryArgs;
 pub use transaction::TransactionsFilter;
+
+use cynic::impl_scalar;
 
 #[cynic::schema("rpc")]
 pub mod schema {}
@@ -70,6 +70,8 @@ pub mod schema {}
 // ===========================================================================
 // Scalars
 // ===========================================================================
+
+impl_scalar!(Address, schema::SuiAddress);
 
 #[derive(cynic::Scalar, Debug, Clone)]
 #[cynic(graphql_type = "Base64")]
@@ -83,9 +85,6 @@ pub struct BigInt(pub String);
 #[cynic(graphql_type = "DateTime")]
 pub struct DateTime(pub String);
 
-#[derive(cynic::Scalar, Debug)]
-pub struct SuiAddress(pub String);
-
 #[derive(cynic::Scalar, Debug, Clone)]
 #[cynic(graphql_type = "UInt53")]
 pub struct Uint53(pub u64);
@@ -96,8 +95,8 @@ pub struct Uint53(pub u64);
 
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "Address")]
-pub struct Address {
-    pub address: SuiAddress,
+pub struct GQLAddress {
+    pub address: Address,
 }
 
 #[derive(cynic::QueryFragment, Debug)]
@@ -138,20 +137,5 @@ impl TryFrom<BigInt> for u64 {
             .0
             .parse::<u64>()
             .map_err(|e| anyhow!("Cannot convert BigInt into u64: {e}"))
-    }
-}
-
-impl From<NativeAddress> for SuiAddress {
-    fn from(value: NativeAddress) -> Self {
-        SuiAddress(value.to_string())
-    }
-}
-
-impl TryFrom<SuiAddress> for NativeAddress {
-    type Error = anyhow::Error;
-
-    fn try_from(value: SuiAddress) -> Result<Self, Self::Error> {
-        NativeAddress::from_str(&value.0)
-            .map_err(|e| Error::msg(format!("Cannot convert SuiAddress into Address: {e}")))
     }
 }
