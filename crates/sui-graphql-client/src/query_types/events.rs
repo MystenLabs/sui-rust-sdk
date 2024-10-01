@@ -1,6 +1,11 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
+use std::str::FromStr;
+
+use base64ct::Encoding;
+use sui_types::types::{Identifier, ObjectId};
+
 use crate::query_types::{schema, Base64, PageInfo, SuiAddress};
 
 // ===========================================================================
@@ -20,9 +25,9 @@ pub struct EventsQuery {
 
 #[derive(cynic::QueryVariables, Debug)]
 pub struct EventsQueryArgs {
+    pub filter: Option<EventFilter>,
     pub after: Option<String>,
     pub before: Option<String>,
-    pub filter: Option<EventFilter>,
     pub first: Option<i32>,
     pub last: Option<i32>,
 }
@@ -38,12 +43,6 @@ pub struct EventConnection {
     pub nodes: Vec<Event>,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
-#[cynic(schema = "rpc", graphql_type = "Event")]
-pub struct Event {
-    pub bcs: Base64,
-}
-
 #[derive(cynic::InputObject, Debug)]
 #[cynic(schema = "rpc", graphql_type = "EventFilter")]
 pub struct EventFilter {
@@ -51,4 +50,89 @@ pub struct EventFilter {
     pub event_type: Option<String>,
     pub sender: Option<SuiAddress>,
     pub transaction_digest: Option<String>,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "Event")]
+pub struct Event {
+    #[cynic(rename = "type")]
+    pub type_: MoveType,
+    pub sending_module: Option<MoveModule>,
+    pub sender: Option<Address>,
+    pub bcs: Base64,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "MoveModule")]
+pub struct MoveModule {
+    pub name: String,
+    pub package: MovePackage,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "MovePackage")]
+pub struct MovePackage {
+    pub address: SuiAddress,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "MoveType")]
+pub struct MoveType {
+    pub repr: Option<String>,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "Address")]
+pub struct Address {
+    pub address: SuiAddress,
+}
+
+#[derive(cynic::Scalar, Debug, Clone)]
+pub struct MoveTypeLayout(pub String);
+
+impl TryFrom<Event> for sui_types::types::Event {
+    type Error = anyhow::Error;
+
+    fn try_from(value: Event) -> Result<Self, Self::Error> {
+        let Event {
+            type_,
+            sending_module,
+            sender,
+            bcs,
+        } = value;
+
+        let type_ = if let Some(t) = type_
+            .repr
+            .map(|layout| sui_types::types::StructTag::from_str(&layout))
+            .transpose()
+            .map_err(|e| anyhow::anyhow!("Invalid struct tag in event: {}", e))?
+        {
+            t
+        } else {
+            return Err(anyhow::anyhow!("Missing struct tag in event"));
+        };
+
+        let (package_id, module) = sending_module
+            .map(|module| (module.package.address, module.name))
+            .ok_or_else(|| anyhow::anyhow!("Missing sending module in event"))?;
+        let package_id = ObjectId::from_str(&package_id.0)?;
+        let module = Identifier::from_str(&module)?;
+
+        let sender = sender
+            .map(|x| x.address)
+            .unwrap_or_else(|| SuiAddress("0x0".to_string()))
+            .try_into()
+            .map_err(|e| anyhow::anyhow!("Invalid sender address in event: {}", e))?;
+
+        let contents = base64ct::Base64::decode_vec(&bcs.0)
+            .map_err(|_| anyhow::anyhow!("Invalid base64 in event"))?;
+
+        Ok(Self {
+            package_id,
+            module,
+            sender,
+            type_,
+            contents,
+        })
+    }
 }

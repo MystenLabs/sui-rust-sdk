@@ -428,40 +428,34 @@ impl Client {
 
     pub async fn events(
         &self,
+        filter: Option<EventFilter>,
         after: Option<String>,
         before: Option<String>,
-        filter: Option<EventFilter>,
         first: Option<i32>,
         last: Option<i32>,
     ) -> Result<Option<Page<Event>>, Error> {
         let operation = EventsQuery::build(EventsQueryArgs {
+            filter,
             after,
             before,
-            filter,
             first,
             last,
         });
+
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
             return Err(Error::msg(format!("{:?}", errors)));
         }
 
-        // TODO bcs from bytes into Event fails due to custom type parser error
-        // called `Result::unwrap()` on an `Err` value: Custom("TypeParseError")
         if let Some(events) = response.data {
             let ec = events.events;
             let page_info = ec.page_info;
             let nodes = ec
                 .nodes
-                .iter()
-                .map(|e| base64ct::Base64::decode_vec(e.bcs.0.as_str()))
-                .collect::<Result<Vec<_>, base64ct::Error>>()
-                .map_err(|e| Error::msg(format!("Cannot decode Base64 event bcs bytes: {e}",)))?
-                .iter()
-                .map(|b| bcs::from_bytes::<Event>(b))
-                .collect::<Result<Vec<_>, bcs::Error>>()
-                .map_err(|e| Error::msg(format!("Cannot decode bcs bytes into Event: {e}",)))?;
+                .into_iter()
+                .map(Event::try_from)
+                .collect::<Result<Vec<Event>, _>>()?;
 
             Ok(Some(Page::new(page_info, nodes)))
         } else {
@@ -827,6 +821,23 @@ mod tests {
                 e.is_ok(),
                 "Epoch summary query failed for network: {n}. Error: {}",
                 e.unwrap_err()
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_events_query() {
+        for (n, _) in NETWORKS {
+            let client = Client::new(n).unwrap();
+            let events = client.events(None, None, None, None, Some(10)).await;
+            assert!(
+                events.is_ok(),
+                "Events query failed for network: {n}. Error: {}",
+                events.unwrap_err()
+            );
+            assert!(
+                events.unwrap().is_some(),
+                "Events query returned no data for network: {n}"
             );
         }
     }
