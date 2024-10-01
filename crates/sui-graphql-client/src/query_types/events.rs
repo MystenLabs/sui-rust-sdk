@@ -116,11 +116,7 @@ impl TryFrom<Event> for sui_types::types::Event {
         let package_id = package_id.into();
         let module = Identifier::from_str(&module)?;
 
-        let sender = sender
-            .map(|x| x.address)
-            .unwrap_or_else(|| Address::from_str("0x0").unwrap())
-            .try_into()
-            .map_err(|e| anyhow::anyhow!("Invalid sender address in event: {}", e))?;
+        let sender = sender.map(|x| x.address).unwrap_or_else(|| Address::ZERO);
 
         let contents = base64ct::Base64::decode_vec(&bcs.0)
             .map_err(|_| anyhow::anyhow!("Invalid base64 in event"))?;

@@ -291,7 +291,7 @@ impl Client {
         coin_type: Option<&str>,
     ) -> Result<Option<u128>, Error> {
         let operation = BalanceQuery::build(BalanceArgs {
-            address: address.into(),
+            address,
             coin_type: coin_type.map(|x| x.to_string()),
         });
         let response = self.run_query(&operation).await?;
@@ -334,7 +334,7 @@ impl Client {
                 before,
                 Some(ObjectFilter {
                     type_: Some(coin_type.unwrap_or("0x2::coin::Coin")),
-                    owner: Some(owner.into()),
+                    owner: Some(owner),
                     object_ids: None,
                     object_keys: None,
                 }),
@@ -369,7 +369,7 @@ impl Client {
                     None,
                     Some(ObjectFilter {
                         type_: Some(coin_type.unwrap_or("0x2::coin::Coin")),
-                        owner: Some(owner.into()),
+                        owner: Some(owner),
                         object_ids: None,
                         object_keys: None,
                     }),
@@ -568,7 +568,7 @@ impl Client {
         version: Option<u64>,
     ) -> Result<Option<Object>, Error> {
         let operation = ObjectQuery::build(ObjectQueryArgs {
-            address: address.into(),
+            address,
             version: version.map(Uint53),
         });
 
@@ -662,7 +662,7 @@ impl Client {
     /// Return the object's bcs content [`Vec<u8>`] based on the provided [`Address`].
     pub async fn object_bcs(&self, object_id: Address) -> Result<Option<Vec<u8>>, Error> {
         let operation = ObjectQuery::build(ObjectQueryArgs {
-            address: object_id.into(),
+            address: object_id,
             version: None,
         });
 
