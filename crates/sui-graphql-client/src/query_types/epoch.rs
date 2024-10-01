@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 use crate::query_types::schema;
+use crate::query_types::Address;
 use crate::query_types::BigInt;
 use crate::query_types::DateTime;
-use crate::query_types::SuiAddress;
 use crate::query_types::Uint53;
 
 // ===========================================================================
@@ -64,14 +64,14 @@ pub struct Epoch {
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "ValidatorSet")]
 pub struct ValidatorSet {
-    pub inactive_pools_id: Option<SuiAddress>,
+    pub inactive_pools_id: Option<Address>,
     pub inactive_pools_size: Option<i32>,
-    pub pending_active_validators_id: Option<SuiAddress>,
+    pub pending_active_validators_id: Option<Address>,
     pub pending_active_validators_size: Option<i32>,
     pub pending_removals: Option<Vec<i32>>,
-    pub staking_pool_mappings_id: Option<SuiAddress>,
+    pub staking_pool_mappings_id: Option<Address>,
     pub staking_pool_mappings_size: Option<i32>,
     pub total_stake: Option<BigInt>,
     pub validator_candidates_size: Option<i32>,
-    pub validator_candidates_id: Option<SuiAddress>,
+    pub validator_candidates_id: Option<Address>,
 }

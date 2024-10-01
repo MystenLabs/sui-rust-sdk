@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::query_types::schema;
+use crate::query_types::Address;
 use crate::query_types::Base64;
 use crate::query_types::PageInfo;
-use crate::query_types::SuiAddress;
 use crate::query_types::Uint53;
 
 // ===========================================================================
@@ -79,9 +79,9 @@ pub struct TransactionsFilter {
     pub kind: Option<TransactionBlockKindInput>,
     pub at_checkpoint: Option<Uint53>,
     pub before_checkpoint: Option<Uint53>,
-    pub changed_object: Option<SuiAddress>,
-    pub input_object: Option<SuiAddress>,
-    pub recv_address: Option<SuiAddress>,
+    pub changed_object: Option<Address>,
+    pub input_object: Option<Address>,
+    pub recv_address: Option<Address>,
 }
 
 #[derive(cynic::QueryFragment, Debug)]

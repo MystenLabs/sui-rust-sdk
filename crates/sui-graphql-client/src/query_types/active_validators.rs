@@ -5,9 +5,9 @@ use crate::query_types::schema;
 use crate::query_types::Address;
 use crate::query_types::Base64;
 use crate::query_types::BigInt;
+use crate::query_types::GQLAddress;
 use crate::query_types::MoveObject;
 use crate::query_types::PageInfo;
-use crate::query_types::SuiAddress;
 use crate::query_types::Uint53;
 
 #[derive(cynic::QueryFragment, Debug)]
@@ -65,7 +65,7 @@ pub struct Validator {
     /// To get the APY in percentage, divide by 100.
     pub apy: Option<i32>,
     /// The validator's address.
-    pub address: Address,
+    pub address: GQLAddress,
     /// The fee charged by the validator for staking services.
     pub commission_rate: Option<i32>,
     /// Validator's credentials.
@@ -108,7 +108,7 @@ pub struct Validator {
     /// The epoch at which this pool became active.
     pub staking_pool_activation_epoch: Option<Uint53>,
     /// The ID of this validator's `0x3::staking_pool::StakingPool`.
-    pub staking_pool_id: SuiAddress,
+    pub staking_pool_id: Address,
     /// The total number of SUI tokens in this pool.
     pub staking_pool_sui_balance: Option<BigInt>,
     /// The voting power of this validator in basis points (e.g., 100 = 1% voting power).
