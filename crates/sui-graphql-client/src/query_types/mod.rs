@@ -8,6 +8,7 @@ mod checkpoint;
 mod coin;
 mod epoch;
 mod events;
+mod execute_tx;
 mod object;
 mod protocol_config;
 mod service_config;
@@ -20,6 +21,7 @@ pub use checkpoint::{CheckpointArgs, CheckpointId, CheckpointQuery};
 pub use coin::{CoinMetadata, CoinMetadataArgs, CoinMetadataQuery};
 pub use epoch::{Epoch, EpochSummaryArgs, EpochSummaryQuery};
 pub use events::{Event, EventConnection, EventFilter, EventsQuery, EventsQueryArgs};
+pub use execute_tx::{ExecuteTransactionArgs, ExecuteTransactionQuery, ExecutionResult};
 pub use object::{
     ObjectFilter, ObjectKey, ObjectQuery, ObjectQueryArgs, ObjectsQuery, ObjectsQueryArgs,
 };
