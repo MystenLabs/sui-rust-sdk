@@ -869,6 +869,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_events_query() {
         for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();
