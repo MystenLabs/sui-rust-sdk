@@ -693,14 +693,16 @@ impl Client {
     /// non-entry functions, and some other checks. Defaults to false.
     pub async fn dry_run(
         &self,
-        tx_bytes: Vec<u8>,
+        tx: &Transaction,
         skip_checks: Option<bool>,
         tx_meta: Option<TransactionMetadata>,
     ) -> Result<Option<Transaction>, Error> {
         let skip_checks = skip_checks.unwrap_or(false);
-        let base64_tx = base64ct::Base64::encode_string(tx_bytes.as_ref());
+        let tx_bytes = base64ct::Base64::encode_string(
+            &bcs::to_bytes(&tx).map_err(|_| Error::msg("Cannot encode Transaction as BCS"))?,
+        );
         let operation = DryRunQuery::build(DryRunArgs {
-            tx_bytes: base64_tx,
+            tx_bytes,
             skip_checks,
             tx_meta,
         });
