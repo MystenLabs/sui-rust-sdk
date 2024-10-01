@@ -681,14 +681,13 @@ impl Client {
 
     /// Dry run a transaction and return the transaction.
     ///
-    /// `txBytes` is either a TransactionData struct or a [`TransactionKind`] struct, BCS-encoded
-    /// and then Base64-encoded. The expected type is controlled by the presence or absence of
-    /// `txMeta`:
+    /// `tx` is either a [`Transaction`] struct or a [`TransactionKind`] struct. The expected type
+    /// is controlled by the presence or absence of `txMeta`:
     ///
     ///  - if present, txBytes is assumed to be a [`TransactionKind`],
     ///  - if absent, txBytes is assumed to be [`Transaction`].
     ///
-    /// `skipChecks` optional flag to disable the usual verification checks that prevent access to
+    /// `skipChecks` optional flag disables the usual verification checks that prevent access to
     /// objects that are owned by addresses other than the sender, and calling non-public,
     /// non-entry functions, and some other checks. Defaults to false.
     pub async fn dry_run(
