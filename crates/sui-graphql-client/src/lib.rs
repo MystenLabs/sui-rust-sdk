@@ -55,6 +55,7 @@ use sui_types::types::Object;
 use sui_types::types::SignedTransaction;
 use sui_types::types::Transaction;
 use sui_types::types::TransactionEffects;
+use sui_types::types::TransactionKind;
 use sui_types::types::UserSignature;
 
 use anyhow::anyhow;
@@ -676,30 +677,52 @@ impl Client {
     }
 
     // ===========================================================================
-    // Transaction API
+    // Dry Run API
     // ===========================================================================
 
-    /// Dry run a transaction and return the transaction.
-    ///
-    /// `tx` is either a [`Transaction`] struct or a [`TransactionKind`] struct. The expected type
-    /// is controlled by the presence or absence of `txMeta`:
-    ///
-    ///  - if present, tx is assumed to be a [`TransactionKind`],
-    ///  - if absent, tx is assumed to be [`Transaction`].
+    /// Dry run a [`Transaction`] and return the transaction.
     ///
     /// `skipChecks` optional flag disables the usual verification checks that prevent access to
     /// objects that are owned by addresses other than the sender, and calling non-public,
     /// non-entry functions, and some other checks. Defaults to false.
-    pub async fn dry_run(
+    pub async fn dry_run_tx(
         &self,
         tx: &Transaction,
+        skip_checks: Option<bool>,
+    ) -> Result<Option<Transaction>, Error> {
+        let tx_bytes = base64ct::Base64::encode_string(
+            &bcs::to_bytes(&tx).map_err(|_| Error::msg("Cannot encode Transaction as BCS"))?,
+        );
+        self.dry_run(tx_bytes, skip_checks, None).await
+    }
+
+    /// Dry run a [`TransactionKind`] and return the transaction.
+    ///
+    /// `skipChecks` optional flag disables the usual verification checks that prevent access to
+    /// objects that are owned by addresses other than the sender, and calling non-public,
+    /// non-entry functions, and some other checks. Defaults to false.
+    ///
+    /// `tx_meta` is the transaction metadata.
+    pub async fn dry_run_tx_kind(
+        &self,
+        tx_kind: &TransactionKind,
+        skip_checks: Option<bool>,
+        tx_meta: TransactionMetadata,
+    ) -> Result<Option<Transaction>, Error> {
+        let tx_bytes = base64ct::Base64::encode_string(
+            &bcs::to_bytes(&tx_kind).map_err(|_| Error::msg("Cannot encode Transaction as BCS"))?,
+        );
+        self.dry_run(tx_bytes, skip_checks, Some(tx_meta)).await
+    }
+
+    /// Internal implementation of the dry run API.
+    async fn dry_run(
+        &self,
+        tx_bytes: String,
         skip_checks: Option<bool>,
         tx_meta: Option<TransactionMetadata>,
     ) -> Result<Option<Transaction>, Error> {
         let skip_checks = skip_checks.unwrap_or(false);
-        let tx_bytes = base64ct::Base64::encode_string(
-            &bcs::to_bytes(&tx).map_err(|_| Error::msg("Cannot encode Transaction as BCS"))?,
-        );
         let operation = DryRunQuery::build(DryRunArgs {
             tx_bytes,
             skip_checks,
@@ -728,6 +751,10 @@ impl Client {
             Ok(None)
         }
     }
+
+    // ===========================================================================
+    // Transaction API
+    // ===========================================================================
 
     // TODO: From Brandon: this fails due to SignedTransaction in Sui core type being technically inaccurate but it is fixed in this SDK here. in particular core incorrectly appends the signing intent when it shouldn't so my guess is that's whats wrong
     /// Get a transaction by its digest.
