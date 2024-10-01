@@ -684,8 +684,8 @@ impl Client {
     /// `tx` is either a [`Transaction`] struct or a [`TransactionKind`] struct. The expected type
     /// is controlled by the presence or absence of `txMeta`:
     ///
-    ///  - if present, txBytes is assumed to be a [`TransactionKind`],
-    ///  - if absent, txBytes is assumed to be [`Transaction`].
+    ///  - if present, tx is assumed to be a [`TransactionKind`],
+    ///  - if absent, tx is assumed to be [`Transaction`].
     ///
     /// `skipChecks` optional flag disables the usual verification checks that prevent access to
     /// objects that are owned by addresses other than the sender, and calling non-public,
