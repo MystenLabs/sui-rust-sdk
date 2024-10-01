@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 use std::str::FromStr;
 
+mod active_validators;
 mod balance;
 mod chain;
 mod checkpoint;
@@ -14,6 +15,10 @@ mod protocol_config;
 mod service_config;
 mod transaction;
 
+pub use active_validators::{
+    ActiveValidatorsArgs, ActiveValidatorsQuery, EpochValidator, Validator, ValidatorConnection,
+    ValidatorSet,
+};
 use anyhow::{anyhow, Error};
 pub use balance::{Balance, BalanceArgs, BalanceQuery, Owner};
 pub use chain::ChainIdentifierQuery;
@@ -27,7 +32,7 @@ pub use object::{
 };
 pub use protocol_config::{ProtocolConfigQuery, ProtocolConfigs, ProtocolVersionArgs};
 pub use service_config::{Feature, ServiceConfig, ServiceConfigQuery};
-use sui_types::types::Address;
+use sui_types::types::Address as NativeAddress;
 pub use transaction::{
     TransactionBlockArgs, TransactionBlockQuery, TransactionBlocksQuery,
     TransactionBlocksQueryArgs, TransactionsFilter,
@@ -58,6 +63,22 @@ pub struct SuiAddress(pub String);
 #[derive(cynic::Scalar, Debug, Clone)]
 #[cynic(graphql_type = "UInt53")]
 pub struct Uint53(pub u64);
+
+// ===========================================================================
+// Types used in several queries
+// ===========================================================================
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "Address")]
+pub struct Address {
+    pub address: SuiAddress,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "MoveObject")]
+pub struct MoveObject {
+    pub bcs: Option<Base64>,
+}
 
 // ===========================================================================
 // Utility Types
@@ -94,17 +115,17 @@ impl TryFrom<BigInt> for u64 {
     }
 }
 
-impl From<Address> for SuiAddress {
-    fn from(value: Address) -> Self {
+impl From<NativeAddress> for SuiAddress {
+    fn from(value: NativeAddress) -> Self {
         SuiAddress(value.to_string())
     }
 }
 
-impl TryFrom<SuiAddress> for Address {
+impl TryFrom<SuiAddress> for NativeAddress {
     type Error = anyhow::Error;
 
     fn try_from(value: SuiAddress) -> Result<Self, Self::Error> {
-        Address::from_str(&value.0)
+        NativeAddress::from_str(&value.0)
             .map_err(|e| Error::msg(format!("Cannot convert SuiAddress into Address: {e}")))
     }
 }
