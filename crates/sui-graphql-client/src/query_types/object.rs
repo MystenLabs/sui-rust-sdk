@@ -37,8 +37,8 @@ pub struct ObjectQueryArgs {
 
 #[derive(cynic::QueryVariables, Debug)]
 pub struct ObjectsQueryArgs<'a> {
-    pub after: Option<&'a str>,
-    pub before: Option<&'a str>,
+    pub after: Option<String>,
+    pub before: Option<String>,
     pub filter: Option<ObjectFilter<'a>>,
     pub first: Option<i32>,
     pub last: Option<i32>,
@@ -54,7 +54,7 @@ pub struct Object {
     pub bcs: Option<Base64>,
 }
 
-#[derive(cynic::InputObject, Debug)]
+#[derive(cynic::InputObject, Debug, Clone)]
 #[cynic(schema = "rpc", graphql_type = "ObjectFilter")]
 pub struct ObjectFilter<'a> {
     #[cynic(rename = "type")]
@@ -64,7 +64,7 @@ pub struct ObjectFilter<'a> {
     pub object_keys: Option<Vec<ObjectKey>>,
 }
 
-#[derive(cynic::InputObject, Debug)]
+#[derive(cynic::InputObject, Debug, Clone)]
 #[cynic(schema = "rpc", graphql_type = "ObjectKey")]
 pub struct ObjectKey {
     pub object_id: Address,

@@ -47,7 +47,7 @@ pub struct EventConnection {
     pub nodes: Vec<Event>,
 }
 
-#[derive(cynic::InputObject, Debug)]
+#[derive(cynic::InputObject, Debug, Clone)]
 #[cynic(schema = "rpc", graphql_type = "EventFilter")]
 pub struct EventFilter {
     pub emitting_module: Option<String>,

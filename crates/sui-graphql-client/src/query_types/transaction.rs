@@ -72,7 +72,7 @@ pub enum TransactionBlockKindInput {
     ProgrammableTx,
 }
 
-#[derive(cynic::InputObject, Debug)]
+#[derive(cynic::InputObject, Debug, Clone)]
 #[cynic(schema = "rpc", graphql_type = "TransactionBlockFilter")]
 pub struct TransactionsFilter {
     pub function: Option<String>,
