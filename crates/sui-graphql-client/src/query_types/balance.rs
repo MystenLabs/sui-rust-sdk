@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::SuiAddress;
-use crate::query_types::{schema, BigInt};
+use crate::query_types::schema;
+use crate::query_types::BigInt;
 
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "Query", variables = "BalanceArgs")]

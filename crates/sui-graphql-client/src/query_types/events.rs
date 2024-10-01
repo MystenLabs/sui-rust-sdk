@@ -4,9 +4,13 @@
 use std::str::FromStr;
 
 use base64ct::Encoding;
-use sui_types::types::{Identifier, ObjectId};
+use sui_types::types::Identifier;
+use sui_types::types::ObjectId;
 
-use crate::query_types::{schema, Base64, PageInfo, SuiAddress};
+use crate::query_types::schema;
+use crate::query_types::Base64;
+use crate::query_types::PageInfo;
+use crate::query_types::SuiAddress;
 
 // ===========================================================================
 // Events Queries

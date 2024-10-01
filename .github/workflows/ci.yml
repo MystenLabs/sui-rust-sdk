@@ -32,7 +32,7 @@ jobs:
         run: make check-features
 
       - name: rustfmt
-        run: cargo fmt -- --check
+        run: make check-fmt
 
       - name: clippy
         run: make clippy

@@ -4,10 +4,10 @@
 use anyhow::Result;
 use cynic::QueryBuilder;
 
-use sui_graphql_client::{
-    query_types::{schema, BigInt, Uint53},
-    Client,
-};
+use sui_graphql_client::query_types::schema;
+use sui_graphql_client::query_types::BigInt;
+use sui_graphql_client::query_types::Uint53;
+use sui_graphql_client::Client;
 
 // The data returned by the custom query.
 #[derive(cynic::QueryFragment, Debug)]

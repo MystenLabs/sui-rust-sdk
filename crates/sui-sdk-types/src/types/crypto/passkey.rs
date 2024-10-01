@@ -1,6 +1,7 @@
 use crate::types::Digest;
 
-use super::{Secp256r1PublicKey, Secp256r1Signature};
+use super::Secp256r1PublicKey;
+use super::Secp256r1Signature;
 
 /// An passkey authenticator with parsed fields. See field defition below. Can be initialized from [struct RawPasskeyAuthenticator].
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -290,7 +291,8 @@ impl proptest::arbitrary::Arbitrary for PasskeyAuthenticator {
     type Strategy = proptest::strategy::BoxedStrategy<Self>;
 
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        use proptest::{collection::vec, prelude::*};
+        use proptest::collection::vec;
+        use proptest::prelude::*;
         use serialization::ClientDataType;
         use serialization::CollectedClientData;
 

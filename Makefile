@@ -9,7 +9,11 @@ check-features:
 
 .PHONY: check-fmt
 check-fmt:
-	cargo fmt -- --check
+	cargo fmt -- --config imports_granularity=Item --check
+
+.PHONY: fmt
+fmt:
+	cargo fmt -- --config imports_granularity=Item
 
 .PHONY: clippy
 clippy:

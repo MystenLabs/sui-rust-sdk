@@ -1,9 +1,15 @@
 use std::collections::HashMap;
 
-use crate::{SignatureError, SuiVerifier};
+use crate::SignatureError;
+use crate::SuiVerifier;
 use poseidon::POSEIDON;
 use signature::Verifier;
-use sui_sdk_types::types::{Claim, Jwk, JwkId, UserSignature, ZkLoginAuthenticator, ZkLoginInputs};
+use sui_sdk_types::types::Claim;
+use sui_sdk_types::types::Jwk;
+use sui_sdk_types::types::JwkId;
+use sui_sdk_types::types::UserSignature;
+use sui_sdk_types::types::ZkLoginAuthenticator;
+use sui_sdk_types::types::ZkLoginInputs;
 
 mod poseidon;
 mod verify;
@@ -130,7 +136,8 @@ struct JwtHeader {
 
 impl JwtHeader {
     fn from_base64(s: &str) -> Result<Self, SignatureError> {
-        use base64ct::{Base64UrlUnpadded, Encoding};
+        use base64ct::Base64UrlUnpadded;
+        use base64ct::Encoding;
 
         #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
         struct Header {

@@ -1,6 +1,8 @@
-use crate::{SignatureError, SuiVerifier};
+use crate::SignatureError;
+use crate::SuiVerifier;
 use signature::Verifier;
-use sui_sdk_types::types::{SimpleSignature, UserSignature};
+use sui_sdk_types::types::SimpleSignature;
+use sui_sdk_types::types::UserSignature;
 
 pub struct SimpleVerifier;
 

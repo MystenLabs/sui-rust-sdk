@@ -403,7 +403,9 @@ fn big_int_array_to_bits<T: ToBits>(
     intended_size: usize,
 ) -> Result<Vec<u8>, SignatureError> {
     use itertools::Itertools;
-    use std::cmp::Ordering::{Equal, Greater, Less};
+    use std::cmp::Ordering::Equal;
+    use std::cmp::Ordering::Greater;
+    use std::cmp::Ordering::Less;
 
     integers
         .iter()

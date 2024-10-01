@@ -1,7 +1,8 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::query_types::{schema, Base64};
+use crate::query_types::schema;
+use crate::query_types::Base64;
 
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(
