@@ -886,7 +886,9 @@ impl Client {
 mod tests {
     use futures::StreamExt;
 
-    use crate::query_types::{EventFilter, ObjectFilter, TransactionsFilter};
+    use crate::query_types::EventFilter;
+    use crate::query_types::ObjectFilter;
+    use crate::query_types::TransactionsFilter;
     use crate::Client;
     use crate::DEVNET_HOST;
     use crate::LOCAL_HOST;
