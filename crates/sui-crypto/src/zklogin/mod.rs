@@ -263,3 +263,13 @@ fn verify_extended_claim(claim: &Claim, expected_key: &str) -> Result<String, Si
         })
         .ok_or_else(|| SignatureError::from_source("invalid extended claim"))
 }
+
+pub(crate) fn zklogin_identifier_from_inputs(
+    inputs: &ZkLoginInputs,
+) -> Result<sui_sdk_types::types::ZkLoginPublicIdentifier, SignatureError> {
+    const ISS: &str = "iss";
+
+    let iss = verify_extended_claim(&inputs.iss_base64_details, ISS)?;
+    sui_sdk_types::types::ZkLoginPublicIdentifier::new(iss, inputs.address_seed.clone())
+        .ok_or_else(|| SignatureError::from_source("invalid iss"))
+}

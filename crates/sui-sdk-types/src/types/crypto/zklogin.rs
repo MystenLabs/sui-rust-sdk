@@ -82,6 +82,14 @@ pub struct ZkLoginPublicIdentifier {
 }
 
 impl ZkLoginPublicIdentifier {
+    pub fn new(iss: String, address_seed: Bn254FieldElement) -> Option<Self> {
+        if iss.len() > 255 {
+            None
+        } else {
+            Some(Self { iss, address_seed })
+        }
+    }
+
     pub fn iss(&self) -> &str {
         &self.iss
     }
