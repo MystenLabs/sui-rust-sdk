@@ -153,7 +153,7 @@ use anyhow::Result;
 use cynic::QueryBuilder;
 
 use sui_graphql_client::{
-    query_types::{schema, BigInt, u64},
+    query_types::{schema, BigInt},
     Client,
 };
 use sui_types::types::Address;
