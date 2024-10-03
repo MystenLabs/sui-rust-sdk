@@ -114,13 +114,13 @@ query CustomQuery($id: UInt53) {
 }
 ```
 
-The generated query types are defined below. Note that the `id` variable is optional (to make it mandatory change the schema to $id: Uint53! -- note the ! character which indicates a mandatory field). That means that if the `id` variable is not provided, the query will return the data for the last known epoch.
+The generated query types are defined below. Note that the `id` variable is optional (to make it mandatory change the schema to $id: u64! -- note the ! character which indicates a mandatory field). That means that if the `id` variable is not provided, the query will return the data for the last known epoch.
 
 
 ```rust,ignore
 #[derive(cynic::QueryVariables, Debug)]
 pub struct CustomQueryVariables {
-    pub id: Option<Uint53>,
+    pub id: Option<u64>,
 }
 
 #[derive(cynic::QueryFragment, Debug)]
@@ -132,11 +132,11 @@ pub struct CustomQuery {
 
 #[derive(cynic::QueryFragment, Debug)]
 pub struct Epoch {
-    pub epoch_id: Uint53,
+    pub epoch_id: u64,
     pub reference_gas_price: Option<BigInt>,
     pub total_gas_fees: Option<BigInt>,
-    pub total_checkpoints: Option<Uint53>,
-    pub total_transactions: Option<Uint53>,
+    pub total_checkpoints: Option<u64>,
+    pub total_transactions: Option<u64>,
 }
 
 #[derive(cynic::Scalar, Debug, Clone)]
@@ -144,7 +144,7 @@ pub struct BigInt(pub String);
 
 #[derive(cynic::Scalar, Debug, Clone)]
 #[cynic(graphql_type = "UInt53")]
-pub struct Uint53(pub u64);
+pub struct u64(pub u64);
 ```
 
 The complete example is shown below:
@@ -153,7 +153,7 @@ use anyhow::Result;
 use cynic::QueryBuilder;
 
 use sui_graphql_client::{
-    query_types::{schema, BigInt, Uint53},
+    query_types::{schema, BigInt, u64},
     Client,
 };
 use sui_types::types::Address;
@@ -162,11 +162,11 @@ use sui_types::types::Address;
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "Epoch")]
 pub struct EpochData {
-    pub epoch_id: Uint53,
+    pub epoch_id: u64,
     pub reference_gas_price: Option<BigInt>,
     pub total_gas_fees: Option<BigInt>,
-    pub total_checkpoints: Option<Uint53>,
-    pub total_transactions: Option<Uint53>,
+    pub total_checkpoints: Option<u64>,
+    pub total_transactions: Option<u64>,
 }
 
 // The variables to pass to the custom query.
@@ -174,7 +174,7 @@ pub struct EpochData {
 // Otherwise, the query will return the data for the last known epoch.
 #[derive(cynic::QueryVariables, Debug)]
 pub struct CustomVariables {
-    pub id: Option<Uint53>,
+    pub id: Option<u64>,
 }
 
 // The custom query. Note that the variables need to be explicitly declared.
@@ -205,7 +205,7 @@ async fn main() -> Result<()> {
     println!("{:?}", response);
 
     // Query the data for epoch 1.
-    let epoch_id = Uint53(1);
+    let epoch_id = u64(1);
     let operation = CustomQuery::build(CustomVariables { id: Some(epoch_id) });
     let response = client
         .run_query::<CustomQuery, CustomVariables>(&operation)

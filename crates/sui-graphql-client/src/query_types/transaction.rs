@@ -5,7 +5,6 @@ use crate::query_types::schema;
 use crate::query_types::Address;
 use crate::query_types::Base64;
 use crate::query_types::PageInfo;
-use crate::query_types::Uint53;
 
 // ===========================================================================
 // Transaction Block(s) Queries
@@ -77,8 +76,8 @@ pub enum TransactionBlockKindInput {
 pub struct TransactionsFilter {
     pub function: Option<String>,
     pub kind: Option<TransactionBlockKindInput>,
-    pub at_checkpoint: Option<Uint53>,
-    pub before_checkpoint: Option<Uint53>,
+    pub at_checkpoint: Option<u64>,
+    pub before_checkpoint: Option<u64>,
     pub changed_object: Option<Address>,
     pub input_object: Option<Address>,
     pub recv_address: Option<Address>,

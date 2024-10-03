@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::query_types::schema;
-use crate::query_types::Uint53;
 
 // ===========================================================================
 // Protocol Config Queries
@@ -25,7 +24,7 @@ pub struct ProtocolConfigQuery {
 
 #[derive(cynic::QueryVariables, Debug)]
 pub struct ProtocolVersionArgs {
-    pub id: Option<Uint53>,
+    pub id: Option<u64>,
 }
 
 // ===========================================================================
@@ -36,7 +35,7 @@ pub struct ProtocolVersionArgs {
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "ProtocolConfigs")]
 pub struct ProtocolConfigs {
-    pub protocol_version: Uint53,
+    pub protocol_version: u64,
     pub feature_flags: Vec<ProtocolConfigFeatureFlag>,
     pub configs: Vec<ProtocolConfigAttr>,
 }

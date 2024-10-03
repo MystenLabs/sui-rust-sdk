@@ -14,7 +14,6 @@ use crate::query_types::Base64;
 use crate::query_types::BigInt;
 use crate::query_types::DateTime;
 use crate::query_types::Epoch;
-use crate::query_types::Uint53;
 
 // ===========================================================================
 // Checkpoint Queries
@@ -40,7 +39,7 @@ pub struct CheckpointArgs {
 #[cynic(schema = "rpc", graphql_type = "CheckpointId")]
 pub struct CheckpointId {
     pub digest: Option<String>,
-    pub sequence_number: Option<Uint53>,
+    pub sequence_number: Option<u64>,
 }
 // ===========================================================================
 // Checkpoint Types
@@ -51,9 +50,9 @@ pub struct CheckpointId {
 pub struct Checkpoint {
     pub epoch: Option<Epoch>,
     pub digest: String,
-    pub network_total_transactions: Option<Uint53>,
+    pub network_total_transactions: Option<u64>,
     pub previous_checkpoint_digest: Option<String>,
-    pub sequence_number: Uint53,
+    pub sequence_number: u64,
     pub timestamp: DateTime,
     pub validator_signatures: Base64,
     pub rolling_gas_summary: Option<GasCostSummary>,

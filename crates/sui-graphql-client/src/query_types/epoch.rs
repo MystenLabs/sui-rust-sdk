@@ -5,7 +5,6 @@ use crate::query_types::schema;
 use crate::query_types::Address;
 use crate::query_types::BigInt;
 use crate::query_types::DateTime;
-use crate::query_types::Uint53;
 
 // ===========================================================================
 // Epoch Queries
@@ -24,16 +23,16 @@ pub struct EpochSummaryQuery {
 
 #[derive(cynic::QueryVariables, Debug)]
 pub struct EpochSummaryArgs {
-    pub id: Option<Uint53>,
+    pub id: Option<u64>,
 }
 
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "Epoch")]
 pub struct EpochSummary {
-    pub epoch_id: Uint53,
+    pub epoch_id: u64,
     pub reference_gas_price: Option<BigInt>,
-    pub total_checkpoints: Option<Uint53>,
-    pub total_transactions: Option<Uint53>,
+    pub total_checkpoints: Option<u64>,
+    pub total_transactions: Option<u64>,
 }
 
 // ===========================================================================
@@ -44,7 +43,7 @@ pub struct EpochSummary {
 #[cynic(schema = "rpc", graphql_type = "Epoch")]
 pub struct Epoch {
     pub end_timestamp: Option<DateTime>,
-    pub epoch_id: Uint53,
+    pub epoch_id: u64,
     pub fund_inflow: Option<BigInt>,
     pub fund_outflow: Option<BigInt>,
     pub fund_size: Option<BigInt>,
@@ -52,12 +51,12 @@ pub struct Epoch {
     pub net_inflow: Option<BigInt>,
     pub reference_gas_price: Option<BigInt>,
     pub start_timestamp: DateTime,
-    pub system_state_version: Option<Uint53>,
-    pub total_checkpoints: Option<Uint53>,
+    pub system_state_version: Option<u64>,
+    pub total_checkpoints: Option<u64>,
     pub total_gas_fees: Option<BigInt>,
     pub total_stake_rewards: Option<BigInt>,
     pub total_stake_subsidies: Option<BigInt>,
-    pub total_transactions: Option<Uint53>,
+    pub total_transactions: Option<u64>,
     pub validator_set: Option<ValidatorSet>,
 }
 

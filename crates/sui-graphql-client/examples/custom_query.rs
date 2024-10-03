@@ -6,18 +6,17 @@ use cynic::QueryBuilder;
 
 use sui_graphql_client::query_types::schema;
 use sui_graphql_client::query_types::BigInt;
-use sui_graphql_client::query_types::Uint53;
 use sui_graphql_client::Client;
 
 // The data returned by the custom query.
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "Epoch")]
 pub struct EpochData {
-    pub epoch_id: Uint53,
+    pub epoch_id: u64,
     pub reference_gas_price: Option<BigInt>,
     pub total_gas_fees: Option<BigInt>,
-    pub total_checkpoints: Option<Uint53>,
-    pub total_transactions: Option<Uint53>,
+    pub total_checkpoints: Option<u64>,
+    pub total_transactions: Option<u64>,
 }
 
 // The variables to pass to the custom query.
@@ -25,7 +24,7 @@ pub struct EpochData {
 // Otherwise, the query will return the data for the last known epoch.
 #[derive(cynic::QueryVariables, Debug)]
 pub struct CustomVariables {
-    pub id: Option<Uint53>,
+    pub id: Option<u64>,
 }
 
 // The custom query. Note that the variables need to be explicitly declared.
@@ -56,7 +55,7 @@ async fn main() -> Result<()> {
     println!("{:?}", response);
 
     // Query the data for epoch 1.
-    let epoch_id = Uint53(1);
+    let epoch_id = 1;
     let operation = CustomQuery::build(CustomVariables { id: Some(epoch_id) });
     let response = client
         .run_query::<CustomQuery, CustomVariables>(&operation)
