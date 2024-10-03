@@ -1,9 +1,6 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::str::FromStr;
-
-use sui_types::types::ObjectDigest;
 use sui_types::types::ObjectReference;
 
 use crate::query_types::schema;
