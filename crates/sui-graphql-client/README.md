@@ -114,10 +114,12 @@ query CustomQuery($id: UInt53) {
 }
 ```
 
-The generated query types are defined below. Note that the `id` variable is optional (to make it mandatory change the schema to $id: u64! -- note the ! character which indicates a mandatory field). That means that if the `id` variable is not provided, the query will return the data for the last known epoch.
+The generated query types are defined below. Note that the `id` variable is optional (to make it mandatory change the schema to $id: Uint53! -- note the ! character which indicates a mandatory field). That means that if the `id` variable is not provided, the query will return the data for the last known epoch.
 
 
 ```rust,ignore
+cynic::impl_scalar!(u64, schema::Uint53);
+
 #[derive(cynic::QueryVariables, Debug)]
 pub struct CustomQueryVariables {
     pub id: Option<u64>,
@@ -142,9 +144,7 @@ pub struct Epoch {
 #[derive(cynic::Scalar, Debug, Clone)]
 pub struct BigInt(pub String);
 
-#[derive(cynic::Scalar, Debug, Clone)]
-#[cynic(graphql_type = "UInt53")]
-pub struct u64(pub u64);
+
 ```
 
 The complete example is shown below:
@@ -157,6 +157,8 @@ use sui_graphql_client::{
     Client,
 };
 use sui_types::types::Address;
+
+cynic::impl_scalar!(u64, schema::Uint53);
 
 // The data returned by the custom query.
 #[derive(cynic::QueryFragment, Debug)]
@@ -205,7 +207,7 @@ async fn main() -> Result<()> {
     println!("{:?}", response);
 
     // Query the data for epoch 1.
-    let epoch_id = u64(1);
+    let epoch_id = 1;
     let operation = CustomQuery::build(CustomVariables { id: Some(epoch_id) });
     let response = client
         .run_query::<CustomQuery, CustomVariables>(&operation)
