@@ -108,15 +108,13 @@ pub struct ObjectRef {
     pub version: Uint53,
 }
 
-impl TryFrom<ObjectReference> for ObjectRef {
-    type Error = anyhow::Error;
-
-    fn try_from(value: ObjectReference) -> Result<Self, Self::Error> {
+impl From<ObjectReference> for ObjectRef {
+    fn from(value: ObjectReference) -> Self {
         let address: Address = (*value.object_id()).into();
-        Ok(ObjectRef {
+        ObjectRef {
             address,
             version: Uint53(value.version()),
             digest: value.digest().to_string(),
-        })
+        }
     }
 }
