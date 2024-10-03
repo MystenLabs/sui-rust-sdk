@@ -75,13 +75,11 @@ impl TryInto<CheckpointSummary> for Checkpoint {
         let epoch = self
             .epoch
             .ok_or_else(|| Error::msg("Epoch is missing"))?
-            .epoch_id
-            .into();
+            .epoch_id;
         let network_total_transactions = self
             .network_total_transactions
-            .ok_or_else(|| Error::msg("Network total transactions is missing"))?
-            .into();
-        let sequence_number = self.sequence_number.into();
+            .ok_or_else(|| Error::msg("Network total transactions is missing"))?;
+        let sequence_number = self.sequence_number;
         let timestamp_ms = ChronoDT::parse_from_rfc3339(&self.timestamp.0)
             .map_err(|e| Error::msg(format!("Cannot parse DateTime: {e}")))?
             .timestamp_millis()

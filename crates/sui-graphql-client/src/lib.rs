@@ -473,8 +473,7 @@ impl Client {
         Ok(response
             .data
             .and_then(|d| d.epoch)
-            .and_then(|e| e.total_checkpoints)
-            .map(|x| x.into()))
+            .and_then(|e| e.total_checkpoints))
     }
 
     /// Return the number of transaction blocks in this epoch. This will return `Ok(None)` if the
@@ -492,8 +491,7 @@ impl Client {
         Ok(response
             .data
             .and_then(|d| d.epoch)
-            .and_then(|e| e.total_transactions)
-            .map(|x| x.into()))
+            .and_then(|e| e.total_transactions))
     }
 
     /// Internal method for getting the epoch summary that is called in a few other APIs for
