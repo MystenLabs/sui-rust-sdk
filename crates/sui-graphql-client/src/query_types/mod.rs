@@ -72,6 +72,7 @@ pub mod schema {}
 // ===========================================================================
 
 impl_scalar!(Address, schema::SuiAddress);
+impl_scalar!(u64, schema::UInt53);
 
 #[derive(cynic::Scalar, Debug, Clone)]
 #[cynic(graphql_type = "Base64")]
@@ -84,10 +85,6 @@ pub struct BigInt(pub String);
 #[derive(cynic::Scalar, Debug, Clone)]
 #[cynic(graphql_type = "DateTime")]
 pub struct DateTime(pub String);
-
-#[derive(cynic::Scalar, Debug, Clone)]
-#[cynic(graphql_type = "UInt53")]
-pub struct Uint53(pub u64);
 
 // ===========================================================================
 // Types used in several queries
@@ -121,12 +118,6 @@ pub struct PageInfo {
     pub start_cursor: Option<String>,
     /// When paginating forwards, the cursor to continue.
     pub end_cursor: Option<String>,
-}
-
-impl From<Uint53> for u64 {
-    fn from(value: Uint53) -> Self {
-        value.0
-    }
 }
 
 impl TryFrom<BigInt> for u64 {

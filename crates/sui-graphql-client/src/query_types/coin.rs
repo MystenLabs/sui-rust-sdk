@@ -27,7 +27,6 @@ pub struct CoinMetadataArgs<'a> {
 
 use crate::query_types::schema;
 use crate::query_types::BigInt;
-use crate::query_types::Uint53;
 
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "CoinMetadata")]
@@ -38,5 +37,5 @@ pub struct CoinMetadata {
     pub name: Option<String>,
     pub symbol: Option<String>,
     pub supply: Option<BigInt>,
-    pub version: Uint53,
+    pub version: u64,
 }

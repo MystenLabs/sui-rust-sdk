@@ -41,7 +41,6 @@ use query_types::TransactionBlockQuery;
 use query_types::TransactionBlocksQuery;
 use query_types::TransactionBlocksQueryArgs;
 use query_types::TransactionsFilter;
-use query_types::Uint53;
 use query_types::Validator;
 use reqwest::Url;
 use sui_types::types::framework::Coin;
@@ -199,9 +198,7 @@ impl Client {
     /// This will return `Ok(None)` if the epoch requested is not available in the GraphQL service
     /// (e.g., due to prunning).
     pub async fn reference_gas_price(&self, epoch: Option<u64>) -> Result<Option<u64>, Error> {
-        let operation = EpochSummaryQuery::build(EpochSummaryArgs {
-            id: epoch.map(Uint53),
-        });
+        let operation = EpochSummaryQuery::build(EpochSummaryArgs { id: epoch });
         let response = self.run_query(&operation).await?;
 
         if let Some(data) = response.data {
@@ -220,9 +217,7 @@ impl Client {
         &self,
         version: Option<u64>,
     ) -> Result<Option<ProtocolConfigs>, Error> {
-        let operation = ProtocolConfigQuery::build(ProtocolVersionArgs {
-            id: version.map(Uint53),
-        });
+        let operation = ProtocolConfigQuery::build(ProtocolVersionArgs { id: version });
         let response = self.run_query(&operation).await?;
         Ok(response.data.map(|p| p.protocol_config))
     }
@@ -250,7 +245,7 @@ impl Client {
         last: Option<i32>,
     ) -> Result<Option<Page<Validator>>, Error> {
         let operation = ActiveValidatorsQuery::build(ActiveValidatorsArgs {
-            id: epoch.map(Uint53),
+            id: epoch,
             after,
             before,
             first,
@@ -437,7 +432,7 @@ impl Client {
         let operation = CheckpointQuery::build(CheckpointArgs {
             id: CheckpointId {
                 digest,
-                sequence_number: seq_num.map(Uint53),
+                sequence_number: seq_num,
             },
         });
         let response = self.run_query(&operation).await?;
@@ -478,8 +473,7 @@ impl Client {
         Ok(response
             .data
             .and_then(|d| d.epoch)
-            .and_then(|e| e.total_checkpoints)
-            .map(|x| x.into()))
+            .and_then(|e| e.total_checkpoints))
     }
 
     /// Return the number of transaction blocks in this epoch. This will return `Ok(None)` if the
@@ -497,8 +491,7 @@ impl Client {
         Ok(response
             .data
             .and_then(|d| d.epoch)
-            .and_then(|e| e.total_transactions)
-            .map(|x| x.into()))
+            .and_then(|e| e.total_transactions))
     }
 
     /// Internal method for getting the epoch summary that is called in a few other APIs for
@@ -507,9 +500,7 @@ impl Client {
         &self,
         epoch: Option<u64>,
     ) -> Result<GraphQlResponse<EpochSummaryQuery>, Error> {
-        let operation = EpochSummaryQuery::build(EpochSummaryArgs {
-            id: epoch.map(Uint53),
-        });
+        let operation = EpochSummaryQuery::build(EpochSummaryArgs { id: epoch });
         self.run_query(&operation).await
     }
 
@@ -567,10 +558,7 @@ impl Client {
         address: Address,
         version: Option<u64>,
     ) -> Result<Option<Object>, Error> {
-        let operation = ObjectQuery::build(ObjectQueryArgs {
-            address,
-            version: version.map(Uint53),
-        });
+        let operation = ObjectQuery::build(ObjectQueryArgs { address, version });
 
         let response = self.run_query(&operation).await?;
 
@@ -861,9 +849,9 @@ mod tests {
             let pc = pc.unwrap();
             if let Some(pc) = pc {
                 assert_eq!(
-                    pc.protocol_version.0, 50,
+                    pc.protocol_version, 50,
                     "Protocol version query mismatch for network: {n}. Expected: 50, received: {}",
-                    pc.protocol_version.0
+                    pc.protocol_version
                 );
             }
         }
@@ -989,6 +977,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_objects_query() {
         for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();

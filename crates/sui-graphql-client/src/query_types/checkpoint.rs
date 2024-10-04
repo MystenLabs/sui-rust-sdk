@@ -14,7 +14,6 @@ use crate::query_types::Base64;
 use crate::query_types::BigInt;
 use crate::query_types::DateTime;
 use crate::query_types::Epoch;
-use crate::query_types::Uint53;
 
 // ===========================================================================
 // Checkpoint Queries
@@ -40,7 +39,7 @@ pub struct CheckpointArgs {
 #[cynic(schema = "rpc", graphql_type = "CheckpointId")]
 pub struct CheckpointId {
     pub digest: Option<String>,
-    pub sequence_number: Option<Uint53>,
+    pub sequence_number: Option<u64>,
 }
 // ===========================================================================
 // Checkpoint Types
@@ -51,9 +50,9 @@ pub struct CheckpointId {
 pub struct Checkpoint {
     pub epoch: Option<Epoch>,
     pub digest: String,
-    pub network_total_transactions: Option<Uint53>,
+    pub network_total_transactions: Option<u64>,
     pub previous_checkpoint_digest: Option<String>,
-    pub sequence_number: Uint53,
+    pub sequence_number: u64,
     pub timestamp: DateTime,
     pub validator_signatures: Base64,
     pub rolling_gas_summary: Option<GasCostSummary>,
@@ -76,13 +75,11 @@ impl TryInto<CheckpointSummary> for Checkpoint {
         let epoch = self
             .epoch
             .ok_or_else(|| Error::msg("Epoch is missing"))?
-            .epoch_id
-            .into();
+            .epoch_id;
         let network_total_transactions = self
             .network_total_transactions
-            .ok_or_else(|| Error::msg("Network total transactions is missing"))?
-            .into();
-        let sequence_number = self.sequence_number.into();
+            .ok_or_else(|| Error::msg("Network total transactions is missing"))?;
+        let sequence_number = self.sequence_number;
         let timestamp_ms = ChronoDT::parse_from_rfc3339(&self.timestamp.0)
             .map_err(|e| Error::msg(format!("Cannot parse DateTime: {e}")))?
             .timestamp_millis()

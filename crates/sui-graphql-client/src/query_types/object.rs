@@ -5,7 +5,6 @@ use crate::query_types::schema;
 use crate::query_types::Address;
 use crate::query_types::Base64;
 use crate::query_types::PageInfo;
-use crate::query_types::Uint53;
 
 // ===========================================================================
 // Object(s) Queries
@@ -32,7 +31,7 @@ pub struct ObjectsQuery {
 #[derive(cynic::QueryVariables, Debug)]
 pub struct ObjectQueryArgs {
     pub address: Address,
-    pub version: Option<Uint53>,
+    pub version: Option<u64>,
 }
 
 #[derive(cynic::QueryVariables, Debug)]
@@ -68,7 +67,7 @@ pub struct ObjectFilter<'a> {
 #[cynic(schema = "rpc", graphql_type = "ObjectKey")]
 pub struct ObjectKey {
     pub object_id: Address,
-    pub version: Uint53,
+    pub version: u64,
 }
 
 #[derive(cynic::QueryFragment, Debug)]

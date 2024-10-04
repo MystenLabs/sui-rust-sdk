@@ -8,7 +8,6 @@ use crate::query_types::BigInt;
 use crate::query_types::GQLAddress;
 use crate::query_types::MoveObject;
 use crate::query_types::PageInfo;
-use crate::query_types::Uint53;
 
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(
@@ -23,7 +22,7 @@ pub struct ActiveValidatorsQuery {
 
 #[derive(cynic::QueryVariables, Debug)]
 pub struct ActiveValidatorsArgs {
-    pub id: Option<Uint53>,
+    pub id: Option<u64>,
     pub after: Option<String>,
     pub before: Option<String>,
     pub first: Option<i32>,
@@ -73,7 +72,7 @@ pub struct Validator {
     /// Validator's description.
     pub description: Option<String>,
     /// Number of exchange rates in the table.
-    pub exchange_rates_size: Option<Uint53>,
+    pub exchange_rates_size: Option<u64>,
     /// The reference gas price for this epoch.
     pub gas_price: Option<BigInt>,
     /// Validator's name.
@@ -106,7 +105,7 @@ pub struct Validator {
     /// The epoch stake rewards will be added here at the end of each epoch.
     pub rewards_pool: Option<BigInt>,
     /// The epoch at which this pool became active.
-    pub staking_pool_activation_epoch: Option<Uint53>,
+    pub staking_pool_activation_epoch: Option<u64>,
     /// The ID of this validator's `0x3::staking_pool::StakingPool`.
     pub staking_pool_id: Address,
     /// The total number of SUI tokens in this pool.
