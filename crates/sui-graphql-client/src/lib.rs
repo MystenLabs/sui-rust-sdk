@@ -320,11 +320,11 @@ impl Client {
     ///
     /// If `coin_type` is not provided, it will default to `0x2::coin::Coin`, which will return all
     /// coins. For SUI coin, pass in the coin type: `0x2::coin::Coin<0x2::sui::SUI>`.
-    pub async fn coins(
-        &self,
+    pub async fn coins<'a>(
+        &'a self,
         owner: Address,
-        after: Option<String>,
-        before: Option<String>,
+        after: Option<&'a str>,
+        before: Option<&'a str>,
         first: Option<i32>,
         last: Option<i32>,
         coin_type: Option<&str>,
@@ -360,17 +360,17 @@ impl Client {
     pub fn coins_stream<'a>(
         &'a self,
         owner: Address,
-        coin_type: Option<String>,
+        coin_type: Option<&'a str>,
     ) -> Pin<Box<dyn Stream<Item = Result<Coin, Error>> + 'a>> {
-        let coin_type = coin_type.unwrap_or_else(|| "0x2::coin::Coin".to_string());
+        let coin_type = coin_type.unwrap_or("0x2::coin::Coin");
+        let mut after: Option<String> = None;
         Box::pin(try_stream! {
-            let mut after = None;
             loop {
                 let response = self.objects(
-                    after,
+                    after.as_deref(),
                     None,
                     Some(ObjectFilter {
-                        type_: Some(&coin_type),
+                        type_: Some(coin_type),
                         owner: Some(owner),
                         object_ids: None,
                         object_keys: None,
@@ -519,11 +519,11 @@ impl Client {
     // Events API
     // ===========================================================================
 
-    pub async fn events(
-        &self,
+    pub async fn events<'a>(
+        &'a self,
         filter: Option<EventFilter>,
-        after: Option<String>,
-        before: Option<String>,
+        after: Option<&'a str>,
+        before: Option<&'a str>,
         first: Option<i32>,
         last: Option<i32>,
     ) -> Result<Option<Page<Event>>, Error> {
@@ -558,16 +558,16 @@ impl Client {
 
     pub async fn events_stream<'a>(
         &'a self,
-        after: Option<String>,
-        before: Option<String>,
+        after: Option<&'a str>,
+        before: Option<&'a str>,
         filter: Option<EventFilter>,
         first: Option<i32>,
         last: Option<i32>,
     ) -> Pin<Box<dyn Stream<Item = Result<Event, Error>> + 'a>> {
+        let mut after = after.map(|s| s.to_string());
         Box::pin(try_stream! {
-            let mut after = after;
             loop {
-                let response = self.events(filter.clone(), after, before.clone(), first, last).await?;
+                let response = self.events(filter.clone(), after.as_deref(), before, first, last).await?;
                 if let Some(page) = response {
                     for event in page.data {
                         yield event;
@@ -644,10 +644,10 @@ impl Client {
     ///
     /// let owned_objects = client.objects(None, None, Some(filter), None, None).await;
     /// ```
-    pub async fn objects(
-        &self,
-        after: Option<String>,
-        before: Option<String>,
+    pub async fn objects<'a>(
+        &'a self,
+        after: Option<&'a str>,
+        before: Option<&'a str>,
         filter: Option<ObjectFilter<'_>>,
         first: Option<i32>,
         last: Option<i32>,
@@ -693,16 +693,17 @@ impl Client {
     /// Stream objects.
     pub async fn objects_stream<'a>(
         &'a self,
-        after: Option<String>,
-        before: Option<String>,
+        after: Option<&'a str>,
+        before: Option<&'a str>,
         filter: Option<ObjectFilter<'a>>,
         first: Option<i32>,
         last: Option<i32>,
     ) -> Pin<Box<dyn Stream<Item = Result<Object, Error>> + 'a>> {
+        let after = after.map(|s| s.to_string());
         Box::pin(try_stream! {
             let mut after = after;
             loop {
-                let response = self.objects(after, before.clone(), filter.clone(), first, last).await?;
+                let response = self.objects(after.as_deref(), before, filter.clone(), first, last).await?;
                 if let Some(page) = response {
                     for object in page.data {
                         yield object;
@@ -769,10 +770,10 @@ impl Client {
     }
 
     /// Get a page of transactions based on the provided filters.
-    pub async fn transactions(
-        &self,
-        after: Option<String>,
-        before: Option<String>,
+    pub async fn transactions<'a>(
+        &'a self,
+        after: Option<&'a str>,
+        before: Option<&'a str>,
         first: Option<i32>,
         last: Option<i32>,
         filter: Option<TransactionsFilter>,
@@ -854,16 +855,16 @@ impl Client {
     /// Stream of transactions based on the provided filters.
     pub async fn transactions_stream<'a>(
         &'a self,
-        after: Option<String>,
-        before: Option<String>,
+        after: Option<&'a str>,
+        before: Option<&'a str>,
         first: Option<i32>,
         last: Option<i32>,
         filter: Option<TransactionsFilter>,
     ) -> Pin<Box<dyn Stream<Item = Result<SignedTransaction, Error>> + 'a>> {
+        let mut after = after.map(|s| s.to_string());
         Box::pin(try_stream! {
-            let mut after = after;
             loop {
-                let response = self.transactions(after, before.clone(), first, last, filter.clone()).await?;
+                let response = self.transactions(after.as_deref(), before, first, last, filter.clone()).await?;
                 if let Some(page) = response {
                     for tx in page.data {
                         yield tx;

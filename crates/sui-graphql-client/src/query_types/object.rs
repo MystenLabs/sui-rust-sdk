@@ -37,8 +37,8 @@ pub struct ObjectQueryArgs {
 
 #[derive(cynic::QueryVariables, Debug)]
 pub struct ObjectsQueryArgs<'a> {
-    pub after: Option<String>,
-    pub before: Option<String>,
+    pub after: Option<&'a str>,
+    pub before: Option<&'a str>,
     pub filter: Option<ObjectFilter<'a>>,
     pub first: Option<i32>,
     pub last: Option<i32>,

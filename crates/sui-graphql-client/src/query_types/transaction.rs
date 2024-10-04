@@ -43,11 +43,11 @@ pub struct TransactionBlockArgs {
 }
 
 #[derive(cynic::QueryVariables, Debug)]
-pub struct TransactionBlocksQueryArgs {
+pub struct TransactionBlocksQueryArgs<'a> {
     pub first: Option<i32>,
-    pub after: Option<String>,
+    pub after: Option<&'a str>,
     pub last: Option<i32>,
-    pub before: Option<String>,
+    pub before: Option<&'a str>,
     pub filter: Option<TransactionsFilter>,
 }
 

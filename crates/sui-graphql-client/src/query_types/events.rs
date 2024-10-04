@@ -28,10 +28,10 @@ pub struct EventsQuery {
 // ===========================================================================
 
 #[derive(cynic::QueryVariables, Debug)]
-pub struct EventsQueryArgs {
+pub struct EventsQueryArgs<'a> {
     pub filter: Option<EventFilter>,
-    pub after: Option<String>,
-    pub before: Option<String>,
+    pub after: Option<&'a str>,
+    pub before: Option<&'a str>,
     pub first: Option<i32>,
     pub last: Option<i32>,
 }
