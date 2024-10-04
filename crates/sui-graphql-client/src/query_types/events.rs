@@ -28,10 +28,10 @@ pub struct EventsQuery {
 // ===========================================================================
 
 #[derive(cynic::QueryVariables, Debug)]
-pub struct EventsQueryArgs {
+pub struct EventsQueryArgs<'a> {
     pub filter: Option<EventFilter>,
-    pub after: Option<String>,
-    pub before: Option<String>,
+    pub after: Option<&'a str>,
+    pub before: Option<&'a str>,
     pub first: Option<i32>,
     pub last: Option<i32>,
 }
@@ -47,7 +47,7 @@ pub struct EventConnection {
     pub nodes: Vec<Event>,
 }
 
-#[derive(cynic::InputObject, Debug)]
+#[derive(cynic::InputObject, Debug, Clone)]
 #[cynic(schema = "rpc", graphql_type = "EventFilter")]
 pub struct EventFilter {
     pub emitting_module: Option<String>,
