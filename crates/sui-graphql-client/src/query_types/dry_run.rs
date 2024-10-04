@@ -5,15 +5,8 @@ use sui_types::types::ObjectReference;
 
 use crate::query_types::schema;
 use crate::query_types::Address;
-use crate::query_types::Base64;
+use crate::query_types::TransactionBlock;
 use crate::query_types::Uint53;
-
-#[derive(cynic::QueryFragment, Debug)]
-#[cynic(schema = "rpc", graphql_type = "Result")]
-pub struct GqlResult {
-    pub ix: Option<i32>,
-    pub cmd: i32,
-}
 
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "Query", variables = "DryRunArgs")]
@@ -23,64 +16,10 @@ pub struct DryRunQuery {
 }
 
 #[derive(cynic::QueryFragment, Debug)]
-#[cynic(schema = "rpc", graphql_type = "Input")]
-pub struct Input {
-    pub __typename: String,
-    pub ix: i32,
-}
-
-#[derive(cynic::QueryFragment, Debug)]
-#[cynic(schema = "rpc", graphql_type = "GasCoin")]
-pub struct GasCoin {
-    #[cynic(rename = "_")]
-    pub __underscore: Option<bool>,
-}
-
-#[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "DryRunResult")]
 pub struct DryRunResult {
     pub error: Option<String>,
-    pub results: Option<Vec<DryRunEffect>>,
-}
-
-#[derive(cynic::QueryFragment, Debug)]
-#[cynic(schema = "rpc", graphql_type = "DryRunEffect")]
-pub struct DryRunEffect {
-    pub mutated_references: Option<Vec<DryRunMutation>>,
-    pub return_values: Option<Vec<DryRunReturn>>,
-}
-
-#[derive(cynic::QueryFragment, Debug)]
-#[cynic(schema = "rpc", graphql_type = "DryRunReturn")]
-pub struct DryRunReturn {
-    pub bcs: Base64,
-    #[cynic(rename = "type")]
-    pub type_: MoveType,
-}
-
-#[derive(cynic::QueryFragment, Debug)]
-#[cynic(schema = "rpc", graphql_type = "DryRunMutation")]
-pub struct DryRunMutation {
-    pub bcs: Base64,
-    pub input: TransactionArgument,
-    #[cynic(rename = "type")]
-    pub type_: MoveType,
-}
-
-#[derive(cynic::QueryFragment, Debug)]
-#[cynic(schema = "rpc", graphql_type = "MoveType")]
-pub struct MoveType {
-    pub repr: String,
-}
-
-#[derive(cynic::InlineFragments, Debug)]
-#[cynic(schema = "rpc", graphql_type = "TransactionArgument")]
-pub enum TransactionArgument {
-    GasCoin(GasCoin),
-    Input(Input),
-    Result(GqlResult),
-    #[cynic(fallback)]
-    Unknown,
+    pub transaction: Option<TransactionBlock>,
 }
 
 #[derive(cynic::QueryVariables, Debug)]

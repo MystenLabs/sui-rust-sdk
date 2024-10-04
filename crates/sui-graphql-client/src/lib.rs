@@ -20,7 +20,6 @@ use query_types::CoinMetadataArgs;
 use query_types::CoinMetadataQuery;
 use query_types::DryRunArgs;
 use query_types::DryRunQuery;
-use query_types::DryRunResult;
 use query_types::EpochSummaryArgs;
 use query_types::EpochSummaryQuery;
 use query_types::EventFilter;
@@ -77,6 +76,12 @@ const TESTNET_HOST: &str = "https://sui-testnet.mystenlabs.com/graphql";
 const DEVNET_HOST: &str = "https://sui-devnet.mystenlabs.com/graphql";
 const LOCAL_HOST: &str = "http://localhost:9125/graphql";
 static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
+
+#[derive(Debug)]
+pub struct DryRunResult {
+    pub error: Option<String>,
+    pub effects: Option<TransactionEffects>,
+}
 
 #[derive(Debug)]
 /// A page of items returned by the GraphQL server.
@@ -690,7 +695,7 @@ impl Client {
         &self,
         tx: &Transaction,
         skip_checks: Option<bool>,
-    ) -> Result<Option<DryRunResult>, Error> {
+    ) -> Result<DryRunResult, Error> {
         let tx_bytes = base64ct::Base64::encode_string(
             &bcs::to_bytes(&tx).map_err(|_| Error::msg("Cannot encode Transaction as BCS"))?,
         );
@@ -709,7 +714,7 @@ impl Client {
         tx_kind: &TransactionKind,
         skip_checks: Option<bool>,
         tx_meta: TransactionMetadata,
-    ) -> Result<Option<DryRunResult>, Error> {
+    ) -> Result<DryRunResult, Error> {
         let tx_bytes = base64ct::Base64::encode_string(
             &bcs::to_bytes(&tx_kind).map_err(|_| Error::msg("Cannot encode Transaction as BCS"))?,
         );
@@ -722,7 +727,7 @@ impl Client {
         tx_bytes: String,
         skip_checks: Option<bool>,
         tx_meta: Option<TransactionMetadata>,
-    ) -> Result<Option<DryRunResult>, Error> {
+    ) -> Result<DryRunResult, Error> {
         let skip_checks = skip_checks.unwrap_or(false);
         let operation = DryRunQuery::build(DryRunArgs {
             tx_bytes,
@@ -731,10 +736,33 @@ impl Client {
         });
         let response = self.run_query(&operation).await?;
 
+        // Query errors
         if let Some(errors) = response.errors {
             return Err(Error::msg(format!("{:?}", errors)));
         }
-        Ok(response.data.map(|d| d.dry_run_transaction_block))
+
+        let error = response
+            .data
+            .as_ref()
+            .and_then(|tx| tx.dry_run_transaction_block.error.clone());
+
+        let effects = response
+            .data
+            .map(|tx| tx.dry_run_transaction_block)
+            .and_then(|tx| {
+                tx.transaction.and_then(|tx| tx.bcs).map(|bcs| {
+                    base64ct::Base64::decode_vec(bcs.0.as_str())
+                        .map_err(|_| Error::msg("Cannot decode bcs bytes from Base64"))
+                })
+            })
+            .transpose()?
+            .map(|bcs| {
+                bcs::from_bytes::<TransactionEffects>(bcs.as_ref())
+                    .map_err(|_| Error::msg("Cannot decode bcs bytes into TransactionEffects"))
+            })
+            .transpose()?;
+
+        Ok(DryRunResult { error, effects })
     }
 
     // ===========================================================================

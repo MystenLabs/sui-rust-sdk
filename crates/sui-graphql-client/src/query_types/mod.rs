@@ -59,6 +59,7 @@ pub use protocol_config::ProtocolVersionArgs;
 pub use service_config::Feature;
 pub use service_config::ServiceConfig;
 pub use service_config::ServiceConfigQuery;
+pub use transaction::TransactionBlock;
 pub use transaction::TransactionBlockArgs;
 pub use transaction::TransactionBlockQuery;
 pub use transaction::TransactionBlocksQuery;
