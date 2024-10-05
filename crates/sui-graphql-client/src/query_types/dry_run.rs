@@ -6,7 +6,6 @@ use sui_types::types::ObjectReference;
 use crate::query_types::schema;
 use crate::query_types::Address;
 use crate::query_types::TransactionBlock;
-use crate::query_types::Uint53;
 
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "Query", variables = "DryRunArgs")]
@@ -32,9 +31,9 @@ pub struct DryRunArgs {
 #[derive(cynic::InputObject, Debug)]
 #[cynic(schema = "rpc", graphql_type = "TransactionMetadata")]
 pub struct TransactionMetadata {
-    pub gas_budget: Option<Uint53>,
+    pub gas_budget: Option<u64>,
     pub gas_objects: Option<Vec<ObjectRef>>,
-    pub gas_price: Option<Uint53>,
+    pub gas_price: Option<u64>,
     pub gas_sponsor: Option<Address>,
     pub sender: Option<Address>,
 }
@@ -44,7 +43,7 @@ pub struct TransactionMetadata {
 pub struct ObjectRef {
     pub address: Address,
     pub digest: String,
-    pub version: Uint53,
+    pub version: u64,
 }
 
 impl From<ObjectReference> for ObjectRef {
@@ -52,7 +51,7 @@ impl From<ObjectReference> for ObjectRef {
         let address: Address = (*value.object_id()).into();
         ObjectRef {
             address,
-            version: Uint53(value.version()),
+            version: value.version(),
             digest: value.digest().to_string(),
         }
     }
