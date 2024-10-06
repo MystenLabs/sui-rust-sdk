@@ -1,7 +1,11 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::query_types::{schema, Address, Base64, JsonValue, PageInfo};
+use crate::query_types::schema;
+use crate::query_types::Address;
+use crate::query_types::Base64;
+use crate::query_types::JsonValue;
+use crate::query_types::PageInfo;
 
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(
