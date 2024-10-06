@@ -686,7 +686,7 @@ impl Client {
     // Dry Run API
     // ===========================================================================
 
-    /// Dry run a [`Transaction`] and return the transaction.
+    /// Dry run a [`Transaction`] and return the transaction effects and dry run error (if any).
     ///
     /// `skipChecks` optional flag disables the usual verification checks that prevent access to
     /// objects that are owned by addresses other than the sender, and calling non-public,
@@ -702,7 +702,7 @@ impl Client {
         self.dry_run(tx_bytes, skip_checks, None).await
     }
 
-    /// Dry run a [`TransactionKind`] and return the transaction.
+    /// Dry run a [`TransactionKind`] and return the transaction effects and dry run error (if any).
     ///
     /// `skipChecks` optional flag disables the usual verification checks that prevent access to
     /// objects that are owned by addresses other than the sender, and calling non-public,
