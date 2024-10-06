@@ -18,13 +18,13 @@ use query_types::CheckpointQuery;
 use query_types::CoinMetadata;
 use query_types::CoinMetadataArgs;
 use query_types::CoinMetadataQuery;
-<<<<<<< HEAD
 use query_types::DryRunArgs;
 use query_types::DryRunQuery;
-=======
+use query_types::DynamicFieldArgs;
 use query_types::DynamicFieldConnectionArgs;
 use query_types::DynamicFieldName;
->>>>>>> fa9b47d9 (Add dynamic fields query)
+use query_types::DynamicFieldQuery;
+use query_types::DynamicFieldsQuery;
 use query_types::EpochSummaryArgs;
 use query_types::EpochSummaryQuery;
 use query_types::EventFilter;
@@ -75,8 +75,6 @@ use cynic::QueryBuilder;
 use futures::Stream;
 use reqwest::Url;
 use std::pin::Pin;
-
-use crate::query_types::{DynamicFieldArgs, DynamicFieldQuery, DynamicFieldsQuery};
 
 const MAINNET_HOST: &str = "https://sui-mainnet.mystenlabs.com/graphql";
 const TESTNET_HOST: &str = "https://sui-testnet.mystenlabs.com/graphql";
