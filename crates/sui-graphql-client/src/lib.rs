@@ -30,6 +30,8 @@ use query_types::ObjectQuery;
 use query_types::ObjectQueryArgs;
 use query_types::ObjectsQuery;
 use query_types::ObjectsQueryArgs;
+use query_types::PackageQuery;
+use query_types::PackageQueryArgs;
 use query_types::PageInfo;
 use query_types::ProtocolConfigQuery;
 use query_types::ProtocolConfigs;
@@ -672,6 +674,44 @@ impl Client {
     }
 
     // ===========================================================================
+    // Package API
+    // ===========================================================================
+
+    // TODO: We should return maybe the MovePackage type, but the `data` field is not accessible.
+    // We might want to expose an API for getting the package or the struct depending what the
+    // object is.
+    /// Get a package's content by its address and optionally, a specific version.
+    pub async fn package(
+        &self,
+        address: Address,
+        version: Option<u64>,
+    ) -> Result<Option<Object>, Error> {
+        let operation = PackageQuery::build(PackageQueryArgs { address, version });
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        if let Some(data) = response.data {
+            let package = data
+                .package
+                .and_then(|p| p.bcs)
+                .map(|bcs| base64ct::Base64::decode_vec(bcs.0.as_str()))
+                .transpose()
+                .map_err(|e| Error::msg(format!("Cannot decode Base64 package bcs bytes: {e}")))?
+                .map(|b| bcs::from_bytes::<Object>(&b))
+                .transpose()
+                .map_err(|e| {
+                    Error::msg(format!("Cannot decode bcs bytes into MovePackage: {e}"))
+                })?;
+            Ok(package)
+        } else {
+            Ok(None)
+        }
+    }
+
+    // ===========================================================================
     // Transaction API
     // ===========================================================================
 
@@ -1060,5 +1100,20 @@ mod tests {
                 "Total supply mismatch for network: {n}"
             );
         }
+    }
+
+    #[tokio::test]
+    async fn test_package_query() {
+        let client = Client::new_testnet();
+        let package = client
+            .package(
+                "0x29100e79cce427714a2059aee4f858a0406fc34c7f50c93fb75c915b618feacf"
+                    .parse()
+                    .unwrap(),
+                None,
+            )
+            .await;
+
+        assert!(package.is_ok());
     }
 }

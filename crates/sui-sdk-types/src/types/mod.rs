@@ -97,6 +97,7 @@ pub use execution_status::PackageUpgradeError;
 pub use execution_status::TypeArgumentError;
 pub use gas::GasCostSummary;
 pub use object::GenesisObject;
+pub use object::MovePackage;
 pub use object::Object;
 pub use object::ObjectData;
 pub use object::ObjectReference;
