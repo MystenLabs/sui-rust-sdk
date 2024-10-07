@@ -747,23 +747,18 @@ impl Client {
             .as_ref()
             .and_then(|tx| tx.dry_run_transaction_block.error.clone());
 
-        // This seems to fail as it is not able to decode the transaction effects' bcs from GraphQL
-        // into sui-types TransactionEffects type.
         let effects = response
             .data
             .map(|tx| tx.dry_run_transaction_block)
-            .and_then(|tx| {
-                tx.transaction
-                    .and_then(|tx| tx.effects)
-                    .and_then(|e| e.bcs)
-                    .map(|bcs| bcs::from_bytes::<TransactionEffects>(bcs.0.as_ref()))
-            })
+            .and_then(|tx| tx.transaction)
+            .and_then(|tx| tx.effects)
+            .and_then(|bcs| bcs.bcs)
+            .map(|bcs| base64ct::Base64::decode_vec(bcs.0.as_str()))
             .transpose()
-            .map_err(|e| {
-                Error::msg(format!(
-                    "Cannot decode bcs bytes into TransactionEffects. {e}"
-                ))
-            })?;
+            .map_err(|_| Error::msg("Cannot decode bcs bytes from Base64 for transaction effects"))?
+            .map(|bcs| bcs::from_bytes::<TransactionEffects>(&bcs))
+            .transpose()
+            .map_err(|_| Error::msg("Cannot decode bcs bytes into TransactionEffects"))?;
 
         Ok(DryRunResult { effects, error })
     }
@@ -1160,8 +1155,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
-    // TODO this fails because it cannot decode the transaction effects properly.
     async fn test_dry_run() {
         let client = Client::new_testnet();
         // this tx bytes works on testnet
