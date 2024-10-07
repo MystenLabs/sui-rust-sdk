@@ -79,8 +79,8 @@ static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_V
 
 #[derive(Debug)]
 pub struct DryRunResult {
-    pub error: Option<String>,
     pub effects: Option<TransactionEffects>,
+    pub error: Option<String>,
 }
 
 #[derive(Debug)]
@@ -741,6 +741,7 @@ impl Client {
             return Err(Error::msg(format!("{:?}", errors)));
         }
 
+        // Dry Run errors
         let error = response
             .data
             .as_ref()
@@ -750,19 +751,19 @@ impl Client {
             .data
             .map(|tx| tx.dry_run_transaction_block)
             .and_then(|tx| {
-                tx.transaction.and_then(|tx| tx.bcs).map(|bcs| {
-                    base64ct::Base64::decode_vec(bcs.0.as_str())
-                        .map_err(|_| Error::msg("Cannot decode bcs bytes from Base64"))
-                })
+                tx.transaction
+                    .and_then(|tx| tx.effects)
+                    .and_then(|e| e.bcs)
+                    .map(|bcs| bcs::from_bytes::<TransactionEffects>(bcs.0.as_ref()))
             })
-            .transpose()?
-            .map(|bcs| {
-                bcs::from_bytes::<TransactionEffects>(bcs.as_ref())
-                    .map_err(|_| Error::msg("Cannot decode bcs bytes into TransactionEffects"))
-            })
-            .transpose()?;
+            .transpose()
+            .map_err(|e| {
+                Error::msg(format!(
+                    "Cannot decode bcs bytes into TransactionEffects. {e}"
+                ))
+            })?;
 
-        Ok(DryRunResult { error, effects })
+        Ok(DryRunResult { effects, error })
     }
 
     // ===========================================================================
@@ -1154,5 +1155,15 @@ mod tests {
                 "Total supply mismatch for network: {n}"
             );
         }
+    }
+
+    #[tokio::test]
+    async fn test_dry_run() {
+        let client = Client::new_testnet();
+        let tx_bytes = "AAACAAiA8PoCAAAAAAAg7q6yDns6nPznaKLd9pUD2K6NFiiibC10pDVQHJKdP2kCAgABAQAAAQECAAABAQBGLuHCJ/xjZfhC4vTJt/Zrvq1gexKLaKf3aVzyIkxRaAFUHzz8ftiZdY25qP4f9zySuT1K/qyTWjbGiTu0i0Z1ZFA4gwUAAAAAILeG86EeQm3qY3ajat3iUnY2Gbrk/NbdwV/d9MZviAwwRi7hwif8Y2X4QuL0ybf2a76tYHsSi2in92lc8iJMUWjoAwAAAAAAAECrPAAAAAAAAA==";
+        let dry_run = client.dry_run(tx_bytes.to_string(), None, None).await;
+        println!("{:?}", dry_run);
+
+        assert!(dry_run.is_ok());
     }
 }
