@@ -55,7 +55,7 @@ pub struct Object {
     pub bcs: Option<Base64>,
 }
 
-#[derive(Clone, cynic::InputObject, Debug)]
+#[derive(Clone, Default, cynic::InputObject, Debug)]
 #[cynic(schema = "rpc", graphql_type = "ObjectFilter")]
 pub struct ObjectFilter<'a> {
     #[cynic(rename = "type")]

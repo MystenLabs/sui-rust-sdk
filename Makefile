@@ -26,7 +26,7 @@ test:
 
 .PHONY: test-with-localnet
 test-with-localnet:
-	cargo nextest run -p sui-graphql-client
+	cargo nextest run -p sui-graphql-client -p sui-transaction-builder
 
 .PHONY: wasm
 wasm:
