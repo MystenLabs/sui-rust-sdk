@@ -1,19 +1,27 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
+use anyhow::anyhow;
 use sui_types::types::ObjectDigest;
 use sui_types::types::ObjectId;
-use sui_types::types::TransactionKind;
+use sui_types::types::ObjectReference;
 
 /// Type representing potentially unresolved object types, with a builder API.
 #[derive(Clone, Debug)]
 pub struct Object {
     pub id: ObjectId,
-    pub kind: Option<TransactionKind>,
+    pub kind: Option<Kind>,
     pub version: Option<u64>,
     pub digest: Option<ObjectDigest>,
     pub initial_shared_version: Option<u64>,
     pub mutable: Option<bool>,
+}
+
+#[derive(Clone, Debug)]
+pub enum Kind {
+    ImmOrOwned,
+    Receiving,
+    Shared,
 }
 
 impl Object {
@@ -30,41 +38,89 @@ impl Object {
     }
 
     // Fully resolved
-    fn owned(id: ObjectId, v: u64, d: ObjectDigest) -> Self {
-        todo!()
+    pub fn owned(id: ObjectId, version: u64, digest: ObjectDigest) -> Self {
+        Self {
+            id,
+            kind: Some(Kind::ImmOrOwned),
+            version: Some(version),
+            digest: Some(digest),
+            initial_shared_version: None,
+            mutable: None,
+        }
     }
-    fn immutable(id: ObjectId, v: u64, d: ObjectDigest) -> Self {
-        todo!()
+
+    pub fn immutable(id: ObjectId, version: u64, digest: ObjectDigest) -> Self {
+        Self {
+            id,
+            kind: Some(Kind::ImmOrOwned),
+            version: Some(version),
+            digest: Some(digest),
+            initial_shared_version: None,
+            mutable: None,
+        }
     }
-    fn receiving(id: ObjectId, v: u64, d: ObjectDigest) -> Self {
-        todo!()
+
+    pub fn receiving(id: ObjectId, version: u64, digest: ObjectDigest) -> Self {
+        Self {
+            id,
+            kind: Some(Kind::Receiving),
+            version: Some(version),
+            digest: Some(digest),
+            initial_shared_version: None,
+            mutable: None,
+        }
     }
-    fn shared(id: ObjectId, i: u64, mutable: bool) -> Self {
-        todo!()
+
+    pub fn shared(id: ObjectId, initial_shared_version: u64, mutable: bool) -> Self {
+        Self {
+            id,
+            kind: Some(Kind::Shared),
+            version: None,
+            digest: None,
+            initial_shared_version: Some(initial_shared_version),
+            mutable: Some(mutable),
+        }
     }
 
     // Add partial information
 
     // Kind
-    fn as_owned(self) -> Self {
-        todo!()
+    pub fn as_owned(self) -> Self {
+        Self {
+            id: self.id,
+            kind: Some(Kind::ImmOrOwned),
+            version: self.version,
+            digest: self.digest,
+            initial_shared_version: self.initial_shared_version,
+            mutable: self.mutable,
+        }
     }
     // Redundant, but who ever liked saying "imm_or_owned"?
-    fn as_immutable(self) -> Self {
+    pub fn as_immutable(self) -> Self {
+        Self {
+            id: self.id,
+            kind: Some(Kind::ImmOrOwned),
+            version: self.version,
+            digest: self.digest,
+            initial_shared_version: self.initial_shared_version,
+            mutable: Some(false),
+        }
+    }
+
+    pub fn as_receiving(self) -> Self {
         todo!()
     }
-    fn as_receiving(self) -> Self {
-        todo!()
-    }
-    fn as_shared(self) -> Self {
+
+    pub fn as_shared(self) -> Self {
         todo!()
     }
 
     // ObjectRef fields
-    fn versioned_at(self, v: u64) -> Self {
+    pub fn versioned_at(self, version: u64) -> Self {
         todo!()
     }
-    fn with_digest(self, d: ObjectDigest) -> Self {
+
+    pub fn with_digest(self, digest: ObjectDigest) -> Self {
         todo!()
     }
 
@@ -84,5 +140,17 @@ impl Object {
     }
     fn by_mut(self) -> Self {
         todo!()
+    }
+}
+
+impl TryInto<ObjectReference> for Object {
+    type Error = anyhow::Error;
+
+    fn try_into(self) -> Result<ObjectReference, Self::Error> {
+        Ok(ObjectReference::new(
+            self.id,
+            self.version.ok_or_else(|| anyhow!("version not set"))?,
+            self.digest.ok_or_else(|| anyhow!("digest not set"))?,
+        ))
     }
 }

@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 mod object;
+use anyhow::anyhow;
 pub use object::Object;
 
 use sui_types::types::Address;
-use sui_types::types::Command;
+use sui_types::types::GasPayment;
 use sui_types::types::ObjectId;
 use sui_types::types::Transaction as SuiTransaction;
 use sui_types::types::TypeTag;
@@ -16,11 +17,17 @@ use serde::Serialize;
 #[derive(Clone, Debug)]
 pub struct Transaction {
     pub inputs: Vec<Input>,
-    pub commands: Vec<Command>,
+    pub commands: Vec<Value>,
+    pub gas: Vec<Object>,
+    pub gas_budget: u64,
+    pub gas_price: u64,
+    pub sender: Address,
+    pub sponsor: Option<Address>,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum Value {
+    Gas,
     Input(u16),
     Result(u16),
     NestedResult(u16, u16),
@@ -58,11 +65,27 @@ pub enum Input {
 
 /// A separate type to support denoting a function by a string, or by a more
 /// structured representation.
-struct Function {
+pub struct Function {
     package: Address,
     module: String,
     function: String,
     type_args: Vec<TypeTag>,
+}
+
+impl Function {
+    pub fn new(
+        package: Address,
+        module: String,
+        function: String,
+        type_args: Vec<TypeTag>,
+    ) -> Self {
+        Self {
+            package,
+            module,
+            function,
+            type_args,
+        }
+    }
 }
 
 impl Value {
@@ -77,23 +100,12 @@ impl Transaction {
         Self {
             inputs: Vec::new(),
             commands: Vec::new(),
+            gas: Vec::new(),
+            gas_budget: 0,
+            gas_price: 0,
+            sender: Address::default(),
+            sponsor: None,
         }
-    }
-
-    /// Assuming everything is resolved, convert this transaction into the
-    /// resolved form. Fails if there are unresolved parts.
-    fn finish(self) -> Result<SuiTransaction, Error> {
-        OK(SuiTransaction {
-            kind: sui_types::types::TransactionKind::ProgrammableTransaction(
-                sui_types::types::ProgrammableTransaction {
-                    inputs: self.inputs,
-                    commands: self.commands,
-                },
-            ),
-            sender: todo!(),
-            gas_payment: todo!(),
-            expiration: todo!(),
-        })
     }
 
     // Transaction Inputs
@@ -108,22 +120,36 @@ impl Transaction {
     pub fn input(&mut self, i: impl Into<Input>) -> Value {
         let input = i.into();
         self.inputs.push(input);
-        Value::Input((self.inputs.len() + 1) as u16)
+        Value::Input((self.inputs.len() - 1) as u16)
     }
 
     // Metadata
     fn set_gas(&mut self, gas: Vec<Object>) {
-        todo!()
+        self.gas = gas;
     }
+
     fn set_sender(&mut self, sender: Address) {
+        self.sender = sender;
+    }
+
+    fn set_sponsor(&mut self, sponsor: Address) {
+        self.sponsor = Some(sponsor);
+    }
+
+    fn set_price(&mut self, price: u64) {
         todo!()
     }
-    fn set_sponsor(&mut self, sponsor: Address) {
+
+    fn set_budget(&mut self, budget: u64) {
         todo!()
     }
 
     // Commands
     fn move_call(&mut self, function: Function, arguments: Vec<Value>) -> Value {
+        for arg in arguments {
+            self.input(arg);
+        }
+        // let cmd =
         todo!()
     }
     fn transfer_objects(&mut self, objects: Vec<Value>, address: Value) {
@@ -152,6 +178,47 @@ impl Transaction {
     ) -> Value {
         todo!()
     }
+
+    /// Assuming everything is resolved, convert this transaction into the
+    /// resolved form. Fails if there are unresolved parts.
+    fn finish(&self) -> Result<SuiTransaction, Error> {
+        Ok(SuiTransaction {
+            kind: sui_types::types::TransactionKind::ProgrammableTransaction(
+                sui_types::types::ProgrammableTransaction {
+                    inputs: vec![],
+                    commands: vec![],
+                },
+            ),
+            sender: self.sender,
+            gas_payment: {
+                GasPayment {
+                    objects: self
+                        .gas
+                        .clone()
+                        .into_iter()
+                        .map(|o| o.try_into())
+                        .collect::<Result<Vec<_>, _>>()
+                        .map_err(|_| anyhow!("Failed to convert gas objects into GasPayment"))?,
+                    owner: {
+                        if let Some(sponsor) = self.sponsor {
+                            sponsor
+                        } else {
+                            self.sender
+                        }
+                    },
+                    price: self.gas_price,
+                    budget: self.gas_budget,
+                }
+            },
+            expiration: sui_types::types::TransactionExpiration::None,
+        })
+    }
+}
+
+impl Default for Transaction {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl From<Literal> for Input {
@@ -163,6 +230,21 @@ impl From<Literal> for Input {
 impl From<Object> for Input {
     fn from(object: Object) -> Input {
         Input::Object(object)
+    }
+}
+
+impl From<RawBytes> for Input {
+    fn from(raw: RawBytes) -> Input {
+        Input::Pure(raw.0)
+    }
+}
+
+impl From<Value> for Input {
+    fn from(value: Value) -> Input {
+        match value {
+            Value::Input(i) => Input::Pure(i.to_be_bytes().to_vec()),
+            _ => todo!(),
+        }
     }
 }
 
