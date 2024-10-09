@@ -18,6 +18,8 @@ use query_types::CheckpointQuery;
 use query_types::CoinMetadata;
 use query_types::CoinMetadataArgs;
 use query_types::CoinMetadataQuery;
+use query_types::DryRunArgs;
+use query_types::DryRunQuery;
 use query_types::EpochSummaryArgs;
 use query_types::EpochSummaryQuery;
 use query_types::EventFilter;
@@ -40,9 +42,10 @@ use query_types::TransactionBlockArgs;
 use query_types::TransactionBlockQuery;
 use query_types::TransactionBlocksQuery;
 use query_types::TransactionBlocksQueryArgs;
+use query_types::TransactionMetadata;
 use query_types::TransactionsFilter;
 use query_types::Validator;
-use reqwest::Url;
+
 use sui_types::types::framework::Coin;
 use sui_types::types::Address;
 use sui_types::types::CheckpointSequenceNumber;
@@ -52,6 +55,7 @@ use sui_types::types::Object;
 use sui_types::types::SignedTransaction;
 use sui_types::types::Transaction;
 use sui_types::types::TransactionEffects;
+use sui_types::types::TransactionKind;
 use sui_types::types::UserSignature;
 
 use anyhow::anyhow;
@@ -64,6 +68,7 @@ use cynic::MutationBuilder;
 use cynic::Operation;
 use cynic::QueryBuilder;
 use futures::Stream;
+use reqwest::Url;
 use std::pin::Pin;
 
 const MAINNET_HOST: &str = "https://sui-mainnet.mystenlabs.com/graphql";
@@ -71,6 +76,12 @@ const TESTNET_HOST: &str = "https://sui-testnet.mystenlabs.com/graphql";
 const DEVNET_HOST: &str = "https://sui-devnet.mystenlabs.com/graphql";
 const LOCAL_HOST: &str = "http://localhost:9125/graphql";
 static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
+
+#[derive(Debug)]
+pub struct DryRunResult {
+    pub effects: Option<TransactionEffects>,
+    pub error: Option<String>,
+}
 
 #[derive(Debug)]
 /// A page of items returned by the GraphQL server.
@@ -672,6 +683,87 @@ impl Client {
     }
 
     // ===========================================================================
+    // Dry Run API
+    // ===========================================================================
+
+    /// Dry run a [`Transaction`] and return the transaction effects and dry run error (if any).
+    ///
+    /// `skipChecks` optional flag disables the usual verification checks that prevent access to
+    /// objects that are owned by addresses other than the sender, and calling non-public,
+    /// non-entry functions, and some other checks. Defaults to false.
+    pub async fn dry_run_tx(
+        &self,
+        tx: &Transaction,
+        skip_checks: Option<bool>,
+    ) -> Result<DryRunResult, Error> {
+        let tx_bytes = base64ct::Base64::encode_string(
+            &bcs::to_bytes(&tx).map_err(|_| Error::msg("Cannot encode Transaction as BCS"))?,
+        );
+        self.dry_run(tx_bytes, skip_checks, None).await
+    }
+
+    /// Dry run a [`TransactionKind`] and return the transaction effects and dry run error (if any).
+    ///
+    /// `skipChecks` optional flag disables the usual verification checks that prevent access to
+    /// objects that are owned by addresses other than the sender, and calling non-public,
+    /// non-entry functions, and some other checks. Defaults to false.
+    ///
+    /// `tx_meta` is the transaction metadata.
+    pub async fn dry_run_tx_kind(
+        &self,
+        tx_kind: &TransactionKind,
+        skip_checks: Option<bool>,
+        tx_meta: TransactionMetadata,
+    ) -> Result<DryRunResult, Error> {
+        let tx_bytes = base64ct::Base64::encode_string(
+            &bcs::to_bytes(&tx_kind).map_err(|_| Error::msg("Cannot encode Transaction as BCS"))?,
+        );
+        self.dry_run(tx_bytes, skip_checks, Some(tx_meta)).await
+    }
+
+    /// Internal implementation of the dry run API.
+    async fn dry_run(
+        &self,
+        tx_bytes: String,
+        skip_checks: Option<bool>,
+        tx_meta: Option<TransactionMetadata>,
+    ) -> Result<DryRunResult, Error> {
+        let skip_checks = skip_checks.unwrap_or(false);
+        let operation = DryRunQuery::build(DryRunArgs {
+            tx_bytes,
+            skip_checks,
+            tx_meta,
+        });
+        let response = self.run_query(&operation).await?;
+
+        // Query errors
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        // Dry Run errors
+        let error = response
+            .data
+            .as_ref()
+            .and_then(|tx| tx.dry_run_transaction_block.error.clone());
+
+        let effects = response
+            .data
+            .map(|tx| tx.dry_run_transaction_block)
+            .and_then(|tx| tx.transaction)
+            .and_then(|tx| tx.effects)
+            .and_then(|bcs| bcs.bcs)
+            .map(|bcs| base64ct::Base64::decode_vec(bcs.0.as_str()))
+            .transpose()
+            .map_err(|_| Error::msg("Cannot decode bcs bytes from Base64 for transaction effects"))?
+            .map(|bcs| bcs::from_bytes::<TransactionEffects>(&bcs))
+            .transpose()
+            .map_err(|_| Error::msg("Cannot decode bcs bytes into TransactionEffects"))?;
+
+        Ok(DryRunResult { effects, error })
+    }
+
+    // ===========================================================================
     // Transaction API
     // ===========================================================================
 
@@ -1060,5 +1152,16 @@ mod tests {
                 "Total supply mismatch for network: {n}"
             );
         }
+    }
+
+    #[tokio::test]
+    async fn test_dry_run() {
+        let client = Client::new_testnet();
+        // this tx bytes works on testnet
+        let tx_bytes = "AAACAAiA8PoCAAAAAAAg7q6yDns6nPznaKLd9pUD2K6NFiiibC10pDVQHJKdP2kCAgABAQAAAQECAAABAQBGLuHCJ/xjZfhC4vTJt/Zrvq1gexKLaKf3aVzyIkxRaAFUHzz8ftiZdY25qP4f9zySuT1K/qyTWjbGiTu0i0Z1ZFA4gwUAAAAAILeG86EeQm3qY3ajat3iUnY2Gbrk/NbdwV/d9MZviAwwRi7hwif8Y2X4QuL0ybf2a76tYHsSi2in92lc8iJMUWjoAwAAAAAAAECrPAAAAAAAAA==";
+
+        let dry_run = client.dry_run(tx_bytes.to_string(), None, None).await;
+
+        assert!(dry_run.is_ok());
     }
 }

@@ -58,6 +58,13 @@ pub struct TransactionBlocksQueryArgs {
 #[cynic(schema = "rpc", graphql_type = "TransactionBlock")]
 pub struct TransactionBlock {
     pub bcs: Option<Base64>,
+    pub effects: Option<TransactionBlockEffects>,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "TransactionBlockEffects")]
+pub struct TransactionBlockEffects {
+    pub bcs: Option<Base64>,
 }
 
 #[derive(cynic::Enum, Clone, Copy, Debug)]
