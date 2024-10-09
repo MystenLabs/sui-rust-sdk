@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["afterCheckpoint","atCheckpoint","beforeCheckpoint","changedObject","function","inputObject","kind","recvAddress","sentAddress","signAddress","transactionIds"]};

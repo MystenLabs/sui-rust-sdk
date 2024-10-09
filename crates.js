@@ -1,0 +1,1 @@
+window.ALL_CRATES = ["sui_crypto","sui_graphql_client","sui_sdk_types"];
