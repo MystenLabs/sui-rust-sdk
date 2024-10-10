@@ -9,6 +9,7 @@ use sui_types::types::Address;
 use sui_types::types::GasPayment;
 use sui_types::types::ObjectId;
 use sui_types::types::Transaction as SuiTransaction;
+use sui_types::types::TransactionExpiration;
 use sui_types::types::TypeTag;
 
 use anyhow::Error;
@@ -16,13 +17,14 @@ use serde::Serialize;
 
 #[derive(Clone, Debug)]
 pub struct Transaction {
-    pub inputs: Vec<Input>,
-    pub commands: Vec<Value>,
-    pub gas: Vec<Object>,
-    pub gas_budget: u64,
-    pub gas_price: u64,
-    pub sender: Address,
-    pub sponsor: Option<Address>,
+    inputs: Vec<Input>,
+    commands: Vec<Value>,
+    gas: Vec<Object>,
+    gas_budget: u64,
+    gas_price: u64,
+    sender: Address,
+    sponsor: Option<Address>,
+    expiration: Option<TransactionExpiration>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -105,6 +107,7 @@ impl Transaction {
             gas_price: 0,
             sender: Address::default(),
             sponsor: None,
+            expiration: None,
         }
     }
 
@@ -112,8 +115,8 @@ impl Transaction {
 
     /// The gas coin -- it doesn't actually need to be called on Transaction
     /// but including it here for uniformity.
-    fn gas(&self) -> Value {
-        todo!()
+    fn gas(&self) -> Vec<Object> {
+        vec![]
     }
 
     /// Make a value available to the transaction as an input.
@@ -124,52 +127,56 @@ impl Transaction {
     }
 
     // Metadata
-    fn set_gas(&mut self, gas: Vec<Object>) {
+    pub fn set_gas(&mut self, gas: Vec<Object>) {
         self.gas = gas;
     }
 
-    fn set_sender(&mut self, sender: Address) {
+    pub fn set_gas_budget(&mut self, budget: u64) {
+        self.gas_budget = budget;
+    }
+
+    pub fn set_gas_price(&mut self, price: u64) {
+        self.gas_price = price;
+    }
+
+    pub fn set_sender(&mut self, sender: Address) {
         self.sender = sender;
     }
 
-    fn set_sponsor(&mut self, sponsor: Address) {
+    pub fn set_sponsor(&mut self, sponsor: Address) {
         self.sponsor = Some(sponsor);
     }
 
-    fn set_price(&mut self, price: u64) {
-        todo!()
-    }
-
-    fn set_budget(&mut self, budget: u64) {
-        todo!()
+    pub fn set_expiration(&mut self, epoch: u64) {
+        self.expiration = Some(TransactionExpiration::Epoch(epoch));
     }
 
     // Commands
-    fn move_call(&mut self, function: Function, arguments: Vec<Value>) -> Value {
+    pub fn move_call(&mut self, function: Function, arguments: Vec<Value>) -> Value {
         for arg in arguments {
             self.input(arg);
         }
         // let cmd =
         todo!()
     }
-    fn transfer_objects(&mut self, objects: Vec<Value>, address: Value) {
+    pub fn transfer_objects(&mut self, objects: Vec<Value>, address: Value) {
         todo!()
     }
-    fn split_coins(&mut self, coin: Value, amounts: Vec<Value>) -> Value {
+    pub fn split_coins(&mut self, coin: Value, amounts: Vec<Value>) -> Value {
         todo!()
     }
-    fn merge_coins(&mut self, first: Value, rest: Vec<Value>) {
+    pub fn merge_coins(&mut self, first: Value, rest: Vec<Value>) {
         todo!()
     }
-    fn make_move_vec(&mut self, type_: Option<TypeTag>, vec: Vec<Value>) {
-        todo!()
-    }
-
-    fn publish(&mut self, modules: Vec<Vec<u8>>, deps: Vec<ObjectId>) -> Value {
+    pub fn make_move_vec(&mut self, type_: Option<TypeTag>, vec: Vec<Value>) {
         todo!()
     }
 
-    fn upgrade(
+    pub fn publish(&mut self, modules: Vec<Vec<u8>>, deps: Vec<ObjectId>) -> Value {
+        todo!()
+    }
+
+    pub fn upgrade(
         &mut self,
         modules: Vec<Vec<u8>>,
         deps: Vec<ObjectId>,
@@ -181,7 +188,7 @@ impl Transaction {
 
     /// Assuming everything is resolved, convert this transaction into the
     /// resolved form. Fails if there are unresolved parts.
-    fn finish(&self) -> Result<SuiTransaction, Error> {
+    pub fn finish(&self) -> Result<SuiTransaction, Error> {
         Ok(SuiTransaction {
             kind: sui_types::types::TransactionKind::ProgrammableTransaction(
                 sui_types::types::ProgrammableTransaction {
