@@ -27,6 +27,7 @@ use query_types::DynamicFieldConnectionArgs;
 use query_types::DynamicFieldName;
 use query_types::DynamicFieldQuery;
 use query_types::DynamicFieldsQuery;
+use query_types::DynamicObjectFieldQuery;
 use query_types::EpochSummaryArgs;
 use query_types::EpochSummaryQuery;
 use query_types::EventFilter;
@@ -157,6 +158,12 @@ pub struct Client {
     rpc: Url,
     /// The reqwest client.
     inner: reqwest::Client,
+}
+
+#[derive(Debug)]
+pub struct DynamicFieldOutput {
+    pub json: Option<serde_json::Value>,
+    pub object: Option<Object>,
 }
 
 impl Client {
@@ -552,16 +559,13 @@ impl Client {
     /// type have copy, drop, and store, and are specified using their type, and their BCS
     /// contents, Base64 encoded.
     ///
-    /// This returns the value of the dynamic field as a JSON value.
-    ///
-    /// Dynamic fields on wrapped objects can be accessed by directly querying the wrapped object
-    /// using [`object`] function.
+    /// This returns the value of the dynamic field as a JSON value and the object as a [`Object`].
     pub async fn dynamic_field(
         &self,
         address: Address,
         type_: &str,
         bcs: &[u8],
-    ) -> Result<Option<serde_json::Value>, Error> {
+    ) -> Result<Option<DynamicFieldOutput>, Error> {
         let operation = DynamicFieldQuery::build(DynamicFieldArgs {
             address,
             name: DynamicFieldName {
@@ -576,20 +580,51 @@ impl Client {
             return Err(Error::msg(format!("{:?}", errors)));
         }
 
-        let json = response
+        let result: Option<DynamicFieldOutput> = response
             .data
             .and_then(|d| d.object)
             .and_then(|o| o.dynamic_field)
-            .and_then(|df| df.field_value_json());
+            .map(|df| df.into());
+        Ok(result)
+    }
 
-        Ok(json)
+    /// Access a dynamic object field on an object using its name. Names are arbitrary Move values whose
+    /// type have copy, drop, and store, and are specified using their type, and their BCS
+    /// contents, Base64 encoded.
+    ///
+    /// This returns the value of the dynamic field as a JSON value and the object as a [`Object`].
+    pub async fn dynamic_object_field(
+        &self,
+        address: Address,
+        type_: &str,
+        bcs: &[u8],
+    ) -> Result<Option<DynamicFieldOutput>, Error> {
+        let operation = DynamicObjectFieldQuery::build(DynamicFieldArgs {
+            address,
+            name: DynamicFieldName {
+                type_: type_.to_string(),
+                bcs: crate::query_types::Base64(base64ct::Base64::encode_string(bcs)),
+            },
+        });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        let result: Option<DynamicFieldOutput> = response
+            .data
+            .and_then(|d| d.object)
+            .and_then(|o| o.dynamic_object_field)
+            .map(|df| df.into());
+        Ok(result)
     }
 
     /// Get a page of dynamic fields for the provided address.
     ///
     /// This returns [`Page`] of [`serde_json::Value`]s, representing the value field of the
     /// dynamic field as a JSON value.
-    /// ```
     pub async fn dynamic_fields(
         &self,
         address: Address,
@@ -597,7 +632,7 @@ impl Client {
         before: Option<String>,
         first: Option<i32>,
         last: Option<i32>,
-    ) -> Result<Option<Page<serde_json::Value>>, Error> {
+    ) -> Result<Option<Page<DynamicFieldOutput>>, Error> {
         let operation = DynamicFieldsQuery::build(DynamicFieldConnectionArgs {
             address,
             after,
@@ -617,8 +652,8 @@ impl Client {
                 let nodes = owner.dynamic_fields.nodes;
                 let jsons = nodes
                     .into_iter()
-                    .filter_map(|df| df.field_value_json())
-                    .collect::<Vec<_>>();
+                    .map(|df| df.into())
+                    .collect::<Vec<DynamicFieldOutput>>();
 
                 Ok(Some(Page::new(page_info, jsons)))
             } else {

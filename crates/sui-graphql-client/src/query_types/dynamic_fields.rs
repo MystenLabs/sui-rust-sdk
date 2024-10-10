@@ -1,11 +1,14 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
+use base64ct::Encoding;
+
 use crate::query_types::schema;
 use crate::query_types::Address;
 use crate::query_types::Base64;
 use crate::query_types::JsonValue;
 use crate::query_types::PageInfo;
+use crate::DynamicFieldOutput;
 
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(
@@ -113,6 +116,23 @@ pub struct DynamicFieldName {
     pub bcs: Base64,
 }
 
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(
+    schema = "rpc",
+    graphql_type = "Object",
+    variables = "DynamicFieldArgs"
+)]
+pub struct DynamicObjectField {
+    #[arguments(name: $name)]
+    pub dynamic_object_field: Option<DynamicField>,
+}
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "Query", variables = "DynamicFieldArgs")]
+pub struct DynamicObjectFieldQuery {
+    #[arguments(address: $address)]
+    pub object: Option<DynamicObjectField>,
+}
+
 impl DynamicFieldValue {
     /// Returns the JSON representation of the field value, if available.
     pub fn field_value_json(&self) -> Option<JsonValue> {
@@ -130,5 +150,20 @@ impl DynamicField {
     /// Returns the JSON representation of the field value, if available.
     pub fn field_value_json(&self) -> Option<JsonValue> {
         self.value.as_ref().and_then(|v| v.field_value_json())
+    }
+}
+
+impl From<DynamicField> for DynamicFieldOutput {
+    fn from(val: DynamicField) -> DynamicFieldOutput {
+        let obj = match val.value {
+            Some(DynamicFieldValue::MoveObject(ref mo)) => mo.bcs.clone(),
+            _ => None,
+        }
+        .map(|bcs| base64ct::Base64::decode_vec(bcs.0.as_ref()).unwrap());
+
+        DynamicFieldOutput {
+            object: obj.and_then(|o| bcs::from_bytes::<sui_types::types::Object>(o.as_ref()).ok()),
+            json: val.field_value_json(),
+        }
     }
 }
