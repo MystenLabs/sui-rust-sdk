@@ -83,10 +83,20 @@ const DEVNET_HOST: &str = "https://sui-devnet.mystenlabs.com/graphql";
 const LOCAL_HOST: &str = "http://localhost:9125/graphql";
 static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
+// ===========================================================================
+// Output Types
+// ===========================================================================
+
 #[derive(Debug)]
 pub struct DryRunResult {
     pub effects: Option<TransactionEffects>,
     pub error: Option<String>,
+}
+
+#[derive(Debug)]
+pub struct DynamicFieldOutput {
+    pub json: Option<serde_json::Value>,
+    pub object: Option<Object>,
 }
 
 #[derive(Debug)]
@@ -119,12 +129,6 @@ pub struct Client {
     rpc: Url,
     /// The reqwest client.
     inner: reqwest::Client,
-}
-
-#[derive(Debug)]
-pub struct DynamicFieldOutput {
-    pub json: Option<serde_json::Value>,
-    pub object: Option<Object>,
 }
 
 impl Client {

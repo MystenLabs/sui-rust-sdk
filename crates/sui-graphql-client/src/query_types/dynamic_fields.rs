@@ -155,14 +155,17 @@ impl DynamicField {
 
 impl From<DynamicField> for DynamicFieldOutput {
     fn from(val: DynamicField) -> DynamicFieldOutput {
-        let obj = match val.value {
-            Some(DynamicFieldValue::MoveObject(ref mo)) => mo.bcs.clone(),
+        let object = match val.value {
+            Some(DynamicFieldValue::MoveObject(ref mo)) => mo
+                .bcs
+                .as_ref()
+                .and_then(|bcs| base64ct::Base64::decode_vec(bcs.0.as_ref()).ok())
+                .and_then(|o| bcs::from_bytes::<sui_types::types::Object>(o.as_ref()).ok()),
             _ => None,
-        }
-        .map(|bcs| base64ct::Base64::decode_vec(bcs.0.as_ref()).unwrap());
+        };
 
         DynamicFieldOutput {
-            object: obj.and_then(|o| bcs::from_bytes::<sui_types::types::Object>(o.as_ref()).ok()),
+            object,
             json: val.field_value_json(),
         }
     }
