@@ -20,6 +20,12 @@ use query_types::CoinMetadataArgs;
 use query_types::CoinMetadataQuery;
 use query_types::DryRunArgs;
 use query_types::DryRunQuery;
+use query_types::DynamicFieldArgs;
+use query_types::DynamicFieldConnectionArgs;
+use query_types::DynamicFieldName;
+use query_types::DynamicFieldQuery;
+use query_types::DynamicFieldsQuery;
+use query_types::DynamicObjectFieldQuery;
 use query_types::EpochSummaryArgs;
 use query_types::EpochSummaryQuery;
 use query_types::EventFilter;
@@ -113,6 +119,12 @@ pub struct Client {
     rpc: Url,
     /// The reqwest client.
     inner: reqwest::Client,
+}
+
+#[derive(Debug)]
+pub struct DynamicFieldOutput {
+    pub json: Option<serde_json::Value>,
+    pub object: Option<Object>,
 }
 
 impl Client {
@@ -466,6 +478,119 @@ impl Client {
             .checkpoint(None, None)
             .await?
             .map(|c| c.sequence_number))
+    }
+
+    // ===========================================================================
+    // Dynamic Field(s) API
+    // ===========================================================================
+
+    /// Access a dynamic field on an object using its name. Names are arbitrary Move values whose
+    /// type have copy, drop, and store, and are specified using their type, and their BCS
+    /// contents, Base64 encoded.
+    ///
+    /// This returns the value of the dynamic field as a JSON value and the object as a [`Object`].
+    pub async fn dynamic_field(
+        &self,
+        address: Address,
+        type_: &str,
+        bcs: &[u8],
+    ) -> Result<Option<DynamicFieldOutput>, Error> {
+        let operation = DynamicFieldQuery::build(DynamicFieldArgs {
+            address,
+            name: DynamicFieldName {
+                type_: type_.to_string(),
+                bcs: crate::query_types::Base64(base64ct::Base64::encode_string(bcs)),
+            },
+        });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        let result: Option<DynamicFieldOutput> = response
+            .data
+            .and_then(|d| d.object)
+            .and_then(|o| o.dynamic_field)
+            .map(|df| df.into());
+        Ok(result)
+    }
+
+    /// Access a dynamic object field on an object using its name. Names are arbitrary Move values whose
+    /// type have copy, drop, and store, and are specified using their type, and their BCS
+    /// contents, Base64 encoded.
+    ///
+    /// This returns the value of the dynamic field as a JSON value and the object as a [`Object`].
+    pub async fn dynamic_object_field(
+        &self,
+        address: Address,
+        type_: &str,
+        bcs: &[u8],
+    ) -> Result<Option<DynamicFieldOutput>, Error> {
+        let operation = DynamicObjectFieldQuery::build(DynamicFieldArgs {
+            address,
+            name: DynamicFieldName {
+                type_: type_.to_string(),
+                bcs: crate::query_types::Base64(base64ct::Base64::encode_string(bcs)),
+            },
+        });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        let result: Option<DynamicFieldOutput> = response
+            .data
+            .and_then(|d| d.object)
+            .and_then(|o| o.dynamic_object_field)
+            .map(|df| df.into());
+        Ok(result)
+    }
+
+    /// Get a page of dynamic fields for the provided address.
+    ///
+    /// This returns [`Page`] of [`serde_json::Value`]s, representing the value field of the
+    /// dynamic field as a JSON value.
+    pub async fn dynamic_fields(
+        &self,
+        address: Address,
+        after: Option<String>,
+        before: Option<String>,
+        first: Option<i32>,
+        last: Option<i32>,
+    ) -> Result<Option<Page<DynamicFieldOutput>>, Error> {
+        let operation = DynamicFieldsQuery::build(DynamicFieldConnectionArgs {
+            address,
+            after,
+            before,
+            first,
+            last,
+        });
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        if let Some(dfs) = response.data {
+            if let Some(owner) = dfs.object {
+                let page_info = owner.dynamic_fields.page_info;
+                let nodes = owner.dynamic_fields.nodes;
+                let jsons = nodes
+                    .into_iter()
+                    .map(|df| df.into())
+                    .collect::<Vec<DynamicFieldOutput>>();
+
+                Ok(Some(Page::new(page_info, jsons)))
+            } else {
+                Ok(None)
+            }
+        } else {
+            Ok(None)
+        }
     }
 
     // ===========================================================================
@@ -873,6 +998,7 @@ impl Client {
 
 #[cfg(test)]
 mod tests {
+    use base64ct::Encoding;
     use futures::StreamExt;
 
     use crate::Client;
@@ -1163,5 +1289,31 @@ mod tests {
         let dry_run = client.dry_run(tx_bytes.to_string(), None, None).await;
 
         assert!(dry_run.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_dynamic_field_query() {
+        let client = Client::new_devnet();
+        let bcs = base64ct::Base64::decode_vec("AgAAAAAAAAA=").unwrap();
+        let dynamic_field = client
+            .dynamic_field("0x5".parse().unwrap(), "u64", &bcs)
+            .await;
+
+        assert!(dynamic_field.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_dynamic_fields_query() {
+        for (n, _) in NETWORKS {
+            let client = Client::new(n).unwrap();
+            let dynamic_fields = client
+                .dynamic_fields("0x5".parse().unwrap(), None, None, None, None)
+                .await;
+            assert!(
+                dynamic_fields.is_ok(),
+                "Dynamic fields query failed for network: {n}. Error: {}",
+                dynamic_fields.unwrap_err()
+            );
+        }
     }
 }
