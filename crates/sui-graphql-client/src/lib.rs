@@ -35,6 +35,8 @@ use query_types::EventsQuery;
 use query_types::EventsQueryArgs;
 use query_types::ExecuteTransactionArgs;
 use query_types::ExecuteTransactionQuery;
+use query_types::LatestPackageArgs;
+use query_types::LatestPackageQuery;
 use query_types::MoveFunction;
 use query_types::MoveModule;
 use query_types::NormalizedMoveFunctionQuery;
@@ -46,6 +48,11 @@ use query_types::ObjectQuery;
 use query_types::ObjectQueryArgs;
 use query_types::ObjectsQuery;
 use query_types::ObjectsQueryArgs;
+use query_types::PackageByNameArgs;
+use query_types::PackageByNameQuery;
+use query_types::PackageCheckpointFilter;
+use query_types::PackagesQuery;
+use query_types::PackagesQueryArgs;
 use query_types::PageInfo;
 use query_types::ProtocolConfigQuery;
 use query_types::ProtocolConfigs;
@@ -68,6 +75,7 @@ use sui_types::types::CheckpointSequenceNumber;
 use sui_types::types::CheckpointSummary;
 use sui_types::types::Digest;
 use sui_types::types::Event;
+use sui_types::types::MovePackage;
 use sui_types::types::Object;
 use sui_types::types::SignedTransaction;
 use sui_types::types::Transaction;
@@ -1113,6 +1121,101 @@ impl Client {
                 .map(|bcs| base64ct::Base64::decode_vec(bcs.bcs.0.as_str()))
                 .transpose()
                 .map_err(|e| Error::msg(format!("Cannot decode Base64 object bcs bytes: {e}")))
+        } else {
+            Ok(None)
+        }
+    }
+
+    // ===========================================================================
+    // Package API
+    // ===========================================================================
+
+    /// The latest version of the package at address.
+    /// This corresponds to the package with the highest version that shares its original ID with
+    /// the package at address.
+    pub async fn latest_package(&self, address: Address) -> Result<Option<MovePackage>, Error> {
+        let operation = LatestPackageQuery::build(LatestPackageArgs { address });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        Ok(response
+            .data
+            .and_then(|x| x.latest_package)
+            .and_then(|x| x.bcs)
+            .and_then(|bcs| base64ct::Base64::decode_vec(bcs.0.as_str()).ok())
+            .and_then(|bcs| bcs::from_bytes::<MovePackage>(&bcs).ok()))
+    }
+
+    /// Fetch a package by its name (using Move Registry Service)
+    pub async fn package_by_name(&self, name: &str) -> Result<Option<MovePackage>, Error> {
+        let operation = PackageByNameQuery::build(PackageByNameArgs { name });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        Ok(response
+            .data
+            .and_then(|x| x.package_by_name)
+            .and_then(|x| x.bcs)
+            .and_then(|bcs| base64ct::Base64::decode_vec(bcs.0.as_str()).ok())
+            .and_then(|bcs| bcs::from_bytes::<MovePackage>(&bcs).ok()))
+    }
+
+    pub async fn packages(
+        &self,
+        after: Option<&str>,
+        before: Option<&str>,
+        first: Option<i32>,
+        last: Option<i32>,
+        after_checkpoint: Option<u64>,
+        before_checkpoint: Option<u64>,
+    ) -> Result<Option<Page<MovePackage>>, Error> {
+        let operation = PackagesQuery::build(PackagesQueryArgs {
+            after,
+            before,
+            first,
+            last,
+            filter: Some(PackageCheckpointFilter {
+                after_checkpoint,
+                before_checkpoint,
+            }),
+        });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        if let Some(packages) = response.data {
+            let pc = packages.packages;
+            let page_info = pc.page_info;
+            let bcs = pc
+                .nodes
+                .iter()
+                .map(|p| &p.bcs)
+                .filter_map(|b64| {
+                    b64.as_ref()
+                        .map(|b| base64ct::Base64::decode_vec(b.0.as_str()))
+                })
+                .collect::<Result<Vec<_>, base64ct::Error>>()
+                .map_err(|e| Error::msg(format!("Cannot decode Base64 package bcs bytes: {e}")))?;
+            let packages = bcs
+                .iter()
+                .map(|b| bcs::from_bytes::<MovePackage>(b))
+                .collect::<Result<Vec<_>, bcs::Error>>()
+                .map_err(|e| {
+                    Error::msg(format!("Cannot decode bcs bytes into MovePackage: {e}"))
+                })?;
+
+            Ok(Some(Page::new(page_info, packages)))
         } else {
             Ok(None)
         }
