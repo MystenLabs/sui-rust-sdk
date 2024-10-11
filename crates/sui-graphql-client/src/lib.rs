@@ -775,26 +775,22 @@ impl Client {
         });
         let response = self.run_query(&operation).await?;
 
-        let signed_tx = response
+        Ok(response
             .data
-            .and_then(|tbq| tbq.transaction_block)
-            .and_then(|tb| tb.bcs)
-            .map(|bcs| base64ct::Base64::decode_vec(bcs.0.as_str()))
+            .and_then(|d| d.transaction_block)
+            .map(|tx| tx.try_into())
             .transpose()
-            .map_err(|e| Error::msg(format!("Cannot decode Base64 transaction bcs bytes: {e}")))?
-            .map(|bcs| bcs::from_bytes::<SignedTransaction>(&bcs))
-            .transpose()?;
-        Ok(signed_tx)
+            .map_err(|e| Error::msg(format!("Cannot decode transaction: {e}")))?)
     }
 
     /// Get a page of transactions based on the provided filters.
-    pub async fn transactions(
+    pub async fn transactions<'a>(
         &self,
-        after: Option<String>,
-        before: Option<String>,
+        after: Option<&str>,
+        before: Option<&str>,
         first: Option<i32>,
         last: Option<i32>,
-        filter: Option<TransactionsFilter>,
+        filter: Option<TransactionsFilter<'a>>,
     ) -> Result<Option<Page<SignedTransaction>>, Error> {
         let operation = TransactionBlocksQuery::build(TransactionBlocksQueryArgs {
             after,
@@ -809,28 +805,12 @@ impl Client {
         if let Some(txb) = response.data {
             let txc = txb.transaction_blocks;
             let page_info = txc.page_info;
-            let bcs = txc
-                .nodes
-                .iter()
-                .map(|tx| &tx.bcs)
-                .filter_map(|b64| {
-                    b64.as_ref()
-                        .map(|b| base64ct::Base64::decode_vec(b.0.as_str()))
-                })
-                .collect::<Result<Vec<_>, base64ct::Error>>()
-                .map_err(|e| {
-                    Error::msg(format!("Cannot decode Base64 transaction bcs bytes: {e}"))
-                })?;
 
-            let transactions = bcs
-                .iter()
-                .map(|tx| bcs::from_bytes::<SignedTransaction>(tx))
-                .collect::<Result<Vec<_>, bcs::Error>>()
-                .map_err(|e| {
-                    Error::msg(format!(
-                        "Cannot decode bcs bytes into SignedTransaction: {e}"
-                    ))
-                })?;
+            let transactions = txc
+                .nodes
+                .into_iter()
+                .map(|n| n.try_into())
+                .collect::<Result<Vec<_>>>()?;
             let page = Page::new(page_info, transactions);
             Ok(Some(page))
         } else {
