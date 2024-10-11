@@ -8,23 +8,31 @@ use crate::query_types::Base64;
 use crate::query_types::PageInfo;
 
 // ===========================================================================
+// Package by address (and optional version)
+// ===========================================================================
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "Query", variables = "PackageArgs")]
+pub struct PackageQuery {
+    #[arguments(address: $address, version: $version)]
+    pub package: Option<MovePackage>,
+}
+
+// ===========================================================================
 // Latest Package
 // ===========================================================================
 
 #[derive(cynic::QueryFragment, Debug)]
-#[cynic(
-    schema = "rpc",
-    graphql_type = "Query",
-    variables = "LatestPackageArgs"
-)]
+#[cynic(schema = "rpc", graphql_type = "Query", variables = "PackageArgs")]
 pub struct LatestPackageQuery {
     #[arguments(address: $address)]
     pub latest_package: Option<MovePackage>,
 }
 
 #[derive(cynic::QueryVariables, Debug)]
-pub struct LatestPackageArgs {
+pub struct PackageArgs {
     pub address: Address,
+    pub version: Option<u64>,
 }
 
 // ===========================================================================
@@ -50,7 +58,7 @@ pub struct PackageByNameArgs<'a> {
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "MovePackage")]
 pub struct MovePackage {
-    pub bcs: Option<Base64>,
+    pub package_bcs: Option<Base64>,
 }
 
 /// ===========================================================================
