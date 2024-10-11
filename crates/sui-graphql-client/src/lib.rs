@@ -38,6 +38,7 @@ use query_types::ExecuteTransactionQuery;
 use query_types::LatestPackageQuery;
 use query_types::MoveFunction;
 use query_types::MoveModule;
+use query_types::MovePackageVersionFilter;
 use query_types::NormalizedMoveFunctionQuery;
 use query_types::NormalizedMoveFunctionQueryArgs;
 use query_types::NormalizedMoveModuleQuery;
@@ -52,6 +53,8 @@ use query_types::PackageByNameArgs;
 use query_types::PackageByNameQuery;
 use query_types::PackageCheckpointFilter;
 use query_types::PackageQuery;
+use query_types::PackageVersionsArgs;
+use query_types::PackageVersionsQuery;
 use query_types::PackagesQuery;
 use query_types::PackagesQueryArgs;
 use query_types::PageInfo;
@@ -1165,7 +1168,65 @@ impl Client {
             .map_err(|e| Error::msg(format!("Cannot decode bcs bytes into MovePackage: {e}")))
     }
 
-    /// The latest version of the package at address.
+    /// Fetch all versions of package at address (packages that share this package's original ID),
+    /// optionally bounding the versions exclusively from below with afterVersion, or from above
+    /// with beforeVersion.
+    pub async fn package_versions(
+        &self,
+        address: Address,
+        after: Option<&str>,
+        before: Option<&str>,
+        first: Option<i32>,
+        last: Option<i32>,
+        after_version: Option<u64>,
+        before_version: Option<u64>,
+    ) -> Result<Option<Page<MovePackage>>, Error> {
+        let operation = PackageVersionsQuery::build(PackageVersionsArgs {
+            address,
+            after,
+            before,
+            first,
+            last,
+            filter: Some(MovePackageVersionFilter {
+                after_version,
+                before_version,
+            }),
+        });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        if let Some(packages) = response.data {
+            let pc = packages.package_versions;
+            let page_info = pc.page_info;
+            let bcs = pc
+                .nodes
+                .iter()
+                .map(|p| &p.package_bcs)
+                .filter_map(|b64| {
+                    b64.as_ref()
+                        .map(|b| base64ct::Base64::decode_vec(b.0.as_str()))
+                })
+                .collect::<Result<Vec<_>, base64ct::Error>>()
+                .map_err(|e| Error::msg(format!("Cannot decode Base64 package bcs bytes: {e}")))?;
+            let packages = bcs
+                .iter()
+                .map(|b| bcs::from_bytes::<MovePackage>(b))
+                .collect::<Result<Vec<_>, bcs::Error>>()
+                .map_err(|e| {
+                    Error::msg(format!("Cannot decode bcs bytes into MovePackage: {e}"))
+                })?;
+
+            Ok(Some(Page::new(page_info, packages)))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Fetch the latest version of the package at address.
     /// This corresponds to the package with the highest version that shares its original ID with
     /// the package at address.
     pub async fn latest_package(&self, address: Address) -> Result<Option<MovePackage>, Error> {
