@@ -1117,6 +1117,20 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
+    async fn test_transactions_query() {
+        for (n, _) in NETWORKS {
+            let client = Client::new(n).unwrap();
+            let transactions = client.transactions(None, None, None, Some(5), None).await;
+            assert!(
+                transactions.is_ok(),
+                "Transactions query failed for network: {n}. Error: {}",
+                transactions.unwrap_err()
+            );
+        }
+    }
+
+    #[tokio::test]
     async fn test_total_supply() {
         for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();
