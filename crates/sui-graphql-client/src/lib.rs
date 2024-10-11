@@ -775,12 +775,12 @@ impl Client {
         });
         let response = self.run_query(&operation).await?;
 
-        Ok(response
+        response
             .data
             .and_then(|d| d.transaction_block)
             .map(|tx| tx.try_into())
             .transpose()
-            .map_err(|e| Error::msg(format!("Cannot decode transaction: {e}")))?)
+            .map_err(|e| Error::msg(format!("Cannot decode transaction: {e}")))
     }
 
     /// Get a page of transactions based on the provided filters.
