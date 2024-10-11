@@ -14,6 +14,7 @@ use crate::query_types::Base64;
 use crate::query_types::BigInt;
 use crate::query_types::DateTime;
 use crate::query_types::Epoch;
+use crate::query_types::PageInfo;
 
 // ===========================================================================
 // Checkpoint Queries
@@ -24,6 +25,27 @@ use crate::query_types::Epoch;
 pub struct CheckpointQuery {
     #[arguments(id: $id)]
     pub checkpoint: Option<Checkpoint>,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "Query", variables = "CheckpointsArgs")]
+pub struct CheckpointsQuery {
+    pub checkpoints: CheckpointConnection,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "CheckpointConnection")]
+pub struct CheckpointConnection {
+    pub nodes: Vec<Checkpoint>,
+    pub page_info: PageInfo,
+}
+
+#[derive(cynic::QueryVariables, Debug)]
+pub struct CheckpointsArgs<'a> {
+    pub first: Option<i32>,
+    pub after: Option<&'a str>,
+    pub last: Option<i32>,
+    pub before: Option<&'a str>,
 }
 
 // ===========================================================================

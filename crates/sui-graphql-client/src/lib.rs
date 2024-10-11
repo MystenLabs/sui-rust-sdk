@@ -15,6 +15,8 @@ use query_types::ChainIdentifierQuery;
 use query_types::CheckpointArgs;
 use query_types::CheckpointId;
 use query_types::CheckpointQuery;
+use query_types::CheckpointsArgs;
+use query_types::CheckpointsQuery;
 use query_types::CoinMetadata;
 use query_types::CoinMetadataArgs;
 use query_types::CoinMetadataQuery;
@@ -428,7 +430,7 @@ impl Client {
     // Checkpoints API
     // ===========================================================================
 
-    /// Get the `CheckpointSummary` for a given checkpoint digest or checkpoint id. If none is
+    /// Get the [`CheckpointSummary`] for a given checkpoint digest or checkpoint id. If none is
     /// provided, it will use the last known checkpoint id.
     pub async fn checkpoint(
         &self,
@@ -456,6 +458,42 @@ impl Client {
             .data
             .map(|c| c.checkpoint.map(|c| c.try_into()).transpose())
             .ok_or_else(|| Error::msg("No data in response"))?
+    }
+
+    /// Get a page of [`CheckpointSummary`] for the provided parameters.
+    pub async fn checkpoints(
+        &self,
+        after: Option<&str>,
+        before: Option<&str>,
+        first: Option<i32>,
+        last: Option<i32>,
+    ) -> Result<Option<Page<CheckpointSummary>>, Error> {
+        let operation = CheckpointsQuery::build(CheckpointsArgs {
+            after,
+            before,
+            first,
+            last,
+        });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        if let Some(checkpoints) = response.data {
+            let cc = checkpoints.checkpoints;
+            let page_info = cc.page_info;
+            let nodes = cc
+                .nodes
+                .into_iter()
+                .map(|c| c.try_into())
+                .collect::<Result<Vec<CheckpointSummary>, _>>()?;
+
+            Ok(Some(Page::new(page_info, nodes)))
+        } else {
+            Ok(None)
+        }
     }
 
     /// Return the sequence number of the latest checkpoint that has been executed.  
@@ -993,6 +1031,18 @@ mod tests {
             assert!(
                 c.is_ok(),
                 "Checkpoint query failed for network: {n}. Error: {}",
+                c.unwrap_err()
+            );
+        }
+    }
+    #[tokio::test]
+    async fn test_checkpoints_query() {
+        for (n, _) in NETWORKS {
+            let client = Client::new(n).unwrap();
+            let c = client.checkpoints(None, None, None, Some(5)).await;
+            assert!(
+                c.is_ok(),
+                "Checkpoints query failed for network: {n}. Error: {}",
                 c.unwrap_err()
             );
         }
