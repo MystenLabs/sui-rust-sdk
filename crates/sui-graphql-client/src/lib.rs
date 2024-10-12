@@ -255,6 +255,11 @@ impl Client {
         first: Option<i32>,
         last: Option<i32>,
     ) -> Result<Option<Page<Validator>>, Error> {
+        ensure!(
+            !(first.is_some() && last.is_some()),
+            "Cannot pass both first and last"
+        );
+
         let operation = ActiveValidatorsQuery::build(ActiveValidatorsArgs {
             id: epoch,
             after,
@@ -334,6 +339,11 @@ impl Client {
         last: Option<i32>,
         coin_type: Option<&str>,
     ) -> Result<Option<Page<Coin>>, Error> {
+        ensure!(
+            !(first.is_some() && last.is_some()),
+            "Cannot pass both first and last"
+        );
+
         let response = self
             .objects(
                 after,
@@ -527,6 +537,11 @@ impl Client {
         first: Option<i32>,
         last: Option<i32>,
     ) -> Result<Option<Page<Event>>, Error> {
+        ensure!(
+            !(first.is_some() && last.is_some()),
+            "Cannot pass both first and last"
+        );
+
         let operation = EventsQuery::build(EventsQueryArgs {
             filter,
             after,
@@ -620,6 +635,11 @@ impl Client {
         first: Option<i32>,
         last: Option<i32>,
     ) -> Result<Option<Page<Object>>, Error> {
+        ensure!(
+            !(first.is_some() && last.is_some()),
+            "Cannot pass both first and last"
+        );
+
         let operation = ObjectsQuery::build(ObjectsQueryArgs {
             after,
             before,
@@ -796,6 +816,11 @@ impl Client {
         last: Option<i32>,
         filter: Option<TransactionsFilter>,
     ) -> Result<Option<Page<SignedTransaction>>, Error> {
+        ensure!(
+            !(first.is_some() && last.is_some()),
+            "Cannot pass both first and last"
+        );
+
         let operation = TransactionBlocksQuery::build(TransactionBlocksQueryArgs {
             after,
             before,
