@@ -3,50 +3,40 @@
 
 mod object;
 use anyhow::anyhow;
+use object::Kind;
 pub use object::Object;
 
 use sui_types::types::Address;
+use sui_types::types::Argument;
+use sui_types::types::Command;
 use sui_types::types::GasPayment;
+use sui_types::types::Identifier;
+use sui_types::types::InputArgument;
+use sui_types::types::MakeMoveVector;
+use sui_types::types::MergeCoins;
+use sui_types::types::MoveCall;
 use sui_types::types::ObjectId;
-use sui_types::types::Transaction as SuiTransaction;
+use sui_types::types::Publish;
+use sui_types::types::SplitCoins;
+use sui_types::types::Transaction;
 use sui_types::types::TransactionExpiration;
+use sui_types::types::TransferObjects;
 use sui_types::types::TypeTag;
 
 use anyhow::Error;
 use serde::Serialize;
+use sui_types::types::Upgrade;
 
 #[derive(Clone, Debug)]
-pub struct Transaction {
+pub struct TransactionBuilder {
     inputs: Vec<Input>,
-    commands: Vec<Value>,
+    commands: Vec<Command>,
     gas: Vec<Object>,
     gas_budget: u64,
     gas_price: u64,
     sender: Address,
     sponsor: Option<Address>,
     expiration: Option<TransactionExpiration>,
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum Value {
-    Gas,
-    Input(u16),
-    Result(u16),
-    NestedResult(u16, u16),
-}
-
-/// A special kind of input for resolution that supports a basic form of type
-/// inference and BCS serialization. Developers will not typically interact with
-/// this type, but it is used to convert literals and primitive types in Rust into
-/// values that can be used in a PTB.
-#[derive(Clone, Debug)]
-pub enum Literal {
-    Bool(bool),
-    Number(i32),
-    String(String),
-    Vec(Vec<Literal>),
-    None,
-    Some(Box<Literal>),
 }
 
 /// A transaction input that bypasses serialization -- the input contents is
@@ -56,12 +46,20 @@ struct RawBytes(Vec<u8>);
 /// A transaction input that will be serialized from BCS.
 pub struct Serialized<'a, T: Serialize>(pub &'a T);
 
+#[derive(Clone, Copy, Debug)]
+pub enum Value {
+    Gas,
+    Input(u16),
+    Result(u16),
+    NestedResult(u16, u16),
+}
+
 /// Inputs are converted into this type when they are added to a Transaction.
 /// We will offer a number of type conversion trait impls to make this seamless.
 #[derive(Clone, Debug)]
 pub enum Input {
     Pure(Vec<u8>),
-    Literal(Literal),
+    // Literal(Literal),
     Object(Object),
 }
 
@@ -93,11 +91,17 @@ impl Function {
 impl Value {
     /// Turn a Result into a NestedResult.
     fn nested(&self, ix: u16) -> Value {
-        todo!()
+        Value::NestedResult(
+            ix,
+            match self {
+                Value::Result(i) => *i,
+                _ => panic!("Cannot nest a non-result value"),
+            },
+        )
     }
 }
 
-impl Transaction {
+impl TransactionBuilder {
     pub fn new() -> Self {
         Self {
             inputs: Vec::new(),
@@ -113,12 +117,6 @@ impl Transaction {
 
     // Transaction Inputs
 
-    /// The gas coin -- it doesn't actually need to be called on Transaction
-    /// but including it here for uniformity.
-    fn gas(&self) -> Vec<Object> {
-        vec![]
-    }
-
     /// Make a value available to the transaction as an input.
     pub fn input(&mut self, i: impl Into<Input>) -> Value {
         let input = i.into();
@@ -127,6 +125,7 @@ impl Transaction {
     }
 
     // Metadata
+
     pub fn set_gas(&mut self, gas: Vec<Object>) {
         self.gas = gas;
     }
@@ -153,47 +152,117 @@ impl Transaction {
 
     // Commands
     pub fn move_call(&mut self, function: Function, arguments: Vec<Value>) -> Value {
-        for arg in arguments {
-            self.input(arg);
-        }
-        // let cmd =
-        todo!()
+        let cmd = Command::MoveCall(MoveCall {
+            arguments: arguments.into_iter().map(|a| a.into()).collect(),
+            package: function.package.into(),
+            module: Identifier::new(function.module).unwrap(),
+            type_arguments: function.type_args,
+            function: Identifier::new(function.function).unwrap(),
+        });
+        self.commands.push(cmd);
+        Value::Result(self.commands.len() as u16 - 1)
     }
+
+    /// Transfer a list of objects to the given address.
     pub fn transfer_objects(&mut self, objects: Vec<Value>, address: Value) {
-        todo!()
+        let cmd = Command::TransferObjects(TransferObjects {
+            objects: objects.into_iter().map(|o| o.into()).collect(),
+            address: address.into(),
+        });
+        self.commands.push(cmd);
     }
+
+    /// Split a coin by amounts.
     pub fn split_coins(&mut self, coin: Value, amounts: Vec<Value>) -> Value {
-        todo!()
-    }
-    pub fn merge_coins(&mut self, first: Value, rest: Vec<Value>) {
-        todo!()
-    }
-    pub fn make_move_vec(&mut self, type_: Option<TypeTag>, vec: Vec<Value>) {
-        todo!()
-    }
-
-    pub fn publish(&mut self, modules: Vec<Vec<u8>>, deps: Vec<ObjectId>) -> Value {
-        todo!()
+        let cmd = Command::SplitCoins(SplitCoins {
+            coin: coin.into(),
+            amounts: amounts.into_iter().map(|a| a.into()).collect(),
+        });
+        self.commands.push(cmd);
+        Value::Result(self.commands.len() as u16 - 1)
     }
 
+    /// Merge a list of coins into a single coin.
+    pub fn merge_coins(&mut self, into: Value, coins: Vec<Value>) {
+        let cmd = Command::MergeCoins(MergeCoins {
+            coin: into.into(),
+            coins_to_merge: coins.into_iter().map(|c| c.into()).collect(),
+        });
+        self.commands.push(cmd);
+    }
+
+    /// Make a move vector from a list of elements.
+    pub fn make_move_vec(&mut self, type_: Option<TypeTag>, elements: Vec<Value>) {
+        let cmd = Command::MakeMoveVector(MakeMoveVector {
+            type_,
+            elements: elements.into_iter().map(|v| v.into()).collect(),
+        });
+        self.commands.push(cmd);
+    }
+
+    /// Publish a new module.
+    pub fn publish(&mut self, modules: Vec<Vec<u8>>, dependencies: Vec<ObjectId>) -> Value {
+        let cmd = Command::Publish(Publish {
+            modules,
+            dependencies,
+        });
+        self.commands.push(cmd);
+        Value::Result(self.commands.len() as u16 - 1)
+    }
+
+    /// Upgrade a module.
     pub fn upgrade(
         &mut self,
         modules: Vec<Vec<u8>>,
-        deps: Vec<ObjectId>,
+        dependencies: Vec<ObjectId>,
         prev: ObjectId,
         ticket: Value,
     ) -> Value {
-        todo!()
+        let cmd = Command::Upgrade(Upgrade {
+            modules,
+            dependencies,
+            package: prev,
+            ticket: ticket.into(),
+        });
+        self.commands.push(cmd);
+        Value::Result(self.commands.len() as u16 - 1)
     }
 
     /// Assuming everything is resolved, convert this transaction into the
     /// resolved form. Fails if there are unresolved parts.
-    pub fn finish(&self) -> Result<SuiTransaction, Error> {
-        Ok(SuiTransaction {
+    pub fn finish(&self) -> Result<Transaction, Error> {
+        if self.gas.is_empty() {
+            return Err(anyhow!("No gas objects provided"));
+        }
+        if self.gas_budget == 0 {
+            return Err(anyhow!("No gas budget provided"));
+        }
+        if self.gas_price == 0 {
+            return Err(anyhow!("No gas price provided"));
+        }
+        if self.sender == Address::default() {
+            return Err(anyhow!("No sender provided"));
+        }
+        if self.commands.is_empty() && !self.inputs.is_empty() {
+            return Err(anyhow!("No commands provided, but only inputs."));
+        }
+        if !self.commands.is_empty() && self.inputs.is_empty() {
+            return Err(anyhow!("Commands provided, but no inputs."));
+        }
+        if self.gas.is_empty() {
+            return Err(anyhow!("No gas objects provided"));
+        }
+
+        Ok(Transaction {
             kind: sui_types::types::TransactionKind::ProgrammableTransaction(
                 sui_types::types::ProgrammableTransaction {
-                    inputs: vec![],
-                    commands: vec![],
+                    inputs: self
+                        .inputs
+                        .iter()
+                        .map(|i| i.try_into())
+                        .collect::<Result<Vec<_>, _>>()
+                        .map_err(|e| anyhow!("Failed to convert inputs into InputArgument: {e}"))?,
+                    commands: self.commands.clone(),
                 },
             ),
             sender: self.sender,
@@ -206,31 +275,19 @@ impl Transaction {
                         .map(|o| o.try_into())
                         .collect::<Result<Vec<_>, _>>()
                         .map_err(|_| anyhow!("Failed to convert gas objects into GasPayment"))?,
-                    owner: {
-                        if let Some(sponsor) = self.sponsor {
-                            sponsor
-                        } else {
-                            self.sender
-                        }
-                    },
+                    owner: self.sponsor.unwrap_or(self.sender),
                     price: self.gas_price,
                     budget: self.gas_budget,
                 }
             },
-            expiration: sui_types::types::TransactionExpiration::None,
+            expiration: self.expiration.unwrap_or(TransactionExpiration::None),
         })
     }
 }
 
-impl Default for Transaction {
+impl Default for TransactionBuilder {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-impl From<Literal> for Input {
-    fn from(literal: Literal) -> Input {
-        Input::Literal(literal)
     }
 }
 
@@ -266,5 +323,45 @@ impl<'a> From<Serialized<'a, Address>> for Input {
     fn from(serialized: Serialized<'a, Address>) -> Input {
         // Convert Serialized<Address> into Input::Pure variant
         Input::Pure(serialized.serialize()) // Here we use `Pure(Vec<u8>)`
+    }
+}
+
+impl From<Value> for Argument {
+    fn from(value: Value) -> Self {
+        match value {
+            Value::Gas => Argument::Gas,
+            Value::Input(i) => Argument::Input(i),
+            Value::Result(i) => Argument::Result(i),
+            Value::NestedResult(i, j) => Argument::NestedResult(i, j),
+        }
+    }
+}
+
+impl TryFrom<&Input> for InputArgument {
+    type Error = Error;
+    fn try_from(value: &Input) -> Result<Self, Error> {
+        match value {
+            Input::Object(ref object) => {
+                if let Some(obj) = &object.kind {
+                    match obj {
+                        Kind::ImmOrOwned => Ok(InputArgument::ImmutableOrOwned(object.try_into()?)),
+                        Kind::Receiving => Ok(InputArgument::Receiving(object.try_into()?)),
+                        Kind::Shared => Ok(InputArgument::Shared {
+                            object_id: object.id,
+                            initial_shared_version: object
+                                .initial_shared_version
+                                .ok_or_else(|| Error::msg("Initial shared version not found"))?,
+                            mutable: object.mutable.ok_or_else(|| {
+                                Error::msg("Expected mutable object, but mutable field is None")
+                            })?,
+                        }),
+                    }
+                } else {
+                    Err(anyhow!("Object kind not found"))
+                }
+            }
+
+            Input::Pure(v) => Ok(InputArgument::Pure { value: v.clone() }),
+        }
     }
 }

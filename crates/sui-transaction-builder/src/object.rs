@@ -108,38 +108,85 @@ impl Object {
     }
 
     pub fn as_receiving(self) -> Self {
-        todo!()
+        Self {
+            id: self.id,
+            kind: Some(Kind::Receiving),
+            version: self.version,
+            digest: self.digest,
+            initial_shared_version: self.initial_shared_version,
+            mutable: self.mutable,
+        }
     }
 
     pub fn as_shared(self) -> Self {
-        todo!()
+        Self {
+            id: self.id,
+            kind: Some(Kind::Shared),
+            version: self.version,
+            digest: self.digest,
+            initial_shared_version: self.initial_shared_version,
+            mutable: self.mutable,
+        }
     }
 
     // ObjectRef fields
     pub fn versioned_at(self, version: u64) -> Self {
-        todo!()
+        Self {
+            id: self.id,
+            kind: self.kind,
+            version: Some(version),
+            digest: self.digest,
+            initial_shared_version: self.initial_shared_version,
+            mutable: self.mutable,
+        }
     }
 
     pub fn with_digest(self, digest: ObjectDigest) -> Self {
-        todo!()
+        Self {
+            id: self.id,
+            kind: self.kind,
+            version: self.version,
+            digest: Some(digest),
+            initial_shared_version: self.initial_shared_version,
+            mutable: self.mutable,
+        }
     }
 
     // Shared fields
 
     // Initial shared version
     fn shared_at(self, i: u64) -> Self {
-        todo!()
+        Self {
+            id: self.id,
+            kind: self.kind,
+            version: self.version,
+            digest: self.digest,
+            initial_shared_version: Some(i),
+            mutable: self.mutable,
+        }
     }
 
     // Shared value mutability
     fn by_val(self) -> Self {
-        todo!()
+        self
     }
-    fn by_ref(self) -> Self {
-        todo!()
+    fn by_ref(&self) -> &Self {
+        self
     }
-    fn by_mut(self) -> Self {
-        todo!()
+    fn by_mut(&mut self) -> &mut Self {
+        self
+    }
+}
+
+impl TryInto<ObjectReference> for &Object {
+    type Error = anyhow::Error;
+
+    fn try_into(self) -> Result<ObjectReference, Self::Error> {
+        Ok(ObjectReference::new(
+            self.id,
+            self.version.ok_or_else(|| anyhow!("version not set"))?,
+            self.digest.ok_or_else(|| anyhow!("digest not set"))?,
+        ))
     }
 }
 
