@@ -3,6 +3,7 @@
 
 #![doc = include_str!("../README.md")]
 
+pub mod api;
 pub mod faucet;
 pub mod query_types;
 
