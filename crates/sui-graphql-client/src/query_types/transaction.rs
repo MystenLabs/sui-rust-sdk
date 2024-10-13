@@ -90,11 +90,13 @@ pub enum TransactionBlockKindInput {
 pub struct TransactionsFilter<'a> {
     pub function: Option<String>,
     pub kind: Option<TransactionBlockKindInput>,
+    pub after_checkpoint: Option<u64>,
     pub at_checkpoint: Option<u64>,
     pub before_checkpoint: Option<u64>,
-    pub changed_object: Option<Address>,
+    pub affected_address: Option<Address>,
+    pub sent_address: Option<Address>,
     pub input_object: Option<Address>,
-    pub recv_address: Option<Address>,
+    pub changed_object: Option<Address>,
     pub transaction_ids: Option<Vec<&'a str>>,
 }
 
