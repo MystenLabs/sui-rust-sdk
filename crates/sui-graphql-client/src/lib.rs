@@ -22,7 +22,6 @@ use query_types::DryRunArgs;
 use query_types::DryRunQuery;
 use query_types::DynamicFieldArgs;
 use query_types::DynamicFieldConnectionArgs;
-use query_types::DynamicFieldName;
 use query_types::DynamicFieldQuery;
 use query_types::DynamicFieldsQuery;
 use query_types::DynamicObjectFieldQuery;
@@ -94,7 +93,15 @@ pub struct DryRunResult {
 }
 
 #[derive(Debug)]
+pub struct DynamicFieldName {
+    pub type_: String,
+    pub bcs: Vec<u8>,
+    pub json: Option<serde_json::Value>,
+}
+
+#[derive(Debug)]
 pub struct DynamicFieldOutput {
+    pub name: DynamicFieldName,
     pub json: Option<serde_json::Value>,
     pub object: Option<Object>,
 }
@@ -511,7 +518,7 @@ impl Client {
     ) -> Result<Option<DynamicFieldOutput>, Error> {
         let operation = DynamicFieldQuery::build(DynamicFieldArgs {
             address,
-            name: DynamicFieldName {
+            name: crate::query_types::DynamicFieldName {
                 type_: type_.to_string(),
                 bcs: crate::query_types::Base64(base64ct::Base64::encode_string(bcs)),
             },
@@ -544,7 +551,7 @@ impl Client {
     ) -> Result<Option<DynamicFieldOutput>, Error> {
         let operation = DynamicObjectFieldQuery::build(DynamicFieldArgs {
             address,
-            name: DynamicFieldName {
+            name: crate::query_types::DynamicFieldName {
                 type_: type_.to_string(),
                 bcs: crate::query_types::Base64(base64ct::Base64::encode_string(bcs)),
             },
