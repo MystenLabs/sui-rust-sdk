@@ -24,9 +24,11 @@ pub(crate) use serialization::SignedTransactionWithIntentMessage;
 mod unresolved;
 pub use unresolved::UnresolvedGasPayment;
 pub use unresolved::UnresolvedInputArgument;
+pub use unresolved::UnresolvedInputArgumentKind;
 pub use unresolved::UnresolvedObjectReference;
 pub use unresolved::UnresolvedProgrammableTransaction;
 pub use unresolved::UnresolvedTransaction;
+pub use unresolved::UnresolvedValue;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(test, derive(test_strategy::Arbitrary))]
