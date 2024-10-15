@@ -44,7 +44,6 @@ pub use dynamic_fields::DynamicFieldConnectionArgs;
 pub use dynamic_fields::DynamicFieldName;
 pub use dynamic_fields::DynamicFieldQuery;
 pub use dynamic_fields::DynamicFieldsOwnerQuery;
-pub use dynamic_fields::DynamicFieldsQuery;
 pub use dynamic_fields::DynamicObjectFieldQuery;
 pub use epoch::Epoch;
 pub use epoch::EpochSummaryArgs;
