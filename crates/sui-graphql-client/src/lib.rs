@@ -24,7 +24,6 @@ use query_types::DynamicFieldArgs;
 use query_types::DynamicFieldConnectionArgs;
 use query_types::DynamicFieldQuery;
 use query_types::DynamicFieldsOwnerQuery;
-use query_types::DynamicFieldsQuery;
 use query_types::DynamicObjectFieldQuery;
 use query_types::EpochSummaryArgs;
 use query_types::EpochSummaryQuery;
@@ -52,6 +51,7 @@ use query_types::TransactionMetadata;
 use query_types::TransactionsFilter;
 use query_types::Validator;
 
+use serde::Serialize;
 use sui_types::types::framework::Coin;
 use sui_types::types::Address;
 use sui_types::types::CheckpointSequenceNumber;
@@ -510,7 +510,29 @@ impl Client {
     /// type have copy, drop, and store, and are specified using their type, and their BCS
     /// contents, Base64 encoded.
     ///
-    /// This returns the value of the dynamic field as a JSON value and the object as a [`Object`].
+    /// Same as [`dynamic_field`] but instead of passing the bcs bytes, it takes a value of a
+    /// type that implements Serialize. The `type_` parameter is still required and represents the
+    /// dynamic field's type.
+    ///
+    /// This returns [`DynamicFieldOutput`] which contains the name, the value as json, and object.
+    pub async fn dynamic_field_with_name(
+        &self,
+        address: Address,
+        type_: &str,
+        name: impl Serialize,
+    ) -> Result<Option<DynamicFieldOutput>, Error> {
+        let bcs = bcs::to_bytes(&name).unwrap();
+        self.dynamic_field(address, type_, &bcs).await
+    }
+
+    /// Access a dynamic field on an object using its name. Names are arbitrary Move values whose
+    /// type have copy, drop, and store, and are specified using their type, and their BCS
+    /// contents, Base64 encoded.
+    ///
+    /// See also [`dynamic_field_with_name`] for a function that accepts a value that implements
+    /// Serialize, instead of passing the bcs bytes directly.
+    ///
+    /// This returns [`DynamicFieldOutput`] which contains the name, the value as json, and object.
     pub async fn dynamic_field(
         &self,
         address: Address,
@@ -543,7 +565,25 @@ impl Client {
     /// type have copy, drop, and store, and are specified using their type, and their BCS
     /// contents, Base64 encoded.
     ///
-    /// This returns the value of the dynamic field as a JSON value and the object as a [`Object`].
+    /// This is the same as [`dynamic_object_field`] but instead of passing the bcs bytes, it takes
+    /// a value of a type that implements Serialize.
+    ///
+    /// This returns [`DynamicFieldOutput`] which contains the name, the value as json, and object.
+    pub async fn dynamic_object_field_with_name(
+        &self,
+        address: Address,
+        type_: &str,
+        name: impl Serialize,
+    ) -> Result<Option<DynamicFieldOutput>, Error> {
+        let bcs = bcs::to_bytes(&name).unwrap();
+        self.dynamic_object_field(address, type_, &bcs).await
+    }
+
+    /// Access a dynamic object field on an object using its name. Names are arbitrary Move values whose
+    /// type have copy, drop, and store, and are specified using their type, and their BCS
+    /// contents, Base64 encoded.
+    ///
+    /// This returns [`DynamicFieldOutput`] which contains the name, the value as json, and object.
     pub async fn dynamic_object_field(
         &self,
         address: Address,
@@ -572,55 +612,11 @@ impl Client {
         Ok(result)
     }
 
-    /// Get a page of dynamic fields for the provided address.
+    /// Get a page of dynamic fields for the provided address. Note that this will also fetch
+    /// dynamic fields on wrapped objects.
     ///
-    /// This returns [`Page`] of [`serde_json::Value`]s, representing the value field of the
-    /// dynamic field as a JSON value.
+    /// This returns [`Page`] of [`DynamicFieldOutput`]s.
     pub async fn dynamic_fields(
-        &self,
-        address: Address,
-        after: Option<String>,
-        before: Option<String>,
-        first: Option<i32>,
-        last: Option<i32>,
-    ) -> Result<Option<Page<DynamicFieldOutput>>, Error> {
-        let operation = DynamicFieldsQuery::build(DynamicFieldConnectionArgs {
-            address,
-            after,
-            before,
-            first,
-            last,
-        });
-        let response = self.run_query(&operation).await?;
-
-        if let Some(errors) = response.errors {
-            return Err(Error::msg(format!("{:?}", errors)));
-        }
-
-        if let Some(dfs) = response.data {
-            if let Some(owner) = dfs.object {
-                let page_info = owner.dynamic_fields.page_info;
-                let nodes = owner.dynamic_fields.nodes;
-                let jsons = nodes
-                    .into_iter()
-                    .map(|df| df.into())
-                    .collect::<Vec<DynamicFieldOutput>>();
-
-                Ok(Some(Page::new(page_info, jsons)))
-            } else {
-                Ok(None)
-            }
-        } else {
-            Ok(None)
-        }
-    }
-
-    /// Get a page of dynamic fields for this address, assuming the dynamic fields are on wrapped
-    /// objects.
-    ///
-    /// This returns [`Page`] of [`serde_json::Value`]s, representing the value field of the
-    /// dynamic field as a JSON value.
-    pub async fn dynamic_fields_on_wrapped_objects(
         &self,
         address: Address,
         after: Option<String>,
@@ -636,6 +632,7 @@ impl Client {
             last,
         });
         let response = self.run_query(&operation).await?;
+
         if let Some(errors) = response.errors {
             return Err(Error::msg(format!("{:?}", errors)));
         }
