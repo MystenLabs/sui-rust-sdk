@@ -7,6 +7,8 @@ use crate::query_types::schema;
 use crate::query_types::Address;
 use crate::query_types::Base64;
 use crate::query_types::JsonValue;
+use crate::query_types::MoveObject;
+use crate::query_types::MoveValue;
 use crate::query_types::PageInfo;
 use crate::DynamicFieldOutput;
 
@@ -19,6 +21,27 @@ use crate::DynamicFieldOutput;
 pub struct DynamicFieldsQuery {
     #[arguments(address: $address )]
     pub object: Option<Object>,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(
+    schema = "rpc",
+    graphql_type = "Query",
+    variables = "DynamicFieldConnectionArgs"
+)]
+pub struct DynamicFieldsOwnerQuery {
+    #[arguments(address: $address)]
+    pub owner: Option<ObjectOwner>,
+}
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(
+    schema = "rpc",
+    graphql_type = "Owner",
+    variables = "DynamicFieldConnectionArgs"
+)]
+pub struct ObjectOwner {
+    #[arguments(after: $after, before: $before, first: $first, last: $last)]
+    pub dynamic_fields: DynamicFieldConnection,
 }
 
 #[derive(cynic::QueryFragment, Debug)]
@@ -68,21 +91,6 @@ pub struct DynamicFieldConnectionArgs {
     pub before: Option<String>,
     pub first: Option<i32>,
     pub last: Option<i32>,
-}
-
-#[derive(cynic::QueryFragment, Debug)]
-#[cynic(schema = "rpc", graphql_type = "MoveValue")]
-pub struct MoveValue {
-    pub __typename: String,
-    pub bcs: Base64,
-    pub json: Option<JsonValue>,
-}
-
-#[derive(cynic::QueryFragment, Debug)]
-#[cynic(schema = "rpc", graphql_type = "MoveObject")]
-pub struct MoveObject {
-    pub bcs: Option<Base64>,
-    pub contents: Option<MoveValue>,
 }
 
 #[derive(cynic::QueryFragment, Debug)]

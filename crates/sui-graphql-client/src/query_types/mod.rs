@@ -43,6 +43,7 @@ pub use dynamic_fields::DynamicFieldArgs;
 pub use dynamic_fields::DynamicFieldConnectionArgs;
 pub use dynamic_fields::DynamicFieldName;
 pub use dynamic_fields::DynamicFieldQuery;
+pub use dynamic_fields::DynamicFieldsOwnerQuery;
 pub use dynamic_fields::DynamicFieldsQuery;
 pub use dynamic_fields::DynamicObjectFieldQuery;
 pub use epoch::Epoch;
@@ -118,8 +119,16 @@ pub struct GQLAddress {
 #[cynic(schema = "rpc", graphql_type = "MoveObject")]
 pub struct MoveObject {
     pub bcs: Option<Base64>,
+    pub contents: Option<MoveValue>,
 }
 
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "MoveValue")]
+pub struct MoveValue {
+    pub __typename: String,
+    pub bcs: Base64,
+    pub json: Option<JsonValue>,
+}
 // ===========================================================================
 // Utility Types
 // ===========================================================================

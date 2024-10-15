@@ -25,6 +25,7 @@ use query_types::DryRunQuery;
 use query_types::DynamicFieldArgs;
 use query_types::DynamicFieldConnectionArgs;
 use query_types::DynamicFieldQuery;
+use query_types::DynamicFieldsOwnerQuery;
 use query_types::DynamicFieldsQuery;
 use query_types::DynamicObjectFieldQuery;
 use query_types::EpochSummaryArgs;
@@ -675,6 +676,49 @@ impl Client {
         }
     }
 
+    /// Get a page of dynamic fields for this address, assuming the dynamic fields are on wrapped
+    /// objects.
+    ///
+    /// This returns [`Page`] of [`serde_json::Value`]s, representing the value field of the
+    /// dynamic field as a JSON value.
+    pub async fn dynamic_fields_on_wrapped_objects(
+        &self,
+        address: Address,
+        after: Option<String>,
+        before: Option<String>,
+        first: Option<i32>,
+        last: Option<i32>,
+    ) -> Result<Option<Page<DynamicFieldOutput>>, Error> {
+        let operation = DynamicFieldsOwnerQuery::build(DynamicFieldConnectionArgs {
+            address,
+            after,
+            before,
+            first,
+            last,
+        });
+        let response = self.run_query(&operation).await?;
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        if let Some(dfs) = response.data {
+            if let Some(owner) = dfs.owner {
+                let page_info = owner.dynamic_fields.page_info;
+                let nodes = owner.dynamic_fields.nodes;
+                let jsons = nodes
+                    .into_iter()
+                    .map(|df| df.into())
+                    .collect::<Vec<DynamicFieldOutput>>();
+
+                Ok(Some(Page::new(page_info, jsons)))
+            } else {
+                Ok(None)
+            }
+        } else {
+            Ok(None)
+        }
+    }
+
     // ===========================================================================
     // Epoch API
     // ===========================================================================
@@ -896,6 +940,34 @@ impl Client {
                 .map(|bcs| base64ct::Base64::decode_vec(bcs.0.as_str()))
                 .transpose()
                 .map_err(|e| Error::msg(format!("Cannot decode Base64 object bcs bytes: {e}")))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Return the contents JSON of an object that is a Move object.
+    ///
+    /// If the object does not exist (e.g., due to prunning), this will return `Ok(None)`.
+    /// Similarly, if this is not an object but an address, it will return `Ok(None)`.
+    pub async fn object_move_contents(
+        &self,
+        address: Address,
+        version: Option<u64>,
+    ) -> Result<Option<serde_json::Value>, Error> {
+        let operation = ObjectQuery::build(ObjectQueryArgs { address, version });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        if let Some(object) = response.data {
+            Ok(object
+                .object
+                .and_then(|o| o.as_move_object)
+                .and_then(|o| o.contents)
+                .and_then(|mv| mv.json))
         } else {
             Ok(None)
         }
@@ -1344,7 +1416,7 @@ mod tests {
         let mut num_coins = 0;
         while let Some(result) = stream.next().await {
             assert!(result.is_ok());
-            num_coins += 1;
+            num_coins = 1;
         }
         assert!(num_coins > 0);
     }
