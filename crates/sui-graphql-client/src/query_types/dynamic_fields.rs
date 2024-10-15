@@ -18,17 +18,6 @@ use crate::DynamicFieldOutput;
     graphql_type = "Query",
     variables = "DynamicFieldConnectionArgs"
 )]
-pub struct DynamicFieldsQuery {
-    #[arguments(address: $address )]
-    pub object: Option<Object>,
-}
-
-#[derive(cynic::QueryFragment, Debug)]
-#[cynic(
-    schema = "rpc",
-    graphql_type = "Query",
-    variables = "DynamicFieldConnectionArgs"
-)]
 pub struct DynamicFieldsOwnerQuery {
     #[arguments(address: $address)]
     pub owner: Option<ObjectOwner>,
@@ -66,17 +55,6 @@ pub struct ObjectField {
 pub struct DynamicFieldArgs {
     pub address: Address,
     pub name: DynamicFieldName,
-}
-
-#[derive(cynic::QueryFragment, Debug)]
-#[cynic(
-    schema = "rpc",
-    graphql_type = "Object",
-    variables = "DynamicFieldConnectionArgs"
-)]
-pub struct Object {
-    #[arguments(after: $after, before: $before, first: $first, last: $last)]
-    pub dynamic_fields: DynamicFieldConnection,
 }
 
 #[derive(cynic::QueryVariables, Debug)]
