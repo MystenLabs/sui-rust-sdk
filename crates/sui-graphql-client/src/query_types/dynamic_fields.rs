@@ -165,6 +165,12 @@ impl From<DynamicField> for DynamicFieldOutput {
         };
 
         DynamicFieldOutput {
+            name: crate::DynamicFieldName {
+                type_: val.name.as_ref().unwrap().__typename.clone(),
+                bcs: base64ct::Base64::decode_vec(val.name.as_ref().unwrap().bcs.0.as_ref())
+                    .unwrap(),
+                json: val.name.as_ref().unwrap().json.clone(),
+            },
             object,
             json: val.field_value_json(),
         }
