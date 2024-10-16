@@ -7,7 +7,7 @@ use crate::query_types::schema;
 use crate::query_types::Address;
 use crate::query_types::Base64;
 use crate::query_types::JsonValue;
-use crate::query_types::MoveObject;
+use crate::query_types::MoveObjectContents;
 use crate::query_types::MoveValue;
 use crate::query_types::PageInfo;
 use crate::DynamicFieldOutput;
@@ -88,7 +88,7 @@ pub struct DynamicField {
 #[derive(cynic::InlineFragments, Debug)]
 #[cynic(schema = "rpc", graphql_type = "DynamicFieldValue")]
 pub enum DynamicFieldValue {
-    MoveObject(MoveObject),
+    MoveObject(MoveObjectContents),
     MoveValue(MoveValue),
     #[cynic(fallback)]
     Unknown,
@@ -141,14 +141,14 @@ impl DynamicField {
 
 impl From<DynamicField> for DynamicFieldOutput {
     fn from(val: DynamicField) -> DynamicFieldOutput {
-        let object = match val.value {
-            Some(DynamicFieldValue::MoveObject(ref mo)) => mo
-                .bcs
-                .as_ref()
-                .and_then(|bcs| base64ct::Base64::decode_vec(bcs.0.as_ref()).ok())
-                .and_then(|o| bcs::from_bytes::<sui_types::types::Object>(o.as_ref()).ok()),
-            _ => None,
-        };
+        // let object = match val.value {
+        //     Some(DynamicFieldValue::MoveObject(ref mo)) => mo
+        //         .contents
+        //         .as_ref()
+        //         .and_then(|c| base64ct::Base64::decode_vec(c.bcs.0.as_ref()).ok())
+        //         .and_then(|o| bcs::from_bytes::<sui_types::types::Object>(o.as_ref()).ok()),
+        //     _ => None,
+        // };
 
         DynamicFieldOutput {
             name: crate::DynamicFieldName {
@@ -157,7 +157,7 @@ impl From<DynamicField> for DynamicFieldOutput {
                     .unwrap(),
                 json: val.name.as_ref().unwrap().json.clone(),
             },
-            object,
+            // object,
             json: val.field_value_json(),
         }
     }

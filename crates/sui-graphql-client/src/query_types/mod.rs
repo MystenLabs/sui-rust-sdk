@@ -116,6 +116,11 @@ pub struct GQLAddress {
 #[cynic(schema = "rpc", graphql_type = "MoveObject")]
 pub struct MoveObject {
     pub bcs: Option<Base64>,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "MoveObject")]
+pub struct MoveObjectContents {
     pub contents: Option<MoveValue>,
 }
 

@@ -104,7 +104,6 @@ pub struct DynamicFieldName {
 pub struct DynamicFieldOutput {
     pub name: DynamicFieldName,
     pub json: Option<serde_json::Value>,
-    pub object: Option<Object>,
 }
 
 #[derive(Debug)]
@@ -883,29 +882,29 @@ impl Client {
     ///
     /// If the object does not exist (e.g., due to prunning), this will return `Ok(None)`.
     /// Similarly, if this is not an object but an address, it will return `Ok(None)`.
-    pub async fn object_move_contents(
-        &self,
-        address: Address,
-        version: Option<u64>,
-    ) -> Result<Option<serde_json::Value>, Error> {
-        let operation = ObjectQuery::build(ObjectQueryArgs { address, version });
-
-        let response = self.run_query(&operation).await?;
-
-        if let Some(errors) = response.errors {
-            return Err(Error::msg(format!("{:?}", errors)));
-        }
-
-        if let Some(object) = response.data {
-            Ok(object
-                .object
-                .and_then(|o| o.as_move_object)
-                .and_then(|o| o.contents)
-                .and_then(|mv| mv.json))
-        } else {
-            Ok(None)
-        }
-    }
+    // pub async fn object_move_contents(
+    //     &self,
+    //     address: Address,
+    //     version: Option<u64>,
+    // ) -> Result<Option<serde_json::Value>, Error> {
+    //     let operation = ObjectQuery::build(ObjectQueryArgs { address, version });
+    //
+    //     let response = self.run_query(&operation).await?;
+    //
+    //     if let Some(errors) = response.errors {
+    //         return Err(Error::msg(format!("{:?}", errors)));
+    //     }
+    //
+    //     if let Some(object) = response.data {
+    //         Ok(object
+    //             .object
+    //             .and_then(|o| o.as_move_object)
+    //             .and_then(|o| o.contents)
+    //             .and_then(|mv| mv.json))
+    //     } else {
+    //         Ok(None)
+    //     }
+    // }
 
     // ===========================================================================
     // Dry Run API
