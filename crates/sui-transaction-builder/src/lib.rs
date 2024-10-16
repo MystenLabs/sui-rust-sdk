@@ -25,6 +25,11 @@ use sui_types::types::TypeTag;
 
 use anyhow::Error;
 use serde::Serialize;
+use sui_types::types::UnresolvedGasPayment;
+use sui_types::types::UnresolvedInputArgument;
+use sui_types::types::UnresolvedObjectReference;
+use sui_types::types::UnresolvedProgrammableTransaction;
+use sui_types::types::UnresolvedTransaction;
 use sui_types::types::Upgrade;
 
 #[derive(Clone, Debug)]
@@ -86,6 +91,15 @@ impl Function {
             type_args,
         }
     }
+}
+
+/// A transaction state that can be resolved or unresolved. When calling [`try_finish`]` on the
+/// transaction builder, it will return either the resolved transaction if no error was
+/// encountered, or the Unresolved. The unresolved transaction can be used to call the transaction
+/// resolution API, that will attempt to resolve the transaction.
+pub enum TransactionResolution {
+    Resolved(Transaction),
+    Unresolved(UnresolvedTransaction),
 }
 
 impl Value {
@@ -283,6 +297,50 @@ impl TransactionBuilder {
             expiration: self.expiration.unwrap_or(TransactionExpiration::None),
         })
     }
+
+    /// Try to finish the transaction, but if not all parts are resolved, it will return an
+    /// [`UnresolvedTransaction`]. This can be used to resolve the transaction later by calling the
+    /// [`resolve_transaction`] method.
+    pub fn try_finish(&self) -> Result<TransactionResolution, Error> {
+        match self.finish() {
+            Ok(tx) => Ok(TransactionResolution::Resolved(tx)),
+            Err(_) => Ok(TransactionResolution::Unresolved(UnresolvedTransaction {
+                ptb: UnresolvedProgrammableTransaction {
+                    inputs: self.inputs.clone().into_iter().map(|x| x.into()).collect(),
+                    commands: self.commands.clone(),
+                },
+                sender: self.sender,
+                gas_payment: Some(UnresolvedGasPayment {
+                    objects: self
+                        .gas
+                        .clone()
+                        .into_iter()
+                        .map(to_unresolved_obj_ref)
+                        .collect(),
+                    owner: self.sponsor.unwrap_or(self.sender),
+                    price: Some(self.gas_price),
+                    budget: Some(self.gas_budget),
+                }),
+                expiration: self.expiration.unwrap_or(TransactionExpiration::None),
+            })),
+        }
+    }
+
+    /// Take an unresolved transaction and attempt to resolve it. It requires a fullnode.
+    pub fn resolve_transaction(
+        &self,
+        unresolved_tx: UnresolvedTransaction,
+    ) -> Result<Transaction, Error> {
+        todo!()
+    }
+
+    /// Attempt to finish the transaction, but if it fails, resolve it instead.
+    pub fn finish_or_resolve_tx(&self) -> Result<Transaction, Error> {
+        match self.try_finish()? {
+            TransactionResolution::Resolved(tx) => Ok(tx),
+            TransactionResolution::Unresolved(tx) => self.resolve_transaction(tx),
+        }
+    }
 }
 
 impl Default for TransactionBuilder {
@@ -362,6 +420,41 @@ impl TryFrom<&Input> for InputArgument {
             }
 
             Input::Pure(v) => Ok(InputArgument::Pure { value: v.clone() }),
+        }
+    }
+}
+
+/// Convert an object into an [`UnresolvedObjectReference`].
+fn to_unresolved_obj_ref(obj: Object) -> UnresolvedObjectReference {
+    UnresolvedObjectReference {
+        object_id: obj.id,
+        version: obj.version,
+        digest: obj.digest,
+    }
+}
+
+impl From<Input> for UnresolvedInputArgument {
+    fn from(arg: Input) -> Self {
+        match arg {
+            Input::Object(obj) => match obj.kind.as_ref() {
+                Some(Kind::ImmOrOwned) => {
+                    UnresolvedInputArgument::ImmutableOrOwned(to_unresolved_obj_ref(obj))
+                }
+                Some(Kind::Receiving) => {
+                    UnresolvedInputArgument::Receiving(to_unresolved_obj_ref(obj))
+                }
+                Some(Kind::Shared) => UnresolvedInputArgument::Shared {
+                    object_id: obj.id,
+                    initial_shared_version: obj.initial_shared_version,
+                    mutable: obj.mutable,
+                },
+                None => UnresolvedInputArgument::ImmutableOrOwned(UnresolvedObjectReference {
+                    object_id: obj.id,
+                    version: obj.version,
+                    digest: obj.digest,
+                }),
+            },
+            Input::Pure(v) => UnresolvedInputArgument::Pure { value: v },
         }
     }
 }
