@@ -4,6 +4,7 @@ use super::Digest;
 use super::GasCostSummary;
 use super::Object;
 use super::SignedTransaction;
+use super::Transaction;
 use super::TransactionDigest;
 use super::TransactionEffects;
 use super::TransactionEffectsDigest;
@@ -159,7 +160,7 @@ pub struct CheckpointData {
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct CheckpointTransaction {
-    /// The input Transaction
+    /// The Transaction
     #[cfg_attr(
         feature = "serde",
         serde(with = "::serde_with::As::<crate::_serde::SignedTransactionWithIntentMessage>")
@@ -176,6 +177,157 @@ pub struct CheckpointTransaction {
     /// The state of all output objects created or mutated by this transaction.
     #[cfg_attr(test, any(proptest::collection::size_range(0..=2).lift()))]
     pub output_objects: Vec<Object>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+pub enum FullCheckpointData {
+    V2(CheckpointDataV2),
+}
+
+impl FullCheckpointData {
+    pub fn as_v2(&self) -> &CheckpointDataV2 {
+        match self {
+            Self::V2(v2) => v2,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+pub struct CheckpointDataV2 {
+    pub checkpoint_summary: SignedCheckpointSummary,
+    pub checkpoint_contents: CheckpointContents,
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=1).lift()))]
+    pub transactions: Vec<CheckpointTransactionV2>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+pub struct CheckpointTransactionV2 {
+    /// The Transaction
+    pub transaction: Transaction,
+    /// The effects produced by executing this transaction
+    pub effects: TransactionEffects,
+    /// The events, if any, emitted by this transaciton during execution
+    pub events: Option<TransactionEvents>,
+    /// The state of all inputs to this transaction as they were prior to execution.
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=1).lift()))]
+    pub input_objects: Vec<Object>,
+    /// The state of all output objects created or mutated or unwrapped by this transaction.
+    #[cfg_attr(test, any(proptest::collection::size_range(0..=1).lift()))]
+    pub output_objects: Vec<Object>,
+}
+
+impl From<CheckpointData> for CheckpointDataV2 {
+    fn from(checkpoint: CheckpointData) -> Self {
+        let CheckpointData {
+            checkpoint_summary,
+            checkpoint_contents,
+            transactions,
+        } = checkpoint;
+
+        Self {
+            checkpoint_summary,
+            checkpoint_contents,
+            transactions: transactions.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
+impl From<CheckpointTransaction> for CheckpointTransactionV2 {
+    fn from(value: CheckpointTransaction) -> Self {
+        let CheckpointTransaction {
+            transaction,
+            effects,
+            events,
+            input_objects,
+            output_objects,
+        } = value;
+
+        Self {
+            transaction: transaction.transaction,
+            effects,
+            events,
+            input_objects,
+            output_objects,
+        }
+    }
+}
+
+impl From<CheckpointDataV2> for CheckpointData {
+    fn from(checkpoint: CheckpointDataV2) -> Self {
+        let CheckpointDataV2 {
+            checkpoint_summary,
+            checkpoint_contents,
+            transactions,
+        } = checkpoint;
+
+        let transactions = checkpoint_contents
+            .0
+            .iter()
+            .map(|txn| txn.signatures.clone())
+            .zip(transactions)
+            .map(
+                |(
+                    signatures,
+                    CheckpointTransactionV2 {
+                        transaction,
+                        effects,
+                        events,
+                        input_objects,
+                        output_objects,
+                    },
+                )| {
+                    CheckpointTransaction {
+                        transaction: SignedTransaction {
+                            transaction,
+                            signatures,
+                        },
+                        effects,
+                        events,
+                        input_objects,
+                        output_objects,
+                    }
+                },
+            )
+            .collect();
+
+        Self {
+            checkpoint_summary,
+            checkpoint_contents,
+            transactions,
+        }
+    }
+}
+
+impl From<CheckpointData> for FullCheckpointData {
+    fn from(checkpoint: CheckpointData) -> Self {
+        Self::V2(checkpoint.into())
+    }
+}
+
+impl From<FullCheckpointData> for CheckpointData {
+    fn from(value: FullCheckpointData) -> Self {
+        match value {
+            FullCheckpointData::V2(v2) => v2.into(),
+        }
+    }
 }
 
 #[cfg(feature = "serde")]
