@@ -106,27 +106,11 @@ pub struct DynamicFieldOutput {
     pub json: Option<serde_json::Value>,
 }
 
-// Newtype wrapper for &[u8]
-pub struct BcsName<'a>(pub &'a [u8]);
-
-// Trait for converting into bytes
-pub trait IntoBytes {
-    fn into_bytes(self) -> Vec<u8>;
-}
-
-// Implement IntoBytes for ByteSlice to handle &[u8]
-impl<'a> IntoBytes for BcsName<'a> {
-    fn into_bytes(self) -> Vec<u8> {
-        self.0.to_vec() // Convert the byte slice into a Vec<u8>
-    }
-}
-
-// Implement IntoBytes for any type that implements Serialize
-impl<T: Serialize> IntoBytes for T {
-    fn into_bytes(self) -> Vec<u8> {
-        bcs::to_bytes(&self).unwrap() // Serialize the type into bytes
-    }
-}
+/// Helper struct for passing a value that has a type that implements Serialize, for the dynamic
+/// fields API.
+pub struct Name(Vec<u8>);
+/// Helper struct for passing a raw bcs value.
+pub struct BcsName(pub Vec<u8>);
 
 #[derive(Debug)]
 /// A page of items returned by the GraphQL server.
@@ -148,6 +132,20 @@ impl<T> Page<T> {
 
     fn new(page_info: PageInfo, data: Vec<T>) -> Self {
         Self { page_info, data }
+    }
+}
+
+impl<T: Serialize> From<T> for Name {
+    fn from(value: T) -> Self {
+        Name {
+            0: bcs::to_bytes(&value).unwrap(),
+        }
+    }
+}
+
+impl From<BcsName> for Name {
+    fn from(value: BcsName) -> Self {
+        Name { 0: value.0 }
     }
 }
 
@@ -531,39 +529,29 @@ impl Client {
     /// type have copy, drop, and store, and are specified using their type, and their BCS
     /// contents, Base64 encoded.
     ///
-    /// Same as [`dynamic_field`] but instead of passing the bcs bytes, it takes a value of a
-    /// type that implements Serialize. The `type_` parameter is still required and represents the
-    /// dynamic field's type.
+    /// The `name` argument can be either a [`BcsName`] for passing raw bcs bytes or a type that
+    /// implements Serialize.
     ///
     /// This returns [`DynamicFieldOutput`] which contains the name, the value as json, and object.
-    // pub async fn dynamic_field_with_name(
-    //     &self,
-    //     address: Address,
-    //     type_: &str,
-    //     name: impl Serialize,
-    // ) -> Result<Option<DynamicFieldOutput>, Error> {
-    //     let bcs = bcs::to_bytes(&name).unwrap();
-    //     self.dynamic_field(address, type_, &bcs).await
-    // }
-
-    /// Access a dynamic field on an object using its name. Names are arbitrary Move values whose
-    /// type have copy, drop, and store, and are specified using their type, and their BCS
-    /// contents, Base64 encoded.
     ///
-    /// See also [`dynamic_field_with_name`] for a function that accepts a value that implements
-    /// Serialize, instead of passing the bcs bytes directly.
+    /// # Example
+    /// ```rust,ignore
     ///
-    /// This returns [`DynamicFieldOutput`] which contains the name, the value as json, and object.
-    pub async fn dynamic_field<Name: IntoBytes>(
+    /// let client = sui_graphql_client::Client::new_devnet();
+    /// let address = Address::from_str("0x5").unwrap();
+    /// let df = client.dynamic_field_with_name(address, "u64", 2u64).await.unwrap();
+    ///
+    /// # alternatively, pass in the bcs bytes
+    /// let bcs = base64ct::Base64::decode_vec("AgAAAAAAAAA=").unwrap();
+    /// let df = client.dynamic_field(address, "u64", BcsName(bcs)).await.unwrap();
+    /// ```
+    pub async fn dynamic_field(
         &self,
         address: Address,
         type_: &str,
-        // bcs: &[u8],
-        name: Name,
+        name: impl Into<Name>,
     ) -> Result<Option<DynamicFieldOutput>, Error> {
-        // println!("name: {:?}", name);
-        let bcs = name.into_bytes(); // Convert to bytes using IntoBytes
-                                     // println!("bcs: {:?}", bcs);
+        let bcs = name.into().0;
         let operation = DynamicFieldQuery::build(DynamicFieldArgs {
             address,
             name: crate::query_types::DynamicFieldName {
@@ -590,36 +578,22 @@ impl Client {
     /// type have copy, drop, and store, and are specified using their type, and their BCS
     /// contents, Base64 encoded.
     ///
-    /// This is the same as [`dynamic_object_field`] but instead of passing the bcs bytes, it takes
-    /// a value of a type that implements Serialize.
-    ///
-    /// This returns [`DynamicFieldOutput`] which contains the name, the value as json, and object.
-    pub async fn dynamic_object_field_with_name(
-        &self,
-        address: Address,
-        type_: &str,
-        name: impl Serialize,
-    ) -> Result<Option<DynamicFieldOutput>, Error> {
-        let bcs = bcs::to_bytes(&name).unwrap();
-        self.dynamic_object_field(address, type_, &bcs).await
-    }
-
-    /// Access a dynamic object field on an object using its name. Names are arbitrary Move values whose
-    /// type have copy, drop, and store, and are specified using their type, and their BCS
-    /// contents, Base64 encoded.
+    /// The `name` argument can be either a [`BcsName`] for passing raw bcs bytes or a type that
+    /// implements Serialize.
     ///
     /// This returns [`DynamicFieldOutput`] which contains the name, the value as json, and object.
     pub async fn dynamic_object_field(
         &self,
         address: Address,
         type_: &str,
-        bcs: &[u8],
+        name: impl Into<Name>,
     ) -> Result<Option<DynamicFieldOutput>, Error> {
+        let bcs = name.into().0;
         let operation = DynamicObjectFieldQuery::build(DynamicFieldArgs {
             address,
             name: crate::query_types::DynamicFieldName {
                 type_: type_.to_string(),
-                bcs: crate::query_types::Base64(base64ct::Base64::encode_string(bcs)),
+                bcs: crate::query_types::Base64(base64ct::Base64::encode_string(&bcs)),
             },
         });
 
