@@ -151,6 +151,7 @@ mod tests {
             "0x1::__::__",
             "0x1::_bar::_BAR<0x2::_____::______fooo______>",
             "0x1::__::__<0x2::_____::______fooo______, 0xff::Bar____::_______foo>",
+            "0x5d32d749705c5f07c741f1818df3db466128bf01677611a959b03040ac5dc774::slippage::HopSwapEvent<0x2::sui::SUI, 0x3c86bba6a3d3ce958615ae51cc5604f58956b1583323f664cf5f048da0fcbb19::_spd::_SPD>",
         ] {
             assert!(parse_type_tag(s).is_ok(), "Failed to parse tag {}", s);
         }
@@ -186,6 +187,7 @@ mod tests {
         "0x1::__::__",
         "0x1::_bar::_BAR<0x2::_____::______fooo______>",
         "0x1::__::__<0x2::_____::______fooo______, 0xff::Bar____::_______foo>",
+        "0x5d32d749705c5f07c741f1818df3db466128bf01677611a959b03040ac5dc774::slippage::HopSwapEvent<0x2::sui::SUI, 0x3c86bba6a3d3ce958615ae51cc5604f58956b1583323f664cf5f048da0fcbb19::_spd::_SPD>",
         ];
         for s in valid {
             let mut input = s;
