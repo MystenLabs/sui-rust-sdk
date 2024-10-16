@@ -1469,6 +1469,12 @@ mod tests {
             .await;
 
         assert!(dynamic_field.is_ok());
+
+        let dynamic_field = client
+            .dynamic_field("0x5".parse().unwrap(), "u64", 2u64)
+            .await;
+
+        assert!(dynamic_field.is_ok());
     }
 
     #[tokio::test]
