@@ -562,8 +562,14 @@ impl Client {
             let nodes = ec
                 .nodes
                 .into_iter()
-                .map(Event::try_from)
-                .collect::<Result<Vec<Event>, _>>()?;
+                .map(|e| e.bcs.0)
+                .map(|b| base64ct::Base64::decode_vec(&b))
+                .collect::<Result<Vec<_>, base64ct::Error>>()
+                .map_err(|e| Error::msg(format!("Cannot decode Base64 event bcs bytes: {e}")))?
+                .iter()
+                .map(|b| bcs::from_bytes::<Event>(b))
+                .collect::<Result<Vec<_>, bcs::Error>>()
+                .map_err(|e| Error::msg(format!("Cannot decode bcs bytes into Event: {e}")))?;
 
             Ok(Some(Page::new(page_info, nodes)))
         } else {
@@ -1056,7 +1062,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
+    #[ignore] // schema was updated, but the service has not been released with the new schema
     async fn test_events_query() {
         for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();
