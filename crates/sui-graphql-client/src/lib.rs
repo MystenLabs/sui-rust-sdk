@@ -51,6 +51,7 @@ use query_types::TransactionMetadata;
 use query_types::TransactionsFilter;
 use query_types::Validator;
 
+use serde::de::DeserializeOwned;
 use serde::Serialize;
 use sui_types::types::framework::Coin;
 use sui_types::types::Address;
@@ -104,6 +105,7 @@ pub struct DynamicFieldName {
 pub struct DynamicFieldOutput {
     pub name: DynamicFieldName,
     pub json: Option<serde_json::Value>,
+    pub value: Option<(String, Vec<u8>)>,
 }
 
 /// Helper struct for passing a value that has a type that implements Serialize, for the dynamic
@@ -146,6 +148,13 @@ impl<T: Serialize> From<T> for Name {
 impl From<BcsName> for Name {
     fn from(value: BcsName) -> Self {
         Name { 0: value.0 }
+    }
+}
+
+impl DynamicFieldOutput {
+    pub fn deserialize<T: DeserializeOwned>(&self) -> Result<T, anyhow::Error> {
+        let bcs = &self.name.bcs;
+        bcs::from_bytes::<T>(&bcs).map_err(|_| anyhow!("Cannot decode BCS bytes"))
     }
 }
 
@@ -878,33 +887,62 @@ impl Client {
         }
     }
 
-    /// Return the contents JSON of an object that is a Move object.
+    /// Return the contents' JSON of an object that is a Move object.
     ///
     /// If the object does not exist (e.g., due to prunning), this will return `Ok(None)`.
     /// Similarly, if this is not an object but an address, it will return `Ok(None)`.
-    // pub async fn object_move_contents(
-    //     &self,
-    //     address: Address,
-    //     version: Option<u64>,
-    // ) -> Result<Option<serde_json::Value>, Error> {
-    //     let operation = ObjectQuery::build(ObjectQueryArgs { address, version });
-    //
-    //     let response = self.run_query(&operation).await?;
-    //
-    //     if let Some(errors) = response.errors {
-    //         return Err(Error::msg(format!("{:?}", errors)));
-    //     }
-    //
-    //     if let Some(object) = response.data {
-    //         Ok(object
-    //             .object
-    //             .and_then(|o| o.as_move_object)
-    //             .and_then(|o| o.contents)
-    //             .and_then(|mv| mv.json))
-    //     } else {
-    //         Ok(None)
-    //     }
-    // }
+    pub async fn object_move_contents(
+        &self,
+        address: Address,
+        version: Option<u64>,
+    ) -> Result<Option<serde_json::Value>, Error> {
+        let operation = ObjectQuery::build(ObjectQueryArgs { address, version });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        if let Some(object) = response.data {
+            Ok(object
+                .object
+                .and_then(|o| o.as_move_object)
+                .and_then(|o| o.contents)
+                .and_then(|mv| mv.json))
+        } else {
+            Ok(None)
+        }
+    }
+    /// Return the BCS of an object that is a Move object.
+    ///
+    /// If the object does not exist (e.g., due to prunning), this will return `Ok(None)`.
+    /// Similarly, if this is not an object but an address, it will return `Ok(None)`.
+    pub async fn object_move_contents_bcs(
+        &self,
+        address: Address,
+        version: Option<u64>,
+    ) -> Result<Option<Vec<u8>>, Error> {
+        let operation = ObjectQuery::build(ObjectQueryArgs { address, version });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        if let Some(object) = response.data {
+            object
+                .object
+                .and_then(|o| o.as_move_object)
+                .and_then(|o| o.contents)
+                .map(|bcs| base64ct::Base64::decode_vec(bcs.bcs.0.as_str()))
+                .transpose()
+                .map_err(|e| Error::msg(format!("Cannot decode Base64 object bcs bytes: {e}")))
+        } else {
+            Ok(None)
+        }
+    }
 
     // ===========================================================================
     // Dry Run API
