@@ -108,6 +108,28 @@ pub struct DynamicFieldOutput {
     pub json: Option<serde_json::Value>,
 }
 
+// Newtype wrapper for &[u8]
+pub struct BcsName<'a>(pub &'a [u8]);
+
+// Trait for converting into bytes
+pub trait IntoBytes {
+    fn into_bytes(self) -> Vec<u8>;
+}
+
+// Implement IntoBytes for ByteSlice to handle &[u8]
+impl<'a> IntoBytes for BcsName<'a> {
+    fn into_bytes(self) -> Vec<u8> {
+        self.0.to_vec() // Convert the byte slice into a Vec<u8>
+    }
+}
+
+// Implement IntoBytes for any type that implements Serialize
+impl<T: Serialize> IntoBytes for T {
+    fn into_bytes(self) -> Vec<u8> {
+        bcs::to_bytes(&self).unwrap() // Serialize the type into bytes
+    }
+}
+
 #[derive(Debug)]
 /// A page of items returned by the GraphQL server.
 pub struct Page<T> {
@@ -575,15 +597,15 @@ impl Client {
     /// dynamic field's type.
     ///
     /// This returns [`DynamicFieldOutput`] which contains the name, the value as json, and object.
-    pub async fn dynamic_field_with_name(
-        &self,
-        address: Address,
-        type_: &str,
-        name: impl Serialize,
-    ) -> Result<Option<DynamicFieldOutput>, Error> {
-        let bcs = bcs::to_bytes(&name).unwrap();
-        self.dynamic_field(address, type_, &bcs).await
-    }
+    // pub async fn dynamic_field_with_name(
+    //     &self,
+    //     address: Address,
+    //     type_: &str,
+    //     name: impl Serialize,
+    // ) -> Result<Option<DynamicFieldOutput>, Error> {
+    //     let bcs = bcs::to_bytes(&name).unwrap();
+    //     self.dynamic_field(address, type_, &bcs).await
+    // }
 
     /// Access a dynamic field on an object using its name. Names are arbitrary Move values whose
     /// type have copy, drop, and store, and are specified using their type, and their BCS
@@ -593,17 +615,21 @@ impl Client {
     /// Serialize, instead of passing the bcs bytes directly.
     ///
     /// This returns [`DynamicFieldOutput`] which contains the name, the value as json, and object.
-    pub async fn dynamic_field(
+    pub async fn dynamic_field<Name: IntoBytes>(
         &self,
         address: Address,
         type_: &str,
-        bcs: &[u8],
+        // bcs: &[u8],
+        name: Name,
     ) -> Result<Option<DynamicFieldOutput>, Error> {
+        // println!("name: {:?}", name);
+        let bcs = name.into_bytes(); // Convert to bytes using IntoBytes
+                                     // println!("bcs: {:?}", bcs);
         let operation = DynamicFieldQuery::build(DynamicFieldArgs {
             address,
             name: crate::query_types::DynamicFieldName {
                 type_: type_.to_string(),
-                bcs: crate::query_types::Base64(base64ct::Base64::encode_string(bcs)),
+                bcs: crate::query_types::Base64(base64ct::Base64::encode_string(&bcs)),
             },
         });
 
