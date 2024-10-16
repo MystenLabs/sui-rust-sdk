@@ -130,6 +130,22 @@ impl DynamicFieldValue {
             _ => None,
         }
     }
+
+    pub fn type_bcs(&self) -> Option<(String, Vec<u8>)> {
+        match self {
+            DynamicFieldValue::MoveObject(mo) => Some((
+                mo.contents.as_ref().unwrap().__typename.clone(),
+                mo.contents.as_ref().unwrap().bcs.0.clone().into(),
+                // base64ct::Base64::decode_vec(mo.contents.as_ref().unwrap().bcs.0.as_ref()).unwrap(),
+            )),
+            DynamicFieldValue::MoveValue(mv) => Some((
+                mv.__typename.clone(),
+                mv.bcs.0.clone().into(),
+                // base64ct::Base64::decode_vec(mv.bcs.0.as_ref()).unwrap(),
+            )),
+            _ => None,
+        }
+    }
 }
 
 impl DynamicField {
@@ -157,8 +173,8 @@ impl From<DynamicField> for DynamicFieldOutput {
                     .unwrap(),
                 json: val.name.as_ref().unwrap().json.clone(),
             },
-            // object,
             json: val.field_value_json(),
+            value: val.value.and_then(|x| x.type_bcs()),
         }
     }
 }
