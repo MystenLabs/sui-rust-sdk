@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 mod object;
-use anyhow::anyhow;
 use object::Kind;
 pub use object::Object;
 
@@ -22,15 +21,16 @@ use sui_types::types::Transaction;
 use sui_types::types::TransactionExpiration;
 use sui_types::types::TransferObjects;
 use sui_types::types::TypeTag;
-
-use anyhow::Error;
-use serde::Serialize;
 use sui_types::types::UnresolvedGasPayment;
 use sui_types::types::UnresolvedInputArgument;
 use sui_types::types::UnresolvedObjectReference;
 use sui_types::types::UnresolvedProgrammableTransaction;
 use sui_types::types::UnresolvedTransaction;
 use sui_types::types::Upgrade;
+
+use anyhow::anyhow;
+use anyhow::Error;
+use serde::Serialize;
 
 #[derive(Clone, Debug)]
 pub struct TransactionBuilder {
