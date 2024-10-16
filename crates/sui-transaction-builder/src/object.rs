@@ -155,7 +155,7 @@ impl Object {
     // Shared fields
 
     // Initial shared version
-    fn shared_at(self, i: u64) -> Self {
+    pub fn shared_at(self, i: u64) -> Self {
         Self {
             id: self.id,
             kind: self.kind,
@@ -167,13 +167,13 @@ impl Object {
     }
 
     // Shared value mutability
-    fn by_val(self) -> Self {
+    pub fn by_val(self) -> Self {
         self
     }
-    fn by_ref(&self) -> &Self {
+    pub fn by_ref(&self) -> &Self {
         self
     }
-    fn by_mut(&mut self) -> &mut Self {
+    pub fn by_mut(&mut self) -> &mut Self {
         self
     }
 }
