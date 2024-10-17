@@ -1230,7 +1230,7 @@ impl Client {
     /// Fetch the latest version of the package at address.
     /// This corresponds to the package with the highest version that shares its original ID with
     /// the package at address.
-    pub async fn latest_package(&self, address: Address) -> Result<Option<MovePackage>, Error> {
+    pub async fn package_latest(&self, address: Address) -> Result<Option<MovePackage>, Error> {
         let operation = LatestPackageQuery::build(PackageArgs {
             address,
             version: None,
@@ -2045,7 +2045,7 @@ mod tests {
     #[tokio::test]
     async fn test_latest_package_query() {
         let client = test_client();
-        let package = client.latest_package("0x2".parse().unwrap()).await;
+        let package = client.package_latest("0x2".parse().unwrap()).await;
         assert!(
             package.is_ok(),
             "Latest package query failed for {} network. Error: {}",
