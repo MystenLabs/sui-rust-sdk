@@ -139,22 +139,20 @@ impl<T> Page<T> {
 
 impl<T: Serialize> From<T> for Name {
     fn from(value: T) -> Self {
-        Name {
-            0: bcs::to_bytes(&value).unwrap(),
-        }
+        Name(bcs::to_bytes(&value).unwrap())
     }
 }
 
 impl From<BcsName> for Name {
     fn from(value: BcsName) -> Self {
-        Name { 0: value.0 }
+        Name(value.0)
     }
 }
 
 impl DynamicFieldOutput {
     pub fn deserialize<T: DeserializeOwned>(&self) -> Result<T, anyhow::Error> {
         let bcs = &self.name.bcs;
-        bcs::from_bytes::<T>(&bcs).map_err(|_| anyhow!("Cannot decode BCS bytes"))
+        bcs::from_bytes::<T>(bcs).map_err(|_| anyhow!("Cannot decode BCS bytes"))
     }
 }
 
