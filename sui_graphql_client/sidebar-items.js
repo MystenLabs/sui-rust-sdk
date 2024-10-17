@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["faucet","query_types"],"struct":["Client","DryRunResult","Page"]};

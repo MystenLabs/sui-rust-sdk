@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["__typename","netAddress","networkPubKey","p2PAddress","primaryAddress","proofOfPossession","protocolPubKey","workerAddress","workerPubKey"]};
