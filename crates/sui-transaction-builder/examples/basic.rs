@@ -14,12 +14,12 @@ use sui_types::types::UserSignature;
 
 async fn example_without_literal_inference() -> Result<(), anyhow::Error> {
     let client = Client::new_localhost();
-
+    //
     let mut tx = TransactionBuilder::new();
     let coin_obj_id = "0x530b2f240cfa1e31d41cb1a4ce57b73084c767546feb1d8823809180114ed8b9";
     let coin_digest = "6Tg9GrJnKSg6XXQv7eE2usMaN7EaaxbVvv34w5J4oBKo";
     let coin_version = 2;
-
+    //
     let coin = tx.input(Object::owned(
         ObjectId::from_str(coin_obj_id).unwrap(),
         coin_version,
@@ -47,22 +47,31 @@ async fn example_without_literal_inference() -> Result<(), anyhow::Error> {
     );
 
     let tx = tx.finish()?;
-
-    let dry_run = client.dry_run_tx(&tx, None).await?;
-    println!("{:?}", dry_run);
+    //
+    // let dry_run = client.dry_run_tx(&tx, None).await?;
+    // println!("{:?}", dry_run);
 
     let pk = base64ct::Base64::decode_vec("ALq6tKX5UqW5AyEqMj5Xq/zOC5tlKl/plh0afwooHZAn").unwrap();
+    let pk = base64ct::Base64::decode_vec("APE5yOYt6zlGz+C4sV9S09A3bORT6h9vumk4zP7+7H1a").unwrap();
     let pk = Ed25519PrivateKey::new(pk[1..].try_into().expect("slice has wrong length"));
 
-    // let t = pk.sign_transaction(&tx);
-    // println!("{:?}", t);
+    println!("{:?}", pk.public_key());
+    println!("{:?}", pk.public_key().to_address());
+    println!(
+        "{:?}",
+        base64ct::Base64::encode_string(pk.public_key().as_bytes())
+    );
+    let t = pk.sign_transaction(&tx);
+
+    println!("{:?}", t);
+
     //
     // // println!("{:?}", t);
     // let sig = "AGPG9CToY0r+3Uss5r2CVeHjD9rTZIvOhWLCqKe0Nj4JAfLZCnmJCGFgj+kC2/JHW4jRIsTfVUICbvRXyE3YtQGb4j7voyHkHCbVWoY0M/QxU8+gFDigeOxJIVqeaxKMSQ==";
     // let sig = UserSignature::from_base64(&sig).unwrap();
     //
-    // let effects = client.execute_tx(vec![sig], &tx).await?;
-    // println!("{:?}", effects);
+    let effects = client.execute_tx(vec![t.unwrap()], &tx).await?;
+    println!("{:?}", effects);
     // let split = tx.split_coins(
     //     coin,
     //    vec![tx.input(Serialized(&500u64)), tx.input(Serialized(&500u64))],
