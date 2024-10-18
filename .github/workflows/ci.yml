@@ -34,8 +34,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: rust version
         run: |
@@ -56,8 +54,11 @@ jobs:
 
       - name: Run tests that do not require local network
         run: make test
+      
+      - name: rustdoc
+        run: make doc
 
-      - name: Get releases JSON file
+      - name: Get Sui releases JSON file
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
@@ -68,11 +69,12 @@ jobs:
             -L -o releases.json \
             https://api.github.com/repos/MystenLabs/sui/releases
 
-      - name: Get the latest Sui testnet binary and start a local network
+      - name: Get the Sui testnet binary and start a local network
         shell: bash
         env:
           SUI_BINARY_VERSION: "1.35.1" # used for downloading a specific Sui binary versions that matches the GraphQL schema for local network tests
         run: |
+          echo "Sui binary version: $SUI_BINARY_VERSION"
           os=${{runner.os}}
           binary_os=""
           if [ $os == "Linux" ]; then
@@ -86,13 +88,10 @@ jobs:
           tar -zxvf $filename ./sui
           ./sui start --force-regenesis --with-faucet --with-indexer --with-graphql --pg-port 5432 --pg-db-name sui_indexer_v2 --epoch-duration-ms 10000 &
 
-      - name: Run tests that require local network
+      - name: Run tests that require local network (GraphQL Client and Tx Builder)
         run: |
           make test-with-localnet
-
-      - name: rustdoc
-        run: make doc
-
+  
   wasm:
     runs-on: ubuntu-latest
 
