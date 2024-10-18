@@ -80,7 +80,7 @@ jobs:
           echo "Downloading testnet binary from $testnet_url"
           wget -q $testnet_url -O $filename
           tar -zxvf $filename ./sui
-          ./sui start --force-regenesis --with-faucet --with-indexer --with-graphql --pg-port 5432 --pg-db-name sui_indexer_v2 &
+          ./sui start --force-regenesis --with-faucet --with-indexer --with-graphql --pg-port 5432 --pg-db-name sui_indexer_v2 --epoch-duration-ms 10000 &
 
       - name: Run tests that require local network
         run: |
