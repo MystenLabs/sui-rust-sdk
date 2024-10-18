@@ -61,12 +61,10 @@ jobs:
         run: |
           curl \
             -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \ # auth request, otherwise there's only 60 requests per hour limit
-            -L -o releases.json \
-            https://api.github.com/repos/MystenLabs/sui/releases
-          binary_os="ubuntu"
-          testnet_url=$(cat releases.json | jq --arg os $binary_os '.[] | .assets[] | select(.name | contains("testnet")) | select(.name | contains($os))' | jq  -csr '.[0] | .browser_download_url')
-          filename="sui-$binary_os.tar.gz"
+            -H "Authorization: Bearer $GITHUB_TOKEN" \ 
+            -L -o releases.json https://api.github.com/repos/MystenLabs/sui/releases
+          testnet_url=$(cat releases.json | jq '.[] | .assets[] | select(.name | contains("testnet")) | select(.name | contains("ubuntu"))' | jq  -csr '.[0] | .browser_download_url')
+          filename="sui.tar.gz"
           echo "Downloading testnet binary from $testnet_url"
           wget $testnet_url -O $filename
           tar -zxvf $filename ./sui
