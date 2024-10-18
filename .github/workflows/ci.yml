@@ -15,6 +15,21 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres: # we need this postgres instance for running a local network with indexer and graphql
+        image: postgres
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgrespw
+          POSTGRES_DB: sui_indexer_v2
+          POSTGRES_HOST_AUTH_METHOD: trust
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
 
     steps:
       - name: Checkout repository
@@ -37,8 +52,29 @@ jobs:
       - name: clippy
         run: make clippy
 
-      - name: Run tests
+      - name: Run tests that do not require local network
         run: make test
+
+      - name: Get the latest Sui testnet binary and start a local network
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \ # auth request, otherwise there's only 60 requests per hour limit
+            -L -o releases.json \
+            https://api.github.com/repos/MystenLabs/sui/releases
+          binary_os="ubuntu"
+          testnet_url=$(cat releases.json | jq --arg os $binary_os '.[] | .assets[] | select(.name | contains("testnet")) | select(.name | contains($os))' | jq  -csr '.[0] | .browser_download_url')
+          filename="sui-$binary_os.tar.gz"
+          echo "Downloading testnet binary from $testnet_url"
+          wget $testnet_url -O $filename
+          tar -zxvf $filename ./sui
+          ./sui start --force-regenesis --with-faucet --with-indexer --with-faucet --pg-port 5432 --pg-db-name sui_indexer_v2 &
+
+      - name: Run tests that require local network
+        run: |
+          make test-with-localnet
 
       - name: rustdoc
         run: make doc
