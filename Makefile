@@ -21,8 +21,12 @@ clippy:
 
 .PHONY: test
 test:
-	cargo nextest run --all-features
+	cargo nextest run --all-features -p sui-sdk-types -p sui-crypto
 	cargo test --doc
+
+.PHONY: test-with-localnet
+test-with-localnet:
+	cargo nextest run -p sui-graphql-client
 
 .PHONY: wasm
 wasm:
