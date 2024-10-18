@@ -939,7 +939,12 @@ mod tests {
     use crate::LOCAL_HOST;
     use crate::MAINNET_HOST;
     use crate::TESTNET_HOST;
-    const NETWORKS: [(&str, &str); 2] = [(MAINNET_HOST, "35834a8a"), (TESTNET_HOST, "4c78adac")];
+    const NETWORKS: [(&str, &str); 4] = [
+        (MAINNET_HOST, "35834a8a"),
+        (TESTNET_HOST, "4c78adac"),
+        (DEVNET_HOST, "_"),
+        (LOCAL_HOST, "_"),
+    ];
 
     #[test]
     fn test_rpc_server() {
@@ -967,7 +972,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_chain_id() {
-        for (n, id) in NETWORKS.iter() {
+        for (n, id) in NETWORKS[..2].iter() {
             let client = Client::new(n).unwrap();
             let chain_id = client.chain_id().await;
             assert!(chain_id.is_ok());
