@@ -11,6 +11,7 @@ permissions:
 
 env:
   RUSTFLAGS: -Dwarnings
+  SUI_BINARY_VERSION: "1.35.1" # used for downloading a specific Sui binary versions that matches the GraphQL schema for local network tests
 
 jobs:
   test:
@@ -42,6 +43,20 @@ jobs:
 
       - uses: taiki-e/install-action@cargo-hack
       - uses: taiki-e/install-action@cargo-nextest
+
+      - name: Check if the schema file was modified but not the version needed for the Sui CLI binary
+        run: |
+          # we need to keep the version of the Sui binary to be the same as when this schema made it into testnet
+          # to do so we check if the schema file changed, and if the workflow file changed. If it did not, then 
+          SCHEMA_FILE_CHANGED=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep -q 'crates/sui-graphql-client/schema/graphql_rpc.graphql' && echo "true" || echo "false")
+          WORKFLOW_CHANGED=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep -q '.github/workflows/ci.yml' && echo "true" || echo "false")
+
+          if [ "$SCHEMA_FILE_CHANGED" = "true" ] && [ "$WORKFLOW_CHANGED" = "true" ]; then
+            echo "Both the specific file and the workflow file were changed."
+          else
+            echo "If you changed the GraphQL schema, make sure you set the correct Sui SUI_BINARY_VERSION the workflow file. This version should be the one at which this schema was deployed to testnet network."
+            exit 1  # If you want the job to fail if the conditions aren't met.
+          fi
 
       - name: feature compatibility
         run: make check-features
@@ -75,7 +90,9 @@ jobs:
             binary_os="ubuntu"
           fi
           
-          testnet_url=$(cat releases.json | jq --arg os $binary_os '.[] | .assets[] | select(.name | contains("testnet")) | select(.name | contains($os)) | select(.name | contains("x86"))'| jq  -csr '.[0] | .browser_download_url')
+          # We need to set the exact binary version that corresponds to the schema used in this repository
+          # If you update schema, then you need to update this SUI_BINARY_VERSION as well
+          testnet_url=$(cat releases.json | jq --arg os $binary_os --arg version $SUI_BINARY_VERSION '.[] | .assets[] | select(.name | contains("testnet")) | select(.name | contains($os)) | select(.name | contains("x86")) | select(.name | contains($version))'| jq  -csr '.[0] | .browser_download_url')
           filename="sui-$binary_os.tar.gz"
           echo "Downloading testnet binary from $testnet_url"
           wget -q $testnet_url -O $filename
