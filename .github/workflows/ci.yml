@@ -73,14 +73,12 @@ jobs:
           binary_os=""
           if [ $os == "Linux" ]; then
             binary_os="ubuntu"
-          elif [ $os == "macOS" ]; then
-            binary_os="macos-arm64"
           fi
           
-          testnet_url=$(cat releases.json | jq --arg os $binary_os '.[] | .assets[] | select(.name | contains("testnet")) | select(.name | contains($os))' | jq  -csr '.[0] | .browser_download_url')
+          testnet_url=$(cat releases.json | jq --arg os $binary_os '.[] | .assets[] | select(.name | contains("testnet")) | select(.name | contains($os)) | select(.name | contains("x86"))'| jq  -csr '.[0] | .browser_download_url')
           filename="sui-$binary_os.tar.gz"
           echo "Downloading testnet binary from $testnet_url"
-          wget $testnet_url -O $filename
+          wget -q $testnet_url -O $filename
           tar -zxvf $filename ./sui
           ./sui start --force-regenesis --with-faucet --with-indexer --with-faucet --pg-port 5432 --pg-db-name sui_indexer_v2 &
 
