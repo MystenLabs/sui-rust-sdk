@@ -49,15 +49,15 @@ jobs:
       - name: Check if the schema file was modified but not the version needed for the Sui CLI binary
         run: |
           # we need to keep the version of the Sui binary to be the same as when this schema made it into testnet
-          # to do so we check if the schema file changed, and if the workflow file changed. If it did not, then 
+          # to do so we check if the schema file changed, and if the workflow file changed. If it did not, then error 
           SCHEMA_FILE_CHANGED=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep -q 'crates/sui-graphql-client/schema/graphql_rpc.graphql' && echo "true" || echo "false")
           WORKFLOW_CHANGED=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep -q '.github/workflows/ci.yml' && echo "true" || echo "false")
+          echo $SCHEMA_FILE_CHANGED
+          echo $WORKFLOW_CHANGED
 
-          if [ "$SCHEMA_FILE_CHANGED" = "true" ] && [ "$WORKFLOW_CHANGED" = "true" ]; then
-            echo "Both the specific file and the workflow file were changed."
-          else
+          if [ "$SCHEMA_FILE_CHANGED" = "true" ] && [ "$WORKFLOW_CHANGED" = "false" ]; then
             echo "If you changed the GraphQL schema, make sure you set the correct Sui SUI_BINARY_VERSION the workflow file. This version should be the one at which this schema was deployed to testnet network."
-            exit 1  # If you want the job to fail if the conditions aren't met.
+            exit 1  
           fi
 
       - name: feature compatibility
