@@ -121,6 +121,30 @@ impl<T> Page<T> {
     }
 }
 
+/// Pagination direction.
+pub enum Direction {
+    Forward,
+    Backward,
+}
+
+/// Pagination options for querying the GraphQL server. It defaults to forward pagination with a
+/// limit of 10 items per request.
+pub struct PaginationFilter<'a> {
+    direction: Direction,
+    cursor: Option<&'a str>,
+    limit: Option<i32>,
+}
+
+impl Default for PaginationFilter<'_> {
+    fn default() -> Self {
+        Self {
+            direction: Direction::Forward,
+            cursor: None,
+            limit: Some(10),
+        }
+    }
+}
+
 /// The GraphQL client for interacting with the Sui blockchain.
 /// By default, it uses the `reqwest` crate as the HTTP client.
 pub struct Client {
@@ -262,18 +286,16 @@ impl Client {
 
     /// Get the list of active validators for the provided epoch, including related metadata.
     /// If no epoch is provided, it will return the active validators for the current epoch.
-    pub async fn active_validators(
+    pub async fn active_validators<'a>(
         &self,
         epoch: Option<u64>,
-        after: Option<String>,
-        before: Option<String>,
-        first: Option<i32>,
-        last: Option<i32>,
+        pagination_filter: Option<PaginationFilter<'a>>,
     ) -> Result<Page<Validator>, Error> {
-        ensure!(
-            !(first.is_some() && last.is_some()),
-            "Cannot pass both first and last"
-        );
+        let pagination = pagination_filter.unwrap_or_default();
+        let (after, before, first, last) = match pagination.direction {
+            Direction::Forward => (pagination.cursor, None, pagination.limit, None),
+            Direction::Backward => (None, pagination.cursor, None, pagination.limit),
+        };
 
         let operation = ActiveValidatorsQuery::build(ActiveValidatorsArgs {
             id: epoch,
@@ -345,32 +367,21 @@ impl Client {
     ///
     /// If `coin_type` is not provided, it will default to `0x2::coin::Coin`, which will return all
     /// coins. For SUI coin, pass in the coin type: `0x2::coin::Coin<0x2::sui::SUI>`.
-    pub async fn coins(
+    pub async fn coins<'a>(
         &self,
         owner: Address,
-        after: Option<&str>,
-        before: Option<&str>,
-        first: Option<i32>,
-        last: Option<i32>,
         coin_type: Option<&str>,
+        pagination_filter: Option<PaginationFilter<'a>>,
     ) -> Result<Page<Coin>, Error> {
-        ensure!(
-            !(first.is_some() && last.is_some()),
-            "Cannot pass both first and last"
-        );
-
         let response = self
             .objects(
-                after,
-                before,
                 Some(ObjectFilter {
                     type_: Some(coin_type.unwrap_or("0x2::coin::Coin")),
                     owner: Some(owner),
                     object_ids: None,
                     object_keys: None,
                 }),
-                first,
-                last,
+                pagination_filter,
             )
             .await?;
 
@@ -395,16 +406,16 @@ impl Client {
             let mut after = None;
             loop {
                 let response = self.objects(
-                    after.as_deref(),
-                    None,
                     Some(ObjectFilter {
                         type_: Some(coin_type.unwrap_or("0x2::coin::Coin")),
                         owner: Some(owner),
                         object_ids: None,
                         object_keys: None,
                     }),
-                    None,
-                    None,
+                    Some(PaginationFilter {
+                        cursor: after.as_deref(),
+                        ..Default::default()
+                    }),
                 ).await?;
 
                 if !response.is_empty() {
@@ -582,15 +593,13 @@ impl Client {
     pub async fn events(
         &self,
         filter: Option<EventFilter>,
-        after: Option<String>,
-        before: Option<String>,
-        first: Option<i32>,
-        last: Option<i32>,
+        pagination_filter: Option<PaginationFilter<'_>>,
     ) -> Result<Page<Event>, Error> {
-        ensure!(
-            !(first.is_some() && last.is_some()),
-            "Cannot pass both first and last"
-        );
+        let pagination = pagination_filter.unwrap_or_default();
+        let (after, before, first, last) = match pagination.direction {
+            Direction::Forward => (pagination.cursor, None, pagination.limit, None),
+            Direction::Backward => (None, pagination.cursor, None, pagination.limit),
+        };
 
         let operation = EventsQuery::build(EventsQueryArgs {
             filter,
@@ -685,16 +694,14 @@ impl Client {
     /// ```
     pub async fn objects(
         &self,
-        after: Option<&str>,
-        before: Option<&str>,
         filter: Option<ObjectFilter<'_>>,
-        first: Option<i32>,
-        last: Option<i32>,
+        pagination_filter: Option<PaginationFilter<'_>>,
     ) -> Result<Page<Object>, Error> {
-        ensure!(
-            !(first.is_some() && last.is_some()),
-            "Cannot pass both first and last"
-        );
+        let pagination = pagination_filter.unwrap_or_default();
+        let (after, before, first, last) = match pagination.direction {
+            Direction::Forward => (pagination.cursor, None, pagination.limit, None),
+            Direction::Backward => (None, pagination.cursor, None, pagination.limit),
+        };
 
         let operation = ObjectsQuery::build(ObjectsQueryArgs {
             after,
@@ -862,16 +869,14 @@ impl Client {
     /// Get a page of transactions based on the provided filters.
     pub async fn transactions<'a>(
         &self,
-        after: Option<&str>,
-        before: Option<&str>,
-        first: Option<i32>,
-        last: Option<i32>,
         filter: Option<TransactionsFilter<'a>>,
+        pagination_filter: Option<PaginationFilter<'a>>,
     ) -> Result<Page<SignedTransaction>, Error> {
-        ensure!(
-            !(first.is_some() && last.is_some()),
-            "Cannot pass both first and last"
-        );
+        let pagination = pagination_filter.unwrap_or_default();
+        let (after, before, first, last) = match pagination.direction {
+            Direction::Forward => (pagination.cursor, None, pagination.limit, None),
+            Direction::Backward => (None, pagination.cursor, None, pagination.limit),
+        };
 
         let operation = TransactionBlocksQuery::build(TransactionBlocksQueryArgs {
             after,
@@ -1023,7 +1028,7 @@ mod tests {
     async fn test_active_validators() {
         for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();
-            let av = client.active_validators(None, None, None, None, None).await;
+            let av = client.active_validators(None, None).await;
             assert!(
                 av.is_ok(),
                 "Active validators query failed for network: {n}. Error: {}",
@@ -1128,7 +1133,7 @@ mod tests {
     async fn test_events_query() {
         for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();
-            let events = client.events(None, None, None, None, Some(10)).await;
+            let events = client.events(None, None).await;
             assert!(
                 events.is_ok(),
                 "Events query failed for network: {n}. Error: {}",
@@ -1146,7 +1151,7 @@ mod tests {
     async fn test_objects_query() {
         for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();
-            let objects = client.objects(None, None, None, None, None).await;
+            let objects = client.objects(None, None).await;
             assert!(
                 objects.is_ok(),
                 "Objects query failed for network: {n}. Error: {}",
@@ -1186,9 +1191,7 @@ mod tests {
     async fn test_coins_query() {
         for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();
-            let coins = client
-                .coins("0x1".parse().unwrap(), None, None, None, None, None)
-                .await;
+            let coins = client.coins("0x1".parse().unwrap(), None, None).await;
             assert!(
                 coins.is_ok(),
                 "Coins query failed for network: {n}. Error: {}",
@@ -1214,7 +1217,7 @@ mod tests {
     async fn test_transactions_query() {
         for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();
-            let transactions = client.transactions(None, None, None, Some(5), None).await;
+            let transactions = client.transactions(None, None).await;
             assert!(
                 transactions.is_ok(),
                 "Transactions query failed for network: {n}. Error: {}",
