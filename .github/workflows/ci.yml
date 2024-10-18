@@ -55,9 +55,18 @@ jobs:
       # - name: Run tests that do not require local network
       #   run: make test
       #
-      - name: Get the latest Sui testnet binary and start a local network
+      - name: Get releases JSON file
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          curl \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -L -o releases.json \
+            https://api.github.com/repos/MystenLabs/sui/releases
+
+      - name: Get the latest Sui testnet binary and start a local network
         shell: bash
         run: |
           os=${{runner.os}}
