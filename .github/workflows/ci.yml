@@ -43,18 +43,18 @@ jobs:
       - uses: taiki-e/install-action@cargo-hack
       - uses: taiki-e/install-action@cargo-nextest
 
-      # - name: feature compatibility
-      #   run: make check-features
-      #
-      # - name: rustfmt
-      #   run: make check-fmt
-      #
-      # - name: clippy
-      #   run: make clippy
-      #
-      # - name: Run tests that do not require local network
-      #   run: make test
-      #
+      - name: feature compatibility
+        run: make check-features
+
+      - name: rustfmt
+        run: make check-fmt
+
+      - name: clippy
+        run: make clippy
+
+      - name: Run tests that do not require local network
+        run: make test
+
       - name: Get releases JSON file
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
