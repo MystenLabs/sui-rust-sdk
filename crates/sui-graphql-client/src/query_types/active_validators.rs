@@ -21,10 +21,10 @@ pub struct ActiveValidatorsQuery {
 }
 
 #[derive(cynic::QueryVariables, Debug)]
-pub struct ActiveValidatorsArgs {
+pub struct ActiveValidatorsArgs<'a> {
     pub id: Option<u64>,
-    pub after: Option<String>,
-    pub before: Option<String>,
+    pub after: Option<&'a str>,
+    pub before: Option<&'a str>,
     pub first: Option<i32>,
     pub last: Option<i32>,
 }
