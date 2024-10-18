@@ -16,8 +16,8 @@ async fn example_without_literal_inference() -> Result<(), anyhow::Error> {
     let client = Client::new_localhost();
     //
     let mut tx = TransactionBuilder::new();
-    let coin_obj_id = "0x530b2f240cfa1e31d41cb1a4ce57b73084c767546feb1d8823809180114ed8b9";
-    let coin_digest = "6Tg9GrJnKSg6XXQv7eE2usMaN7EaaxbVvv34w5J4oBKo";
+    let coin_obj_id = "0x19406ea4d9609cd9422b85e6bf2486908f790b778c757aff805241f3f609f9b4";
+    let coin_digest = "7opR9rFUYivSTqoJHvFb9p6p54THyHTatMG6id4JKZR9";
     let coin_version = 2;
     //
     let coin = tx.input(Object::owned(
@@ -35,14 +35,14 @@ async fn example_without_literal_inference() -> Result<(), anyhow::Error> {
     tx.set_gas_budget(500000000);
     tx.set_gas_price(1000);
     tx.set_gas(vec![Object::owned(
-        ObjectId::from_str("0x2e3a2b36a01cd6ad6b39788fc2bcbe9944ac482bccba1e9c6adea29a3c406f76")
+        ObjectId::from_str("0xd8792bce2743e002673752902c0e7348dfffd78638cb5367b0b85857bceb9821")
             .unwrap(),
         2,
-        ObjectDigest::from_str("6A1VyFnpKKG28oaM9G4gwkkfh8DSAByxSBTQJvoyTMhd")
+        ObjectDigest::from_str("2ZigdvsZn5BMeszscPQZq9z8ebnS2FpmAuRbAi9ednCk")
             .map_err(|_| anyhow!("Invalid object digest"))?,
     )]);
     tx.set_sender(
-        Address::from_str("0x462ee1c227fc6365f842e2f4c9b7f66bbead607b128b68a7f7695cf2224c5168")
+        Address::from_str("0xc574ea804d9c1a27c886312e96c0e2c9cfd71923ebaeb3000d04b5e65fca2793")
             .unwrap(),
     );
 
@@ -51,8 +51,9 @@ async fn example_without_literal_inference() -> Result<(), anyhow::Error> {
     // let dry_run = client.dry_run_tx(&tx, None).await?;
     // println!("{:?}", dry_run);
 
-    let pk = base64ct::Base64::decode_vec("ALq6tKX5UqW5AyEqMj5Xq/zOC5tlKl/plh0afwooHZAn").unwrap();
-    let pk = base64ct::Base64::decode_vec("APE5yOYt6zlGz+C4sV9S09A3bORT6h9vumk4zP7+7H1a").unwrap();
+    // let pk = base64ct::Base64::decode_vec("ALq6tKX5UqW5AyEqMj5Xq/zOC5tlKl/plh0afwooHZAn").unwrap();
+    // let pk = base64ct::Base64::decode_vec("APE5yOYt6zlGz+C4sV9S09A3bORT6h9vumk4zP7+7H1a").unwrap();
+    let pk = base64ct::Base64::decode_vec("AAjgPs/zbxDsObju6Tp2/8W5lNWP/sjUDsVxR1vgdmyT").unwrap();
     let pk = Ed25519PrivateKey::new(pk[1..].try_into().expect("slice has wrong length"));
 
     println!("{:?}", pk.public_key());
