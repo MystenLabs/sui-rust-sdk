@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["FAUCET_DEVNET_HOST","FAUCET_LOCAL_HOST","FAUCET_TESTNET_HOST"],"enum":["BatchSendStatusType"],"struct":["BatchSendStatus","CoinInfo","FaucetClient","FaucetReceipt"]};
