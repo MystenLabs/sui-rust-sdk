@@ -23,9 +23,11 @@ use sui_types::types::TransferObjects;
 use sui_types::types::TypeTag;
 use sui_types::types::UnresolvedGasPayment;
 use sui_types::types::UnresolvedInputArgument;
+use sui_types::types::UnresolvedInputArgumentKind;
 use sui_types::types::UnresolvedObjectReference;
 use sui_types::types::UnresolvedProgrammableTransaction;
 use sui_types::types::UnresolvedTransaction;
+use sui_types::types::UnresolvedValue;
 use sui_types::types::Upgrade;
 
 use anyhow::anyhow;
@@ -437,24 +439,51 @@ impl From<Input> for UnresolvedInputArgument {
     fn from(arg: Input) -> Self {
         match arg {
             Input::Object(obj) => match obj.kind.as_ref() {
-                Some(Kind::ImmOrOwned) => {
-                    UnresolvedInputArgument::ImmutableOrOwned(to_unresolved_obj_ref(obj))
-                }
-                Some(Kind::Receiving) => {
-                    UnresolvedInputArgument::Receiving(to_unresolved_obj_ref(obj))
-                }
-                Some(Kind::Shared) => UnresolvedInputArgument::Shared {
-                    object_id: obj.id,
-                    initial_shared_version: obj.initial_shared_version,
-                    mutable: obj.mutable,
-                },
-                None => UnresolvedInputArgument::ImmutableOrOwned(UnresolvedObjectReference {
-                    object_id: obj.id,
+                Some(Kind::ImmOrOwned) => UnresolvedInputArgument {
+                    kind: Some(UnresolvedInputArgumentKind::ImmutableOrOwned),
+                    value: None,
+                    object_id: Some(obj.id),
                     version: obj.version,
                     digest: obj.digest,
-                }),
+                    mutable: obj.mutable,
+                },
+                Some(Kind::Receiving) => UnresolvedInputArgument {
+                    kind: Some(UnresolvedInputArgumentKind::Receiving),
+                    value: None,
+                    object_id: Some(obj.id),
+                    version: obj.version,
+                    digest: obj.digest,
+                    mutable: obj.mutable,
+                },
+                Some(Kind::Shared) => UnresolvedInputArgument {
+                    kind: Some(UnresolvedInputArgumentKind::Shared),
+                    value: None,
+                    object_id: Some(obj.id),
+                    version: obj.version,
+                    digest: obj.digest,
+                    mutable: obj.mutable,
+                },
+                None => UnresolvedInputArgument {
+                    kind: Some(UnresolvedInputArgumentKind::ImmutableOrOwned),
+                    value: None,
+                    object_id: Some(obj.id),
+                    version: obj.version,
+                    digest: obj.digest,
+                    mutable: obj.mutable,
+                },
             },
-            Input::Pure(v) => UnresolvedInputArgument::Pure { value: v },
+            Input::Pure(v) => UnresolvedInputArgument {
+                kind: Some(UnresolvedInputArgumentKind::Pure),
+                value: Some(UnresolvedValue::Array(
+                    v.into_iter()
+                        .map(|x| UnresolvedValue::Number(x as u64))
+                        .collect(),
+                )),
+                object_id: None,
+                version: None,
+                digest: None,
+                mutable: None,
+            },
         }
     }
 }
