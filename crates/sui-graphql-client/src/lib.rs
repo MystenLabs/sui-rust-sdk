@@ -73,6 +73,7 @@ use futures::Stream;
 use reqwest::Url;
 use std::pin::Pin;
 
+const ITEMS_PER_PAGE: i32 = 10;
 const MAINNET_HOST: &str = "https://sui-mainnet.mystenlabs.com/graphql";
 const TESTNET_HOST: &str = "https://sui-testnet.mystenlabs.com/graphql";
 const DEVNET_HOST: &str = "https://sui-devnet.mystenlabs.com/graphql";
@@ -140,7 +141,7 @@ impl Default for PaginationFilter<'_> {
         Self {
             direction: Direction::Forward,
             cursor: None,
-            limit: Some(10),
+            limit: Some(ITEMS_PER_PAGE),
         }
     }
 }
