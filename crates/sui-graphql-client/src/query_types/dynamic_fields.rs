@@ -134,7 +134,10 @@ impl DynamicFieldValue {
     /// Return the typename and bcs of this dynamic field value.
     pub fn type_bcs(&self) -> Option<(String, Vec<u8>)> {
         match self {
-            DynamicFieldValue::MoveObject(mo) => mo.contents.as_ref().map(|o| (o.__typename.clone(), o.bcs.0.clone().into())),
+            DynamicFieldValue::MoveObject(mo) => mo
+                .contents
+                .as_ref()
+                .map(|o| (o.__typename.clone(), o.bcs.0.clone().into())),
             DynamicFieldValue::MoveValue(mv) => {
                 Some((mv.__typename.clone(), mv.bcs.0.clone().into()))
             }
