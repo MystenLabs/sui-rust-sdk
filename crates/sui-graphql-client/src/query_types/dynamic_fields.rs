@@ -131,18 +131,16 @@ impl DynamicFieldValue {
         }
     }
 
+    /// Return the typename and bcs of this dynamic field value.
     pub fn type_bcs(&self) -> Option<(String, Vec<u8>)> {
         match self {
-            DynamicFieldValue::MoveObject(mo) => Some((
-                mo.contents.as_ref().unwrap().__typename.clone(),
-                mo.contents.as_ref().unwrap().bcs.0.clone().into(),
-                // base64ct::Base64::decode_vec(mo.contents.as_ref().unwrap().bcs.0.as_ref()).unwrap(),
-            )),
-            DynamicFieldValue::MoveValue(mv) => Some((
-                mv.__typename.clone(),
-                mv.bcs.0.clone().into(),
-                // base64ct::Base64::decode_vec(mv.bcs.0.as_ref()).unwrap(),
-            )),
+            DynamicFieldValue::MoveObject(mo) => match mo.contents.as_ref() {
+                Some(o) => Some((o.__typename.clone(), o.bcs.0.clone().into())),
+                None => None,
+            },
+            DynamicFieldValue::MoveValue(mv) => {
+                Some((mv.__typename.clone(), mv.bcs.0.clone().into()))
+            }
             _ => None,
         }
     }
@@ -157,15 +155,6 @@ impl DynamicField {
 
 impl From<DynamicField> for DynamicFieldOutput {
     fn from(val: DynamicField) -> DynamicFieldOutput {
-        // let object = match val.value {
-        //     Some(DynamicFieldValue::MoveObject(ref mo)) => mo
-        //         .contents
-        //         .as_ref()
-        //         .and_then(|c| base64ct::Base64::decode_vec(c.bcs.0.as_ref()).ok())
-        //         .and_then(|o| bcs::from_bytes::<sui_types::types::Object>(o.as_ref()).ok()),
-        //     _ => None,
-        // };
-
         DynamicFieldOutput {
             name: crate::DynamicFieldName {
                 type_: val.name.as_ref().unwrap().__typename.clone(),

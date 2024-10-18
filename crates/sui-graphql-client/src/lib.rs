@@ -98,16 +98,24 @@ pub struct DryRunResult {
 
 #[derive(Debug)]
 pub struct DynamicFieldName {
+    /// The type name of this dynamic field name
     pub type_: String,
+    /// The bcs bytes of this dynamic field name
     pub bcs: Vec<u8>,
+    /// The json representation of the dynamic field name
     pub json: Option<serde_json::Value>,
 }
 
+type Typename = String;
+
 #[derive(Debug)]
 pub struct DynamicFieldOutput {
+    /// The name of the dynamic field
     pub name: DynamicFieldName,
+    /// The json representation of the dynamic field value object
     pub json: Option<serde_json::Value>,
-    pub value: Option<(String, Vec<u8>)>,
+    /// The dynamic field value typename and bcs
+    pub value: Option<(Typename, Vec<u8>)>,
 }
 
 /// Helper struct for passing a value that has a type that implements Serialize, for the dynamic
