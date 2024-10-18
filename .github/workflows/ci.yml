@@ -15,6 +15,21 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres: # we need this postgres instance for running a local network with indexer and graphql
+        image: postgres
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgrespw
+          POSTGRES_DB: sui_indexer_v2
+          POSTGRES_HOST_AUTH_METHOD: trust
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
 
     steps:
       - name: Checkout repository
@@ -37,12 +52,46 @@ jobs:
       - name: clippy
         run: make clippy
 
-      - name: Run tests
+      - name: Run tests that do not require local network
         run: make test
 
       - name: rustdoc
         run: make doc
 
+      - name: Get Sui releases JSON file
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          curl \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -L -o releases.json \
+            https://api.github.com/repos/MystenLabs/sui/releases
+
+      - name: Get the Sui testnet binary and start a local network
+        shell: bash
+        env:
+          SUI_BINARY_VERSION: "1.35.1" # used for downloading a specific Sui binary versions that matches the GraphQL schema for local network tests
+        run: |
+          echo "Sui binary version: $SUI_BINARY_VERSION"
+          os=${{runner.os}}
+          binary_os=""
+          if [ $os == "Linux" ]; then
+            binary_os="ubuntu"
+          fi
+          
+          testnet_url=$(cat releases.json | jq --arg os $binary_os --arg version $SUI_BINARY_VERSION '.[] | .assets[] | select(.name | contains("testnet")) | select(.name | contains($os)) | select(.name | contains("x86")) | select(.name | contains($version))'| jq  -csr '.[0] | .browser_download_url')
+          filename="sui-$binary_os.tar.gz"
+          echo "Downloading testnet binary from $testnet_url"
+          wget -q $testnet_url -O $filename
+          tar -zxvf $filename ./sui
+          ./sui start --force-regenesis --with-faucet --with-indexer --with-graphql --pg-port 5432 --pg-db-name sui_indexer_v2 --epoch-duration-ms 10000 &
+
+      - name: Run tests that require local network (GraphQL Client and Tx Builder)
+        run: |
+          make test-with-localnet
+  
   wasm:
     runs-on: ubuntu-latest
 
