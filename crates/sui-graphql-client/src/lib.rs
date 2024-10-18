@@ -959,7 +959,7 @@ mod tests {
     async fn test_balance_query() {
         let client = Client::new_localhost();
         let balance = client.balance("0x1".parse().unwrap(), None).await;
-        assert!(balance.is_ok(), "Balance query failed local network");
+        assert!(balance.is_ok(), "Balance query failed for local network");
     }
 
     #[tokio::test]
@@ -975,7 +975,7 @@ mod tests {
         let rgp = client.reference_gas_price(None).await;
         assert!(
             rgp.is_ok(),
-            "Reference gas price query failed local network"
+            "Reference gas price query failed for local network"
         );
     }
 
@@ -992,7 +992,7 @@ mod tests {
         if let Some(pc) = pc {
             assert_eq!(
                 pc.protocol_version, 50,
-                "Protocol version query mismatch local network. Expected: 50, received: {}",
+                "Protocol version query mismatch for local network. Expected: 50, received: {}",
                 pc.protocol_version
             );
         }
@@ -1002,7 +1002,7 @@ mod tests {
     async fn test_service_config_query() {
         let client = Client::new_localhost();
         let sc = client.service_config().await;
-        assert!(sc.is_ok(), "Service config query failed local network");
+        assert!(sc.is_ok(), "Service config query failed for local network");
     }
 
     #[tokio::test]
@@ -1012,13 +1012,13 @@ mod tests {
         let av = client.active_validators(None, None).await;
         assert!(
             av.is_ok(),
-            "Active validators query failed local network. Error: {}",
+            "Active validators query failed for local network. Error: {}",
             av.unwrap_err()
         );
 
         assert!(
             !av.unwrap().is_empty(),
-            "Active validators query returned None local network"
+            "Active validators query returned None for local network"
         );
     }
 
@@ -1026,7 +1026,7 @@ mod tests {
     async fn test_coin_metadata_query() {
         let client = Client::new_localhost();
         let cm = client.coin_metadata("0x2::sui::SUI").await;
-        assert!(cm.is_ok(), "Coin metadata query failed local network");
+        assert!(cm.is_ok(), "Coin metadata query failed for local network");
     }
 
     #[tokio::test]
@@ -1035,7 +1035,7 @@ mod tests {
         let c = client.checkpoint(None, None).await;
         assert!(
             c.is_ok(),
-            "Checkpoint query failed local network. Error: {}",
+            "Checkpoint query failed for local network. Error: {}",
             c.unwrap_err()
         );
     }
@@ -1045,7 +1045,7 @@ mod tests {
         let c = client.checkpoints(None, None, None, Some(5)).await;
         assert!(
             c.is_ok(),
-            "Checkpoints query failed local network. Error: {}",
+            "Checkpoints query failed for local network. Error: {}",
             c.unwrap_err()
         );
     }
@@ -1056,7 +1056,7 @@ mod tests {
         let last_checkpoint = client.latest_checkpoint_sequence_number().await;
         assert!(
             last_checkpoint.is_ok(),
-            "Latest checkpoint sequence number query failed local network. Error: {}",
+            "Latest checkpoint sequence number query failed for local network. Error: {}",
             last_checkpoint.unwrap_err()
         );
     }
@@ -1067,7 +1067,7 @@ mod tests {
         let e = client.epoch_total_checkpoints(None).await;
         assert!(
             e.is_ok(),
-            "Epoch total checkpoints query failed local network. Error: {}",
+            "Epoch total checkpoints query failed for local network. Error: {}",
             e.unwrap_err()
         );
     }
@@ -1078,7 +1078,7 @@ mod tests {
         let e = client.epoch_total_transaction_blocks(None).await;
         assert!(
             e.is_ok(),
-            "Epoch total transaction blocks query failed local network. Error: {}",
+            "Epoch total transaction blocks query failed for local network. Error: {}",
             e.unwrap_err()
         );
     }
@@ -1089,7 +1089,7 @@ mod tests {
         let e = client.epoch_summary(None).await;
         assert!(
             e.is_ok(),
-            "Epoch summary query failed local network. Error: {}",
+            "Epoch summary query failed for local network. Error: {}",
             e.unwrap_err()
         );
     }
@@ -1101,12 +1101,12 @@ mod tests {
         let events = client.events(None, None).await;
         assert!(
             events.is_ok(),
-            "Events query failed local network. Error: {}",
+            "Events query failed for local network. Error: {}",
             events.unwrap_err()
         );
         assert!(
             !events.unwrap().is_empty(),
-            "Events query returned no data local network"
+            "Events query returned no data for local network"
         );
     }
 
@@ -1117,7 +1117,7 @@ mod tests {
         let objects = client.objects(None, None).await;
         assert!(
             objects.is_ok(),
-            "Objects query failed local network. Error: {}",
+            "Objects query failed for local network. Error: {}",
             objects.unwrap_err()
         );
     }
@@ -1129,7 +1129,7 @@ mod tests {
         let object = client.object("0x5".parse().unwrap(), None).await;
         assert!(
             object.is_ok(),
-            "Object query failed local network. Error: {}",
+            "Object query failed for local network. Error: {}",
             object.unwrap_err()
         );
     }
@@ -1140,7 +1140,7 @@ mod tests {
         let object_bcs = client.object_bcs("0x5".parse().unwrap()).await;
         assert!(
             object_bcs.is_ok(),
-            "Object bcs query failed local network. Error: {}",
+            "Object bcs query failed for local network. Error: {}",
             object_bcs.unwrap_err()
         );
     }
@@ -1151,7 +1151,7 @@ mod tests {
         let coins = client.coins("0x1".parse().unwrap(), None, None).await;
         assert!(
             coins.is_ok(),
-            "Coins query failed local network. Error: {}",
+            "Coins query failed for local network. Error: {}",
             coins.unwrap_err()
         );
     }
@@ -1175,7 +1175,7 @@ mod tests {
         let transactions = client.transactions(None, None).await;
         assert!(
             transactions.is_ok(),
-            "Transactions query failed local network. Error: {}",
+            "Transactions query failed for local network. Error: {}",
             transactions.unwrap_err()
         );
     }
@@ -1186,13 +1186,13 @@ mod tests {
         let ts = client.total_supply("0x2::sui::SUI").await;
         assert!(
             ts.is_ok(),
-            "Total supply query failed local network. Error: {}",
+            "Total supply query failed for local network. Error: {}",
             ts.unwrap_err()
         );
         assert_eq!(
             ts.unwrap().unwrap(),
             10_000_000_000,
-            "Total supply mismatch local network"
+            "Total supply mismatch for local network"
         );
     }
 

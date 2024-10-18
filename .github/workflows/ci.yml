@@ -54,7 +54,7 @@ jobs:
 
       - name: Run tests that do not require local network
         run: make test
-      
+
       - name: rustdoc
         run: make doc
 
