@@ -22,6 +22,11 @@ use query_types::CoinMetadataArgs;
 use query_types::CoinMetadataQuery;
 use query_types::DryRunArgs;
 use query_types::DryRunQuery;
+use query_types::DynamicFieldArgs;
+use query_types::DynamicFieldConnectionArgs;
+use query_types::DynamicFieldQuery;
+use query_types::DynamicFieldsOwnerQuery;
+use query_types::DynamicObjectFieldQuery;
 use query_types::EpochSummaryArgs;
 use query_types::EpochSummaryQuery;
 use query_types::EventFilter;
@@ -48,6 +53,8 @@ use query_types::TransactionMetadata;
 use query_types::TransactionsFilter;
 use query_types::Validator;
 
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 use sui_types::types::framework::Coin;
 use sui_types::types::Address;
 use sui_types::types::CheckpointSequenceNumber;
@@ -79,11 +86,35 @@ const DEVNET_HOST: &str = "https://sui-devnet.mystenlabs.com/graphql";
 const LOCAL_HOST: &str = "http://localhost:9125/graphql";
 static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
+// ===========================================================================
+// Output Types
+// ===========================================================================
+
 #[derive(Debug)]
 pub struct DryRunResult {
     pub effects: Option<TransactionEffects>,
     pub error: Option<String>,
 }
+
+#[derive(Debug)]
+pub struct DynamicFieldName {
+    pub type_: String,
+    pub bcs: Vec<u8>,
+    pub json: Option<serde_json::Value>,
+}
+
+#[derive(Debug)]
+pub struct DynamicFieldOutput {
+    pub name: DynamicFieldName,
+    pub json: Option<serde_json::Value>,
+    pub value: Option<(String, Vec<u8>)>,
+}
+
+/// Helper struct for passing a value that has a type that implements Serialize, for the dynamic
+/// fields API.
+pub struct Name(Vec<u8>);
+/// Helper struct for passing a raw bcs value.
+pub struct BcsName(pub Vec<u8>);
 
 #[derive(Debug)]
 /// A page of items returned by the GraphQL server.
@@ -105,6 +136,25 @@ impl<T> Page<T> {
 
     fn new(page_info: PageInfo, data: Vec<T>) -> Self {
         Self { page_info, data }
+    }
+}
+
+impl<T: Serialize> From<T> for Name {
+    fn from(value: T) -> Self {
+        Name(bcs::to_bytes(&value).unwrap())
+    }
+}
+
+impl From<BcsName> for Name {
+    fn from(value: BcsName) -> Self {
+        Name(value.0)
+    }
+}
+
+impl DynamicFieldOutput {
+    pub fn deserialize<T: DeserializeOwned>(&self) -> Result<T, anyhow::Error> {
+        let bcs = &self.name.bcs;
+        bcs::from_bytes::<T>(bcs).map_err(|_| anyhow!("Cannot decode BCS bytes"))
     }
 }
 
@@ -517,6 +567,139 @@ impl Client {
     }
 
     // ===========================================================================
+    // Dynamic Field(s) API
+    // ===========================================================================
+
+    /// Access a dynamic field on an object using its name. Names are arbitrary Move values whose
+    /// type have copy, drop, and store, and are specified using their type, and their BCS
+    /// contents, Base64 encoded.
+    ///
+    /// The `name` argument can be either a [`BcsName`] for passing raw bcs bytes or a type that
+    /// implements Serialize.
+    ///
+    /// This returns [`DynamicFieldOutput`] which contains the name, the value as json, and object.
+    ///
+    /// # Example
+    /// ```rust,ignore
+    ///
+    /// let client = sui_graphql_client::Client::new_devnet();
+    /// let address = Address::from_str("0x5").unwrap();
+    /// let df = client.dynamic_field_with_name(address, "u64", 2u64).await.unwrap();
+    ///
+    /// # alternatively, pass in the bcs bytes
+    /// let bcs = base64ct::Base64::decode_vec("AgAAAAAAAAA=").unwrap();
+    /// let df = client.dynamic_field(address, "u64", BcsName(bcs)).await.unwrap();
+    /// ```
+    pub async fn dynamic_field(
+        &self,
+        address: Address,
+        type_: &str,
+        name: impl Into<Name>,
+    ) -> Result<Option<DynamicFieldOutput>, Error> {
+        let bcs = name.into().0;
+        let operation = DynamicFieldQuery::build(DynamicFieldArgs {
+            address,
+            name: crate::query_types::DynamicFieldName {
+                type_: type_.to_string(),
+                bcs: crate::query_types::Base64(base64ct::Base64::encode_string(&bcs)),
+            },
+        });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        let result: Option<DynamicFieldOutput> = response
+            .data
+            .and_then(|d| d.object)
+            .and_then(|o| o.dynamic_field)
+            .map(|df| df.into());
+        Ok(result)
+    }
+
+    /// Access a dynamic object field on an object using its name. Names are arbitrary Move values whose
+    /// type have copy, drop, and store, and are specified using their type, and their BCS
+    /// contents, Base64 encoded.
+    ///
+    /// The `name` argument can be either a [`BcsName`] for passing raw bcs bytes or a type that
+    /// implements Serialize.
+    ///
+    /// This returns [`DynamicFieldOutput`] which contains the name, the value as json, and object.
+    pub async fn dynamic_object_field(
+        &self,
+        address: Address,
+        type_: &str,
+        name: impl Into<Name>,
+    ) -> Result<Option<DynamicFieldOutput>, Error> {
+        let bcs = name.into().0;
+        let operation = DynamicObjectFieldQuery::build(DynamicFieldArgs {
+            address,
+            name: crate::query_types::DynamicFieldName {
+                type_: type_.to_string(),
+                bcs: crate::query_types::Base64(base64ct::Base64::encode_string(&bcs)),
+            },
+        });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        let result: Option<DynamicFieldOutput> = response
+            .data
+            .and_then(|d| d.object)
+            .and_then(|o| o.dynamic_object_field)
+            .map(|df| df.into());
+        Ok(result)
+    }
+
+    /// Get a page of dynamic fields for the provided address. Note that this will also fetch
+    /// dynamic fields on wrapped objects.
+    ///
+    /// This returns [`Page`] of [`DynamicFieldOutput`]s.
+    pub async fn dynamic_fields(
+        &self,
+        address: Address,
+        after: Option<String>,
+        before: Option<String>,
+        first: Option<i32>,
+        last: Option<i32>,
+    ) -> Result<Option<Page<DynamicFieldOutput>>, Error> {
+        let operation = DynamicFieldsOwnerQuery::build(DynamicFieldConnectionArgs {
+            address,
+            after,
+            before,
+            first,
+            last,
+        });
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        if let Some(dfs) = response.data {
+            if let Some(owner) = dfs.owner {
+                let page_info = owner.dynamic_fields.page_info;
+                let nodes = owner.dynamic_fields.nodes;
+                let jsons = nodes
+                    .into_iter()
+                    .map(|df| df.into())
+                    .collect::<Vec<DynamicFieldOutput>>();
+
+                Ok(Some(Page::new(page_info, jsons)))
+            } else {
+                Ok(None)
+            }
+        } else {
+            Ok(None)
+        }
+    }
+
+    // ===========================================================================
     // Epoch API
     // ===========================================================================
 
@@ -746,6 +929,63 @@ impl Client {
         }
     }
 
+    /// Return the contents' JSON of an object that is a Move object.
+    ///
+    /// If the object does not exist (e.g., due to prunning), this will return `Ok(None)`.
+    /// Similarly, if this is not an object but an address, it will return `Ok(None)`.
+    pub async fn object_move_contents(
+        &self,
+        address: Address,
+        version: Option<u64>,
+    ) -> Result<Option<serde_json::Value>, Error> {
+        let operation = ObjectQuery::build(ObjectQueryArgs { address, version });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        if let Some(object) = response.data {
+            Ok(object
+                .object
+                .and_then(|o| o.as_move_object)
+                .and_then(|o| o.contents)
+                .and_then(|mv| mv.json))
+        } else {
+            Ok(None)
+        }
+    }
+    /// Return the BCS of an object that is a Move object.
+    ///
+    /// If the object does not exist (e.g., due to prunning), this will return `Ok(None)`.
+    /// Similarly, if this is not an object but an address, it will return `Ok(None)`.
+    pub async fn object_move_contents_bcs(
+        &self,
+        address: Address,
+        version: Option<u64>,
+    ) -> Result<Option<Vec<u8>>, Error> {
+        let operation = ObjectQuery::build(ObjectQueryArgs { address, version });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        if let Some(object) = response.data {
+            object
+                .object
+                .and_then(|o| o.as_move_object)
+                .and_then(|o| o.contents)
+                .map(|bcs| base64ct::Base64::decode_vec(bcs.bcs.0.as_str()))
+                .transpose()
+                .map_err(|e| Error::msg(format!("Cannot decode Base64 object bcs bytes: {e}")))
+        } else {
+            Ok(None)
+        }
+    }
+
     // ===========================================================================
     // Dry Run API
     // ===========================================================================
@@ -922,6 +1162,7 @@ impl Client {
 
 #[cfg(test)]
 mod tests {
+    use base64ct::Encoding;
     use futures::StreamExt;
 
     use crate::Client;
@@ -1192,7 +1433,7 @@ mod tests {
         let mut num_coins = 0;
         while let Some(result) = stream.next().await {
             assert!(result.is_ok());
-            num_coins += 1;
+            num_coins = 1;
         }
         assert!(num_coins > 0);
     }
@@ -1238,5 +1479,37 @@ mod tests {
         let dry_run = client.dry_run(tx_bytes.to_string(), None, None).await;
 
         assert!(dry_run.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_dynamic_field_query() {
+        let client = Client::new_devnet();
+        let bcs = base64ct::Base64::decode_vec("AgAAAAAAAAA=").unwrap();
+        let dynamic_field = client
+            .dynamic_field("0x5".parse().unwrap(), "u64", &bcs)
+            .await;
+
+        assert!(dynamic_field.is_ok());
+
+        let dynamic_field = client
+            .dynamic_field("0x5".parse().unwrap(), "u64", 2u64)
+            .await;
+
+        assert!(dynamic_field.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_dynamic_fields_query() {
+        for (n, _) in NETWORKS {
+            let client = Client::new(n).unwrap();
+            let dynamic_fields = client
+                .dynamic_fields("0x5".parse().unwrap(), None, None, None, None)
+                .await;
+            assert!(
+                dynamic_fields.is_ok(),
+                "Dynamic fields query failed for network: {n}. Error: {}",
+                dynamic_fields.unwrap_err()
+            );
+        }
     }
 }
