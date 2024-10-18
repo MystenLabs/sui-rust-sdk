@@ -407,7 +407,7 @@ impl Client {
 
                 if !response.is_empty() {
                     for object in response.data() {
-                        if let Some(coin) = Coin::try_from_object(&object) {
+                        if let Some(coin) = Coin::try_from_object(object) {
                             yield coin.into_owned();
                         }
                     }
