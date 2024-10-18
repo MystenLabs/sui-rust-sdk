@@ -115,7 +115,7 @@ pub struct MoveObject {
 // Utility Types
 // ===========================================================================
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(Default, cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "PageInfo")]
 /// Information about pagination in a connection.
 pub struct PageInfo {

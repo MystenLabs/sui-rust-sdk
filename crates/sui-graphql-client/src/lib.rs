@@ -95,16 +95,29 @@ pub struct Page<T> {
 }
 
 impl<T> Page<T> {
+    /// Return the page information.
     pub fn page_info(&self) -> &PageInfo {
         &self.page_info
     }
 
+    /// Return the data in the page.
     pub fn data(&self) -> &[T] {
         &self.data
     }
 
+    /// Internal function to create a new page with the provided data and page information.
     fn new(page_info: PageInfo, data: Vec<T>) -> Self {
         Self { page_info, data }
+    }
+
+    /// Check if the page has data.
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
+    }
+
+    /// Internal function to create a page with no data.
+    fn new_empty() -> Self {
+        Self::new(PageInfo::default(), vec![])
     }
 }
 
@@ -256,7 +269,7 @@ impl Client {
         before: Option<String>,
         first: Option<i32>,
         last: Option<i32>,
-    ) -> Result<Option<Page<Validator>>, Error> {
+    ) -> Result<Page<Validator>, Error> {
         ensure!(
             !(first.is_some() && last.is_some()),
             "Cannot pass both first and last"
@@ -286,9 +299,9 @@ impl Client {
                 .nodes
                 .into_iter()
                 .collect::<Vec<_>>();
-            Ok(Some(Page::new(page_info, nodes)))
+            Ok(Page::new(page_info, nodes))
         } else {
-            Ok(None)
+            Ok(Page::new_empty())
         }
     }
 
@@ -340,7 +353,7 @@ impl Client {
         first: Option<i32>,
         last: Option<i32>,
         coin_type: Option<&str>,
-    ) -> Result<Option<Page<Coin>>, Error> {
+    ) -> Result<Page<Coin>, Error> {
         ensure!(
             !(first.is_some() && last.is_some()),
             "Cannot pass both first and last"
@@ -361,16 +374,15 @@ impl Client {
             )
             .await?;
 
-        Ok(response.map(|x| {
-            Page::new(
-                x.page_info,
-                x.data
-                    .iter()
-                    .flat_map(Coin::try_from_object)
-                    .map(|c| c.into_owned())
-                    .collect::<Vec<_>>(),
-            )
-        }))
+        Ok(Page::new(
+            response.page_info,
+            response
+                .data
+                .iter()
+                .flat_map(Coin::try_from_object)
+                .map(|c| c.into_owned())
+                .collect::<Vec<_>>(),
+        ))
     }
 
     /// Stream of coins for the specified address and coin type.
@@ -395,14 +407,14 @@ impl Client {
                     None,
                 ).await?;
 
-                if let Some(page) = response {
-                    for object in page.data {
-                        if let Some(coin) = Coin::try_from_object(&object) {
+                if !response.is_empty() {
+                    for object in response.data() {
+                        if let Some(coin) = Coin::try_from_object(object) {
                             yield coin.into_owned();
                         }
                     }
 
-                    if let Some(end_cursor) = page.page_info.end_cursor {
+                    if let Some(end_cursor) = response.page_info.end_cursor {
                         after = Some(end_cursor);
                     } else {
                         break;
@@ -574,7 +586,7 @@ impl Client {
         before: Option<String>,
         first: Option<i32>,
         last: Option<i32>,
-    ) -> Result<Option<Page<Event>>, Error> {
+    ) -> Result<Page<Event>, Error> {
         ensure!(
             !(first.is_some() && last.is_some()),
             "Cannot pass both first and last"
@@ -609,9 +621,9 @@ impl Client {
                 .collect::<Result<Vec<_>, bcs::Error>>()
                 .map_err(|e| Error::msg(format!("Cannot decode bcs bytes into Event: {e}")))?;
 
-            Ok(Some(Page::new(page_info, nodes)))
+            Ok(Page::new(page_info, nodes))
         } else {
-            Ok(None)
+            Ok(Page::new_empty())
         }
     }
 
@@ -678,7 +690,7 @@ impl Client {
         filter: Option<ObjectFilter<'_>>,
         first: Option<i32>,
         last: Option<i32>,
-    ) -> Result<Option<Page<Object>>, Error> {
+    ) -> Result<Page<Object>, Error> {
         ensure!(
             !(first.is_some() && last.is_some()),
             "Cannot pass both first and last"
@@ -716,9 +728,9 @@ impl Client {
                 .collect::<Result<Vec<_>, bcs::Error>>()
                 .map_err(|e| Error::msg(format!("Cannot decode bcs bytes into Object: {e}")))?;
 
-            Ok(Some(Page::new(page_info, objects)))
+            Ok(Page::new(page_info, objects))
         } else {
-            Ok(None)
+            Ok(Page::new_empty())
         }
     }
 
@@ -855,7 +867,7 @@ impl Client {
         first: Option<i32>,
         last: Option<i32>,
         filter: Option<TransactionsFilter<'a>>,
-    ) -> Result<Option<Page<SignedTransaction>>, Error> {
+    ) -> Result<Page<SignedTransaction>, Error> {
         ensure!(
             !(first.is_some() && last.is_some()),
             "Cannot pass both first and last"
@@ -881,9 +893,9 @@ impl Client {
                 .map(|n| n.try_into())
                 .collect::<Result<Vec<_>>>()?;
             let page = Page::new(page_info, transactions);
-            Ok(Some(page))
+            Ok(page)
         } else {
-            Ok(None)
+            Ok(Page::new_empty())
         }
     }
 
@@ -1019,7 +1031,7 @@ mod tests {
             );
 
             assert!(
-                av.unwrap().is_some(),
+                !av.unwrap().is_empty(),
                 "Active validators query returned None for network: {n}"
             );
         }
@@ -1123,7 +1135,7 @@ mod tests {
                 events.unwrap_err()
             );
             assert!(
-                events.unwrap().is_some(),
+                !events.unwrap().is_empty(),
                 "Events query returned no data for network: {n}"
             );
         }
