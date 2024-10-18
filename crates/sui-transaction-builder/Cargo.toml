@@ -17,7 +17,9 @@ bcs = "0.1.6"
 [dev-dependencies]
 base64ct = "1.6"
 sui-crypto = { package = "sui-crypto", path = "../sui-crypto" , features = ["ed25519"] }
+sui-types = { package = "sui-sdk-types", path = "../sui-sdk-types", features = ["rand"] }
 sui-graphql-client = { package = "sui-graphql-client", path = "../sui-graphql-client" }
 tokio = { version = "1.0", features = ["full"] }
 anyhow = "1.0"
+rand = "0.8"
 
