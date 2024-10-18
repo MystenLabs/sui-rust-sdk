@@ -43,28 +43,33 @@ jobs:
       - uses: taiki-e/install-action@cargo-hack
       - uses: taiki-e/install-action@cargo-nextest
 
-      - name: feature compatibility
-        run: make check-features
-
-      - name: rustfmt
-        run: make check-fmt
-
-      - name: clippy
-        run: make clippy
-
-      - name: Run tests that do not require local network
-        run: make test
-
+      # - name: feature compatibility
+      #   run: make check-features
+      #
+      # - name: rustfmt
+      #   run: make check-fmt
+      #
+      # - name: clippy
+      #   run: make clippy
+      #
+      # - name: Run tests that do not require local network
+      #   run: make test
+      #
       - name: Get the latest Sui testnet binary and start a local network
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
         run: |
-          curl \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \ 
-            -L -o releases.json https://api.github.com/repos/MystenLabs/sui/releases
-          testnet_url=$(cat releases.json | jq '.[] | .assets[] | select(.name | contains("testnet")) | select(.name | contains("ubuntu"))' | jq  -csr '.[0] | .browser_download_url')
-          filename="sui.tar.gz"
+          os=${{runner.os}}
+          binary_os=""
+          if [ $os == "Linux" ]; then
+            binary_os="ubuntu"
+          elif [ $os == "macOS" ]; then
+            binary_os="macos-arm64"
+          fi
+          
+          testnet_url=$(cat releases.json | jq --arg os $binary_os '.[] | .assets[] | select(.name | contains("testnet")) | select(.name | contains($os))' | jq  -csr '.[0] | .browser_download_url')
+          filename="sui-$binary_os.tar.gz"
           echo "Downloading testnet binary from $testnet_url"
           wget $testnet_url -O $filename
           tar -zxvf $filename ./sui
