@@ -931,27 +931,26 @@ impl Client {
 
 // This function is used in tests to create a new client instance for the local server.
 #[cfg(test)]
-fn test_client() -> Client {
-    let network = std::env::var("NETWORK").unwrap_or_else(|_| "local".to_string());
-    match network.as_str() {
-        "mainnet" => Client::new_mainnet(),
-        "testnet" => Client::new_testnet(),
-        "devnet" => Client::new_devnet(),
-        _ => Client::new_localhost(),
-    }
-}
-
-#[cfg(test)]
 mod tests {
     use futures::StreamExt;
 
-    use crate::test_client;
     use crate::Client;
     use crate::PaginationFilter;
     use crate::DEVNET_HOST;
     use crate::LOCAL_HOST;
     use crate::MAINNET_HOST;
     use crate::TESTNET_HOST;
+
+    fn test_client() -> Client {
+        let network = std::env::var("NETWORK").unwrap_or_else(|_| "local".to_string());
+        match network.as_str() {
+            "mainnet" => Client::new_mainnet(),
+            "testnet" => Client::new_testnet(),
+            "devnet" => Client::new_devnet(),
+            "local" => Client::new_localhost(),
+            _ => Client::new(&network).expect("Invalid network URL: {network}"),
+        }
+    }
 
     #[test]
     fn test_rpc_server() {

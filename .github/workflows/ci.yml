@@ -127,7 +127,7 @@ jobs:
 
       - name: Run tests that require local network (GraphQL Client and Tx Builder)
         env:
-          NETWORK: "local" # other expected options are mainnet, testnet, or devnet
+          NETWORK: "local" # other expected options are mainnet, testnet, or devnet, or an actual URL to a GraphQL server: http://localhost:port
         run: |
           sleep $((EPOCH_DURATION_MS / 1000)) # wait for the network to get to second epoch
           make test-with-localnet
