@@ -197,6 +197,27 @@ impl Client {
         self.rpc.as_str()
     }
 
+    fn pagination_filter<'a>(
+        &self,
+        pagination_filter: PaginationFilter<'a>,
+    ) -> (Option<&'a str>, Option<&'a str>, Option<i32>, Option<i32>) {
+        let (after, before, first, last) = match pagination_filter.direction {
+            Direction::Forward => (
+                pagination_filter.cursor,
+                None,
+                pagination_filter.limit,
+                None,
+            ),
+            Direction::Backward => (
+                None,
+                pagination_filter.cursor,
+                None,
+                pagination_filter.limit,
+            ),
+        };
+        (after, before, first, last)
+    }
+
     /// Run a query on the GraphQL server and return the response.
     /// This method returns [`cynic::GraphQlResponse`]  over the query type `T`, and it is
     /// intended to be used with custom queries.
@@ -284,20 +305,7 @@ impl Client {
         epoch: Option<u64>,
         pagination_filter: PaginationFilter<'a>,
     ) -> Result<Page<Validator>, Error> {
-        let (after, before, first, last) = match pagination_filter.direction {
-            Direction::Forward => (
-                pagination_filter.cursor,
-                None,
-                pagination_filter.limit,
-                None,
-            ),
-            Direction::Backward => (
-                None,
-                pagination_filter.cursor,
-                None,
-                pagination_filter.limit,
-            ),
-        };
+        let (after, before, first, last) = self.pagination_filter(pagination_filter);
 
         let operation = ActiveValidatorsQuery::build(ActiveValidatorsArgs {
             id: epoch,
@@ -496,20 +504,8 @@ impl Client {
         &self,
         pagination_filter: PaginationFilter<'a>,
     ) -> Result<Option<Page<CheckpointSummary>>, Error> {
-        let (after, before, first, last) = match pagination_filter.direction {
-            Direction::Forward => (
-                pagination_filter.cursor,
-                None,
-                pagination_filter.limit,
-                None,
-            ),
-            Direction::Backward => (
-                None,
-                pagination_filter.cursor,
-                None,
-                pagination_filter.limit,
-            ),
-        };
+        let (after, before, first, last) = self.pagination_filter(pagination_filter);
+
         let operation = CheckpointsQuery::build(CheckpointsArgs {
             after,
             before,
@@ -603,20 +599,7 @@ impl Client {
         filter: Option<EventFilter>,
         pagination_filter: PaginationFilter<'_>,
     ) -> Result<Page<Event>, Error> {
-        let (after, before, first, last) = match pagination_filter.direction {
-            Direction::Forward => (
-                pagination_filter.cursor,
-                None,
-                pagination_filter.limit,
-                None,
-            ),
-            Direction::Backward => (
-                None,
-                pagination_filter.cursor,
-                None,
-                pagination_filter.limit,
-            ),
-        };
+        let (after, before, first, last) = self.pagination_filter(pagination_filter);
 
         let operation = EventsQuery::build(EventsQueryArgs {
             filter,
@@ -714,21 +697,7 @@ impl Client {
         filter: Option<ObjectFilter<'_>>,
         pagination_filter: PaginationFilter<'_>,
     ) -> Result<Page<Object>, Error> {
-        let (after, before, first, last) = match pagination_filter.direction {
-            Direction::Forward => (
-                pagination_filter.cursor,
-                None,
-                pagination_filter.limit,
-                None,
-            ),
-            Direction::Backward => (
-                None,
-                pagination_filter.cursor,
-                None,
-                pagination_filter.limit,
-            ),
-        };
-
+        let (after, before, first, last) = self.pagination_filter(pagination_filter);
         let operation = ObjectsQuery::build(ObjectsQueryArgs {
             after,
             before,
@@ -898,20 +867,7 @@ impl Client {
         filter: Option<TransactionsFilter<'a>>,
         pagination_filter: PaginationFilter<'a>,
     ) -> Result<Page<SignedTransaction>, Error> {
-        let (after, before, first, last) = match pagination_filter.direction {
-            Direction::Forward => (
-                pagination_filter.cursor,
-                None,
-                pagination_filter.limit,
-                None,
-            ),
-            Direction::Backward => (
-                None,
-                pagination_filter.cursor,
-                None,
-                pagination_filter.limit,
-            ),
-        };
+        let (after, before, first, last) = self.pagination_filter(pagination_filter);
 
         let operation = TransactionBlocksQuery::build(TransactionBlocksQueryArgs {
             after,
