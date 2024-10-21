@@ -122,27 +122,20 @@ impl<T> Page<T> {
 }
 
 /// Pagination direction.
+#[derive(Default)]
 pub enum Direction {
+    #[default]
     Forward,
     Backward,
 }
 
 /// Pagination options for querying the GraphQL server. It defaults to forward pagination with the
 /// GraphQL server's default items per page limit.
+#[derive(Default)]
 pub struct PaginationFilter<'a> {
     direction: Direction,
     cursor: Option<&'a str>,
     limit: Option<i32>,
-}
-
-impl Default for PaginationFilter<'_> {
-    fn default() -> Self {
-        Self {
-            direction: Direction::Forward,
-            cursor: None,
-            limit: None,
-        }
-    }
 }
 
 /// The GraphQL client for interacting with the Sui blockchain.
