@@ -15,21 +15,6 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
-    services:
-      postgres: # we need this postgres instance for running a local network with indexer and graphql
-        image: postgres
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgrespw
-          POSTGRES_DB: sui_indexer_v2
-          POSTGRES_HOST_AUTH_METHOD: trust
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
 
     steps:
       - name: Checkout repository
@@ -57,6 +42,55 @@ jobs:
 
       - name: rustdoc
         run: make doc
+
+  wasm:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: rust version
+        run: |
+          rustc --version
+          cargo --version
+
+      - uses: taiki-e/install-action@wasm-pack
+
+      - name: Install clang
+        run: sudo apt-get install -y clang
+
+      - name: Run tests in wasm
+        run: make wasm
+
+
+  run_tests_on_network:
+    runs-on: ubuntu-latest
+    env:
+      EPOCH_DURATION_MS: 10000
+    services:
+      postgres: # we need this postgres instance for running a local network with indexer and graphql
+        image: postgres
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgrespw
+          POSTGRES_DB: sui_indexer_v2
+          POSTGRES_HOST_AUTH_METHOD: trust
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: rust version
+        run: |
+          rustc --version
+          cargo --version
 
       - name: Get Sui releases JSON file
         env:
@@ -86,28 +120,12 @@ jobs:
           echo "Downloading testnet binary from $testnet_url"
           wget -q $testnet_url -O $filename
           tar -zxvf $filename ./sui
-          ./sui start --force-regenesis --with-faucet --with-indexer --with-graphql --pg-port 5432 --pg-db-name sui_indexer_v2 --epoch-duration-ms 10000 &
+          ./sui start --force-regenesis --with-faucet --with-indexer --with-graphql --pg-port 5432 --pg-db-name sui_indexer_v2 --epoch-duration-ms $EPOCH_DURATION_MS &
 
       - name: Run tests that require local network (GraphQL Client and Tx Builder)
+        env:
+          NETWORK: "local" # other expected options are mainnet, testnet, or devnet
         run: |
+          sleep $((EPOCH_DURATION_MS / 1000)) # wait for the network to get to second epoch
           make test-with-localnet
   
-  wasm:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: rust version
-        run: |
-          rustc --version
-          cargo --version
-
-      - uses: taiki-e/install-action@wasm-pack
-
-      - name: Install clang
-        run: sudo apt-get install -y clang
-
-      - name: Run tests in wasm
-        run: make wasm
