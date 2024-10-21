@@ -197,6 +197,7 @@ impl Client {
         self.rpc.as_str()
     }
 
+    /// Internal function to handle pagination filters and return the appropriate values.
     fn pagination_filter<'a>(
         &self,
         pagination_filter: PaginationFilter<'a>,
