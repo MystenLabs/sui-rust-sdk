@@ -110,7 +110,7 @@ impl<T> Page<T> {
         Self { page_info, data }
     }
 
-    /// Check if the page has data.
+    /// Check if the page has no data.
     pub fn is_empty(&self) -> bool {
         self.data.is_empty()
     }
@@ -282,12 +282,21 @@ impl Client {
     pub async fn active_validators<'a>(
         &self,
         epoch: Option<u64>,
-        pagination_filter: Option<PaginationFilter<'a>>,
+        pagination_filter: PaginationFilter<'a>,
     ) -> Result<Page<Validator>, Error> {
-        let pagination = pagination_filter.unwrap_or_default();
-        let (after, before, first, last) = match pagination.direction {
-            Direction::Forward => (pagination.cursor, None, pagination.limit, None),
-            Direction::Backward => (None, pagination.cursor, None, pagination.limit),
+        let (after, before, first, last) = match pagination_filter.direction {
+            Direction::Forward => (
+                pagination_filter.cursor,
+                None,
+                pagination_filter.limit,
+                None,
+            ),
+            Direction::Backward => (
+                None,
+                pagination_filter.cursor,
+                None,
+                pagination_filter.limit,
+            ),
         };
 
         let operation = ActiveValidatorsQuery::build(ActiveValidatorsArgs {
@@ -364,7 +373,7 @@ impl Client {
         &self,
         owner: Address,
         coin_type: Option<&str>,
-        pagination_filter: Option<PaginationFilter<'a>>,
+        pagination_filter: PaginationFilter<'a>,
     ) -> Result<Page<Coin>, Error> {
         let response = self
             .objects(
@@ -405,13 +414,12 @@ impl Client {
                         object_ids: None,
                         object_keys: None,
                     }),
-                    Some(PaginationFilter {
+                    PaginationFilter {
                         cursor: after.as_deref(),
                         ..Default::default()
-                    }),
+                    },
                 ).await?;
 
-                if !response.is_empty() {
                     for object in response.data() {
                         if let Some(coin) = Coin::try_from_object(object) {
                             yield coin.into_owned();
@@ -423,9 +431,6 @@ impl Client {
                     } else {
                         break;
                     }
-                } else {
-                    break;
-                }
             }
         })
     }
@@ -487,20 +492,30 @@ impl Client {
     }
 
     /// Get a page of [`CheckpointSummary`] for the provided parameters.
-    pub async fn checkpoints(
+    pub async fn checkpoints<'a>(
         &self,
-        after: Option<&str>,
-        before: Option<&str>,
-        first: Option<i32>,
-        last: Option<i32>,
+        pagination_filter: PaginationFilter<'a>,
     ) -> Result<Option<Page<CheckpointSummary>>, Error> {
+        let (after, before, first, last) = match pagination_filter.direction {
+            Direction::Forward => (
+                pagination_filter.cursor,
+                None,
+                pagination_filter.limit,
+                None,
+            ),
+            Direction::Backward => (
+                None,
+                pagination_filter.cursor,
+                None,
+                pagination_filter.limit,
+            ),
+        };
         let operation = CheckpointsQuery::build(CheckpointsArgs {
             after,
             before,
             first,
             last,
         });
-
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
@@ -586,12 +601,21 @@ impl Client {
     pub async fn events(
         &self,
         filter: Option<EventFilter>,
-        pagination_filter: Option<PaginationFilter<'_>>,
+        pagination_filter: PaginationFilter<'_>,
     ) -> Result<Page<Event>, Error> {
-        let pagination = pagination_filter.unwrap_or_default();
-        let (after, before, first, last) = match pagination.direction {
-            Direction::Forward => (pagination.cursor, None, pagination.limit, None),
-            Direction::Backward => (None, pagination.cursor, None, pagination.limit),
+        let (after, before, first, last) = match pagination_filter.direction {
+            Direction::Forward => (
+                pagination_filter.cursor,
+                None,
+                pagination_filter.limit,
+                None,
+            ),
+            Direction::Backward => (
+                None,
+                pagination_filter.cursor,
+                None,
+                pagination_filter.limit,
+            ),
         };
 
         let operation = EventsQuery::build(EventsQueryArgs {
@@ -688,12 +712,21 @@ impl Client {
     pub async fn objects(
         &self,
         filter: Option<ObjectFilter<'_>>,
-        pagination_filter: Option<PaginationFilter<'_>>,
+        pagination_filter: PaginationFilter<'_>,
     ) -> Result<Page<Object>, Error> {
-        let pagination = pagination_filter.unwrap_or_default();
-        let (after, before, first, last) = match pagination.direction {
-            Direction::Forward => (pagination.cursor, None, pagination.limit, None),
-            Direction::Backward => (None, pagination.cursor, None, pagination.limit),
+        let (after, before, first, last) = match pagination_filter.direction {
+            Direction::Forward => (
+                pagination_filter.cursor,
+                None,
+                pagination_filter.limit,
+                None,
+            ),
+            Direction::Backward => (
+                None,
+                pagination_filter.cursor,
+                None,
+                pagination_filter.limit,
+            ),
         };
 
         let operation = ObjectsQuery::build(ObjectsQueryArgs {
@@ -863,12 +896,21 @@ impl Client {
     pub async fn transactions<'a>(
         &self,
         filter: Option<TransactionsFilter<'a>>,
-        pagination_filter: Option<PaginationFilter<'a>>,
+        pagination_filter: PaginationFilter<'a>,
     ) -> Result<Page<SignedTransaction>, Error> {
-        let pagination = pagination_filter.unwrap_or_default();
-        let (after, before, first, last) = match pagination.direction {
-            Direction::Forward => (pagination.cursor, None, pagination.limit, None),
-            Direction::Backward => (None, pagination.cursor, None, pagination.limit),
+        let (after, before, first, last) = match pagination_filter.direction {
+            Direction::Forward => (
+                pagination_filter.cursor,
+                None,
+                pagination_filter.limit,
+                None,
+            ),
+            Direction::Backward => (
+                None,
+                pagination_filter.cursor,
+                None,
+                pagination_filter.limit,
+            ),
         };
 
         let operation = TransactionBlocksQuery::build(TransactionBlocksQueryArgs {
@@ -935,6 +977,7 @@ mod tests {
     use futures::StreamExt;
 
     use crate::Client;
+    use crate::PaginationFilter;
     use crate::DEVNET_HOST;
     use crate::LOCAL_HOST;
     use crate::MAINNET_HOST;
@@ -1021,7 +1064,9 @@ mod tests {
     async fn test_active_validators() {
         for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();
-            let av = client.active_validators(None, None).await;
+            let av = client
+                .active_validators(None, PaginationFilter::default())
+                .await;
             assert!(
                 av.is_ok(),
                 "Active validators query failed for network: {n}. Error: {}",
@@ -1060,7 +1105,7 @@ mod tests {
     async fn test_checkpoints_query() {
         for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();
-            let c = client.checkpoints(None, None, None, Some(5)).await;
+            let c = client.checkpoints(PaginationFilter::default()).await;
             assert!(
                 c.is_ok(),
                 "Checkpoints query failed for network: {n}. Error: {}",
@@ -1126,7 +1171,7 @@ mod tests {
     async fn test_events_query() {
         for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();
-            let events = client.events(None, None).await;
+            let events = client.events(None, PaginationFilter::default()).await;
             assert!(
                 events.is_ok(),
                 "Events query failed for network: {n}. Error: {}",
@@ -1144,7 +1189,7 @@ mod tests {
     async fn test_objects_query() {
         for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();
-            let objects = client.objects(None, None).await;
+            let objects = client.objects(None, PaginationFilter::default()).await;
             assert!(
                 objects.is_ok(),
                 "Objects query failed for network: {n}. Error: {}",
@@ -1184,7 +1229,9 @@ mod tests {
     async fn test_coins_query() {
         for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();
-            let coins = client.coins("0x1".parse().unwrap(), None, None).await;
+            let coins = client
+                .coins("0x1".parse().unwrap(), None, PaginationFilter::default())
+                .await;
             assert!(
                 coins.is_ok(),
                 "Coins query failed for network: {n}. Error: {}",
@@ -1210,7 +1257,7 @@ mod tests {
     async fn test_transactions_query() {
         for (n, _) in NETWORKS {
             let client = Client::new(n).unwrap();
-            let transactions = client.transactions(None, None).await;
+            let transactions = client.transactions(None, PaginationFilter::default()).await;
             assert!(
                 transactions.is_ok(),
                 "Transactions query failed for network: {n}. Error: {}",
