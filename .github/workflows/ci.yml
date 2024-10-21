@@ -91,6 +91,9 @@ jobs:
         run: |
           rustc --version
           cargo --version
+      
+      - uses: taiki-e/install-action@cargo-hack
+      - uses: taiki-e/install-action@cargo-nextest
 
       - name: Get Sui releases JSON file
         env:
