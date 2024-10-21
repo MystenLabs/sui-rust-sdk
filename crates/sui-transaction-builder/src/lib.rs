@@ -384,9 +384,15 @@ impl From<RawBytes> for Input {
 impl From<Value> for Input {
     fn from(value: Value) -> Input {
         match value {
-            Value::Input(i) => Input::Pure(i.to_be_bytes().to_vec()),
+            Value::Input(i) => Input::Pure(bcs::to_bytes(&i.to_be_bytes()).unwrap()),
             _ => panic!("Cannot convert Value to Input"),
         }
+    }
+}
+
+impl From<Vec<u8>> for Input {
+    fn from(bytes: Vec<u8>) -> Input {
+        Input::Pure(bytes)
     }
 }
 
@@ -513,13 +519,50 @@ mod tests {
     use std::str::FromStr;
     use sui_crypto::ed25519::Ed25519PrivateKey;
     use sui_crypto::SuiSigner;
-    use sui_graphql_client::Client;
+    use sui_graphql_client::{Client, PaginationFilter};
 
-    use sui_graphql_client::faucet::FaucetClient;
-    use sui_types::types::{Address, ObjectDigest, ObjectId};
+    use sui_graphql_client::faucet::{CoinInfo, FaucetClient};
+    use sui_types::types::{Address, ObjectDigest, ObjectId, TypeTag};
 
     use crate::object::Object;
-    use crate::{Serialized, TransactionBuilder};
+    use crate::{Function, Serialized, TransactionBuilder};
+
+    /// Derive an address from a known private key (was generated for testing)
+    fn helper_address_pk() -> (Address, Ed25519PrivateKey) {
+        let pk_bcs =
+            base64ct::Base64::decode_vec("AAjgPs/zbxDsObju6Tp2/8W5lNWP/sjUDsVxR1vgdmyT").unwrap();
+        let pk = Ed25519PrivateKey::new(pk_bcs[1..].try_into().expect("slice has wrong length"));
+        let address = pk.public_key().to_address();
+        (address, pk)
+    }
+
+    /// Generate an address from a known ED25519 private key, call faucet, set the sender,
+    /// set the gas object (last coin from the returned Vec<CoinInfo>), set gas price, set gas
+    /// budget, and return the address, private key, and coins.
+    async fn helper_setup(
+        tx: &mut TransactionBuilder,
+        client: &Client,
+    ) -> (Address, Ed25519PrivateKey, Vec<CoinInfo>) {
+        let (address, pk) = helper_address_pk();
+        let coins = FaucetClient::local()
+            .request_and_wait(address)
+            .await
+            .unwrap()
+            .unwrap()
+            .sent;
+        let gas = coins.last().unwrap().id;
+        let gas_obj = client.object(gas.into(), None).await.unwrap().unwrap();
+        tx.set_gas(vec![Object::owned(
+            gas,
+            gas_obj.version(),
+            gas_obj.digest(),
+        )]);
+        tx.set_gas_budget(500000000);
+        tx.set_gas_price(1000);
+        tx.set_sender(address);
+
+        (address, pk, coins)
+    }
 
     #[tokio::test]
     async fn test_tx_finish() {
@@ -592,24 +635,14 @@ mod tests {
     /// Test TransferObj PTB.
     #[tokio::test]
     async fn test_transfer_obj_execution() {
-        let pk_bcs =
-            base64ct::Base64::decode_vec("AAjgPs/zbxDsObju6Tp2/8W5lNWP/sjUDsVxR1vgdmyT").unwrap();
-        let pk = Ed25519PrivateKey::new(pk_bcs[1..].try_into().expect("slice has wrong length"));
-        let address = pk.public_key().to_address();
-        // request coins from local network faucet
-        let coins = FaucetClient::local()
-            .request_and_wait(address)
-            .await
-            .unwrap()
-            .unwrap()
-            .sent;
-        let first = coins.first().unwrap().id;
-        let gas = coins.last().unwrap().id;
+        // a specific random private key
 
         let mut tx = TransactionBuilder::new();
+        let (_, pk, coins) = helper_setup(&mut tx, &Client::new_localhost()).await;
 
         // get the object information from the client
         let client = Client::new_localhost();
+        let first = coins.first().unwrap().id;
         let coin = client.object(first.into(), None).await.unwrap().unwrap();
         let coin_digest = coin.digest();
         let coin_version = coin.version();
@@ -618,20 +651,102 @@ mod tests {
         let recipient = Address::generate(rand::thread_rng());
         let recipient_input = tx.input(Serialized(&recipient));
         tx.transfer_objects(vec![coin_input], recipient_input);
-        tx.set_gas_budget(500000000);
-        tx.set_gas_price(1000);
 
-        let gas_obj = client.object(gas.into(), None).await.unwrap().unwrap();
-        tx.set_gas(vec![Object::owned(gas, 2, gas_obj.digest())]);
-
-        tx.set_sender(address);
         let tx = tx.finish().unwrap();
         let sig = pk.sign_transaction(&tx).unwrap();
 
         let effects = client.execute_tx(vec![sig], &tx).await;
-        println!("{:?}", &effects);
         assert!(effects.is_ok());
-        assert!(effects.unwrap().is_some());
+
+        // wait for the transaction to be finalized
+        loop {
+            let tx_digest = client.transaction(&tx.digest().to_base58()).await.unwrap();
+            if tx_digest.is_some() {
+                break;
+            }
+        }
+
+        // check that recipient has 1
+        let recipient_coins = client
+            .coins(recipient, None, Some(PaginationFilter::default()))
+            .await
+            .unwrap();
+        assert_eq!(recipient_coins.data().len(), 1);
+
+        // check that status is succeeded and not failure
+        let status = match effects.unwrap().unwrap() {
+            sui_types::types::TransactionEffects::V2(e) => Some(e.status),
+            _ => None,
+        };
+        let expected_status = sui_types::types::ExecutionStatus::Success;
+        assert_eq!(expected_status, status.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_move_call() {
+        // Check that `0x1::option::is_none` move call works when passing `1`
+        let client = Client::new_localhost();
+        let mut tx = TransactionBuilder::new();
+        // set up the sender, gas object, gas budget, and gas price and return the pk to sign
+        let (_, pk, _) = helper_setup(&mut tx, &client).await;
+        let function = Function::new(
+            "0x1".parse().unwrap(),
+            "option".to_string(),
+            "is_none".to_string(),
+            vec![TypeTag::U64],
+        );
+        let input = tx.input(Serialized(&vec![1u64]).serialize());
+        tx.move_call(function, vec![input]);
+
+        let tx = tx.finish().unwrap();
+        let sig = pk.sign_transaction(&tx).unwrap();
+        let effects = client.execute_tx(vec![sig], &tx).await;
+
+        // wait for the transaction to be finalized
+        loop {
+            let tx_digest = client.transaction(&tx.digest().to_base58()).await.unwrap();
+            if tx_digest.is_some() {
+                break;
+            }
+        }
+
+        assert!(effects.is_ok());
+        let status = match effects.unwrap().unwrap() {
+            sui_types::types::TransactionEffects::V2(e) => Some(e.status),
+            _ => None,
+        };
+        let expected_status = sui_types::types::ExecutionStatus::Success;
+        assert_eq!(expected_status, status.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_split_transfer() {
+        let client = Client::new_localhost();
+        let mut tx = TransactionBuilder::new();
+        let (_, pk, coins) = helper_setup(&mut tx, &client).await;
+
+        let coin = coins.first().unwrap().id;
+        let coin_obj = client.object(coin.into(), None).await.unwrap().unwrap();
+        let coin_digest = coin_obj.digest();
+        let coin_version = coin_obj.version();
+
+        let coin_input = tx.input(Object::owned(
+            coin_obj.object_id(),
+            coin_version,
+            coin_digest,
+        ));
+        // transfer 1 SUI
+        let amount = tx.input(Serialized(&1_000_000_000u64).serialize());
+        let result = tx.split_coins(coin_input, vec![amount]);
+        let recipient_address = Address::generate(rand::thread_rng());
+        let recipient = tx.input(Serialized(&recipient_address));
+        tx.transfer_objects(vec![result], recipient);
+
+        let tx = tx.finish().unwrap();
+        let sig = pk.sign_transaction(&tx).unwrap();
+
+        let effects = client.execute_tx(vec![sig], &tx).await;
+        assert!(effects.is_ok(), "Execution failed: {:?}", effects);
 
         // wait for the transaction to be finalized
         loop {
@@ -643,9 +758,145 @@ mod tests {
 
         // check that recipient has 1 coin
         let recipient_coins = client
-            .coins(recipient, None, None, None, None, None)
+            .coins(recipient_address, None, Some(PaginationFilter::default()))
             .await
             .unwrap();
-        assert_eq!(recipient_coins.unwrap().data().len(), 1);
+        assert_eq!(recipient_coins.data().len(), 1);
+
+        // check that status is succeeded and not failure
+        let status = match effects.unwrap().unwrap() {
+            sui_types::types::TransactionEffects::V2(e) => Some(e.status),
+            _ => None,
+        };
+        let expected_status = sui_types::types::ExecutionStatus::Success;
+        assert_eq!(expected_status, status.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_split_without_transfer_should_fail() {
+        let client = Client::new_localhost();
+        let mut tx = TransactionBuilder::new();
+        let (_, pk, coins) = helper_setup(&mut tx, &client).await;
+
+        let coin = coins.first().unwrap().id;
+        let coin_obj = client.object(coin.into(), None).await.unwrap().unwrap();
+        let coin_digest = coin_obj.digest();
+        let coin_version = coin_obj.version();
+
+        let coin_input = tx.input(Object::owned(
+            coin_obj.object_id(),
+            coin_version,
+            coin_digest,
+        ));
+        // transfer 1 SUI
+        let amount = tx.input(Serialized(&1_000_000_000u64).serialize());
+        tx.split_coins(coin_input, vec![amount]);
+
+        let tx = tx.finish().unwrap();
+        let sig = pk.sign_transaction(&tx).unwrap();
+
+        let effects = client.execute_tx(vec![sig], &tx).await;
+        assert!(effects.is_ok());
+
+        // wait for the transaction to be finalized
+        loop {
+            let tx_digest = client.transaction(&tx.digest().to_base58()).await.unwrap();
+            if tx_digest.is_some() {
+                break;
+            }
+        }
+        assert!(effects.is_ok());
+        let status = match effects.unwrap().unwrap() {
+            sui_types::types::TransactionEffects::V2(e) => Some(e.status),
+            _ => None,
+        };
+        let expected_status = sui_types::types::ExecutionStatus::Success;
+        assert_ne!(expected_status, status.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_merge_coins() {
+        let client = Client::new_localhost();
+        let mut tx = TransactionBuilder::new();
+        let (_, pk, coins) = helper_setup(&mut tx, &client).await;
+
+        let coin1 = coins.first().unwrap().id;
+        let coin1_obj = client.object(coin1.into(), None).await.unwrap().unwrap();
+        let coin1_digest = coin1_obj.digest();
+        let coin1_version = coin1_obj.version();
+
+        let coin_to_merge = tx.input(Object::owned(
+            coin1_obj.object_id(),
+            coin1_version,
+            coin1_digest,
+        ));
+
+        let mut coins_to_merge = vec![];
+        // last coin is used for gas, first coin is the one we merge into
+        for c in coins[1..&coins.len() - 1].iter() {
+            let coin = client.object(c.id.into(), None).await.unwrap().unwrap();
+            let coin_digest = coin.digest();
+            let coin_version = coin.version();
+            coins_to_merge.push(tx.input(Object::owned(
+                coin.object_id(),
+                coin_version,
+                coin_digest,
+            )));
+        }
+
+        tx.merge_coins(coin_to_merge, coins_to_merge);
+        let tx = tx.finish().unwrap();
+        let sig = pk.sign_transaction(&tx).unwrap();
+
+        let effects = client.execute_tx(vec![sig], &tx).await;
+        assert!(effects.is_ok(), "Execution failed. Effects: {:?}", effects);
+
+        // wait for the transaction to be finalized
+        loop {
+            let tx_digest = client.transaction(&tx.digest().to_base58()).await.unwrap();
+            if tx_digest.is_some() {
+                break;
+            }
+        }
+
+        // check that it succeeded
+        let status = match effects.unwrap().unwrap() {
+            sui_types::types::TransactionEffects::V2(e) => Some(e.status),
+            _ => None,
+        };
+        let expected_status = sui_types::types::ExecutionStatus::Success;
+        assert_eq!(expected_status, status.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_make_move_vec() {
+        let client = Client::new_localhost();
+        let mut tx = TransactionBuilder::new();
+        let (_, pk, _) = helper_setup(&mut tx, &client).await;
+
+        let input = tx.input(Serialized(&1u64).serialize());
+        tx.make_move_vec(Some(TypeTag::U64), vec![input]);
+
+        let tx = tx.finish().unwrap();
+        let sig = pk.sign_transaction(&tx).unwrap();
+
+        let effects = client.execute_tx(vec![sig], &tx).await;
+        assert!(effects.is_ok(), "Execution failed. Effects: {:?}", effects);
+
+        // wait for the transaction to be finalized
+        loop {
+            let tx_digest = client.transaction(&tx.digest().to_base58()).await.unwrap();
+            if tx_digest.is_some() {
+                break;
+            }
+        }
+
+        // check that it succeeded
+        let status = match effects.unwrap().unwrap() {
+            sui_types::types::TransactionEffects::V2(e) => Some(e.status),
+            _ => None,
+        };
+        let expected_status = sui_types::types::ExecutionStatus::Success;
+        assert_eq!(expected_status, status.unwrap());
     }
 }
