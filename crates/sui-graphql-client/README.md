@@ -20,7 +20,7 @@ executing transactions and more.
 ## Connecting to a GraphQL server
 Instantiate a client with [`Client::new(server: &str)`] or use one of the predefined functions for different networks [`Client`].
 
-```rust
+```rust, no_run
 use sui_graphql_client::Client;
 use anyhow::Result;
 
@@ -118,7 +118,7 @@ The generated query types are defined below. Note that the `id` variable is opti
 Note that instead of using `Uint53`, the scalar is mapped to `u64` in the library using `impl_scalar(u64, schema::Uint53)`, thus all references to `Uint53` in the schema are replaced with `u64` in the code below.
 
 
-```rust,ignore
+```rust, ignore
 #[derive(cynic::QueryVariables, Debug)]
 pub struct CustomQueryVariables {
     pub id: Option<u64>,
@@ -145,7 +145,7 @@ pub struct BigInt(pub String);
 ```
 
 The complete example is shown below:
-```rust
+```rust, ignore
 use anyhow::Result;
 use cynic::QueryBuilder;
 
