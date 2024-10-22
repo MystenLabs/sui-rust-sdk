@@ -514,20 +514,29 @@ impl From<Input> for UnresolvedInputArgument {
 
 #[cfg(test)]
 mod tests {
-    use anyhow::{anyhow, Error};
+    use anyhow::anyhow;
+    use anyhow::Error;
     use base64ct::Encoding;
     use std::str::FromStr;
+
     use sui_crypto::ed25519::Ed25519PrivateKey;
     use sui_crypto::SuiSigner;
-    use sui_graphql_client::{Client, PaginationFilter};
-
-    use sui_graphql_client::faucet::{CoinInfo, FaucetClient};
-    use sui_types::types::{
-        Address, ExecutionStatus, ObjectDigest, ObjectId, Transaction, TransactionEffects, TypeTag,
-    };
+    use sui_graphql_client::faucet::CoinInfo;
+    use sui_graphql_client::faucet::FaucetClient;
+    use sui_graphql_client::Client;
+    use sui_graphql_client::PaginationFilter;
+    use sui_types::types::Address;
+    use sui_types::types::ExecutionStatus;
+    use sui_types::types::ObjectDigest;
+    use sui_types::types::ObjectId;
+    use sui_types::types::Transaction;
+    use sui_types::types::TransactionEffects;
+    use sui_types::types::TypeTag;
 
     use crate::object::Object;
-    use crate::{Function, Serialized, TransactionBuilder};
+    use crate::Function;
+    use crate::Serialized;
+    use crate::TransactionBuilder;
 
     /// Derive an address from a known private key (was generated for testing)
     fn helper_address_pk() -> (Address, Ed25519PrivateKey) {
