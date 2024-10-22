@@ -37,7 +37,7 @@ jobs:
       - name: clippy
         run: make clippy
 
-      - name: Run tests that do not require local network
+      - name: Run tests
         run: make test
 
       - name: rustdoc
