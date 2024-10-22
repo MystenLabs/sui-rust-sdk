@@ -693,7 +693,7 @@ mod tests {
         let effects = client.execute_tx(vec![sig], &tx).await;
         wait_for_tx_and_check_effects_status_success(&client, &tx, effects).await;
 
-        // check that recipient has 1
+        // check that recipient has 1 coin
         let recipient_coins = client
             .coins(recipient, None, PaginationFilter::default())
             .await
@@ -799,6 +799,7 @@ mod tests {
             _ => None,
         };
         let expected_status = ExecutionStatus::Success;
+        // The tx failed, so we expect Failure instead of Success
         assert_ne!(expected_status, status.unwrap());
     }
 
@@ -806,7 +807,7 @@ mod tests {
     async fn test_merge_coins() {
         let client = Client::new_localhost();
         let mut tx = TransactionBuilder::new();
-        let (_, pk, coins) = helper_setup(&mut tx, &client).await;
+        let (address, pk, coins) = helper_setup(&mut tx, &client).await;
 
         let coin1 = coins.first().unwrap().id;
         let coin1_obj = client.object(coin1.into(), None).await.unwrap().unwrap();
@@ -838,6 +839,13 @@ mod tests {
 
         let effects = client.execute_tx(vec![sig], &tx).await;
         wait_for_tx_and_check_effects_status_success(&client, &tx, effects).await;
+
+        // check that there are two coins
+        let coins_after = client
+            .coins(address, None, PaginationFilter::default())
+            .await
+            .unwrap();
+        assert_eq!(coins_after.data().len(), 2);
     }
 
     #[tokio::test]
@@ -853,23 +861,7 @@ mod tests {
         let sig = pk.sign_transaction(&tx).unwrap();
 
         let effects = client.execute_tx(vec![sig], &tx).await;
-        assert!(effects.is_ok(), "Execution failed. Effects: {:?}", effects);
-
-        // wait for the transaction to be finalized
-        loop {
-            let tx_digest = client.transaction(&tx.digest().to_base58()).await.unwrap();
-            if tx_digest.is_some() {
-                break;
-            }
-        }
-
-        // check that it succeeded
-        let status = match effects.unwrap().unwrap() {
-            sui_types::types::TransactionEffects::V2(e) => Some(e.status),
-            _ => None,
-        };
-        let expected_status = ExecutionStatus::Success;
-        assert_eq!(expected_status, status.unwrap());
+        wait_for_tx_and_check_effects_status_success(&client, &tx, effects).await;
     }
 
     #[tokio::test]
