@@ -88,22 +88,6 @@ pub struct Function {
     type_args: Vec<TypeTag>,
 }
 
-impl Function {
-    pub fn new(
-        package: Address,
-        module: String,
-        function: String,
-        type_args: Vec<TypeTag>,
-    ) -> Self {
-        Self {
-            package,
-            module,
-            function,
-            type_args,
-        }
-    }
-}
-
 /// A transaction state that can be resolved or unresolved. When calling [`try_finish`]` on the
 /// transaction builder, it will return either the resolved transaction if no error was
 /// encountered, or the [`UnresolvedTransaction`]. The unresolved transaction can be used to call the transaction
@@ -111,19 +95,6 @@ impl Function {
 pub enum TransactionResolution {
     Resolved(Transaction),
     Unresolved(UnresolvedTransaction),
-}
-
-impl Value {
-    /// Turn a Result into a NestedResult.
-    fn nested(&self, ix: u16) -> Value {
-        Value::NestedResult(
-            ix,
-            match self {
-                Value::Result(i) => *i,
-                _ => panic!("Cannot nest a non-result value"),
-            },
-        )
-    }
 }
 
 /// A transaction builder to build transactions.
@@ -369,6 +340,35 @@ impl Default for TransactionBuilder {
     }
 }
 
+impl Value {
+    /// Turn a Result into a NestedResult.
+    fn nested(&self, ix: u16) -> Value {
+        Value::NestedResult(
+            ix,
+            match self {
+                Value::Result(i) => *i,
+                _ => panic!("Cannot nest a non-result value"),
+            },
+        )
+    }
+}
+
+impl Function {
+    pub fn new(
+        package: Address,
+        module: String,
+        function: String,
+        type_args: Vec<TypeTag>,
+    ) -> Self {
+        Self {
+            package,
+            module,
+            function,
+            type_args,
+        }
+    }
+}
+
 impl From<Object> for Input {
     fn from(object: Object) -> Input {
         Input::Object(object)
@@ -514,7 +514,7 @@ impl From<Input> for UnresolvedInputArgument {
 
 #[cfg(test)]
 mod tests {
-    use anyhow::anyhow;
+    use anyhow::{anyhow, Error};
     use base64ct::Encoding;
     use std::str::FromStr;
     use sui_crypto::ed25519::Ed25519PrivateKey;
@@ -522,7 +522,9 @@ mod tests {
     use sui_graphql_client::{Client, PaginationFilter};
 
     use sui_graphql_client::faucet::{CoinInfo, FaucetClient};
-    use sui_types::types::{Address, ObjectDigest, ObjectId, TypeTag};
+    use sui_types::types::{
+        Address, ExecutionStatus, ObjectDigest, ObjectId, Transaction, TransactionEffects, TypeTag,
+    };
 
     use crate::object::Object;
     use crate::{Function, Serialized, TransactionBuilder};
@@ -562,6 +564,29 @@ mod tests {
         tx.set_sender(address);
 
         (address, pk, coins)
+    }
+
+    async fn wait_for_tx_and_check_effects_status_success(
+        client: &Client,
+        tx: &Transaction,
+        effects: Result<Option<TransactionEffects>, Error>,
+    ) {
+        assert!(effects.is_ok(), "Execution failed. Effects: {:?}", effects);
+        // wait for the transaction to be finalized
+        loop {
+            let tx_digest = client.transaction(&tx.digest().to_base58()).await.unwrap();
+            if tx_digest.is_some() {
+                break;
+            }
+        }
+
+        // check that it succeeded
+        let status = match effects.unwrap().unwrap() {
+            sui_types::types::TransactionEffects::V2(e) => Some(e.status),
+            _ => None,
+        };
+        let expected_status = ExecutionStatus::Success;
+        assert_eq!(expected_status, status.unwrap());
     }
 
     #[tokio::test]
@@ -656,15 +681,7 @@ mod tests {
         let sig = pk.sign_transaction(&tx).unwrap();
 
         let effects = client.execute_tx(vec![sig], &tx).await;
-        assert!(effects.is_ok());
-
-        // wait for the transaction to be finalized
-        loop {
-            let tx_digest = client.transaction(&tx.digest().to_base58()).await.unwrap();
-            if tx_digest.is_some() {
-                break;
-            }
-        }
+        wait_for_tx_and_check_effects_status_success(&client, &tx, effects).await;
 
         // check that recipient has 1
         let recipient_coins = client
@@ -672,14 +689,6 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(recipient_coins.data().len(), 1);
-
-        // check that status is succeeded and not failure
-        let status = match effects.unwrap().unwrap() {
-            sui_types::types::TransactionEffects::V2(e) => Some(e.status),
-            _ => None,
-        };
-        let expected_status = sui_types::types::ExecutionStatus::Success;
-        assert_eq!(expected_status, status.unwrap());
     }
 
     #[tokio::test]
@@ -701,22 +710,7 @@ mod tests {
         let tx = tx.finish().unwrap();
         let sig = pk.sign_transaction(&tx).unwrap();
         let effects = client.execute_tx(vec![sig], &tx).await;
-
-        // wait for the transaction to be finalized
-        loop {
-            let tx_digest = client.transaction(&tx.digest().to_base58()).await.unwrap();
-            if tx_digest.is_some() {
-                break;
-            }
-        }
-
-        assert!(effects.is_ok());
-        let status = match effects.unwrap().unwrap() {
-            sui_types::types::TransactionEffects::V2(e) => Some(e.status),
-            _ => None,
-        };
-        let expected_status = sui_types::types::ExecutionStatus::Success;
-        assert_eq!(expected_status, status.unwrap());
+        wait_for_tx_and_check_effects_status_success(&client, &tx, effects).await;
     }
 
     #[tokio::test]
@@ -746,15 +740,7 @@ mod tests {
         let sig = pk.sign_transaction(&tx).unwrap();
 
         let effects = client.execute_tx(vec![sig], &tx).await;
-        assert!(effects.is_ok(), "Execution failed: {:?}", effects);
-
-        // wait for the transaction to be finalized
-        loop {
-            let tx_digest = client.transaction(&tx.digest().to_base58()).await.unwrap();
-            if tx_digest.is_some() {
-                break;
-            }
-        }
+        wait_for_tx_and_check_effects_status_success(&client, &tx, effects).await;
 
         // check that recipient has 1 coin
         let recipient_coins = client
@@ -762,14 +748,6 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(recipient_coins.data().len(), 1);
-
-        // check that status is succeeded and not failure
-        let status = match effects.unwrap().unwrap() {
-            sui_types::types::TransactionEffects::V2(e) => Some(e.status),
-            _ => None,
-        };
-        let expected_status = sui_types::types::ExecutionStatus::Success;
-        assert_eq!(expected_status, status.unwrap());
     }
 
     #[tokio::test]
@@ -810,7 +788,7 @@ mod tests {
             sui_types::types::TransactionEffects::V2(e) => Some(e.status),
             _ => None,
         };
-        let expected_status = sui_types::types::ExecutionStatus::Success;
+        let expected_status = ExecutionStatus::Success;
         assert_ne!(expected_status, status.unwrap());
     }
 
@@ -849,23 +827,7 @@ mod tests {
         let sig = pk.sign_transaction(&tx).unwrap();
 
         let effects = client.execute_tx(vec![sig], &tx).await;
-        assert!(effects.is_ok(), "Execution failed. Effects: {:?}", effects);
-
-        // wait for the transaction to be finalized
-        loop {
-            let tx_digest = client.transaction(&tx.digest().to_base58()).await.unwrap();
-            if tx_digest.is_some() {
-                break;
-            }
-        }
-
-        // check that it succeeded
-        let status = match effects.unwrap().unwrap() {
-            sui_types::types::TransactionEffects::V2(e) => Some(e.status),
-            _ => None,
-        };
-        let expected_status = sui_types::types::ExecutionStatus::Success;
-        assert_eq!(expected_status, status.unwrap());
+        wait_for_tx_and_check_effects_status_success(&client, &tx, effects).await;
     }
 
     #[tokio::test]
@@ -896,7 +858,50 @@ mod tests {
             sui_types::types::TransactionEffects::V2(e) => Some(e.status),
             _ => None,
         };
-        let expected_status = sui_types::types::ExecutionStatus::Success;
+        let expected_status = ExecutionStatus::Success;
         assert_eq!(expected_status, status.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_publish() {
+        let client = Client::new_localhost();
+        let mut tx = TransactionBuilder::new();
+        let (address, pk, _) = helper_setup(&mut tx, &client).await;
+
+        // publish very dummy package (first_package from sui/examples/move/first_package)
+        let modules: [u8; 506] = [
+            161, 28, 235, 11, 6, 0, 0, 0, 10, 1, 0, 8, 2, 8, 16, 3, 24, 46, 4, 70, 2, 5, 72, 49, 7,
+            121, 133, 1, 8, 254, 1, 64, 10, 190, 2, 18, 12, 208, 2, 119, 13, 199, 3, 6, 0, 4, 1,
+            10, 1, 15, 1, 16, 0, 1, 12, 0, 0, 0, 8, 0, 1, 3, 4, 0, 3, 2, 2, 0, 0, 6, 0, 1, 0, 0, 7,
+            2, 3, 0, 0, 12, 2, 3, 0, 0, 14, 4, 3, 0, 0, 13, 5, 6, 0, 0, 9, 7, 6, 0, 1, 8, 0, 8, 0,
+            2, 15, 12, 1, 1, 8, 3, 11, 9, 10, 0, 7, 11, 1, 7, 8, 3, 0, 1, 6, 8, 0, 1, 3, 1, 6, 8,
+            1, 3, 3, 3, 7, 8, 3, 1, 8, 0, 4, 7, 8, 1, 3, 3, 7, 8, 3, 1, 8, 2, 1, 6, 8, 3, 1, 5, 1,
+            8, 1, 2, 9, 0, 5, 5, 70, 111, 114, 103, 101, 5, 83, 119, 111, 114, 100, 9, 84, 120, 67,
+            111, 110, 116, 101, 120, 116, 3, 85, 73, 68, 7, 101, 120, 97, 109, 112, 108, 101, 2,
+            105, 100, 4, 105, 110, 105, 116, 5, 109, 97, 103, 105, 99, 3, 110, 101, 119, 9, 110,
+            101, 119, 95, 115, 119, 111, 114, 100, 6, 111, 98, 106, 101, 99, 116, 6, 115, 101, 110,
+            100, 101, 114, 8, 115, 116, 114, 101, 110, 103, 116, 104, 12, 115, 119, 111, 114, 100,
+            95, 99, 114, 101, 97, 116, 101, 14, 115, 119, 111, 114, 100, 115, 95, 99, 114, 101, 97,
+            116, 101, 100, 8, 116, 114, 97, 110, 115, 102, 101, 114, 10, 116, 120, 95, 99, 111,
+            110, 116, 101, 120, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 3, 5, 8, 2, 7, 3, 12, 3, 1, 2, 2, 5, 8,
+            2, 14, 3, 0, 0, 0, 0, 1, 9, 10, 0, 17, 6, 6, 0, 0, 0, 0, 0, 0, 0, 0, 18, 1, 11, 0, 46,
+            17, 8, 56, 0, 2, 1, 1, 0, 0, 1, 4, 11, 0, 16, 0, 20, 2, 2, 1, 0, 0, 1, 4, 11, 0, 16, 1,
+            20, 2, 3, 1, 0, 0, 1, 4, 11, 0, 16, 2, 20, 2, 4, 1, 0, 0, 1, 6, 11, 2, 17, 6, 11, 0,
+            11, 1, 18, 0, 2, 5, 1, 0, 0, 1, 14, 10, 0, 16, 2, 20, 6, 1, 0, 0, 0, 0, 0, 0, 0, 22,
+            11, 0, 15, 2, 21, 11, 3, 17, 6, 11, 1, 11, 2, 18, 0, 2, 0, 1, 0, 2, 1, 1, 0,
+        ];
+        let deps = vec![
+            ObjectId::from_str("0x1").unwrap(),
+            ObjectId::from_str("0x2").unwrap(),
+        ];
+        let sender = tx.input(Serialized(&address));
+        let upgrade_cap = tx.publish(vec![modules.to_vec()], deps);
+        tx.transfer_objects(vec![upgrade_cap], sender);
+        let tx = tx.finish().unwrap();
+        let sig = pk.sign_transaction(&tx).unwrap();
+        let effects = client.execute_tx(vec![sig], &tx).await;
+        wait_for_tx_and_check_effects_status_success(&client, &tx, effects).await;
     }
 }
