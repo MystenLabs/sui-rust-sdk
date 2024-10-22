@@ -320,7 +320,7 @@ impl TransactionBuilder {
     /// Take an unresolved transaction and attempt to resolve it. It requires a fullnode.
     pub fn resolve_transaction(
         &self,
-        unresolved_tx: UnresolvedTransaction,
+        _unresolved_tx: UnresolvedTransaction,
     ) -> Result<Transaction, Error> {
         todo!()
     }
@@ -342,7 +342,7 @@ impl Default for TransactionBuilder {
 
 impl Value {
     /// Turn a Result into a NestedResult.
-    fn nested(&self, ix: u16) -> Value {
+    fn _nested(&self, ix: u16) -> Value {
         Value::NestedResult(
             ix,
             match self {
