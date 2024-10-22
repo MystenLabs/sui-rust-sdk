@@ -64,7 +64,7 @@ jobs:
         run: make wasm
 
 
-  run_tests_on_network:
+  run_tests_with_network:
     runs-on: ubuntu-latest
     env:
       EPOCH_DURATION_MS: 10000
