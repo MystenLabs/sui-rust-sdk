@@ -205,7 +205,8 @@ impl TransactionBuilder {
         self.commands.push(cmd);
     }
 
-    /// Publish a list of modules with the given dependencies.
+    /// Publish a list of modules with the given dependencies. This requires the upgrade cap to be
+    /// transferred to sender/another address after this call.
     pub fn publish(&mut self, modules: Vec<Vec<u8>>, dependencies: Vec<ObjectId>) -> Value {
         let cmd = Command::Publish(Publish {
             modules,
