@@ -92,7 +92,6 @@ jobs:
           rustc --version
           cargo --version
       
-      - uses: taiki-e/install-action@cargo-hack
       - uses: taiki-e/install-action@cargo-nextest
 
       - name: Get the Sui testnet binary and start a local network
