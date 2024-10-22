@@ -79,8 +79,7 @@ pub enum Input {
     Object(Object),
 }
 
-/// A separate type to support denoting a function by a string, or by a more
-/// structured representation.
+/// A separate type to support denoting a function by a more structured representation.
 pub struct Function {
     package: Address,
     module: String,
@@ -318,7 +317,7 @@ impl TransactionBuilder {
         }
     }
 
-    /// Take an unresolved transaction and attempt to resolve it. It requires a fullnode.
+    /// Takes an unresolved transaction and attempts to resolve it by querying the GraphQL service.
     pub fn resolve_transaction(
         &self,
         _unresolved_tx: UnresolvedTransaction,
@@ -355,6 +354,7 @@ impl Value {
 }
 
 impl Function {
+    /// Constructor for the function type.
     pub fn new(
         package: Address,
         module: String,
@@ -391,6 +391,8 @@ impl From<Value> for Input {
     }
 }
 
+// this seems to be needed as without it this is not possible
+// let input = tx.input(Serialized(&1u64).serialize());
 impl From<Vec<u8>> for Input {
     fn from(bytes: Vec<u8>) -> Input {
         Input::Pure(bytes)
@@ -398,6 +400,7 @@ impl From<Vec<u8>> for Input {
 }
 
 impl<'a, T: Serialize> Serialized<'a, T> {
+    /// Serializes the given value into bcs bytes.
     pub fn serialize(&self) -> Vec<u8> {
         bcs::to_bytes(self.0).unwrap()
     }
@@ -411,6 +414,7 @@ impl<'a> From<Serialized<'a, Address>> for Input {
     }
 }
 
+/// Convert a [`Value`] into a transaction command [`Argument`] type.
 impl From<Value> for Argument {
     fn from(value: Value) -> Self {
         match value {
