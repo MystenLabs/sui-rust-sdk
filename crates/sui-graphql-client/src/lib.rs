@@ -933,7 +933,9 @@ impl Client {
 #[cfg(test)]
 mod tests {
     use futures::StreamExt;
+    use sui_types::types::Ed25519PublicKey;
 
+    use crate::faucet::FaucetClient;
     use crate::Client;
     use crate::PaginationFilter;
     use crate::DEVNET_HOST;
@@ -1202,8 +1204,17 @@ mod tests {
 
     #[tokio::test]
     async fn test_coins_stream() {
-        let client = Client::new_testnet();
-        let mut stream = client.coins_stream("0x1".parse().unwrap(), None);
+        let client = test_client();
+        let faucet = match client.rpc_server() {
+            LOCAL_HOST => FaucetClient::local(),
+            TESTNET_HOST => FaucetClient::testnet(),
+            DEVNET_HOST => FaucetClient::devnet(),
+            _ => return,
+        };
+        let key = Ed25519PublicKey::generate(rand::thread_rng());
+        let address = key.to_address();
+        faucet.request_and_wait(address).await.unwrap();
+        let mut stream = client.coins_stream(address, None);
         let mut num_coins = 0;
         while let Some(result) = stream.next().await {
             assert!(result.is_ok());
