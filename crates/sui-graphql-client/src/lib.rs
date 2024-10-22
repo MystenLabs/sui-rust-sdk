@@ -1031,7 +1031,9 @@ mod tests {
     #[tokio::test]
     async fn test_active_validators() {
         let client = test_client();
-        let av = client.active_validators(None, None).await;
+        let av = client
+            .active_validators(None, PaginationFilter::default())
+            .await;
         assert!(
             av.is_ok(),
             "Active validators query failed for {} network. Error: {}",
@@ -1071,7 +1073,7 @@ mod tests {
     #[tokio::test]
     async fn test_checkpoints_query() {
         let client = test_client();
-        let c = client.checkpoints(None, None, None, Some(5)).await;
+        let c = client.checkpoints(PaginationFilter::default()).await;
         assert!(
             c.is_ok(),
             "Checkpoints query failed for {} network. Error: {}",
@@ -1132,7 +1134,7 @@ mod tests {
     #[ignore] // schema was updated, but the service has not been released with the new schema
     async fn test_events_query() {
         let client = test_client();
-        let events = client.events(None, None).await;
+        let events = client.events(None, PaginationFilter::default()).await;
         assert!(
             events.is_ok(),
             "Events query failed for {} network. Error: {}",
@@ -1150,7 +1152,7 @@ mod tests {
     #[ignore]
     async fn test_objects_query() {
         let client = test_client();
-        let objects = client.objects(None, None).await;
+        let objects = client.objects(None, PaginationFilter::default()).await;
         assert!(
             objects.is_ok(),
             "Objects query failed for {} network. Error: {}",
@@ -1187,7 +1189,9 @@ mod tests {
     #[tokio::test]
     async fn test_coins_query() {
         let client = test_client();
-        let coins = client.coins("0x1".parse().unwrap(), None, None).await;
+        let coins = client
+            .coins("0x1".parse().unwrap(), None, PaginationFilter::default())
+            .await;
         assert!(
             coins.is_ok(),
             "Coins query failed for {} network. Error: {}",
@@ -1212,7 +1216,7 @@ mod tests {
     #[ignore]
     async fn test_transactions_query() {
         let client = test_client();
-        let transactions = client.transactions(None, None).await;
+        let transactions = client.transactions(None, PaginationFilter::default()).await;
         assert!(
             transactions.is_ok(),
             "Transactions query failed for {} network. Error: {}",
