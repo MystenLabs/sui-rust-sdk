@@ -2029,7 +2029,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_package() {
-        let client = Client::new_testnet();
+        let client = test_client();
         let package = client.package("0x2".parse().unwrap(), None).await;
         assert!(package.is_ok());
     }
