@@ -517,7 +517,6 @@ impl From<Input> for UnresolvedInputArgument {
 mod tests {
     use anyhow::anyhow;
     use anyhow::Error;
-    use base64ct::Encoding;
     use std::str::FromStr;
 
     use sui_crypto::ed25519::Ed25519PrivateKey;
@@ -539,18 +538,17 @@ mod tests {
     use crate::Serialized;
     use crate::TransactionBuilder;
 
-    /// Derive an address from a known private key (was generated for testing)
+    /// Generate a random private key and its corresponding address
     fn helper_address_pk() -> (Address, Ed25519PrivateKey) {
-        let pk_bcs =
-            base64ct::Base64::decode_vec("AAjgPs/zbxDsObju6Tp2/8W5lNWP/sjUDsVxR1vgdmyT").unwrap();
-        let pk = Ed25519PrivateKey::new(pk_bcs[1..].try_into().expect("slice has wrong length"));
+        let pk = Ed25519PrivateKey::generate(rand::thread_rng());
         let address = pk.public_key().to_address();
         (address, pk)
     }
 
-    /// Generate an address from a known ED25519 private key, call faucet, set the sender,
-    /// set the gas object (last coin from the returned Vec<CoinInfo>), set gas price, set gas
-    /// budget, and return the address, private key, and coins.
+    /// Generate a private key and its corresponding address, call faucet which returns 5 coin
+    /// objects, set the sender to this address, set the gas object (last coin from the returned
+    /// Vec<CoinInfo>), set gas price, set gas budget, and return the address, private key, and
+    /// coins.
     async fn helper_setup(
         tx: &mut TransactionBuilder,
         client: &Client,
@@ -670,8 +668,6 @@ mod tests {
     /// Test TransferObj PTB.
     #[tokio::test]
     async fn test_transfer_obj_execution() {
-        // a specific random private key
-
         let mut tx = TransactionBuilder::new();
         let (_, pk, coins) = helper_setup(&mut tx, &Client::new_localhost()).await;
 
@@ -695,7 +691,7 @@ mod tests {
 
         // check that recipient has 1
         let recipient_coins = client
-            .coins(recipient, None, Some(PaginationFilter::default()))
+            .coins(recipient, None, PaginationFilter::default())
             .await
             .unwrap();
         assert_eq!(recipient_coins.data().len(), 1);
@@ -754,7 +750,7 @@ mod tests {
 
         // check that recipient has 1 coin
         let recipient_coins = client
-            .coins(recipient_address, None, Some(PaginationFilter::default()))
+            .coins(recipient_address, None, PaginationFilter::default())
             .await
             .unwrap();
         assert_eq!(recipient_coins.data().len(), 1);
