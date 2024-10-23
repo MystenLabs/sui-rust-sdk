@@ -81,6 +81,8 @@ use anyhow::anyhow;
 use cynic::impl_scalar;
 use serde_json::Value as JsonValue;
 
+use crate::errors::ClientError;
+
 #[cynic::schema("rpc")]
 pub mod schema {}
 
@@ -158,12 +160,12 @@ pub struct PageInfo {
 }
 
 impl TryFrom<BigInt> for u64 {
-    type Error = anyhow::Error;
+    type Error = ClientError;
 
     fn try_from(value: BigInt) -> Result<Self, Self::Error> {
         value
             .0
             .parse::<u64>()
-            .map_err(|e| anyhow!("Cannot convert BigInt into u64: {e}"))
+            .map_err(|e| ClientError::ParseError(e))
     }
 }
