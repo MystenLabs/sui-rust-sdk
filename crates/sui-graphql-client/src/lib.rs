@@ -715,7 +715,7 @@ impl Client {
         &self,
         address: Address,
         pagination_filter: PaginationFilter<'a>,
-    ) -> Result<Option<Page<DynamicFieldOutput>>, Error> {
+    ) -> Result<Page<DynamicFieldOutput>, Error> {
         let (after, before, first, last) = self.pagination_filter(pagination_filter);
         let operation = DynamicFieldsOwnerQuery::build(DynamicFieldConnectionArgs {
             address,
@@ -731,10 +731,10 @@ impl Client {
         }
 
         let Some(DynamicFieldsOwnerQuery { owner: Some(dfs) }) = response.data else {
-            return Ok(Some(Page::new_empty()));
+            return Ok(Page::new_empty());
         };
 
-        Ok(Some(Page::new(
+        Ok(Page::new(
             dfs.dynamic_fields.page_info,
             dfs.dynamic_fields
                 .nodes
@@ -742,7 +742,7 @@ impl Client {
                 .map(TryInto::try_into)
                 .collect::<Result<Vec<_>, Error>>()
                 .map_err(|e| Error::msg(format!("{:?}", e)))?,
-        )))
+        ))
     }
 
     // ===========================================================================
