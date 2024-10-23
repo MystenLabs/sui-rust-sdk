@@ -6,6 +6,7 @@ use std::str::FromStr;
 use base64ct::Encoding;
 use sui_types::types::TypeTag;
 
+use crate::error::ClientError;
 use crate::query_types::schema;
 use crate::query_types::Address;
 use crate::query_types::Base64;
@@ -160,7 +161,7 @@ impl DynamicField {
 }
 
 impl TryFrom<DynamicField> for DynamicFieldOutput {
-    type Error = anyhow::Error;
+    type Error = ClientError;
 
     fn try_from(val: DynamicField) -> Result<Self, Self::Error> {
         let typetag = TypeTag::from_str(
@@ -171,7 +172,7 @@ impl TryFrom<DynamicField> for DynamicFieldOutput {
                 .repr
                 .as_str(),
         )
-        .map_err(|_| anyhow::anyhow!("Invalid TypeTag"))?;
+        .map_err(ClientError::from)?;
         Ok(DynamicFieldOutput {
             name: crate::DynamicFieldName {
                 type_: typetag,
