@@ -172,10 +172,10 @@ pub enum Direction {
 /// Pagination options for querying the GraphQL server. It defaults to forward pagination with the
 /// GraphQL server's default items per page limit.
 #[derive(Default)]
-pub struct PaginationFilter<'a> {
-    direction: Direction,
-    cursor: Option<&'a str>,
-    limit: Option<i32>,
+pub struct PaginationFilter {
+    pub direction: Direction,
+    pub cursor: Option<String>,
+    pub limit: Option<i32>,
 }
 
 impl<T: Serialize> From<T> for NameValue {
@@ -266,10 +266,10 @@ impl Client {
     }
 
     /// Internal function to handle pagination filters and return the appropriate values.
-    fn pagination_filter<'a>(
+    fn pagination_filter(
         &self,
-        pagination_filter: PaginationFilter<'a>,
-    ) -> (Option<&'a str>, Option<&'a str>, Option<i32>, Option<i32>) {
+        pagination_filter: PaginationFilter,
+    ) -> (Option<String>, Option<String>, Option<i32>, Option<i32>) {
         let (after, before, first, last) = match pagination_filter.direction {
             Direction::Forward => (
                 pagination_filter.cursor,
@@ -372,14 +372,14 @@ impl Client {
     pub async fn active_validators<'a>(
         &self,
         epoch: Option<u64>,
-        pagination_filter: PaginationFilter<'a>,
+        pagination_filter: PaginationFilter,
     ) -> Result<Page<Validator>, Error> {
         let (after, before, first, last) = self.pagination_filter(pagination_filter);
 
         let operation = ActiveValidatorsQuery::build(ActiveValidatorsArgs {
             id: epoch,
-            after,
-            before,
+            after: after.as_deref(),
+            before: before.as_deref(),
             first,
             last,
         });
@@ -450,7 +450,7 @@ impl Client {
         &self,
         owner: Address,
         coin_type: Option<&str>,
-        pagination_filter: PaginationFilter<'a>,
+        pagination_filter: PaginationFilter,
     ) -> Result<Page<Coin>, Error> {
         let response = self
             .objects(
@@ -492,7 +492,7 @@ impl Client {
                         object_keys: None,
                     }),
                     PaginationFilter {
-                        cursor: after.as_deref(),
+                        cursor: after,
                         ..Default::default()
                     },
                 ).await?;
@@ -571,13 +571,13 @@ impl Client {
     /// Get a page of [`CheckpointSummary`] for the provided parameters.
     pub async fn checkpoints<'a>(
         &self,
-        pagination_filter: PaginationFilter<'a>,
+        pagination_filter: PaginationFilter,
     ) -> Result<Option<Page<CheckpointSummary>>, Error> {
         let (after, before, first, last) = self.pagination_filter(pagination_filter);
 
         let operation = CheckpointsQuery::build(CheckpointsArgs {
-            after,
-            before,
+            after: after.as_deref(),
+            before: before.as_deref(),
             first,
             last,
         });
@@ -714,13 +714,13 @@ impl Client {
     pub async fn dynamic_fields<'a>(
         &self,
         address: Address,
-        pagination_filter: PaginationFilter<'a>,
+        pagination_filter: PaginationFilter,
     ) -> Result<Option<Page<DynamicFieldOutput>>, Error> {
         let (after, before, first, last) = self.pagination_filter(pagination_filter);
         let operation = DynamicFieldsOwnerQuery::build(DynamicFieldConnectionArgs {
             address,
-            after,
-            before,
+            after: after.as_deref(),
+            before: before.as_deref(),
             first,
             last,
         });
@@ -799,14 +799,14 @@ impl Client {
     pub async fn events(
         &self,
         filter: Option<EventFilter>,
-        pagination_filter: PaginationFilter<'_>,
+        pagination_filter: PaginationFilter,
     ) -> Result<Page<Event>, Error> {
         let (after, before, first, last) = self.pagination_filter(pagination_filter);
 
         let operation = EventsQuery::build(EventsQueryArgs {
             filter,
-            after,
-            before,
+            after: after.as_deref(),
+            before: before.as_deref(),
             first,
             last,
         });
@@ -897,12 +897,12 @@ impl Client {
     pub async fn objects(
         &self,
         filter: Option<ObjectFilter<'_>>,
-        pagination_filter: PaginationFilter<'_>,
+        pagination_filter: PaginationFilter,
     ) -> Result<Page<Object>, Error> {
         let (after, before, first, last) = self.pagination_filter(pagination_filter);
         let operation = ObjectsQuery::build(ObjectsQueryArgs {
-            after,
-            before,
+            after: after.as_deref(),
+            before: before.as_deref(),
             filter,
             first,
             last,
@@ -1124,13 +1124,13 @@ impl Client {
     pub async fn transactions<'a>(
         &self,
         filter: Option<TransactionsFilter<'a>>,
-        pagination_filter: PaginationFilter<'a>,
+        pagination_filter: PaginationFilter,
     ) -> Result<Page<SignedTransaction>, Error> {
         let (after, before, first, last) = self.pagination_filter(pagination_filter);
 
         let operation = TransactionBlocksQuery::build(TransactionBlocksQueryArgs {
-            after,
-            before,
+            after: after.as_deref(),
+            before: before.as_deref(),
             filter,
             first,
             last,
