@@ -228,7 +228,7 @@ impl TransactionBuilder {
 
     /// Assuming everything is resolved, convert this transaction into the
     /// resolved form. Fails if there are unresolved parts.
-    fn try_finish(self) -> Result<Transaction, Error> {
+    fn finish(self) -> Result<Transaction, Error> {
         let Some(sender) = self.sender else {
             return Err(anyhow!("No sender provided"));
         };
@@ -282,10 +282,15 @@ impl TransactionBuilder {
         })
     }
 
-    /// Attempt to finish the transaction, but if it fails, it will attempt to resolve the
-    /// transaction by querying the GraphQL service, for which a client is required.
-    pub fn resolve_transaction(self, client: Option<Client>) -> Result<Transaction, Error> {
-        match self.clone().try_finish() {
+    /// Attempt to finish the transaction with the provided data so far.
+    ///
+    /// - if it succeeds, returns the transaction.
+    /// - if it fails, it will attempt to resolve the transaction by querying the GraphQL service
+    ///   for missing data. A client is required for this operation.
+    ///
+    /// It returns an error if the transaction cannot be resolved.
+    pub fn try_finish(self, client: Option<Client>) -> Result<Transaction, Error> {
+        match self.clone().finish() {
             Ok(tx) => Ok(tx),
             Err(_) => {
                 let Some(client) = client else {
@@ -596,7 +601,7 @@ mod tests {
             .unwrap(),
         ));
 
-        let result = tx.clone().try_finish();
+        let result = tx.clone().finish();
         assert!(result.is_err());
 
         tx.transfer_objects(vec![coin], recipient);
@@ -617,7 +622,7 @@ mod tests {
                 .unwrap(),
         );
 
-        let tx = tx.try_finish();
+        let tx = tx.finish();
         assert!(tx.is_ok());
     }
 
@@ -639,7 +644,7 @@ mod tests {
         let recipient_input = tx.input(Serialized(&recipient));
         tx.transfer_objects(vec![coin_input], recipient_input);
 
-        let tx = tx.try_finish().unwrap();
+        let tx = tx.finish().unwrap();
         let sig = pk.sign_transaction(&tx).unwrap();
 
         let effects = client.execute_tx(vec![sig], &tx).await;
@@ -669,7 +674,7 @@ mod tests {
         let input = tx.input(Serialized(&vec![1u64]));
         tx.move_call(function, vec![input]);
 
-        let tx = tx.try_finish().unwrap();
+        let tx = tx.finish().unwrap();
         let sig = pk.sign_transaction(&tx).unwrap();
         let effects = client.execute_tx(vec![sig], &tx).await;
         wait_for_tx_and_check_effects_status_success(&client, &tx, effects).await;
@@ -698,7 +703,7 @@ mod tests {
         let recipient = tx.input(Serialized(&recipient_address));
         tx.transfer_objects(vec![result], recipient);
 
-        let tx = tx.try_finish().unwrap();
+        let tx = tx.finish().unwrap();
         let sig = pk.sign_transaction(&tx).unwrap();
 
         let effects = client.execute_tx(vec![sig], &tx).await;
@@ -732,7 +737,7 @@ mod tests {
         let amount = tx.input(Serialized(&1_000_000_000u64));
         tx.split_coins(coin_input, vec![amount]);
 
-        let tx = tx.try_finish().unwrap();
+        let tx = tx.finish().unwrap();
         let sig = pk.sign_transaction(&tx).unwrap();
 
         let effects = client.execute_tx(vec![sig], &tx).await;
@@ -786,7 +791,7 @@ mod tests {
         }
 
         tx.merge_coins(coin_to_merge, coins_to_merge);
-        let tx = tx.try_finish().unwrap();
+        let tx = tx.finish().unwrap();
         let sig = pk.sign_transaction(&tx).unwrap();
 
         let effects = client.execute_tx(vec![sig], &tx).await;
@@ -809,7 +814,7 @@ mod tests {
         let input = tx.input(Serialized(&1u64));
         tx.make_move_vec(Some(TypeTag::U64), vec![input]);
 
-        let tx = tx.try_finish().unwrap();
+        let tx = tx.finish().unwrap();
         let sig = pk.sign_transaction(&tx).unwrap();
 
         let effects = client.execute_tx(vec![sig], &tx).await;
@@ -853,7 +858,7 @@ mod tests {
         let sender = tx.input(Serialized(&address));
         let upgrade_cap = tx.publish(vec![modules.to_vec()], deps);
         tx.transfer_objects(vec![upgrade_cap], sender);
-        let tx = tx.try_finish().unwrap();
+        let tx = tx.finish().unwrap();
         let sig = pk.sign_transaction(&tx).unwrap();
         let effects = client.execute_tx(vec![sig], &tx).await;
         wait_for_tx_and_check_effects_status_success(&client, &tx, effects).await;
