@@ -6,7 +6,7 @@ use sui_types::types::SignedTransaction;
 use sui_types::types::Transaction;
 use sui_types::types::UserSignature;
 
-use crate::errors::ClientError;
+use crate::error::ClientError;
 use crate::query_types::schema;
 use crate::query_types::Address;
 use crate::query_types::Base64;

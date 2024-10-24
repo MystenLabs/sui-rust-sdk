@@ -80,7 +80,7 @@ use sui_types::types::Address;
 use cynic::impl_scalar;
 use serde_json::Value as JsonValue;
 
-use crate::errors::ClientError;
+use crate::error::ClientError;
 
 #[cynic::schema("rpc")]
 pub mod schema {}

@@ -3,7 +3,7 @@
 
 use cynic::QueryBuilder;
 
-use sui_graphql_client::errors::ClientError;
+use sui_graphql_client::error::ClientError;
 use sui_graphql_client::query_types::schema;
 use sui_graphql_client::query_types::BigInt;
 use sui_graphql_client::Client;

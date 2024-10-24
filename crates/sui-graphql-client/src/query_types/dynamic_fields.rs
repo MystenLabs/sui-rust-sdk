@@ -6,7 +6,7 @@ use std::str::FromStr;
 use base64ct::Encoding;
 use sui_types::types::TypeTag;
 
-use crate::errors::ClientError;
+use crate::error::ClientError;
 use crate::query_types::schema;
 use crate::query_types::Address;
 use crate::query_types::Base64;

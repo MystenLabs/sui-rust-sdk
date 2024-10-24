@@ -8,7 +8,7 @@ use sui_types::types::CheckpointDigest;
 use sui_types::types::CheckpointSummary;
 use sui_types::types::GasCostSummary as NativeGasCostSummary;
 
-use crate::errors::ClientError;
+use crate::error::ClientError;
 use crate::query_types::schema;
 use crate::query_types::Base64;
 use crate::query_types::BigInt;

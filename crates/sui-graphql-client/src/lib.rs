@@ -3,12 +3,12 @@
 
 #![doc = include_str!("../README.md")]
 
-pub mod errors;
+pub mod error;
 pub mod faucet;
 pub mod query_types;
 
 use base64ct::Encoding;
-use errors::ClientError;
+use error::ClientError;
 use query_types::ActiveValidatorsArgs;
 use query_types::ActiveValidatorsQuery;
 use query_types::BalanceArgs;
