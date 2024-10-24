@@ -63,13 +63,13 @@ struct RawBytes(Vec<u8>);
 /// A transaction input that will be serialized from BCS.
 pub struct Serialized<'a, T: Serialize>(pub &'a T);
 
-#[derive(Clone, Copy, Debug)]
-pub enum Value {
-    Gas,
-    Input(u16),
-    Result(u16),
-    NestedResult(u16, u16),
-}
+// #[derive(Clone, Copy, Debug)]
+// pub enum Argument {
+//     Gas,
+//     Input(u16),
+//     Result(u16),
+//     NestedResult(u16, u16),
+// }
 
 /// Inputs are converted into this type when they are added to a Transaction.
 /// We will offer a number of type conversion trait impls to make this seamless.
@@ -107,10 +107,10 @@ impl TransactionBuilder {
     // Transaction Inputs
 
     /// Make a value available to the transaction as an input.
-    pub fn input(&mut self, i: impl Into<Input>) -> Value {
+    pub fn input(&mut self, i: impl Into<Input>) -> Argument {
         let input = i.into();
         self.inputs.push(input);
-        Value::Input((self.inputs.len() - 1) as u16)
+        Argument::Input((self.inputs.len() - 1) as u16)
     }
 
     // Metadata
@@ -147,65 +147,65 @@ impl TransactionBuilder {
 
     // Commands
     /// Call a Move function with the given arguments.
-    pub fn move_call(&mut self, function: Function, arguments: Vec<Value>) -> Value {
+    pub fn move_call(&mut self, function: Function, arguments: Vec<Argument>) -> Argument {
         let cmd = Command::MoveCall(MoveCall {
             package: function.package.into(),
             module: function.module,
             function: function.function,
             type_arguments: function.type_args,
-            arguments: arguments.into_iter().map(|a| a.into()).collect(),
+            arguments,
         });
         self.commands.push(cmd);
-        Value::Result(self.commands.len() as u16 - 1)
+        Argument::Result(self.commands.len() as u16 - 1)
     }
 
     /// Transfer a list of objects to the given address.
-    pub fn transfer_objects(&mut self, objects: Vec<Value>, address: Value) {
+    pub fn transfer_objects(&mut self, objects: Vec<Argument>, address: Argument) {
         let cmd = Command::TransferObjects(TransferObjects {
-            objects: objects.into_iter().map(|o| o.into()).collect(),
-            address: address.into(),
+            objects: objects.into_iter().collect(),
+            address,
         });
         self.commands.push(cmd);
     }
 
     /// Split a coin by amounts.
-    pub fn split_coins(&mut self, coin: Value, amounts: Vec<Value>) -> Value {
+    pub fn split_coins(&mut self, coin: Argument, amounts: Vec<Argument>) -> Argument {
         let cmd = Command::SplitCoins(SplitCoins {
-            coin: coin.into(),
-            amounts: amounts.into_iter().map(|a| a.into()).collect(),
+            coin,
+            amounts: amounts.into_iter().collect(),
         });
         self.commands.push(cmd);
-        Value::Result(self.commands.len() as u16 - 1)
+        Argument::Result(self.commands.len() as u16 - 1)
     }
 
     /// Merge a list of coins into a single coin.
-    pub fn merge_coins(&mut self, into_coin: Value, coins: Vec<Value>) {
+    pub fn merge_coins(&mut self, into_coin: Argument, coins: Vec<Argument>) {
         let cmd = Command::MergeCoins(MergeCoins {
-            coin: into_coin.into(),
-            coins_to_merge: coins.into_iter().map(|c| c.into()).collect(),
+            coin: into_coin,
+            coins_to_merge: coins.into_iter().collect(),
         });
         self.commands.push(cmd);
     }
 
     /// Make a move vector from a list of elements.
-    pub fn make_move_vec(&mut self, type_: Option<TypeTag>, elements: Vec<Value>) -> Value {
+    pub fn make_move_vec(&mut self, type_: Option<TypeTag>, elements: Vec<Argument>) -> Argument {
         let cmd = Command::MakeMoveVector(MakeMoveVector {
             type_,
-            elements: elements.into_iter().map(|v| v.into()).collect(),
+            elements: elements.into_iter().collect(),
         });
         self.commands.push(cmd);
-        Value::Result(self.commands.len() as u16 - 1)
+        Argument::Result(self.commands.len() as u16 - 1)
     }
 
     /// Publish a list of modules with the given dependencies. This requires the upgrade cap to be
     /// transferred to sender/another address after this call.
-    pub fn publish(&mut self, modules: Vec<Vec<u8>>, dependencies: Vec<ObjectId>) -> Value {
+    pub fn publish(&mut self, modules: Vec<Vec<u8>>, dependencies: Vec<ObjectId>) -> Argument {
         let cmd = Command::Publish(Publish {
             modules,
             dependencies,
         });
         self.commands.push(cmd);
-        Value::Result(self.commands.len() as u16 - 1)
+        Argument::Result(self.commands.len() as u16 - 1)
     }
 
     /// Upgrade a module.
@@ -214,16 +214,16 @@ impl TransactionBuilder {
         modules: Vec<Vec<u8>>,
         dependencies: Vec<ObjectId>,
         prev: ObjectId,
-        ticket: Value,
-    ) -> Value {
+        ticket: Argument,
+    ) -> Argument {
         let cmd = Command::Upgrade(Upgrade {
             modules,
             dependencies,
             package: prev,
-            ticket: ticket.into(),
+            ticket,
         });
         self.commands.push(cmd);
-        Value::Result(self.commands.len() as u16 - 1)
+        Argument::Result(self.commands.len() as u16 - 1)
     }
 
     /// Assuming everything is resolved, convert this transaction into the
@@ -343,19 +343,6 @@ impl Default for TransactionBuilder {
     }
 }
 
-impl Value {
-    /// Turn a Result into a NestedResult.
-    pub fn nested(&self, ix: u16) -> Value {
-        Value::NestedResult(
-            match self {
-                Value::Result(i) => *i,
-                _ => panic!("Cannot nest a non-result value"),
-            },
-            ix,
-        )
-    }
-}
-
 impl Function {
     /// Constructor for the function type.
     pub fn new(
@@ -388,18 +375,6 @@ impl From<RawBytes> for Input {
 impl<'a, T: Serialize> From<Serialized<'a, T>> for Input {
     fn from(val: Serialized<'a, T>) -> Input {
         Input::Pure(bcs::to_bytes(val.0).unwrap())
-    }
-}
-
-/// Convert a [`Value`] into a transaction command [`Argument`] type.
-impl From<Value> for Argument {
-    fn from(value: Value) -> Self {
-        match value {
-            Value::Gas => Argument::Gas,
-            Value::Input(i) => Argument::Input(i),
-            Value::Result(i) => Argument::Result(i),
-            Value::NestedResult(i, j) => Argument::NestedResult(i, j),
-        }
     }
 }
 

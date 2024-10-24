@@ -626,6 +626,19 @@ pub enum Argument {
     NestedResult(u16, u16),
 }
 
+impl Argument {
+    /// Turn a Result into a NestedResult.
+    pub fn nested(&self, ix: u16) -> Argument {
+        Argument::NestedResult(
+            match self {
+                Argument::Result(i) => *i,
+                _ => panic!("Cannot nest a non-result value"),
+            },
+            ix,
+        )
+    }
+}
+
 /// The command for calling a Move function, either an entry function or a public
 /// function (which cannot return references).
 #[derive(Clone, Debug, PartialEq, Eq)]
