@@ -63,7 +63,6 @@ jobs:
       - name: Run tests in wasm
         run: make wasm
 
-
   run_tests_with_network:
     runs-on: ubuntu-latest
     env:
@@ -91,18 +90,18 @@ jobs:
         run: |
           rustc --version
           cargo --version
-      
+
       - uses: taiki-e/install-action@cargo-nextest
 
       - name: Get the Sui testnet binary and start a local network
         shell: bash
         env:
-          SUI_BINARY_VERSION: "1.35.1" # used for downloading a specific Sui binary versions that matches the GraphQL schema for local network tests
+          SUI_BINARY_VERSION: "1.36.1" # used for downloading a specific Sui binary versions that matches the GraphQL schema for local network tests
           SUI_NETWORK_RELEASE: "testnet" # which release to use
         run: |
           ASSET_NAME="sui-$SUI_NETWORK_RELEASE-v$SUI_BINARY_VERSION-ubuntu-x86_64.tgz"
           download_url="https://github.com/mystenlabs/sui/releases/download/$SUI_NETWORK_RELEASE-v$SUI_BINARY_VERSION/$ASSET_NAME"
-          
+
           echo "Downloading testnet binary from $download_url"
           wget -q $download_url -O sui.tgz
           tar -zxvf sui.tgz ./sui
@@ -115,4 +114,3 @@ jobs:
         run: |
           sleep $((EPOCH_DURATION_MS / 1000)) # wait for the network to get to epoch #2
           make test-with-localnet
-  
