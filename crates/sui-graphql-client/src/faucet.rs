@@ -5,8 +5,6 @@ use sui_types::types::Address;
 use sui_types::types::ObjectId;
 use sui_types::types::TransactionDigest;
 
-use anyhow::anyhow;
-use anyhow::bail;
 use reqwest::StatusCode;
 use reqwest::Url;
 use serde::Deserialize;
@@ -73,6 +71,29 @@ pub struct CoinInfo {
     pub transfer_tx_digest: TransactionDigest,
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum FaucetError {
+    #[error("Request error")]
+    RequestError,
+    #[error("Cannot fetch request status due to too many requests from this IP address.")]
+    RequestStatusTooManyRequests,
+    #[error("Service is currently overloaded or unavailable. Please try again later.")]
+    ServiceUnavailable,
+    #[error("Cannot fetch request status due to a bad gateway.")]
+    BadGateway,
+    #[error("Response parse error")]
+    ResponseParseError {
+        #[from]
+        source: serde_json::Error,
+    },
+    #[error("Unsuccessful request: {error}")]
+    UnsuccessfulRequest { error: String },
+    #[error("Faucet service received too many requests from this IP address. Please try again after 60 minutes.")]
+    TooManyRequests,
+    #[error("Request timed out")]
+    RequestTimeout,
+}
+
 impl FaucetClient {
     /// Construct a new `FaucetClient` with the given faucet service URL. This [`FaucetClient`]
     /// expects that the service provides two endpoints: /v1/gas and /v1/status. As such, do not
@@ -112,12 +133,12 @@ impl FaucetClient {
 
     /// Request gas from the faucet. Note that this will return the UUID of the request and not
     /// wait until the token is received. Use `request_and_wait` to wait for the token.
-    pub async fn request(&self, address: Address) -> Result<Option<String>, anyhow::Error> {
+    pub async fn request(&self, address: Address) -> Result<Option<String>, FaucetError> {
         self.request_impl(address).await
     }
 
     /// Internal implementation of a faucet request. It returns the task Uuid as a String.
-    async fn request_impl(&self, address: Address) -> Result<Option<String>, anyhow::Error> {
+    async fn request_impl(&self, address: Address) -> Result<Option<String>, FaucetError> {
         let address = address.to_string();
         let json_body = json![{
             "FixedAmountRequest": {
@@ -142,7 +163,7 @@ impl FaucetClient {
 
                 if let Some(err) = faucet_resp.error {
                     error!("Faucet request was unsuccessful: {err}");
-                    bail!("Faucet request was unsuccessful: {err}")
+                    Err(FaucetError::UnsuccessfulRequest { error: err })
                 } else {
                     info!("Request succesful: {:?}", faucet_resp.task);
                     Ok(faucet_resp.task)
@@ -150,15 +171,17 @@ impl FaucetClient {
             }
             StatusCode::TOO_MANY_REQUESTS => {
                 error!("Faucet service received too many requests from this IP address.");
-                bail!("Faucet service received too many requests from this IP address. Please try again after 60 minutes.");
+                Err(FaucetError::TooManyRequests)
             }
             StatusCode::SERVICE_UNAVAILABLE => {
                 error!("Faucet service is currently overloaded or unavailable.");
-                bail!("Faucet service is currently overloaded or unavailable. Please try again later.");
+                Err(FaucetError::ServiceUnavailable)
             }
             status_code => {
                 error!("Faucet request was unsuccessful: {status_code}");
-                bail!("Faucet request was unsuccessful: {status_code}");
+                Err(FaucetError::UnsuccessfulRequest {
+                    error: format!("{status_code}"),
+                })
             }
         }
     }
@@ -172,7 +195,7 @@ impl FaucetClient {
     pub async fn request_and_wait(
         &self,
         address: Address,
-    ) -> Result<Option<FaucetReceipt>, anyhow::Error> {
+    ) -> Result<Option<FaucetReceipt>, FaucetError> {
         let request_id = self.request(address).await?;
         if let Some(request_id) = request_id {
             let poll_response = tokio::time::timeout(FAUCET_REQUEST_TIMEOUT, async {
@@ -200,10 +223,9 @@ impl FaucetClient {
                         }
                     } else if let Some(err) = req.err() {
                         error!("Faucet request {request_id} failed. Error: {:?}", err);
-                        break Err(anyhow!(
-                            "Faucet request {request_id} failed. Error: {:?}",
-                            err
-                        ));
+                        break Err(FaucetError::UnsuccessfulRequest {
+                            error: format!("Faucet request {request_id} failed. Error: {:?}", err),
+                        });
                     }
                 }
             })
@@ -213,7 +235,7 @@ impl FaucetClient {
                     "Faucet request {request_id} timed out. Timeout set to {} seconds",
                     FAUCET_REQUEST_TIMEOUT.as_secs()
                 );
-                anyhow!("Faucet request timed out")
+                FaucetError::RequestTimeout
             })??;
             Ok(poll_response.transferred_gas_objects)
         } else {
@@ -224,25 +246,29 @@ impl FaucetClient {
     /// Check the faucet request status.
     ///
     /// Possible statuses are defined in: [`BatchSendStatusType`]
-    pub async fn request_status(
-        &self,
-        id: String,
-    ) -> Result<Option<BatchSendStatus>, anyhow::Error> {
+    pub async fn request_status(&self, id: String) -> Result<Option<BatchSendStatus>, FaucetError> {
         let status_url = format!("{}v1/status/{}", self.faucet_url, id);
         info!("Checking status of faucet request: {status_url}");
         let response = self.inner.get(&status_url).send().await?;
         if response.status() == StatusCode::TOO_MANY_REQUESTS {
-            bail!("Cannot fetch request status due to too many requests from this IP address.");
+            return Err(FaucetError::RequestStatusTooManyRequests);
         } else if response.status() == StatusCode::BAD_GATEWAY {
-            bail!("Cannot fetch request status due to a bad gateway.")
+            return Err(FaucetError::BadGateway);
         }
         let json = response
             .json::<BatchStatusFaucetResponse>()
             .await
             .map_err(|e| {
                 error!("Failed to parse faucet response: {:?}", e);
-                anyhow!("Failed to parse faucet response: {:?}", e)
+                FaucetError::RequestError
             })?;
         Ok(json.status)
+    }
+}
+
+impl From<reqwest::Error> for FaucetError {
+    fn from(err: reqwest::Error) -> Self {
+        tracing::error!("Faucet request error: {:?}", err);
+        FaucetError::RequestError
     }
 }

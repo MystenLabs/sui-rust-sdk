@@ -1,9 +1,9 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::Result;
 use cynic::QueryBuilder;
 
+use sui_graphql_client::error::ClientError;
 use sui_graphql_client::query_types::schema;
 use sui_graphql_client::query_types::BigInt;
 use sui_graphql_client::Client;
@@ -43,7 +43,7 @@ pub struct ChainIdQuery {
 }
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> Result<(), ClientError> {
     let client = Client::new_devnet();
 
     // Query the data for the last known epoch. Note that id variable is None, so last epoch data
