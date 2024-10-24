@@ -87,68 +87,56 @@ impl Object {
     // Kind
     pub fn as_owned(self) -> Self {
         Self {
-            id: self.id,
             kind: Some(Kind::ImmOrOwned),
-            version: self.version,
-            digest: self.digest,
-            initial_shared_version: self.initial_shared_version,
-            mutable: self.mutable,
+            digest: None,
+            version: None,
+            mutable: None,
+            initial_shared_version: None,
+            ..self
         }
     }
     // Redundant, but who ever liked saying "imm_or_owned"?
     pub fn as_immutable(self) -> Self {
         Self {
-            id: self.id,
             kind: Some(Kind::ImmOrOwned),
-            version: self.version,
-            digest: self.digest,
-            initial_shared_version: self.initial_shared_version,
-            mutable: Some(false),
+            digest: None,
+            version: None,
+            mutable: None,
+            initial_shared_version: None,
+            ..self
         }
     }
 
     pub fn as_receiving(self) -> Self {
         Self {
-            id: self.id,
             kind: Some(Kind::Receiving),
-            version: self.version,
-            digest: self.digest,
-            initial_shared_version: self.initial_shared_version,
-            mutable: self.mutable,
+            initial_shared_version: None,
+            mutable: None,
+            ..self
         }
     }
 
     pub fn as_shared(self) -> Self {
         Self {
-            id: self.id,
             kind: Some(Kind::Shared),
-            version: self.version,
-            digest: self.digest,
-            initial_shared_version: self.initial_shared_version,
-            mutable: self.mutable,
+            version: None,
+            digest: None,
+            ..self
         }
     }
 
     // ObjectRef fields
     pub fn versioned_at(self, version: u64) -> Self {
         Self {
-            id: self.id,
-            kind: self.kind,
             version: Some(version),
-            digest: self.digest,
-            initial_shared_version: self.initial_shared_version,
-            mutable: self.mutable,
+            ..self
         }
     }
 
     pub fn with_digest(self, digest: ObjectDigest) -> Self {
         Self {
-            id: self.id,
-            kind: self.kind,
-            version: self.version,
             digest: Some(digest),
-            initial_shared_version: self.initial_shared_version,
-            mutable: self.mutable,
+            ..self
         }
     }
 
@@ -157,23 +145,26 @@ impl Object {
     // Initial shared version
     pub fn shared_at(self, i: u64) -> Self {
         Self {
-            id: self.id,
-            kind: self.kind,
-            version: self.version,
-            digest: self.digest,
             initial_shared_version: Some(i),
-            mutable: self.mutable,
+            ..self
         }
     }
 
     // Shared value mutability
     pub fn by_val(self) -> Self {
-        self
+        Self {
+            mutable: Some(true),
+            ..self
+        }
     }
-    pub fn by_ref(&self) -> &Self {
-        self
+    pub fn by_ref(self) -> Self {
+        Self {
+            mutable: Some(false),
+            ..self
+        }
     }
     pub fn by_mut(&mut self) -> &mut Self {
+        self.mutable = Some(true);
         self
     }
 }
