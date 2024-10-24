@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use cynic::GraphQlError;
+use sui_types::types::{DigestParseError, TypeParseError};
 use thiserror::Error as ThisError;
 
 #[derive(Debug, ThisError)]
@@ -10,10 +11,12 @@ pub enum ClientError {
     InvalidURL { url: String },
     #[error("GraphQL error: {message}")]
     GraphQLError { message: String },
+    #[error("Error when serializing to bcs: {message}")]
+    SerializeToBcsError { message: String },
     #[error("Decoding Base64 error: {message}")]
     DecodingBase64Error { message: String },
-    #[error("Decoding BCS error: {message}")]
-    DecodingBCSError { message: String },
+    #[error("Deserializing bcs error: {message}")]
+    DeserializingBcsError { message: String },
     #[error("Request error: {error}")]
     ReqwestError { error: reqwest::Error },
     #[error("Empty response from server")]
@@ -22,6 +25,20 @@ pub enum ClientError {
     ParseError(#[from] std::num::ParseIntError),
     #[error("Custom parse error: {message}")]
     CustomParseError { message: String },
+    #[error("Either digest or sequence number must be provided")]
+    DigestOrSequenceError,
+    #[error("Checkpoint parse error: {message}")]
+    CheckpointParseError { message: String },
+    #[error("DateTime parse error: {message}")]
+    DateTimeParseError { message: String },
+    #[error("FromStr error: {0}")]
+    FromStrError(#[from] std::string::ParseError),
+    #[error("Gas cost summary parse error: {message}")]
+    GasCostSummaryParseError { message: String },
+    #[error("Transaction parse error: {message}")]
+    TransactionParseError { message: String },
+    #[error("Invalid type tag: {message}")]
+    InvalidTypeTag { message: String },
 }
 
 impl From<GraphQlError> for ClientError {
@@ -39,7 +56,23 @@ impl From<Vec<GraphQlError>> for ClientError {
                 .into_iter()
                 .map(|e| e.message)
                 .collect::<Vec<_>>()
-                .join(", "),
+                .join("\n"),
+        }
+    }
+}
+
+impl From<DigestParseError> for ClientError {
+    fn from(error: DigestParseError) -> Self {
+        ClientError::CheckpointParseError {
+            message: error.to_string(),
+        }
+    }
+}
+
+impl From<TypeParseError> for ClientError {
+    fn from(error: TypeParseError) -> Self {
+        ClientError::InvalidTypeTag {
+            message: error.to_string(),
         }
     }
 }

@@ -77,7 +77,6 @@ pub use transaction::TransactionsFilter;
 
 use sui_types::types::Address;
 
-use anyhow::anyhow;
 use cynic::impl_scalar;
 use serde_json::Value as JsonValue;
 

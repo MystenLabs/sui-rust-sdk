@@ -70,10 +70,6 @@ use sui_types::types::TransactionKind;
 use sui_types::types::TypeTag;
 use sui_types::types::UserSignature;
 
-use anyhow::anyhow;
-use anyhow::ensure;
-// use anyhow::Error;
-// use anyhow::Result;
 use cynic::serde;
 use cynic::GraphQlResponse;
 use cynic::MutationBuilder;
@@ -196,7 +192,7 @@ impl DynamicFieldOutput {
     pub fn deserialize<T: DeserializeOwned>(
         &self,
         expected_type: TypeTag,
-    ) -> Result<T, anyhow::Error> {
+    ) -> Result<T, ClientError> {
         assert_eq!(
             expected_type, self.name.type_,
             "Expected type {}, but got {}",
@@ -204,7 +200,10 @@ impl DynamicFieldOutput {
         );
 
         let bcs = &self.name.bcs;
-        bcs::from_bytes::<T>(bcs).map_err(|_| anyhow!("Cannot decode BCS bytes"))
+        bcs::from_bytes::<T>(bcs).map_err(|_| ClientError::DeserializingBcsError {
+            message: "Cannot deserialize DynamicFieldOutput from BCS bytes into {expected_type}"
+                .to_string(),
+        })
     }
 }
 
@@ -392,13 +391,8 @@ impl Client {
     pub async fn active_validators<'a>(
         &self,
         epoch: Option<u64>,
-<<<<<<< Updated upstream
         pagination_filter: PaginationFilter<'a>,
-    ) -> Result<Page<Validator>, Error> {
-=======
-        pagination_filter: PaginationFilter,
     ) -> Result<Page<Validator>, ClientError> {
->>>>>>> Stashed changes
         let (after, before, first, last) = self.pagination_filter(pagination_filter);
 
         let operation = ActiveValidatorsQuery::build(ActiveValidatorsArgs {
@@ -477,13 +471,8 @@ impl Client {
         &self,
         owner: Address,
         coin_type: Option<&str>,
-<<<<<<< Updated upstream
         pagination_filter: PaginationFilter<'a>,
-    ) -> Result<Page<Coin>, Error> {
-=======
-        pagination_filter: PaginationFilter,
     ) -> Result<Page<Coin>, ClientError> {
->>>>>>> Stashed changes
         let response = self
             .objects(
                 Some(ObjectFilter {
@@ -553,7 +542,7 @@ impl Client {
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(Error::msg(format!("{:?}", errors)));
+            return Err(ClientError::from(errors));
         }
 
         Ok(response.data.and_then(|x| x.coin_metadata))
@@ -580,10 +569,9 @@ impl Client {
         digest: Option<String>,
         seq_num: Option<u64>,
     ) -> Result<Option<CheckpointSummary>, ClientError> {
-        ensure!(
-            !(digest.is_some() && seq_num.is_some()),
-            "Either digest or seq_num must be provided"
-        );
+        if digest.is_some() && seq_num.is_some() {
+            return Err(ClientError::DigestOrSequenceError);
+        }
 
         let operation = CheckpointQuery::build(CheckpointArgs {
             id: CheckpointId {
@@ -594,25 +582,20 @@ impl Client {
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(Error::msg(format!("{:?}", errors)));
+            return Err(ClientError::from(errors));
         }
 
         response
             .data
             .map(|c| c.checkpoint.map(|c| c.try_into()).transpose())
-            .ok_or_else(|| Error::msg("No data in response"))?
+            .ok_or_else(|| ClientError::EmptyResponse)?
     }
 
     /// Get a page of [`CheckpointSummary`] for the provided parameters.
     pub async fn checkpoints<'a>(
         &self,
-<<<<<<< Updated upstream
         pagination_filter: PaginationFilter<'a>,
-    ) -> Result<Option<Page<CheckpointSummary>>, Error> {
-=======
-        pagination_filter: PaginationFilter,
     ) -> Result<Option<Page<CheckpointSummary>>, ClientError> {
->>>>>>> Stashed changes
         let (after, before, first, last) = self.pagination_filter(pagination_filter);
 
         let operation = CheckpointsQuery::build(CheckpointsArgs {
@@ -624,7 +607,7 @@ impl Client {
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(Error::msg(format!("{:?}", errors)));
+            return Err(ClientError::from(errors));
         }
 
         if let Some(checkpoints) = response.data {
@@ -694,7 +677,7 @@ impl Client {
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(Error::msg(format!("{:?}", errors)));
+            return Err(ClientError::from(errors));
         }
 
         let result = response
@@ -702,8 +685,7 @@ impl Client {
             .and_then(|d| d.object)
             .and_then(|o| o.dynamic_field)
             .map(|df| df.try_into())
-            .transpose()
-            .map_err(|e| Error::msg(format!("{:?}", e)))?;
+            .transpose()?;
 
         Ok(result)
     }
@@ -734,7 +716,7 @@ impl Client {
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(Error::msg(format!("{:?}", errors)));
+            return Err(ClientError::from(errors));
         }
 
         let result: Option<DynamicFieldOutput> = response
@@ -742,8 +724,7 @@ impl Client {
             .and_then(|d| d.object)
             .and_then(|o| o.dynamic_object_field)
             .map(|df| df.try_into())
-            .transpose()
-            .map_err(|e| Error::msg(format!("{:?}", e)))?;
+            .transpose()?;
         Ok(result)
     }
 
@@ -754,13 +735,8 @@ impl Client {
     pub async fn dynamic_fields<'a>(
         &self,
         address: Address,
-<<<<<<< Updated upstream
         pagination_filter: PaginationFilter<'a>,
-    ) -> Result<Option<Page<DynamicFieldOutput>>, Error> {
-=======
-        pagination_filter: PaginationFilter,
     ) -> Result<Option<Page<DynamicFieldOutput>>, ClientError> {
->>>>>>> Stashed changes
         let (after, before, first, last) = self.pagination_filter(pagination_filter);
         let operation = DynamicFieldsOwnerQuery::build(DynamicFieldConnectionArgs {
             address,
@@ -772,7 +748,7 @@ impl Client {
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(Error::msg(format!("{:?}", errors)));
+            return Err(ClientError::from(errors));
         }
 
         let Some(DynamicFieldsOwnerQuery { owner: Some(dfs) }) = response.data else {
@@ -785,8 +761,7 @@ impl Client {
                 .nodes
                 .into_iter()
                 .map(TryInto::try_into)
-                .collect::<Result<Vec<_>, ClientError>>()
-                .map_err(|e| Error::msg(format!("{:?}", e)))?,
+                .collect::<Result<Vec<_>, ClientError>>()?,
         )))
     }
 
@@ -803,7 +778,7 @@ impl Client {
         let response = self.epoch_summary(epoch).await?;
 
         if let Some(errors) = response.errors {
-            return Err(Error::msg(format!("{:?}", errors)));
+            return Err(ClientError::from(errors));
         }
 
         Ok(response
@@ -821,7 +796,7 @@ impl Client {
         let response = self.epoch_summary(epoch).await?;
 
         if let Some(errors) = response.errors {
-            return Err(Error::msg(format!("{:?}", errors)));
+            return Err(ClientError::from(errors));
         }
 
         Ok(response
@@ -847,13 +822,8 @@ impl Client {
     pub async fn events(
         &self,
         filter: Option<EventFilter>,
-<<<<<<< Updated upstream
         pagination_filter: PaginationFilter<'_>,
-    ) -> Result<Page<Event>, Error> {
-=======
-        pagination_filter: PaginationFilter,
     ) -> Result<Page<Event>, ClientError> {
->>>>>>> Stashed changes
         let (after, before, first, last) = self.pagination_filter(pagination_filter);
 
         let operation = EventsQuery::build(EventsQueryArgs {
@@ -867,7 +837,7 @@ impl Client {
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(Error::msg(format!("{:?}", errors)));
+            return Err(ClientError::from(errors));
         }
 
         if let Some(events) = response.data {
@@ -879,11 +849,15 @@ impl Client {
                 .map(|e| e.bcs.0)
                 .map(|b| base64ct::Base64::decode_vec(&b))
                 .collect::<Result<Vec<_>, base64ct::Error>>()
-                .map_err(|e| Error::msg(format!("Cannot decode Base64 event bcs bytes: {e}")))?
+                .map_err(|e| ClientError::DecodingBase64Error {
+                    message: format!("cannot decode Base64 event bcs bytes: {e}"),
+                })?
                 .iter()
                 .map(|b| bcs::from_bytes::<Event>(b))
                 .collect::<Result<Vec<_>, bcs::Error>>()
-                .map_err(|e| Error::msg(format!("Cannot decode bcs bytes into Event: {e}")))?;
+                .map_err(|e| ClientError::DeserializingBcsError {
+                    message: format!("cannot decode bcs bytes into Event: {e}"),
+                })?;
 
             Ok(Page::new(page_info, nodes))
         } else {
@@ -909,7 +883,7 @@ impl Client {
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(Error::msg(format!("{:?}", errors)));
+            return Err(ClientError::from(errors));
         }
 
         if let Some(object) = response.data {
@@ -918,11 +892,15 @@ impl Client {
                 .and_then(|o| o.bcs)
                 .map(|bcs| base64ct::Base64::decode_vec(bcs.0.as_str()))
                 .transpose()
-                .map_err(|e| Error::msg(format!("Cannot decode Base64 object bcs bytes: {e}",)))?;
+                .map_err(|e| ClientError::DecodingBase64Error {
+                    message: format!("Cannot decode Base64 object bcs bytes: {e}",),
+                })?;
             let object = bcs
                 .map(|b| bcs::from_bytes::<sui_types::types::Object>(&b))
                 .transpose()
-                .map_err(|e| Error::msg(format!("Cannot decode bcs bytes into Object: {e}",)))?;
+                .map_err(|e| ClientError::DeserializingBcsError {
+                    message: format!("Cannot decode bcs bytes into Object: {e}"),
+                })?;
 
             Ok(object)
         } else {
@@ -950,13 +928,8 @@ impl Client {
     pub async fn objects(
         &self,
         filter: Option<ObjectFilter<'_>>,
-<<<<<<< Updated upstream
         pagination_filter: PaginationFilter<'_>,
-    ) -> Result<Page<Object>, Error> {
-=======
-        pagination_filter: PaginationFilter,
     ) -> Result<Page<Object>, ClientError> {
->>>>>>> Stashed changes
         let (after, before, first, last) = self.pagination_filter(pagination_filter);
         let operation = ObjectsQuery::build(ObjectsQueryArgs {
             after,
@@ -968,7 +941,7 @@ impl Client {
 
         let response = self.run_query(&operation).await?;
         if let Some(errors) = response.errors {
-            return Err(Error::msg(format!("{:?}", errors)));
+            return Err(ClientError::from(errors));
         }
 
         if let Some(objects) = response.data {
@@ -983,12 +956,16 @@ impl Client {
                         .map(|b| base64ct::Base64::decode_vec(b.0.as_str()))
                 })
                 .collect::<Result<Vec<_>, base64ct::Error>>()
-                .map_err(|e| Error::msg(format!("Cannot decode Base64 object bcs bytes: {e}")))?;
+                .map_err(|e| ClientError::DecodingBase64Error {
+                    message: format!("Cannot decode Base64 object bcs bytes: {e}"),
+                })?;
             let objects = bcs
                 .iter()
                 .map(|b| bcs::from_bytes::<sui_types::types::Object>(b))
                 .collect::<Result<Vec<_>, bcs::Error>>()
-                .map_err(|e| Error::msg(format!("Cannot decode bcs bytes into Object: {e}")))?;
+                .map_err(|e| ClientError::DeserializingBcsError {
+                    message: format!("Cannot decode bcs bytes into Object: {e}"),
+                })?;
 
             Ok(Page::new(page_info, objects))
         } else {
@@ -1006,7 +983,7 @@ impl Client {
         let response = self.run_query(&operation).await.unwrap();
 
         if let Some(errors) = response.errors {
-            return Err(Error::msg(format!("{:?}", errors)));
+            return Err(ClientError::from(errors));
         }
 
         if let Some(object) = response.data.map(|d| d.object) {
@@ -1014,7 +991,9 @@ impl Client {
                 .and_then(|o| o.bcs)
                 .map(|bcs| base64ct::Base64::decode_vec(bcs.0.as_str()))
                 .transpose()
-                .map_err(|e| Error::msg(format!("Cannot decode Base64 object bcs bytes: {e}")))
+                .map_err(|e| ClientError::DecodingBase64Error {
+                    message: format!("Cannot decode Base64 object bcs bytes: {e}"),
+                })
         } else {
             Ok(None)
         }
@@ -1034,7 +1013,7 @@ impl Client {
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(Error::msg(format!("{:?}", errors)));
+            return Err(ClientError::from(errors));
         }
 
         if let Some(object) = response.data {
@@ -1061,7 +1040,7 @@ impl Client {
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(Error::msg(format!("{:?}", errors)));
+            return Err(ClientError::from(errors));
         }
 
         if let Some(object) = response.data {
@@ -1071,7 +1050,9 @@ impl Client {
                 .and_then(|o| o.contents)
                 .map(|bcs| base64ct::Base64::decode_vec(bcs.bcs.0.as_str()))
                 .transpose()
-                .map_err(|e| Error::msg(format!("Cannot decode Base64 object bcs bytes: {e}")))
+                .map_err(|e| ClientError::DecodingBase64Error {
+                    message: format!("Cannot decode Base64 object bcs bytes: {e}"),
+                })
         } else {
             Ok(None)
         }
@@ -1091,9 +1072,11 @@ impl Client {
         tx: &Transaction,
         skip_checks: Option<bool>,
     ) -> Result<DryRunResult, ClientError> {
-        let tx_bytes = base64ct::Base64::encode_string(
-            &bcs::to_bytes(&tx).map_err(|_| Error::msg("Cannot encode Transaction as BCS"))?,
-        );
+        let tx_bytes = base64ct::Base64::encode_string(&bcs::to_bytes(&tx).map_err(|_| {
+            ClientError::SerializeToBcsError {
+                message: "Cannot encode Transaction as BCS".to_string(),
+            }
+        })?);
         self.dry_run(tx_bytes, skip_checks, None).await
     }
 
@@ -1110,9 +1093,11 @@ impl Client {
         skip_checks: Option<bool>,
         tx_meta: TransactionMetadata,
     ) -> Result<DryRunResult, ClientError> {
-        let tx_bytes = base64ct::Base64::encode_string(
-            &bcs::to_bytes(&tx_kind).map_err(|_| Error::msg("Cannot encode Transaction as BCS"))?,
-        );
+        let tx_bytes = base64ct::Base64::encode_string(&bcs::to_bytes(&tx_kind).map_err(|_| {
+            ClientError::SerializeToBcsError {
+                message: "Cannot encode Transaction as BCS".to_string(),
+            }
+        })?);
         self.dry_run(tx_bytes, skip_checks, Some(tx_meta)).await
     }
 
@@ -1133,7 +1118,7 @@ impl Client {
 
         // Query errors
         if let Some(errors) = response.errors {
-            return Err(Error::msg(format!("{:?}", errors)));
+            return Err(ClientError::from(errors));
         }
 
         // Dry Run errors
@@ -1150,10 +1135,14 @@ impl Client {
             .and_then(|bcs| bcs.bcs)
             .map(|bcs| base64ct::Base64::decode_vec(bcs.0.as_str()))
             .transpose()
-            .map_err(|_| Error::msg("Cannot decode bcs bytes from Base64 for transaction effects"))?
+            .map_err(|_| ClientError::DecodingBase64Error {
+                message: "Cannot decode bcs bytes from Base64 for transaction effects".to_string(),
+            })?
             .map(|bcs| bcs::from_bytes::<TransactionEffects>(&bcs))
             .transpose()
-            .map_err(|_| Error::msg("Cannot decode bcs bytes into TransactionEffects"))?;
+            .map_err(|_| ClientError::DeserializingBcsError {
+                message: "Cannot decode bcs bytes into TransactionEffects".to_string(),
+            })?;
 
         Ok(DryRunResult { effects, error })
     }
@@ -1178,20 +1167,14 @@ impl Client {
             .and_then(|d| d.transaction_block)
             .map(|tx| tx.try_into())
             .transpose()
-            .map_err(|e| Error::msg(format!("Cannot decode transaction: {e}")))
     }
 
     /// Get a page of transactions based on the provided filters.
     pub async fn transactions<'a>(
         &self,
         filter: Option<TransactionsFilter<'a>>,
-<<<<<<< Updated upstream
         pagination_filter: PaginationFilter<'a>,
-    ) -> Result<Page<SignedTransaction>, Error> {
-=======
-        pagination_filter: PaginationFilter,
     ) -> Result<Page<SignedTransaction>, ClientError> {
->>>>>>> Stashed changes
         let (after, before, first, last) = self.pagination_filter(pagination_filter);
 
         let operation = TransactionBlocksQuery::build(TransactionBlocksQueryArgs {
@@ -1234,17 +1217,22 @@ impl Client {
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(Error::msg(format!("{:?}", errors)));
+            return Err(ClientError::from(errors));
         }
 
         if let Some(data) = response.data {
             let result = data.execute_transaction_block;
             let bcs =
                 base64ct::Base64::decode_vec(result.effects.bcs.0.as_str()).map_err(|_| {
-                    Error::msg("Cannot decode bcs bytes from Base64 for transaction effects")
+                    ClientError::DecodingBase64Error {
+                        message: "Cannot decode bcs bytes from Base64 for transaction effects"
+                            .to_string(),
+                    }
                 })?;
-            let effects: TransactionEffects = bcs::from_bytes(&bcs)
-                .map_err(|_| Error::msg("Cannot decode bcs bytes into TransactionEffects"))?;
+            let effects: TransactionEffects =
+                bcs::from_bytes(&bcs).map_err(|_| ClientError::DeserializingBcsError {
+                    message: "Cannot decode bcs bytes into TransactionEffects".to_string(),
+                })?;
 
             Ok(Some(effects))
         } else {

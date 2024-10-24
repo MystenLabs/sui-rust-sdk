@@ -9,7 +9,6 @@ readme = "README.md"
 description = "Sui GraphQL RPC Client for the Sui Blockchain"
 
 [dependencies]
-anyhow = "1.0.8"
 async-stream = "0.3.5"
 async-trait = "0.1.8"
 base64ct = { version = "1.6.0", features = ["alloc"] }
