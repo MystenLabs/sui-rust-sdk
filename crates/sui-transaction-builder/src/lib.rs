@@ -1,7 +1,9 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
+mod error;
 mod object;
+pub use error::TxBuilderError as Error;
 use object::Kind;
 pub use object::Object;
 
@@ -31,8 +33,6 @@ use sui_types::types::UnresolvedTransaction;
 use sui_types::types::UnresolvedValue;
 use sui_types::types::Upgrade;
 
-use anyhow::anyhow;
-use anyhow::Error;
 use serde::Serialize;
 
 #[derive(Clone, Debug)]
@@ -62,14 +62,6 @@ struct RawBytes(Vec<u8>);
 
 /// A transaction input that will be serialized from BCS.
 pub struct Serialized<'a, T: Serialize>(pub &'a T);
-
-// #[derive(Clone, Copy, Debug)]
-// pub enum Argument {
-//     Gas,
-//     Input(u16),
-//     Result(u16),
-//     NestedResult(u16, u16),
-// }
 
 /// Inputs are converted into this type when they are added to a Transaction.
 /// We will offer a number of type conversion trait impls to make this seamless.
@@ -230,25 +222,22 @@ impl TransactionBuilder {
     /// resolved form. Fails if there are unresolved parts.
     fn finish(self) -> Result<Transaction, Error> {
         let Some(sender) = self.sender else {
-            return Err(anyhow!("No sender provided"));
+            return Err(Error::NoSender);
         };
         if self.gas.is_empty() {
-            return Err(anyhow!("No gas objects provided"));
+            return Err(Error::NoGasObjects);
         }
         if self.gas_budget == 0 {
-            return Err(anyhow!("No gas budget provided"));
+            return Err(Error::NoGasBudget);
         }
         if self.gas_price == 0 {
-            return Err(anyhow!("No gas price provided"));
+            return Err(Error::NoGasPrice);
         }
         if self.commands.is_empty() && !self.inputs.is_empty() {
-            return Err(anyhow!("No commands provided, but only inputs."));
+            return Err(Error::NoCommandsOnlyInputs);
         }
         if !self.commands.is_empty() && self.inputs.is_empty() {
-            return Err(anyhow!("Commands provided, but no inputs."));
-        }
-        if self.gas.is_empty() {
-            return Err(anyhow!("No gas objects provided"));
+            return Err(Error::NoInputsOnlyCommands);
         }
 
         Ok(Transaction {
@@ -259,7 +248,11 @@ impl TransactionBuilder {
                         .into_iter()
                         .map(|i| i.try_into())
                         .collect::<Result<Vec<_>, _>>()
-                        .map_err(|e| anyhow!("Failed to convert inputs into InputArgument: {e}"))?,
+                        .map_err(|e| {
+                            Error::InternalError(format!(
+                                "Failed to convert inputs into InputArgument: {e}"
+                            ))
+                        })?,
                     commands: self.commands.clone(),
                 },
             ),
@@ -272,7 +265,11 @@ impl TransactionBuilder {
                         .into_iter()
                         .map(|o| o.try_into())
                         .collect::<Result<Vec<_>, _>>()
-                        .map_err(|_| anyhow!("Failed to convert gas objects into GasPayment"))?,
+                        .map_err(|_| {
+                            Error::InternalError(
+                                "Failed to convert gas objects into GasPayment".to_string(),
+                            )
+                        })?,
                     owner: self.sponsor.unwrap_or(sender),
                     price: self.gas_price,
                     budget: self.gas_budget,
@@ -294,10 +291,10 @@ impl TransactionBuilder {
             Ok(tx) => Ok(tx),
             Err(_) => {
                 let Some(client) = client else {
-                    return Err(anyhow!("No client provided for resolving transaction"));
+                    return Err(Error::NoClient);
                 };
                 let Some(sender) = self.sender else {
-                    return Err(anyhow!("No sender provided"));
+                    return Err(Error::NoSender);
                 };
 
                 let unresolved_tx = {
@@ -385,20 +382,30 @@ impl TryFrom<Input> for InputArgument {
             Input::Object(object) => {
                 if let Some(obj) = &object.kind {
                     match obj {
-                        Kind::ImmOrOwned => Ok(InputArgument::ImmutableOrOwned(object.try_into()?)),
-                        Kind::Receiving => Ok(InputArgument::Receiving(object.try_into()?)),
+                        Kind::ImmOrOwned => Ok(InputArgument::ImmutableOrOwned(
+                            object.try_into().map_err(|e| {
+                                Error::InternalError(format!(
+                                    "Cannot convert object kind to InputArgument: {e}"
+                                ))
+                            })?,
+                        )),
+                        Kind::Receiving => Ok(InputArgument::Receiving(
+                            object.try_into().map_err(|e| {
+                                Error::InternalError(format!(
+                                    "Cannot convert object kind to InputArgument: {e}"
+                                ))
+                            })?,
+                        )),
                         Kind::Shared => Ok(InputArgument::Shared {
                             object_id: object.id,
                             initial_shared_version: object
                                 .initial_shared_version
-                                .ok_or_else(|| Error::msg("Initial shared version not found"))?,
-                            mutable: object.mutable.ok_or_else(|| {
-                                Error::msg("Expected mutable object, but mutable field is None")
-                            })?,
+                                .ok_or(Error::InitialSharedVersionNotFound)?,
+                            mutable: object.mutable.ok_or(Error::MutablePropertyNotFound)?,
                         }),
                     }
                 } else {
-                    Err(anyhow!("Object kind not found"))
+                    Err(Error::ObjectKindNotSet)
                 }
             }
 
@@ -471,8 +478,6 @@ fn to_unresolved_obj_ref(obj: Object) -> UnresolvedObjectReference {
 
 #[cfg(test)]
 mod tests {
-    use anyhow::anyhow;
-    use anyhow::Error;
     use std::str::FromStr;
 
     use sui_crypto::ed25519::Ed25519PrivateKey;
@@ -534,7 +539,7 @@ mod tests {
     async fn wait_for_tx_and_check_effects_status_success(
         client: &Client,
         tx: &Transaction,
-        effects: Result<Option<TransactionEffects>, Error>,
+        effects: Result<Option<TransactionEffects>, anyhow::Error>,
     ) {
         assert!(effects.is_ok(), "Execution failed. Effects: {:?}", effects);
         // wait for the transaction to be finalized
@@ -563,16 +568,13 @@ mod tests {
         let coin = tx.input(Object::owned(
             ObjectId::from_str(coin_obj_id).unwrap(),
             coin_version,
-            ObjectDigest::from_str(coin_digest)
-                .map_err(|_| anyhow!("Invalid object digest"))
-                .unwrap(),
+            ObjectDigest::from_str(coin_digest).unwrap(),
         ));
 
         let recipient = tx.input(Serialized(
             &Address::from_str(
                 "0xeeaeb20e7b3a9cfce768a2ddf69503d8ae8d1628a26c2d74a435501c929d3f69",
             )
-            .map_err(|_| anyhow!("Invalid address"))
             .unwrap(),
         ));
 
@@ -588,9 +590,7 @@ mod tests {
             )
             .unwrap(),
             2,
-            ObjectDigest::from_str("2ZigdvsZn5BMeszscPQZq9z8ebnS2FpmAuRbAi9ednCk")
-                .map_err(|_| anyhow!("Invalid object digest"))
-                .unwrap(),
+            ObjectDigest::from_str("2ZigdvsZn5BMeszscPQZq9z8ebnS2FpmAuRbAi9ednCk").unwrap(),
         )]);
         tx.set_sender(
             Address::from_str("0xc574ea804d9c1a27c886312e96c0e2c9cfd71923ebaeb3000d04b5e65fca2793")

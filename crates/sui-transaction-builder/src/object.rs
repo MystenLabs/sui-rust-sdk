@@ -1,10 +1,11 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::anyhow;
 use sui_types::types::ObjectDigest;
 use sui_types::types::ObjectId;
 use sui_types::types::ObjectReference;
+
+use crate::Error;
 
 /// Type representing potentially unresolved object types, with a builder API.
 #[derive(Clone, Debug)]
@@ -170,11 +171,10 @@ impl Object {
 }
 
 impl TryFrom<Object> for ObjectReference {
-    type Error = anyhow::Error;
-
-    fn try_from(value: Object) -> Result<Self, Self::Error> {
-        let version = value.version.ok_or_else(|| anyhow!("version not set"))?;
-        let digest = value.digest.ok_or_else(|| anyhow!("digest not set"))?;
+    type Error = Error;
+    fn try_from(value: Object) -> Result<Self, Error> {
+        let version = value.version.ok_or(Error::NoVersion)?;
+        let digest = value.digest.ok_or(Error::NoDigest)?;
         Ok(ObjectReference::new(value.id, version, digest))
     }
 }

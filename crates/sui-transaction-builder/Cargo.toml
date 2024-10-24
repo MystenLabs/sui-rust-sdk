@@ -12,15 +12,14 @@ description = "Transaction API for the Rust SDK for the Sui Blockchain"
 sui-types = { package = "sui-sdk-types", path = "../sui-sdk-types", features = ["serde"] }
 sui-graphql-client = { package = "sui-graphql-client", path = "../sui-graphql-client" }
 serde = { version = "1.0", features = ["derive"] }
-anyhow = "1.0"
 bcs = "0.1.6"
+thiserror = "1.0"
 
 [dev-dependencies]
+anyhow = "1.0"
 base64ct = "1.6"
 sui-crypto = { package = "sui-crypto", path = "../sui-crypto" , features = ["ed25519"] }
 sui-types = { package = "sui-sdk-types", path = "../sui-sdk-types", features = ["rand"] }
-sui-graphql-client = { package = "sui-graphql-client", path = "../sui-graphql-client" }
 tokio = { version = "1.0", features = ["full"] }
-anyhow = "1.0"
 rand = "0.8"
 
