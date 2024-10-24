@@ -5,6 +5,7 @@ mod object;
 use object::Kind;
 pub use object::Object;
 
+use sui_graphql_client::Client;
 use sui_types::types::Address;
 use sui_types::types::Argument;
 use sui_types::types::Command;
@@ -48,7 +49,7 @@ pub struct TransactionBuilder {
     /// The gas price for the transaction.
     gas_price: u64,
     /// The sender of the transaction.
-    sender: Address,
+    sender: Option<Address>,
     /// The sponsor of the transaction. If None, the sender is also the sponsor.
     sponsor: Option<Address>,
     /// The expiration of the transaction.
@@ -82,18 +83,9 @@ pub enum Input {
 /// A separate type to support denoting a function by a more structured representation.
 pub struct Function {
     package: Address,
-    module: String,
-    function: String,
+    module: Identifier,
+    function: Identifier,
     type_args: Vec<TypeTag>,
-}
-
-/// A transaction state that can be resolved or unresolved. When calling [`try_finish`]` on the
-/// transaction builder, it will return either the resolved transaction if no error was
-/// encountered, or the [`UnresolvedTransaction`]. The unresolved transaction can be used to call the transaction
-/// resolution API, that will attempt to resolve the transaction.
-pub enum TransactionResolution {
-    Resolved(Transaction),
-    Unresolved(UnresolvedTransaction),
 }
 
 /// A transaction builder to build transactions.
@@ -106,7 +98,7 @@ impl TransactionBuilder {
             gas: Vec::new(),
             gas_budget: 0,
             gas_price: 0,
-            sender: Address::default(),
+            sender: None,
             sponsor: None,
             expiration: None,
         }
@@ -140,7 +132,7 @@ impl TransactionBuilder {
 
     /// Set the sender of the transaction.
     pub fn set_sender(&mut self, sender: Address) {
-        self.sender = sender;
+        self.sender = Some(sender);
     }
 
     /// Set the sponsor of the transaction.
@@ -157,11 +149,11 @@ impl TransactionBuilder {
     /// Call a Move function with the given arguments.
     pub fn move_call(&mut self, function: Function, arguments: Vec<Value>) -> Value {
         let cmd = Command::MoveCall(MoveCall {
-            arguments: arguments.into_iter().map(|a| a.into()).collect(),
             package: function.package.into(),
-            module: Identifier::new(function.module).unwrap(),
+            module: function.module,
+            function: function.function,
             type_arguments: function.type_args,
-            function: Identifier::new(function.function).unwrap(),
+            arguments: arguments.into_iter().map(|a| a.into()).collect(),
         });
         self.commands.push(cmd);
         Value::Result(self.commands.len() as u16 - 1)
@@ -196,12 +188,13 @@ impl TransactionBuilder {
     }
 
     /// Make a move vector from a list of elements.
-    pub fn make_move_vec(&mut self, type_: Option<TypeTag>, elements: Vec<Value>) {
+    pub fn make_move_vec(&mut self, type_: Option<TypeTag>, elements: Vec<Value>) -> Value {
         let cmd = Command::MakeMoveVector(MakeMoveVector {
             type_,
             elements: elements.into_iter().map(|v| v.into()).collect(),
         });
         self.commands.push(cmd);
+        Value::Result(self.commands.len() as u16 - 1)
     }
 
     /// Publish a list of modules with the given dependencies. This requires the upgrade cap to be
@@ -235,7 +228,10 @@ impl TransactionBuilder {
 
     /// Assuming everything is resolved, convert this transaction into the
     /// resolved form. Fails if there are unresolved parts.
-    pub fn finish(&self) -> Result<Transaction, Error> {
+    fn try_finish(&self) -> Result<Transaction, Error> {
+        let Some(sender) = self.sender else {
+            return Err(anyhow!("No sender provided"));
+        };
         if self.gas.is_empty() {
             return Err(anyhow!("No gas objects provided"));
         }
@@ -244,9 +240,6 @@ impl TransactionBuilder {
         }
         if self.gas_price == 0 {
             return Err(anyhow!("No gas price provided"));
-        }
-        if self.sender == Address::default() {
-            return Err(anyhow!("No sender provided"));
         }
         if self.commands.is_empty() && !self.inputs.is_empty() {
             return Err(anyhow!("No commands provided, but only inputs."));
@@ -270,7 +263,7 @@ impl TransactionBuilder {
                     commands: self.commands.clone(),
                 },
             ),
-            sender: self.sender,
+            sender,
             gas_payment: {
                 GasPayment {
                     objects: self
@@ -280,7 +273,7 @@ impl TransactionBuilder {
                         .map(|o| o.try_into())
                         .collect::<Result<Vec<_>, _>>()
                         .map_err(|_| anyhow!("Failed to convert gas objects into GasPayment"))?,
-                    owner: self.sponsor.unwrap_or(self.sender),
+                    owner: self.sponsor.unwrap_or(sender),
                     price: self.gas_price,
                     budget: self.gas_budget,
                 }
@@ -289,48 +282,53 @@ impl TransactionBuilder {
         })
     }
 
-    /// Try to finish the transaction, but if not all parts are resolved, it will return an
-    /// [`UnresolvedTransaction`]. This can be used to resolve the transaction later by calling the
-    /// [`resolve_transaction`] method.
-    pub fn try_finish(&self) -> Result<TransactionResolution, Error> {
-        match self.finish() {
-            Ok(tx) => Ok(TransactionResolution::Resolved(tx)),
-            Err(_) => Ok(TransactionResolution::Unresolved(UnresolvedTransaction {
-                ptb: UnresolvedProgrammableTransaction {
-                    inputs: self.inputs.clone().into_iter().map(|x| x.into()).collect(),
-                    commands: self.commands.clone(),
-                },
-                sender: self.sender,
-                gas_payment: Some(UnresolvedGasPayment {
-                    objects: self
-                        .gas
-                        .clone()
-                        .into_iter()
-                        .map(to_unresolved_obj_ref)
-                        .collect(),
-                    owner: self.sponsor.unwrap_or(self.sender),
-                    price: Some(self.gas_price),
-                    budget: Some(self.gas_budget),
-                }),
-                expiration: self.expiration.unwrap_or(TransactionExpiration::None),
-            })),
+    /// Attempt to finish the transaction, but if it fails, it will attempt to resolve the
+    /// transaction by querying the GraphQL service, for which a client is required.
+    pub fn resolve_transaction(self, client: Option<Client>) -> Result<Transaction, Error> {
+        match self.try_finish() {
+            Ok(tx) => Ok(tx),
+            Err(_) => {
+                let Some(client) = client else {
+                    return Err(anyhow!("No client provided for resolving transaction"));
+                };
+                let Some(sender) = self.sender else {
+                    return Err(anyhow!("No sender provided"));
+                };
+
+                let unresolved_tx = {
+                    UnresolvedTransaction {
+                        ptb: UnresolvedProgrammableTransaction {
+                            inputs: self.inputs.clone().into_iter().map(|x| x.into()).collect(),
+                            commands: self.commands.clone(),
+                        },
+                        sender,
+                        gas_payment: Some(UnresolvedGasPayment {
+                            objects: self
+                                .gas
+                                .clone()
+                                .into_iter()
+                                .map(to_unresolved_obj_ref)
+                                .collect(),
+                            owner: self.sponsor.unwrap_or(sender),
+                            price: Some(self.gas_price),
+                            budget: Some(self.gas_budget),
+                        }),
+                        expiration: self.expiration.unwrap_or(TransactionExpiration::None),
+                    }
+                };
+
+                self.resolve_tx(client, unresolved_tx)
+            }
         }
     }
 
     /// Takes an unresolved transaction and attempts to resolve it by querying the GraphQL service.
-    pub fn resolve_transaction(
+    fn resolve_tx(
         &self,
+        _client: Client,
         _unresolved_tx: UnresolvedTransaction,
     ) -> Result<Transaction, Error> {
         todo!()
-    }
-
-    /// Attempt to finish the transaction, but if it fails, resolve it instead.
-    pub fn finish_or_resolve_tx(&self) -> Result<Transaction, Error> {
-        match self.try_finish()? {
-            TransactionResolution::Resolved(tx) => Ok(tx),
-            TransactionResolution::Unresolved(tx) => self.resolve_transaction(tx),
-        }
     }
 }
 
@@ -342,13 +340,13 @@ impl Default for TransactionBuilder {
 
 impl Value {
     /// Turn a Result into a NestedResult.
-    fn _nested(&self, ix: u16) -> Value {
+    pub fn nested(&self, ix: u16) -> Value {
         Value::NestedResult(
-            ix,
             match self {
                 Value::Result(i) => *i,
                 _ => panic!("Cannot nest a non-result value"),
             },
+            ix,
         )
     }
 }
@@ -357,8 +355,8 @@ impl Function {
     /// Constructor for the function type.
     pub fn new(
         package: Address,
-        module: String,
-        function: String,
+        module: Identifier,
+        function: Identifier,
         type_args: Vec<TypeTag>,
     ) -> Self {
         Self {
@@ -382,35 +380,9 @@ impl From<RawBytes> for Input {
     }
 }
 
-impl From<Value> for Input {
-    fn from(value: Value) -> Input {
-        match value {
-            Value::Input(i) => Input::Pure(bcs::to_bytes(&i.to_be_bytes()).unwrap()),
-            _ => panic!("Cannot convert Value to Input"),
-        }
-    }
-}
-
-// this seems to be needed as without it this is not possible
-// let input = tx.input(Serialized(&1u64).serialize());
-impl From<Vec<u8>> for Input {
-    fn from(bytes: Vec<u8>) -> Input {
-        Input::Pure(bytes)
-    }
-}
-
-impl<'a, T: Serialize> Serialized<'a, T> {
-    /// Serializes the given value into bcs bytes.
-    pub fn serialize(&self) -> Vec<u8> {
-        bcs::to_bytes(self.0).unwrap()
-    }
-}
-
-// Allow converting Serialized<Address> into Input
-impl<'a> From<Serialized<'a, Address>> for Input {
-    fn from(serialized: Serialized<'a, Address>) -> Input {
-        // Convert Serialized<Address> into Input::Pure variant
-        Input::Pure(serialized.serialize()) // Here we use `Pure(Vec<u8>)`
+impl<'a, T: Serialize> From<Serialized<'a, T>> for Input {
+    fn from(val: Serialized<'a, T>) -> Input {
+        Input::Pure(bcs::to_bytes(val.0).unwrap())
     }
 }
 
@@ -452,15 +424,6 @@ impl TryFrom<&Input> for InputArgument {
 
             Input::Pure(v) => Ok(InputArgument::Pure { value: v.clone() }),
         }
-    }
-}
-
-/// Convert an object into an [`UnresolvedObjectReference`].
-fn to_unresolved_obj_ref(obj: Object) -> UnresolvedObjectReference {
-    UnresolvedObjectReference {
-        object_id: obj.id,
-        version: obj.version,
-        digest: obj.digest,
     }
 }
 
@@ -517,6 +480,15 @@ impl From<Input> for UnresolvedInputArgument {
     }
 }
 
+/// Convert an object into an [`UnresolvedObjectReference`].
+fn to_unresolved_obj_ref(obj: Object) -> UnresolvedObjectReference {
+    UnresolvedObjectReference {
+        object_id: obj.id,
+        version: obj.version,
+        digest: obj.digest,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use anyhow::anyhow;
@@ -564,6 +536,7 @@ mod tests {
             .unwrap()
             .unwrap()
             .sent;
+        println!("Coins: {:?}", coins);
         let gas = coins.last().unwrap().id;
         let gas_obj = client.object(gas.into(), None).await.unwrap().unwrap();
         tx.set_gas(vec![Object::owned(
@@ -602,7 +575,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_tx_finish() {
+    async fn test_try_finish() {
         let mut tx = TransactionBuilder::new();
         let coin_obj_id = "0x19406ea4d9609cd9422b85e6bf2486908f790b778c757aff805241f3f609f9b4";
         let coin_digest = "7opR9rFUYivSTqoJHvFb9p6p54THyHTatMG6id4JKZR9";
@@ -623,7 +596,7 @@ mod tests {
             .unwrap(),
         ));
 
-        assert!(tx.finish().is_err());
+        assert!(tx.try_finish().is_err());
 
         tx.transfer_objects(vec![coin], recipient);
         tx.set_gas_budget(500000000);
@@ -643,30 +616,8 @@ mod tests {
                 .unwrap(),
         );
 
-        let tx = tx.finish();
-        assert!(tx.is_ok());
-    }
-
-    #[tokio::test]
-    async fn test_try_finish() {
-        let mut tx = TransactionBuilder::new();
-        let coin_obj_id = "0x19406ea4d9609cd9422b85e6bf2486908f790b778c757aff805241f3f609f9b4";
-        let coin_digest = "7opR9rFUYivSTqoJHvFb9p6p54THyHTatMG6id4JKZR9";
-        let coin_version = 2;
-        let _coin = tx.input(Object::owned(
-            ObjectId::from_str(coin_obj_id).unwrap(),
-            coin_version,
-            ObjectDigest::from_str(coin_digest)
-                .map_err(|_| anyhow!("Invalid object digest"))
-                .unwrap(),
-        ));
-
         let tx = tx.try_finish();
         assert!(tx.is_ok());
-        assert!(matches!(
-            tx.unwrap(),
-            crate::TransactionResolution::Unresolved(_)
-        ));
     }
 
     /// Test TransferObj PTB.
@@ -687,7 +638,7 @@ mod tests {
         let recipient_input = tx.input(Serialized(&recipient));
         tx.transfer_objects(vec![coin_input], recipient_input);
 
-        let tx = tx.finish().unwrap();
+        let tx = tx.try_finish().unwrap();
         let sig = pk.sign_transaction(&tx).unwrap();
 
         let effects = client.execute_tx(vec![sig], &tx).await;
@@ -710,14 +661,14 @@ mod tests {
         let (_, pk, _) = helper_setup(&mut tx, &client).await;
         let function = Function::new(
             "0x1".parse().unwrap(),
-            "option".to_string(),
-            "is_none".to_string(),
+            "option".parse().unwrap(),
+            "is_none".parse().unwrap(),
             vec![TypeTag::U64],
         );
-        let input = tx.input(Serialized(&vec![1u64]).serialize());
+        let input = tx.input(Serialized(&vec![1u64]));
         tx.move_call(function, vec![input]);
 
-        let tx = tx.finish().unwrap();
+        let tx = tx.try_finish().unwrap();
         let sig = pk.sign_transaction(&tx).unwrap();
         let effects = client.execute_tx(vec![sig], &tx).await;
         wait_for_tx_and_check_effects_status_success(&client, &tx, effects).await;
@@ -740,13 +691,13 @@ mod tests {
             coin_digest,
         ));
         // transfer 1 SUI
-        let amount = tx.input(Serialized(&1_000_000_000u64).serialize());
+        let amount = tx.input(Serialized(&1_000_000_000u64));
         let result = tx.split_coins(coin_input, vec![amount]);
         let recipient_address = Address::generate(rand::thread_rng());
         let recipient = tx.input(Serialized(&recipient_address));
         tx.transfer_objects(vec![result], recipient);
 
-        let tx = tx.finish().unwrap();
+        let tx = tx.try_finish().unwrap();
         let sig = pk.sign_transaction(&tx).unwrap();
 
         let effects = client.execute_tx(vec![sig], &tx).await;
@@ -777,10 +728,10 @@ mod tests {
             coin_digest,
         ));
         // transfer 1 SUI
-        let amount = tx.input(Serialized(&1_000_000_000u64).serialize());
+        let amount = tx.input(Serialized(&1_000_000_000u64));
         tx.split_coins(coin_input, vec![amount]);
 
-        let tx = tx.finish().unwrap();
+        let tx = tx.try_finish().unwrap();
         let sig = pk.sign_transaction(&tx).unwrap();
 
         let effects = client.execute_tx(vec![sig], &tx).await;
@@ -834,7 +785,7 @@ mod tests {
         }
 
         tx.merge_coins(coin_to_merge, coins_to_merge);
-        let tx = tx.finish().unwrap();
+        let tx = tx.try_finish().unwrap();
         let sig = pk.sign_transaction(&tx).unwrap();
 
         let effects = client.execute_tx(vec![sig], &tx).await;
@@ -854,10 +805,10 @@ mod tests {
         let mut tx = TransactionBuilder::new();
         let (_, pk, _) = helper_setup(&mut tx, &client).await;
 
-        let input = tx.input(Serialized(&1u64).serialize());
+        let input = tx.input(Serialized(&1u64));
         tx.make_move_vec(Some(TypeTag::U64), vec![input]);
 
-        let tx = tx.finish().unwrap();
+        let tx = tx.try_finish().unwrap();
         let sig = pk.sign_transaction(&tx).unwrap();
 
         let effects = client.execute_tx(vec![sig], &tx).await;
@@ -901,7 +852,7 @@ mod tests {
         let sender = tx.input(Serialized(&address));
         let upgrade_cap = tx.publish(vec![modules.to_vec()], deps);
         tx.transfer_objects(vec![upgrade_cap], sender);
-        let tx = tx.finish().unwrap();
+        let tx = tx.try_finish().unwrap();
         let sig = pk.sign_transaction(&tx).unwrap();
         let effects = client.execute_tx(vec![sig], &tx).await;
         wait_for_tx_and_check_effects_status_success(&client, &tx, effects).await;
