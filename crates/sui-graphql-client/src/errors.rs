@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use cynic::GraphQlError;
-use sui_types::types::{DigestParseError, TypeParseError};
+use sui_types::types::DigestParseError;
+use sui_types::types::TypeParseError;
 use thiserror::Error as ThisError;
 
 #[derive(Debug, ThisError)]

@@ -163,7 +163,7 @@ impl FaucetClient {
 
                 if let Some(err) = faucet_resp.error {
                     error!("Faucet request was unsuccessful: {err}");
-                    return Err(FaucetError::UnsuccessfulRequest { error: err });
+                    Err(FaucetError::UnsuccessfulRequest { error: err })
                 } else {
                     info!("Request succesful: {:?}", faucet_resp.task);
                     Ok(faucet_resp.task)
@@ -171,17 +171,17 @@ impl FaucetClient {
             }
             StatusCode::TOO_MANY_REQUESTS => {
                 error!("Faucet service received too many requests from this IP address.");
-                return Err(FaucetError::TooManyRequests);
+                Err(FaucetError::TooManyRequests)
             }
             StatusCode::SERVICE_UNAVAILABLE => {
                 error!("Faucet service is currently overloaded or unavailable.");
-                return Err(FaucetError::ServiceUnavailable);
+                Err(FaucetError::ServiceUnavailable)
             }
             status_code => {
                 error!("Faucet request was unsuccessful: {status_code}");
-                return Err(FaucetError::UnsuccessfulRequest {
+                Err(FaucetError::UnsuccessfulRequest {
                     error: format!("{status_code}"),
-                });
+                })
             }
         }
     }

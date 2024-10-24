@@ -116,7 +116,7 @@ impl TryInto<CheckpointSummary> for Checkpoint {
                 message: format!("Cannot convert timestamp millis (i64) to millis (u64): {e}"),
             })?;
         let content_digest =
-            CheckpointContentsDigest::from_str(&self.digest).map_err(|e| ClientError::from(e))?;
+            CheckpointContentsDigest::from_str(&self.digest).map_err(ClientError::from)?;
         let previous_digest = self
             .previous_checkpoint_digest
             .map(|d| CheckpointDigest::from_str(&d))

@@ -162,9 +162,6 @@ impl TryFrom<BigInt> for u64 {
     type Error = ClientError;
 
     fn try_from(value: BigInt) -> Result<Self, Self::Error> {
-        value
-            .0
-            .parse::<u64>()
-            .map_err(|e| ClientError::ParseError(e))
+        value.0.parse::<u64>().map_err(ClientError::ParseError)
     }
 }

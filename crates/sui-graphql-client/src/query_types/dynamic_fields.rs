@@ -169,7 +169,7 @@ impl TryFrom<DynamicField> for DynamicFieldOutput {
                 .repr
                 .as_str(),
         )
-        .map_err(|e| ClientError::from(e))?;
+        .map_err(ClientError::from)?;
         Ok(DynamicFieldOutput {
             name: crate::DynamicFieldName {
                 type_: typetag,
