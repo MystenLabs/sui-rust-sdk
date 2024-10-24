@@ -228,7 +228,7 @@ impl TransactionBuilder {
 
     /// Assuming everything is resolved, convert this transaction into the
     /// resolved form. Fails if there are unresolved parts.
-    fn try_finish(&self) -> Result<Transaction, Error> {
+    fn try_finish(self) -> Result<Transaction, Error> {
         let Some(sender) = self.sender else {
             return Err(anyhow!("No sender provided"));
         };
@@ -256,7 +256,7 @@ impl TransactionBuilder {
                 sui_types::types::ProgrammableTransaction {
                     inputs: self
                         .inputs
-                        .iter()
+                        .into_iter()
                         .map(|i| i.try_into())
                         .collect::<Result<Vec<_>, _>>()
                         .map_err(|e| anyhow!("Failed to convert inputs into InputArgument: {e}"))?,
@@ -285,7 +285,7 @@ impl TransactionBuilder {
     /// Attempt to finish the transaction, but if it fails, it will attempt to resolve the
     /// transaction by querying the GraphQL service, for which a client is required.
     pub fn resolve_transaction(self, client: Option<Client>) -> Result<Transaction, Error> {
-        match self.try_finish() {
+        match self.clone().try_finish() {
             Ok(tx) => Ok(tx),
             Err(_) => {
                 let Some(client) = client else {
@@ -398,11 +398,11 @@ impl From<Value> for Argument {
     }
 }
 
-impl TryFrom<&Input> for InputArgument {
+impl TryFrom<Input> for InputArgument {
     type Error = Error;
-    fn try_from(value: &Input) -> Result<Self, Error> {
+    fn try_from(value: Input) -> Result<Self, Error> {
         match value {
-            Input::Object(ref object) => {
+            Input::Object(object) => {
                 if let Some(obj) = &object.kind {
                     match obj {
                         Kind::ImmOrOwned => Ok(InputArgument::ImmutableOrOwned(object.try_into()?)),
@@ -596,7 +596,8 @@ mod tests {
             .unwrap(),
         ));
 
-        assert!(tx.try_finish().is_err());
+        let result = tx.clone().try_finish();
+        assert!(result.is_err());
 
         tx.transfer_objects(vec![coin], recipient);
         tx.set_gas_budget(500000000);

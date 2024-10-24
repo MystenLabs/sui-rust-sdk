@@ -169,26 +169,12 @@ impl Object {
     }
 }
 
-impl TryInto<ObjectReference> for &Object {
+impl TryFrom<Object> for ObjectReference {
     type Error = anyhow::Error;
 
-    fn try_into(self) -> Result<ObjectReference, Self::Error> {
-        Ok(ObjectReference::new(
-            self.id,
-            self.version.ok_or_else(|| anyhow!("version not set"))?,
-            self.digest.ok_or_else(|| anyhow!("digest not set"))?,
-        ))
-    }
-}
-
-impl TryInto<ObjectReference> for Object {
-    type Error = anyhow::Error;
-
-    fn try_into(self) -> Result<ObjectReference, Self::Error> {
-        Ok(ObjectReference::new(
-            self.id,
-            self.version.ok_or_else(|| anyhow!("version not set"))?,
-            self.digest.ok_or_else(|| anyhow!("digest not set"))?,
-        ))
+    fn try_from(value: Object) -> Result<Self, Self::Error> {
+        let version = value.version.ok_or_else(|| anyhow!("version not set"))?;
+        let digest = value.digest.ok_or_else(|| anyhow!("digest not set"))?;
+        Ok(ObjectReference::new(value.id, version, digest))
     }
 }
