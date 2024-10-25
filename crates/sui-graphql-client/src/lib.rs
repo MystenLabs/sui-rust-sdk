@@ -192,12 +192,12 @@ impl DynamicFieldOutput {
     /// Deserialize the name of the dynamic field into the specified type.
     pub fn deserialize_name<T: DeserializeOwned>(
         &self,
-        expected_type: TypeTag,
+        expected_type: &TypeTag,
     ) -> Result<T, anyhow::Error> {
         assert_eq!(
-            expected_type, self.name.type_,
+            expected_type, &self.name.type_,
             "Expected type {}, but got {}",
-            expected_type, self.name.type_
+            expected_type, &self.name.type_
         );
 
         let bcs = &self.name.bcs;
@@ -207,12 +207,12 @@ impl DynamicFieldOutput {
     /// Deserialize the value of the dynamic field into the specified type.
     pub fn deserialize_value<T: DeserializeOwned>(
         &self,
-        expected_type: TypeTag,
+        expected_type: &TypeTag,
     ) -> Result<T, anyhow::Error> {
         let typetag = self.value.as_ref().map(|(typename, _)| typename);
         assert_eq!(
             Some(&expected_type),
-            typetag,
+            typetag.as_ref(),
             "Expected type {}, but got {:?}",
             expected_type,
             typetag
@@ -1210,8 +1210,6 @@ impl Client {
 // This function is used in tests to create a new client instance for the local server.
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
     use base64ct::Encoding;
     use futures::StreamExt;
     use sui_types::types::Ed25519PublicKey;
