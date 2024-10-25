@@ -135,16 +135,16 @@ impl DynamicFieldValue {
     }
 
     /// Return the typename and bcs of this dynamic field value.
-    pub fn type_bcs(&self) -> Option<(String, Vec<u8>)> {
+    pub fn type_bcs(&self) -> Option<(TypeTag, Vec<u8>)> {
         match self {
             DynamicFieldValue::MoveObject(mo) => mo.contents.as_ref().map(|o| {
                 (
-                    o.type_.repr.clone(),
+                    TypeTag::from_str(&o.type_.repr.clone()).expect("Invalid TypeTag"),
                     base64ct::Base64::decode_vec(&o.bcs.0).expect("Invalid Base64"),
                 )
             }),
             DynamicFieldValue::MoveValue(mv) => Some((
-                mv.type_.repr.clone(),
+                TypeTag::from_str(&mv.type_.repr.clone()).expect("Invalid TypeTag"),
                 base64ct::Base64::decode_vec(&mv.bcs.0).expect("Invalid Base64"),
             )),
             _ => None,

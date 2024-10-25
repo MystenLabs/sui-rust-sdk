@@ -107,14 +107,12 @@ pub struct DynamicFieldName {
     pub json: Option<serde_json::Value>,
 }
 
-type Typename = String;
-
 #[derive(Debug)]
 pub struct DynamicFieldOutput {
     /// The name of the dynamic field
     pub name: DynamicFieldName,
     /// The dynamic field value typename and bcs
-    pub value: Option<(Typename, Vec<u8>)>,
+    pub value: Option<(TypeTag, Vec<u8>)>,
     /// The json representation of the dynamic field value object
     pub value_as_json: Option<serde_json::Value>,
 }
@@ -191,7 +189,8 @@ impl From<BcsName> for NameValue {
 }
 
 impl DynamicFieldOutput {
-    pub fn deserialize<T: DeserializeOwned>(
+    /// Deserialize the name of the dynamic field into the specified type.
+    pub fn deserialize_name<T: DeserializeOwned>(
         &self,
         expected_type: TypeTag,
     ) -> Result<T, anyhow::Error> {
@@ -203,6 +202,27 @@ impl DynamicFieldOutput {
 
         let bcs = &self.name.bcs;
         bcs::from_bytes::<T>(bcs).map_err(|_| anyhow!("Cannot decode BCS bytes"))
+    }
+
+    /// Deserialize the value of the dynamic field into the specified type.
+    pub fn deserialize_value<T: DeserializeOwned>(
+        &self,
+        expected_type: TypeTag,
+    ) -> Result<T, anyhow::Error> {
+        let typetag = self.value.as_ref().map(|(typename, _)| typename);
+        assert_eq!(
+            Some(&expected_type),
+            typetag,
+            "Expected type {}, but got {:?}",
+            expected_type,
+            typetag
+        );
+
+        if let Some((_, bcs)) = &self.value {
+            bcs::from_bytes::<T>(bcs).map_err(|_| anyhow!("Cannot decode BCS bytes"))
+        } else {
+            Err(anyhow!("No value found"))
+        }
     }
 }
 
@@ -1190,6 +1210,8 @@ impl Client {
 // This function is used in tests to create a new client instance for the local server.
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use base64ct::Encoding;
     use futures::StreamExt;
     use sui_types::types::Ed25519PublicKey;
