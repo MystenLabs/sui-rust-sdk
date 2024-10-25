@@ -184,18 +184,3 @@ impl TryFrom<DynamicField> for DynamicFieldOutput {
         })
     }
 }
-
-// impl From<DynamicField> for DynamicFieldOutput {
-//     fn from(val: DynamicField) -> DynamicFieldOutput {
-//         DynamicFieldOutput {
-//             name: crate::DynamicFieldName {
-//                 type_: TypeTag::from_str(val.name.as_ref().unwrap().type_.as_str()),
-//                 bcs: base64ct::Base64::decode_vec(val.name.as_ref().unwrap().bcs.0.as_ref())
-//                     .unwrap(),
-//                 json: val.name.as_ref().unwrap().json.clone(),
-//             },
-//             value_as_json: val.field_value_json(),
-//             value: val.value.and_then(|x| x.type_bcs()),
-//         }
-//     }
-// }
