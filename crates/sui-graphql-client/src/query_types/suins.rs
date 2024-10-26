@@ -7,6 +7,8 @@
 
 use crate::query_types::schema;
 use crate::query_types::Address as SdkAddress;
+use crate::query_types::Base64;
+use crate::query_types::PageInfo;
 
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(
@@ -28,4 +30,41 @@ pub struct ResolveSuiNSQueryArgs<'a> {
 #[cynic(schema = "rpc", graphql_type = "Address")]
 pub struct Address {
     pub address: SdkAddress,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(
+    schema = "rpc",
+    graphql_type = "Query",
+    variables = "SuinsRegistrationsQueryArgs"
+)]
+pub struct SuinsRegistrationsQuery {
+    #[arguments(address: $address)]
+    pub owner: Option<Owner>,
+}
+
+#[derive(cynic::QueryVariables, Debug)]
+pub struct SuinsRegistrationsQueryArgs {
+    pub address: SdkAddress,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "Owner")]
+pub struct Owner {
+    #[arguments(after: "", before: "", first: 10, last: 10)]
+    pub suins_registrations: SuinsRegistrationConnection,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "SuinsRegistrationConnection")]
+pub struct SuinsRegistrationConnection {
+    pub page_info: PageInfo,
+    pub nodes: Vec<SuinsRegistration>,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "SuinsRegistration")]
+pub struct SuinsRegistration {
+    pub bcs: Option<Base64>,
+    pub domain: String,
 }

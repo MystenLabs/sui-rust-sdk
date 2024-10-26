@@ -52,6 +52,8 @@ use query_types::ResolveSuiNSQuery;
 use query_types::ResolveSuiNSQueryArgs;
 use query_types::ServiceConfig;
 use query_types::ServiceConfigQuery;
+use query_types::SuinsRegistrationsQuery;
+use query_types::SuinsRegistrationsQueryArgs;
 use query_types::TransactionBlockArgs;
 use query_types::TransactionBlockQuery;
 use query_types::TransactionBlocksQuery;
@@ -102,6 +104,8 @@ static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_V
 // ===========================================================================
 // Output Types
 // ===========================================================================
+
+type Domain = String;
 
 /// The result of a dry run, which includes the effects of the transaction and any errors that may
 /// have occurred.
@@ -1284,7 +1288,7 @@ impl Client {
 
     // SuiNS
     // ===========================================================================
-    /// Get the SuiNS record for the provided name.
+    /// Get the address for the provided Suins domain name.
     pub async fn resolve_suins_to_address(&self, domain: &str) -> Result<Option<Address>, Error> {
         let operation = ResolveSuiNSQuery::build(ResolveSuiNSQueryArgs { name: domain });
 
@@ -1379,6 +1383,48 @@ impl Client {
         }
 
         Ok(response.data.and_then(|p| p.package).and_then(|p| p.module))
+    }
+
+    /// Get the SuiNS registrations for the provided address, returning a page of (Object, Domain)
+    /// tuples.
+    pub async fn suins_registrations(
+        &self,
+        address: Address,
+    ) -> Result<Page<(Object, Domain)>, Error> {
+        let operation = SuinsRegistrationsQuery::build(SuinsRegistrationsQueryArgs { address });
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        if let Some((nodes, page_info)) = response
+            .data
+            .and_then(|d| d.owner)
+            .map(|o| o.suins_registrations)
+            .map(|c| (c.nodes, c.page_info))
+        {
+            let bcs = nodes
+                .iter()
+                .map(|o| &o.bcs)
+                .filter_map(|b64| {
+                    b64.as_ref()
+                        .map(|b| base64ct::Base64::decode_vec(b.0.as_str()))
+                })
+                .collect::<Result<Vec<_>, base64ct::Error>>()
+                .map_err(|e| Error::msg(format!("Cannot decode Base64 object bcs bytes: {e}")))?;
+            let objects = bcs
+                .iter()
+                .map(|b| bcs::from_bytes::<sui_types::types::Object>(b))
+                .collect::<Result<Vec<_>, bcs::Error>>()
+                .map_err(|e| Error::msg(format!("Cannot decode bcs bytes into Object: {e}")))?;
+            let names = nodes.iter().map(|n| n.domain.clone()).collect::<Vec<_>>();
+            let result = objects.into_iter().zip(names).collect::<Vec<_>>();
+
+            Ok(Page::new(page_info, result))
+        } else {
+            Ok(Page::new_empty())
+        }
     }
 }
 

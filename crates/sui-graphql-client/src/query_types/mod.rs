@@ -83,6 +83,8 @@ pub use service_config::ServiceConfig;
 pub use service_config::ServiceConfigQuery;
 pub use suins::ResolveSuiNSQuery;
 pub use suins::ResolveSuiNSQueryArgs;
+pub use suins::SuinsRegistrationsQuery;
+pub use suins::SuinsRegistrationsQueryArgs;
 pub use transaction::TransactionBlock;
 pub use transaction::TransactionBlockArgs;
 pub use transaction::TransactionBlockQuery;
