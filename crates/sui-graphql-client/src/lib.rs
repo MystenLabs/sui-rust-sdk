@@ -48,6 +48,8 @@ use query_types::PageInfo;
 use query_types::ProtocolConfigQuery;
 use query_types::ProtocolConfigs;
 use query_types::ProtocolVersionArgs;
+use query_types::ResolveSuiNSQuery;
+use query_types::ResolveSuiNSQueryArgs;
 use query_types::ServiceConfig;
 use query_types::ServiceConfigQuery;
 use query_types::TransactionBlockArgs;
@@ -1278,6 +1280,23 @@ impl Client {
         } else {
             Ok(None)
         }
+    }
+
+    // SuiNS
+    // ===========================================================================
+    /// Get the SuiNS record for the provided name.
+    pub async fn resolve_suins_to_address(&self, domain: &str) -> Result<Option<Address>, Error> {
+        let operation = ResolveSuiNSQuery::build(ResolveSuiNSQueryArgs { name: domain });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+        Ok(response
+            .data
+            .and_then(|d| d.resolve_suins_address)
+            .map(|a| a.address))
     }
 
     // ===========================================================================

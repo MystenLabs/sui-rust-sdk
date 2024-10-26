@@ -15,6 +15,7 @@ mod normalized_move;
 mod object;
 mod protocol_config;
 mod service_config;
+mod suins;
 mod transaction;
 
 pub use active_validators::ActiveValidatorsArgs;
@@ -80,6 +81,8 @@ pub use protocol_config::ProtocolVersionArgs;
 pub use service_config::Feature;
 pub use service_config::ServiceConfig;
 pub use service_config::ServiceConfigQuery;
+pub use suins::ResolveSuiNSQuery;
+pub use suins::ResolveSuiNSQueryArgs;
 pub use transaction::TransactionBlock;
 pub use transaction::TransactionBlockArgs;
 pub use transaction::TransactionBlockQuery;
