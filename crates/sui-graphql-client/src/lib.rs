@@ -81,6 +81,8 @@ use futures::Stream;
 use reqwest::Url;
 use std::pin::Pin;
 
+use crate::query_types::CheckpointTotalTxQuery;
+
 const MAINNET_HOST: &str = "https://sui-mainnet.mystenlabs.com/graphql";
 const TESTNET_HOST: &str = "https://sui-testnet.mystenlabs.com/graphql";
 const DEVNET_HOST: &str = "https://sui-devnet.mystenlabs.com/graphql";
@@ -424,6 +426,38 @@ impl Client {
         } else {
             Ok(Page::new_empty())
         }
+    }
+
+    /// The total number of transaction blocks in the network by the end of the provided checkpoint.
+    /// Only one of `checkpoint_digest` or `checkpoint_seq_num` should be provided. If none is
+    /// provided, it will return the total number of transactions by the end of the last known
+    /// checkpoint.
+    pub async fn total_transaction_blocks(
+        &self,
+        digest: Option<String>,
+        seq_num: Option<u64>,
+    ) -> Result<Option<u64>, Error> {
+        ensure!(
+            !(digest.is_some() && seq_num.is_some()),
+            "Either digest or seq_num must be provided"
+        );
+
+        let operation = CheckpointTotalTxQuery::build(CheckpointArgs {
+            id: CheckpointId {
+                digest,
+                sequence_number: seq_num,
+            },
+        });
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        Ok(response
+            .data
+            .and_then(|x| x.checkpoint)
+            .and_then(|c| c.network_total_transactions))
     }
 
     // ===========================================================================
@@ -1576,6 +1610,18 @@ mod tests {
             "Dynamic fields query failed for {} network. Error: {}",
             client.rpc_server(),
             dynamic_fields.unwrap_err()
+        );
+    }
+
+    #[tokio::test]
+    async fn test_total_transaction_blocks() {
+        let client = test_client();
+        let total_transaction_blocks = client.total_transaction_blocks(None, None).await;
+        assert!(
+            total_transaction_blocks.as_ref().is_ok_and(|f| f.is_some()),
+            "Total transaction blocks query failed for {} network. Error: {}",
+            client.rpc_server(),
+            total_transaction_blocks.unwrap_err()
         );
     }
 }

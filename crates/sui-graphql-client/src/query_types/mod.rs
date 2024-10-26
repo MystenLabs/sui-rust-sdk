@@ -30,6 +30,7 @@ pub use chain::ChainIdentifierQuery;
 pub use checkpoint::CheckpointArgs;
 pub use checkpoint::CheckpointId;
 pub use checkpoint::CheckpointQuery;
+pub use checkpoint::CheckpointTotalTxQuery;
 pub use checkpoint::CheckpointsArgs;
 pub use checkpoint::CheckpointsQuery;
 pub use coin::CoinMetadata;

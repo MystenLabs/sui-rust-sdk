@@ -28,6 +28,19 @@ pub struct CheckpointQuery {
 }
 
 #[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "Query", variables = "CheckpointArgs")]
+pub struct CheckpointTotalTxQuery {
+    #[arguments(id: $id)]
+    pub checkpoint: Option<CheckpointTotalTx>,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "Checkpoint")]
+pub struct CheckpointTotalTx {
+    pub network_total_transactions: Option<u64>,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "Query", variables = "CheckpointsArgs")]
 pub struct CheckpointsQuery {
     pub checkpoints: CheckpointConnection,
