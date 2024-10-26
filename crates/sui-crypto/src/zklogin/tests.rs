@@ -2,6 +2,7 @@ use signature::Signer;
 use sui_sdk_types::types::PersonalMessage;
 
 use crate::ed25519::Ed25519PrivateKey;
+use crate::SuiVerifier;
 
 use super::*;
 

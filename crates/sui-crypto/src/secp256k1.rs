@@ -1,16 +1,12 @@
 use crate::SignatureError;
-use crate::SuiSigner;
-use crate::SuiVerifier;
 use k256::ecdsa::SigningKey;
 use k256::ecdsa::VerifyingKey;
 use k256::elliptic_curve::group::GroupEncoding;
 use signature::Signer;
 use signature::Verifier;
-use sui_sdk_types::types::PersonalMessage;
 use sui_sdk_types::types::Secp256k1PublicKey;
 use sui_sdk_types::types::Secp256k1Signature;
 use sui_sdk_types::types::SimpleSignature;
-use sui_sdk_types::types::Transaction;
 use sui_sdk_types::types::UserSignature;
 
 pub struct Secp256k1PrivateKey(SigningKey);
@@ -87,21 +83,6 @@ impl Signer<UserSignature> for Secp256k1PrivateKey {
     }
 }
 
-impl SuiSigner for Secp256k1PrivateKey {
-    fn sign_transaction(&self, transaction: &Transaction) -> Result<UserSignature, SignatureError> {
-        let msg = transaction.signing_digest();
-        self.try_sign(&msg)
-    }
-
-    fn sign_personal_message(
-        &self,
-        message: &PersonalMessage<'_>,
-    ) -> Result<UserSignature, SignatureError> {
-        let msg = message.signing_digest();
-        self.try_sign(&msg)
-    }
-}
-
 pub struct Secp256k1VerifyingKey(VerifyingKey);
 
 impl Secp256k1VerifyingKey {
@@ -151,26 +132,6 @@ impl Verifier<UserSignature> for Secp256k1VerifyingKey {
     }
 }
 
-impl SuiVerifier for Secp256k1VerifyingKey {
-    fn verify_transaction(
-        &self,
-        transaction: &Transaction,
-        signature: &UserSignature,
-    ) -> Result<(), SignatureError> {
-        let message = transaction.signing_digest();
-        self.verify(&message, signature)
-    }
-
-    fn verify_personal_message(
-        &self,
-        message: &PersonalMessage<'_>,
-        signature: &UserSignature,
-    ) -> Result<(), SignatureError> {
-        let message = message.signing_digest();
-        self.verify(&message, signature)
-    }
-}
-
 #[derive(Default, Clone, Debug)]
 pub struct Secp256k1Verifier {}
 
@@ -206,29 +167,12 @@ impl Verifier<UserSignature> for Secp256k1Verifier {
     }
 }
 
-impl SuiVerifier for Secp256k1Verifier {
-    fn verify_transaction(
-        &self,
-        transaction: &Transaction,
-        signature: &UserSignature,
-    ) -> Result<(), SignatureError> {
-        let message = transaction.signing_digest();
-        self.verify(&message, signature)
-    }
-
-    fn verify_personal_message(
-        &self,
-        message: &PersonalMessage<'_>,
-        signature: &UserSignature,
-    ) -> Result<(), SignatureError> {
-        let message = message.signing_digest();
-        self.verify(&message, signature)
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::SuiSigner;
+    use crate::SuiVerifier;
+    use sui_sdk_types::types::PersonalMessage;
     use test_strategy::proptest;
 
     #[cfg(target_arch = "wasm32")]

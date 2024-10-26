@@ -1,5 +1,4 @@
 use crate::SignatureError;
-use crate::SuiVerifier;
 use signature::Verifier;
 use sui_sdk_types::types::SimpleSignature;
 use sui_sdk_types::types::UserSignature;
@@ -59,25 +58,5 @@ impl Verifier<UserSignature> for SimpleVerifier {
         };
 
         <Self as Verifier<SimpleSignature>>::verify(self, message, signature)
-    }
-}
-
-impl SuiVerifier for SimpleVerifier {
-    fn verify_transaction(
-        &self,
-        transaction: &sui_sdk_types::types::Transaction,
-        signature: &UserSignature,
-    ) -> Result<(), SignatureError> {
-        let message = transaction.signing_digest();
-        self.verify(&message, signature)
-    }
-
-    fn verify_personal_message(
-        &self,
-        message: &sui_sdk_types::types::PersonalMessage<'_>,
-        signature: &UserSignature,
-    ) -> Result<(), SignatureError> {
-        let message = message.signing_digest();
-        self.verify(&message, signature)
     }
 }

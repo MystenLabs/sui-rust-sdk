@@ -61,6 +61,14 @@ pub mod simple;
 )]
 pub mod multisig;
 
+/// Interface for signing user transactions and messages in Sui
+///
+/// # Note
+///
+/// There is a blanket implementation of `SuiSigner` for all `T` where `T:
+/// `[`Signer`]`<`[`UserSignature`]`>` so it is generally recommended for a signer to implement
+/// `Signer<UserSignature>` and rely on the blanket implementation which handles the proper
+/// construction of the signing message.
 pub trait SuiSigner {
     fn sign_transaction(&self, transaction: &Transaction) -> Result<UserSignature, SignatureError>;
     fn sign_personal_message(
@@ -69,6 +77,29 @@ pub trait SuiSigner {
     ) -> Result<UserSignature, SignatureError>;
 }
 
+impl<T: Signer<UserSignature>> SuiSigner for T {
+    fn sign_transaction(&self, transaction: &Transaction) -> Result<UserSignature, SignatureError> {
+        let msg = transaction.signing_digest();
+        self.try_sign(&msg)
+    }
+
+    fn sign_personal_message(
+        &self,
+        message: &PersonalMessage<'_>,
+    ) -> Result<UserSignature, SignatureError> {
+        let msg = message.signing_digest();
+        self.try_sign(&msg)
+    }
+}
+
+/// Interface for verifying user transactions and messages in Sui
+///
+/// # Note
+///
+/// There is a blanket implementation of `SuiVerifier` for all `T` where `T:
+/// `[`Verifier`]`<`[`UserSignature`]`>` so it is generally recommended for a signer to implement
+/// `Verifier<UserSignature>` and rely on the blanket implementation which handles the proper
+/// construction of the signing message.
 pub trait SuiVerifier {
     fn verify_transaction(
         &self,
@@ -80,4 +111,24 @@ pub trait SuiVerifier {
         message: &PersonalMessage<'_>,
         signature: &UserSignature,
     ) -> Result<(), SignatureError>;
+}
+
+impl<T: Verifier<UserSignature>> SuiVerifier for T {
+    fn verify_transaction(
+        &self,
+        transaction: &Transaction,
+        signature: &UserSignature,
+    ) -> Result<(), SignatureError> {
+        let message = transaction.signing_digest();
+        self.verify(&message, signature)
+    }
+
+    fn verify_personal_message(
+        &self,
+        message: &PersonalMessage<'_>,
+        signature: &UserSignature,
+    ) -> Result<(), SignatureError> {
+        let message = message.signing_digest();
+        self.verify(&message, signature)
+    }
 }

@@ -23,9 +23,9 @@ rustdoc-args = [
 
 [features]
 default = []
-ed25519 = ["dep:ed25519-dalek", "dep:rand_core", "sui-sdk-types/hash", "sui-sdk-types/serde"]
-secp256r1 = ["dep:p256", "dep:rand_core", "sui-sdk-types/hash", "sui-sdk-types/serde"]
-secp256k1 = ["dep:k256", "dep:rand_core", "signature/std", "sui-sdk-types/hash", "sui-sdk-types/serde"]
+ed25519 = ["dep:ed25519-dalek", "dep:rand_core"]
+secp256r1 = ["dep:p256", "dep:rand_core"]
+secp256k1 = ["dep:k256", "dep:rand_core", "signature/std"]
 zklogin = [
     "dep:ark-bn254",
     "dep:ark-ff",
@@ -39,13 +39,11 @@ zklogin = [
     "dep:serde_derive",
     "dep:serde_json",
     "signature/std",
-    "sui-sdk-types/hash",
-    "sui-sdk-types/serde",
 ]
 
 [dependencies]
 signature = "2.2"
-sui-sdk-types = { version = "0.0.1", path = "../sui-sdk-types", default-features = false }
+sui-sdk-types = { version = "0.0.1", path = "../sui-sdk-types", default-features = false, features = ["hash", "serde"] }
 
 # RNG support
 rand_core = { version = "0.6.4", optional = true }

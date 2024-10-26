@@ -1,5 +1,4 @@
 use crate::SignatureError;
-use crate::SuiVerifier;
 use crate::Verifier;
 use sui_sdk_types::types::MultisigAggregatedSignature;
 use sui_sdk_types::types::MultisigCommittee;
@@ -166,26 +165,6 @@ impl Verifier<UserSignature> for MultisigVerifier {
     }
 }
 
-impl SuiVerifier for MultisigVerifier {
-    fn verify_transaction(
-        &self,
-        transaction: &sui_sdk_types::types::Transaction,
-        signature: &UserSignature,
-    ) -> Result<(), SignatureError> {
-        let message = transaction.signing_digest();
-        self.verify(&message, signature)
-    }
-
-    fn verify_personal_message(
-        &self,
-        message: &sui_sdk_types::types::PersonalMessage<'_>,
-        signature: &UserSignature,
-    ) -> Result<(), SignatureError> {
-        let message = message.signing_digest();
-        self.verify(&message, signature)
-    }
-}
-
 /// Interpret a bitmap of 01s as a list of indices that is set to 1s.
 /// e.g. 22 = 0b10110, then the result is [1, 2, 4].
 struct BitmapIndices {
@@ -270,26 +249,6 @@ impl Verifier<UserSignature> for UserSignatureVerifier {
                 "unsupported user signature scheme",
             )),
         }
-    }
-}
-
-impl SuiVerifier for UserSignatureVerifier {
-    fn verify_transaction(
-        &self,
-        transaction: &sui_sdk_types::types::Transaction,
-        signature: &UserSignature,
-    ) -> Result<(), SignatureError> {
-        let message = transaction.signing_digest();
-        self.verify(&message, signature)
-    }
-
-    fn verify_personal_message(
-        &self,
-        message: &sui_sdk_types::types::PersonalMessage<'_>,
-        signature: &UserSignature,
-    ) -> Result<(), SignatureError> {
-        let message = message.signing_digest();
-        self.verify(&message, signature)
     }
 }
 
