@@ -44,8 +44,12 @@ pub struct SuinsRegistrationsQuery {
 }
 
 #[derive(cynic::QueryVariables, Debug)]
-pub struct SuinsRegistrationsQueryArgs {
+pub struct SuinsRegistrationsQueryArgs<'a> {
+    pub after: Option<&'a str>,
+    pub before: Option<&'a str>,
     pub address: SdkAddress,
+    pub first: Option<i32>,
+    pub last: Option<i32>,
 }
 
 #[derive(cynic::QueryFragment, Debug)]

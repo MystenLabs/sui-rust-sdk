@@ -1390,8 +1390,16 @@ impl Client {
     pub async fn suins_registrations(
         &self,
         address: Address,
+        pagination_filter: PaginationFilter<'_>,
     ) -> Result<Page<(Object, Domain)>, Error> {
-        let operation = SuinsRegistrationsQuery::build(SuinsRegistrationsQueryArgs { address });
+        let (after, before, first, last) = self.pagination_filter(pagination_filter);
+        let operation = SuinsRegistrationsQuery::build(SuinsRegistrationsQueryArgs {
+            address,
+            after,
+            before,
+            first,
+            last,
+        });
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
