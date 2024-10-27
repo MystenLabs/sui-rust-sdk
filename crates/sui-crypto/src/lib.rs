@@ -61,6 +61,24 @@ pub mod simple;
 )]
 pub mod multisig;
 
+#[cfg(any(
+    feature = "ed25519",
+    feature = "secp256r1",
+    feature = "secp256k1",
+    feature = "zklogin"
+))]
+#[cfg_attr(
+    doc_cfg,
+    doc(cfg(any(
+        feature = "ed25519",
+        feature = "secp256r1",
+        feature = "secp256k1",
+        feature = "zklogin"
+    )))
+)]
+#[doc(inline)]
+pub use multisig::UserSignatureVerifier;
+
 /// Interface for signing user transactions and messages in Sui
 ///
 /// # Note
