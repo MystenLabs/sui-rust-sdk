@@ -63,8 +63,8 @@ impl Secp256k1PrivateKey {
         Self(SigningKey::random(&mut rng))
     }
 
-    #[cfg(feature = "der")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "der")))]
+    #[cfg(feature = "pem")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "pem")))]
     /// Deserialize PKCS#8 private key from ASN.1 DER-encoded data (binary format).
     pub fn from_der(bytes: &[u8]) -> Result<Self, SignatureError> {
         k256::pkcs8::DecodePrivateKey::from_pkcs8_der(bytes)
@@ -72,8 +72,8 @@ impl Secp256k1PrivateKey {
             .map_err(SignatureError::from_source)
     }
 
-    #[cfg(feature = "der")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "der")))]
+    #[cfg(feature = "pem")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "pem")))]
     /// Serialize this private key as DER-encoded PKCS#8
     pub fn to_der(&self) -> Result<Vec<u8>, SignatureError> {
         use k256::pkcs8::EncodePrivateKey;
@@ -105,7 +105,7 @@ impl Secp256k1PrivateKey {
             .map(|pem| (*pem).to_owned())
     }
 
-    #[cfg(feature = "der")]
+    #[cfg(feature = "pem")]
     pub(crate) fn from_k256(private_key: SigningKey) -> Self {
         Self(private_key)
     }
@@ -147,8 +147,8 @@ impl Secp256k1VerifyingKey {
         Secp256k1PublicKey::new(self.0.as_ref().to_bytes().into())
     }
 
-    #[cfg(feature = "der")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "der")))]
+    #[cfg(feature = "pem")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "pem")))]
     /// Deserialize public key from ASN.1 DER-encoded data (binary format).
     pub fn from_der(bytes: &[u8]) -> Result<Self, SignatureError> {
         k256::pkcs8::DecodePublicKey::from_public_key_der(bytes)
@@ -156,8 +156,8 @@ impl Secp256k1VerifyingKey {
             .map_err(SignatureError::from_source)
     }
 
-    #[cfg(feature = "der")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "der")))]
+    #[cfg(feature = "pem")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "pem")))]
     /// Serialize this public key as DER-encoded data
     pub fn to_der(&self) -> Result<Vec<u8>, SignatureError> {
         use pkcs8::EncodePublicKey;
@@ -188,7 +188,7 @@ impl Secp256k1VerifyingKey {
             .map_err(SignatureError::from_source)
     }
 
-    #[cfg(feature = "der")]
+    #[cfg(feature = "pem")]
     pub(crate) fn from_k256(verifying_key: VerifyingKey) -> Self {
         Self(verifying_key)
     }

@@ -40,8 +40,16 @@ zklogin = [
     "dep:serde_json",
     "signature/std",
 ]
-der = ["dep:pkcs8", "ed25519-dalek?/pkcs8", "p256?/pkcs8", "k256?/pkcs8"]
-pem = ["der", "dep:pem-rfc7468", "ed25519-dalek?/pem", "p256?/pem", "k256?/pem"]
+pem = [
+    "dep:pkcs8",
+    "dep:pem-rfc7468",
+    "ed25519-dalek?/pkcs8",
+    "p256?/pkcs8",
+    "k256?/pkcs8",
+    "ed25519-dalek?/pem",
+    "p256?/pem",
+    "k256?/pem",
+]
 
 [dependencies]
 signature = "2.2"

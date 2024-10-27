@@ -60,8 +60,8 @@ impl Ed25519PrivateKey {
         Self(buf.into())
     }
 
-    #[cfg(feature = "der")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "der")))]
+    #[cfg(feature = "pem")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "pem")))]
     /// Deserialize PKCS#8 private key from ASN.1 DER-encoded data (binary format).
     pub fn from_der(bytes: &[u8]) -> Result<Self, SignatureError> {
         ed25519_dalek::pkcs8::DecodePrivateKey::from_pkcs8_der(bytes)
@@ -69,8 +69,8 @@ impl Ed25519PrivateKey {
             .map_err(SignatureError::from_source)
     }
 
-    #[cfg(feature = "der")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "der")))]
+    #[cfg(feature = "pem")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "pem")))]
     /// Serialize this private key as DER-encoded PKCS#8
     pub fn to_der(&self) -> Result<Vec<u8>, SignatureError> {
         use ed25519_dalek::pkcs8::EncodePrivateKey;
@@ -102,7 +102,7 @@ impl Ed25519PrivateKey {
             .map(|pem| (*pem).to_owned())
     }
 
-    #[cfg(feature = "der")]
+    #[cfg(feature = "pem")]
     pub(crate) fn from_dalek(private_key: ed25519_dalek::SigningKey) -> Self {
         Self(private_key)
     }
@@ -145,8 +145,8 @@ impl Ed25519VerifyingKey {
         Ed25519PublicKey::new(self.0.to_bytes())
     }
 
-    #[cfg(feature = "der")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "der")))]
+    #[cfg(feature = "pem")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "pem")))]
     /// Deserialize public key from ASN.1 DER-encoded data (binary format).
     pub fn from_der(bytes: &[u8]) -> Result<Self, SignatureError> {
         ed25519_dalek::pkcs8::DecodePublicKey::from_public_key_der(bytes)
@@ -154,8 +154,8 @@ impl Ed25519VerifyingKey {
             .map_err(SignatureError::from_source)
     }
 
-    #[cfg(feature = "der")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "der")))]
+    #[cfg(feature = "pem")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "pem")))]
     /// Serialize this public key as DER-encoded data
     pub fn to_der(&self) -> Result<Vec<u8>, SignatureError> {
         use pkcs8::EncodePublicKey;
@@ -186,7 +186,7 @@ impl Ed25519VerifyingKey {
             .map_err(SignatureError::from_source)
     }
 
-    #[cfg(feature = "der")]
+    #[cfg(feature = "pem")]
     pub(crate) fn from_dalek(verifying_key: ed25519_dalek::VerifyingKey) -> Self {
         Self(verifying_key)
     }

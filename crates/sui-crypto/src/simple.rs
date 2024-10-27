@@ -133,8 +133,8 @@ mod keypair {
             self.verifying_key().public_key()
         }
 
-        #[cfg(feature = "der")]
-        #[cfg_attr(doc_cfg, doc(cfg(feature = "der")))]
+        #[cfg(feature = "pem")]
+        #[cfg_attr(doc_cfg, doc(cfg(feature = "pem")))]
         /// Deserialize PKCS#8 private key from ASN.1 DER-encoded data (binary format).
         pub fn from_der(bytes: &[u8]) -> Result<Self, SignatureError> {
             let private_key =
@@ -179,8 +179,8 @@ mod keypair {
             .map(|inner| Self { inner })
         }
 
-        #[cfg(feature = "der")]
-        #[cfg_attr(doc_cfg, doc(cfg(feature = "der")))]
+        #[cfg(feature = "pem")]
+        #[cfg_attr(doc_cfg, doc(cfg(feature = "pem")))]
         /// Serialize this private key as DER-encoded PKCS#8
         pub fn to_der(&self) -> Result<Vec<u8>, SignatureError> {
             match &self.inner {
@@ -206,8 +206,8 @@ mod keypair {
             Self::from_der(doc.as_bytes())
         }
 
-        #[cfg(feature = "der")]
-        #[cfg_attr(doc_cfg, doc(cfg(feature = "der")))]
+        #[cfg(feature = "pem")]
+        #[cfg_attr(doc_cfg, doc(cfg(feature = "pem")))]
         /// Serialize this private key as DER-encoded PKCS#8
         pub fn to_pem(&self) -> Result<String, SignatureError> {
             match &self.inner {
@@ -312,8 +312,8 @@ mod keypair {
             }
         }
 
-        #[cfg(feature = "der")]
-        #[cfg_attr(doc_cfg, doc(cfg(feature = "der")))]
+        #[cfg(feature = "pem")]
+        #[cfg_attr(doc_cfg, doc(cfg(feature = "pem")))]
         /// Deserialize public key from ASN.1 DER-encoded data (binary format).
         pub fn from_der(bytes: &[u8]) -> Result<Self, SignatureError> {
             let public_key = pkcs8::SubjectPublicKeyInfoRef::try_from(bytes)
@@ -358,8 +358,8 @@ mod keypair {
             .map(|inner| Self { inner })
         }
 
-        #[cfg(feature = "der")]
-        #[cfg_attr(doc_cfg, doc(cfg(feature = "der")))]
+        #[cfg(feature = "pem")]
+        #[cfg_attr(doc_cfg, doc(cfg(feature = "pem")))]
         /// Serialize this public key as DER-encoded data
         pub fn to_der(&self) -> Result<Vec<u8>, SignatureError> {
             match &self.inner {
