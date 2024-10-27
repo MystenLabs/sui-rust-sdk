@@ -6,6 +6,7 @@ use signature::Signer;
 use signature::Verifier;
 use sui_sdk_types::types::Secp256r1PublicKey;
 use sui_sdk_types::types::Secp256r1Signature;
+use sui_sdk_types::types::SignatureScheme;
 use sui_sdk_types::types::SimpleSignature;
 use sui_sdk_types::types::UserSignature;
 
@@ -38,6 +39,10 @@ impl Secp256r1PrivateKey {
 
     pub fn new(bytes: [u8; Self::LENGTH]) -> Self {
         Self(SigningKey::from_bytes(&bytes.into()).unwrap())
+    }
+
+    pub fn scheme(&self) -> SignatureScheme {
+        SignatureScheme::Secp256r1
     }
 
     pub fn verifying_key(&self) -> Secp256r1VerifyingKey {
@@ -130,6 +135,7 @@ impl Signer<UserSignature> for Secp256r1PrivateKey {
     }
 }
 
+#[derive(Debug)]
 pub struct Secp256r1VerifyingKey(VerifyingKey);
 
 impl Secp256r1VerifyingKey {

@@ -3,6 +3,7 @@ use crate::Signer;
 use crate::Verifier;
 use sui_sdk_types::types::Ed25519PublicKey;
 use sui_sdk_types::types::Ed25519Signature;
+use sui_sdk_types::types::SignatureScheme;
 use sui_sdk_types::types::SimpleSignature;
 use sui_sdk_types::types::UserSignature;
 
@@ -35,6 +36,10 @@ impl Ed25519PrivateKey {
 
     pub fn new(bytes: [u8; Self::LENGTH]) -> Self {
         Self(bytes.into())
+    }
+
+    pub fn scheme(&self) -> SignatureScheme {
+        SignatureScheme::Ed25519
     }
 
     pub fn verifying_key(&self) -> Ed25519VerifyingKey {
@@ -128,6 +133,7 @@ impl Signer<UserSignature> for Ed25519PrivateKey {
     }
 }
 
+#[derive(Debug)]
 pub struct Ed25519VerifyingKey(ed25519_dalek::VerifyingKey);
 
 impl Ed25519VerifyingKey {
