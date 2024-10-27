@@ -33,6 +33,12 @@ use query_types::EventsQuery;
 use query_types::EventsQueryArgs;
 use query_types::ExecuteTransactionArgs;
 use query_types::ExecuteTransactionQuery;
+use query_types::MoveFunction;
+use query_types::MoveModule;
+use query_types::NormalizedMoveFunctionQuery;
+use query_types::NormalizedMoveFunctionQueryArgs;
+use query_types::NormalizedMoveModuleQuery;
+use query_types::NormalizedMoveModuleQueryArgs;
 use query_types::ObjectFilter;
 use query_types::ObjectQuery;
 use query_types::ObjectQueryArgs;
@@ -81,6 +87,7 @@ use reqwest::Url;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::pin::Pin;
+use std::str::FromStr;
 
 use crate::query_types::CheckpointTotalTxQuery;
 
@@ -1271,6 +1278,87 @@ impl Client {
         } else {
             Ok(None)
         }
+    }
+
+    // ===========================================================================
+    // Normalized Move Package API
+    // ===========================================================================
+    /// Return the normalized Move function data for the provided package, module, and function.
+    pub async fn normalized_move_function(
+        &self,
+        package: &str,
+        module: &str,
+        function: &str,
+        version: Option<u64>,
+    ) -> Result<Option<MoveFunction>, Error> {
+        let operation = NormalizedMoveFunctionQuery::build(NormalizedMoveFunctionQueryArgs {
+            address: Address::from_str(package)?,
+            module,
+            function,
+            version,
+        });
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        Ok(response
+            .data
+            .and_then(|p| p.package)
+            .and_then(|p| p.module)
+            .and_then(|m| m.function))
+    }
+
+    /// Return the normalized Move module data for the provided module.
+    // TODO: do we want to self paginate everything and return all the data, or keep pagination
+    // options?
+    pub async fn normalized_move_module(
+        &self,
+        package: &str,
+        module: &str,
+        version: Option<u64>,
+        pagination_filter_enums: PaginationFilter<'_>,
+        pagination_filter_friends: PaginationFilter<'_>,
+        pagination_filter_functions: PaginationFilter<'_>,
+        pagination_filter_structs: PaginationFilter<'_>,
+    ) -> Result<Option<MoveModule>, Error> {
+        let (after_enums, before_enums, first_enums, last_enums) =
+            self.pagination_filter(pagination_filter_enums);
+        let (after_friends, before_friends, first_friends, last_friends) =
+            self.pagination_filter(pagination_filter_friends);
+        let (after_functions, before_functions, first_functions, last_functions) =
+            self.pagination_filter(pagination_filter_functions);
+        let (after_structs, before_structs, first_structs, last_structs) =
+            self.pagination_filter(pagination_filter_structs);
+        let operation = NormalizedMoveModuleQuery::build(NormalizedMoveModuleQueryArgs {
+            package: Address::from_str(package)?,
+            module,
+            version,
+            after_enums,
+            after_functions,
+            after_structs,
+            after_friends,
+            before_enums,
+            before_functions,
+            before_structs,
+            before_friends,
+            first_enums,
+            first_functions,
+            first_structs,
+            first_friends,
+            last_enums,
+            last_functions,
+            last_structs,
+            last_friends,
+        });
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        Ok(response.data.and_then(|p| p.package).and_then(|p| p.module))
     }
 }
 
