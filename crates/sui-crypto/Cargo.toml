@@ -40,6 +40,8 @@ zklogin = [
     "dep:serde_json",
     "signature/std",
 ]
+der = ["dep:pkcs8", "ed25519-dalek?/pkcs8", "p256?/pkcs8", "k256?/pkcs8"]
+pem = ["der", "dep:pem-rfc7468", "ed25519-dalek?/pem", "p256?/pem", "k256?/pem"]
 
 [dependencies]
 signature = "2.2"
@@ -69,6 +71,10 @@ itertools = { version = "0.13.0", optional = true }
 serde = { version = "1.0.210", optional = true }
 serde_derive = { version = "1.0.210", optional = true }
 serde_json = { version = "1.0.128", optional = true }
+
+# pkcs8 der and pem support
+pkcs8 = { version = "0.10", optional = true, features = ["std"] }
+pem-rfc7468 = { version = "0.7", optional = true, features = ["std"] }
 
 [dev-dependencies]
 bcs = { version = "0.1.6" }
