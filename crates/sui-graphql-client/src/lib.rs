@@ -1313,6 +1313,7 @@ impl Client {
     /// Return the normalized Move module data for the provided module.
     // TODO: do we want to self paginate everything and return all the data, or keep pagination
     // options?
+    #[allow(clippy::too_many_arguments)]
     pub async fn normalized_move_module(
         &self,
         package: &str,
