@@ -26,12 +26,17 @@ pub struct EpochSummaryArgs {
     pub id: Option<u64>,
 }
 
+/// A summary of the epoch.
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "Epoch")]
 pub struct EpochSummary {
+    /// The epoch number.
     pub epoch_id: u64,
+    /// The reference gas price throughout this epoch.
     pub reference_gas_price: Option<BigInt>,
+    /// The total number of checkpoints in this epoch.
     pub total_checkpoints: Option<u64>,
+    /// The total number of transactions in this epoch.
     pub total_transactions: Option<u64>,
 }
 

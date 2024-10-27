@@ -28,14 +28,22 @@ pub struct CoinMetadataArgs<'a> {
 use crate::query_types::schema;
 use crate::query_types::BigInt;
 
+/// The coin metadata associated with the given coin type.
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "CoinMetadata")]
 pub struct CoinMetadata {
+    /// The number of decimal places used to represent the token.
     pub decimals: Option<i32>,
+    /// Optional description of the token, provided by the creator of the token.
     pub description: Option<String>,
+    /// Icon URL of the coin.
     pub icon_url: Option<String>,
+    /// Full, official name of the token.
     pub name: Option<String>,
+    /// The token's identifying abbreviation.
     pub symbol: Option<String>,
+    /// The overall quantity of tokens that will be issued.
     pub supply: Option<BigInt>,
+    /// Version of the token.
     pub version: u64,
 }
