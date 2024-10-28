@@ -1,6 +1,5 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
-use std::str::FromStr;
 
 use anyhow::Error;
 use chrono::DateTime as ChronoDT;
