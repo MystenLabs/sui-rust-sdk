@@ -1643,10 +1643,33 @@ mod tests {
         let client = test_client();
         let total_transaction_blocks = client.total_transaction_blocks().await;
         assert!(
-            total_transaction_blocks.as_ref().is_ok_and(|f| f.is_some()),
+            total_transaction_blocks
+                .as_ref()
+                .is_ok_and(|f| f.is_some_and(|tx| tx > 0)),
             "Total transaction blocks query failed for {} network. Error: {}",
             client.rpc_server(),
             total_transaction_blocks.unwrap_err()
         );
+
+        let chckp = client.latest_checkpoint_sequence_number().await;
+        assert!(
+            chckp.is_ok(),
+            "Latest checkpoint sequence number query failed for {} network. Error: {}",
+            client.rpc_server(),
+            chckp.unwrap_err()
+        );
+        let chckp_id = chckp.unwrap().unwrap();
+        let total_transaction_blocks = client.total_transaction_blocks_by_seq_num(chckp_id).await;
+        assert!(total_transaction_blocks.is_ok());
+        assert!(total_transaction_blocks.unwrap().is_some_and(|tx| tx > 0));
+
+        let chckp = client.checkpoint(None, Some(chckp_id)).await;
+        assert!(chckp.is_ok());
+        let digest = chckp.unwrap().unwrap().content_digest;
+        let total_transaction_blocks = client
+            .total_transaction_blocks_by_digest(digest.into())
+            .await;
+        assert!(total_transaction_blocks.is_ok());
+        assert!(total_transaction_blocks.unwrap().is_some_and(|tx| tx > 0));
     }
 }

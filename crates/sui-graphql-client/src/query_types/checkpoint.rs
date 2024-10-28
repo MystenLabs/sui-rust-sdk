@@ -119,10 +119,10 @@ impl TryInto<CheckpointSummary> for Checkpoint {
             .map_err(|e| Error::msg(format!("Cannot parse DateTime: {e}")))?
             .timestamp_millis()
             .try_into()?;
-        let content_digest = CheckpointContentsDigest::from_str(&self.digest)?;
+        let content_digest = CheckpointContentsDigest::from_base58(&self.digest)?;
         let previous_digest = self
             .previous_checkpoint_digest
-            .map(|d| CheckpointDigest::from_str(&d))
+            .map(|d| CheckpointDigest::from_base58(&d))
             .transpose()?;
         let epoch_rolling_gas_cost_summary = self
             .rolling_gas_summary
