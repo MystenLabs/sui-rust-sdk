@@ -5,6 +5,7 @@
 
 pub mod faucet;
 pub mod query_types;
+pub mod streams;
 
 use query_types::ActiveValidatorsArgs;
 use query_types::ActiveValidatorsQuery;
@@ -138,7 +139,7 @@ pub struct NameValue(Vec<u8>);
 /// Helper struct for passing a raw bcs value.
 pub struct BcsName(pub Vec<u8>);
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 /// A page of items returned by the GraphQL server.
 pub struct Page<T> {
     /// Information about the page, such as the cursor and whether there are more pages.
@@ -175,7 +176,7 @@ impl<T> Page<T> {
 }
 
 /// Pagination direction.
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub enum Direction {
     #[default]
     Forward,
@@ -184,7 +185,7 @@ pub enum Direction {
 
 /// Pagination options for querying the GraphQL server. It defaults to forward pagination with the
 /// GraphQL server's default items per page limit.
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct PaginationFilter {
     /// The direction of pagination.
     pub direction: Direction,
