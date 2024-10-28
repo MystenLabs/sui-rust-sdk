@@ -621,7 +621,7 @@ impl Client {
     /// provided, it will use the last known checkpoint id.
     pub async fn checkpoint(
         &self,
-        digest: Option<String>,
+        digest: Option<Digest>,
         seq_num: Option<u64>,
     ) -> Result<Option<CheckpointSummary>, Error> {
         ensure!(
@@ -631,7 +631,7 @@ impl Client {
 
         let operation = CheckpointQuery::build(CheckpointArgs {
             id: CheckpointId {
-                digest,
+                digest: digest.map(|d| d.to_string()),
                 sequence_number: seq_num,
             },
         });
