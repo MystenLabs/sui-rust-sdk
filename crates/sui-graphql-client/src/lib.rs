@@ -6,7 +6,6 @@
 pub mod faucet;
 pub mod query_types;
 
-use base64ct::Encoding;
 use query_types::ActiveValidatorsArgs;
 use query_types::ActiveValidatorsQuery;
 use query_types::BalanceArgs;
@@ -53,12 +52,11 @@ use query_types::TransactionMetadata;
 use query_types::TransactionsFilter;
 use query_types::Validator;
 
-use serde::de::DeserializeOwned;
-use serde::Serialize;
 use sui_types::types::framework::Coin;
 use sui_types::types::Address;
 use sui_types::types::CheckpointSequenceNumber;
 use sui_types::types::CheckpointSummary;
+use sui_types::types::Digest;
 use sui_types::types::Event;
 use sui_types::types::Object;
 use sui_types::types::SignedTransaction;
@@ -72,6 +70,7 @@ use anyhow::anyhow;
 use anyhow::ensure;
 use anyhow::Error;
 use anyhow::Result;
+use base64ct::Encoding;
 use cynic::serde;
 use cynic::GraphQlResponse;
 use cynic::MutationBuilder;
@@ -79,6 +78,8 @@ use cynic::Operation;
 use cynic::QueryBuilder;
 use futures::Stream;
 use reqwest::Url;
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 use std::pin::Pin;
 
 const MAINNET_HOST: &str = "https://sui-mainnet.mystenlabs.com/graphql";
@@ -91,12 +92,15 @@ static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_V
 // Output Types
 // ===========================================================================
 
+/// The result of a dry run, which includes the effects of the transaction and any errors that may
+/// have occurred.
 #[derive(Debug)]
 pub struct DryRunResult {
     pub effects: Option<TransactionEffects>,
     pub error: Option<String>,
 }
 
+/// The name part of a dynamic field, including its type, bcs, and json representation.
 #[derive(Debug)]
 pub struct DynamicFieldName {
     /// The type name of this dynamic field name
@@ -107,6 +111,8 @@ pub struct DynamicFieldName {
     pub json: Option<serde_json::Value>,
 }
 
+/// The output of a dynamic field query, that includes the name, value, and value's json
+/// representation.
 #[derive(Debug)]
 pub struct DynamicFieldOutput {
     /// The name of the dynamic field
@@ -171,8 +177,11 @@ pub enum Direction {
 /// GraphQL server's default items per page limit.
 #[derive(Default)]
 pub struct PaginationFilter<'a> {
+    /// The direction of pagination.
     direction: Direction,
+    /// An opaque cursor used for pagination.
     cursor: Option<&'a str>,
+    /// The maximum number of items to return. Use `service_config` to find the limit.
     limit: Option<i32>,
 }
 
@@ -816,6 +825,7 @@ impl Client {
     // Events API
     // ===========================================================================
 
+    /// Return a page of events based on the provided filters.
     pub async fn events(
         &self,
         filter: Option<EventFilter>,
@@ -1124,9 +1134,8 @@ impl Client {
     // Transaction API
     // ===========================================================================
 
-    // TODO: From Brandon: this fails due to SignedTransaction in Sui core type being technically inaccurate but it is fixed in this SDK here. in particular core incorrectly appends the signing intent when it shouldn't so my guess is that's whats wrong
     /// Get a transaction by its digest.
-    pub async fn transaction(&self, digest: &str) -> Result<Option<SignedTransaction>, Error> {
+    pub async fn transaction(&self, digest: Digest) -> Result<Option<SignedTransaction>, Error> {
         let operation = TransactionBlockQuery::build(TransactionBlockArgs {
             digest: digest.to_string(),
         });

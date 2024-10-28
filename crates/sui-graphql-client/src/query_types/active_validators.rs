@@ -57,6 +57,7 @@ pub struct ValidatorConnection {
     pub nodes: Vec<Validator>,
 }
 
+/// Represents a validator in the system.
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "Validator")]
 pub struct Validator {
@@ -114,10 +115,10 @@ pub struct Validator {
     pub voting_power: Option<i32>,
 }
 
+/// The credentials related fields associated with a validator.
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "ValidatorCredentials")]
 #[allow(non_snake_case)]
-/// The credentials related fields associated with a validator.
 pub struct ValidatorCredentials {
     pub protocol_pub_key: Option<Base64>,
     pub network_pub_key: Option<Base64>,
