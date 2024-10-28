@@ -59,6 +59,7 @@ use sui_types::types::framework::Coin;
 use sui_types::types::Address;
 use sui_types::types::CheckpointSequenceNumber;
 use sui_types::types::CheckpointSummary;
+use sui_types::types::Digest;
 use sui_types::types::Event;
 use sui_types::types::Object;
 use sui_types::types::SignedTransaction;
@@ -428,18 +429,42 @@ impl Client {
         }
     }
 
-    /// The total number of transaction blocks in the network by the end of the provided checkpoint.
-    /// Only one of `checkpoint_digest` or `checkpoint_seq_num` should be provided. If none is
-    /// provided, it will return the total number of transactions by the end of the last known
+    /// The total number of transaction blocks in the network by the end of the provided
+    /// checkpoint digest.
+    pub async fn total_transaction_blocks_by_digest(
+        &self,
+        digest: Digest,
+    ) -> Result<Option<u64>, Error> {
+        self.internal_total_transaction_blocks(Some(digest.to_string()), None)
+            .await
+    }
+
+    /// The total number of transaction blocks in the network by the end of the provided checkpoint
+    /// sequence number.
+    pub async fn total_transaction_blocks_by_seq_num(
+        &self,
+        seq_num: u64,
+    ) -> Result<Option<u64>, Error> {
+        self.internal_total_transaction_blocks(None, Some(seq_num))
+            .await
+    }
+
+    /// The total number of transaction blocks in the network by the end of the last known
     /// checkpoint.
-    pub async fn total_transaction_blocks(
+    pub async fn total_transaction_blocks(&self) -> Result<Option<u64>, Error> {
+        self.internal_total_transaction_blocks(None, None).await
+    }
+
+    /// Internal function to get the total number of transaction blocks based on the provided
+    /// checkpoint digest or sequence number.
+    async fn internal_total_transaction_blocks(
         &self,
         digest: Option<String>,
         seq_num: Option<u64>,
     ) -> Result<Option<u64>, Error> {
         ensure!(
             !(digest.is_some() && seq_num.is_some()),
-            "Either digest or seq_num must be provided"
+            "Cannot provide both digest and seq_num."
         );
 
         let operation = CheckpointTotalTxQuery::build(CheckpointArgs {
@@ -1616,7 +1641,7 @@ mod tests {
     #[tokio::test]
     async fn test_total_transaction_blocks() {
         let client = test_client();
-        let total_transaction_blocks = client.total_transaction_blocks(None, None).await;
+        let total_transaction_blocks = client.total_transaction_blocks().await;
         assert!(
             total_transaction_blocks.as_ref().is_ok_and(|f| f.is_some()),
             "Total transaction blocks query failed for {} network. Error: {}",
