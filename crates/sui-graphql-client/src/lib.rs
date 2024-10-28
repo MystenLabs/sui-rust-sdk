@@ -82,6 +82,8 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::pin::Pin;
 
+use crate::query_types::CheckpointTotalTxQuery;
+
 const MAINNET_HOST: &str = "https://sui-mainnet.mystenlabs.com/graphql";
 const TESTNET_HOST: &str = "https://sui-testnet.mystenlabs.com/graphql";
 const DEVNET_HOST: &str = "https://sui-devnet.mystenlabs.com/graphql";
@@ -435,6 +437,62 @@ impl Client {
         }
     }
 
+    /// The total number of transaction blocks in the network by the end of the provided
+    /// checkpoint digest.
+    pub async fn total_transaction_blocks_by_digest(
+        &self,
+        digest: Digest,
+    ) -> Result<Option<u64>, Error> {
+        self.internal_total_transaction_blocks(Some(digest.to_string()), None)
+            .await
+    }
+
+    /// The total number of transaction blocks in the network by the end of the provided checkpoint
+    /// sequence number.
+    pub async fn total_transaction_blocks_by_seq_num(
+        &self,
+        seq_num: u64,
+    ) -> Result<Option<u64>, Error> {
+        self.internal_total_transaction_blocks(None, Some(seq_num))
+            .await
+    }
+
+    /// The total number of transaction blocks in the network by the end of the last known
+    /// checkpoint.
+    pub async fn total_transaction_blocks(&self) -> Result<Option<u64>, Error> {
+        self.internal_total_transaction_blocks(None, None).await
+    }
+
+    /// Internal function to get the total number of transaction blocks based on the provided
+    /// checkpoint digest or sequence number.
+    async fn internal_total_transaction_blocks(
+        &self,
+        digest: Option<String>,
+        seq_num: Option<u64>,
+    ) -> Result<Option<u64>, Error> {
+        ensure!(
+            !(digest.is_some() && seq_num.is_some()),
+            "Cannot provide both digest and seq_num."
+        );
+
+        let operation = CheckpointTotalTxQuery::build(CheckpointArgs {
+            id: CheckpointId {
+                digest,
+                sequence_number: seq_num,
+            },
+        });
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        Ok(response
+            .data
+            .and_then(|x| x.checkpoint)
+            .and_then(|c| c.network_total_transactions))
+    }
+
     // ===========================================================================
     // Balance API
     // ===========================================================================
@@ -571,7 +629,7 @@ impl Client {
     /// provided, it will use the last known checkpoint id.
     pub async fn checkpoint(
         &self,
-        digest: Option<String>,
+        digest: Option<Digest>,
         seq_num: Option<u64>,
     ) -> Result<Option<CheckpointSummary>, Error> {
         ensure!(
@@ -581,7 +639,7 @@ impl Client {
 
         let operation = CheckpointQuery::build(CheckpointArgs {
             id: CheckpointId {
-                digest,
+                digest: digest.map(|d| d.to_string()),
                 sequence_number: seq_num,
             },
         });
@@ -1586,5 +1644,40 @@ mod tests {
             client.rpc_server(),
             dynamic_fields.unwrap_err()
         );
+    }
+
+    #[tokio::test]
+    async fn test_total_transaction_blocks() {
+        let client = test_client();
+        let total_transaction_blocks = client.total_transaction_blocks().await;
+        assert!(
+            total_transaction_blocks
+                .as_ref()
+                .is_ok_and(|f| f.is_some_and(|tx| tx > 0)),
+            "Total transaction blocks query failed for {} network. Error: {}",
+            client.rpc_server(),
+            total_transaction_blocks.unwrap_err()
+        );
+
+        let chckp = client.latest_checkpoint_sequence_number().await;
+        assert!(
+            chckp.is_ok(),
+            "Latest checkpoint sequence number query failed for {} network. Error: {}",
+            client.rpc_server(),
+            chckp.unwrap_err()
+        );
+        let chckp_id = chckp.unwrap().unwrap();
+        let total_transaction_blocks = client.total_transaction_blocks_by_seq_num(chckp_id).await;
+        assert!(total_transaction_blocks.is_ok());
+        assert!(total_transaction_blocks.unwrap().is_some_and(|tx| tx > 0));
+
+        let chckp = client.checkpoint(None, Some(chckp_id)).await;
+        assert!(chckp.is_ok());
+        let digest = chckp.unwrap().unwrap().content_digest;
+        let total_transaction_blocks = client
+            .total_transaction_blocks_by_digest(digest.into())
+            .await;
+        assert!(total_transaction_blocks.is_ok());
+        assert!(total_transaction_blocks.unwrap().is_some_and(|tx| tx > 0));
     }
 }
