@@ -396,6 +396,21 @@ mod signing_message {
             digest.into_inner()
         }
     }
+
+    impl crate::CheckpointSummary {
+        pub fn signing_message(&self) -> Vec<u8> {
+            const INTENT: Intent = Intent {
+                scope: IntentScope::CheckpointSummary,
+                version: IntentVersion::V0,
+                app_id: IntentAppId::Sui,
+            };
+            let mut message = Vec::new();
+            message.extend(INTENT.to_bytes());
+            bcs::serialize_into(&mut message, self).unwrap();
+            bcs::serialize_into(&mut message, &self.epoch).unwrap();
+            message
+        }
+    }
 }
 
 /// A 1-byte domain separator for deriving `ObjectId`s in Sui. It is starting from `0xf0` to ensure
