@@ -1390,13 +1390,13 @@ impl Client {
     pub async fn suins_registrations(
         &self,
         address: Address,
-        pagination_filter: PaginationFilter<'_>,
+        pagination_filter: PaginationFilter,
     ) -> Result<Page<(Object, Domain)>, Error> {
         let (after, before, first, last) = self.pagination_filter(pagination_filter);
         let operation = SuinsRegistrationsQuery::build(SuinsRegistrationsQueryArgs {
             address,
-            after,
-            before,
+            after: after.as_deref(),
+            before: before.as_deref(),
             first,
             last,
         });
