@@ -680,9 +680,9 @@ impl Client {
 
     /// Get a stream of [`CheckpointSummary`]. Note that this will fetch all checkpoints which may
     /// trigger a lot of requests.
-    pub async fn checkpoints_stream<'a>(
-        &'a self,
-    ) -> impl Stream<Item = Result<CheckpointSummary, Error>> + 'a {
+    pub async fn checkpoints_stream(
+        &self,
+    ) -> impl Stream<Item = Result<CheckpointSummary, Error>> + '_ {
         stream_paginated_query(move |cursor| {
             let filter = PaginationFilter {
                 cursor,
@@ -838,10 +838,10 @@ impl Client {
 
     /// Get a stream of dynamic fields for the provided address. Note that this will also fetch
     /// dynamic fields on wrapped objects.
-    pub async fn dynamic_fields_stream<'a>(
-        &'a self,
+    pub async fn dynamic_fields_stream(
+        &self,
         address: Address,
-    ) -> impl Stream<Item = Result<DynamicFieldOutput, Error>> + 'a {
+    ) -> impl Stream<Item = Result<DynamicFieldOutput, Error>> + '_ {
         stream_paginated_query(move |cursor| {
             let filter = PaginationFilter {
                 cursor,
@@ -947,10 +947,10 @@ impl Client {
     }
 
     /// Return a stream of events based on the (optional) event filter.
-    pub async fn events_stream<'a>(
-        &'a self,
+    pub async fn events_stream(
+        &self,
         filter: Option<EventFilter>,
-    ) -> impl Stream<Item = Result<Event, Error>> + 'a {
+    ) -> impl Stream<Item = Result<Event, Error>> + '_ {
         stream_paginated_query(move |cursor| {
             let pagination_filter = PaginationFilter {
                 cursor,
