@@ -132,12 +132,13 @@ where
 /// Creates a new `PageStream` for a paginated query.
 ///
 /// Examples
-/// ```rust, no_run
+/// ```rust,ignore
 /// use futures::StreamExt;
 /// use sui_graphql_client::streams::stream_paginated_query;
+/// use sui_graphql_client::Client;
+/// use sui_graphql_client::PaginationFilter;
 ///
 /// let client = Client::new_testnet();
-/// let cursor = None;
 /// let stream = stream_paginated_query(|cursor| {
 ///    client.coins(owner, coin_type, PaginationFilter { cursor, ..Default::default() })
 /// });
