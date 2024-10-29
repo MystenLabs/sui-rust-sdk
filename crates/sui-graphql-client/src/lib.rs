@@ -1286,23 +1286,6 @@ impl Client {
         }
     }
 
-    // SuiNS
-    // ===========================================================================
-    /// Get the address for the provided Suins domain name.
-    pub async fn resolve_suins_to_address(&self, domain: &str) -> Result<Option<Address>, Error> {
-        let operation = ResolveSuiNSQuery::build(ResolveSuiNSQueryArgs { name: domain });
-
-        let response = self.run_query(&operation).await?;
-
-        if let Some(errors) = response.errors {
-            return Err(Error::msg(format!("{:?}", errors)));
-        }
-        Ok(response
-            .data
-            .and_then(|d| d.resolve_suins_address)
-            .map(|a| a.address))
-    }
-
     // ===========================================================================
     // Normalized Move Package API
     // ===========================================================================
@@ -1383,6 +1366,24 @@ impl Client {
         }
 
         Ok(response.data.and_then(|p| p.package).and_then(|p| p.module))
+    }
+
+    // ===========================================================================
+    // SuiNS
+    // ===========================================================================
+    /// Get the address for the provided Suins domain name.
+    pub async fn resolve_suins_to_address(&self, domain: &str) -> Result<Option<Address>, Error> {
+        let operation = ResolveSuiNSQuery::build(ResolveSuiNSQueryArgs { name: domain });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+        Ok(response
+            .data
+            .and_then(|d| d.resolve_suins_address)
+            .map(|a| a.address))
     }
 
     /// Get the SuiNS registrations for the provided address, returning a page of (Object, Domain)
