@@ -1699,6 +1699,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_coins_stream() {
+        const NUM_COINS_FROM_FAUCET: usize = 5;
         let client = test_client();
         let faucet = match client.rpc_server() {
             LOCAL_HOST => FaucetClient::local(),
@@ -1714,9 +1715,9 @@ mod tests {
 
         while let Some(result) = stream.next().await {
             assert!(result.is_ok());
-            num_coins = 1;
+            num_coins += 1;
         }
-        assert!(num_coins > 0);
+        assert!(num_coins == NUM_COINS_FROM_FAUCET);
     }
 
     #[tokio::test]
