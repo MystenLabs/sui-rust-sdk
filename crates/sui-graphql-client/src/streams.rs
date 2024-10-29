@@ -70,15 +70,19 @@ where
         }
 
         // Get cursor from current page, will be None on first poll
-        let current_cursor = this.current_page.as_ref().and_then(|page| {
-            page.page_info()
-                .has_next_page
-                .then(|| page.page_info().end_cursor.clone())
-        });
+        let current_cursor = this
+            .current_page
+            .as_ref()
+            .and_then(|page| {
+                page.page_info()
+                    .has_next_page
+                    .then(|| page.page_info().end_cursor.clone())
+            })
+            .flatten();
 
         // If there's no future yet, create one
         if this.current_future.is_none() {
-            let future = (this.query_fn)(current_cursor.flatten());
+            let future = (this.query_fn)(current_cursor);
             this.current_future = Some(Box::pin(future));
         }
 
@@ -95,14 +99,17 @@ where
                     this.current_page = Some(page);
                     this.current_index = 0; // Reset index for the new page
 
-                    let item =
-                        this.current_page.as_ref().unwrap().data()[this.current_index].clone();
-                    this.current_index += 1;
+                    if let Some(page) = this.current_page.as_ref() {
+                        let item = page.data()[this.current_index].clone();
+                        this.current_index += 1;
 
-                    // Clear the future as we no longer need it
-                    this.current_future = None;
+                        // Clear the future as we no longer need it
+                        this.current_future = None;
 
-                    Poll::Ready(Some(Ok(item)))
+                        Poll::Ready(Some(Ok(item)))
+                    } else {
+                        Poll::Ready(None)
+                    }
                 }
                 Poll::Ready(Err(e)) => {
                     this.finished = true;
