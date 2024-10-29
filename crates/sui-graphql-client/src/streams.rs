@@ -1,16 +1,13 @@
-// Copyright (c) Mysten Labs, Inc.
-// SPDX-License-Identifier: Apache-2.0
-
 use crate::Error;
 use crate::Page;
 
 use futures::Stream;
-// use futures::StreamExt;
 use std::future::Future;
 use std::pin::Pin;
 use std::task::Context;
 use std::task::Poll;
 
+/// A stream that yields items from a paginated query.
 pub struct PageStream<T, F, Fut>
 where
     F: Fn(Option<String>) -> Fut,
@@ -19,8 +16,16 @@ where
     query_fn: F,
     current_page: Option<Page<T>>,
     current_future: Option<Pin<Box<Fut>>>,
-    current_index: usize, // Track current index of the page data
+    current_index: usize,
     finished: bool,
+}
+
+// Implement Unpin for PageStream since none of our fields need to be pinned
+impl<T, F, Fut> Unpin for PageStream<T, F, Fut>
+where
+    F: Fn(Option<String>) -> Fut,
+    Fut: Future<Output = Result<Page<T>, Error>>,
+{
 }
 
 impl<T, F, Fut> PageStream<T, F, Fut>
@@ -33,7 +38,7 @@ where
             query_fn,
             current_page: None,
             current_future: None,
-            current_index: 0, // Start at index 0
+            current_index: 0,
             finished: false,
         }
     }
@@ -47,30 +52,30 @@ where
 {
     type Item = Result<T, Error>;
 
-    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let this = unsafe { self.get_unchecked_mut() };
-
-        if this.finished {
+    /// Polls the stream for the next item.
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        // We can now use self directly since we implemented Unpin
+        if self.finished {
             return Poll::Ready(None);
         }
 
         // If we have a current page, return the next item
-        if let Some(page) = &this.current_page {
-            if this.current_index < page.data().len() {
-                let item = page.data()[this.current_index].clone();
-                this.current_index += 1;
+        if let Some(page) = &self.current_page {
+            if self.current_index < page.data().len() {
+                let item = page.data()[self.current_index].clone();
+                self.current_index += 1;
                 return Poll::Ready(Some(Ok(item)));
             }
 
             // If no more items and no next page, mark as finished
             if !page.page_info().has_next_page {
-                this.finished = true;
+                self.finished = true;
                 return Poll::Ready(None);
             }
         }
 
-        // Get cursor from current page, will be None on first poll
-        let current_cursor = this
+        // Get cursor from current page
+        let current_cursor = self
             .current_page
             .as_ref()
             .and_then(|page| {
@@ -81,30 +86,30 @@ where
             .flatten();
 
         // If there's no future yet, create one
-        if this.current_future.is_none() {
-            let future = (this.query_fn)(current_cursor);
-            this.current_future = Some(Box::pin(future));
+        if self.current_future.is_none() {
+            let future = (self.query_fn)(current_cursor);
+            self.current_future = Some(Box::pin(future));
         }
 
         // Poll the future
-        if let Some(future) = &mut this.current_future {
+        if let Some(future) = &mut self.current_future {
             match future.as_mut().poll(cx) {
                 Poll::Ready(Ok(page)) => {
                     if page.is_empty() {
-                        this.finished = true;
+                        self.finished = true;
                         return Poll::Ready(None);
                     }
 
                     // Store the new page and reset the index
-                    this.current_page = Some(page);
-                    this.current_index = 0; // Reset index for the new page
+                    self.current_page = Some(page);
+                    self.current_index = 0;
 
-                    if let Some(page) = this.current_page.as_ref() {
-                        let item = page.data()[this.current_index].clone();
-                        this.current_index += 1;
+                    if let Some(page) = self.current_page.as_ref() {
+                        let item = page.data()[self.current_index].clone();
+                        self.current_index += 1;
 
                         // Clear the future as we no longer need it
-                        this.current_future = None;
+                        self.current_future = None;
 
                         Poll::Ready(Some(Ok(item)))
                     } else {
@@ -112,8 +117,8 @@ where
                     }
                 }
                 Poll::Ready(Err(e)) => {
-                    this.finished = true;
-                    this.current_future = None;
+                    self.finished = true;
+                    self.current_future = None;
                     Poll::Ready(Some(Err(e)))
                 }
                 Poll::Pending => Poll::Pending,
@@ -124,6 +129,22 @@ where
     }
 }
 
+/// Creates a new `PageStream` for a paginated query.
+///
+/// Examples
+/// ```rust, no_run
+/// let client = Client::new_testnet();
+/// let cursor = None;
+/// let stream = stream_paginated_query(|cursor| {
+///    client.coins(owner, coin_type, PaginationFilter { cursor, ..Default::default() })
+/// });
+/// while let Some(result) = stream.next().await {
+///    match result {
+///        Ok(coin) => println!("Got coin: {:?}", coin),
+///        Err(e) => eprintln!("Error: {}", e),
+///    }
+/// }
+/// ```
 pub fn stream_paginated_query<T, F, Fut>(query_fn: F) -> PageStream<T, F, Fut>
 where
     F: Fn(Option<String>) -> Fut,
