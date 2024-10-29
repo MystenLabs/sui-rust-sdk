@@ -58,8 +58,8 @@ use query_types::TransactionBlocksQueryArgs;
 use query_types::TransactionMetadata;
 use query_types::TransactionsFilter;
 use query_types::Validator;
-
 use streams::stream_paginated_query;
+
 use sui_types::types::framework::Coin;
 use sui_types::types::Address;
 use sui_types::types::CheckpointSequenceNumber;
@@ -111,7 +111,7 @@ pub struct DryRunResult {
 }
 
 /// The name part of a dynamic field, including its type, bcs, and json representation.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct DynamicFieldName {
     /// The type name of this dynamic field name
     pub type_: TypeTag,
@@ -123,7 +123,7 @@ pub struct DynamicFieldName {
 
 /// The output of a dynamic field query, that includes the name, value, and value's json
 /// representation.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct DynamicFieldOutput {
     /// The name of the dynamic field
     pub name: DynamicFieldName,
@@ -570,59 +570,23 @@ impl Client {
         ))
     }
 
+    /// Get the list of coins for the specified address as a stream.
+    ///
+    /// If `coin_type` is not provided, it will default to `0x2::coin::Coin`, which will return all
+    /// coins. For SUI coin, pass in the coin type: `0x2::coin::Coin<0x2::sui::SUI>`.
     pub async fn coins_stream(
         &self,
         address: Address,
         coin_type: Option<&'static str>,
     ) -> impl Stream<Item = Result<Coin, Error>> {
-        let address = address.clone();
-
-        stream_paginated_query(move |cursor| {
+        stream_paginated_query(move |_| {
             let filter = PaginationFilter {
-                cursor,
                 ..Default::default()
             };
 
-            self.coins(address.clone(), coin_type, filter)
+            self.coins(address, coin_type, filter)
         })
     }
-
-    /// Stream of coins for the specified address and coin type.
-    // pub fn coins_stream<'a>(
-    //     &'a self,
-    //     owner: Address,
-    //     coin_type: Option<&'a str>,
-    // ) -> Pin<Box<dyn Stream<Item = Result<Coin, Error>> + 'a>> {
-    //     Box::pin(async_stream::try_stream! {
-    //         let mut after = None;
-    //         loop {
-    //             let response = self.objects(
-    //                 Some(ObjectFilter {
-    //                     type_: Some(coin_type.unwrap_or("0x2::coin::Coin")),
-    //                     owner: Some(owner),
-    //                     object_ids: None,
-    //                     object_keys: None,
-    //                 }),
-    //                 PaginationFilter {
-    //                     cursor: after,
-    //                     ..Default::default()
-    //                 },
-    //             ).await?;
-    //
-    //                 for object in response.data() {
-    //                     if let Some(coin) = Coin::try_from_object(object) {
-    //                         yield coin.into_owned();
-    //                     }
-    //                 }
-    //
-    //                 if let Some(end_cursor) = response.page_info.end_cursor {
-    //                     after = Some(end_cursor);
-    //                 } else {
-    //                     break;
-    //                 }
-    //         }
-    //     })
-    // }
 
     /// Get the coin metadata for the coin type.
     pub async fn coin_metadata(&self, coin_type: &str) -> Result<Option<CoinMetadata>, Error> {
@@ -684,7 +648,7 @@ impl Client {
     pub async fn checkpoints<'a>(
         &self,
         pagination_filter: PaginationFilter,
-    ) -> Result<Option<Page<CheckpointSummary>>, Error> {
+    ) -> Result<Page<CheckpointSummary>, Error> {
         let (after, before, first, last) = self.pagination_filter(pagination_filter);
 
         let operation = CheckpointsQuery::build(CheckpointsArgs {
@@ -708,10 +672,25 @@ impl Client {
                 .map(|c| c.try_into())
                 .collect::<Result<Vec<CheckpointSummary>, _>>()?;
 
-            Ok(Some(Page::new(page_info, nodes)))
+            Ok(Page::new(page_info, nodes))
         } else {
-            Ok(None)
+            Ok(Page::new_empty())
         }
+    }
+
+    /// Get a stream of [`CheckpointSummary`]. Note that this will fetch all checkpoints which may
+    /// trigger a lot of requests.
+    pub async fn checkpoints_stream<'a>(
+        &'a self,
+    ) -> impl Stream<Item = Result<CheckpointSummary, Error>> + 'a {
+        stream_paginated_query(move |cursor| {
+            let filter = PaginationFilter {
+                cursor,
+                ..Default::default()
+            };
+
+            self.checkpoints(filter)
+        })
     }
 
     /// Return the sequence number of the latest checkpoint that has been executed.  
@@ -857,6 +836,22 @@ impl Client {
         ))
     }
 
+    /// Get a stream of dynamic fields for the provided address. Note that this will also fetch
+    /// dynamic fields on wrapped objects.
+    pub async fn dynamic_fields_stream<'a>(
+        &'a self,
+        address: Address,
+    ) -> impl Stream<Item = Result<DynamicFieldOutput, Error>> + 'a {
+        stream_paginated_query(move |cursor| {
+            let filter = PaginationFilter {
+                cursor,
+                ..Default::default()
+            };
+
+            self.dynamic_fields(address, filter)
+        })
+    }
+
     // ===========================================================================
     // Epoch API
     // ===========================================================================
@@ -908,7 +903,7 @@ impl Client {
     // Events API
     // ===========================================================================
 
-    /// Return a page of events based on the provided filters.
+    /// Return a page of events based on the (optional) event filter.
     pub async fn events(
         &self,
         filter: Option<EventFilter>,
@@ -949,6 +944,21 @@ impl Client {
         } else {
             Ok(Page::new_empty())
         }
+    }
+
+    /// Return a stream of events based on the (optional) event filter.
+    pub async fn events_stream<'a>(
+        &'a self,
+        filter: Option<EventFilter>,
+    ) -> impl Stream<Item = Result<Event, Error>> + 'a {
+        stream_paginated_query(move |cursor| {
+            let pagination_filter = PaginationFilter {
+                cursor,
+                ..Default::default()
+            };
+
+            self.events(filter.clone(), pagination_filter)
+        })
     }
 
     // ===========================================================================
@@ -1049,6 +1059,21 @@ impl Client {
         } else {
             Ok(Page::new_empty())
         }
+    }
+
+    /// Return a stream of objects based on the (optional) object filter.
+    pub async fn objects_stream<'a>(
+        &'a self,
+        filter: Option<ObjectFilter<'a>>,
+    ) -> impl Stream<Item = Result<Object, Error>> + 'a {
+        stream_paginated_query(move |cursor| {
+            let pagination_filter = PaginationFilter {
+                cursor,
+                ..Default::default()
+            };
+
+            self.objects(filter.clone(), pagination_filter)
+        })
     }
 
     /// Return the object's bcs content [`Vec<u8>`] based on the provided [`Address`].
@@ -1264,6 +1289,21 @@ impl Client {
         } else {
             Ok(Page::new_empty())
         }
+    }
+
+    /// Get a stream of transactions based on the (optional) transaction filter.
+    pub async fn transactions_stream<'a>(
+        &'a self,
+        filter: Option<TransactionsFilter<'a>>,
+    ) -> impl Stream<Item = Result<SignedTransaction, Error>> + 'a {
+        stream_paginated_query(move |cursor| {
+            let pagination_filter = PaginationFilter {
+                cursor,
+                ..Default::default()
+            };
+
+            self.transactions(filter.clone(), pagination_filter)
+        })
     }
 
     /// Execute a transaction.

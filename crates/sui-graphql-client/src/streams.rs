@@ -133,6 +133,9 @@ where
 ///
 /// Examples
 /// ```rust, no_run
+/// use futures::StreamExt;
+/// use sui_graphql_client::streams::stream_paginated_query;
+///
 /// let client = Client::new_testnet();
 /// let cursor = None;
 /// let stream = stream_paginated_query(|cursor| {
