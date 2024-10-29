@@ -59,6 +59,7 @@ use query_types::TransactionMetadata;
 use query_types::TransactionsFilter;
 use query_types::Validator;
 
+use streams::stream_paginated_query;
 use sui_types::types::framework::Coin;
 use sui_types::types::Address;
 use sui_types::types::CheckpointSequenceNumber;
@@ -87,7 +88,6 @@ use futures::Stream;
 use reqwest::Url;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-use std::pin::Pin;
 use std::str::FromStr;
 
 use crate::query_types::CheckpointTotalTxQuery;
@@ -570,42 +570,59 @@ impl Client {
         ))
     }
 
-    /// Stream of coins for the specified address and coin type.
-    pub fn coins_stream<'a>(
-        &'a self,
-        owner: Address,
-        coin_type: Option<&'a str>,
-    ) -> Pin<Box<dyn Stream<Item = Result<Coin, Error>> + 'a>> {
-        Box::pin(async_stream::try_stream! {
-            let mut after = None;
-            loop {
-                let response = self.objects(
-                    Some(ObjectFilter {
-                        type_: Some(coin_type.unwrap_or("0x2::coin::Coin")),
-                        owner: Some(owner),
-                        object_ids: None,
-                        object_keys: None,
-                    }),
-                    PaginationFilter {
-                        cursor: after,
-                        ..Default::default()
-                    },
-                ).await?;
+    pub async fn coins_stream(
+        &self,
+        address: Address,
+        coin_type: Option<&'static str>,
+    ) -> impl Stream<Item = Result<Coin, Error>> {
+        let address = address.clone();
 
-                    for object in response.data() {
-                        if let Some(coin) = Coin::try_from_object(object) {
-                            yield coin.into_owned();
-                        }
-                    }
+        stream_paginated_query(move |cursor| {
+            let filter = PaginationFilter {
+                cursor,
+                ..Default::default()
+            };
 
-                    if let Some(end_cursor) = response.page_info.end_cursor {
-                        after = Some(end_cursor);
-                    } else {
-                        break;
-                    }
-            }
+            self.coins(address.clone(), coin_type, filter)
         })
     }
+
+    /// Stream of coins for the specified address and coin type.
+    // pub fn coins_stream<'a>(
+    //     &'a self,
+    //     owner: Address,
+    //     coin_type: Option<&'a str>,
+    // ) -> Pin<Box<dyn Stream<Item = Result<Coin, Error>> + 'a>> {
+    //     Box::pin(async_stream::try_stream! {
+    //         let mut after = None;
+    //         loop {
+    //             let response = self.objects(
+    //                 Some(ObjectFilter {
+    //                     type_: Some(coin_type.unwrap_or("0x2::coin::Coin")),
+    //                     owner: Some(owner),
+    //                     object_ids: None,
+    //                     object_keys: None,
+    //                 }),
+    //                 PaginationFilter {
+    //                     cursor: after,
+    //                     ..Default::default()
+    //                 },
+    //             ).await?;
+    //
+    //                 for object in response.data() {
+    //                     if let Some(coin) = Coin::try_from_object(object) {
+    //                         yield coin.into_owned();
+    //                     }
+    //                 }
+    //
+    //                 if let Some(end_cursor) = response.page_info.end_cursor {
+    //                     after = Some(end_cursor);
+    //                 } else {
+    //                     break;
+    //                 }
+    //         }
+    //     })
+    // }
 
     /// Get the coin metadata for the coin type.
     pub async fn coin_metadata(&self, coin_type: &str) -> Result<Option<CoinMetadata>, Error> {
@@ -1652,8 +1669,9 @@ mod tests {
         let key = Ed25519PublicKey::generate(rand::thread_rng());
         let address = key.to_address();
         faucet.request_and_wait(address).await.unwrap();
-        let mut stream = client.coins_stream(address, None);
+        let mut stream = client.coins_stream(address, None).await;
         let mut num_coins = 0;
+
         while let Some(result) = stream.next().await {
             assert!(result.is_ok());
             num_coins = 1;
