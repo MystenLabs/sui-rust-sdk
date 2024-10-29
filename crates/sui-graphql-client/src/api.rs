@@ -63,7 +63,7 @@ impl Api {
     pub async fn active_validators(
         &self,
         epoch: Option<u64>,
-        pagination_filter: PaginationFilter<'_>,
+        pagination_filter: PaginationFilter,
     ) -> Result<Page<Validator>, Error> {
         self.inner.active_validators(epoch, pagination_filter).await
     }
@@ -126,7 +126,7 @@ impl Api {
         &self,
         owner: ObjectId,
         coin_type: &str,
-        pagination_filter: PaginationFilter<'_>,
+        pagination_filter: PaginationFilter,
     ) -> Result<Page<Coin>, Error> {
         self.inner
             .coins(owner.into(), Some(coin_type), pagination_filter)
@@ -176,24 +176,17 @@ impl Api {
         &self,
         digest: Digest,
     ) -> Result<Option<CheckpointSummary>, Error> {
-        self.inner.checkpoint(Some(digest.to_string()), None).await
+        self.inner.checkpoint(Some(digest), None).await
     }
 
     /// Return a page of checkpoint summary.
     pub async fn checkpoints(
         &self,
-        pagination_filter: PaginationFilter<'_>,
+        pagination_filter: PaginationFilter,
     ) -> Result<Option<Page<CheckpointSummary>>, Error> {
         self.inner.checkpoints(pagination_filter).await
     }
 
-    // pub async fn checkpoints_paginate(
-    //     &self,
-    //     pagination_filter: PaginationFilter<'_>,
-    // ) -> Result<Page<CheckpointSummary>, Error> {
-    //     self.inner.checkpoints(pagination_filter).await
-    // }
-    //
     // ========================================================================
     // Event(s)
     // ========================================================================
@@ -208,7 +201,7 @@ impl Api {
     pub async fn events(
         &self,
         filter: EventFilter,
-        pagination_filter: PaginationFilter<'_>,
+        pagination_filter: PaginationFilter,
     ) -> Result<Page<Event>, Error> {
         self.inner.events(Some(filter), pagination_filter).await
     }
@@ -235,7 +228,7 @@ impl Api {
     pub async fn objects<'a>(
         &self,
         filter: ObjectFilter<'a>,
-        pagination_filter: PaginationFilter<'_>,
+        pagination_filter: PaginationFilter,
     ) -> Result<Page<Object>, Error> {
         self.inner.objects(Some(filter), pagination_filter).await
     }
@@ -260,7 +253,7 @@ impl Api {
                 Some(filter.clone()),
                 PaginationFilter {
                     direction: crate::Direction::Forward,
-                    cursor: cursor.as_deref(),
+                    cursor,
                     limit: None,
                 },
             )
@@ -270,7 +263,7 @@ impl Api {
             if !page.page_info().has_next_page {
                 break;
             }
-            cursor = page.page_info().end_cursor.as_deref();
+            cursor = page.page_info().end_cursor.clone();
             page = self
                 .inner
                 .objects(
@@ -290,7 +283,7 @@ impl Api {
     pub async fn owned_objects(
         &self,
         address: Address,
-        pagination_filter: PaginationFilter<'_>,
+        pagination_filter: PaginationFilter,
     ) -> Result<Page<Object>, Error> {
         self.inner
             .objects(
@@ -310,7 +303,7 @@ impl Api {
     // ========================================================================
 
     /// Return a [`SignedTransaction`] by its digest.
-    pub async fn transaction(&self, digest: &str) -> Result<Option<SignedTransaction>, Error> {
+    pub async fn transaction(&self, digest: Digest) -> Result<Option<SignedTransaction>, Error> {
         self.inner.transaction(digest).await
     }
 
@@ -365,7 +358,7 @@ impl Api {
         &self,
         client: &Client,
         tx_filter: TransactionsFilter<'a>,
-        pagination_filter: PaginationFilter<'a>,
+        pagination_filter: PaginationFilter,
     ) -> Result<Page<SignedTransaction>, Error> {
         client
             .transactions(Some(tx_filter), pagination_filter)
