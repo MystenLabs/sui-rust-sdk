@@ -96,13 +96,13 @@ where
 
             // If there's no future yet, create one
             if self.current_future.is_none() {
-                if self.is_first_page && current_cursor != None {
+                if self.is_first_page && current_cursor.is_some() {
                     self.is_first_page = false;
                 }
                 let filter = PaginationFilter {
                     direction: self.direction.clone(),
                     cursor: current_cursor,
-                    limit: None, // Let the caller set the limit in the query_fn
+                    limit: None,
                 };
                 let future = (self.query_fn)(filter);
                 self.current_future = Some(Box::pin(future));
