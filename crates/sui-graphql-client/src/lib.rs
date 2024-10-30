@@ -584,11 +584,11 @@ impl Client {
         &self,
         address: Address,
         coin_type: Option<&'static str>,
-        pagination_direction: Direction,
+        streaming_direction: Direction,
     ) -> impl Stream<Item = Result<Coin, Error>> {
         stream_paginated_query(
             move |filter| self.coins(address, coin_type, filter),
-            pagination_direction,
+            streaming_direction,
         )
     }
 
@@ -686,9 +686,9 @@ impl Client {
     /// trigger a lot of requests.
     pub async fn checkpoints_stream(
         &self,
-        pagination_direction: Direction,
+        streaming_direction: Direction,
     ) -> impl Stream<Item = Result<CheckpointSummary, Error>> + '_ {
-        stream_paginated_query(move |filter| self.checkpoints(filter), pagination_direction)
+        stream_paginated_query(move |filter| self.checkpoints(filter), streaming_direction)
     }
 
     /// Return the sequence number of the latest checkpoint that has been executed.  
@@ -839,11 +839,11 @@ impl Client {
     pub async fn dynamic_fields_stream(
         &self,
         address: Address,
-        pagination_direction: Direction,
+        streaming_direction: Direction,
     ) -> impl Stream<Item = Result<DynamicFieldOutput, Error>> + '_ {
         stream_paginated_query(
             move |filter| self.dynamic_fields(address, filter),
-            pagination_direction,
+            streaming_direction,
         )
     }
 
@@ -945,11 +945,11 @@ impl Client {
     pub async fn events_stream(
         &self,
         filter: Option<EventFilter>,
-        pagination_direction: Direction,
+        streaming_direction: Direction,
     ) -> impl Stream<Item = Result<Event, Error>> + '_ {
         stream_paginated_query(
             move |pag_filter| self.events(filter.clone(), pag_filter),
-            pagination_direction,
+            streaming_direction,
         )
     }
 
@@ -1057,11 +1057,11 @@ impl Client {
     pub async fn objects_stream<'a>(
         &'a self,
         filter: Option<ObjectFilter<'a>>,
-        pagination_direction: Direction,
+        streaming_direction: Direction,
     ) -> impl Stream<Item = Result<Object, Error>> + 'a {
         stream_paginated_query(
             move |pag_filter| self.objects(filter.clone(), pag_filter),
-            pagination_direction,
+            streaming_direction,
         )
     }
 
@@ -1284,11 +1284,11 @@ impl Client {
     pub async fn transactions_stream<'a>(
         &'a self,
         filter: Option<TransactionsFilter<'a>>,
-        pagination_direction: Direction,
+        streaming_direction: Direction,
     ) -> impl Stream<Item = Result<SignedTransaction, Error>> + 'a {
         stream_paginated_query(
             move |pag_filter| self.transactions(filter.clone(), pag_filter),
-            pagination_direction,
+            streaming_direction,
         )
     }
 
