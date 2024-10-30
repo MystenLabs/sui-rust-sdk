@@ -92,6 +92,8 @@ use std::str::FromStr;
 
 use crate::query_types::CheckpointTotalTxQuery;
 
+const DEFAULT_ITEMS_PER_PAGE: i32 = 10;
+
 const MAINNET_HOST: &str = "https://sui-mainnet.mystenlabs.com/graphql";
 const TESTNET_HOST: &str = "https://sui-testnet.mystenlabs.com/graphql";
 const DEVNET_HOST: &str = "https://sui-devnet.mystenlabs.com/graphql";
@@ -180,7 +182,7 @@ impl<T> Page<T> {
 }
 
 /// Pagination direction.
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default)]
 pub enum Direction {
     #[default]
     Forward,
@@ -189,7 +191,7 @@ pub enum Direction {
 
 /// Pagination options for querying the GraphQL server. It defaults to forward pagination with the
 /// GraphQL server's default items per page limit.
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct PaginationFilter {
     /// The direction of pagination.
     pub direction: Direction,
@@ -309,23 +311,23 @@ impl Client {
     }
 
     /// Internal function to handle pagination filters and return the appropriate values.
-    fn pagination_filter(
+    async fn pagination_filter(
         &self,
         pagination_filter: PaginationFilter,
     ) -> (Option<String>, Option<String>, Option<i32>, Option<i32>) {
+        let limit = if let Some(limit) = pagination_filter.limit {
+            limit
+        } else {
+            let cfg = self.service_config().await;
+            if let Ok(cfg) = cfg {
+                cfg.max_page_size
+            } else {
+                DEFAULT_ITEMS_PER_PAGE
+            }
+        };
         let (after, before, first, last) = match pagination_filter.direction {
-            Direction::Forward => (
-                pagination_filter.cursor,
-                None,
-                pagination_filter.limit,
-                None,
-            ),
-            Direction::Backward => (
-                None,
-                pagination_filter.cursor,
-                None,
-                pagination_filter.limit,
-            ),
+            Direction::Forward => (pagination_filter.cursor, None, Some(limit), None),
+            Direction::Backward => (None, pagination_filter.cursor, None, Some(limit)),
         };
         (after, before, first, last)
     }
@@ -417,7 +419,7 @@ impl Client {
         epoch: Option<u64>,
         pagination_filter: PaginationFilter,
     ) -> Result<Page<Validator>, Error> {
-        let (after, before, first, last) = self.pagination_filter(pagination_filter);
+        let (after, before, first, last) = self.pagination_filter(pagination_filter).await;
 
         let operation = ActiveValidatorsQuery::build(ActiveValidatorsArgs {
             id: epoch,
@@ -582,14 +584,12 @@ impl Client {
         &self,
         address: Address,
         coin_type: Option<&'static str>,
+        pagination_direction: Direction,
     ) -> impl Stream<Item = Result<Coin, Error>> {
-        stream_paginated_query(move |_| {
-            let filter = PaginationFilter {
-                ..Default::default()
-            };
-
-            self.coins(address, coin_type, filter)
-        })
+        stream_paginated_query(
+            move |filter| self.coins(address, coin_type, filter),
+            pagination_direction,
+        )
     }
 
     /// Get the coin metadata for the coin type.
@@ -653,7 +653,7 @@ impl Client {
         &self,
         pagination_filter: PaginationFilter,
     ) -> Result<Page<CheckpointSummary>, Error> {
-        let (after, before, first, last) = self.pagination_filter(pagination_filter);
+        let (after, before, first, last) = self.pagination_filter(pagination_filter).await;
 
         let operation = CheckpointsQuery::build(CheckpointsArgs {
             after: after.as_deref(),
@@ -686,15 +686,9 @@ impl Client {
     /// trigger a lot of requests.
     pub async fn checkpoints_stream(
         &self,
+        pagination_direction: Direction,
     ) -> impl Stream<Item = Result<CheckpointSummary, Error>> + '_ {
-        stream_paginated_query(move |cursor| {
-            let filter = PaginationFilter {
-                cursor,
-                ..Default::default()
-            };
-
-            self.checkpoints(filter)
-        })
+        stream_paginated_query(move |filter| self.checkpoints(filter), pagination_direction)
     }
 
     /// Return the sequence number of the latest checkpoint that has been executed.  
@@ -811,7 +805,7 @@ impl Client {
         address: Address,
         pagination_filter: PaginationFilter,
     ) -> Result<Page<DynamicFieldOutput>, Error> {
-        let (after, before, first, last) = self.pagination_filter(pagination_filter);
+        let (after, before, first, last) = self.pagination_filter(pagination_filter).await;
         let operation = DynamicFieldsOwnerQuery::build(DynamicFieldConnectionArgs {
             address,
             after: after.as_deref(),
@@ -845,15 +839,12 @@ impl Client {
     pub async fn dynamic_fields_stream(
         &self,
         address: Address,
+        pagination_direction: Direction,
     ) -> impl Stream<Item = Result<DynamicFieldOutput, Error>> + '_ {
-        stream_paginated_query(move |cursor| {
-            let filter = PaginationFilter {
-                cursor,
-                ..Default::default()
-            };
-
-            self.dynamic_fields(address, filter)
-        })
+        stream_paginated_query(
+            move |filter| self.dynamic_fields(address, filter),
+            pagination_direction,
+        )
     }
 
     // ===========================================================================
@@ -913,7 +904,7 @@ impl Client {
         filter: Option<EventFilter>,
         pagination_filter: PaginationFilter,
     ) -> Result<Page<Event>, Error> {
-        let (after, before, first, last) = self.pagination_filter(pagination_filter);
+        let (after, before, first, last) = self.pagination_filter(pagination_filter).await;
 
         let operation = EventsQuery::build(EventsQueryArgs {
             filter,
@@ -954,15 +945,12 @@ impl Client {
     pub async fn events_stream(
         &self,
         filter: Option<EventFilter>,
+        pagination_direction: Direction,
     ) -> impl Stream<Item = Result<Event, Error>> + '_ {
-        stream_paginated_query(move |cursor| {
-            let pagination_filter = PaginationFilter {
-                cursor,
-                ..Default::default()
-            };
-
-            self.events(filter.clone(), pagination_filter)
-        })
+        stream_paginated_query(
+            move |pag_filter| self.events(filter.clone(), pag_filter),
+            pagination_direction,
+        )
     }
 
     // ===========================================================================
@@ -1026,7 +1014,7 @@ impl Client {
         filter: Option<ObjectFilter<'_>>,
         pagination_filter: PaginationFilter,
     ) -> Result<Page<Object>, Error> {
-        let (after, before, first, last) = self.pagination_filter(pagination_filter);
+        let (after, before, first, last) = self.pagination_filter(pagination_filter).await;
         let operation = ObjectsQuery::build(ObjectsQueryArgs {
             after: after.as_deref(),
             before: before.as_deref(),
@@ -1069,15 +1057,12 @@ impl Client {
     pub async fn objects_stream<'a>(
         &'a self,
         filter: Option<ObjectFilter<'a>>,
+        pagination_direction: Direction,
     ) -> impl Stream<Item = Result<Object, Error>> + 'a {
-        stream_paginated_query(move |cursor| {
-            let pagination_filter = PaginationFilter {
-                cursor,
-                ..Default::default()
-            };
-
-            self.objects(filter.clone(), pagination_filter)
-        })
+        stream_paginated_query(
+            move |pag_filter| self.objects(filter.clone(), pag_filter),
+            pagination_direction,
+        )
     }
 
     /// Return the object's bcs content [`Vec<u8>`] based on the provided [`Address`].
@@ -1267,7 +1252,7 @@ impl Client {
         filter: Option<TransactionsFilter<'a>>,
         pagination_filter: PaginationFilter,
     ) -> Result<Page<SignedTransaction>, Error> {
-        let (after, before, first, last) = self.pagination_filter(pagination_filter);
+        let (after, before, first, last) = self.pagination_filter(pagination_filter).await;
 
         let operation = TransactionBlocksQuery::build(TransactionBlocksQueryArgs {
             after: after.as_deref(),
@@ -1299,15 +1284,12 @@ impl Client {
     pub async fn transactions_stream<'a>(
         &'a self,
         filter: Option<TransactionsFilter<'a>>,
+        pagination_direction: Direction,
     ) -> impl Stream<Item = Result<SignedTransaction, Error>> + 'a {
-        stream_paginated_query(move |cursor| {
-            let pagination_filter = PaginationFilter {
-                cursor,
-                ..Default::default()
-            };
-
-            self.transactions(filter.clone(), pagination_filter)
-        })
+        stream_paginated_query(
+            move |pag_filter| self.transactions(filter.clone(), pag_filter),
+            pagination_direction,
+        )
     }
 
     /// Execute a transaction.
@@ -1387,13 +1369,13 @@ impl Client {
         pagination_filter_structs: PaginationFilter,
     ) -> Result<Option<MoveModule>, Error> {
         let (after_enums, before_enums, first_enums, last_enums) =
-            self.pagination_filter(pagination_filter_enums);
+            self.pagination_filter(pagination_filter_enums).await;
         let (after_friends, before_friends, first_friends, last_friends) =
-            self.pagination_filter(pagination_filter_friends);
+            self.pagination_filter(pagination_filter_friends).await;
         let (after_functions, before_functions, first_functions, last_functions) =
-            self.pagination_filter(pagination_filter_functions);
+            self.pagination_filter(pagination_filter_functions).await;
         let (after_structs, before_structs, first_structs, last_structs) =
-            self.pagination_filter(pagination_filter_structs);
+            self.pagination_filter(pagination_filter_structs).await;
         let operation = NormalizedMoveModuleQuery::build(NormalizedMoveModuleQueryArgs {
             package: Address::from_str(package)?,
             module,
@@ -1436,6 +1418,7 @@ mod tests {
     use crate::faucet::FaucetClient;
     use crate::BcsName;
     use crate::Client;
+    use crate::Direction;
     use crate::PaginationFilter;
     use crate::DEVNET_HOST;
     use crate::LOCAL_HOST;
@@ -1714,7 +1697,9 @@ mod tests {
         let key = Ed25519PublicKey::generate(rand::thread_rng());
         let address = key.to_address();
         faucet.request_and_wait(address).await.unwrap();
-        let mut stream = client.coins_stream(address, None).await;
+        let mut stream = client
+            .coins_stream(address, None, Direction::default())
+            .await;
         let mut num_coins = 0;
 
         while let Some(result) = stream.next().await {
