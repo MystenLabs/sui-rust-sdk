@@ -173,6 +173,10 @@ impl<T> Page<T> {
     fn new_empty() -> Self {
         Self::new(PageInfo::default(), vec![])
     }
+
+    pub fn into_parts(self) -> (PageInfo, Vec<T>) {
+        (self.page_info, self.data)
+    }
 }
 
 /// Pagination direction.

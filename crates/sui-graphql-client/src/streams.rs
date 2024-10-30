@@ -1,6 +1,7 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::query_types::PageInfo;
 use crate::Error;
 use crate::Page;
 
@@ -11,37 +12,19 @@ use std::task::Context;
 use std::task::Poll;
 
 /// A stream that yields items from a paginated query.
-pub struct PageStream<T, F, Fut>
-where
-    F: Fn(Option<String>) -> Fut,
-    Fut: Future<Output = Result<Page<T>, Error>>,
-{
+pub struct PageStream<T, F, Fut> {
     query_fn: F,
-    current_page: Option<Page<T>>,
+    current_page: Option<(PageInfo, std::vec::IntoIter<T>)>,
     current_future: Option<Pin<Box<Fut>>>,
-    current_index: usize,
     finished: bool,
 }
 
-// Implement Unpin for PageStream since none of our fields need to be pinned
-impl<T, F, Fut> Unpin for PageStream<T, F, Fut>
-where
-    F: Fn(Option<String>) -> Fut,
-    Fut: Future<Output = Result<Page<T>, Error>>,
-{
-}
-
-impl<T, F, Fut> PageStream<T, F, Fut>
-where
-    F: Fn(Option<String>) -> Fut,
-    Fut: Future<Output = Result<Page<T>, Error>>,
-{
+impl<T, F, Fut> PageStream<T, F, Fut> {
     pub fn new(query_fn: F) -> Self {
         Self {
             query_fn,
             current_page: None,
             current_future: None,
-            current_index: 0,
             finished: false,
         }
     }
@@ -49,8 +32,9 @@ where
 
 impl<T, F, Fut> Stream for PageStream<T, F, Fut>
 where
-    T: Clone,
+    T: Clone + Unpin,
     F: Fn(Option<String>) -> Fut,
+    F: Unpin,
     Fut: Future<Output = Result<Page<T>, Error>>,
 {
     type Item = Result<T, Error>;
@@ -62,72 +46,59 @@ where
             return Poll::Ready(None);
         }
 
-        // If we have a current page, return the next item
-        if let Some(page) = &self.current_page {
-            if self.current_index < page.data().len() {
-                let item = page.data()[self.current_index].clone();
-                self.current_index += 1;
-                return Poll::Ready(Some(Ok(item)));
+        loop {
+            // If we have a current page, return the next item
+            if let Some((page_info, iter)) = &mut self.current_page {
+                if let Some(item) = iter.next() {
+                    return Poll::Ready(Some(Ok(item)));
+                }
+
+                // If no more items and no next page, mark as finished
+                if !page_info.has_next_page {
+                    self.finished = true;
+                    return Poll::Ready(None);
+                }
             }
 
-            // If no more items and no next page, mark as finished
-            if !page.page_info().has_next_page {
-                self.finished = true;
-                return Poll::Ready(None);
+            // Get cursor from current page
+            let current_cursor = self
+                .current_page
+                .as_ref()
+                .and_then(|(page_info, _iter)| {
+                    page_info
+                        .has_next_page
+                        .then(|| page_info.end_cursor.clone())
+                })
+                .flatten();
+
+            // If there's no future yet, create one
+            if self.current_future.is_none() {
+                let future = (self.query_fn)(current_cursor);
+                self.current_future = Some(Box::pin(future));
             }
-        }
 
-        // Get cursor from current page
-        let current_cursor = self
-            .current_page
-            .as_ref()
-            .and_then(|page| {
-                page.page_info()
-                    .has_next_page
-                    .then(|| page.page_info().end_cursor.clone())
-            })
-            .flatten();
-
-        // If there's no future yet, create one
-        if self.current_future.is_none() {
-            let future = (self.query_fn)(current_cursor);
-            self.current_future = Some(Box::pin(future));
-        }
-
-        // Poll the future
-        if let Some(future) = &mut self.current_future {
-            match future.as_mut().poll(cx) {
+            // Poll the future
+            match self.current_future.as_mut().unwrap().as_mut().poll(cx) {
                 Poll::Ready(Ok(page)) => {
+                    // Clear the future as we no longer need it
+                    self.current_future = None;
+
                     if page.is_empty() {
                         self.finished = true;
                         return Poll::Ready(None);
                     }
 
                     // Store the new page and reset the index
-                    self.current_page = Some(page);
-                    self.current_index = 0;
-
-                    if let Some(page) = self.current_page.as_ref() {
-                        let item = page.data()[self.current_index].clone();
-                        self.current_index += 1;
-
-                        // Clear the future as we no longer need it
-                        self.current_future = None;
-
-                        Poll::Ready(Some(Ok(item)))
-                    } else {
-                        Poll::Ready(None)
-                    }
+                    let (page_info, data) = page.into_parts();
+                    self.current_page = Some((page_info, data.into_iter()));
                 }
                 Poll::Ready(Err(e)) => {
                     self.finished = true;
                     self.current_future = None;
-                    Poll::Ready(Some(Err(e)))
+                    return Poll::Ready(Some(Err(e)));
                 }
-                Poll::Pending => Poll::Pending,
+                Poll::Pending => return Poll::Pending,
             }
-        } else {
-            Poll::Pending
         }
     }
 }
