@@ -19,6 +19,8 @@ use query_types::CheckpointsQuery;
 use query_types::CoinMetadata;
 use query_types::CoinMetadataArgs;
 use query_types::CoinMetadataQuery;
+use query_types::DefaultSuinsNameQuery;
+use query_types::DefaultSuinsNameQueryArgs;
 use query_types::DryRunArgs;
 use query_types::DryRunQuery;
 use query_types::DynamicFieldArgs;
@@ -48,6 +50,8 @@ use query_types::PageInfo;
 use query_types::ProtocolConfigQuery;
 use query_types::ProtocolConfigs;
 use query_types::ProtocolVersionArgs;
+use query_types::ResolveSuinsQuery;
+use query_types::ResolveSuinsQueryArgs;
 use query_types::ServiceConfig;
 use query_types::ServiceConfigQuery;
 use query_types::TransactionBlockArgs;
@@ -1360,6 +1364,40 @@ impl Client {
         }
 
         Ok(response.data.and_then(|p| p.package).and_then(|p| p.module))
+    }
+
+    // ===========================================================================
+    // SuiNS
+    // ===========================================================================
+
+    /// Get the address for the provided Suins domain name.
+    pub async fn resolve_suins_to_address(&self, domain: &str) -> Result<Option<Address>, Error> {
+        let operation = ResolveSuinsQuery::build(ResolveSuinsQueryArgs { name: domain });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+        Ok(response
+            .data
+            .and_then(|d| d.resolve_suins_address)
+            .map(|a| a.address))
+    }
+
+    /// Get the default Suins domain name for the provided address.
+    pub async fn default_suins_name(&self, address: Address) -> Result<Option<String>, Error> {
+        let operation = DefaultSuinsNameQuery::build(DefaultSuinsNameQueryArgs { address });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+        Ok(response
+            .data
+            .and_then(|d| d.address)
+            .and_then(|a| a.default_suins_name))
     }
 }
 
