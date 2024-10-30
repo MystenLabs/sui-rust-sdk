@@ -1171,21 +1171,18 @@ impl Client {
     /// Fetch all versions of package at address (packages that share this package's original ID),
     /// optionally bounding the versions exclusively from below with afterVersion, or from above
     /// with beforeVersion.
-    #[allow(clippy::too_many_arguments)]
     pub async fn package_versions(
         &self,
         address: Address,
-        after: Option<&str>,
-        before: Option<&str>,
-        first: Option<i32>,
-        last: Option<i32>,
+        pagination_filter: PaginationFilter,
         after_version: Option<u64>,
         before_version: Option<u64>,
     ) -> Result<Option<Page<MovePackage>>, Error> {
+        let (after, before, first, last) = self.pagination_filter(pagination_filter);
         let operation = PackageVersionsQuery::build(PackageVersionsArgs {
             address,
-            after,
-            before,
+            after: after.as_deref(),
+            before: before.as_deref(),
             first,
             last,
             filter: Some(MovePackageVersionFilter {
