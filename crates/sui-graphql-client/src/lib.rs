@@ -207,15 +207,15 @@ pub enum Direction {
 }
 
 /// Pagination options for querying the GraphQL server. It defaults to forward pagination with the
-/// GraphQL server's default items per page limit.
+/// GraphQL server's max page size.
 #[derive(Clone, Debug, Default)]
 pub struct PaginationFilter {
     /// The direction of pagination.
     pub direction: Direction,
     /// An opaque cursor used for pagination.
     pub cursor: Option<String>,
-    /// The maximum number of items to return. If this is ommitted, it will query the service
-    /// configuration for the max page size.
+    /// The maximum number of items to return. If this is ommitted, it will lazily query the
+    /// service configuration for the max page size.
     pub limit: Option<i32>,
 }
 
