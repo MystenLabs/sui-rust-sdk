@@ -105,6 +105,7 @@ use reqwest::Url;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::str::FromStr;
+use tokio::sync::OnceCell;
 
 use crate::query_types::CheckpointTotalTxQuery;
 
@@ -115,7 +116,7 @@ const TESTNET_HOST: &str = "https://sui-testnet.mystenlabs.com/graphql";
 const DEVNET_HOST: &str = "https://sui-devnet.mystenlabs.com/graphql";
 const LOCAL_HOST: &str = "http://localhost:9125/graphql";
 static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
-
+static MAX_PAGE_SIZE: OnceCell<i32> = OnceCell::const_new();
 // ===========================================================================
 // Output Types
 // ===========================================================================
@@ -213,7 +214,8 @@ pub struct PaginationFilter {
     pub direction: Direction,
     /// An opaque cursor used for pagination.
     pub cursor: Option<String>,
-    /// The maximum number of items to return. Use `service_config` to find the limit.
+    /// The maximum number of items to return. If this is ommitted, it will query the service
+    /// configuration for the max page size.
     pub limit: Option<i32>,
 }
 
@@ -327,20 +329,15 @@ impl Client {
     }
 
     /// Internal function to handle pagination filters and return the appropriate values.
+    /// If limit is omitted, it will use the max page size from the service config.
     async fn pagination_filter(
         &self,
         pagination_filter: PaginationFilter,
     ) -> (Option<String>, Option<String>, Option<i32>, Option<i32>) {
-        let limit = if let Some(limit) = pagination_filter.limit {
-            limit
-        } else {
-            let cfg = self.service_config().await;
-            if let Ok(cfg) = cfg {
-                cfg.max_page_size
-            } else {
-                DEFAULT_ITEMS_PER_PAGE
-            }
-        };
+        let limit = pagination_filter
+            .limit
+            .unwrap_or(self.max_page_size().await.unwrap_or(DEFAULT_ITEMS_PER_PAGE));
+
         let (after, before, first, last) = match pagination_filter.direction {
             Direction::Forward => (pagination_filter.cursor, None, Some(limit), None),
             Direction::Backward => (None, pagination_filter.cursor, None, Some(limit)),
@@ -348,6 +345,26 @@ impl Client {
         (after, before, first, last)
     }
 
+    /// Lazily fetch the max page size
+    pub async fn max_page_size(&self) -> Result<i32> {
+        // If the value is already initialized, return it
+        if let Some(&size) = MAX_PAGE_SIZE.get() {
+            return Ok(size);
+        }
+
+        // Otherwise, fetch and initialize it
+        let size = match self.service_config().await {
+            Ok(cfg) => cfg.max_page_size,
+            Err(_) => DEFAULT_ITEMS_PER_PAGE,
+        };
+
+        // Try to set the value, handling race conditions
+        MAX_PAGE_SIZE
+            .set(size)
+            .map_err(|_| anyhow!("Failed to initialize max page size"))?;
+
+        Ok(size)
+    }
     /// Run a query on the GraphQL server and return the response.
     /// This method returns [`cynic::GraphQlResponse`]  over the query type `T`, and it is
     /// intended to be used with custom queries.
