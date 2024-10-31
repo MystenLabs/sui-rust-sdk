@@ -36,8 +36,10 @@ use query_types::EventsQuery;
 use query_types::EventsQueryArgs;
 use query_types::ExecuteTransactionArgs;
 use query_types::ExecuteTransactionQuery;
+use query_types::LatestPackageQuery;
 use query_types::MoveFunction;
 use query_types::MoveModule;
+use query_types::MovePackageVersionFilter;
 use query_types::NormalizedMoveFunctionQuery;
 use query_types::NormalizedMoveFunctionQueryArgs;
 use query_types::NormalizedMoveModuleQuery;
@@ -47,6 +49,15 @@ use query_types::ObjectQuery;
 use query_types::ObjectQueryArgs;
 use query_types::ObjectsQuery;
 use query_types::ObjectsQueryArgs;
+use query_types::PackageArgs;
+use query_types::PackageByNameArgs;
+use query_types::PackageByNameQuery;
+use query_types::PackageCheckpointFilter;
+use query_types::PackageQuery;
+use query_types::PackageVersionsArgs;
+use query_types::PackageVersionsQuery;
+use query_types::PackagesQuery;
+use query_types::PackagesQueryArgs;
 use query_types::PageInfo;
 use query_types::ProtocolConfigQuery;
 use query_types::ProtocolConfigs;
@@ -70,6 +81,7 @@ use sui_types::types::CheckpointSequenceNumber;
 use sui_types::types::CheckpointSummary;
 use sui_types::types::Digest;
 use sui_types::types::Event;
+use sui_types::types::MovePackage;
 use sui_types::types::Object;
 use sui_types::types::SignedTransaction;
 use sui_types::types::Transaction;
@@ -1151,6 +1163,210 @@ impl Client {
     }
 
     // ===========================================================================
+    // Package API
+    // ===========================================================================
+
+    /// The package corresponding to the given address (at the optionally given version).
+    /// When no version is given, the package is loaded directly from the address given. Otherwise,
+    /// the address is translated before loading to point to the package whose original ID matches
+    /// the package at address, but whose version is version. For non-system packages, this
+    /// might result in a different address than address because different versions of a package,
+    /// introduced by upgrades, exist at distinct addresses.
+    ///
+    /// Note that this interpretation of version is different from a historical object read (the
+    /// interpretation of version for the object query).
+    pub async fn package(
+        &self,
+        address: Address,
+        version: Option<u64>,
+    ) -> Result<Option<MovePackage>, Error> {
+        let operation = PackageQuery::build(PackageArgs { address, version });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        response
+            .data
+            .and_then(|x| x.package)
+            .and_then(|x| x.package_bcs)
+            .map(|bcs| base64ct::Base64::decode_vec(bcs.0.as_str()))
+            .transpose()
+            .map_err(|e| Error::msg(format!("Cannot decode Base64 package bcs bytes: {e}")))?
+            .map(|bcs| bcs::from_bytes::<MovePackage>(&bcs))
+            .transpose()
+            .map_err(|e| Error::msg(format!("Cannot decode bcs bytes into MovePackage: {e}")))
+    }
+
+    /// Fetch all versions of package at address (packages that share this package's original ID),
+    /// optionally bounding the versions exclusively from below with afterVersion, or from above
+    /// with beforeVersion.
+    pub async fn package_versions(
+        &self,
+        address: Address,
+        pagination_filter: PaginationFilter,
+        after_version: Option<u64>,
+        before_version: Option<u64>,
+    ) -> Result<Option<Page<MovePackage>>, Error> {
+        let (after, before, first, last) = self.pagination_filter(pagination_filter);
+        let operation = PackageVersionsQuery::build(PackageVersionsArgs {
+            address,
+            after: after.as_deref(),
+            before: before.as_deref(),
+            first,
+            last,
+            filter: Some(MovePackageVersionFilter {
+                after_version,
+                before_version,
+            }),
+        });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        if let Some(packages) = response.data {
+            let pc = packages.package_versions;
+            let page_info = pc.page_info;
+            let bcs = pc
+                .nodes
+                .iter()
+                .map(|p| &p.package_bcs)
+                .filter_map(|b64| {
+                    b64.as_ref()
+                        .map(|b| base64ct::Base64::decode_vec(b.0.as_str()))
+                })
+                .collect::<Result<Vec<_>, base64ct::Error>>()
+                .map_err(|e| Error::msg(format!("Cannot decode Base64 package bcs bytes: {e}")))?;
+            let packages = bcs
+                .iter()
+                .map(|b| bcs::from_bytes::<MovePackage>(b))
+                .collect::<Result<Vec<_>, bcs::Error>>()
+                .map_err(|e| {
+                    Error::msg(format!("Cannot decode bcs bytes into MovePackage: {e}"))
+                })?;
+
+            Ok(Some(Page::new(page_info, packages)))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Fetch the latest version of the package at address.
+    /// This corresponds to the package with the highest version that shares its original ID with
+    /// the package at address.
+    pub async fn package_latest(&self, address: Address) -> Result<Option<MovePackage>, Error> {
+        let operation = LatestPackageQuery::build(PackageArgs {
+            address,
+            version: None,
+        });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        let pkg = response
+            .data
+            .and_then(|x| x.latest_package)
+            .and_then(|x| x.package_bcs)
+            .map(|bcs| base64ct::Base64::decode_vec(bcs.0.as_str()))
+            .transpose()
+            .map_err(|e| Error::msg(format!("Cannot decode Base64 package bcs bytes: {e}")))?
+            .map(|bcs| bcs::from_bytes::<MovePackage>(&bcs))
+            .transpose()
+            .map_err(|e| Error::msg(format!("Cannot decode bcs bytes into MovePackage: {e}")))?;
+
+        Ok(pkg)
+    }
+
+    /// Fetch a package by its name (using Move Registry Service)
+    pub async fn package_by_name(&self, name: &str) -> Result<Option<MovePackage>, Error> {
+        let operation = PackageByNameQuery::build(PackageByNameArgs { name });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            println!("{:?}", errors);
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        Ok(response
+            .data
+            .and_then(|x| x.package_by_name)
+            .and_then(|x| x.package_bcs)
+            .and_then(|bcs| base64ct::Base64::decode_vec(bcs.0.as_str()).ok())
+            .and_then(|bcs| bcs::from_bytes::<MovePackage>(&bcs).ok()))
+    }
+
+    /// The Move packages that exist in the network, optionally filtered to be strictly before
+    /// beforeCheckpoint and/or strictly after afterCheckpoint.
+    ///
+    /// This query returns all versions of a given user package that appear between the specified
+    /// checkpoints, but only records the latest versions of system packages.
+    pub async fn packages(
+        &self,
+        after: Option<&str>,
+        before: Option<&str>,
+        first: Option<i32>,
+        last: Option<i32>,
+        after_checkpoint: Option<u64>,
+        before_checkpoint: Option<u64>,
+    ) -> Result<Option<Page<MovePackage>>, Error> {
+        if first.is_some() && last.is_some() {
+            return Err(Error::msg("Cannot specify both first and last"));
+        }
+
+        let operation = PackagesQuery::build(PackagesQueryArgs {
+            after,
+            before,
+            first,
+            last,
+            filter: Some(PackageCheckpointFilter {
+                after_checkpoint,
+                before_checkpoint,
+            }),
+        });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        if let Some(packages) = response.data {
+            let pc = packages.packages;
+            let page_info = pc.page_info;
+            let bcs = pc
+                .nodes
+                .iter()
+                .map(|p| &p.package_bcs)
+                .filter_map(|b64| {
+                    b64.as_ref()
+                        .map(|b| base64ct::Base64::decode_vec(b.0.as_str()))
+                })
+                .collect::<Result<Vec<_>, base64ct::Error>>()
+                .map_err(|e| Error::msg(format!("Cannot decode Base64 package bcs bytes: {e}")))?;
+            let packages = bcs
+                .iter()
+                .map(|b| bcs::from_bytes::<MovePackage>(b))
+                .collect::<Result<Vec<_>, bcs::Error>>()
+                .map_err(|e| {
+                    Error::msg(format!("Cannot decode bcs bytes into MovePackage: {e}"))
+                })?;
+
+            Ok(Some(Page::new(page_info, packages)))
+        } else {
+            Ok(None)
+        }
+    }
+
+    // ===========================================================================
     // Dry Run API
     // ===========================================================================
 
@@ -1855,5 +2071,45 @@ mod tests {
             .await;
         assert!(total_transaction_blocks.is_ok());
         assert!(total_transaction_blocks.unwrap().is_some_and(|tx| tx > 0));
+    }
+
+    #[tokio::test]
+    async fn test_package() {
+        let client = test_client();
+        let package = client.package("0x2".parse().unwrap(), None).await;
+        assert!(package.is_ok());
+    }
+
+    #[tokio::test]
+    #[ignore] // don't know which name is not malformed
+    async fn test_package_by_name() {
+        let client = Client::new_testnet();
+        let package = client.package_by_name("sui@sui").await;
+        assert!(package.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_latest_package_query() {
+        let client = test_client();
+        let package = client.package_latest("0x2".parse().unwrap()).await;
+        assert!(
+            package.is_ok(),
+            "Latest package query failed for {} network. Error: {}",
+            client.rpc_server(),
+            package.unwrap_err()
+        );
+    }
+
+    #[tokio::test]
+    #[ignore] // TIMES OUT FOR NOW
+    async fn test_packages_query() {
+        let client = test_client();
+        let packages = client.packages(None, None, None, None, None, None).await;
+        assert!(
+            packages.is_ok(),
+            "Packages query failed for {} network. Error: {}",
+            client.rpc_server(),
+            packages.unwrap_err()
+        );
     }
 }
