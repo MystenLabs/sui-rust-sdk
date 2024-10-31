@@ -1210,7 +1210,7 @@ impl Client {
         after_version: Option<u64>,
         before_version: Option<u64>,
     ) -> Result<Option<Page<MovePackage>>, Error> {
-        let (after, before, first, last) = self.pagination_filter(pagination_filter);
+        let (after, before, first, last) = self.pagination_filter(pagination_filter).await;
         let operation = PackageVersionsQuery::build(PackageVersionsArgs {
             address,
             after: after.as_deref(),
