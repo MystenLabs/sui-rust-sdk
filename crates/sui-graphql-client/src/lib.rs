@@ -1869,7 +1869,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // schema was updated, but the service has not been released with the new schema
     async fn test_events_query() {
         let client = test_client();
         let events = client.events(None, PaginationFilter::default()).await;
@@ -1887,7 +1886,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
     async fn test_objects_query() {
         let client = test_client();
         let objects = client.objects(None, PaginationFilter::default()).await;
@@ -1900,7 +1898,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
     async fn test_object_query() {
         let client = test_client();
         let object = client.object("0x5".parse().unwrap(), None).await;
@@ -1964,7 +1961,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
     async fn test_transactions_query() {
         let client = test_client();
         let transactions = client.transactions(None, PaginationFilter::default()).await;
@@ -1996,7 +1992,6 @@ mod tests {
 
     // This needs the tx builder to be able to be tested properly
     #[tokio::test]
-    #[ignore]
     async fn test_dry_run() {
         let client = Client::new_testnet();
         // this tx bytes works on testnet
