@@ -1484,6 +1484,7 @@ impl Client {
             .map_err(|e| Error::msg(format!("Cannot decode transaction: {e}")))
     }
 
+    /// Get a transaction's effects by its digest.
     pub async fn transaction_effects(
         &self,
         digest: Digest,
@@ -1581,6 +1582,7 @@ impl Client {
         )
     }
 
+    /// Get a stream of transactions' effects based on the (optional) transaction filter.
     pub async fn transactions_effects_stream<'a>(
         &'a self,
         filter: Option<TransactionsFilter<'a>>,
