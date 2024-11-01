@@ -5,7 +5,8 @@ use sui_types::types::ObjectReference;
 
 use crate::query_types::schema;
 use crate::query_types::Address;
-use crate::query_types::TransactionBlock;
+
+use super::transaction::TxBlockEffects;
 
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "Query", variables = "DryRunArgs")]
@@ -18,7 +19,7 @@ pub struct DryRunQuery {
 #[cynic(schema = "rpc", graphql_type = "DryRunResult")]
 pub struct DryRunResult {
     pub error: Option<String>,
-    pub transaction: Option<TransactionBlock>,
+    pub transaction: Option<TxBlockEffects>,
 }
 
 #[derive(cynic::QueryVariables, Debug)]

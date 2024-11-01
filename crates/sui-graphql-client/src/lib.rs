@@ -67,7 +67,9 @@ use query_types::ResolveSuinsQueryArgs;
 use query_types::ServiceConfig;
 use query_types::ServiceConfigQuery;
 use query_types::TransactionBlockArgs;
+use query_types::TransactionBlockEffectsQuery;
 use query_types::TransactionBlockQuery;
+use query_types::TransactionBlocksEffectsQuery;
 use query_types::TransactionBlocksQuery;
 use query_types::TransactionBlocksQueryArgs;
 use query_types::TransactionMetadata;
@@ -1482,6 +1484,23 @@ impl Client {
             .map_err(|e| Error::msg(format!("Cannot decode transaction: {e}")))
     }
 
+    pub async fn transaction_effects(
+        &self,
+        digest: Digest,
+    ) -> Result<Option<TransactionEffects>, Error> {
+        let operation = TransactionBlockEffectsQuery::build(TransactionBlockArgs {
+            digest: digest.to_string(),
+        });
+        let response = self.run_query(&operation).await?;
+
+        response
+            .data
+            .and_then(|d| d.transaction_block)
+            .map(|tx| tx.try_into())
+            .transpose()
+            .map_err(|e| Error::msg(format!("Cannot decode transaction: {e}")))
+    }
+
     /// Get a page of transactions based on the provided filters.
     pub async fn transactions<'a>(
         &self,
@@ -1516,6 +1535,40 @@ impl Client {
         }
     }
 
+    /// Get a page of transactions' effects based on the provided filters.
+    pub async fn transactions_effects<'a>(
+        &self,
+        filter: Option<TransactionsFilter<'a>>,
+        pagination_filter: PaginationFilter,
+    ) -> Result<Page<TransactionEffects>, Error> {
+        let (after, before, first, last) = self.pagination_filter(pagination_filter).await;
+
+        let operation = TransactionBlocksEffectsQuery::build(TransactionBlocksQueryArgs {
+            after: after.as_deref(),
+            before: before.as_deref(),
+            filter,
+            first,
+            last,
+        });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(txb) = response.data {
+            let txc = txb.transaction_blocks;
+            let page_info = txc.page_info;
+
+            let transactions = txc
+                .nodes
+                .into_iter()
+                .map(|n| n.try_into())
+                .collect::<Result<Vec<_>>>()?;
+            let page = Page::new(page_info, transactions);
+            Ok(page)
+        } else {
+            Ok(Page::new_empty())
+        }
+    }
+
     /// Get a stream of transactions based on the (optional) transaction filter.
     pub async fn transactions_stream<'a>(
         &'a self,
@@ -1524,6 +1577,17 @@ impl Client {
     ) -> impl Stream<Item = Result<SignedTransaction, Error>> + 'a {
         stream_paginated_query(
             move |pag_filter| self.transactions(filter.clone(), pag_filter),
+            streaming_direction,
+        )
+    }
+
+    pub async fn transactions_effects_stream<'a>(
+        &'a self,
+        filter: Option<TransactionsFilter<'a>>,
+        streaming_direction: Direction,
+    ) -> impl Stream<Item = Result<TransactionEffects, Error>> + 'a {
+        stream_paginated_query(
+            move |pag_filter| self.transactions_effects(filter.clone(), pag_filter),
             streaming_direction,
         )
     }
@@ -1694,6 +1758,8 @@ mod tests {
     use crate::LOCAL_HOST;
     use crate::MAINNET_HOST;
     use crate::TESTNET_HOST;
+
+    const NUM_COINS_FROM_FAUCET: usize = 5;
 
     fn test_client() -> Client {
         let network = std::env::var("NETWORK").unwrap_or_else(|_| "local".to_string());
@@ -1953,7 +2019,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_coins_stream() {
-        const NUM_COINS_FROM_FAUCET: usize = 5;
         let client = test_client();
         let faucet = match client.rpc_server() {
             LOCAL_HOST => FaucetClient::local(),
@@ -1974,6 +2039,36 @@ mod tests {
             num_coins += 1;
         }
         assert!(num_coins == NUM_COINS_FROM_FAUCET);
+    }
+
+    #[tokio::test]
+    async fn test_transaction_effects_query() {
+        let client = test_client();
+        let transactions = client
+            .transactions(None, PaginationFilter::default())
+            .await
+            .unwrap();
+        let tx_digest = transactions.data()[0].transaction.digest();
+        let effects = client.transaction_effects(tx_digest.into()).await.unwrap();
+        assert!(
+            effects.is_some(),
+            "Transaction effects query failed for {} network.",
+            client.rpc_server(),
+        );
+    }
+
+    #[tokio::test]
+    async fn test_transactions_effects_query() {
+        let client = test_client();
+        let txs_effects = client
+            .transactions_effects(None, PaginationFilter::default())
+            .await;
+        assert!(
+            txs_effects.is_ok(),
+            "Transactions effects query failed for {} network. Error: {}",
+            client.rpc_server(),
+            txs_effects.unwrap_err()
+        );
     }
 
     #[tokio::test]
