@@ -42,6 +42,7 @@ use query_types::LatestPackageQuery;
 use query_types::MoveFunction;
 use query_types::MoveModule;
 use query_types::MovePackageVersionFilter;
+use query_types::MovePackageVersionFilterReplay;
 use query_types::NormalizedMoveFunctionQuery;
 use query_types::NormalizedMoveFunctionQueryArgs;
 use query_types::NormalizedMoveModuleQuery;
@@ -57,7 +58,9 @@ use query_types::PackageByNameQuery;
 use query_types::PackageCheckpointFilter;
 use query_types::PackageQuery;
 use query_types::PackageVersionsArgs;
+use query_types::PackageVersionsArgsReplay;
 use query_types::PackageVersionsQuery;
+use query_types::PackageVersionsWithEpochDataQuery;
 use query_types::PackagesQuery;
 use query_types::PackagesQueryArgs;
 use query_types::PageInfo;
@@ -84,6 +87,7 @@ use sui_types::Address;
 use sui_types::CheckpointDigest;
 use sui_types::CheckpointSequenceNumber;
 use sui_types::CheckpointSummary;
+use sui_types::EpochId;
 use sui_types::Event;
 use sui_types::MovePackage;
 use sui_types::Object;
@@ -94,6 +98,7 @@ use sui_types::TransactionEffects;
 use sui_types::TransactionKind;
 use sui_types::TypeTag;
 use sui_types::UserSignature;
+use sui_types::Version;
 
 use base64ct::Encoding;
 use cynic::serde;
@@ -1256,6 +1261,122 @@ impl Client {
         } else {
             Ok(Page::new_empty())
         }
+    }
+
+    /// Return a (Option<MovePackage>, version, Option<EpochId>) tuple for each version of the
+    /// package at address. The Option<EpochId> is the epoch in which this package was published.
+    pub async fn package_versions_for_replay(
+        &self,
+        address: Address,
+        pagination_filter: PaginationFilter,
+        after_version: Option<u64>,
+        before_version: Option<u64>,
+    ) -> Result<Page<(Option<MovePackage>, Version, Option<EpochId>)>, Error> {
+        let (after, before, first, last) = self.pagination_filter(pagination_filter).await;
+        let operation = PackageVersionsWithEpochDataQuery::build(PackageVersionsArgsReplay {
+            address,
+            after: after.as_deref(),
+            before: before.as_deref(),
+            first,
+            last,
+            filter: Some(MovePackageVersionFilterReplay {
+                after_version,
+                before_version,
+            }),
+        });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::msg(format!("{:?}", errors)));
+        }
+
+        if let Some(packages) = response.data {
+            let pc = packages.package_versions;
+            let page_info = pc.page_info;
+            let data = pc
+                .nodes
+                .into_iter()
+                .map(|p| (p.package_bcs, p.version, p.previous_transaction_block))
+                .collect::<Vec<_>>();
+
+            let mut output = vec![];
+
+            for (bcs, version, previous_transaction_block) in data {
+                let bcs = bcs
+                    .as_ref()
+                    .map(|b| base64ct::Base64::decode_vec(b.0.as_str()))
+                    .transpose()
+                    .map_err(|e| {
+                        Error::msg(format!("Cannot decode Base64 package bcs bytes: {e}"))
+                    })?;
+                let package = bcs
+                    .map(|b| bcs::from_bytes::<MovePackage>(&b))
+                    .transpose()
+                    .map_err(|e| {
+                        Error::msg(format!("Cannot decode bcs bytes into MovePackage: {e}"))
+                    })?;
+
+                let effects = previous_transaction_block.and_then(|x| x.effects);
+                let effects = effects.and_then(|x| x.bcs);
+                let bcs = effects
+                    .map(|x| base64ct::Base64::decode_vec(x.0.as_str()))
+                    .transpose()
+                    .map_err(|e| {
+                        Error::msg(format!("Cannot decode Base64 effects bcs bytes: {e}"))
+                    })?;
+                let effects = bcs
+                    .map(|b| bcs::from_bytes::<TransactionEffects>(&b))
+                    .transpose()
+                    .map_err(|e| {
+                        Error::msg(format!(
+                            "Cannot decode bcs bytes into TransactionEffects: {e}"
+                        ))
+                    })?;
+                let epoch = effects.map(|e| match e {
+                    TransactionEffects::V1(e) => e.epoch,
+                    TransactionEffects::V2(e) => e.epoch,
+                });
+
+                output.push((package, version, epoch));
+            }
+
+            Ok(Page::new(page_info, output))
+        } else {
+            Ok(Page::new_empty())
+        }
+    }
+
+    /// A stream of package versions for replay.
+    ///
+    /// Examples
+    /// ```rust,ignore
+    /// let client = sui_graphql_client::Client::new_mainnet();
+    /// let address = Address::from_str("0x2").unwrap();
+    /// let mut stream = client.package_versions_for_replay_stream(address, Direction::Forward);
+    /// while let Some(result) = stream.next().await {
+    ///    match result {
+    ///      Ok((Some(pkg), version, Some(epoch))) => {
+    ///         println!("Package: {:#?}", pkg);
+    ///         println!("Version: {:#?}", version);
+    ///         println!("Epoch: {:#?}", epoch);
+    ///      }
+    ///      Ok(_) => {}
+    ///      Err(e) => {
+    ///         println!("Error: {:#?}", e);
+    ///      }
+    ///    }
+    ///  }
+    pub async fn package_versions_for_replay_stream(
+        &self,
+        address: Address,
+        streaming_direction: Direction,
+    ) -> impl Stream<Item = Result<(Option<MovePackage>, Version, Option<EpochId>), Error>> + '_
+    {
+        stream_paginated_query(
+            move |filter| self.package_versions_for_replay(address, filter, None, None),
+            streaming_direction,
+        )
     }
 
     /// Fetch the latest version of the package at address.

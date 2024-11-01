@@ -88,6 +88,7 @@ pub struct TransactionBlocksQueryArgs<'a> {
 #[cynic(schema = "rpc", graphql_type = "TransactionBlock")]
 pub struct TransactionBlock {
     pub bcs: Option<Base64>,
+    pub effects: Option<TransactionBlockEffects>,
     pub signatures: Option<Vec<Base64>>,
 }
 
