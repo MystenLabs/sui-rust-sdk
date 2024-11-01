@@ -186,6 +186,6 @@ impl TryFrom<TxBlockEffects> for TransactionEffects {
             .map(|bcs| bcs::from_bytes::<TransactionEffects>(&bcs))
             .transpose()
             .map_err(|_| Error::msg("Cannot decode bcs bytes into TransactionEffects"))?;
-        Ok(effects.ok_or_else(|| Error::msg("Cannot decode effects"))?)
+        effects.ok_or_else(|| Error::msg("Cannot decode effects"))
     }
 }
