@@ -1209,7 +1209,7 @@ impl Client {
         pagination_filter: PaginationFilter,
         after_version: Option<u64>,
         before_version: Option<u64>,
-    ) -> Result<Option<Page<MovePackage>>, Error> {
+    ) -> Result<Page<MovePackage>, Error> {
         let (after, before, first, last) = self.pagination_filter(pagination_filter).await;
         let operation = PackageVersionsQuery::build(PackageVersionsArgs {
             address,
@@ -1250,9 +1250,9 @@ impl Client {
                     Error::msg(format!("Cannot decode bcs bytes into MovePackage: {e}"))
                 })?;
 
-            Ok(Some(Page::new(page_info, packages)))
+            Ok(Page::new(page_info, packages))
         } else {
-            Ok(None)
+            Ok(Page::new_empty())
         }
     }
 
@@ -1317,7 +1317,7 @@ impl Client {
         last: Option<i32>,
         after_checkpoint: Option<u64>,
         before_checkpoint: Option<u64>,
-    ) -> Result<Option<Page<MovePackage>>, Error> {
+    ) -> Result<Page<MovePackage>, Error> {
         if first.is_some() && last.is_some() {
             return Err(Error::msg("Cannot specify both first and last"));
         }
@@ -1360,9 +1360,9 @@ impl Client {
                     Error::msg(format!("Cannot decode bcs bytes into MovePackage: {e}"))
                 })?;
 
-            Ok(Some(Page::new(page_info, packages)))
+            Ok(Page::new(page_info, packages))
         } else {
-            Ok(None)
+            Ok(Page::new_empty())
         }
     }
 
@@ -2077,7 +2077,18 @@ mod tests {
     async fn test_package() {
         let client = test_client();
         let package = client.package("0x2".parse().unwrap(), None).await;
-        assert!(package.is_ok());
+        assert!(
+            package.is_ok(),
+            "Package query failed for {} network. Error: {}",
+            client.rpc_server(),
+            package.unwrap_err()
+        );
+
+        assert!(
+            package.unwrap().is_some(),
+            "Package query returned None for {} network",
+            client.rpc_server()
+        );
     }
 
     #[tokio::test]
@@ -2098,10 +2109,15 @@ mod tests {
             client.rpc_server(),
             package.unwrap_err()
         );
+
+        assert!(
+            package.unwrap().is_some(),
+            "Latest package for 0x2 query returned None for {} network",
+            client.rpc_server()
+        );
     }
 
     #[tokio::test]
-    #[ignore] // TIMES OUT FOR NOW
     async fn test_packages_query() {
         let client = test_client();
         let packages = client.packages(None, None, None, None, None, None).await;
@@ -2110,6 +2126,12 @@ mod tests {
             "Packages query failed for {} network. Error: {}",
             client.rpc_server(),
             packages.unwrap_err()
+        );
+
+        assert!(
+            !packages.unwrap().is_empty(),
+            "Packages query returned no data for {} network",
+            client.rpc_server()
         );
     }
 }
