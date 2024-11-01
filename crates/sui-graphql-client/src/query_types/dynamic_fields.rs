@@ -40,16 +40,12 @@ pub struct ObjectOwner {
 #[cynic(schema = "rpc", graphql_type = "Query", variables = "DynamicFieldArgs")]
 pub struct DynamicFieldQuery {
     #[arguments(address: $address)]
-    pub object: Option<ObjectField>,
+    pub owner: Option<OwnerField>,
 }
 
 #[derive(cynic::QueryFragment, Debug)]
-#[cynic(
-    schema = "rpc",
-    graphql_type = "Object",
-    variables = "DynamicFieldArgs"
-)]
-pub struct ObjectField {
+#[cynic(schema = "rpc", graphql_type = "Owner", variables = "DynamicFieldArgs")]
+pub struct OwnerField {
     #[arguments(name: $name)]
     pub dynamic_field: Option<DynamicField>,
 }

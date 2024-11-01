@@ -764,7 +764,7 @@ impl Client {
 
         let result = response
             .data
-            .and_then(|d| d.object)
+            .and_then(|d| d.owner)
             .and_then(|o| o.dynamic_field)
             .map(|df| df.try_into())
             .transpose()
