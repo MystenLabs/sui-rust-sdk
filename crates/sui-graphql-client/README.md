@@ -114,6 +114,8 @@ query CustomQuery($id: UInt53) {
 }
 ```
 
+When using `cynic` and `sui-graphql-client`, you will need to register the schema by calling `sui-graphql-client-build::register_schema` in a `build.rs` file. See [sui-graphql-client-build](https://github.com/MystenLabs/sui-rust-sdk/tree/master/crates/sui-graphql-client-build) for more information.
+
 The generated query types are defined below. Note that the `id` variable is optional (to make it mandatory change the schema to $id: Uint53! -- note the ! character which indicates a mandatory field). That means that if the `id` variable is not provided, the query will return the data for the last known epoch.
 Note that instead of using `Uint53`, the scalar is mapped to `u64` in the library using `impl_scalar(u64, schema::Uint53)`, thus all references to `Uint53` in the schema are replaced with `u64` in the code below.
 
@@ -125,7 +127,7 @@ pub struct CustomQueryVariables {
 }
 
 #[derive(cynic::QueryFragment, Debug)]
-#[cynic(graphql_type = "Query", variables = "CustomQueryVariables")]
+#[cynic(schema = "SCHEMA_NAME_HERE", graphql_type = "Query", variables = "CustomQueryVariables")]
 pub struct CustomQuery {
     #[arguments(id: $id)]
     pub epoch: Option<Epoch>,
@@ -157,7 +159,7 @@ use sui_types::types::Address;
 
 // The data returned by the custom query.
 #[derive(cynic::QueryFragment, Debug)]
-#[cynic(schema = "rpc", graphql_type = "Epoch")]
+#[cynic(schema = "SCHEMA_NAME_HERE", graphql_type = "Epoch")]
 pub struct EpochData {
     pub epoch_id: u64,
     pub reference_gas_price: Option<BigInt>,
@@ -176,7 +178,7 @@ pub struct CustomVariables {
 
 // The custom query. Note that the variables need to be explicitly declared.
 #[derive(cynic::QueryFragment, Debug)]
-#[cynic(schema = "rpc", graphql_type = "Query", variables = "CustomVariables")]
+#[cynic(schema = "SCHEMA_NAME_HERE", graphql_type = "Query", variables = "CustomVariables")]
 pub struct CustomQuery {
     #[arguments(id: $id)]
     pub epoch: Option<EpochData>,
@@ -184,7 +186,7 @@ pub struct CustomQuery {
 
 // Custom query with no variables.
 #[derive(cynic::QueryFragment, Debug)]
-#[cynic(schema = "rpc", graphql_type = "Query")]
+#[cynic(schema = "SCHEMA_NAME_HERE", graphql_type = "Query")]
 pub struct ChainIdQuery {
     chain_identifier: String,
 }

@@ -30,5 +30,5 @@ rand = "0.8.5"
 tokio = { version = "1.40.0", features = ["full"] }
 
 [build-dependencies]
-cynic-codegen = { version = "3.7.3" }
+sui_graphql_client_build = { package = "sui-graphql-client-build", path = "../sui-graphql-client-build" }
 
