@@ -1,9 +1,9 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::error;
 use crate::query_types::PageInfo;
 use crate::Direction;
-use crate::Error;
 use crate::Page;
 use crate::PaginationFilter;
 
@@ -41,9 +41,9 @@ where
     T: Clone + Unpin,
     F: Fn(PaginationFilter) -> Fut,
     F: Unpin,
-    Fut: Future<Output = Result<Page<T>, Error>>,
+    Fut: Future<Output = Result<Page<T>, error::Error>>,
 {
-    type Item = Result<T, Error>;
+    type Item = Result<T, error::Error>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         if self.finished {
@@ -172,7 +172,7 @@ where
 pub fn stream_paginated_query<T, F, Fut>(query_fn: F, direction: Direction) -> PageStream<T, F, Fut>
 where
     F: Fn(PaginationFilter) -> Fut,
-    Fut: Future<Output = Result<Page<T>, Error>>,
+    Fut: Future<Output = Result<Page<T>, error::Error>>,
 {
     PageStream::new(query_fn, direction)
 }

@@ -1,13 +1,14 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::Error;
 use chrono::DateTime as ChronoDT;
 use sui_types::types::CheckpointContentsDigest;
 use sui_types::types::CheckpointDigest;
 use sui_types::types::CheckpointSummary;
 use sui_types::types::GasCostSummary as NativeGasCostSummary;
 
+use crate::error;
+use crate::error::ConversionError;
 use crate::query_types::schema;
 use crate::query_types::Base64;
 use crate::query_types::BigInt;
@@ -103,19 +104,20 @@ pub struct GasCostSummary {
 
 // TODO need bcs in GraphQL Checkpoint to avoid this conversion
 impl TryInto<CheckpointSummary> for Checkpoint {
-    type Error = anyhow::Error;
+    type Error = error::Error;
 
     fn try_into(self) -> Result<CheckpointSummary, Self::Error> {
         let epoch = self
             .epoch
-            .ok_or_else(|| Error::msg("Epoch is missing"))?
+            .ok_or_else(|| ConversionError("Epoch is checkpoint summary is missing".to_string()))?
             .epoch_id;
-        let network_total_transactions = self
-            .network_total_transactions
-            .ok_or_else(|| Error::msg("Network total transactions is missing"))?;
+        let network_total_transactions = self.network_total_transactions.ok_or_else(|| {
+            ConversionError(
+                "Network total transactions in checkpoint summary is missing".to_string(),
+            )
+        })?;
         let sequence_number = self.sequence_number;
-        let timestamp_ms = ChronoDT::parse_from_rfc3339(&self.timestamp.0)
-            .map_err(|e| Error::msg(format!("Cannot parse DateTime: {e}")))?
+        let timestamp_ms = ChronoDT::parse_from_rfc3339(&self.timestamp.0)?
             .timestamp_millis()
             .try_into()?;
         let content_digest = CheckpointContentsDigest::from_base58(&self.digest)?;
@@ -125,7 +127,9 @@ impl TryInto<CheckpointSummary> for Checkpoint {
             .transpose()?;
         let epoch_rolling_gas_cost_summary = self
             .rolling_gas_summary
-            .ok_or_else(|| Error::msg("Rolling gas summary is missing"))?
+            .ok_or_else(|| {
+                ConversionError("Gas cost summary in checkpoint summary is missing".to_string())
+            })?
             .try_into()?;
         Ok(CheckpointSummary {
             epoch,
@@ -143,23 +147,23 @@ impl TryInto<CheckpointSummary> for Checkpoint {
 }
 
 impl TryInto<NativeGasCostSummary> for GasCostSummary {
-    type Error = anyhow::Error;
+    type Error = error::Error;
     fn try_into(self) -> Result<NativeGasCostSummary, Self::Error> {
         let computation_cost = self
             .computation_cost
-            .ok_or_else(|| Error::msg("Computation cost is missing"))?
+            .ok_or_else(|| ConversionError("Computation cost is missing".to_string()))?
             .try_into()?;
         let non_refundable_storage_fee = self
             .non_refundable_storage_fee
-            .ok_or_else(|| Error::msg("Non-refundable storage fee is missing"))?
+            .ok_or_else(|| ConversionError("Non-refundable storage fee is missing".to_string()))?
             .try_into()?;
         let storage_cost = self
             .storage_cost
-            .ok_or_else(|| Error::msg("Storage cost is missing"))?
+            .ok_or_else(|| ConversionError("Storage cost is missing".to_string()))?
             .try_into()?;
         let storage_rebate = self
             .storage_rebate
-            .ok_or_else(|| Error::msg("Storage rebate is missing"))?
+            .ok_or_else(|| ConversionError("Storage rebate is missing".to_string()))?
             .try_into()?;
         Ok(NativeGasCostSummary {
             computation_cost,

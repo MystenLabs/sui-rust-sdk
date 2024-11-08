@@ -1,13 +1,14 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::Error;
 use base64ct::Encoding;
 use sui_types::types::SignedTransaction;
 use sui_types::types::Transaction;
 use sui_types::types::TransactionEffects;
 use sui_types::types::UserSignature;
 
+use crate::error;
+use crate::error::DeserializeError;
 use crate::query_types::schema;
 use crate::query_types::Address;
 use crate::query_types::Base64;
@@ -142,23 +143,20 @@ pub struct TransactionBlockEffectsConnection {
 }
 
 impl TryFrom<TransactionBlock> for SignedTransaction {
-    type Error = anyhow::Error;
+    type Error = error::Error;
 
     fn try_from(value: TransactionBlock) -> Result<Self, Self::Error> {
         let transaction = value
             .bcs
             .map(|tx| base64ct::Base64::decode_vec(tx.0.as_str()))
-            .transpose()
-            .map_err(|_| Error::msg("Cannot decode Base64 transaction bcs bytes"))?
+            .transpose()?
             .map(|bcs| bcs::from_bytes::<Transaction>(&bcs))
-            .transpose()
-            .map_err(|_| Error::msg("Cannot decode bcs bytes into Transaction"))?;
+            .transpose()?;
 
         let signatures = if let Some(sigs) = value.signatures {
             sigs.iter()
                 .map(|s| UserSignature::from_base64(&s.0))
-                .collect::<Result<Vec<_>, _>>()
-                .map_err(|_| Error::msg("Cannot decode Base64 signature"))?
+                .collect::<Result<Vec<_>, _>>()?
         } else {
             vec![]
         };
@@ -169,7 +167,7 @@ impl TryFrom<TransactionBlock> for SignedTransaction {
                 signatures,
             })
         } else {
-            Err(Error::msg("Cannot decode transaction"))
+            Err(DeserializeError("Cannot deserialize transaction".to_string()).into())
         }
     }
 }
