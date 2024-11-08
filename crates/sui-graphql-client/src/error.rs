@@ -12,36 +12,54 @@ use sui_types::types::TypeParseError;
 
 type BoxError = Box<dyn std::error::Error + Send + Sync>;
 
+/// General error type for the client. It is used to wrap all the possible errors that can occur.
 #[derive(Debug)]
 pub struct Error {
     inner: Box<ClientError>,
 }
 
+/// Error type for the client. It is split into multiple fields to allow for more granular error
+/// handling. The `source` field is used to store the original error.
 #[derive(Debug)]
 pub struct ClientError {
+    /// Error when the GraphQL server returns an error.
     pub query_response_error: bool,
+    /// Error when deserialization a value (mostly bcs or base64).
     pub deserialize_error: bool,
+    /// Error when parsing a value.
     pub parse_error: bool,
+    /// Graphql server returned an empty response, though it was expected to return a value.
     pub empty_response_error: bool,
+    /// Error when converting from a type to another.
     pub conversion_error: bool,
+    /// The original error. Use downcasting to get the original error based on the error type from
+    /// above.
     pub source: Option<BoxError>,
 }
 
+/// An empty response with no data from the GraphQL server. This is used to signal that the API
+/// expected some data, but the response was empty.
 #[derive(Debug, Clone)]
 pub struct EmptyResponse;
 
+/// Error when deserialization a value (mostly bcs or base64).
 #[derive(Debug, Clone)]
 pub struct DeserializeError(pub String);
 
+/// Error when parsing a value.
 #[derive(Debug, Clone)]
 pub enum ParseError {
+    /// Error when parsing a URL.
     UrlParseError(String),
+    /// Error when parsing a BigInt into integer.
     BigIntParsingError,
 }
 
+/// Error when converting from a type to another.
 #[derive(Debug, Clone)]
 pub struct ConversionError(pub String);
 
+/// Error when the GraphQL server returns an error.
 #[derive(Debug, Clone)]
 pub struct QueryResponseError(pub Vec<GraphQlError>);
 
@@ -120,12 +138,6 @@ impl From<reqwest::Error> for Error {
     }
 }
 
-impl From<Vec<GraphQlError>> for QueryResponseError {
-    fn from(errors: Vec<GraphQlError>) -> Self {
-        Self(errors)
-    }
-}
-
 impl From<QueryResponseError> for Error {
     fn from(error: QueryResponseError) -> Self {
         Self::empty().with_query_response_error(error)
@@ -135,18 +147,6 @@ impl From<QueryResponseError> for Error {
 impl From<DeserializeError> for Error {
     fn from(error: DeserializeError) -> Self {
         Self::empty().with_deserialize_error(error)
-    }
-}
-
-impl From<anyhow::Error> for Error {
-    fn from(error: anyhow::Error) -> Self {
-        Self::from_error(error)
-    }
-}
-
-impl From<serde_json::Error> for Error {
-    fn from(error: serde_json::Error) -> Self {
-        Self::empty().with_error(Box::new(error))
     }
 }
 
@@ -249,29 +249,34 @@ impl Error {
         }
     }
 
+    /// Set the deserialize error to true and set the source to the given error.
     fn with_deserialize_error(mut self, error: DeserializeError) -> Self {
         self.inner.deserialize_error = true;
         self.inner.source.replace(Box::new(error));
         self
     }
 
+    /// Set the empty response error to true.
     fn with_empty_response_error(mut self) -> Self {
         self.inner.empty_response_error = true;
         self
     }
 
+    /// Set the parse error to true and set the source to the given error.
     fn with_parse_error(mut self, error: ParseError) -> Self {
         self.inner.parse_error = true;
         self.inner.source.replace(Box::new(error));
         self
     }
 
+    /// Set the query response error to true and set the source to the given error.
     fn with_query_response_error(mut self, error: QueryResponseError) -> Self {
         self.inner.query_response_error = true;
         self.inner.source.replace(Box::new(error));
         self
     }
 
+    /// Set the conversion error to true and set the source to the given error.
     fn with_conversion_error(mut self, error: ConversionError) -> Self {
         self.inner.conversion_error = true;
         self.inner.source.replace(Box::new(error));
