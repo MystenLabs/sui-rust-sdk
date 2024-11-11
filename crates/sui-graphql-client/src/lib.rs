@@ -351,7 +351,7 @@ impl Client {
     }
 
     /// Lazily fetch the max page size
-    pub async fn max_page_size(&self) -> Result<i32> {
+    pub async fn max_page_size(&self) -> Result<i32, error::Error> {
         self.service_config().await.map(|cfg| cfg.max_page_size)
     }
 
@@ -432,7 +432,7 @@ impl Client {
 
     /// Get the GraphQL service configuration, including complexity limits, read and mutation limits,
     /// supported versions, and others.
-    pub async fn service_config(&self) -> Result<ServiceConfig, error::Error> {
+    pub async fn service_config(&self) -> Result<&ServiceConfig, error::Error> {
         // If the value is already initialized, return it
         if let Some(service_config) = self.service_config.get() {
             return Ok(service_config);
@@ -450,8 +450,8 @@ impl Client {
             response
                 .data
                 .map(|s| s.service_config)
-                .ok_or_else(|| EmptyResponse.into())
-        };
+                .ok_or_else(|| EmptyResponse)
+        }?;
 
         let service_config = self.service_config.get_or_init(move || service_config);
 
