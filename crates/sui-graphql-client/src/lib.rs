@@ -206,14 +206,15 @@ pub enum Direction {
 }
 
 /// Pagination options for querying the GraphQL server. It defaults to forward pagination with the
-/// GraphQL server's default items per page limit.
+/// GraphQL server's max page size.
 #[derive(Clone, Debug, Default)]
 pub struct PaginationFilter {
     /// The direction of pagination.
     pub direction: Direction,
     /// An opaque cursor used for pagination.
     pub cursor: Option<String>,
-    /// The maximum number of items to return. Use `service_config` to find the limit.
+    /// The maximum number of items to return. If this is ommitted, it will lazily query the
+    /// service configuration for the max page size.
     pub limit: Option<i32>,
 }
 
@@ -274,6 +275,8 @@ pub struct Client {
     rpc: Url,
     /// The reqwest client.
     inner: reqwest::Client,
+
+    service_config: std::sync::OnceLock<ServiceConfig>,
 }
 
 impl Client {
@@ -288,6 +291,7 @@ impl Client {
         let client = Client {
             rpc,
             inner: reqwest::Client::builder().user_agent(USER_AGENT).build()?,
+            service_config: Default::default(),
         };
         Ok(client)
     }
@@ -327,25 +331,25 @@ impl Client {
     }
 
     /// Internal function to handle pagination filters and return the appropriate values.
+    /// If limit is omitted, it will use the max page size from the service config.
     async fn pagination_filter(
         &self,
         pagination_filter: PaginationFilter,
     ) -> (Option<String>, Option<String>, Option<i32>, Option<i32>) {
-        let limit = if let Some(limit) = pagination_filter.limit {
-            limit
-        } else {
-            let cfg = self.service_config().await;
-            if let Ok(cfg) = cfg {
-                cfg.max_page_size
-            } else {
-                DEFAULT_ITEMS_PER_PAGE
-            }
-        };
+        let limit = pagination_filter
+            .limit
+            .unwrap_or(self.max_page_size().await.unwrap_or(DEFAULT_ITEMS_PER_PAGE));
+
         let (after, before, first, last) = match pagination_filter.direction {
             Direction::Forward => (pagination_filter.cursor, None, Some(limit), None),
             Direction::Backward => (None, pagination_filter.cursor, None, Some(limit)),
         };
         (after, before, first, last)
+    }
+
+    /// Lazily fetch the max page size
+    pub async fn max_page_size(&self) -> Result<i32> {
+        self.service_config().await.map(|cfg| cfg.max_page_size)
     }
 
     /// Run a query on the GraphQL server and return the response.
@@ -418,14 +422,26 @@ impl Client {
 
     /// Get the GraphQL service configuration, including complexity limits, read and mutation limits,
     /// supported versions, and others.
-    pub async fn service_config(&self) -> Result<ServiceConfig, Error> {
-        let operation = ServiceConfigQuery::build(());
-        let response = self.run_query(&operation).await?;
+    pub async fn service_config(&self) -> Result<&ServiceConfig, Error> {
+        // If the value is already initialized, return it
+        if let Some(service_config) = self.service_config.get() {
+            return Ok(service_config);
+        }
 
-        response
-            .data
-            .map(|s| s.service_config)
-            .ok_or_else(|| Error::msg("No data in response"))
+        // Otherwise, fetch and initialize it
+        let service_config = {
+            let operation = ServiceConfigQuery::build(());
+            let response = self.run_query(&operation).await?;
+
+            response
+                .data
+                .map(|s| s.service_config)
+                .ok_or_else(|| Error::msg("No data in response"))?
+        };
+
+        let service_config = self.service_config.get_or_init(move || service_config);
+
+        Ok(service_config)
     }
 
     /// Get the list of active validators for the provided epoch, including related metadata.
@@ -707,7 +723,7 @@ impl Client {
         stream_paginated_query(move |filter| self.checkpoints(filter), streaming_direction)
     }
 
-    /// Return the sequence number of the latest checkpoint that has been executed.  
+    /// Return the sequence number of the latest checkpoint that has been executed.
     pub async fn latest_checkpoint_sequence_number(
         &self,
     ) -> Result<Option<CheckpointSequenceNumber>, Error> {
