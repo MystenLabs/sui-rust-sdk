@@ -447,10 +447,7 @@ impl Client {
                 return Err(QueryResponseError(errors).into());
             }
 
-            response
-                .data
-                .map(|s| s.service_config)
-                .ok_or_else(|| EmptyResponse)
+            response.data.map(|s| s.service_config).ok_or(EmptyResponse)
         }?;
 
         let service_config = self.service_config.get_or_init(move || service_config);
