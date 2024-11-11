@@ -1,0 +1,8 @@
+[package]
+name = "sui-graphql-client-build"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+cynic-codegen = "3.8.0"
+
