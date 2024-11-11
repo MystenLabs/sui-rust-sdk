@@ -105,7 +105,6 @@ use reqwest::Url;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::str::FromStr;
-use tokio::sync::OnceCell;
 
 use crate::query_types::CheckpointTotalTxQuery;
 
@@ -116,7 +115,7 @@ const TESTNET_HOST: &str = "https://sui-testnet.mystenlabs.com/graphql";
 const DEVNET_HOST: &str = "https://sui-devnet.mystenlabs.com/graphql";
 const LOCAL_HOST: &str = "http://localhost:9125/graphql";
 static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
-static MAX_PAGE_SIZE: OnceCell<i32> = OnceCell::const_new();
+
 // ===========================================================================
 // Output Types
 // ===========================================================================
@@ -276,6 +275,8 @@ pub struct Client {
     rpc: Url,
     /// The reqwest client.
     inner: reqwest::Client,
+
+    service_config: std::sync::OnceLock<ServiceConfig>,
 }
 
 impl Client {
@@ -290,6 +291,7 @@ impl Client {
         let client = Client {
             rpc,
             inner: reqwest::Client::builder().user_agent(USER_AGENT).build()?,
+            service_config: Default::default(),
         };
         Ok(client)
     }
@@ -347,24 +349,9 @@ impl Client {
 
     /// Lazily fetch the max page size
     pub async fn max_page_size(&self) -> Result<i32> {
-        // If the value is already initialized, return it
-        if let Some(&size) = MAX_PAGE_SIZE.get() {
-            return Ok(size);
-        }
-
-        // Otherwise, fetch and initialize it
-        let size = match self.service_config().await {
-            Ok(cfg) => cfg.max_page_size,
-            Err(_) => DEFAULT_ITEMS_PER_PAGE,
-        };
-
-        // Try to set the value, handling race conditions
-        MAX_PAGE_SIZE
-            .set(size)
-            .map_err(|_| anyhow!("Failed to initialize max page size"))?;
-
-        Ok(size)
+        self.service_config().await.map(|cfg| cfg.max_page_size)
     }
+
     /// Run a query on the GraphQL server and return the response.
     /// This method returns [`cynic::GraphQlResponse`]  over the query type `T`, and it is
     /// intended to be used with custom queries.
@@ -435,14 +422,26 @@ impl Client {
 
     /// Get the GraphQL service configuration, including complexity limits, read and mutation limits,
     /// supported versions, and others.
-    pub async fn service_config(&self) -> Result<ServiceConfig, Error> {
-        let operation = ServiceConfigQuery::build(());
-        let response = self.run_query(&operation).await?;
+    pub async fn service_config(&self) -> Result<&ServiceConfig, Error> {
+        // If the value is already initialized, return it
+        if let Some(service_config) = self.service_config.get() {
+            return Ok(service_config);
+        }
 
-        response
-            .data
-            .map(|s| s.service_config)
-            .ok_or_else(|| Error::msg("No data in response"))
+        // Otherwise, fetch and initialize it
+        let service_config = {
+            let operation = ServiceConfigQuery::build(());
+            let response = self.run_query(&operation).await?;
+
+            response
+                .data
+                .map(|s| s.service_config)
+                .ok_or_else(|| Error::msg("No data in response"))?
+        };
+
+        let service_config = self.service_config.get_or_init(move || service_config);
+
+        Ok(service_config)
     }
 
     /// Get the list of active validators for the provided epoch, including related metadata.
@@ -724,7 +723,7 @@ impl Client {
         stream_paginated_query(move |filter| self.checkpoints(filter), streaming_direction)
     }
 
-    /// Return the sequence number of the latest checkpoint that has been executed.  
+    /// Return the sequence number of the latest checkpoint that has been executed.
     pub async fn latest_checkpoint_sequence_number(
         &self,
     ) -> Result<Option<CheckpointSequenceNumber>, Error> {
