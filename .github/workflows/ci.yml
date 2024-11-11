@@ -52,6 +52,7 @@ jobs:
 
       - name: rust version
         run: |
+          rustup default 1.81.0
           rustc --version
           cargo --version
 
