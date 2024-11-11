@@ -42,9 +42,9 @@
 /// }
 /// ```
 pub fn register_schema(schema_name: &str) {
-    let sdl = include_bytes!("../schema.graphql");
+    let sdl = include_str!("../schema.graphql");
     cynic_codegen::register_schema(schema_name)
-        .from_sdl(std::str::from_utf8(sdl).unwrap())
+        .from_sdl(sdl)
         .expect("Failed to find GraphQL Schema")
         .as_default()
         .unwrap();
