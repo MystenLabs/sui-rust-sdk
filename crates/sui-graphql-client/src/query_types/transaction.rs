@@ -5,6 +5,7 @@ use anyhow::Error;
 use base64ct::Encoding;
 use sui_types::types::SignedTransaction;
 use sui_types::types::Transaction;
+use sui_types::types::TransactionEffects;
 use sui_types::types::UserSignature;
 
 use crate::query_types::schema;
@@ -31,6 +32,17 @@ pub struct TransactionBlockQuery {
 #[cynic(
     schema = "rpc",
     graphql_type = "Query",
+    variables = "TransactionBlockArgs"
+)]
+pub struct TransactionBlockEffectsQuery {
+    #[arguments(digest: $digest)]
+    pub transaction_block: Option<TxBlockEffects>,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(
+    schema = "rpc",
+    graphql_type = "Query",
     variables = "TransactionBlocksQueryArgs"
 )]
 pub struct TransactionBlocksQuery {
@@ -38,6 +50,16 @@ pub struct TransactionBlocksQuery {
     pub transaction_blocks: TransactionBlockConnection,
 }
 
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(
+    schema = "rpc",
+    graphql_type = "Query",
+    variables = "TransactionBlocksQueryArgs"
+)]
+pub struct TransactionBlocksEffectsQuery {
+    #[arguments(first: $first, after: $after, last: $last, before: $before, filter: $filter)]
+    pub transaction_blocks: TransactionBlockEffectsConnection,
+}
 // ===========================================================================
 // Transaction Block(s) Query Args
 // ===========================================================================
@@ -64,8 +86,13 @@ pub struct TransactionBlocksQueryArgs<'a> {
 #[cynic(schema = "rpc", graphql_type = "TransactionBlock")]
 pub struct TransactionBlock {
     pub bcs: Option<Base64>,
-    pub effects: Option<TransactionBlockEffects>,
     pub signatures: Option<Vec<Base64>>,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "TransactionBlock")]
+pub struct TxBlockEffects {
+    pub effects: Option<TransactionBlockEffects>,
 }
 
 #[derive(cynic::QueryFragment, Debug)]
@@ -107,6 +134,13 @@ pub struct TransactionBlockConnection {
     pub page_info: PageInfo,
 }
 
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "TransactionBlockConnection")]
+pub struct TransactionBlockEffectsConnection {
+    pub nodes: Vec<TxBlockEffects>,
+    pub page_info: PageInfo,
+}
+
 impl TryFrom<TransactionBlock> for SignedTransaction {
     type Error = anyhow::Error;
 
@@ -137,5 +171,21 @@ impl TryFrom<TransactionBlock> for SignedTransaction {
         } else {
             Err(Error::msg("Cannot decode transaction"))
         }
+    }
+}
+
+impl TryFrom<TxBlockEffects> for TransactionEffects {
+    type Error = anyhow::Error;
+
+    fn try_from(value: TxBlockEffects) -> Result<Self, Self::Error> {
+        let effects = value
+            .effects
+            .map(|fx| base64ct::Base64::decode_vec(fx.bcs.unwrap().0.as_str()))
+            .transpose()
+            .map_err(|_| Error::msg("Cannot decode Base64 effects bcs bytes"))?
+            .map(|bcs| bcs::from_bytes::<TransactionEffects>(&bcs))
+            .transpose()
+            .map_err(|_| Error::msg("Cannot decode bcs bytes into TransactionEffects"))?;
+        effects.ok_or_else(|| Error::msg("Cannot decode effects"))
     }
 }
