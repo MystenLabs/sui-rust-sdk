@@ -87,6 +87,7 @@ use sui_types::types::MovePackage;
 use sui_types::types::Object;
 use sui_types::types::SignedTransaction;
 use sui_types::types::Transaction;
+use sui_types::types::TransactionDigest;
 use sui_types::types::TransactionEffects;
 use sui_types::types::TransactionKind;
 use sui_types::types::TypeTag;
@@ -1487,7 +1488,7 @@ impl Client {
     /// Get a transaction's effects by its digest.
     pub async fn transaction_effects(
         &self,
-        digest: Digest,
+        digest: TransactionDigest,
     ) -> Result<Option<TransactionEffects>, Error> {
         let operation = TransactionBlockEffectsQuery::build(TransactionBlockArgs {
             digest: digest.to_string(),
@@ -2051,7 +2052,7 @@ mod tests {
             .await
             .unwrap();
         let tx_digest = transactions.data()[0].transaction.digest();
-        let effects = client.transaction_effects(tx_digest.into()).await.unwrap();
+        let effects = client.transaction_effects(tx_digest).await.unwrap();
         assert!(
             effects.is_some(),
             "Transaction effects query failed for {} network.",
