@@ -73,6 +73,17 @@ impl Error {
         }
     }
 
+    /// Special constructor for queries that expect to return data but it's none.
+    pub(crate) fn empty_response_error() -> Self {
+        Self {
+            inner: Box::new(InnerError {
+                kind: Kind::Query,
+                source: Some("Expected a non-empty response data from query".into()),
+                query_errors: None,
+            }),
+        }
+    }
+
     /// Create a Query kind of error with the original graphql errors.
     pub(crate) fn graphql_error(errors: Vec<GraphQlError>) -> Self {
         Self {
@@ -85,8 +96,21 @@ impl Error {
     }
 }
 
+impl std::fmt::Display for Kind {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Kind::Deserialization => write!(f, "Deserialization error:"),
+            Kind::Parse => write!(f, "Parse error:"),
+            Kind::Query => write!(f, "Query error:"),
+            Kind::Other => write!(f, "Error:"),
+        }
+    }
+}
+
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.inner.kind)?;
+
         if let Some(source) = &self.inner.source {
             writeln!(f, " {}", source)?;
         }

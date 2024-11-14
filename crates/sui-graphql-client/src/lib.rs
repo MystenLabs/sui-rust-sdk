@@ -380,12 +380,10 @@ impl Client {
             return Err(Error::graphql_error(errors));
         }
 
-        response.data.map(|e| e.chain_identifier).ok_or_else(|| {
-            Error::from_error(
-                Kind::Query,
-                "Expected response data from query but got None",
-            )
-        })
+        response
+            .data
+            .map(|e| e.chain_identifier)
+            .ok_or_else(Error::empty_response_error)
     }
 
     /// Get the reference gas price for the provided epoch or the last known one if no epoch is
@@ -433,12 +431,10 @@ impl Client {
                 return Err(Error::graphql_error(errors));
             }
 
-            response.data.map(|s| s.service_config).ok_or_else(|| {
-                Error::from_error(
-                    Kind::Other,
-                    "Expected response data from query but got None",
-                )
-            })?
+            response
+                .data
+                .map(|s| s.service_config)
+                .ok_or_else(Error::empty_response_error)?
         };
 
         let service_config = self.service_config.get_or_init(move || service_config);
@@ -515,7 +511,7 @@ impl Client {
         if digest.is_some() && seq_num.is_some() {
             return Err(Error::from_error(
                 Kind::Other,
-                "Conflicting arguments. Cannot provide both digest and seq_num, only one can be provided",
+                "Conflicting arguments: either digest or seq_num can be provided, but not both.",
             ));
         }
 
@@ -557,12 +553,7 @@ impl Client {
         let total_balance = response
             .data
             .map(|b| b.owner.and_then(|o| o.balance.map(|b| b.total_balance)))
-            .ok_or_else(|| {
-                Error::from_error(
-                    Kind::Query,
-                    "Expected response data from query but got None",
-                )
-            })?
+            .ok_or_else(Error::empty_response_error)?
             .flatten()
             .map(|x| x.0.parse::<u128>())
             .transpose()?;
@@ -677,10 +668,7 @@ impl Client {
         response
             .data
             .map(|c| c.checkpoint.map(|c| c.try_into()).transpose())
-            .ok_or(Error::from_error(
-                Kind::Query,
-                "Expected response data from query but got None",
-            ))?
+            .ok_or(Error::empty_response_error())?
     }
 
     /// Get a page of [`CheckpointSummary`] for the provided parameters.
@@ -1315,7 +1303,7 @@ impl Client {
         if first.is_some() && last.is_some() {
             return Err(Error::from_error(
                 Kind::Other,
-                "Conflicting arguments. Only one of first or last can be provided.",
+                "Conflicting arguments: either first or last can be provided, but not both.",
             ));
         }
 
