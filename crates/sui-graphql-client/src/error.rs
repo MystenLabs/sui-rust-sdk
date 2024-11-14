@@ -10,31 +10,78 @@ use sui_types::types::AddressParseError;
 use sui_types::types::DigestParseError;
 use sui_types::types::TypeParseError;
 
-type BoxError = Box<dyn std::error::Error + Send + Sync>;
+type BoxError = Box<dyn std::error::Error + Send + Sync + 'static>;
 
 /// General error type for the client. It is used to wrap all the possible errors that can occur.
 #[derive(Debug)]
 pub struct Error {
-    inner: Box<ClientError>,
+    inner: Box<InnerError>,
 }
 
 /// Error type for the client. It is split into multiple fields to allow for more granular error
 /// handling. The `source` field is used to store the original error.
 #[derive(Debug)]
-pub struct ClientError {
+struct InnerError {
     /// Error when the GraphQL server returns an error.
-    pub query_response_error: bool,
+    query_response_error: bool,
     /// Error when deserialization a value (mostly bcs or base64).
-    pub deserialize_error: bool,
+    deserialize_error: bool,
     /// Error when parsing a value.
-    pub parse_error: bool,
+    parse_error: bool,
     /// Graphql server returned an empty response, though it was expected to return a value.
-    pub empty_response_error: bool,
+    empty_response_error: bool,
     /// Error when converting from a type to another.
-    pub conversion_error: bool,
+    conversion_error: bool,
     /// The original error. Use downcasting to get the original error based on the error type from
     /// above.
-    pub source: Option<BoxError>,
+    source: Option<BoxError>,
+    /// GraphQL errors returned by the server.
+    graphql_errors: Vec<GraphQlError>,
+}
+
+impl Error {
+    /// Create a new error with the given source.
+    pub fn new<E: Into<BoxError>>(error: E) -> Self {
+        Self::from_error(error)
+    }
+
+    /// Check if the error is a query response error.
+    pub fn is_query_response_error(&self) -> bool {
+        self.inner.query_response_error
+    }
+
+    /// Check if the error is a deserialize error.
+    pub fn is_deserialize_error(&self) -> bool {
+        self.inner.deserialize_error
+    }
+
+    /// Check if the error is a parse error.
+    pub fn is_parse_error(&self) -> bool {
+        self.inner.parse_error
+    }
+
+    /// Check if the error is an empty response error.
+    pub fn is_empty_response_error(&self) -> bool {
+        self.inner.empty_response_error
+    }
+
+    /// Check if the error is a conversion error.
+    pub fn is_conversion_error(&self) -> bool {
+        self.inner.conversion_error
+    }
+
+    /// Get the source error.
+    pub fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.inner.source.as_deref().map(|e| e as _)
+    }
+}
+
+enum Kind {
+    QueryResponseError,
+    DeserializeError(String),
+    ParseError,
+    EmptyResponseError,
+    ConversionError,
 }
 
 /// An empty response with no data from the GraphQL server. This is used to signal that the API
@@ -220,7 +267,7 @@ impl Error {
     /// Create an empty error with no source.
     fn empty() -> Self {
         Self {
-            inner: Box::new(ClientError {
+            inner: Box::new(InnerError {
                 query_response_error: false,
                 deserialize_error: false,
                 parse_error: false,
