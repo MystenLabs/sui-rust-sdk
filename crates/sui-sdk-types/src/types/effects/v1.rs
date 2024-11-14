@@ -87,6 +87,13 @@ pub struct ObjectReferenceWithOwner {
     pub owner: Owner,
 }
 
+impl TransactionEffectsV1 {
+    /// The status of the execution
+    pub fn status(&self) -> &ExecutionStatus {
+        &self.status
+    }
+}
+
 #[cfg(feature = "serde")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
 mod serialization {

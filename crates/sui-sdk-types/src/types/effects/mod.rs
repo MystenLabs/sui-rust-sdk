@@ -13,6 +13,8 @@ pub use v2::TransactionEffectsV2;
 pub use v2::UnchangedSharedKind;
 pub use v2::UnchangedSharedObject;
 
+use crate::types::execution_status::ExecutionStatus;
+
 /// The response from processing a transaction or a certified transaction
 #[derive(Eq, PartialEq, Clone, Debug)]
 #[cfg_attr(
@@ -26,6 +28,16 @@ pub enum TransactionEffects {
     V1(Box<TransactionEffectsV1>),
     #[cfg_attr(feature = "schemars", schemars(rename = "2"))]
     V2(Box<TransactionEffectsV2>),
+}
+
+impl TransactionEffects {
+    /// Return the status of the transaction
+    pub fn status(&self) -> &ExecutionStatus {
+        match self {
+            TransactionEffects::V1(e) => e.status(),
+            TransactionEffects::V2(e) => e.status(),
+        }
+    }
 }
 
 #[cfg(feature = "serde")]

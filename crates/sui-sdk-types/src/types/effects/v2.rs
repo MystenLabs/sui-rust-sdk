@@ -9,6 +9,8 @@ use crate::types::ObjectId;
 use crate::types::TransactionDigest;
 use crate::types::TransactionEventsDigest;
 
+use super::TransactionEffectsV1;
+
 /// The response from processing a transaction or a certified transaction
 #[derive(Eq, PartialEq, Clone, Debug)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -16,7 +18,7 @@ use crate::types::TransactionEventsDigest;
 pub struct TransactionEffectsV2 {
     /// The status of the execution
     #[cfg_attr(feature = "schemars", schemars(flatten))]
-    pub status: ExecutionStatus,
+    status: ExecutionStatus,
     /// The epoch when this transaction was executed.
     #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub epoch: EpochId,
@@ -183,6 +185,13 @@ pub enum IdOperation {
     None,
     Created,
     Deleted,
+}
+
+impl TransactionEffectsV2 {
+    /// The status of the execution
+    pub fn status(&self) -> &ExecutionStatus {
+        &self.status
+    }
 }
 
 #[cfg(feature = "serde")]
