@@ -1489,7 +1489,7 @@ impl Client {
     pub async fn transaction_effects(
         &self,
         digest: TransactionDigest,
-    ) -> Result<Option<TransactionEffects>, Error> {
+    ) -> Result<Option<TransactionEffects>, error::Error> {
         let operation = TransactionBlockEffectsQuery::build(TransactionBlockArgs {
             digest: digest.to_string(),
         });
@@ -1500,7 +1500,6 @@ impl Client {
             .and_then(|d| d.transaction_block)
             .map(|tx| tx.try_into())
             .transpose()
-            .map_err(|e| Error::msg(format!("Cannot decode transaction: {e}")))
     }
 
     /// Get a page of transactions based on the provided filters.
@@ -1546,7 +1545,7 @@ impl Client {
         &self,
         filter: Option<TransactionsFilter<'a>>,
         pagination_filter: PaginationFilter,
-    ) -> Result<Page<TransactionEffects>, Error> {
+    ) -> Result<Page<TransactionEffects>, error::Error> {
         let (after, before, first, last) = self.pagination_filter(pagination_filter).await;
 
         let operation = TransactionBlocksEffectsQuery::build(TransactionBlocksQueryArgs {
@@ -1567,7 +1566,7 @@ impl Client {
                 .nodes
                 .into_iter()
                 .map(|n| n.try_into())
-                .collect::<Result<Vec<_>>>()?;
+                .collect::<Result<Vec<_>, error::Error>>()?;
             let page = Page::new(page_info, transactions);
             Ok(page)
         } else {
@@ -1592,7 +1591,7 @@ impl Client {
         &'a self,
         filter: Option<TransactionsFilter<'a>>,
         streaming_direction: Direction,
-    ) -> impl Stream<Item = Result<TransactionEffects, Error>> + 'a {
+    ) -> impl Stream<Item = Result<TransactionEffects, error::Error>> + 'a {
         stream_paginated_query(
             move |pag_filter| self.transactions_effects(filter.clone(), pag_filter),
             streaming_direction,
