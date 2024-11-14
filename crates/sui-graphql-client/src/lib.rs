@@ -8,10 +8,7 @@ pub mod faucet;
 pub mod query_types;
 pub mod streams;
 
-use error::ConflictingArguments;
-use error::EmptyResponse;
-use error::ParseError;
-use error::QueryResponseError;
+use error::Error;
 use query_types::ActiveValidatorsArgs;
 use query_types::ActiveValidatorsQuery;
 use query_types::BalanceArgs;
@@ -110,6 +107,8 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::str::FromStr;
 
+use crate::error::Kind;
+use crate::error::Result;
 use crate::query_types::CheckpointTotalTxQuery;
 
 const DEFAULT_ITEMS_PER_PAGE: i32 = 10;
@@ -235,10 +234,7 @@ impl From<BcsName> for NameValue {
 
 impl DynamicFieldOutput {
     /// Deserialize the name of the dynamic field into the specified type.
-    pub fn deserialize_name<T: DeserializeOwned>(
-        &self,
-        expected_type: &TypeTag,
-    ) -> Result<T, error::Error> {
+    pub fn deserialize_name<T: DeserializeOwned>(&self, expected_type: &TypeTag) -> Result<T> {
         assert_eq!(
             expected_type, &self.name.type_,
             "Expected type {}, but got {}",
@@ -246,14 +242,11 @@ impl DynamicFieldOutput {
         );
 
         let bcs = &self.name.bcs;
-        bcs::from_bytes::<T>(bcs).map_err(|e| e.into())
+        bcs::from_bytes::<T>(bcs).map_err(Into::into)
     }
 
     /// Deserialize the value of the dynamic field into the specified type.
-    pub fn deserialize_value<T: DeserializeOwned>(
-        &self,
-        expected_type: &TypeTag,
-    ) -> Result<T, error::Error> {
+    pub fn deserialize_value<T: DeserializeOwned>(&self, expected_type: &TypeTag) -> Result<T> {
         let typetag = self.value.as_ref().map(|(typename, _)| typename);
         assert_eq!(
             Some(&expected_type),
@@ -264,9 +257,9 @@ impl DynamicFieldOutput {
         );
 
         if let Some((_, bcs)) = &self.value {
-            bcs::from_bytes::<T>(bcs).map_err(|e| e.into())
+            bcs::from_bytes::<T>(bcs).map_err(Into::into)
         } else {
-            Err(error::DeserializeError("No value to deserialize".to_string()).into())
+            Err(Error::from_error(Kind::Deserialization, "Value is missing"))
         }
     }
 }
@@ -288,7 +281,7 @@ impl Client {
     // ===========================================================================
 
     /// Create a new GraphQL client with the provided server address.
-    pub fn new(server: &str) -> Result<Self, error::Error> {
+    pub fn new(server: &str) -> Result<Self> {
         let rpc = reqwest::Url::parse(server)?;
 
         let client = Client {
@@ -322,7 +315,7 @@ impl Client {
 
     /// Set the server address for the GraphQL GraphQL client. It should be a valid URL with a host and
     /// optionally a port number.
-    pub fn set_rpc_server(&mut self, server: &str) -> Result<(), error::Error> {
+    pub fn set_rpc_server(&mut self, server: &str) -> Result<()> {
         let rpc = reqwest::Url::parse(server)?;
         self.rpc = rpc;
         Ok(())
@@ -351,17 +344,14 @@ impl Client {
     }
 
     /// Lazily fetch the max page size
-    pub async fn max_page_size(&self) -> Result<i32, error::Error> {
+    pub async fn max_page_size(&self) -> Result<i32> {
         self.service_config().await.map(|cfg| cfg.max_page_size)
     }
 
     /// Run a query on the GraphQL server and return the response.
     /// This method returns [`cynic::GraphQlResponse`]  over the query type `T`, and it is
     /// intended to be used with custom queries.
-    pub async fn run_query<T, V>(
-        &self,
-        operation: &Operation<T, V>,
-    ) -> Result<GraphQlResponse<T>, error::Error>
+    pub async fn run_query<T, V>(&self, operation: &Operation<T, V>) -> Result<GraphQlResponse<T>>
     where
         T: serde::de::DeserializeOwned,
         V: serde::Serialize,
@@ -382,18 +372,20 @@ impl Client {
     // ===========================================================================
 
     /// Get the chain identifier.
-    pub async fn chain_id(&self) -> Result<String, error::Error> {
+    pub async fn chain_id(&self) -> Result<String> {
         let operation = ChainIdentifierQuery::build(());
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
 
-        response
-            .data
-            .map(|e| e.chain_identifier)
-            .ok_or_else(|| EmptyResponse.into())
+        response.data.map(|e| e.chain_identifier).ok_or_else(|| {
+            Error::from_error(
+                Kind::Query,
+                "Expected response data from query but got None",
+            )
+        })
     }
 
     /// Get the reference gas price for the provided epoch or the last known one if no epoch is
@@ -401,30 +393,24 @@ impl Client {
     ///
     /// This will return `Ok(None)` if the epoch requested is not available in the GraphQL service
     /// (e.g., due to pruning).
-    pub async fn reference_gas_price(
-        &self,
-        epoch: Option<u64>,
-    ) -> Result<Option<u64>, error::Error> {
+    pub async fn reference_gas_price(&self, epoch: Option<u64>) -> Result<Option<u64>> {
         let operation = EpochSummaryQuery::build(EpochSummaryArgs { id: epoch });
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
 
         let d = response.data;
 
         d.and_then(|e| e.epoch)
             .and_then(|e| e.reference_gas_price)
-            .map(|x| x.try_into().map_err(|e: ParseError| e.into()))
+            .map(|x| x.try_into())
             .transpose()
     }
 
     /// Get the protocol configuration.
-    pub async fn protocol_config(
-        &self,
-        version: Option<u64>,
-    ) -> Result<Option<ProtocolConfigs>, error::Error> {
+    pub async fn protocol_config(&self, version: Option<u64>) -> Result<Option<ProtocolConfigs>> {
         let operation = ProtocolConfigQuery::build(ProtocolVersionArgs { id: version });
         let response = self.run_query(&operation).await?;
         Ok(response.data.map(|p| p.protocol_config))
@@ -432,7 +418,7 @@ impl Client {
 
     /// Get the GraphQL service configuration, including complexity limits, read and mutation limits,
     /// supported versions, and others.
-    pub async fn service_config(&self) -> Result<&ServiceConfig, error::Error> {
+    pub async fn service_config(&self) -> Result<&ServiceConfig> {
         // If the value is already initialized, return it
         if let Some(service_config) = self.service_config.get() {
             return Ok(service_config);
@@ -444,11 +430,16 @@ impl Client {
             let response = self.run_query(&operation).await?;
 
             if let Some(errors) = response.errors {
-                return Err(QueryResponseError(errors).into());
+                return Err(Error::graphql_error(errors));
             }
 
-            response.data.map(|s| s.service_config).ok_or(EmptyResponse)
-        }?;
+            response.data.map(|s| s.service_config).ok_or_else(|| {
+                Error::from_error(
+                    Kind::Other,
+                    "Expected response data from query but got None",
+                )
+            })?
+        };
 
         let service_config = self.service_config.get_or_init(move || service_config);
 
@@ -461,7 +452,7 @@ impl Client {
         &self,
         epoch: Option<u64>,
         pagination_filter: PaginationFilter,
-    ) -> Result<Page<Validator>, error::Error> {
+    ) -> Result<Page<Validator>> {
         let (after, before, first, last) = self.pagination_filter(pagination_filter).await;
 
         let operation = ActiveValidatorsQuery::build(ActiveValidatorsArgs {
@@ -474,7 +465,7 @@ impl Client {
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
 
         if let Some(validators) = response
@@ -496,27 +487,21 @@ impl Client {
 
     /// The total number of transaction blocks in the network by the end of the provided
     /// checkpoint digest.
-    pub async fn total_transaction_blocks_by_digest(
-        &self,
-        digest: Digest,
-    ) -> Result<Option<u64>, error::Error> {
+    pub async fn total_transaction_blocks_by_digest(&self, digest: Digest) -> Result<Option<u64>> {
         self.internal_total_transaction_blocks(Some(digest.to_string()), None)
             .await
     }
 
     /// The total number of transaction blocks in the network by the end of the provided checkpoint
     /// sequence number.
-    pub async fn total_transaction_blocks_by_seq_num(
-        &self,
-        seq_num: u64,
-    ) -> Result<Option<u64>, error::Error> {
+    pub async fn total_transaction_blocks_by_seq_num(&self, seq_num: u64) -> Result<Option<u64>> {
         self.internal_total_transaction_blocks(None, Some(seq_num))
             .await
     }
 
     /// The total number of transaction blocks in the network by the end of the last known
     /// checkpoint.
-    pub async fn total_transaction_blocks(&self) -> Result<Option<u64>, error::Error> {
+    pub async fn total_transaction_blocks(&self) -> Result<Option<u64>> {
         self.internal_total_transaction_blocks(None, None).await
     }
 
@@ -526,12 +511,12 @@ impl Client {
         &self,
         digest: Option<String>,
         seq_num: Option<u64>,
-    ) -> Result<Option<u64>, error::Error> {
+    ) -> Result<Option<u64>> {
         if digest.is_some() && seq_num.is_some() {
-            return Err(ConflictingArguments(
-                "cannot provide both digest and seq_num. Only one can be provided".to_string(),
-            )
-            .into());
+            return Err(Error::from_error(
+                Kind::Other,
+                "Conflicting arguments. Cannot provide both digest and seq_num, only one can be provided",
+            ));
         }
 
         let operation = CheckpointTotalTxQuery::build(CheckpointArgs {
@@ -543,7 +528,7 @@ impl Client {
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
 
         Ok(response
@@ -558,11 +543,7 @@ impl Client {
 
     /// Get the balance of all the coins owned by address for the provided coin type.
     /// Coin type will default to `0x2::coin::Coin<0x2::sui::SUI>` if not provided.
-    pub async fn balance(
-        &self,
-        address: Address,
-        coin_type: Option<&str>,
-    ) -> Result<Option<u128>, error::Error> {
+    pub async fn balance(&self, address: Address, coin_type: Option<&str>) -> Result<Option<u128>> {
         let operation = BalanceQuery::build(BalanceArgs {
             address,
             coin_type: coin_type.map(|x| x.to_string()),
@@ -570,13 +551,18 @@ impl Client {
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
 
         let total_balance = response
             .data
             .map(|b| b.owner.and_then(|o| o.balance.map(|b| b.total_balance)))
-            .ok_or(EmptyResponse)?
+            .ok_or_else(|| {
+                Error::from_error(
+                    Kind::Query,
+                    "Expected response data from query but got None",
+                )
+            })?
             .flatten()
             .map(|x| x.0.parse::<u128>())
             .transpose()?;
@@ -596,7 +582,7 @@ impl Client {
         owner: Address,
         coin_type: Option<&str>,
         pagination_filter: PaginationFilter,
-    ) -> Result<Page<Coin>, error::Error> {
+    ) -> Result<Page<Coin>> {
         let response = self
             .objects(
                 Some(ObjectFilter {
@@ -629,7 +615,7 @@ impl Client {
         address: Address,
         coin_type: Option<&'static str>,
         streaming_direction: Direction,
-    ) -> impl Stream<Item = Result<Coin, error::Error>> {
+    ) -> impl Stream<Item = Result<Coin>> {
         stream_paginated_query(
             move |filter| self.coins(address, coin_type, filter),
             streaming_direction,
@@ -637,27 +623,24 @@ impl Client {
     }
 
     /// Get the coin metadata for the coin type.
-    pub async fn coin_metadata(
-        &self,
-        coin_type: &str,
-    ) -> Result<Option<CoinMetadata>, error::Error> {
+    pub async fn coin_metadata(&self, coin_type: &str) -> Result<Option<CoinMetadata>> {
         let operation = CoinMetadataQuery::build(CoinMetadataArgs { coin_type });
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
 
         Ok(response.data.and_then(|x| x.coin_metadata))
     }
 
     /// Get total supply for the coin type.
-    pub async fn total_supply(&self, coin_type: &str) -> Result<Option<u64>, error::Error> {
+    pub async fn total_supply(&self, coin_type: &str) -> Result<Option<u64>> {
         let coin_metadata = self.coin_metadata(coin_type).await?;
 
         coin_metadata
             .and_then(|c| c.supply)
-            .map(|c| c.try_into().map_err(|e: ParseError| e.into()))
+            .map(|c| c.try_into())
             .transpose()
     }
 
@@ -671,12 +654,12 @@ impl Client {
         &self,
         digest: Option<Digest>,
         seq_num: Option<u64>,
-    ) -> Result<Option<CheckpointSummary>, error::Error> {
+    ) -> Result<Option<CheckpointSummary>> {
         if digest.is_some() && seq_num.is_some() {
-            return Err(ConflictingArguments(
-                "either digest or seq_num must be provided".to_string(),
-            )
-            .into());
+            return Err(Error::from_error(
+                Kind::Other,
+                "either digest or seq_num must be provided",
+            ));
         }
 
         let operation = CheckpointQuery::build(CheckpointArgs {
@@ -688,20 +671,23 @@ impl Client {
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
 
         response
             .data
             .map(|c| c.checkpoint.map(|c| c.try_into()).transpose())
-            .ok_or(EmptyResponse)?
+            .ok_or(Error::from_error(
+                Kind::Query,
+                "Expected response data from query but got None",
+            ))?
     }
 
     /// Get a page of [`CheckpointSummary`] for the provided parameters.
     pub async fn checkpoints<'a>(
         &self,
         pagination_filter: PaginationFilter,
-    ) -> Result<Page<CheckpointSummary>, error::Error> {
+    ) -> Result<Page<CheckpointSummary>> {
         let (after, before, first, last) = self.pagination_filter(pagination_filter).await;
 
         let operation = CheckpointsQuery::build(CheckpointsArgs {
@@ -713,7 +699,7 @@ impl Client {
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
 
         if let Some(checkpoints) = response.data {
@@ -736,14 +722,14 @@ impl Client {
     pub async fn checkpoints_stream(
         &self,
         streaming_direction: Direction,
-    ) -> impl Stream<Item = Result<CheckpointSummary, error::Error>> + '_ {
+    ) -> impl Stream<Item = Result<CheckpointSummary>> + '_ {
         stream_paginated_query(move |filter| self.checkpoints(filter), streaming_direction)
     }
 
     /// Return the sequence number of the latest checkpoint that has been executed.
     pub async fn latest_checkpoint_sequence_number(
         &self,
-    ) -> Result<Option<CheckpointSequenceNumber>, error::Error> {
+    ) -> Result<Option<CheckpointSequenceNumber>> {
         Ok(self
             .checkpoint(None, None)
             .await?
@@ -779,7 +765,7 @@ impl Client {
         address: Address,
         type_: TypeTag,
         name: impl Into<NameValue>,
-    ) -> Result<Option<DynamicFieldOutput>, error::Error> {
+    ) -> Result<Option<DynamicFieldOutput>> {
         let bcs = name.into().0;
         let operation = DynamicFieldQuery::build(DynamicFieldArgs {
             address,
@@ -792,7 +778,7 @@ impl Client {
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
 
         let result = response
@@ -818,7 +804,7 @@ impl Client {
         address: Address,
         type_: TypeTag,
         name: impl Into<NameValue>,
-    ) -> Result<Option<DynamicFieldOutput>, error::Error> {
+    ) -> Result<Option<DynamicFieldOutput>> {
         let bcs = name.into().0;
         let operation = DynamicObjectFieldQuery::build(DynamicFieldArgs {
             address,
@@ -831,7 +817,7 @@ impl Client {
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
 
         let result: Option<DynamicFieldOutput> = response
@@ -851,7 +837,7 @@ impl Client {
         &self,
         address: Address,
         pagination_filter: PaginationFilter,
-    ) -> Result<Page<DynamicFieldOutput>, error::Error> {
+    ) -> Result<Page<DynamicFieldOutput>> {
         let (after, before, first, last) = self.pagination_filter(pagination_filter).await;
         let operation = DynamicFieldsOwnerQuery::build(DynamicFieldConnectionArgs {
             address,
@@ -863,7 +849,7 @@ impl Client {
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
 
         let Some(DynamicFieldsOwnerQuery { owner: Some(dfs) }) = response.data else {
@@ -876,7 +862,7 @@ impl Client {
                 .nodes
                 .into_iter()
                 .map(TryInto::try_into)
-                .collect::<Result<Vec<_>, error::Error>>()?,
+                .collect::<Result<Vec<_>>>()?,
         ))
     }
 
@@ -886,7 +872,7 @@ impl Client {
         &self,
         address: Address,
         streaming_direction: Direction,
-    ) -> impl Stream<Item = Result<DynamicFieldOutput, error::Error>> + '_ {
+    ) -> impl Stream<Item = Result<DynamicFieldOutput>> + '_ {
         stream_paginated_query(
             move |filter| self.dynamic_fields(address, filter),
             streaming_direction,
@@ -899,14 +885,11 @@ impl Client {
 
     /// Return the number of checkpoints in this epoch. This will return `Ok(None)` if the epoch
     /// requested is not available in the GraphQL service (e.g., due to pruning).
-    pub async fn epoch_total_checkpoints(
-        &self,
-        epoch: Option<u64>,
-    ) -> Result<Option<u64>, error::Error> {
+    pub async fn epoch_total_checkpoints(&self, epoch: Option<u64>) -> Result<Option<u64>> {
         let response = self.epoch_summary(epoch).await?;
 
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
 
         Ok(response
@@ -917,14 +900,11 @@ impl Client {
 
     /// Return the number of transaction blocks in this epoch. This will return `Ok(None)` if the
     /// epoch requested is not available in the GraphQL service (e.g., due to pruning).
-    pub async fn epoch_total_transaction_blocks(
-        &self,
-        epoch: Option<u64>,
-    ) -> Result<Option<u64>, error::Error> {
+    pub async fn epoch_total_transaction_blocks(&self, epoch: Option<u64>) -> Result<Option<u64>> {
         let response = self.epoch_summary(epoch).await?;
 
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
 
         Ok(response
@@ -938,7 +918,7 @@ impl Client {
     async fn epoch_summary(
         &self,
         epoch: Option<u64>,
-    ) -> Result<GraphQlResponse<EpochSummaryQuery>, error::Error> {
+    ) -> Result<GraphQlResponse<EpochSummaryQuery>> {
         let operation = EpochSummaryQuery::build(EpochSummaryArgs { id: epoch });
         self.run_query(&operation).await
     }
@@ -952,7 +932,7 @@ impl Client {
         &self,
         filter: Option<EventFilter>,
         pagination_filter: PaginationFilter,
-    ) -> Result<Page<Event>, error::Error> {
+    ) -> Result<Page<Event>> {
         let (after, before, first, last) = self.pagination_filter(pagination_filter).await;
 
         let operation = EventsQuery::build(EventsQueryArgs {
@@ -966,7 +946,7 @@ impl Client {
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
 
         if let Some(events) = response.data {
@@ -993,7 +973,7 @@ impl Client {
         &self,
         filter: Option<EventFilter>,
         streaming_direction: Direction,
-    ) -> impl Stream<Item = Result<Event, error::Error>> + '_ {
+    ) -> impl Stream<Item = Result<Event>> + '_ {
         stream_paginated_query(
             move |pag_filter| self.events(filter.clone(), pag_filter),
             streaming_direction,
@@ -1008,17 +988,13 @@ impl Client {
     ///
     /// If the object does not exist (e.g., due to pruning), this will return `Ok(None)`.
     /// Similarly, if this is not an object but an address, it will return `Ok(None)`.
-    pub async fn object(
-        &self,
-        address: Address,
-        version: Option<u64>,
-    ) -> Result<Option<Object>, error::Error> {
+    pub async fn object(&self, address: Address, version: Option<u64>) -> Result<Option<Object>> {
         let operation = ObjectQuery::build(ObjectQueryArgs { address, version });
 
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
 
         if let Some(object) = response.data {
@@ -1059,7 +1035,7 @@ impl Client {
         &self,
         filter: Option<ObjectFilter<'_>>,
         pagination_filter: PaginationFilter,
-    ) -> Result<Page<Object>, error::Error> {
+    ) -> Result<Page<Object>> {
         let (after, before, first, last) = self.pagination_filter(pagination_filter).await;
         let operation = ObjectsQuery::build(ObjectsQueryArgs {
             after: after.as_deref(),
@@ -1071,7 +1047,7 @@ impl Client {
 
         let response = self.run_query(&operation).await?;
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
 
         if let Some(objects) = response.data {
@@ -1102,7 +1078,7 @@ impl Client {
         &'a self,
         filter: Option<ObjectFilter<'a>>,
         streaming_direction: Direction,
-    ) -> impl Stream<Item = Result<Object, error::Error>> + 'a {
+    ) -> impl Stream<Item = Result<Object>> + 'a {
         stream_paginated_query(
             move |pag_filter| self.objects(filter.clone(), pag_filter),
             streaming_direction,
@@ -1110,7 +1086,7 @@ impl Client {
     }
 
     /// Return the object's bcs content [`Vec<u8>`] based on the provided [`Address`].
-    pub async fn object_bcs(&self, object_id: Address) -> Result<Option<Vec<u8>>, error::Error> {
+    pub async fn object_bcs(&self, object_id: Address) -> Result<Option<Vec<u8>>> {
         let operation = ObjectQuery::build(ObjectQueryArgs {
             address: object_id,
             version: None,
@@ -1119,7 +1095,7 @@ impl Client {
         let response = self.run_query(&operation).await.unwrap();
 
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
 
         if let Some(object) = response.data.map(|d| d.object) {
@@ -1140,13 +1116,13 @@ impl Client {
         &self,
         address: Address,
         version: Option<u64>,
-    ) -> Result<Option<serde_json::Value>, error::Error> {
+    ) -> Result<Option<serde_json::Value>> {
         let operation = ObjectQuery::build(ObjectQueryArgs { address, version });
 
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
 
         if let Some(object) = response.data {
@@ -1167,13 +1143,13 @@ impl Client {
         &self,
         address: Address,
         version: Option<u64>,
-    ) -> Result<Option<Vec<u8>>, error::Error> {
+    ) -> Result<Option<Vec<u8>>> {
         let operation = ObjectQuery::build(ObjectQueryArgs { address, version });
 
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
 
         if let Some(object) = response.data {
@@ -1205,13 +1181,13 @@ impl Client {
         &self,
         address: Address,
         version: Option<u64>,
-    ) -> Result<Option<MovePackage>, error::Error> {
+    ) -> Result<Option<MovePackage>> {
         let operation = PackageQuery::build(PackageArgs { address, version });
 
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
 
         Ok(response
@@ -1233,7 +1209,7 @@ impl Client {
         pagination_filter: PaginationFilter,
         after_version: Option<u64>,
         before_version: Option<u64>,
-    ) -> Result<Page<MovePackage>, error::Error> {
+    ) -> Result<Page<MovePackage>> {
         let (after, before, first, last) = self.pagination_filter(pagination_filter).await;
         let operation = PackageVersionsQuery::build(PackageVersionsArgs {
             address,
@@ -1250,7 +1226,7 @@ impl Client {
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
 
         if let Some(packages) = response.data {
@@ -1279,10 +1255,7 @@ impl Client {
     /// Fetch the latest version of the package at address.
     /// This corresponds to the package with the highest version that shares its original ID with
     /// the package at address.
-    pub async fn package_latest(
-        &self,
-        address: Address,
-    ) -> Result<Option<MovePackage>, error::Error> {
+    pub async fn package_latest(&self, address: Address) -> Result<Option<MovePackage>> {
         let operation = LatestPackageQuery::build(PackageArgs {
             address,
             version: None,
@@ -1291,7 +1264,7 @@ impl Client {
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
 
         let pkg = response
@@ -1307,14 +1280,14 @@ impl Client {
     }
 
     /// Fetch a package by its name (using Move Registry Service)
-    pub async fn package_by_name(&self, name: &str) -> Result<Option<MovePackage>, error::Error> {
+    pub async fn package_by_name(&self, name: &str) -> Result<Option<MovePackage>> {
         let operation = PackageByNameQuery::build(PackageByNameArgs { name });
 
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
             println!("{:?}", errors);
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
 
         Ok(response
@@ -1338,11 +1311,12 @@ impl Client {
         last: Option<i32>,
         after_checkpoint: Option<u64>,
         before_checkpoint: Option<u64>,
-    ) -> Result<Page<MovePackage>, error::Error> {
+    ) -> Result<Page<MovePackage>> {
         if first.is_some() && last.is_some() {
-            return Err(
-                ConflictingArguments(" only first or last can be provided.".to_string()).into(),
-            );
+            return Err(Error::from_error(
+                Kind::Other,
+                "Conflicting arguments. Only one of first or last can be provided.",
+            ));
         }
 
         let operation = PackagesQuery::build(PackagesQueryArgs {
@@ -1359,7 +1333,7 @@ impl Client {
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
 
         if let Some(packages) = response.data {
@@ -1398,7 +1372,7 @@ impl Client {
         &self,
         tx: &Transaction,
         skip_checks: Option<bool>,
-    ) -> Result<DryRunResult, error::Error> {
+    ) -> Result<DryRunResult> {
         let tx_bytes = base64ct::Base64::encode_string(&bcs::to_bytes(&tx)?);
         self.dry_run(tx_bytes, skip_checks, None).await
     }
@@ -1415,7 +1389,7 @@ impl Client {
         tx_kind: &TransactionKind,
         skip_checks: Option<bool>,
         tx_meta: TransactionMetadata,
-    ) -> Result<DryRunResult, error::Error> {
+    ) -> Result<DryRunResult> {
         let tx_bytes = base64ct::Base64::encode_string(&bcs::to_bytes(&tx_kind)?);
         self.dry_run(tx_bytes, skip_checks, Some(tx_meta)).await
     }
@@ -1426,7 +1400,7 @@ impl Client {
         tx_bytes: String,
         skip_checks: Option<bool>,
         tx_meta: Option<TransactionMetadata>,
-    ) -> Result<DryRunResult, error::Error> {
+    ) -> Result<DryRunResult> {
         let skip_checks = skip_checks.unwrap_or(false);
         let operation = DryRunQuery::build(DryRunArgs {
             tx_bytes,
@@ -1437,7 +1411,7 @@ impl Client {
 
         // Query errors
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
 
         // Dry Run errors
@@ -1465,17 +1439,14 @@ impl Client {
     // ===========================================================================
 
     /// Get a transaction by its digest.
-    pub async fn transaction(
-        &self,
-        digest: Digest,
-    ) -> Result<Option<SignedTransaction>, error::Error> {
+    pub async fn transaction(&self, digest: Digest) -> Result<Option<SignedTransaction>> {
         let operation = TransactionBlockQuery::build(TransactionBlockArgs {
             digest: digest.to_string(),
         });
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
 
         response
@@ -1489,7 +1460,7 @@ impl Client {
     pub async fn transaction_effects(
         &self,
         digest: TransactionDigest,
-    ) -> Result<Option<TransactionEffects>, error::Error> {
+    ) -> Result<Option<TransactionEffects>> {
         let operation = TransactionBlockEffectsQuery::build(TransactionBlockArgs {
             digest: digest.to_string(),
         });
@@ -1507,7 +1478,7 @@ impl Client {
         &self,
         filter: Option<TransactionsFilter<'a>>,
         pagination_filter: PaginationFilter,
-    ) -> Result<Page<SignedTransaction>, error::Error> {
+    ) -> Result<Page<SignedTransaction>> {
         let (after, before, first, last) = self.pagination_filter(pagination_filter).await;
 
         let operation = TransactionBlocksQuery::build(TransactionBlocksQueryArgs {
@@ -1521,7 +1492,7 @@ impl Client {
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
 
         if let Some(txb) = response.data {
@@ -1532,7 +1503,7 @@ impl Client {
                 .nodes
                 .into_iter()
                 .map(|n| n.try_into())
-                .collect::<Result<Vec<_>, error::Error>>()?;
+                .collect::<Result<Vec<_>>>()?;
             let page = Page::new(page_info, transactions);
             Ok(page)
         } else {
@@ -1545,7 +1516,7 @@ impl Client {
         &self,
         filter: Option<TransactionsFilter<'a>>,
         pagination_filter: PaginationFilter,
-    ) -> Result<Page<TransactionEffects>, error::Error> {
+    ) -> Result<Page<TransactionEffects>> {
         let (after, before, first, last) = self.pagination_filter(pagination_filter).await;
 
         let operation = TransactionBlocksEffectsQuery::build(TransactionBlocksQueryArgs {
@@ -1566,7 +1537,7 @@ impl Client {
                 .nodes
                 .into_iter()
                 .map(|n| n.try_into())
-                .collect::<Result<Vec<_>, error::Error>>()?;
+                .collect::<Result<Vec<_>>>()?;
             let page = Page::new(page_info, transactions);
             Ok(page)
         } else {
@@ -1579,7 +1550,7 @@ impl Client {
         &'a self,
         filter: Option<TransactionsFilter<'a>>,
         streaming_direction: Direction,
-    ) -> impl Stream<Item = Result<SignedTransaction, error::Error>> + 'a {
+    ) -> impl Stream<Item = Result<SignedTransaction>> + 'a {
         stream_paginated_query(
             move |pag_filter| self.transactions(filter.clone(), pag_filter),
             streaming_direction,
@@ -1591,7 +1562,7 @@ impl Client {
         &'a self,
         filter: Option<TransactionsFilter<'a>>,
         streaming_direction: Direction,
-    ) -> impl Stream<Item = Result<TransactionEffects, error::Error>> + 'a {
+    ) -> impl Stream<Item = Result<TransactionEffects>> + 'a {
         stream_paginated_query(
             move |pag_filter| self.transactions_effects(filter.clone(), pag_filter),
             streaming_direction,
@@ -1603,7 +1574,7 @@ impl Client {
         &self,
         signatures: Vec<UserSignature>,
         tx: &Transaction,
-    ) -> Result<Option<TransactionEffects>, error::Error> {
+    ) -> Result<Option<TransactionEffects>> {
         let operation = ExecuteTransactionQuery::build(ExecuteTransactionArgs {
             signatures: signatures.iter().map(|s| s.to_base64()).collect(),
             tx_bytes: base64ct::Base64::encode_string(bcs::to_bytes(tx).unwrap().as_ref()),
@@ -1612,7 +1583,7 @@ impl Client {
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
 
         if let Some(data) = response.data {
@@ -1636,7 +1607,7 @@ impl Client {
         module: &str,
         function: &str,
         version: Option<u64>,
-    ) -> Result<Option<MoveFunction>, error::Error> {
+    ) -> Result<Option<MoveFunction>> {
         let operation = NormalizedMoveFunctionQuery::build(NormalizedMoveFunctionQueryArgs {
             address: Address::from_str(package)?,
             module,
@@ -1646,7 +1617,7 @@ impl Client {
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
 
         Ok(response
@@ -1669,7 +1640,7 @@ impl Client {
         pagination_filter_friends: PaginationFilter,
         pagination_filter_functions: PaginationFilter,
         pagination_filter_structs: PaginationFilter,
-    ) -> Result<Option<MoveModule>, error::Error> {
+    ) -> Result<Option<MoveModule>> {
         let (after_enums, before_enums, first_enums, last_enums) =
             self.pagination_filter(pagination_filter_enums).await;
         let (after_friends, before_friends, first_friends, last_friends) =
@@ -1702,7 +1673,7 @@ impl Client {
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
 
         Ok(response.data.and_then(|p| p.package).and_then(|p| p.module))
@@ -1713,16 +1684,13 @@ impl Client {
     // ===========================================================================
 
     /// Get the address for the provided Suins domain name.
-    pub async fn resolve_suins_to_address(
-        &self,
-        domain: &str,
-    ) -> Result<Option<Address>, error::Error> {
+    pub async fn resolve_suins_to_address(&self, domain: &str) -> Result<Option<Address>> {
         let operation = ResolveSuinsQuery::build(ResolveSuinsQueryArgs { name: domain });
 
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
         Ok(response
             .data
@@ -1731,16 +1699,13 @@ impl Client {
     }
 
     /// Get the default Suins domain name for the provided address.
-    pub async fn default_suins_name(
-        &self,
-        address: Address,
-    ) -> Result<Option<String>, error::Error> {
+    pub async fn default_suins_name(&self, address: Address) -> Result<Option<String>> {
         let operation = DefaultSuinsNameQuery::build(DefaultSuinsNameQueryArgs { address });
 
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(QueryResponseError(errors).into());
+            return Err(Error::graphql_error(errors));
         }
         Ok(response
             .data

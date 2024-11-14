@@ -8,7 +8,8 @@ use sui_types::types::CheckpointSummary;
 use sui_types::types::GasCostSummary as NativeGasCostSummary;
 
 use crate::error;
-use crate::error::ConversionError;
+use crate::error::Error;
+use crate::error::Kind;
 use crate::query_types::schema;
 use crate::query_types::Base64;
 use crate::query_types::BigInt;
@@ -109,11 +110,14 @@ impl TryInto<CheckpointSummary> for Checkpoint {
     fn try_into(self) -> Result<CheckpointSummary, Self::Error> {
         let epoch = self
             .epoch
-            .ok_or_else(|| ConversionError("Epoch is checkpoint summary is missing".to_string()))?
+            .ok_or_else(|| {
+                Error::from_error(Kind::Other, "Epoch is checkpoint summary is missing")
+            })?
             .epoch_id;
         let network_total_transactions = self.network_total_transactions.ok_or_else(|| {
-            ConversionError(
-                "Network total transactions in checkpoint summary is missing".to_string(),
+            Error::from_error(
+                Kind::Other,
+                "Network total transactions in checkpoint summary is missing",
             )
         })?;
         let sequence_number = self.sequence_number;
@@ -128,7 +132,10 @@ impl TryInto<CheckpointSummary> for Checkpoint {
         let epoch_rolling_gas_cost_summary = self
             .rolling_gas_summary
             .ok_or_else(|| {
-                ConversionError("Gas cost summary in checkpoint summary is missing".to_string())
+                Error::from_error(
+                    Kind::Other,
+                    "Gas cost summary in checkpoint summary is missing",
+                )
             })?
             .try_into()?;
         Ok(CheckpointSummary {
@@ -151,19 +158,19 @@ impl TryInto<NativeGasCostSummary> for GasCostSummary {
     fn try_into(self) -> Result<NativeGasCostSummary, Self::Error> {
         let computation_cost = self
             .computation_cost
-            .ok_or_else(|| ConversionError("Computation cost is missing".to_string()))?
+            .ok_or_else(|| Error::from_error(Kind::Other, "Computation cost is missing"))?
             .try_into()?;
         let non_refundable_storage_fee = self
             .non_refundable_storage_fee
-            .ok_or_else(|| ConversionError("Non-refundable storage fee is missing".to_string()))?
+            .ok_or_else(|| Error::from_error(Kind::Other, "Non-refundable storage fee is missing"))?
             .try_into()?;
         let storage_cost = self
             .storage_cost
-            .ok_or_else(|| ConversionError("Storage cost is missing".to_string()))?
+            .ok_or_else(|| Error::from_error(Kind::Other, "Storage cost is missing"))?
             .try_into()?;
         let storage_rebate = self
             .storage_rebate
-            .ok_or_else(|| ConversionError("Storage rebate is missing".to_string()))?
+            .ok_or_else(|| Error::from_error(Kind::Other, "Storage rebate is missing"))?
             .try_into()?;
         Ok(NativeGasCostSummary {
             computation_cost,

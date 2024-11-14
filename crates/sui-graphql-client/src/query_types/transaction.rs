@@ -8,8 +8,8 @@ use sui_types::types::TransactionEffects;
 use sui_types::types::UserSignature;
 
 use crate::error;
-use crate::error::ConversionError;
-use crate::error::DeserializeError;
+use crate::error::Error;
+use crate::error::Kind;
 use crate::query_types::schema;
 use crate::query_types::Address;
 use crate::query_types::Base64;
@@ -168,7 +168,10 @@ impl TryFrom<TransactionBlock> for SignedTransaction {
                 signatures,
             })
         } else {
-            Err(DeserializeError("Cannot deserialize transaction".to_string()).into())
+            Err(Error::from_error(
+                Kind::Other,
+                "Expected a deserialized transaction but got None",
+            ))
         }
     }
 }
@@ -180,20 +183,14 @@ impl TryFrom<TxBlockEffects> for TransactionEffects {
         let effects = value
             .effects
             .map(|fx| base64ct::Base64::decode_vec(fx.bcs.unwrap().0.as_str()))
-            .transpose()
-            .map_err(|_| error::DeserializeError("Cannot deserialize bcs from base64".to_string()))?
+            .transpose()?
             .map(|bcs| bcs::from_bytes::<TransactionEffects>(&bcs))
-            .transpose()
-            .map_err(|_| {
-                error::DeserializeError(
-                    "Cannot deserialize TransactionEffects from bcs".to_string(),
-                )
-            })?;
+            .transpose()?;
         effects.ok_or_else(|| {
-            ConversionError(
-                "Cannot convert GraphQL TxBlockEffects into TransactionEffects".to_string(),
+            Error::from_error(
+                Kind::Other,
+                "Cannot convert GraphQL TxBlockEffects into TransactionEffects",
             )
-            .into()
         })
     }
 }

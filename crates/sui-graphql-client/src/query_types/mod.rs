@@ -191,12 +191,9 @@ pub struct PageInfo {
 }
 
 impl TryFrom<BigInt> for u64 {
-    type Error = error::ParseError;
+    type Error = error::Error;
 
     fn try_from(value: BigInt) -> Result<Self, Self::Error> {
-        value
-            .0
-            .parse::<u64>()
-            .map_err(|_| error::ParseError::BigIntParsingError)
+        Ok(value.0.parse::<u64>()?)
     }
 }

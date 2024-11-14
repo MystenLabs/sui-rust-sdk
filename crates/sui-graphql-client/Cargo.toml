@@ -12,7 +12,7 @@ description = "Sui GraphQL RPC Client for the Sui Blockchain"
 anyhow = "1.0.71"
 async-stream = "0.3.3"
 async-trait = "0.1.61"
-base64ct = { version = "1.6.0", features = ["alloc"] }
+base64ct = { version = "1.6.0", features = ["alloc", "std"] }
 bcs = "0.1.4"
 chrono = "0.4.26"
 cynic = "3.7.3"
