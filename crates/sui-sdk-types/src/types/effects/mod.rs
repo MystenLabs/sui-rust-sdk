@@ -31,11 +31,27 @@ pub enum TransactionEffects {
 }
 
 impl TransactionEffects {
-    /// Return the status of the transaction
+    /// Return the status of the transaction.
     pub fn status(&self) -> &ExecutionStatus {
         match self {
             TransactionEffects::V1(e) => e.status(),
             TransactionEffects::V2(e) => e.status(),
+        }
+    }
+
+    /// Return the epoch in which this transaction was executed.
+    pub fn epoch(&self) -> u64 {
+        match self {
+            TransactionEffects::V1(e) => *e.epoch(),
+            TransactionEffects::V2(e) => *e.epoch(),
+        }
+    }
+
+    /// Return the gas cost summary of the transaction.
+    pub fn gas_summary(&self) -> &crate::types::gas::GasCostSummary {
+        match self {
+            TransactionEffects::V1(e) => e.gas_summary(),
+            TransactionEffects::V2(e) => e.gas_summary(),
         }
     }
 }

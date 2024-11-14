@@ -92,6 +92,16 @@ impl TransactionEffectsV1 {
     pub fn status(&self) -> &ExecutionStatus {
         &self.status
     }
+
+    /// The epoch when this transaction was executed.
+    pub fn epoch(&self) -> &EpochId {
+        &self.epoch
+    }
+
+    /// The gas used in this transaction.
+    pub fn gas_summary(&self) -> &GasCostSummary {
+        &self.gas_used
+    }
 }
 
 #[cfg(feature = "serde")]

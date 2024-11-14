@@ -9,8 +9,6 @@ use crate::types::ObjectId;
 use crate::types::TransactionDigest;
 use crate::types::TransactionEventsDigest;
 
-use super::TransactionEffectsV1;
-
 /// The response from processing a transaction or a certified transaction
 #[derive(Eq, PartialEq, Clone, Debug)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -21,8 +19,8 @@ pub struct TransactionEffectsV2 {
     status: ExecutionStatus,
     /// The epoch when this transaction was executed.
     #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
-    pub epoch: EpochId,
-    pub gas_used: GasCostSummary,
+    epoch: EpochId,
+    gas_used: GasCostSummary,
     /// The transaction digest
     pub transaction_digest: TransactionDigest,
     /// The updated gas object reference, as an index into the `changed_objects` vector.
@@ -191,6 +189,16 @@ impl TransactionEffectsV2 {
     /// The status of the execution
     pub fn status(&self) -> &ExecutionStatus {
         &self.status
+    }
+
+    /// The epoch when this transaction was executed.
+    pub fn epoch(&self) -> &EpochId {
+        &self.epoch
+    }
+
+    /// The gas used in this transaction.
+    pub fn gas_summary(&self) -> &GasCostSummary {
+        &self.gas_used
     }
 }
 
