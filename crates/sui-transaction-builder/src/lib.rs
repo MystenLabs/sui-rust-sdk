@@ -501,6 +501,7 @@ mod tests {
     use crate::Serialized;
     use crate::TransactionBuilder;
     use sui_types::types::Digest;
+    use sui_types::types::TransactionDigest;
 
     /// Type corresponding to the output of `sui move build --dump-bytecode-as-base64`
     #[derive(serde::Deserialize, Debug)]
@@ -595,7 +596,7 @@ mod tests {
 
     /// Wait for the transaction to be finalized and indexed. This queries the GraphQL server until
     /// it retrieves the requested transaction.
-    async fn wait_for_tx(client: &Client, digest: Digest) {
+    async fn wait_for_tx(client: &Client, digest: TransactionDigest) {
         while client.transaction(digest).await.unwrap().is_none() {
             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
         }
@@ -605,7 +606,7 @@ mod tests {
     /// transaction was successfully executed.
     async fn wait_for_tx_and_check_effects_status_success(
         client: &Client,
-        digest: Digest,
+        digest: TransactionDigest,
         effects: Result<Option<TransactionEffects>, sui_graphql_client::error::Error>,
     ) {
         assert!(effects.is_ok(), "Execution failed. Effects: {:?}", effects);

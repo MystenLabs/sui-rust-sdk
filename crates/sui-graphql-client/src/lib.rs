@@ -81,9 +81,9 @@ use streams::stream_paginated_query;
 
 use sui_types::types::framework::Coin;
 use sui_types::types::Address;
+use sui_types::types::CheckpointDigest;
 use sui_types::types::CheckpointSequenceNumber;
 use sui_types::types::CheckpointSummary;
-use sui_types::types::Digest;
 use sui_types::types::Event;
 use sui_types::types::MovePackage;
 use sui_types::types::Object;
@@ -483,7 +483,10 @@ impl Client {
 
     /// The total number of transaction blocks in the network by the end of the provided
     /// checkpoint digest.
-    pub async fn total_transaction_blocks_by_digest(&self, digest: Digest) -> Result<Option<u64>> {
+    pub async fn total_transaction_blocks_by_digest(
+        &self,
+        digest: CheckpointDigest,
+    ) -> Result<Option<u64>> {
         self.internal_total_transaction_blocks(Some(digest.to_string()), None)
             .await
     }
@@ -643,7 +646,7 @@ impl Client {
     /// provided, it will use the last known checkpoint id.
     pub async fn checkpoint(
         &self,
-        digest: Option<Digest>,
+        digest: Option<CheckpointDigest>,
         seq_num: Option<u64>,
     ) -> Result<Option<CheckpointSummary>> {
         if digest.is_some() && seq_num.is_some() {
@@ -1434,7 +1437,10 @@ impl Client {
     // ===========================================================================
 
     /// Get a transaction by its digest.
-    pub async fn transaction(&self, digest: Digest) -> Result<Option<SignedTransaction>> {
+    pub async fn transaction(
+        &self,
+        digest: TransactionDigest,
+    ) -> Result<Option<SignedTransaction>> {
         let operation = TransactionBlockQuery::build(TransactionBlockArgs {
             digest: digest.to_string(),
         });
