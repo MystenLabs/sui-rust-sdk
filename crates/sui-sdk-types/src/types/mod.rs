@@ -14,6 +14,7 @@ mod type_tag;
 mod u256;
 
 pub use address::Address;
+pub use address::AddressParseError;
 pub use checkpoint::CheckpointCommitment;
 pub use checkpoint::CheckpointContents;
 pub use checkpoint::CheckpointData;
