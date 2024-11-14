@@ -401,9 +401,9 @@ impl Client {
             return Err(Error::graphql_error(errors));
         }
 
-        let d = response.data;
-
-        d.and_then(|e| e.epoch)
+        response
+            .data
+            .and_then(|e| e.epoch)
             .and_then(|e| e.reference_gas_price)
             .map(|x| x.try_into())
             .transpose()
