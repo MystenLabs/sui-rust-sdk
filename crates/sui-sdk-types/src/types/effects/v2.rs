@@ -192,8 +192,8 @@ impl TransactionEffectsV2 {
     }
 
     /// The epoch when this transaction was executed.
-    pub fn epoch(&self) -> &EpochId {
-        &self.epoch
+    pub fn epoch(&self) -> EpochId {
+        self.epoch
     }
 
     /// The gas used in this transaction.

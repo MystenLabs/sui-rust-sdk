@@ -116,10 +116,8 @@ pub enum InputKind {
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct Input {
-    /// The object kind. This field is only relevant for object inputs.
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none",))]
     pub kind: Option<InputKind>,
-    /// The value of this object. This field is only relevant for Pure kind of inputs.
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none",))]
     pub value: Option<Value>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none",))]
@@ -129,7 +127,7 @@ pub struct Input {
     /// this is an owned object.
     /// The semantics of version can change depending on whether the object is shared or not.
     /// For shared objects, this is the initial version the object was shared at. For all other
-    /// objects, this is the version of the object
+    /// objects, this is the version of the object.
     #[cfg_attr(
         feature = "serde",
         serde(
@@ -220,102 +218,61 @@ impl Input {
         }
     }
 
-    /// Return the object as an immutable kind of object.
-    pub fn as_immutable(self) -> Self {
-        Self {
-            kind: Some(InputKind::ImmutableOrOwned),
-            digest: None,
-            version: None,
-            mutable: None,
-            ..self
-        }
+    /// Set the object kind to immutable.
+    pub fn with_immutable_kind(&mut self) {
+        self.kind = Some(InputKind::ImmutableOrOwned);
     }
 
-    /// Return the object as an owned kind of object.
-    pub fn as_owned(self) -> Self {
-        Self {
-            kind: Some(InputKind::ImmutableOrOwned),
-            digest: None,
-            version: None,
-            mutable: None,
-            ..self
-        }
+    /// Set the object kind to owned.
+    pub fn with_owned_kind(&mut self) {
+        self.kind = Some(InputKind::ImmutableOrOwned);
     }
 
-    /// Return the object as a receiving kind of object.
-    pub fn as_receiving(self) -> Self {
-        Self {
-            kind: Some(InputKind::Receiving),
-            version: None,
-            mutable: None,
-            ..self
-        }
+    /// Set the object kind to receiving.
+    pub fn with_receiving_kind(&mut self) {
+        self.kind = Some(InputKind::Receiving);
     }
 
-    /// Return the object as a shared kind of object.
-    pub fn as_shared(self) -> Self {
-        Self {
-            kind: Some(InputKind::Shared),
-            version: None,
-            digest: None,
-            ..self
-        }
+    /// Set the object kind to shared.
+    pub fn with_shared_kind(&mut self) {
+        self.kind = Some(InputKind::Shared);
     }
 
-    /// Return the object with the specified version.
-    pub fn versioned_at(self, version: u64) -> Self {
-        Self {
-            version: Some(version),
-            ..self
-        }
+    /// Set the specified version.
+    pub fn with_version(&mut self, version: u64) {
+        self.version = Some(version);
     }
 
-    /// Return the object with this specified digest.
-    pub fn with_digest(self, digest: ObjectDigest) -> Self {
-        Self {
-            digest: Some(digest),
-            ..self
-        }
+    /// Set the specified digest.
+    pub fn with_digest(&mut self, digest: ObjectDigest) {
+        self.digest = Some(digest);
     }
 
     // Shared fields
 
-    /// Return the object with the specified initial shared version.
-    pub fn shared_at(self, i: u64) -> Self {
-        Self {
-            kind: Some(InputKind::Shared),
-            version: Some(i),
-            ..self
-        }
+    /// Set the initial shared version.
+    pub fn with_initial_shared_version(&mut self, initial: u64) {
+        self.version = Some(initial);
     }
 
-    /// Return the shared object after setting `mutable` to true when the input is used by value.
-    pub fn by_val(self) -> Self {
-        Self {
-            kind: Some(InputKind::Shared),
-            mutable: Some(true),
-            ..self
-        }
+    /// Make the object shared and set `mutable` to true when the input is used by value.
+    pub fn by_val(&mut self) {
+        self.kind = Some(InputKind::Shared);
+        self.mutable = Some(true);
     }
 
-    /// Return the shared object after setting `mutable` to false when the input is used by
+    /// Make the object shared and set `mutable` to false when the input is used by
     /// reference.
-    pub fn by_ref(self) -> Self {
-        Self {
-            kind: Some(InputKind::Shared),
-            mutable: Some(false),
-            ..self
-        }
+    pub fn by_ref(&mut self) {
+        self.kind = Some(InputKind::Shared);
+        self.mutable = Some(false);
     }
 
-    /// Return the shared object after setting `mutable` to true when the input is used by mutable
+    /// Make the object shared and set `mutable` to true when the input is used by mutable
     /// reference.
-    pub fn by_mut(self) -> Self {
-        Self {
-            kind: Some(InputKind::Shared),
-            mutable: Some(true),
-            ..self
-        }
+    pub fn by_mut(&mut self) {
+        self.kind = Some(InputKind::Shared);
+        self.mutable = Some(true);
     }
 }
 

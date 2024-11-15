@@ -42,8 +42,8 @@ impl TransactionEffects {
     /// Return the epoch in which this transaction was executed.
     pub fn epoch(&self) -> u64 {
         match self {
-            TransactionEffects::V1(e) => *e.epoch(),
-            TransactionEffects::V2(e) => *e.epoch(),
+            TransactionEffects::V1(e) => e.epoch(),
+            TransactionEffects::V2(e) => e.epoch(),
         }
     }
 
