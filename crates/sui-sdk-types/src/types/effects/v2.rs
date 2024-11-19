@@ -16,11 +16,11 @@ use crate::types::TransactionEventsDigest;
 pub struct TransactionEffectsV2 {
     /// The status of the execution
     #[cfg_attr(feature = "schemars", schemars(flatten))]
-    pub status: ExecutionStatus,
+    status: ExecutionStatus,
     /// The epoch when this transaction was executed.
     #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
-    pub epoch: EpochId,
-    pub gas_used: GasCostSummary,
+    epoch: EpochId,
+    gas_used: GasCostSummary,
     /// The transaction digest
     pub transaction_digest: TransactionDigest,
     /// The updated gas object reference, as an index into the `changed_objects` vector.
@@ -183,6 +183,23 @@ pub enum IdOperation {
     None,
     Created,
     Deleted,
+}
+
+impl TransactionEffectsV2 {
+    /// The status of the execution
+    pub fn status(&self) -> &ExecutionStatus {
+        &self.status
+    }
+
+    /// The epoch when this transaction was executed.
+    pub fn epoch(&self) -> EpochId {
+        self.epoch
+    }
+
+    /// The gas used in this transaction.
+    pub fn gas_summary(&self) -> &GasCostSummary {
+        &self.gas_used
+    }
 }
 
 #[cfg(feature = "serde")]

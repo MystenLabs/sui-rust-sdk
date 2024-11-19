@@ -163,7 +163,7 @@ serialization_test!(VersionAssignment);
 serialization_test!(EndOfEpochTransactionKind);
 serialization_test!(GasPayment);
 serialization_test!(GenesisTransaction);
-serialization_test!(InputArgument);
+serialization_test!(Input);
 serialization_test!(MakeMoveVector);
 serialization_test!(MergeCoins);
 serialization_test!(MoveCall);

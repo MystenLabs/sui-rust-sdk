@@ -21,14 +21,7 @@ mod serialization;
 #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
 pub(crate) use serialization::SignedTransactionWithIntentMessage;
 
-mod unresolved;
-pub use unresolved::UnresolvedGasPayment;
-pub use unresolved::UnresolvedInputArgument;
-pub use unresolved::UnresolvedInputArgumentKind;
-pub use unresolved::UnresolvedObjectReference;
-pub use unresolved::UnresolvedProgrammableTransaction;
-pub use unresolved::UnresolvedTransaction;
-pub use unresolved::UnresolvedValue;
+pub mod unresolved;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(test, derive(test_strategy::Arbitrary))]
@@ -51,10 +44,11 @@ pub struct SignedTransaction {
     pub signatures: Vec<UserSignature>,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub enum TransactionExpiration {
     /// The transaction has no expiration
+    #[default]
     None,
     /// Validators wont sign a transaction unless the expiration Epoch
     /// is greater than or equal to the current epoch
@@ -442,7 +436,7 @@ pub struct GenesisTransaction {
 pub struct ProgrammableTransaction {
     /// Input objects or primitive values
     #[cfg_attr(test, any(proptest::collection::size_range(0..=10).lift()))]
-    pub inputs: Vec<InputArgument>,
+    pub inputs: Vec<Input>,
     /// The commands to be executed sequentially. A failure in any command will
     /// result in the failure of the entire transaction.
     #[cfg_attr(test, any(proptest::collection::size_range(0..=10).lift()))]
@@ -456,7 +450,7 @@ pub struct ProgrammableTransaction {
     schemars(tag = "type", rename_all = "snake_case")
 )]
 #[cfg_attr(test, derive(test_strategy::Arbitrary))]
-pub enum InputArgument {
+pub enum Input {
     // contains no structs or objects
     Pure {
         #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::Base64"))]
@@ -624,6 +618,16 @@ pub enum Argument {
     /// of this is to access a value from a Move call with multiple return values.
     // (command index, subresult index)
     NestedResult(u16, u16),
+}
+
+impl Argument {
+    /// Turn a Result into a NestedResult. If the argument is not a Result, returns None.
+    pub fn nested(&self, ix: u16) -> Option<Argument> {
+        match self {
+            Argument::Result(i) => Some(Argument::NestedResult(*i, ix)),
+            _ => None,
+        }
+    }
 }
 
 /// The command for calling a Move function, either an entry function or a public
