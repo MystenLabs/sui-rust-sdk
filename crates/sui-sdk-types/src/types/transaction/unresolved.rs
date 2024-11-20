@@ -10,7 +10,8 @@ use super::TransactionExpiration;
 // transaction using this type by providing all the required data.
 #[cfg_attr(
     feature = "serde",
-    derive(serde_derive::Serialize, serde_derive::Deserialize)
+    derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename = "UnresolvedTransaction")
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct Transaction {
@@ -24,7 +25,8 @@ pub struct Transaction {
 
 #[cfg_attr(
     feature = "serde",
-    derive(serde_derive::Serialize, serde_derive::Deserialize)
+    derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename = "UnresolvedProgrammableTransaction")
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct ProgrammableTransaction {
@@ -34,7 +36,8 @@ pub struct ProgrammableTransaction {
 
 #[cfg_attr(
     feature = "serde",
-    derive(serde_derive::Serialize, serde_derive::Deserialize)
+    derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename = "UnresolvedGasPayment")
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct GasPayment {
@@ -69,7 +72,8 @@ pub struct GasPayment {
 #[derive(Clone, Debug)]
 #[cfg_attr(
     feature = "serde",
-    derive(serde_derive::Serialize, serde_derive::Deserialize)
+    derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename = "UnresolvedObjectReference")
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct ObjectReference {
@@ -92,6 +96,7 @@ pub struct ObjectReference {
 #[cfg_attr(
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename = "UnresolvedInputKind"),
     serde(rename_all = "snake_case")
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -112,7 +117,8 @@ pub enum InputKind {
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 #[cfg_attr(
     feature = "serde",
-    derive(serde_derive::Serialize, serde_derive::Deserialize)
+    derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename = "UnresolvedInput"),
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct Input {
@@ -152,6 +158,7 @@ pub struct Input {
 #[cfg_attr(
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize),
+    serde(rename = "UnresolvedValue"),
     serde(try_from = "serde_json::Value", into = "serde_json::Value")
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema), schemars(untagged))]
