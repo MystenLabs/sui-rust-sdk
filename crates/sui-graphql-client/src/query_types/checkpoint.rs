@@ -1,6 +1,7 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
+use base64ct::Encoding;
 use chrono::DateTime as ChronoDT;
 use sui_types::types::CheckpointContentsDigest;
 use sui_types::types::CheckpointDigest;
@@ -84,99 +85,26 @@ pub struct CheckpointId {
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "Checkpoint")]
 pub struct Checkpoint {
-    pub epoch: Option<Epoch>,
-    pub digest: String,
-    pub network_total_transactions: Option<u64>,
-    pub previous_checkpoint_digest: Option<String>,
-    pub sequence_number: u64,
-    pub timestamp: DateTime,
-    pub validator_signatures: Base64,
-    pub rolling_gas_summary: Option<GasCostSummary>,
+    pub checkpoint_summary_bcs: Option<Base64>,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
-#[cynic(schema = "rpc", graphql_type = "GasCostSummary")]
-pub struct GasCostSummary {
-    pub computation_cost: Option<BigInt>,
-    pub non_refundable_storage_fee: Option<BigInt>,
-    pub storage_cost: Option<BigInt>,
-    pub storage_rebate: Option<BigInt>,
-}
-
-// TODO need bcs in GraphQL Checkpoint to avoid this conversion
 impl TryInto<CheckpointSummary> for Checkpoint {
     type Error = error::Error;
 
-    fn try_into(self) -> Result<CheckpointSummary, Self::Error> {
-        let epoch = self
-            .epoch
-            .ok_or_else(|| {
-                Error::from_error(Kind::Other, "Epoch is checkpoint summary is missing")
-            })?
-            .epoch_id;
-        let network_total_transactions = self.network_total_transactions.ok_or_else(|| {
-            Error::from_error(
-                Kind::Other,
-                "Network total transactions in checkpoint summary is missing",
-            )
-        })?;
-        let sequence_number = self.sequence_number;
-        let timestamp_ms = ChronoDT::parse_from_rfc3339(&self.timestamp.0)?
-            .timestamp_millis()
-            .try_into()?;
-        let content_digest = CheckpointContentsDigest::from_base58(&self.digest)?;
-        let previous_digest = self
-            .previous_checkpoint_digest
-            .map(|d| CheckpointDigest::from_base58(&d))
+    fn try_into(self) -> Result<CheckpointSummary, Error> {
+        let checkpoint = self
+            .checkpoint_summary_bcs
+            .map(|x| base64ct::Base64::decode_vec(&x.0))
+            .transpose()?
+            .map(|bcs| {
+                bcs::from_bytes::<CheckpointSummary>(&bcs).map_err(|e| {
+                    Error::from_error(
+                        Kind::Other,
+                        format!("Failed to deserialize checkpoint summary: {}", e),
+                    )
+                })
+            })
             .transpose()?;
-        let epoch_rolling_gas_cost_summary = self
-            .rolling_gas_summary
-            .ok_or_else(|| {
-                Error::from_error(
-                    Kind::Other,
-                    "Gas cost summary in checkpoint summary is missing",
-                )
-            })?
-            .try_into()?;
-        Ok(CheckpointSummary {
-            epoch,
-            sequence_number,
-            network_total_transactions,
-            timestamp_ms,
-            content_digest,
-            previous_digest,
-            epoch_rolling_gas_cost_summary,
-            checkpoint_commitments: vec![],
-            end_of_epoch_data: None,
-            version_specific_data: vec![],
-        })
-    }
-}
-
-impl TryInto<NativeGasCostSummary> for GasCostSummary {
-    type Error = error::Error;
-    fn try_into(self) -> Result<NativeGasCostSummary, Self::Error> {
-        let computation_cost = self
-            .computation_cost
-            .ok_or_else(|| Error::from_error(Kind::Other, "Computation cost is missing"))?
-            .try_into()?;
-        let non_refundable_storage_fee = self
-            .non_refundable_storage_fee
-            .ok_or_else(|| Error::from_error(Kind::Other, "Non-refundable storage fee is missing"))?
-            .try_into()?;
-        let storage_cost = self
-            .storage_cost
-            .ok_or_else(|| Error::from_error(Kind::Other, "Storage cost is missing"))?
-            .try_into()?;
-        let storage_rebate = self
-            .storage_rebate
-            .ok_or_else(|| Error::from_error(Kind::Other, "Storage rebate is missing"))?
-            .try_into()?;
-        Ok(NativeGasCostSummary {
-            computation_cost,
-            non_refundable_storage_fee,
-            storage_cost,
-            storage_rebate,
-        })
+        checkpoint.ok_or_else(|| Error::from_error(Kind::Other, "Checkpoint summary is missing"))
     }
 }

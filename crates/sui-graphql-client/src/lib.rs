@@ -2133,18 +2133,28 @@ mod tests {
             chckp.unwrap_err()
         );
         let chckp_id = chckp.unwrap().unwrap();
-        let total_transaction_blocks = client.total_transaction_blocks_by_seq_num(chckp_id).await;
-        assert!(total_transaction_blocks.is_ok());
-        assert!(total_transaction_blocks.unwrap().is_some_and(|tx| tx > 0));
-
-        let chckp = client.checkpoint(None, Some(chckp_id)).await;
-        assert!(chckp.is_ok());
-        let digest = chckp.unwrap().unwrap().content_digest;
         let total_transaction_blocks = client
+            .total_transaction_blocks_by_seq_num(chckp_id)
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(total_transaction_blocks > 0);
+
+        let chckp = client
+            .checkpoint(None, Some(chckp_id))
+            .await
+            .unwrap()
+            .unwrap();
+
+        let digest = chckp.digest();
+        let total_transaction_blocks_by_digest = client
             .total_transaction_blocks_by_digest(digest.into())
             .await;
-        assert!(total_transaction_blocks.is_ok());
-        assert!(total_transaction_blocks.unwrap().is_some_and(|tx| tx > 0));
+        assert!(total_transaction_blocks_by_digest.is_ok());
+        assert_eq!(
+            total_transaction_blocks_by_digest.unwrap().unwrap(),
+            total_transaction_blocks
+        );
     }
 
     #[tokio::test]
