@@ -2,20 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use base64ct::Encoding;
-use chrono::DateTime as ChronoDT;
-use sui_types::types::CheckpointContentsDigest;
-use sui_types::types::CheckpointDigest;
 use sui_types::types::CheckpointSummary;
-use sui_types::types::GasCostSummary as NativeGasCostSummary;
 
 use crate::error;
 use crate::error::Error;
 use crate::error::Kind;
 use crate::query_types::schema;
 use crate::query_types::Base64;
-use crate::query_types::BigInt;
-use crate::query_types::DateTime;
-use crate::query_types::Epoch;
 use crate::query_types::PageInfo;
 
 // ===========================================================================
