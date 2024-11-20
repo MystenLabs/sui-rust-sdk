@@ -78,7 +78,7 @@ pub struct CheckpointId {
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "Checkpoint")]
 pub struct Checkpoint {
-    pub checkpoint_summary_bcs: Option<Base64>,
+    pub bcs: Option<Base64>,
 }
 
 impl TryInto<CheckpointSummary> for Checkpoint {
@@ -86,7 +86,7 @@ impl TryInto<CheckpointSummary> for Checkpoint {
 
     fn try_into(self) -> Result<CheckpointSummary, Error> {
         let checkpoint = self
-            .checkpoint_summary_bcs
+            .bcs
             .map(|x| base64ct::Base64::decode_vec(&x.0))
             .transpose()?
             .map(|bcs| {
