@@ -109,7 +109,7 @@ pub enum ObjectData {
 )]
 #[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct MovePackage {
-    id: ObjectId,
+    pub id: ObjectId,
     /// Most move packages are uniquely identified by their ID (i.e. there is only one version per
     /// ID), but the version is still stored because one package may be an upgrade of another (at a
     /// different ID), in which case its version will be one greater than the version of the
@@ -121,7 +121,7 @@ pub struct MovePackage {
     /// In all cases, packages are referred to by move calls using just their ID, and they are
     /// always loaded at their latest version.
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
-    version: Version,
+    pub version: Version,
 
     #[cfg_attr(
         feature = "serde",
@@ -133,11 +133,11 @@ pub struct MovePackage {
             proptest::collection::btree_map(proptest::arbitrary::any::<Identifier>(), proptest::collection::vec(proptest::arbitrary::any::<u8>(), 0..=1024), 0..=5)
         )
     )]
-    modules: BTreeMap<Identifier, Vec<u8>>,
+    pub modules: BTreeMap<Identifier, Vec<u8>>,
 
     /// Maps struct/module to a package version where it was first defined, stored as a vector for
     /// simple serialization and deserialization.
-    type_origin_table: Vec<TypeOrigin>,
+    pub type_origin_table: Vec<TypeOrigin>,
 
     // For each dependency, maps original package ID to the info about the (upgraded) dependency
     // version that this package is using
@@ -147,7 +147,7 @@ pub struct MovePackage {
             proptest::collection::btree_map(proptest::arbitrary::any::<ObjectId>(), proptest::arbitrary::any::<UpgradeInfo>(), 0..=5)
         )
     )]
-    linkage_table: BTreeMap<ObjectId, UpgradeInfo>,
+    pub linkage_table: BTreeMap<ObjectId, UpgradeInfo>,
 }
 
 /// Identifies a struct and the module it was defined in
@@ -182,6 +182,7 @@ pub struct UpgradeInfo {
 }
 
 #[derive(Eq, PartialEq, Debug, Clone, Hash)]
+//TODO hand-roll a Deserialize impl to enforce that an objectid is present
 #[cfg_attr(
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
@@ -210,6 +211,42 @@ pub struct MoveStruct {
     pub(crate) contents: Vec<u8>,
 }
 
+impl MoveStruct {
+    pub fn new(
+        type_: StructTag,
+        has_public_transfer: bool,
+        version: Version,
+        contents: Vec<u8>,
+    ) -> Option<Self> {
+        id_opt(&contents).map(|_| Self {
+            type_,
+            has_public_transfer,
+            version,
+            contents,
+        })
+    }
+
+    pub fn object_type(&self) -> &StructTag {
+        &self.type_
+    }
+
+    pub fn has_public_transfer(&self) -> bool {
+        self.has_public_transfer
+    }
+
+    pub fn version(&self) -> Version {
+        self.version
+    }
+
+    pub fn contents(&self) -> &[u8] {
+        &self.contents
+    }
+
+    pub fn object_id(&self) -> ObjectId {
+        id_opt(self.contents()).unwrap()
+    }
+}
+
 /// Type of a Sui object
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Debug)]
 pub enum ObjectType {
@@ -235,6 +272,20 @@ pub struct Object {
 }
 
 impl Object {
+    pub fn new(
+        data: ObjectData,
+        owner: Owner,
+        previous_transaction: TransactionDigest,
+        storage_rebate: u64,
+    ) -> Self {
+        Self {
+            data,
+            owner,
+            previous_transaction,
+            storage_rebate,
+        }
+    }
+
     pub fn object_id(&self) -> ObjectId {
         match &self.data {
             ObjectData::Struct(struct_) => id_opt(&struct_.contents).unwrap(),
@@ -259,6 +310,18 @@ impl Object {
     pub fn owner(&self) -> &Owner {
         &self.owner
     }
+
+    pub fn data(&self) -> &ObjectData {
+        &self.data
+    }
+
+    pub fn previous_transaction(&self) -> TransactionDigest {
+        self.previous_transaction
+    }
+
+    pub fn storage_rebate(&self) -> u64 {
+        self.storage_rebate
+    }
 }
 
 fn id_opt(contents: &[u8]) -> Option<ObjectId> {
@@ -279,6 +342,10 @@ pub struct GenesisObject {
 }
 
 impl GenesisObject {
+    pub fn new(data: ObjectData, owner: Owner) -> Self {
+        Self { data, owner }
+    }
+
     pub fn object_id(&self) -> ObjectId {
         match &self.data {
             ObjectData::Struct(struct_) => id_opt(&struct_.contents).unwrap(),
@@ -298,6 +365,14 @@ impl GenesisObject {
             ObjectData::Struct(struct_) => ObjectType::Struct(struct_.type_.clone()),
             ObjectData::Package(_) => ObjectType::Package,
         }
+    }
+
+    pub fn owner(&self) -> &Owner {
+        &self.owner
+    }
+
+    pub fn data(&self) -> &ObjectData {
+        &self.data
     }
 }
 

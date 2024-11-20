@@ -15,50 +15,50 @@ use crate::types::TransactionEventsDigest;
 pub struct TransactionEffectsV1 {
     /// The status of the execution
     #[cfg_attr(feature = "schemars", schemars(flatten))]
-    status: ExecutionStatus,
+    pub status: ExecutionStatus,
     /// The epoch when this transaction was executed.
     #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
-    epoch: EpochId,
-    gas_used: GasCostSummary,
+    pub epoch: EpochId,
+    pub gas_used: GasCostSummary,
     /// The version that every modified (mutated or deleted) object had before it was modified by
     /// this transaction.
     #[cfg_attr(test, any(proptest::collection::size_range(0..=5).lift()))]
-    modified_at_versions: Vec<ModifiedAtVersion>,
+    pub modified_at_versions: Vec<ModifiedAtVersion>,
     /// The object references of the shared objects used in this transaction. Empty if no shared objects were used.
     #[cfg_attr(test, any(proptest::collection::size_range(0..=5).lift()))]
-    shared_objects: Vec<ObjectReference>,
+    pub shared_objects: Vec<ObjectReference>,
     /// The transaction digest
-    transaction_digest: TransactionDigest,
+    pub transaction_digest: TransactionDigest,
 
     /// ObjectReference and owner of new objects created.
     #[cfg_attr(test, any(proptest::collection::size_range(0..=5).lift()))]
-    created: Vec<ObjectReferenceWithOwner>,
+    pub created: Vec<ObjectReferenceWithOwner>,
     /// ObjectReference and owner of mutated objects, including gas object.
     #[cfg_attr(test, any(proptest::collection::size_range(0..=5).lift()))]
-    mutated: Vec<ObjectReferenceWithOwner>,
+    pub mutated: Vec<ObjectReferenceWithOwner>,
     /// ObjectReference and owner of objects that are unwrapped in this transaction.
     /// Unwrapped objects are objects that were wrapped into other objects in the past,
     /// and just got extracted out.
     #[cfg_attr(test, any(proptest::collection::size_range(0..=5).lift()))]
-    unwrapped: Vec<ObjectReferenceWithOwner>,
+    pub unwrapped: Vec<ObjectReferenceWithOwner>,
     /// Object Refs of objects now deleted (the new refs).
     #[cfg_attr(test, any(proptest::collection::size_range(0..=5).lift()))]
-    deleted: Vec<ObjectReference>,
+    pub deleted: Vec<ObjectReference>,
     /// Object refs of objects previously wrapped in other objects but now deleted.
     #[cfg_attr(test, any(proptest::collection::size_range(0..=5).lift()))]
-    unwrapped_then_deleted: Vec<ObjectReference>,
+    pub unwrapped_then_deleted: Vec<ObjectReference>,
     /// Object refs of objects now wrapped in other objects.
     #[cfg_attr(test, any(proptest::collection::size_range(0..=5).lift()))]
-    wrapped: Vec<ObjectReference>,
+    pub wrapped: Vec<ObjectReference>,
     /// The updated gas object reference. Have a dedicated field for convenient access.
     /// It's also included in mutated.
-    gas_object: ObjectReferenceWithOwner,
+    pub gas_object: ObjectReferenceWithOwner,
     /// The digest of the events emitted during execution,
     /// can be None if the transaction does not emit any event.
-    events_digest: Option<TransactionEventsDigest>,
+    pub events_digest: Option<TransactionEventsDigest>,
     /// The set of transaction digests this transaction depends on.
     #[cfg_attr(test, any(proptest::collection::size_range(0..=5).lift()))]
-    dependencies: Vec<TransactionDigest>,
+    pub dependencies: Vec<TransactionDigest>,
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]

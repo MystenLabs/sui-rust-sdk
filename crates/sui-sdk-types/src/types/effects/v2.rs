@@ -16,11 +16,11 @@ use crate::types::TransactionEventsDigest;
 pub struct TransactionEffectsV2 {
     /// The status of the execution
     #[cfg_attr(feature = "schemars", schemars(flatten))]
-    status: ExecutionStatus,
+    pub status: ExecutionStatus,
     /// The epoch when this transaction was executed.
     #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
-    epoch: EpochId,
-    gas_used: GasCostSummary,
+    pub epoch: EpochId,
+    pub gas_used: GasCostSummary,
     /// The transaction digest
     pub transaction_digest: TransactionDigest,
     /// The updated gas object reference, as an index into the `changed_objects` vector.

@@ -38,6 +38,10 @@ pub struct MultisigMember {
 }
 
 impl MultisigMember {
+    pub fn new(public_key: MultisigMemberPublicKey, weight: WeightUnit) -> Self {
+        Self { public_key, weight }
+    }
+
     pub fn public_key(&self) -> &MultisigMemberPublicKey {
         &self.public_key
     }
@@ -63,6 +67,10 @@ pub struct MultisigCommittee {
 }
 
 impl MultisigCommittee {
+    pub fn new(members: Vec<MultisigMember>, threshold: ThresholdUnit) -> Self {
+        Self { members, threshold }
+    }
+
     pub fn members(&self) -> &[MultisigMember] {
         &self.members
     }
@@ -155,6 +163,10 @@ impl MultisigAggregatedSignature {
 
     pub fn legacy_bitmap(&self) -> Option<&roaring::RoaringBitmap> {
         self.legacy_bitmap.as_ref()
+    }
+
+    pub fn with_legacy_bitmap(&mut self, legacy_bitmap: roaring::RoaringBitmap) {
+        self.legacy_bitmap = Some(legacy_bitmap);
     }
 
     pub fn committee(&self) -> &MultisigCommittee {

@@ -175,7 +175,7 @@ pub struct AuthenticatorStateExpire {
     /// The initial version of the authenticator object that it was shared at.
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
-    pub authenticator_obj_initial_shared_version: u64,
+    pub authenticator_object_initial_shared_version: u64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -291,9 +291,9 @@ pub enum ConsensusDeterminedVersionAssignments {
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct CancelledTransaction {
-    digest: TransactionDigest,
+    pub digest: TransactionDigest,
     #[cfg_attr(test, any(proptest::collection::size_range(0..=2).lift()))]
-    version_assignments: Vec<VersionAssignment>,
+    pub version_assignments: Vec<VersionAssignment>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -304,10 +304,10 @@ pub struct CancelledTransaction {
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(test, derive(test_strategy::Arbitrary))]
 pub struct VersionAssignment {
-    object_id: ObjectId,
+    pub object_id: ObjectId,
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
-    version: Version,
+    pub version: Version,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -399,7 +399,7 @@ pub struct ChangeEpoch {
 pub struct SystemPackage {
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
-    version: Version,
+    pub version: Version,
     #[cfg_attr(
         feature = "serde",
         serde(
@@ -408,8 +408,8 @@ pub struct SystemPackage {
     )]
     #[cfg_attr(feature = "schemars", schemars(with = "Vec<crate::_schemars::Base64>"))]
     #[cfg_attr(test, any(proptest::collection::size_range(0..=2).lift()))]
-    modules: Vec<Vec<u8>>,
-    dependencies: Vec<ObjectId>,
+    pub modules: Vec<Vec<u8>>,
+    pub dependencies: Vec<ObjectId>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

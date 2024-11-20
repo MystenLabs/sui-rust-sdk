@@ -11,7 +11,7 @@ use super::TypeTag;
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(test, derive(test_strategy::Arbitrary))]
-pub struct TransactionEvents(Vec<Event>);
+pub struct TransactionEvents(pub Vec<Event>);
 
 /// Specific type of event
 #[derive(PartialEq, Eq, Debug, Clone)]

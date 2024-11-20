@@ -123,6 +123,20 @@ pub struct CheckpointContents(
     Vec<CheckpointTransactionInfo>,
 );
 
+impl CheckpointContents {
+    pub fn new(transactions: Vec<CheckpointTransactionInfo>) -> Self {
+        Self(transactions)
+    }
+
+    pub fn transactions(&self) -> &[CheckpointTransactionInfo] {
+        &self.0
+    }
+
+    pub fn into_v1(self) -> Vec<CheckpointTransactionInfo> {
+        self.0
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "serde",
