@@ -9,7 +9,7 @@ type BoxError = Box<dyn std::error::Error + Send + Sync + 'static>;
 
 #[derive(thiserror::Error, Debug, Clone)]
 #[non_exhaustive]
-pub enum ErrorType {
+pub enum Kind {
     #[error("Conversion error due to input issue: {0}")]
     Input(String),
     #[error("Gas object should be an immutable or owned object")]
@@ -108,7 +108,7 @@ impl Error {
     }
 
     /// Set the missing data variable to true and set the source to the given error.
-    pub(crate) fn with_missing_data(error: ErrorType) -> Self {
+    pub(crate) fn with_missing_data(error: Kind) -> Self {
         Self {
             inner: Box::new(BuilderError {
                 missing_data_error: true,
@@ -119,7 +119,7 @@ impl Error {
     }
 
     /// Set the conversion error to true and set the source to the given error.
-    pub(crate) fn with_conversion_error(error: ErrorType) -> Self {
+    pub(crate) fn with_conversion_error(error: Kind) -> Self {
         Self {
             inner: Box::new(BuilderError {
                 missing_data_error: false,
@@ -130,14 +130,14 @@ impl Error {
     }
 }
 
-impl From<ErrorType> for Error {
-    fn from(value: ErrorType) -> Self {
+impl From<Kind> for Error {
+    fn from(value: Kind) -> Self {
         Self::from_error(value)
     }
 }
 
-impl From<Base64Error> for ErrorType {
+impl From<Base64Error> for Kind {
     fn from(value: Base64Error) -> Self {
-        ErrorType::DecodingError(value)
+        Kind::DecodingError(value)
     }
 }

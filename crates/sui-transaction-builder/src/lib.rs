@@ -4,7 +4,7 @@
 mod error;
 
 use error::Error;
-use error::ErrorType;
+use error::Kind;
 use sui_graphql_client::Client;
 use sui_types::types::unresolved;
 use sui_types::types::Address;
@@ -312,16 +312,16 @@ impl TransactionBuilder {
     /// Use the [`resolve`] function to resolve the transaction if not all the data is provided.
     pub fn finish(self) -> Result<Transaction, Error> {
         let Some(sender) = self.sender else {
-            return Err(Error::with_missing_data(ErrorType::Sender));
+            return Err(Error::with_missing_data(Kind::Sender));
         };
         if self.gas.is_empty() {
-            return Err(Error::with_missing_data(ErrorType::GasObjects));
+            return Err(Error::with_missing_data(Kind::GasObjects));
         }
         let Some(budget) = self.gas_budget else {
-            return Err(Error::with_missing_data(ErrorType::GasBudget));
+            return Err(Error::with_missing_data(Kind::GasBudget));
         };
         let Some(price) = self.gas_price else {
-            return Err(Error::with_missing_data(ErrorType::GasPrice));
+            return Err(Error::with_missing_data(Kind::GasPrice));
         };
 
         Ok(Transaction {
@@ -359,9 +359,7 @@ impl TransactionBuilder {
     /// service.
     // TODO: finish the implementation when REST API is ready to provide the transaction resolution
     pub fn resolve(self, _client: &Client) -> Result<(), Error> {
-        let sender = self
-            .sender
-            .ok_or(Error::with_missing_data(ErrorType::Sender))?;
+        let sender = self.sender.ok_or(Error::with_missing_data(Kind::Sender))?;
         let _unresolved_tx = {
             unresolved::Transaction {
                 ptb: unresolved::ProgrammableTransaction {
@@ -457,7 +455,7 @@ fn try_from_gas_unresolved_input_to_unresolved_obj_ref(
         Some(unresolved::InputKind::ImmutableOrOwned) => {
             let object_id = input
                 .object_id
-                .ok_or(Error::with_missing_data(ErrorType::ObjectId))?;
+                .ok_or(Error::with_missing_data(Kind::ObjectId))?;
             let version = input.version;
             let digest = input.digest;
             Ok(unresolved::ObjectReference {
@@ -466,7 +464,7 @@ fn try_from_gas_unresolved_input_to_unresolved_obj_ref(
                 digest,
             })
         }
-        _ => Err(Error::from(ErrorType::WrongGasObjectKind)),
+        _ => Err(Error::from(Kind::WrongGasObjectKind)),
     }
 }
 
@@ -475,10 +473,10 @@ fn try_from_unresolved_obj_ref(obj: unresolved::ObjectReference) -> Result<Objec
     let obj_id = obj.object_id;
     let version = obj
         .version
-        .ok_or(Error::with_missing_data(ErrorType::Version(obj_id)))?;
+        .ok_or(Error::with_missing_data(Kind::Version(obj_id)))?;
     let digest = obj
         .digest
-        .ok_or(Error::with_missing_data(ErrorType::Digest(obj_id)))?;
+        .ok_or(Error::with_missing_data(Kind::Digest(obj_id)))?;
     Ok(ObjectReference::new(obj_id, version, digest))
 }
 
@@ -490,30 +488,29 @@ fn try_from_unresolved_input_arg(value: unresolved::Input) -> Result<Input, Erro
         match kind {
             unresolved::InputKind::Pure => {
                 let Some(value) = value.value else {
-                    return Err(Error::with_missing_data(ErrorType::PureValue));
+                    return Err(Error::with_missing_data(Kind::PureValue));
                 };
 
                 match value {
                     unresolved::Value::String(v) => {
-                        let bytes = base64ct::Base64::decode_vec(&v).map_err(|e| {
-                            Error::with_conversion_error(ErrorType::DecodingError(e))
-                        })?;
+                        let bytes = base64ct::Base64::decode_vec(&v)
+                            .map_err(|e| Error::with_conversion_error(Kind::DecodingError(e)))?;
                         Ok(Input::Pure { value: bytes })
                     }
-                    _ => Err(Error::from(ErrorType::Input(
+                    _ => Err(Error::from(Kind::Input(
                         "expected a base64 string value for the Pure input argument".to_string(),
                     ))),
                 }
             }
             unresolved::InputKind::ImmutableOrOwned => {
                 let Some(object_id) = value.object_id else {
-                    return Err(Error::with_missing_data(ErrorType::ObjectId));
+                    return Err(Error::with_missing_data(Kind::ObjectId));
                 };
                 let Some(version) = value.version else {
-                    return Err(Error::with_missing_data(ErrorType::Version(object_id)));
+                    return Err(Error::with_missing_data(Kind::Version(object_id)));
                 };
                 let Some(digest) = value.digest else {
-                    return Err(Error::with_missing_data(ErrorType::Digest(object_id)));
+                    return Err(Error::with_missing_data(Kind::Digest(object_id)));
                 };
                 Ok(Input::ImmutableOrOwned(ObjectReference::new(
                     object_id, version, digest,
@@ -521,15 +518,15 @@ fn try_from_unresolved_input_arg(value: unresolved::Input) -> Result<Input, Erro
             }
             unresolved::InputKind::Shared => {
                 let Some(object_id) = value.object_id else {
-                    return Err(Error::with_missing_data(ErrorType::ObjectId));
+                    return Err(Error::with_missing_data(Kind::ObjectId));
                 };
                 let Some(initial_shared_version) = value.version else {
-                    return Err(Error::with_missing_data(ErrorType::InitialSharedVersion(
+                    return Err(Error::with_missing_data(Kind::InitialSharedVersion(
                         object_id,
                     )));
                 };
                 let Some(mutable) = value.mutable else {
-                    return Err(Error::with_missing_data(ErrorType::SharedObjectMutability(
+                    return Err(Error::with_missing_data(Kind::SharedObjectMutability(
                         object_id,
                     )));
                 };
@@ -542,22 +539,22 @@ fn try_from_unresolved_input_arg(value: unresolved::Input) -> Result<Input, Erro
             }
             unresolved::InputKind::Receiving => {
                 let Some(object_id) = value.object_id else {
-                    return Err(Error::with_missing_data(ErrorType::ObjectId));
+                    return Err(Error::with_missing_data(Kind::ObjectId));
                 };
                 let Some(version) = value.version else {
-                    return Err(Error::with_missing_data(ErrorType::Version(object_id)));
+                    return Err(Error::with_missing_data(Kind::Version(object_id)));
                 };
                 let Some(digest) = value.digest else {
-                    return Err(Error::with_missing_data(ErrorType::Digest(object_id)));
+                    return Err(Error::with_missing_data(Kind::Digest(object_id)));
                 };
                 Ok(Input::Receiving(ObjectReference::new(
                     object_id, version, digest,
                 )))
             }
-            unresolved::InputKind::Literal => Err(ErrorType::UnsupportedLiteral.into()),
+            unresolved::InputKind::Literal => Err(Kind::UnsupportedLiteral.into()),
         }
     } else {
-        Err(Error::from(ErrorType::Input(
+        Err(Error::from(Kind::Input(
             "unresolved::Input must have a kind that is not None".to_string(),
         )))
     }
