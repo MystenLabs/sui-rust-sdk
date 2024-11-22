@@ -118,7 +118,7 @@ pub enum InputKind {
 #[cfg_attr(
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize),
-    serde(rename = "UnresolvedInput"),
+    serde(rename = "UnresolvedInput")
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct Input {
