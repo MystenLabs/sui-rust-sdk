@@ -23,4 +23,6 @@ sui-crypto = { package = "sui-crypto", path = "../sui-crypto" , features = ["ed2
 sui-types = { package = "sui-sdk-types", path = "../sui-sdk-types", features = ["rand"] }
 tokio = { version = "1.0", features = ["full"] }
 rand = "0.8"
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
 

@@ -26,6 +26,9 @@ test:
 
 .PHONY: test-with-localnet
 test-with-localnet:
+	# At least publish & upgrade tests in tx-builder require a Move project from which to extract modules, dependencies, and digest data.
+	sui move build --path crates/sui-transaction-builder/tests/test_example_v1/ --dump-bytecode-as-base64 >> crates/sui-transaction-builder/test_example_v1_build_output.json
+	sui move build --path crates/sui-transaction-builder/tests/test_example_v2/ --dump-bytecode-as-base64 >> crates/sui-transaction-builder/test_example_v2_build_output.json
 	cargo nextest run -p sui-graphql-client -p sui-transaction-builder
 
 .PHONY: wasm

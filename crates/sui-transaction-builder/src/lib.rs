@@ -562,6 +562,11 @@ fn try_from_unresolved_input_arg(value: unresolved::Input) -> Result<Input, Erro
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
+    use base64ct::Encoding;
+    use serde::de;
+    use serde::{Deserialize, Deserializer};
     use sui_crypto::ed25519::Ed25519PrivateKey;
     use sui_crypto::SuiSigner;
     use sui_graphql_client::faucet::CoinInfo;
@@ -582,69 +587,44 @@ mod tests {
     use crate::Serialized;
     use crate::TransactionBuilder;
 
-    // The compiled modules bcs for the Move project in the `sui/examples/move/first_package`
-    // This is used for the publish and upgrade tests below.
-    // To get the compiled modules bcs, you need to:
-    // 1. change the Sui CLI code to print the `compiled_modules` in debug format
-    // <https://github.com/mystenlabs/sui/blob/5d70ec6f5d4b7ff611649432aeb8c538efb63e80/crates/sui/src/client_commands.rs#L1018>
-    // 2. build the `sui` binary
-    // 3. go to `sui/examples/move/first_package` and run `sui client publish '.' --dry-run`
-    // 4. copy paste the compiled_modules bcs output here
-    const PACKAGE_MODULES: [u8; 506] = [
-        161, 28, 235, 11, 6, 0, 0, 0, 10, 1, 0, 8, 2, 8, 16, 3, 24, 46, 4, 70, 2, 5, 72, 49, 7,
-        121, 133, 1, 8, 254, 1, 64, 10, 190, 2, 18, 12, 208, 2, 119, 13, 199, 3, 6, 0, 4, 1, 10, 1,
-        15, 1, 16, 0, 1, 12, 0, 0, 0, 8, 0, 1, 3, 4, 0, 3, 2, 2, 0, 0, 6, 0, 1, 0, 0, 7, 2, 3, 0,
-        0, 12, 2, 3, 0, 0, 14, 4, 3, 0, 0, 13, 5, 6, 0, 0, 9, 7, 6, 0, 1, 8, 0, 8, 0, 2, 15, 12, 1,
-        1, 8, 3, 11, 9, 10, 0, 7, 11, 1, 7, 8, 3, 0, 1, 6, 8, 0, 1, 3, 1, 6, 8, 1, 3, 3, 3, 7, 8,
-        3, 1, 8, 0, 4, 7, 8, 1, 3, 3, 7, 8, 3, 1, 8, 2, 1, 6, 8, 3, 1, 5, 1, 8, 1, 2, 9, 0, 5, 5,
-        70, 111, 114, 103, 101, 5, 83, 119, 111, 114, 100, 9, 84, 120, 67, 111, 110, 116, 101, 120,
-        116, 3, 85, 73, 68, 7, 101, 120, 97, 109, 112, 108, 101, 2, 105, 100, 4, 105, 110, 105,
-        116, 5, 109, 97, 103, 105, 99, 3, 110, 101, 119, 9, 110, 101, 119, 95, 115, 119, 111, 114,
-        100, 6, 111, 98, 106, 101, 99, 116, 6, 115, 101, 110, 100, 101, 114, 8, 115, 116, 114, 101,
-        110, 103, 116, 104, 12, 115, 119, 111, 114, 100, 95, 99, 114, 101, 97, 116, 101, 14, 115,
-        119, 111, 114, 100, 115, 95, 99, 114, 101, 97, 116, 101, 100, 8, 116, 114, 97, 110, 115,
-        102, 101, 114, 10, 116, 120, 95, 99, 111, 110, 116, 101, 120, 116, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 3, 5,
-        8, 2, 7, 3, 12, 3, 1, 2, 2, 5, 8, 2, 14, 3, 0, 0, 0, 0, 1, 9, 10, 0, 17, 6, 6, 0, 0, 0, 0,
-        0, 0, 0, 0, 18, 1, 11, 0, 46, 17, 8, 56, 0, 2, 1, 1, 0, 0, 1, 4, 11, 0, 16, 0, 20, 2, 2, 1,
-        0, 0, 1, 4, 11, 0, 16, 1, 20, 2, 3, 1, 0, 0, 1, 4, 11, 0, 16, 2, 20, 2, 4, 1, 0, 0, 1, 6,
-        11, 2, 17, 6, 11, 0, 11, 1, 18, 0, 2, 5, 1, 0, 0, 1, 14, 10, 0, 16, 2, 20, 6, 1, 0, 0, 0,
-        0, 0, 0, 0, 22, 11, 0, 15, 2, 21, 11, 3, 17, 6, 11, 1, 11, 2, 18, 0, 2, 0, 1, 0, 2, 1, 1,
-        0,
-    ];
+    /// Type corresponding to the output of `sui move build --dump-bytecode-as-base64`
+    #[derive(serde::Deserialize, Debug)]
+    struct MovePackageData {
+        #[serde(deserialize_with = "bcs_from_str")]
+        modules: Vec<Vec<u8>>,
+        #[serde(deserialize_with = "deps_from_str")]
+        dependencies: Vec<ObjectId>,
+        digest: Vec<u8>,
+    }
 
-    // updated package. Has a new function.
-    // to update the initial package, go to `sui/examples/move/first_package` and add a
-    // function in the `sources/example.move` file. Then follow the comment from the const
-    // PACKAGE_MODULES on how to print the bcs bytes of the update compiled modules using the CLI
-    // and copy paste the output here.
-    const UPDATED_PACKAGE_MODULES: [u8; 587] = [
-        161, 28, 235, 11, 6, 0, 0, 0, 10, 1, 0, 8, 2, 8, 16, 3, 24, 51, 4, 75, 2, 5, 77, 57, 7,
-        134, 1, 155, 1, 8, 161, 2, 64, 10, 225, 2, 18, 12, 243, 2, 163, 1, 13, 150, 4, 6, 0, 4, 1,
-        11, 1, 16, 1, 17, 0, 1, 12, 0, 0, 0, 8, 0, 1, 3, 4, 0, 3, 2, 2, 0, 0, 6, 0, 1, 0, 0, 7, 2,
-        3, 0, 0, 13, 2, 3, 0, 0, 15, 4, 3, 0, 0, 14, 5, 6, 0, 0, 10, 7, 6, 0, 0, 9, 8, 6, 0, 1, 8,
-        0, 9, 0, 2, 16, 13, 1, 1, 8, 3, 12, 10, 11, 0, 8, 12, 1, 7, 8, 3, 0, 1, 6, 8, 0, 1, 3, 1,
-        6, 8, 1, 3, 3, 3, 7, 8, 3, 1, 8, 0, 3, 7, 8, 1, 3, 7, 8, 3, 4, 7, 8, 1, 3, 3, 7, 8, 3, 1,
-        8, 2, 1, 6, 8, 3, 1, 5, 1, 8, 1, 2, 9, 0, 5, 5, 70, 111, 114, 103, 101, 5, 83, 119, 111,
-        114, 100, 9, 84, 120, 67, 111, 110, 116, 101, 120, 116, 3, 85, 73, 68, 7, 101, 120, 97,
-        109, 112, 108, 101, 2, 105, 100, 4, 105, 110, 105, 116, 5, 109, 97, 103, 105, 99, 3, 110,
-        101, 119, 9, 110, 101, 119, 95, 115, 119, 111, 114, 100, 21, 110, 101, 119, 95, 115, 119,
-        111, 114, 100, 95, 109, 97, 120, 95, 115, 116, 114, 101, 110, 103, 104, 6, 111, 98, 106,
-        101, 99, 116, 6, 115, 101, 110, 100, 101, 114, 8, 115, 116, 114, 101, 110, 103, 116, 104,
-        12, 115, 119, 111, 114, 100, 95, 99, 114, 101, 97, 116, 101, 14, 115, 119, 111, 114, 100,
-        115, 95, 99, 114, 101, 97, 116, 101, 100, 8, 116, 114, 97, 110, 115, 102, 101, 114, 10,
-        116, 120, 95, 99, 111, 110, 116, 101, 120, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 3, 5, 8, 2, 7, 3, 13, 3,
-        1, 2, 2, 5, 8, 2, 15, 3, 0, 0, 0, 0, 1, 9, 10, 0, 17, 7, 6, 0, 0, 0, 0, 0, 0, 0, 0, 18, 1,
-        11, 0, 46, 17, 9, 56, 0, 2, 1, 1, 0, 0, 1, 4, 11, 0, 16, 0, 20, 2, 2, 1, 0, 0, 1, 4, 11, 0,
-        16, 1, 20, 2, 3, 1, 0, 0, 1, 4, 11, 0, 16, 2, 20, 2, 4, 1, 0, 0, 1, 6, 11, 2, 17, 7, 11, 0,
-        11, 1, 18, 0, 2, 5, 1, 0, 0, 1, 14, 10, 0, 16, 2, 20, 6, 1, 0, 0, 0, 0, 0, 0, 0, 22, 11, 0,
-        15, 2, 21, 11, 2, 17, 7, 11, 1, 6, 100, 0, 0, 0, 0, 0, 0, 0, 18, 0, 2, 6, 1, 0, 0, 1, 14,
-        10, 0, 16, 2, 20, 6, 1, 0, 0, 0, 0, 0, 0, 0, 22, 11, 0, 15, 2, 21, 11, 3, 17, 7, 11, 1, 11,
-        2, 18, 0, 2, 0, 1, 0, 2, 1, 1, 0,
-    ];
+    fn bcs_from_str<'de, D>(deserializer: D) -> Result<Vec<Vec<u8>>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let bcs = Vec::<String>::deserialize(deserializer)?;
+        bcs.into_iter()
+            .map(|s| base64ct::Base64::decode_vec(&s).map_err(de::Error::custom))
+            .collect()
+    }
+
+    fn deps_from_str<'de, D>(deserializer: D) -> Result<Vec<ObjectId>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let deps = Vec::<String>::deserialize(deserializer)?;
+        deps.into_iter()
+            .map(|s| ObjectId::from_str(&s).map_err(de::Error::custom))
+            .collect()
+    }
+
+    /// This is used to read the json file that contains the modules/deps/digest after calling `sui
+    /// move build` on the `test_example_v1 and test_example_v2` projects in the tests directory.
+    /// The json files are generated automatically when running make tests-with-localnet in the
+    /// root of the sui-transaction-builder crate.
+    fn move_package_data(file: &str) -> MovePackageData {
+        let data = std::fs::read_to_string(file).unwrap();
+        serde_json::from_str(&data).unwrap()
+    }
 
     /// Generate a random private key and its corresponding address
     fn helper_address_pk() -> (Address, Ed25519PrivateKey) {
@@ -936,11 +916,9 @@ mod tests {
         let mut tx = TransactionBuilder::new();
         let (address, pk, _) = helper_setup(&mut tx, &client).await;
 
-        // publish very dummy package (from sui/examples/move/first_package)
-
-        let deps = vec!["0x1".parse().unwrap(), "0x2".parse().unwrap()];
+        let package = move_package_data("test_example_v1_build_output.json");
         let sender = tx.input(Serialized(&address));
-        let upgrade_cap = tx.publish(vec![PACKAGE_MODULES.to_vec()], deps);
+        let upgrade_cap = tx.publish(package.modules, package.dependencies);
         tx.transfer_objects(vec![upgrade_cap], sender);
         let tx = tx.finish().unwrap();
         let sig = pk.sign_transaction(&tx).unwrap();
@@ -954,11 +932,9 @@ mod tests {
         let mut tx = TransactionBuilder::new();
         let (address, pk, coins) = helper_setup(&mut tx, &client).await;
 
-        // publish very dummy package (from sui/examples/move/first_package)
-
-        let deps = vec!["0x1".parse().unwrap(), "0x2".parse().unwrap()];
+        let package = move_package_data("test_example_v1_build_output.json");
         let sender = tx.input(Serialized(&address));
-        let upgrade_cap = tx.publish(vec![PACKAGE_MODULES.to_vec()], deps.clone());
+        let upgrade_cap = tx.publish(package.modules, package.dependencies);
         tx.transfer_objects(vec![upgrade_cap], sender);
         let tx = tx.finish().unwrap();
         let sig = pk.sign_transaction(&tx).unwrap();
@@ -1016,13 +992,8 @@ mod tests {
         }
 
         let upgrade_policy = tx.input(Serialized(&0u8));
-        // the digest of the new package that was compiled. Check PACKAGE_MODULES at the top of the
-        // test module to see how to get this updated package digest.
-        let package_digest: &[u8] = &[
-            68, 89, 156, 51, 190, 35, 155, 216, 248, 49, 135, 170, 106, 42, 190, 4, 208, 59, 155,
-            89, 74, 63, 70, 95, 207, 78, 227, 22, 136, 146, 57, 79,
-        ];
-        let digest_arg = tx.input(Serialized(&package_digest));
+        let updated_package = move_package_data("test_example_v2_build_output.json");
+        let digest_arg = tx.input(Serialized(&updated_package.digest));
 
         // we need this ticket to authorize the upgrade
         let upgrade_ticket = tx.move_call(
@@ -1036,8 +1007,8 @@ mod tests {
         );
         // now we can upgrade the package
         let upgrade_receipt = tx.upgrade(
-            vec![UPDATED_PACKAGE_MODULES.to_vec()],
-            deps,
+            updated_package.modules,
+            updated_package.dependencies,
             package_id.unwrap(),
             upgrade_ticket,
         );
