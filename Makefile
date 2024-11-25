@@ -26,8 +26,8 @@ test:
 
 .PHONY: test-with-localnet
 test-with-localnet:
-	cd crates/sui-transaction-builder/tests/test_example_v1 && sui move build --dump-bytecode-as-base64 >> ../../test_example_v1_build_output.json
-	cd crates/sui-transaction-builder/tests/test_example_v2 && sui move build --dump-bytecode-as-base64 >> ../../test_example_v2_build_output.json
+	cd crates/sui-transaction-builder/tests/test_example_v1 && sui move build --dump-bytecode-as-base64 
+	cd crates/sui-transaction-builder/tests/test_example_v2 && sui move build --dump-bytecode-as-base64
 	cargo nextest run -p sui-graphql-client -p sui-transaction-builder
 
 .PHONY: wasm
