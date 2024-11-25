@@ -587,9 +587,10 @@ mod tests {
             .collect()
     }
 
-    /// This is used to read the json file that contains the modules/deps/digest after calling `sui
-    /// move build` on the `test_example_v1 and test_example_v2` projects in the tests directory.
-    /// The json files are generated automatically when running make tests-with-localnet in the
+    /// This is used to read the json file that contains the modules/deps/digest generated with sui
+    /// move build --dump-bytecode-as-base64 on the `test_example_v1 and test_example_v2` projects
+    /// in the tests directory.
+    /// The json files are generated automatically when running `make test-with-localnet` in the
     /// root of the sui-transaction-builder crate.
     fn move_package_data(file: &str) -> MovePackageData {
         let data = std::fs::read_to_string(file)
