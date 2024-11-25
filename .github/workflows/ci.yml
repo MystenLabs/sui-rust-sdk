@@ -106,8 +106,13 @@ jobs:
           echo "Downloading testnet binary from $download_url"
           wget -q $download_url -O sui.tgz
           tar -zxvf sui.tgz ./sui
+          chmod +x ./sui
           echo "Starting local network with a faucet, an indexer (port 5432) and GraphQL. Epoch duration is set to $EPOCH_DURATION_MS ms"
+          echo "$(pwd)" >> $GITHUB_PATH
           ./sui start --force-regenesis --with-faucet --with-indexer --with-graphql --pg-port 5432 --pg-db-name sui_indexer_v2 --epoch-duration-ms $EPOCH_DURATION_MS &
+
+      - name: Enable debug logging
+        run: set -x
 
       - name: Run tests that require local network (GraphQL Client and Tx Builder)
         env:
