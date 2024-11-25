@@ -5,7 +5,6 @@ mod error;
 
 use error::Error;
 use error::Kind;
-use sui_graphql_client::Client;
 use sui_types::types::unresolved;
 use sui_types::types::Address;
 use sui_types::types::Argument;
@@ -354,36 +353,6 @@ impl TransactionBuilder {
             expiration: self.expiration,
         })
     }
-
-    /// Attempts to resolve the transaction with the data provided so far by querying the GraphQL
-    /// service.
-    // TODO: finish the implementation when REST API is ready to provide the transaction resolution
-    pub fn resolve(self, _client: &Client) -> Result<(), Error> {
-        let sender = self.sender.ok_or(Error::with_missing_data(Kind::Sender))?;
-        let _unresolved_tx = {
-            unresolved::Transaction {
-                ptb: unresolved::ProgrammableTransaction {
-                    inputs: self.inputs.clone(),
-                    commands: self.commands.clone(),
-                },
-                sender,
-                gas_payment: Some(unresolved::GasPayment {
-                    objects: self
-                        .gas
-                        .clone()
-                        .into_iter()
-                        .map(try_from_gas_unresolved_input_to_unresolved_obj_ref)
-                        .collect::<Result<Vec<_>, _>>()?,
-                    owner: self.sponsor.unwrap_or(sender),
-                    price: self.gas_price,
-                    budget: self.gas_budget,
-                }),
-                expiration: self.expiration,
-            }
-        };
-
-        Ok(())
-    }
 }
 
 impl Function {
@@ -464,7 +433,7 @@ fn try_from_gas_unresolved_input_to_unresolved_obj_ref(
                 digest,
             })
         }
-        _ => Err(Error::from(Kind::WrongGasObjectKind)),
+        _ => Err(Error::from(Kind::WrongGasObject)),
     }
 }
 
@@ -564,6 +533,7 @@ fn try_from_unresolved_input_arg(value: unresolved::Input) -> Result<Input, Erro
 mod tests {
     use std::str::FromStr;
 
+    use anyhow::Context;
     use base64ct::Encoding;
     use serde::de;
     use serde::{Deserialize, Deserializer};
@@ -622,7 +592,15 @@ mod tests {
     /// The json files are generated automatically when running make tests-with-localnet in the
     /// root of the sui-transaction-builder crate.
     fn move_package_data(file: &str) -> MovePackageData {
-        let data = std::fs::read_to_string(file).unwrap();
+        let data = std::fs::read_to_string(file)
+            .with_context(|| {
+                format!(
+                    "Failed to read {file}. \
+                    Run `make test-with-localnet` from the root of the repository that will \
+                    generate the right json files with the package data and then run the tests."
+                )
+            })
+            .unwrap();
         serde_json::from_str(&data).unwrap()
     }
 

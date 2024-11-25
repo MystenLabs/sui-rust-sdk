@@ -13,7 +13,7 @@ pub enum Kind {
     #[error("Conversion error due to input issue: {0}")]
     Input(String),
     #[error("Gas object should be an immutable or owned object")]
-    WrongGasObjectKind,
+    WrongGasObject,
     #[error("Decoding error: {0}")]
     DecodingError(Base64Error),
     /// Missing object id
@@ -40,7 +40,7 @@ pub enum Kind {
     GasPrice,
     /// Missing the object kind for this object
     #[error("Missing object kind for object {0}")]
-    ObjectKind(ObjectId),
+    ObjectKindMissing(ObjectId),
     /// Missing the initial shared version for this object
     #[error("Missing initial shared version for object {0}")]
     InitialSharedVersion(ObjectId),
