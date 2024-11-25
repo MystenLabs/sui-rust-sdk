@@ -111,8 +111,11 @@ jobs:
           echo "$(pwd)" >> $GITHUB_PATH
           ./sui start --force-regenesis --with-faucet --with-indexer --with-graphql --pg-port 5432 --pg-db-name sui_indexer_v2 --epoch-duration-ms $EPOCH_DURATION_MS &
 
-      - name: Enable debug logging
-        run: set -x
+      - name: Set up the CLI environment (need a client.yaml for calling some Sui commands)
+        shell: bash
+        run: |
+          mkdir -p $HOME/.sui/sui_config 
+          cp scripts/cli/client.yaml $HOME/.sui/sui_config/client.yaml
 
       - name: Run tests that require local network (GraphQL Client and Tx Builder)
         env:

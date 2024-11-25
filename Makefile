@@ -26,8 +26,6 @@ test:
 
 .PHONY: test-with-localnet
 test-with-localnet:
-	mkdir -p /home/.sui/sui_config
-	cp scripts/cli/client.yaml /home/.sui/sui_config/client.yaml
 	cd crates/sui-transaction-builder/tests/test_example_v1 && sui move build --dump-bytecode-as-base64 
 	cd crates/sui-transaction-builder/tests/test_example_v2 && sui move build --dump-bytecode-as-base64
 	cargo nextest run -p sui-graphql-client -p sui-transaction-builder
