@@ -536,7 +536,8 @@ mod tests {
     use anyhow::Context;
     use base64ct::Encoding;
     use serde::de;
-    use serde::{Deserialize, Deserializer};
+    use serde::Deserialize;
+    use serde::Deserializer;
     use sui_crypto::ed25519::Ed25519PrivateKey;
     use sui_crypto::SuiSigner;
     use sui_graphql_client::faucet::CoinInfo;
