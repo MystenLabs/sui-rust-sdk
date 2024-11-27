@@ -310,16 +310,16 @@ impl TransactionBuilder {
     /// Use the [`resolve`] function to resolve the transaction if not all the data is provided.
     pub fn finish(self) -> Result<Transaction, Error> {
         let Some(sender) = self.sender else {
-            return Err(Error::Sender);
+            return Err(Error::MissingSender);
         };
         if self.gas.is_empty() {
-            return Err(Error::GasObjects);
+            return Err(Error::MissingGasObjects);
         }
         let Some(budget) = self.gas_budget else {
-            return Err(Error::GasBudget);
+            return Err(Error::MissingGasBudget);
         };
         let Some(price) = self.gas_price else {
-            return Err(Error::GasPrice);
+            return Err(Error::MissingGasPrice);
         };
 
         Ok(Transaction {
@@ -421,7 +421,7 @@ fn try_from_gas_unresolved_input_to_unresolved_obj_ref(
 ) -> Result<unresolved::ObjectReference, Error> {
     match input.kind {
         Some(unresolved::InputKind::ImmutableOrOwned) => {
-            let object_id = input.object_id.ok_or(Error::ObjectId)?;
+            let object_id = input.object_id.ok_or(Error::MissingObjectId)?;
             let version = input.version;
             let digest = input.digest;
             Ok(unresolved::ObjectReference {
@@ -437,8 +437,8 @@ fn try_from_gas_unresolved_input_to_unresolved_obj_ref(
 /// Convert from an [`unresolved::ObjectReference`] to a [`ObjectReference`].
 fn try_from_unresolved_obj_ref(obj: unresolved::ObjectReference) -> Result<ObjectReference, Error> {
     let obj_id = obj.object_id;
-    let version = obj.version.ok_or(Error::Version(obj_id))?;
-    let digest = obj.digest.ok_or(Error::Digest(obj_id))?;
+    let version = obj.version.ok_or(Error::MissingVersion(obj_id))?;
+    let digest = obj.digest.ok_or(Error::MissingDigest(obj_id))?;
     Ok(ObjectReference::new(obj_id, version, digest))
 }
 
@@ -450,13 +450,12 @@ fn try_from_unresolved_input_arg(value: unresolved::Input) -> Result<Input, Erro
         match kind {
             unresolved::InputKind::Pure => {
                 let Some(value) = value.value else {
-                    return Err(Error::PureValue);
+                    return Err(Error::MissingPureValue);
                 };
 
                 match value {
                     unresolved::Value::String(v) => {
-                        let bytes = base64ct::Base64::decode_vec(&v)
-                            .map_err(|e| Error::DecodingError(e))?;
+                        let bytes = base64ct::Base64::decode_vec(&v).map_err(Error::Decoding)?;
                         Ok(Input::Pure { value: bytes })
                     }
                     _ => Err(Error::Input(
@@ -466,13 +465,13 @@ fn try_from_unresolved_input_arg(value: unresolved::Input) -> Result<Input, Erro
             }
             unresolved::InputKind::ImmutableOrOwned => {
                 let Some(object_id) = value.object_id else {
-                    return Err(Error::ObjectId);
+                    return Err(Error::MissingObjectId);
                 };
                 let Some(version) = value.version else {
-                    return Err(Error::Version(object_id));
+                    return Err(Error::MissingVersion(object_id));
                 };
                 let Some(digest) = value.digest else {
-                    return Err(Error::Digest(object_id));
+                    return Err(Error::MissingDigest(object_id));
                 };
                 Ok(Input::ImmutableOrOwned(ObjectReference::new(
                     object_id, version, digest,
@@ -480,10 +479,10 @@ fn try_from_unresolved_input_arg(value: unresolved::Input) -> Result<Input, Erro
             }
             unresolved::InputKind::Shared => {
                 let Some(object_id) = value.object_id else {
-                    return Err(Error::ObjectId);
+                    return Err(Error::MissingObjectId);
                 };
                 let Some(initial_shared_version) = value.version else {
-                    return Err(Error::InitialSharedVersion(object_id));
+                    return Err(Error::MissingInitialSharedVersion(object_id));
                 };
                 let Some(mutable) = value.mutable else {
                     return Err(Error::SharedObjectMutability(object_id));
@@ -497,13 +496,13 @@ fn try_from_unresolved_input_arg(value: unresolved::Input) -> Result<Input, Erro
             }
             unresolved::InputKind::Receiving => {
                 let Some(object_id) = value.object_id else {
-                    return Err(Error::ObjectId);
+                    return Err(Error::MissingObjectId);
                 };
                 let Some(version) = value.version else {
-                    return Err(Error::Version(object_id));
+                    return Err(Error::MissingVersion(object_id));
                 };
                 let Some(digest) = value.digest else {
-                    return Err(Error::Digest(object_id));
+                    return Err(Error::MissingDigest(object_id));
                 };
                 Ok(Input::Receiving(ObjectReference::new(
                     object_id, version, digest,
