@@ -6,8 +6,9 @@ pub mod types;
 #[cfg_attr(doc_cfg, doc(cfg(feature = "hash")))]
 pub mod hash;
 
+#[doc(hidden)]
 #[cfg(feature = "serde")]
-mod _serde {
+pub mod _serde {
     use base64ct::Base64;
     use base64ct::Encoding;
     use serde::Deserialize;
@@ -19,16 +20,16 @@ mod _serde {
     use serde_with::SerializeAs;
     use std::borrow::Cow;
 
-    pub(crate) type ReadableDisplay =
+    pub type ReadableDisplay =
         ::serde_with::As<::serde_with::IfIsHumanReadable<::serde_with::DisplayFromStr>>;
 
-    pub(crate) type OptionReadableDisplay =
+    pub type OptionReadableDisplay =
         ::serde_with::As<Option<::serde_with::IfIsHumanReadable<::serde_with::DisplayFromStr>>>;
 
-    pub(crate) type ReadableBase64Encoded =
+    pub type ReadableBase64Encoded =
         ::serde_with::As<::serde_with::IfIsHumanReadable<Base64Encoded, ::serde_with::Bytes>>;
 
-    pub(crate) struct Base64Encoded;
+    pub struct Base64Encoded;
 
     impl<T: AsRef<[u8]>> SerializeAs<T> for Base64Encoded {
         fn serialize_as<S>(source: &T, serializer: S) -> Result<S::Ok, S::Error>
@@ -122,14 +123,15 @@ mod _serde {
     pub(crate) use super::types::SignedTransactionWithIntentMessage;
 }
 
+#[doc(hidden)]
 #[cfg(feature = "schemars")]
-mod _schemars {
+pub mod _schemars {
     use schemars::schema::InstanceType;
     use schemars::schema::Metadata;
     use schemars::schema::SchemaObject;
     use schemars::JsonSchema;
 
-    pub(crate) struct U64;
+    pub struct U64;
 
     impl JsonSchema for U64 {
         fn schema_name() -> String {
@@ -154,7 +156,7 @@ mod _schemars {
         }
     }
 
-    pub(crate) struct I128;
+    pub struct I128;
 
     impl JsonSchema for I128 {
         fn schema_name() -> String {
@@ -179,7 +181,7 @@ mod _schemars {
         }
     }
 
-    pub(crate) struct U256;
+    pub struct U256;
 
     impl JsonSchema for U256 {
         fn schema_name() -> String {
@@ -204,7 +206,7 @@ mod _schemars {
         }
     }
 
-    pub(crate) struct Base64;
+    pub struct Base64;
 
     impl JsonSchema for Base64 {
         fn schema_name() -> String {
@@ -229,7 +231,7 @@ mod _schemars {
         }
     }
 
-    pub(crate) struct Base58;
+    pub struct Base58;
 
     impl JsonSchema for Base58 {
         fn schema_name() -> String {
