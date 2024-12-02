@@ -156,7 +156,7 @@ impl TransactionBuilder {
     /// Call a Move function with the given arguments.
     ///
     /// - `function` is a structured representation of a package::module::function argument,
-    /// optionally with type arguments.
+    ///   optionally with type arguments.
     ///
     /// The return value is a result argument that can be used in subsequent commands.
     /// If the move call returns multiple results, you can access them using the
