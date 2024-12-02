@@ -24,9 +24,13 @@ test:
 	cargo nextest run --all-features -p sui-sdk-types -p sui-crypto
 	cargo test --doc
 
+package_%.json:
+	cd crates/sui-transaction-builder/tests/$(*F) && sui move build --dump-bytecode-as-base64 >> $@
+
 .PHONY: test-with-localnet
 test-with-localnet:
-	$(MAKE) -C crates/sui-transaction-builder test-setup
+	package_example_v1.json 
+	package_example_v2.json
 	cargo nextest run -p sui-graphql-client -p sui-transaction-builder
 
 .PHONY: wasm
