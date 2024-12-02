@@ -27,6 +27,7 @@ use sui_types::types::Upgrade;
 
 use base64ct::Encoding;
 use serde::Serialize;
+use sui_types::types::Owner;
 
 /// A builder for creating transactions. Use [`resolve`] to finalize the transaction data.
 #[derive(Clone, Default, Debug)]
@@ -48,7 +49,7 @@ pub struct TransactionBuilder {
     sender: Option<Address>,
     /// The sponsor of the transaction. If None, the sender is also the sponsor.
     sponsor: Option<Address>,
-    /// The expiration of the transaction.
+    /// The expiration of the transaction. The default value of this type is no expiration.
     expiration: TransactionExpiration,
 }
 
@@ -82,8 +83,6 @@ pub trait IntoInput {
 /// A transaction builder to build transactions.
 impl TransactionBuilder {
     /// Create a new transaction builder and initialize its elements to default.
-    /// This sets the transaction expiration to have no expiration. Use `set_expiration` to set the
-    /// transaction expiration to a specific epoch.
     pub fn new() -> Self {
         Self::default()
     }
@@ -118,8 +117,7 @@ impl TransactionBuilder {
     /// // using input object and passing an ObjectId to the `by_id` function
     /// let gas_obj =
     /// unresolved::Input::by_id("0x19406ea4d9609cd9422b85e6bf2486908f790b778c757aff805241f3f609f9b4".parse().unwrap());
-    /// tx.add_gas(vec![gas_obj]);
-    // Define a trait in your crate
+    /// tx.add_gas(vec![&gas_obj]);
     pub fn add_gas<O, I>(&mut self, gas: I)
     where
         O: IntoInput,
@@ -154,9 +152,11 @@ impl TransactionBuilder {
     }
 
     // Commands
-    /// Call a public or a Move function with the given arguments.
+
+    /// Call a Move function with the given arguments.
     ///
-    /// - `function` is a structured representation of a package::module::function argument.
+    /// - `function` is a structured representation of a package::module::function argument,
+    /// optionally with type arguments.
     ///
     /// The return value is a result argument that can be used in subsequent commands.
     /// If the move call returns multiple results, you can access them using the
@@ -393,16 +393,30 @@ impl<'a, T: Serialize> From<Serialized<'a, T>> for unresolved::Input {
 }
 
 impl IntoInput for unresolved::Input {
-    /// Pass the input as is.
+    /// Pass the input as is
     fn into_input(self) -> unresolved::Input {
         self
     }
 }
 
-impl IntoInput for Object {
-    /// Convert the [`Object`] type into an [`unresolved::Input`] of kind immutable.
+impl IntoInput for &Object {
     fn into_input(self) -> unresolved::Input {
-        unresolved::Input::immutable(self.object_id(), self.version(), self.digest())
+        match self.owner() {
+            Owner::Address(_) => {
+                let mut input = unresolved::Input::by_id(self.object_id());
+                input.with_version(self.version());
+                input.with_digest(self.digest());
+                input
+            }
+            Owner::Object(_) => {
+                unresolved::Input::owned(self.object_id(), self.version(), self.digest())
+            }
+
+            Owner::Shared(_) => unresolved::Input::shared(self.object_id(), self.version(), None),
+            Owner::Immutable => {
+                unresolved::Input::immutable(self.object_id(), self.version(), self.digest())
+            }
+        }
     }
 }
 
@@ -444,7 +458,6 @@ fn try_from_unresolved_obj_ref(obj: unresolved::ObjectReference) -> Result<Objec
 
 /// Convert from an [`unresolved::Input`] into an [`Input`] for resolving the
 /// transaction.
-
 fn try_from_unresolved_input_arg(value: unresolved::Input) -> Result<Input, Error> {
     if let Some(kind) = value.kind {
         match kind {
@@ -622,7 +635,13 @@ mod tests {
         println!("Coins: {:?}", coins);
         let gas = coins.last().unwrap().id;
         let gas_obj = client.object(gas.into(), None).await.unwrap().unwrap();
-        tx.add_gas(vec![gas_obj]);
+        // we'll be able to pass in the gas coin id when we have transaction resolution
+        // until then we need to pass an immutable or owned object with id, version, and digest.
+        tx.add_gas(vec![unresolved::Input::owned(
+            gas_obj.object_id(),
+            gas_obj.version(),
+            gas_obj.digest(),
+        )]);
         tx.add_gas_budget(500000000);
         tx.add_gas_price(1000);
         tx.set_sender(address);
@@ -944,7 +963,7 @@ mod tests {
                             tx.input(unresolved::Input::immutable(o, obj.version(), obj.digest())));
                         }
                         sui_types::types::Owner::Shared(x) => {
-                            upgrade_cap = Some(tx.input(unresolved::Input::shared(o, *x, true)));
+                            upgrade_cap = Some(tx.input(unresolved::Input::shared(o, *x, Some(true))));
                         }
                         // If the capability is owned by an object, then the module defining the owning
                         // object gets to decide how the upgrade capability should be used.
@@ -992,11 +1011,13 @@ mod tests {
             vec![upgrade_cap.unwrap(), upgrade_receipt],
         );
 
-        // we should be able to pass gas by obj id, but we need the resolution api for that so for
-        // now we need to pass the object or a reference.
         let gas = coins.last().unwrap().id;
         let gas_obj = client.object(gas.into(), None).await.unwrap().unwrap();
-        tx.add_gas(vec![gas_obj]);
+        tx.add_gas(vec![unresolved::Input::owned(
+            gas_obj.object_id(),
+            gas_obj.version(),
+            gas_obj.digest(),
+        )]);
         tx.add_gas_budget(500000000);
         tx.add_gas_price(1000);
         tx.set_sender(address);

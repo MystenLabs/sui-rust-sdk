@@ -207,12 +207,12 @@ impl Input {
     /// Return a shared object.
     /// - `mutable` controls whether a command can accept the object by value or mutable reference.
     /// - `initial_shared_version` is the first version the object was shared at.
-    pub fn shared(object_id: ObjectId, initial_shared_version: u64, mutable: bool) -> Self {
+    pub fn shared(object_id: ObjectId, initial_shared_version: u64, mutable: Option<bool>) -> Self {
         Self {
             kind: Some(InputKind::Shared),
             object_id: Some(object_id),
             version: Some(initial_shared_version),
-            mutable: Some(mutable),
+            mutable,
             ..Default::default()
         }
     }
