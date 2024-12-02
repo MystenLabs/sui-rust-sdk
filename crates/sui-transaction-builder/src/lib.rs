@@ -412,7 +412,9 @@ impl IntoInput for &Object {
                 unresolved::Input::owned(self.object_id(), self.version(), self.digest())
             }
 
-            Owner::Shared(_) => unresolved::Input::shared(self.object_id(), self.version(), None),
+            Owner::Shared(at_version) => {
+                unresolved::Input::shared(self.object_id(), *at_version, None)
+            }
             Owner::Immutable => {
                 unresolved::Input::immutable(self.object_id(), self.version(), self.digest())
             }
