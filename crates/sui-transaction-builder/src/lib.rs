@@ -632,7 +632,6 @@ mod tests {
             .unwrap()
             .unwrap()
             .sent;
-        println!("Coins: {:?}", coins);
         let gas = coins.last().unwrap().id;
         let gas_obj = client.object(gas.into(), None).await.unwrap().unwrap();
         // we'll be able to pass in the gas coin id when we have transaction resolution
