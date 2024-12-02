@@ -4,14 +4,14 @@ use crate::TryFromProtoError;
 pub mod generated;
 pub use generated::*;
 
-mod object;
-mod events;
 mod checkpoint;
-mod transaction_convert;
 mod effects;
+mod events;
 mod execution_status;
 mod move_types;
+mod object;
 mod signatures;
+mod transaction_convert;
 
 //
 // Address
@@ -119,4 +119,54 @@ pub fn proto_to_timestamp_ms(timestamp: prost_types::Timestamp) -> Result<u64, T
     let nanos = std::time::Duration::from_nanos(timestamp.nanos.try_into()?);
 
     Ok((seconds + nanos).as_millis().try_into()?)
+}
+
+//
+// Bcs
+//
+
+impl Bcs {
+    pub fn serialize<T: serde::Serialize>(value: &T) -> Result<Self, bcs::Error> {
+        bcs::to_bytes(value).map(|bcs| Self { bcs: bcs.into() })
+    }
+
+    pub fn deserialize<'de, T: serde::Deserialize<'de>>(&'de self) -> Result<T, bcs::Error> {
+        bcs::from_bytes(self.bcs.as_ref())
+    }
+}
+
+impl From<Vec<u8>> for Bcs {
+    fn from(value: Vec<u8>) -> Self {
+        Self { bcs: value.into() }
+    }
+}
+
+impl From<&Bcs> for Vec<u8> {
+    fn from(value: &Bcs) -> Self {
+        value.bcs.to_vec()
+    }
+}
+
+impl From<Bcs> for Vec<u8> {
+    fn from(value: Bcs) -> Self {
+        value.bcs.to_vec()
+    }
+}
+
+impl From<prost::bytes::Bytes> for Bcs {
+    fn from(value: prost::bytes::Bytes) -> Self {
+        Self { bcs: value }
+    }
+}
+
+impl From<&Bcs> for prost::bytes::Bytes {
+    fn from(value: &Bcs) -> Self {
+        value.bcs.clone()
+    }
+}
+
+impl From<Bcs> for prost::bytes::Bytes {
+    fn from(value: Bcs) -> Self {
+        value.bcs
+    }
 }

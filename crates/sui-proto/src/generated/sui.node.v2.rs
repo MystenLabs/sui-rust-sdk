@@ -26,9 +26,65 @@ pub struct NodeInfoResponse {
     pub software_version: ::prost::alloc::string::String,
 }
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
-pub struct SubscribeRequest {}
+pub struct HealthCheckRequest {
+    #[prost(uint32, optional, tag = "1")]
+    pub threshold_seconds: ::core::option::Option<u32>,
+}
 #[derive(Clone, Copy, PartialEq, ::prost::Message)]
-pub struct SubscribeResponse {}
+pub struct GetCommitteeRequest {
+    #[prost(uint64, optional, tag = "1")]
+    pub epoch: ::core::option::Option<u64>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetCommitteeResponse {
+    #[prost(message, optional, tag = "1")]
+    pub committee: ::core::option::Option<super::super::types::ValidatorCommittee>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetTransactionRequest {
+    #[prost(message, optional, tag = "1")]
+    pub digest: ::core::option::Option<super::super::types::Digest>,
+    #[prost(message, optional, tag = "3")]
+    pub options: ::core::option::Option<GetTransactionOptions>,
+}
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct GetTransactionOptions {
+    /// Include the sui.types.Transaction message in the response.
+    ///
+    /// Defaults to true if not included
+    #[prost(bool, optional, tag = "1")]
+    pub include_transaction: ::core::option::Option<bool>,
+    /// Include the Transaction formatted as BCS in the response.
+    ///
+    /// Defaults to false if not included
+    #[prost(bool, optional, tag = "2")]
+    pub include_transaction_bcs: ::core::option::Option<bool>,
+    /// Include the set of sui.types.UserSignature's in the response.
+    ///
+    /// Defaults to true if not included
+    #[prost(bool, optional, tag = "3")]
+    pub include_signatures: ::core::option::Option<bool>,
+    /// Include the sui.types.TransactionEffects message in the response.
+    ///
+    /// Defaults to true if not included
+    #[prost(bool, optional, tag = "4")]
+    pub include_transaction_effects: ::core::option::Option<bool>,
+    /// Include the TransactionEffects formatted as BCS in the response.
+    ///
+    /// Defaults to false if not included
+    #[prost(bool, optional, tag = "5")]
+    pub include_transaction_effects_bcs: ::core::option::Option<bool>,
+    /// Include the sui.types.TransactionEvents message in the response.
+    ///
+    /// Defaults to true if not included
+    #[prost(bool, optional, tag = "6")]
+    pub include_transaction_events: ::core::option::Option<bool>,
+    /// Include the TransactionEvents formatted as BCS in the response.
+    ///
+    /// Defaults to false if not included
+    #[prost(bool, optional, tag = "7")]
+    pub include_transaction_events_bcs: ::core::option::Option<bool>,
+}
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetTransactionResponse {
     /// The digest of this transaction
@@ -36,76 +92,261 @@ pub struct GetTransactionResponse {
     pub digest: ::core::option::Option<super::super::types::Digest>,
     #[prost(message, optional, tag = "2")]
     pub transaction: ::core::option::Option<super::super::types::Transaction>,
-    #[prost(message, repeated, tag = "3")]
+    #[prost(message, optional, tag = "3")]
+    pub transaction_bcs: ::core::option::Option<super::super::types::Bcs>,
+    #[prost(message, repeated, tag = "4")]
     pub signatures: ::prost::alloc::vec::Vec<super::super::types::UserSignature>,
-    #[prost(message, optional, tag = "4")]
-    pub effects: ::core::option::Option<super::super::types::TransactionEffects>,
     #[prost(message, optional, tag = "5")]
+    pub effects: ::core::option::Option<super::super::types::TransactionEffects>,
+    #[prost(message, optional, tag = "6")]
+    pub effects_bcs: ::core::option::Option<super::super::types::Bcs>,
+    #[prost(message, optional, tag = "7")]
     pub events: ::core::option::Option<super::super::types::TransactionEvents>,
-    #[prost(uint64, optional, tag = "6")]
+    #[prost(message, optional, tag = "8")]
+    pub events_bcs: ::core::option::Option<super::super::types::Bcs>,
+    #[prost(uint64, optional, tag = "9")]
     pub checkpoint: ::core::option::Option<u64>,
-    #[prost(uint64, optional, tag = "7")]
-    pub timestamp_ms: ::core::option::Option<u64>,
+    #[prost(message, optional, tag = "10")]
+    pub timestamp: ::core::option::Option<::prost_types::Timestamp>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetObjectRequest {
+    #[prost(message, optional, tag = "1")]
+    pub object_id: ::core::option::Option<super::super::types::ObjectId>,
+    #[prost(uint64, optional, tag = "2")]
+    pub version: ::core::option::Option<u64>,
+    #[prost(message, optional, tag = "3")]
+    pub options: ::core::option::Option<GetObjectOptions>,
+}
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct GetObjectOptions {
+    /// Include the sui.types.Object message in the response.
+    ///
+    /// Defaults to true if not included
+    #[prost(bool, optional, tag = "1")]
+    pub include_object: ::core::option::Option<bool>,
+    /// Include the Object formatted as BCS in the response.
+    ///
+    /// Defaults to false if not included
+    #[prost(bool, optional, tag = "2")]
+    pub include_bcs: ::core::option::Option<bool>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetObjectResponse {
-    /// The digest of this object
     #[prost(message, optional, tag = "1")]
+    pub object_id: ::core::option::Option<super::super::types::ObjectId>,
+    #[prost(uint64, tag = "2")]
+    pub version: u64,
+    /// The digest of this object
+    #[prost(message, optional, tag = "3")]
     pub digest: ::core::option::Option<super::super::types::Digest>,
-    #[prost(message, optional, tag = "2")]
+    #[prost(message, optional, tag = "4")]
     pub object: ::core::option::Option<super::super::types::Object>,
+    #[prost(message, optional, tag = "5")]
+    pub bcs: ::core::option::Option<super::super::types::Bcs>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetCheckpointRequest {
+    #[prost(uint64, optional, tag = "1")]
+    pub sequence_number: ::core::option::Option<u64>,
+    #[prost(message, optional, tag = "2")]
+    pub digest: ::core::option::Option<super::super::types::Digest>,
+    #[prost(message, optional, tag = "3")]
+    pub options: ::core::option::Option<GetCheckpointOptions>,
+}
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct GetCheckpointOptions {
+    /// Include the sui.types.CheckpointSummary in the response.
+    ///
+    /// Defaults to true if not included
+    #[prost(bool, optional, tag = "3")]
+    pub include_summary: ::core::option::Option<bool>,
+    /// Include the CheckpointSummary formatted as BCS in the response.
+    ///
+    /// Defaults to false if not included
+    #[prost(bool, optional, tag = "4")]
+    pub include_summary_bcs: ::core::option::Option<bool>,
+    /// Include the sui.types.ValidatorAggregatedSignature in the response.
+    ///
+    /// Defaults to true if not included
+    #[prost(bool, optional, tag = "5")]
+    pub include_signature: ::core::option::Option<bool>,
+    /// Include the sui.types.CheckpointContents message in the response.
+    ///
+    /// Defaults to false if not included
+    #[prost(bool, optional, tag = "6")]
+    pub include_contents: ::core::option::Option<bool>,
+    /// Include the CheckpointContents formatted as BCS in the response.
+    ///
+    /// Defaults to false if not included
+    #[prost(bool, optional, tag = "7")]
+    pub include_contents_bcs: ::core::option::Option<bool>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetCheckpointResponse {
-    /// The digest of this CheckpointSummary
+    /// The sequence number of this Checkpoint
+    #[prost(uint64, tag = "1")]
+    pub sequence_number: u64,
+    /// The digest of this Checkpoint's CheckpointSummary
+    #[prost(message, optional, tag = "2")]
+    pub digest: ::core::option::Option<super::super::types::Digest>,
+    #[prost(message, optional, tag = "3")]
+    pub summary: ::core::option::Option<super::super::types::CheckpointSummary>,
+    #[prost(message, optional, tag = "4")]
+    pub summary_bcs: ::core::option::Option<super::super::types::Bcs>,
+    #[prost(message, optional, tag = "5")]
+    pub signature: ::core::option::Option<
+        super::super::types::ValidatorAggregatedSignature,
+    >,
+    #[prost(message, optional, tag = "6")]
+    pub contents: ::core::option::Option<super::super::types::CheckpointContents>,
+    #[prost(message, optional, tag = "7")]
+    pub contents_bcs: ::core::option::Option<super::super::types::Bcs>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetFullCheckpointRequest {
+    #[prost(uint64, optional, tag = "1")]
+    pub sequence_number: ::core::option::Option<u64>,
+    #[prost(message, optional, tag = "2")]
+    pub digest: ::core::option::Option<super::super::types::Digest>,
+    #[prost(message, optional, tag = "3")]
+    pub options: ::core::option::Option<GetFullCheckpointOptions>,
+}
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct GetFullCheckpointOptions {
+    /// Include the sui.types.CheckpointSummary in the response.
+    ///
+    /// Defaults to true if not included
+    #[prost(bool, optional, tag = "3")]
+    pub include_summary: ::core::option::Option<bool>,
+    /// Include the CheckpointSummary formatted as BCS in the response.
+    ///
+    /// Defaults to false if not included
+    #[prost(bool, optional, tag = "4")]
+    pub include_summary_bcs: ::core::option::Option<bool>,
+    /// Include the sui.types.ValidatorAggregatedSignature in the response.
+    ///
+    /// Defaults to true if not included
+    #[prost(bool, optional, tag = "5")]
+    pub include_signature: ::core::option::Option<bool>,
+    /// Include the sui.types.CheckpointContents message in the response.
+    ///
+    /// Defaults to false if not included
+    #[prost(bool, optional, tag = "6")]
+    pub include_contents: ::core::option::Option<bool>,
+    /// Include the CheckpointContents formatted as BCS in the response.
+    ///
+    /// Defaults to false if not included
+    #[prost(bool, optional, tag = "7")]
+    pub include_contents_bcs: ::core::option::Option<bool>,
+    /// Include the sui.types.Transaction message in the response.
+    ///
+    /// Defaults to true if not included
+    #[prost(bool, optional, tag = "8")]
+    pub include_transaction: ::core::option::Option<bool>,
+    /// Include the Transaction formatted as BCS in the response.
+    ///
+    /// Defaults to false if not included
+    #[prost(bool, optional, tag = "9")]
+    pub include_transaction_bcs: ::core::option::Option<bool>,
+    /// Include the sui.types.TransactionEffects message in the response.
+    ///
+    /// Defaults to true if not included
+    #[prost(bool, optional, tag = "10")]
+    pub include_transaction_effects: ::core::option::Option<bool>,
+    /// Include the TransactionEffects formatted as BCS in the response.
+    ///
+    /// Defaults to false if not included
+    #[prost(bool, optional, tag = "11")]
+    pub include_transaction_effects_bcs: ::core::option::Option<bool>,
+    /// Include the sui.types.TransactionEvents message in the response.
+    ///
+    /// Defaults to true if not included
+    #[prost(bool, optional, tag = "12")]
+    pub include_transaction_events: ::core::option::Option<bool>,
+    /// Include the TransactionEvents formatted as BCS in the response.
+    ///
+    /// Defaults to false if not included
+    #[prost(bool, optional, tag = "13")]
+    pub include_transaction_events_bcs: ::core::option::Option<bool>,
+    #[prost(bool, optional, tag = "14")]
+    pub include_input_objects: ::core::option::Option<bool>,
+    #[prost(bool, optional, tag = "15")]
+    pub include_output_objects: ::core::option::Option<bool>,
+    /// Include the sui.types.Object message in the response.
+    ///
+    /// Defaults to true if not included
+    #[prost(bool, optional, tag = "16")]
+    pub include_object: ::core::option::Option<bool>,
+    /// Include the Object formatted as BCS in the response.
+    ///
+    /// Defaults to false if not included
+    #[prost(bool, optional, tag = "17")]
+    pub include_object_bcs: ::core::option::Option<bool>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetFullCheckpointResponse {
+    /// The sequence number of this Checkpoint
+    #[prost(uint64, tag = "1")]
+    pub sequence_number: u64,
+    /// The digest of this Checkpoint's CheckpointSummary
+    #[prost(message, optional, tag = "2")]
+    pub digest: ::core::option::Option<super::super::types::Digest>,
+    #[prost(message, optional, tag = "3")]
+    pub summary: ::core::option::Option<super::super::types::CheckpointSummary>,
+    #[prost(message, optional, tag = "4")]
+    pub summary_bcs: ::core::option::Option<super::super::types::Bcs>,
+    #[prost(message, optional, tag = "5")]
+    pub signature: ::core::option::Option<
+        super::super::types::ValidatorAggregatedSignature,
+    >,
+    #[prost(message, optional, tag = "6")]
+    pub contents: ::core::option::Option<super::super::types::CheckpointContents>,
+    #[prost(message, optional, tag = "7")]
+    pub contents_bcs: ::core::option::Option<super::super::types::Bcs>,
+    #[prost(message, repeated, tag = "8")]
+    pub transactions: ::prost::alloc::vec::Vec<FullCheckpointTransaction>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct FullCheckpointTransaction {
+    /// The digest of this transaction
     #[prost(message, optional, tag = "1")]
     pub digest: ::core::option::Option<super::super::types::Digest>,
     #[prost(message, optional, tag = "2")]
-    pub summary: ::core::option::Option<super::super::types::CheckpointSummary>,
-    #[prost(message, optional, tag = "3")]
-    pub signature: ::core::option::Option<
-        super::super::types::ValidatorAggregatedSignature,
-    >,
-    #[prost(message, optional, tag = "4")]
-    pub contents: ::core::option::Option<super::super::types::CheckpointContents>,
-}
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct Checkpoint {
-    #[prost(message, optional, tag = "1")]
-    pub summary: ::core::option::Option<super::super::types::CheckpointSummary>,
-    #[prost(message, optional, tag = "2")]
-    pub signature: ::core::option::Option<
-        super::super::types::ValidatorAggregatedSignature,
-    >,
-    #[prost(message, optional, tag = "3")]
-    pub contents: ::core::option::Option<super::super::types::CheckpointContents>,
-    #[prost(message, repeated, tag = "4")]
-    pub transactions: ::prost::alloc::vec::Vec<CheckpointTransaction>,
-}
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct CheckpointTransaction {
-    #[prost(message, optional, tag = "1")]
     pub transaction: ::core::option::Option<super::super::types::Transaction>,
-    #[prost(message, repeated, tag = "2")]
-    pub signatures: ::prost::alloc::vec::Vec<super::super::types::UserSignature>,
     #[prost(message, optional, tag = "3")]
+    pub transaction_bcs: ::core::option::Option<super::super::types::Bcs>,
+    #[prost(message, optional, tag = "5")]
     pub effects: ::core::option::Option<super::super::types::TransactionEffects>,
-    #[prost(message, optional, tag = "4")]
+    #[prost(message, optional, tag = "6")]
+    pub effects_bcs: ::core::option::Option<super::super::types::Bcs>,
+    #[prost(message, optional, tag = "7")]
     pub events: ::core::option::Option<super::super::types::TransactionEvents>,
-    #[prost(message, repeated, tag = "5")]
-    pub input_objects: ::prost::alloc::vec::Vec<super::super::types::Object>,
-    #[prost(message, repeated, tag = "6")]
-    pub output_objects: ::prost::alloc::vec::Vec<super::super::types::Object>,
+    #[prost(message, optional, tag = "8")]
+    pub events_bcs: ::core::option::Option<super::super::types::Bcs>,
+    #[prost(message, optional, tag = "11")]
+    pub input_objects: ::core::option::Option<FullCheckpointObjects>,
+    #[prost(message, optional, tag = "12")]
+    pub output_objects: ::core::option::Option<FullCheckpointObjects>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ListCheckpointResponse {
+pub struct FullCheckpointObjects {
     #[prost(message, repeated, tag = "1")]
-    pub checkpoints: ::prost::alloc::vec::Vec<GetCheckpointResponse>,
+    pub objects: ::prost::alloc::vec::Vec<FullCheckpointObject>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ListTransactionsResponse {
-    #[prost(message, repeated, tag = "1")]
-    pub transactions: ::prost::alloc::vec::Vec<GetTransactionResponse>,
+pub struct FullCheckpointObject {
+    #[prost(message, optional, tag = "1")]
+    pub object_id: ::core::option::Option<super::super::types::ObjectId>,
+    #[prost(uint64, tag = "2")]
+    pub version: u64,
+    /// The digest of this object
+    #[prost(message, optional, tag = "3")]
+    pub digest: ::core::option::Option<super::super::types::Digest>,
+    #[prost(message, optional, tag = "4")]
+    pub object: ::core::option::Option<super::super::types::Object>,
+    #[prost(message, optional, tag = "5")]
+    pub bcs: ::core::option::Option<super::super::types::Bcs>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct I128 {
@@ -128,29 +369,35 @@ pub struct BalanceChanges {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EffectsFinality {
-    #[prost(message, optional, tag = "1")]
-    pub signature: ::core::option::Option<
-        super::super::types::ValidatorAggregatedSignature,
-    >,
-    #[prost(uint64, optional, tag = "2")]
-    pub checkpoint: ::core::option::Option<u64>,
-    #[prost(bool, optional, tag = "3")]
-    pub quorum_executed: ::core::option::Option<bool>,
+    #[prost(oneof = "effects_finality::Finality", tags = "1, 2, 3")]
+    pub finality: ::core::option::Option<effects_finality::Finality>,
+}
+/// Nested message and enum types in `EffectsFinality`.
+pub mod effects_finality {
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum Finality {
+        #[prost(message, tag = "1")]
+        Certified(super::super::super::types::ValidatorAggregatedSignature),
+        #[prost(uint64, tag = "2")]
+        Checkpointed(u64),
+        #[prost(message, tag = "3")]
+        QuorumExecuted(()),
+    }
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct TransactionExecutionResponse {
+pub struct ExecuteTransactionResponse {
     #[prost(message, optional, tag = "1")]
-    pub effects: ::core::option::Option<super::super::types::TransactionEffects>,
-    #[prost(message, optional, tag = "2")]
     pub finality: ::core::option::Option<EffectsFinality>,
+    #[prost(message, optional, tag = "2")]
+    pub effects: ::core::option::Option<super::super::types::TransactionEffects>,
     #[prost(message, optional, tag = "3")]
-    pub events: ::core::option::Option<super::super::types::TransactionEvents>,
+    pub effects_bcs: ::core::option::Option<super::super::types::Bcs>,
     #[prost(message, optional, tag = "4")]
+    pub events: ::core::option::Option<super::super::types::TransactionEvents>,
+    #[prost(message, optional, tag = "5")]
+    pub events_bcs: ::core::option::Option<super::super::types::Bcs>,
+    #[prost(message, optional, tag = "6")]
     pub balance_changes: ::core::option::Option<BalanceChanges>,
-    #[prost(message, repeated, tag = "5")]
-    pub input_objects: ::prost::alloc::vec::Vec<super::super::types::Object>,
-    #[prost(message, repeated, tag = "6")]
-    pub output_objects: ::prost::alloc::vec::Vec<super::super::types::Object>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct TransactionSimulationResponse {
@@ -176,14 +423,50 @@ pub struct ResolveTransactionResponse {
 pub struct ExecuteTransactionRequest {
     #[prost(message, optional, tag = "1")]
     pub transaction: ::core::option::Option<super::super::types::Transaction>,
-    #[prost(message, repeated, tag = "2")]
+    #[prost(message, optional, tag = "2")]
+    pub transaction_bcs: ::core::option::Option<super::super::types::Bcs>,
+    #[prost(message, repeated, tag = "3")]
     pub signatures: ::prost::alloc::vec::Vec<super::super::types::UserSignature>,
+    #[prost(message, optional, tag = "4")]
+    pub options: ::core::option::Option<ExecuteTransactionOptions>,
+}
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct ExecuteTransactionOptions {
+    /// Include the sui.types.TransactionEffects message in the response.
+    ///
+    /// Defaults to true if not included
+    #[prost(bool, optional, tag = "4")]
+    pub include_transaction_effects: ::core::option::Option<bool>,
+    /// Include the TransactionEffects formatted as BCS in the response.
+    ///
+    /// Defaults to false if not included
+    #[prost(bool, optional, tag = "5")]
+    pub include_transaction_effects_bcs: ::core::option::Option<bool>,
+    /// Include the sui.types.TransactionEvents message in the response.
+    ///
+    /// Defaults to true if not included
+    #[prost(bool, optional, tag = "6")]
+    pub include_transaction_events: ::core::option::Option<bool>,
+    /// Include the TransactionEvents formatted as BCS in the response.
+    ///
+    /// Defaults to false if not included
+    #[prost(bool, optional, tag = "7")]
+    pub include_transaction_events_bcs: ::core::option::Option<bool>,
+    /// Include the BalanceChanges in the response.
+    ///
+    /// Defaults to false if not included
+    #[prost(bool, optional, tag = "8")]
+    pub include_balance_changes: ::core::option::Option<bool>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SimulateTransactionRequest {
     #[prost(message, optional, tag = "1")]
     pub transaction: ::core::option::Option<super::super::types::Transaction>,
 }
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct SubscribeRequest {}
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct SubscribeResponse {}
 /// Generated client implementations.
 pub mod node_client {
     #![allow(
@@ -195,7 +478,6 @@ pub mod node_client {
     )]
     use tonic::codegen::*;
     use tonic::codegen::http::Uri;
-    /// Rpc Node interface
     #[derive(Debug, Clone)]
     pub struct NodeClient<T> {
         inner: tonic::client::Grpc<T>,
@@ -276,6 +558,27 @@ pub mod node_client {
             self.inner = self.inner.max_encoding_message_size(limit);
             self
         }
+        pub async fn health_check(
+            &mut self,
+            request: impl tonic::IntoRequest<super::HealthCheckRequest>,
+        ) -> std::result::Result<tonic::Response<()>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/sui.node.v2.Node/HealthCheck",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("sui.node.v2.Node", "HealthCheck"));
+            self.inner.unary(req, path, codec).await
+        }
         pub async fn get_node_info(
             &mut self,
             request: impl tonic::IntoRequest<()>,
@@ -298,6 +601,151 @@ pub mod node_client {
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(GrpcMethod::new("sui.node.v2.Node", "GetNodeInfo"));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn get_committee(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetCommitteeRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::GetCommitteeResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/sui.node.v2.Node/GetCommittee",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("sui.node.v2.Node", "GetCommittee"));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn get_object(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetObjectRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::GetObjectResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/sui.node.v2.Node/GetObject",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("sui.node.v2.Node", "GetObject"));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn get_transaction(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetTransactionRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::GetTransactionResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/sui.node.v2.Node/GetTransaction",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("sui.node.v2.Node", "GetTransaction"));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn get_checkpoint(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetCheckpointRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::GetCheckpointResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/sui.node.v2.Node/GetCheckpoint",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("sui.node.v2.Node", "GetCheckpoint"));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn get_full_checkpoint(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetFullCheckpointRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::GetFullCheckpointResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/sui.node.v2.Node/GetFullCheckpoint",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("sui.node.v2.Node", "GetFullCheckpoint"));
+            self.inner.unary(req, path, codec).await
+        }
+        /// XXX maybe put in another API?
+        pub async fn execute_transaction(
+            &mut self,
+            request: impl tonic::IntoRequest<super::ExecuteTransactionRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::ExecuteTransactionResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/sui.node.v2.Node/ExecuteTransaction",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("sui.node.v2.Node", "ExecuteTransaction"));
             self.inner.unary(req, path, codec).await
         }
     }
@@ -432,6 +880,10 @@ pub mod node_server {
     /// Generated trait containing gRPC methods that should be implemented for use with NodeServer.
     #[async_trait]
     pub trait Node: std::marker::Send + std::marker::Sync + 'static {
+        async fn health_check(
+            &self,
+            request: tonic::Request<super::HealthCheckRequest>,
+        ) -> std::result::Result<tonic::Response<()>, tonic::Status>;
         async fn get_node_info(
             &self,
             request: tonic::Request<()>,
@@ -439,8 +891,50 @@ pub mod node_server {
             tonic::Response<super::NodeInfoResponse>,
             tonic::Status,
         >;
+        async fn get_committee(
+            &self,
+            request: tonic::Request<super::GetCommitteeRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::GetCommitteeResponse>,
+            tonic::Status,
+        >;
+        async fn get_object(
+            &self,
+            request: tonic::Request<super::GetObjectRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::GetObjectResponse>,
+            tonic::Status,
+        >;
+        async fn get_transaction(
+            &self,
+            request: tonic::Request<super::GetTransactionRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::GetTransactionResponse>,
+            tonic::Status,
+        >;
+        async fn get_checkpoint(
+            &self,
+            request: tonic::Request<super::GetCheckpointRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::GetCheckpointResponse>,
+            tonic::Status,
+        >;
+        async fn get_full_checkpoint(
+            &self,
+            request: tonic::Request<super::GetFullCheckpointRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::GetFullCheckpointResponse>,
+            tonic::Status,
+        >;
+        /// XXX maybe put in another API?
+        async fn execute_transaction(
+            &self,
+            request: tonic::Request<super::ExecuteTransactionRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::ExecuteTransactionResponse>,
+            tonic::Status,
+        >;
     }
-    /// Rpc Node interface
     #[derive(Debug)]
     pub struct NodeServer<T> {
         inner: Arc<T>,
@@ -517,6 +1011,49 @@ pub mod node_server {
         }
         fn call(&mut self, req: http::Request<B>) -> Self::Future {
             match req.uri().path() {
+                "/sui.node.v2.Node/HealthCheck" => {
+                    #[allow(non_camel_case_types)]
+                    struct HealthCheckSvc<T: Node>(pub Arc<T>);
+                    impl<T: Node> tonic::server::UnaryService<super::HealthCheckRequest>
+                    for HealthCheckSvc<T> {
+                        type Response = ();
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::HealthCheckRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as Node>::health_check(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = HealthCheckSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
                 "/sui.node.v2.Node/GetNodeInfo" => {
                     #[allow(non_camel_case_types)]
                     struct GetNodeInfoSvc<T: Node>(pub Arc<T>);
@@ -541,6 +1078,272 @@ pub mod node_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetNodeInfoSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/sui.node.v2.Node/GetCommittee" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetCommitteeSvc<T: Node>(pub Arc<T>);
+                    impl<T: Node> tonic::server::UnaryService<super::GetCommitteeRequest>
+                    for GetCommitteeSvc<T> {
+                        type Response = super::GetCommitteeResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::GetCommitteeRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as Node>::get_committee(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = GetCommitteeSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/sui.node.v2.Node/GetObject" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetObjectSvc<T: Node>(pub Arc<T>);
+                    impl<T: Node> tonic::server::UnaryService<super::GetObjectRequest>
+                    for GetObjectSvc<T> {
+                        type Response = super::GetObjectResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::GetObjectRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as Node>::get_object(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = GetObjectSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/sui.node.v2.Node/GetTransaction" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetTransactionSvc<T: Node>(pub Arc<T>);
+                    impl<
+                        T: Node,
+                    > tonic::server::UnaryService<super::GetTransactionRequest>
+                    for GetTransactionSvc<T> {
+                        type Response = super::GetTransactionResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::GetTransactionRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as Node>::get_transaction(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = GetTransactionSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/sui.node.v2.Node/GetCheckpoint" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetCheckpointSvc<T: Node>(pub Arc<T>);
+                    impl<
+                        T: Node,
+                    > tonic::server::UnaryService<super::GetCheckpointRequest>
+                    for GetCheckpointSvc<T> {
+                        type Response = super::GetCheckpointResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::GetCheckpointRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as Node>::get_checkpoint(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = GetCheckpointSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/sui.node.v2.Node/GetFullCheckpoint" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetFullCheckpointSvc<T: Node>(pub Arc<T>);
+                    impl<
+                        T: Node,
+                    > tonic::server::UnaryService<super::GetFullCheckpointRequest>
+                    for GetFullCheckpointSvc<T> {
+                        type Response = super::GetFullCheckpointResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::GetFullCheckpointRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as Node>::get_full_checkpoint(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = GetFullCheckpointSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/sui.node.v2.Node/ExecuteTransaction" => {
+                    #[allow(non_camel_case_types)]
+                    struct ExecuteTransactionSvc<T: Node>(pub Arc<T>);
+                    impl<
+                        T: Node,
+                    > tonic::server::UnaryService<super::ExecuteTransactionRequest>
+                    for ExecuteTransactionSvc<T> {
+                        type Response = super::ExecuteTransactionResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::ExecuteTransactionRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as Node>::execute_transaction(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = ExecuteTransactionSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
