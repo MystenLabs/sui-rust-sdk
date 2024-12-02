@@ -25,12 +25,10 @@ test:
 	cargo test --doc
 
 package_%.json:
-	cd crates/sui-transaction-builder/tests/$(*F) && sui move build --dump-bytecode-as-base64 >> $@
+	cd crates/sui-transaction-builder/tests/$(*F) && sui move build --dump-bytecode-as-base64 >> ../../$@
 
 .PHONY: test-with-localnet
-test-with-localnet:
-	package_example_v1.json 
-	package_example_v2.json
+test-with-localnet: package_test_example_v1.json package_test_example_v2.json
 	cargo nextest run -p sui-graphql-client -p sui-transaction-builder
 
 .PHONY: wasm

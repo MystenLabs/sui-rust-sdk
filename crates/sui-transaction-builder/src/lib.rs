@@ -902,7 +902,7 @@ mod tests {
         let mut tx = TransactionBuilder::new();
         let (address, pk, _) = helper_setup(&mut tx, &client).await;
 
-        let package = move_package_data("test_example_v1_build_output.json");
+        let package = move_package_data("package_test_example_v1.json");
         let sender = tx.input(Serialized(&address));
         let upgrade_cap = tx.publish(package.modules, package.dependencies);
         tx.transfer_objects(vec![upgrade_cap], sender);
@@ -918,7 +918,7 @@ mod tests {
         let mut tx = TransactionBuilder::new();
         let (address, pk, coins) = helper_setup(&mut tx, &client).await;
 
-        let package = move_package_data("test_example_v1_build_output.json");
+        let package = move_package_data("package_test_example_v2.json");
         let sender = tx.input(Serialized(&address));
         let upgrade_cap = tx.publish(package.modules, package.dependencies);
         tx.transfer_objects(vec![upgrade_cap], sender);
@@ -978,7 +978,7 @@ mod tests {
         }
 
         let upgrade_policy = tx.input(Serialized(&0u8));
-        let updated_package = move_package_data("test_example_v2_build_output.json");
+        let updated_package = move_package_data("package_test_example_v2.json");
         let digest_arg = tx.input(Serialized(&updated_package.digest));
 
         // we need this ticket to authorize the upgrade
