@@ -22,7 +22,7 @@ use crate::types::execution_status::ExecutionStatus;
     derive(schemars::JsonSchema),
     schemars(tag = "version")
 )]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum TransactionEffects {
     #[cfg_attr(feature = "schemars", schemars(rename = "1"))]
     V1(Box<TransactionEffectsV1>),
