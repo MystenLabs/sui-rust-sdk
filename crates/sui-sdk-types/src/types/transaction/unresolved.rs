@@ -1,7 +1,9 @@
 use crate::types::object::Version;
 use crate::types::Address;
+use crate::types::Object;
 use crate::types::ObjectDigest;
 use crate::types::ObjectId;
+use crate::types::Owner;
 
 use super::Command;
 use super::TransactionExpiration;
@@ -207,12 +209,12 @@ impl Input {
     /// Return a shared object.
     /// - `mutable` controls whether a command can accept the object by value or mutable reference.
     /// - `initial_shared_version` is the first version the object was shared at.
-    pub fn shared(object_id: ObjectId, initial_shared_version: u64, mutable: Option<bool>) -> Self {
+    pub fn shared(object_id: ObjectId, initial_shared_version: u64, mutable: bool) -> Self {
         Self {
             kind: Some(InputKind::Shared),
             object_id: Some(object_id),
             version: Some(initial_shared_version),
-            mutable,
+            mutable: Some(mutable),
             ..Default::default()
         }
     }
@@ -226,60 +228,91 @@ impl Input {
     }
 
     /// Set the object kind to immutable.
-    pub fn with_immutable_kind(&mut self) {
-        self.kind = Some(InputKind::ImmutableOrOwned);
+    pub fn with_immutable_kind(self) -> Self {
+        Self {
+            kind: Some(InputKind::ImmutableOrOwned),
+            ..self
+        }
     }
 
     /// Set the object kind to owned.
-    pub fn with_owned_kind(&mut self) {
-        self.kind = Some(InputKind::ImmutableOrOwned);
+    pub fn with_owned_kind(self) -> Self {
+        Self {
+            kind: Some(InputKind::ImmutableOrOwned),
+            ..self
+        }
     }
 
     /// Set the object kind to receiving.
-    pub fn with_receiving_kind(&mut self) {
-        self.kind = Some(InputKind::Receiving);
+    pub fn with_receiving_kind(self) -> Self {
+        Self {
+            kind: Some(InputKind::Receiving),
+            ..self
+        }
     }
 
     /// Set the object kind to shared.
-    pub fn with_shared_kind(&mut self) {
-        self.kind = Some(InputKind::Shared);
+    pub fn with_shared_kind(self) -> Self {
+        Self {
+            kind: Some(InputKind::Shared),
+            ..self
+        }
     }
 
     /// Set the specified version.
-    pub fn with_version(&mut self, version: u64) {
-        self.version = Some(version);
+    pub fn with_version(self, version: u64) -> Self {
+        Self {
+            version: Some(version),
+            ..self
+        }
     }
 
     /// Set the specified digest.
-    pub fn with_digest(&mut self, digest: ObjectDigest) {
-        self.digest = Some(digest);
+    pub fn with_digest(self, digest: ObjectDigest) -> Self {
+        Self {
+            digest: Some(digest),
+            ..self
+        }
     }
 
     // Shared fields
 
     /// Set the initial shared version.
-    pub fn with_initial_shared_version(&mut self, initial: u64) {
-        self.version = Some(initial);
+    pub fn with_initial_shared_version(self, initial_version: u64) -> Self {
+        Self {
+            version: Some(initial_version),
+            kind: Some(InputKind::Shared),
+            ..self
+        }
     }
 
     /// Make the object shared and set `mutable` to true when the input is used by value.
-    pub fn by_val(&mut self) {
-        self.kind = Some(InputKind::Shared);
-        self.mutable = Some(true);
+    pub fn by_val(self) -> Self {
+        Self {
+            kind: Some(InputKind::Shared),
+            mutable: Some(true),
+            ..self
+        }
     }
 
     /// Make the object shared and set `mutable` to false when the input is used by
     /// reference.
-    pub fn by_ref(&mut self) {
-        self.kind = Some(InputKind::Shared);
-        self.mutable = Some(false);
+    pub fn by_ref(self) -> Self {
+        Self {
+            kind: Some(InputKind::Shared),
+            mutable: Some(false),
+            ..self
+        }
     }
 
     /// Make the object shared and set `mutable` to true when the input is used by mutable
     /// reference.
-    pub fn by_mut(&mut self) {
-        self.kind = Some(InputKind::Shared);
-        self.mutable = Some(true);
+    pub fn by_mut(self) -> Self {
+        Self {
+            kind: Some(InputKind::Shared),
+            mutable: Some(true),
+            ..self
+        }
     }
 }
 
@@ -319,5 +352,29 @@ impl From<Value> for serde_json::Value {
             Value::String(s) => Self::String(s),
             Value::Array(a) => Self::Array(a.into_iter().map(Into::into).collect()),
         }
+    }
+}
+
+impl From<&Object> for Input {
+    fn from(object: &Object) -> Self {
+        match object.owner() {
+            Owner::Address(_) => Input::by_id(object.object_id())
+                .with_version(object.version())
+                .with_digest(object.digest()),
+            Owner::Object(_) => Input::owned(object.object_id(), object.version(), object.digest()),
+
+            Owner::Shared(at_version) => {
+                Input::by_id(object.object_id()).with_initial_shared_version(*at_version)
+            }
+            Owner::Immutable => {
+                Input::immutable(object.object_id(), object.version(), object.digest())
+            }
+        }
+    }
+}
+
+impl From<&ObjectId> for Input {
+    fn from(object_id: &ObjectId) -> Self {
+        Input::by_id(*object_id)
     }
 }

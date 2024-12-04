@@ -14,7 +14,6 @@ use sui_types::types::Input;
 use sui_types::types::MakeMoveVector;
 use sui_types::types::MergeCoins;
 use sui_types::types::MoveCall;
-use sui_types::types::Object;
 use sui_types::types::ObjectId;
 use sui_types::types::ObjectReference;
 use sui_types::types::Publish;
@@ -27,7 +26,6 @@ use sui_types::types::Upgrade;
 
 use base64ct::Encoding;
 use serde::Serialize;
-use sui_types::types::Owner;
 
 /// A builder for creating transactions. Use [`resolve`] to finalize the transaction data.
 #[derive(Clone, Default, Debug)]
@@ -75,10 +73,10 @@ pub struct Function {
 /// A trait to convert a type into an [`unresolved::Input`]. This is mostly used for gas objects,
 /// to pass them either as literals, as an object id, as a reference to an object, or as a
 /// [`unresolved::Input`] object.
-pub trait IntoInput {
-    /// Convert the type into an [`unresolved::Input`].
-    fn into_input(self) -> unresolved::Input;
-}
+// pub trait IntoInput {
+//     /// Convert the type into an [`unresolved::Input`].
+//     fn into_input(self) -> unresolved::Input;
+// }
 
 /// A transaction builder to build transactions.
 impl TransactionBuilder {
@@ -120,10 +118,10 @@ impl TransactionBuilder {
     /// tx.add_gas(vec![&gas_obj]);
     pub fn add_gas<O, I>(&mut self, gas: I)
     where
-        O: IntoInput,
+        O: Into<unresolved::Input>,
         I: IntoIterator<Item = O>,
     {
-        self.gas.extend(gas.into_iter().map(IntoInput::into_input));
+        self.gas.extend(gas.into_iter().map(|x| x.into()));
     }
 
     /// Set the gas budget for the transaction.
@@ -392,44 +390,6 @@ impl<'a, T: Serialize> From<Serialized<'a, T>> for unresolved::Input {
     }
 }
 
-impl IntoInput for unresolved::Input {
-    /// Pass the input as is
-    fn into_input(self) -> unresolved::Input {
-        self
-    }
-}
-
-impl IntoInput for &Object {
-    fn into_input(self) -> unresolved::Input {
-        match self.owner() {
-            Owner::Address(_) => {
-                let mut input = unresolved::Input::by_id(self.object_id());
-                input.with_version(self.version());
-                input.with_digest(self.digest());
-                input
-            }
-            Owner::Object(_) => {
-                unresolved::Input::owned(self.object_id(), self.version(), self.digest())
-            }
-
-            Owner::Shared(at_version) => {
-                unresolved::Input::shared(self.object_id(), *at_version, None)
-            }
-            Owner::Immutable => {
-                unresolved::Input::immutable(self.object_id(), self.version(), self.digest())
-            }
-        }
-    }
-}
-
-impl IntoInput for ObjectId {
-    /// Convert the [`ObjectId`] type into an [`unresolved::Input`] with only object id as partial
-    /// information.
-    fn into_input(self) -> unresolved::Input {
-        unresolved::Input::by_id(self)
-    }
-}
-
 /// Convert from an [`unresolved::Input`] to a [`unresolved::ObjectReference`]. This is used to
 /// convert gas objects into unresolved object references.
 fn try_from_gas_unresolved_input_to_unresolved_obj_ref(
@@ -635,14 +595,9 @@ mod tests {
             .unwrap()
             .sent;
         let gas = coins.last().unwrap().id;
+        // TODO when we have tx resolution, we can just pass an ObjectId
         let gas_obj = client.object(gas.into(), None).await.unwrap().unwrap();
-        // we'll be able to pass in the gas coin id when we have transaction resolution
-        // until then we need to pass an immutable or owned object with id, version, and digest.
-        tx.add_gas(vec![unresolved::Input::owned(
-            gas_obj.object_id(),
-            gas_obj.version(),
-            gas_obj.digest(),
-        )]);
+        tx.add_gas(vec![gas_obj.as_input().with_owned_kind()]);
         tx.add_gas_budget(500000000);
         tx.add_gas_price(1000);
         tx.set_sender(address);
@@ -964,7 +919,7 @@ mod tests {
                             tx.input(unresolved::Input::immutable(o, obj.version(), obj.digest())));
                         }
                         sui_types::types::Owner::Shared(x) => {
-                            upgrade_cap = Some(tx.input(unresolved::Input::shared(o, *x, Some(true))));
+                            upgrade_cap = Some(tx.input(unresolved::Input::shared(o, *x, true)));
                         }
                         // If the capability is owned by an object, then the module defining the owning
                         // object gets to decide how the upgrade capability should be used.
@@ -1014,11 +969,7 @@ mod tests {
 
         let gas = coins.last().unwrap().id;
         let gas_obj = client.object(gas.into(), None).await.unwrap().unwrap();
-        tx.add_gas(vec![unresolved::Input::owned(
-            gas_obj.object_id(),
-            gas_obj.version(),
-            gas_obj.digest(),
-        )]);
+        tx.add_gas(vec![gas_obj.as_input().with_owned_kind()]);
         tx.add_gas_budget(500000000);
         tx.add_gas_price(1000);
         tx.set_sender(address);
