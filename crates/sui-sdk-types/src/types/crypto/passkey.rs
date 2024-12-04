@@ -271,7 +271,7 @@ mod serialization {
     }
 }
 
-#[cfg(test)]
+#[cfg(feature = "proptest")]
 impl proptest::arbitrary::Arbitrary for PasskeyAuthenticator {
     type Parameters = ();
     type Strategy = proptest::strategy::BoxedStrategy<Self>;

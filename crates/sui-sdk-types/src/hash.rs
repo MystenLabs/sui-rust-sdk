@@ -283,7 +283,7 @@ mod signing_message {
 /// to ensure no hashing collision for any ObjectId vs Address which is derived
 /// as the hash of `flag || pubkey`.
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 #[repr(u8)]
 enum HashingIntent {
     #[cfg(feature = "serde")]

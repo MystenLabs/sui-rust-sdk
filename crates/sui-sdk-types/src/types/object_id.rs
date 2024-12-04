@@ -6,7 +6,7 @@ use super::Address;
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct ObjectId(Address);
 
 impl ObjectId {

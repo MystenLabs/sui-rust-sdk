@@ -15,7 +15,7 @@ pub type Version = u64;
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct ObjectReference {
     object_id: ObjectId,
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
@@ -63,7 +63,7 @@ impl ObjectReference {
     serde(rename_all = "lowercase")
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum Owner {
     /// # Address Owned
     /// Object is exclusively owned by a single address, and is mutable.
@@ -90,7 +90,7 @@ pub enum Owner {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[allow(clippy::large_enum_variant)]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 //TODO think about hiding this type and not exposing it
 pub enum ObjectData {
     /// An object whose governing logic lives in a published Move module
@@ -107,7 +107,7 @@ pub enum ObjectData {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct MovePackage {
     pub id: ObjectId,
     /// Most move packages are uniquely identified by their ID (i.e. there is only one version per
@@ -157,7 +157,7 @@ pub struct MovePackage {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct TypeOrigin {
     pub module_name: Identifier,
     pub struct_name: Identifier,
@@ -171,7 +171,7 @@ pub struct TypeOrigin {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct UpgradeInfo {
     /// Id of the upgraded packages
     pub upgraded_id: ObjectId,
@@ -187,7 +187,7 @@ pub struct UpgradeInfo {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct MoveStruct {
     /// The type of this object. Immutable
     #[cfg_attr(
@@ -207,7 +207,7 @@ pub struct MoveStruct {
         feature = "serde",
         serde(with = "::serde_with::As::<::serde_with::Bytes>")
     )]
-    #[cfg_attr(test, any(proptest::collection::size_range(32..=1024).lift()))]
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(32..=1024).lift()))]
     pub(crate) contents: Vec<u8>,
 }
 
@@ -257,7 +257,7 @@ pub enum ObjectType {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct Object {
     /// The meat of the object
     pub(crate) data: ObjectData,
@@ -335,7 +335,7 @@ fn id_opt(contents: &[u8]) -> Option<ObjectId> {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct GenesisObject {
     data: ObjectData,
     owner: Owner,

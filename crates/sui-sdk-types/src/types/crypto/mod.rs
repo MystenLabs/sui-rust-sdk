@@ -85,7 +85,7 @@ macro_rules! impl_base64_helper {
 
         #[allow(unused)]
         #[derive(Debug, PartialEq)]
-        #[cfg_attr(test, derive(test_strategy::Arbitrary))]
+        #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
         struct $fromstr([u8; $base::LENGTH]);
 
         impl std::str::FromStr for $fromstr {

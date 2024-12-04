@@ -24,7 +24,7 @@ pub type ProtocolVersion = u64;
     derive(schemars::JsonSchema),
     schemars(tag = "type", rename_all = "snake_case")
 )]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum CheckpointCommitment {
     EcmhLiveObjectSet { digest: Digest },
     // Other commitment types (e.g. merkle roots) go here.
@@ -36,7 +36,7 @@ pub enum CheckpointCommitment {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct EndOfEpochData {
     /// next_epoch_committee is `Some` if and only if the current checkpoint is
     /// the last checkpoint of an epoch.
@@ -59,7 +59,7 @@ pub struct EndOfEpochData {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct CheckpointSummary {
     #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub epoch: EpochId,
@@ -109,7 +109,7 @@ pub struct CheckpointSummary {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct SignedCheckpointSummary {
     pub checkpoint: CheckpointSummary,
     pub signature: ValidatorAggregatedSignature,
@@ -117,9 +117,9 @@ pub struct SignedCheckpointSummary {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct CheckpointContents(
-    #[cfg_attr(test, any(proptest::collection::size_range(0..=2).lift()))]
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
     Vec<CheckpointTransactionInfo>,
 );
 
@@ -143,11 +143,11 @@ impl CheckpointContents {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct CheckpointTransactionInfo {
     pub transaction: TransactionDigest,
     pub effects: TransactionEffectsDigest,
-    #[cfg_attr(test, any(proptest::collection::size_range(0..=2).lift()))]
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
     pub signatures: Vec<UserSignature>,
 }
 
@@ -157,11 +157,11 @@ pub struct CheckpointTransactionInfo {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct CheckpointData {
     pub checkpoint_summary: SignedCheckpointSummary,
     pub checkpoint_contents: CheckpointContents,
-    #[cfg_attr(test, any(proptest::collection::size_range(0..=1).lift()))]
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=1).lift()))]
     pub transactions: Vec<CheckpointTransaction>,
 }
 
@@ -171,7 +171,7 @@ pub struct CheckpointData {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct CheckpointTransaction {
     /// The input Transaction
     #[cfg_attr(
@@ -185,10 +185,10 @@ pub struct CheckpointTransaction {
     /// The events, if any, emitted by this transaciton during execution
     pub events: Option<TransactionEvents>,
     /// The state of all inputs to this transaction as they were prior to execution.
-    #[cfg_attr(test, any(proptest::collection::size_range(0..=2).lift()))]
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
     pub input_objects: Vec<Object>,
     /// The state of all output objects created or mutated by this transaction.
-    #[cfg_attr(test, any(proptest::collection::size_range(0..=2).lift()))]
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
     pub output_objects: Vec<Object>,
 }
 

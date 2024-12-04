@@ -4,7 +4,7 @@ use super::Identifier;
 use super::ObjectId;
 
 #[derive(Eq, PartialEq, Clone, Debug)]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum ExecutionStatus {
     Success,
     /// Gas used in the failed case, and the error.
@@ -12,7 +12,7 @@ pub enum ExecutionStatus {
         /// The error
         error: ExecutionError,
         /// Which command the error occurred
-        #[cfg_attr(test, map(|x: Option<u16>| x.map(Into::into)))]
+        #[cfg_attr(feature = "proptest", map(|x: Option<u16>| x.map(Into::into)))]
         command: Option<u64>,
     },
 }
@@ -27,7 +27,7 @@ pub type TypeParameterIndex = u16;
     derive(schemars::JsonSchema),
     schemars(tag = "error", rename_all = "snake_case")
 )]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum ExecutionError {
     //
     // General transaction errors
@@ -188,7 +188,7 @@ pub enum ExecutionError {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct MoveLocation {
     pub package: ObjectId,
     pub module: Identifier,
@@ -205,7 +205,7 @@ pub struct MoveLocation {
     derive(schemars::JsonSchema),
     schemars(tag = "kind", rename_all = "snake_case")
 )]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum CommandArgumentError {
     /// The type of the value does not match the expected type
     TypeMismatch,
@@ -246,7 +246,7 @@ pub enum CommandArgumentError {
     derive(schemars::JsonSchema),
     schemars(tag = "kind", rename_all = "snake_case")
 )]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum PackageUpgradeError {
     /// Unable to fetch package
     UnableToFetchPackage { package_id: ObjectId },
@@ -276,7 +276,7 @@ pub enum PackageUpgradeError {
     derive(schemars::JsonSchema),
     schemars(rename_all = "snake_case")
 )]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum TypeArgumentError {
     /// A type was not found in the module specified
     TypeNotFound,

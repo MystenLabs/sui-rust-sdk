@@ -5,7 +5,7 @@
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct Digest(
     #[cfg_attr(feature = "serde", serde(with = "DigestSerialization"))]
     #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::Base58"))]
@@ -194,7 +194,7 @@ macro_rules! impl_digest {
             derive(serde_derive::Serialize, serde_derive::Deserialize)
         )]
         #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-        #[cfg_attr(test, derive(test_strategy::Arbitrary))]
+        #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
         pub struct $t(Digest);
 
         impl $t {

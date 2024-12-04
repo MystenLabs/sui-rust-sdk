@@ -11,7 +11,7 @@ use crate::types::TransactionEventsDigest;
 /// The response from processing a transaction or a certified transaction
 #[derive(Eq, PartialEq, Clone, Debug)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct TransactionEffectsV1 {
     /// The status of the execution
     #[cfg_attr(feature = "schemars", schemars(flatten))]
@@ -22,33 +22,33 @@ pub struct TransactionEffectsV1 {
     pub gas_used: GasCostSummary,
     /// The version that every modified (mutated or deleted) object had before it was modified by
     /// this transaction.
-    #[cfg_attr(test, any(proptest::collection::size_range(0..=5).lift()))]
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=5).lift()))]
     pub modified_at_versions: Vec<ModifiedAtVersion>,
     /// The object references of the shared objects used in this transaction. Empty if no shared objects were used.
-    #[cfg_attr(test, any(proptest::collection::size_range(0..=5).lift()))]
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=5).lift()))]
     pub shared_objects: Vec<ObjectReference>,
     /// The transaction digest
     pub transaction_digest: TransactionDigest,
 
     /// ObjectReference and owner of new objects created.
-    #[cfg_attr(test, any(proptest::collection::size_range(0..=5).lift()))]
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=5).lift()))]
     pub created: Vec<ObjectReferenceWithOwner>,
     /// ObjectReference and owner of mutated objects, including gas object.
-    #[cfg_attr(test, any(proptest::collection::size_range(0..=5).lift()))]
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=5).lift()))]
     pub mutated: Vec<ObjectReferenceWithOwner>,
     /// ObjectReference and owner of objects that are unwrapped in this transaction.
     /// Unwrapped objects are objects that were wrapped into other objects in the past,
     /// and just got extracted out.
-    #[cfg_attr(test, any(proptest::collection::size_range(0..=5).lift()))]
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=5).lift()))]
     pub unwrapped: Vec<ObjectReferenceWithOwner>,
     /// Object Refs of objects now deleted (the new refs).
-    #[cfg_attr(test, any(proptest::collection::size_range(0..=5).lift()))]
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=5).lift()))]
     pub deleted: Vec<ObjectReference>,
     /// Object refs of objects previously wrapped in other objects but now deleted.
-    #[cfg_attr(test, any(proptest::collection::size_range(0..=5).lift()))]
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=5).lift()))]
     pub unwrapped_then_deleted: Vec<ObjectReference>,
     /// Object refs of objects now wrapped in other objects.
-    #[cfg_attr(test, any(proptest::collection::size_range(0..=5).lift()))]
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=5).lift()))]
     pub wrapped: Vec<ObjectReference>,
     /// The updated gas object reference. Have a dedicated field for convenient access.
     /// It's also included in mutated.
@@ -57,7 +57,7 @@ pub struct TransactionEffectsV1 {
     /// can be None if the transaction does not emit any event.
     pub events_digest: Option<TransactionEventsDigest>,
     /// The set of transaction digests this transaction depends on.
-    #[cfg_attr(test, any(proptest::collection::size_range(0..=5).lift()))]
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=5).lift()))]
     pub dependencies: Vec<TransactionDigest>,
 }
 
@@ -67,7 +67,7 @@ pub struct TransactionEffectsV1 {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct ModifiedAtVersion {
     pub object_id: ObjectId,
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
@@ -81,7 +81,7 @@ pub struct ModifiedAtVersion {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct ObjectReferenceWithOwner {
     pub reference: ObjectReference,
     pub owner: Owner,

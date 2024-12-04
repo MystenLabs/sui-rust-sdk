@@ -17,7 +17,7 @@ const MAX_COMMITTEE_SIZE: usize = 10;
 // const MAX_BITMAP_VALUE: BitmapUnit = 0b1111111111;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum MultisigMemberPublicKey {
     Ed25519(Ed25519PublicKey),
     Secp256k1(Secp256k1PublicKey),
@@ -31,7 +31,7 @@ pub enum MultisigMemberPublicKey {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct MultisigMember {
     public_key: MultisigMemberPublicKey,
     weight: WeightUnit,
@@ -57,10 +57,10 @@ impl MultisigMember {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct MultisigCommittee {
     /// A list of committee members and their corresponding weight.
-    #[cfg_attr(test, any(proptest::collection::size_range(0..=10).lift()))]
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=10).lift()))]
     members: Vec<MultisigMember>,
     /// If the total weight of the public keys corresponding to verified signatures is larger than threshold, the Multisig is verified.
     threshold: ThresholdUnit,
@@ -115,12 +115,12 @@ impl MultisigCommittee {
 /// The struct that contains signatures and public keys necessary for authenticating a Multisig.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct MultisigAggregatedSignature {
     /// The plain signature encoded with signature scheme.
     ///
     /// The signatures must be in the same order as they are listed in the committee.
-    #[cfg_attr(test, any(proptest::collection::size_range(0..=10).lift()))]
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=10).lift()))]
     signatures: Vec<MultisigMemberSignature>,
     /// A bitmap that indicates the position of which public key the signature should be authenticated with.
     bitmap: BitmapUnit,
@@ -133,7 +133,7 @@ pub struct MultisigAggregatedSignature {
             with = "Option<crate::_schemars::Base64>",
         )
     )]
-    #[cfg_attr(test, strategy(proptest::strategy::Just(None)))]
+    #[cfg_attr(feature = "proptest", strategy(proptest::strategy::Just(None)))]
     legacy_bitmap: Option<roaring::RoaringBitmap>,
     /// The public key encoded with each public key with its signature scheme used along with the corresponding weight.
     committee: MultisigCommittee,
@@ -199,7 +199,7 @@ fn roaring_bitmap_to_u16(roaring: &roaring::RoaringBitmap) -> Result<BitmapUnit,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum MultisigMemberSignature {
     Ed25519(Ed25519Signature),
     Secp256k1(Secp256k1Signature),

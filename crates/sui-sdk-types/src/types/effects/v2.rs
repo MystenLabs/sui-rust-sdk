@@ -12,7 +12,7 @@ use crate::types::TransactionEventsDigest;
 /// The response from processing a transaction or a certified transaction
 #[derive(Eq, PartialEq, Clone, Debug)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct TransactionEffectsV2 {
     /// The status of the execution
     #[cfg_attr(feature = "schemars", schemars(flatten))]
@@ -31,20 +31,20 @@ pub struct TransactionEffectsV2 {
     /// can be None if the transaction does not emit any event.
     pub events_digest: Option<TransactionEventsDigest>,
     /// The set of transaction digests this transaction depends on.
-    #[cfg_attr(test, any(proptest::collection::size_range(0..=5).lift()))]
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=5).lift()))]
     pub dependencies: Vec<TransactionDigest>,
 
     /// The version number of all the written Move objects by this transaction.
     #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub lamport_version: Version,
     /// Objects whose state are changed in the object store.
-    #[cfg_attr(test, any(proptest::collection::size_range(0..=2).lift()))]
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
     pub changed_objects: Vec<ChangedObject>,
     /// Shared objects that are not mutated in this transaction. Unlike owned objects,
     /// read-only shared objects' version are not committed in the transaction,
     /// and in order for a node to catch up and execute it without consensus sequencing,
     /// the version needs to be committed in the effects.
-    #[cfg_attr(test, any(proptest::collection::size_range(0..=2).lift()))]
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
     pub unchanged_shared_objects: Vec<UnchangedSharedObject>,
     /// Auxiliary data that are not protocol-critical, generated as part of the effects but are stored separately.
     /// Storing it separately allows us to avoid bloating the effects with data that are not critical.
@@ -55,7 +55,7 @@ pub struct TransactionEffectsV2 {
 //XXX Do we maybe want to just fold "EffectsObjectChange" into this struct?
 #[derive(Eq, PartialEq, Clone, Debug)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct ChangedObject {
     pub object_id: ObjectId,
     #[cfg_attr(feature = "schemars", schemars(flatten))]
@@ -68,7 +68,7 @@ pub struct ChangedObject {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct UnchangedSharedObject {
     pub object_id: ObjectId,
     pub kind: UnchangedSharedKind,
@@ -80,7 +80,7 @@ pub struct UnchangedSharedObject {
     derive(schemars::JsonSchema),
     schemars(tag = "kind", rename_all = "snake_case")
 )]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum UnchangedSharedKind {
     /// Read-only shared objects from the input. We don't really need ObjectDigest
     /// for protocol correctness, but it will make it easier to verify untrusted read.
@@ -114,7 +114,7 @@ pub enum UnchangedSharedKind {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct EffectsObjectChange {
     // input_state and output_state are the core fields that's required by
     // the protocol as it tells how an object changes on-chain.
@@ -138,7 +138,7 @@ pub struct EffectsObjectChange {
     derive(schemars::JsonSchema),
     schemars(tag = "state", rename_all = "snake_case")
 )]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum ObjectIn {
     NotExist,
     /// The old version, digest and owner.
@@ -156,7 +156,7 @@ pub enum ObjectIn {
     derive(schemars::JsonSchema),
     schemars(tag = "state", rename_all = "snake_case")
 )]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum ObjectOut {
     /// Same definition as in ObjectIn.
     NotExist,
@@ -178,7 +178,7 @@ pub enum ObjectOut {
     serde(rename_all = "lowercase")
 )]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(test, derive(test_strategy::Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum IdOperation {
     None,
     Created,
