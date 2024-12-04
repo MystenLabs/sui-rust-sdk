@@ -68,7 +68,7 @@ impl std::error::Error for TypeParseError {}
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct Identifier(
     #[cfg_attr(
-        test,
+        feature = "proptest",
         strategy(proptest::strategy::Strategy::prop_map(
             "[a-zA-Z][a-zA-Z0-9_]{0,127}",
             Into::into

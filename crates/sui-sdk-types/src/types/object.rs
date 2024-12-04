@@ -128,7 +128,7 @@ pub struct MovePackage {
         serde(with = "::serde_with::As::<BTreeMap<::serde_with::Same, ::serde_with::Bytes>>")
     )]
     #[cfg_attr(
-        test,
+        feature = "proptest",
         strategy(
             proptest::collection::btree_map(proptest::arbitrary::any::<Identifier>(), proptest::collection::vec(proptest::arbitrary::any::<u8>(), 0..=1024), 0..=5)
         )
@@ -142,7 +142,7 @@ pub struct MovePackage {
     // For each dependency, maps original package ID to the info about the (upgraded) dependency
     // version that this package is using
     #[cfg_attr(
-        test,
+        feature = "proptest",
         strategy(
             proptest::collection::btree_map(proptest::arbitrary::any::<ObjectId>(), proptest::arbitrary::any::<UpgradeInfo>(), 0..=5)
         )
