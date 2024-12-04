@@ -24,7 +24,7 @@ test:
 	cargo nextest run --all-features -p sui-sdk-types -p sui-crypto
 	cargo test --doc
 
-package_%.json:
+package_%.json: crates/sui-transaction-builder/tests/%/Move.toml crates/sui-transaction-builder/tests/%/sources/*.move
 	cd crates/sui-transaction-builder/tests/$(*F) && sui move build --dump-bytecode-as-base64 >> ../../$@
 
 .PHONY: test-with-localnet
