@@ -508,7 +508,7 @@ mod tests {
     use sui_types::types::TransactionEffects;
     use sui_types::types::TypeTag;
 
-    use crate::unresolved;
+    use crate::unresolved::Input;
     use crate::Function;
     use crate::Serialized;
     use crate::TransactionBuilder;
@@ -586,10 +586,21 @@ mod tests {
             .unwrap()
             .unwrap()
             .sent;
+        let tx_digest = coins.first().unwrap().transfer_tx_digest;
+
+        let mut interval = tokio::time::interval(std::time::Duration::from_millis(500));
+        loop {
+            interval.tick().await;
+            let tx = client.transaction(tx_digest.into()).await.unwrap();
+            if tx.is_some() {
+                break;
+            }
+        }
         let gas = coins.last().unwrap().id;
         // TODO when we have tx resolution, we can just pass an ObjectId
         let gas_obj = client.object(gas.into(), None).await.unwrap().unwrap();
-        tx.add_gas(vec![gas_obj.as_input().with_owned_kind()]);
+        let gas_input: Input = (&gas_obj).into();
+        tx.add_gas(vec![gas_input.with_owned_kind()]);
         tx.add_gas_budget(500000000);
         tx.add_gas_price(1000);
         tx.set_sender(address);
@@ -625,7 +636,7 @@ mod tests {
         let coin_obj_id = "0x19406ea4d9609cd9422b85e6bf2486908f790b778c757aff805241f3f609f9b4";
         let coin_digest = "7opR9rFUYivSTqoJHvFb9p6p54THyHTatMG6id4JKZR9";
         let coin_version = 2;
-        let coin = tx.input(unresolved::Input::owned(
+        let coin = tx.input(Input::owned(
             coin_obj_id.parse().unwrap(),
             coin_version,
             coin_digest.parse().unwrap(),
@@ -640,7 +651,7 @@ mod tests {
         tx.transfer_objects(vec![coin], recipient);
         tx.add_gas_budget(500000000);
         tx.add_gas_price(1000);
-        tx.add_gas(vec![unresolved::Input::immutable(
+        tx.add_gas(vec![Input::immutable(
             "0xd8792bce2743e002673752902c0e7348dfffd78638cb5367b0b85857bceb9821"
                 .parse()
                 .unwrap(),
@@ -668,15 +679,8 @@ mod tests {
         // get the object information from the client
         let client = Client::new_localhost();
         let first = coins.first().unwrap().id;
-        let coin = client.object(first.into(), None).await.unwrap().unwrap();
-        let coin_digest = coin.digest();
-        let coin_version = coin.version();
-
-        let coin_input = tx.input(unresolved::Input::owned(
-            coin.object_id(),
-            coin_version,
-            coin_digest,
-        ));
+        let coin: Input = (&client.object(first.into(), None).await.unwrap().unwrap()).into();
+        let coin_input = tx.input(coin.with_owned_kind());
         let recipient = Address::generate(rand::thread_rng());
         let recipient_input = tx.input(Serialized(&recipient));
         tx.transfer_objects(vec![coin_input], recipient_input);
@@ -751,8 +755,8 @@ mod tests {
         let (_, pk, coins) = helper_setup(&mut tx, &client).await;
 
         let coin = coins.first().unwrap().id;
-        let coin_obj = client.object(coin.into(), None).await.unwrap().unwrap();
-        let coin_input = tx.input(coin_obj.as_input().with_owned_kind());
+        let coin_obj: Input = (&client.object(coin.into(), None).await.unwrap().unwrap()).into();
+        let coin_input = tx.input(coin_obj.with_owned_kind());
 
         // transfer 1 SUI
         let amount = tx.input(Serialized(&1_000_000_000u64));
@@ -785,14 +789,14 @@ mod tests {
         let (address, pk, coins) = helper_setup(&mut tx, &client).await;
 
         let coin1 = coins.first().unwrap().id;
-        let coin1_obj = client.object(coin1.into(), None).await.unwrap().unwrap();
-        let coin_to_merge = tx.input(coin1_obj.as_input().with_owned_kind());
+        let coin1_obj: Input = (&client.object(coin1.into(), None).await.unwrap().unwrap()).into();
+        let coin_to_merge = tx.input(coin1_obj.with_owned_kind());
 
         let mut coins_to_merge = vec![];
         // last coin is used for gas, first coin is the one we merge into
         for c in coins[1..&coins.len() - 1].iter() {
-            let coin = client.object(c.id.into(), None).await.unwrap().unwrap();
-            coins_to_merge.push(tx.input(coin.as_input().with_owned_kind()));
+            let coin: Input = (&client.object(c.id.into(), None).await.unwrap().unwrap()).into();
+            coins_to_merge.push(tx.input(coin.with_owned_kind()));
         }
 
         tx.merge_coins(coin_to_merge, coins_to_merge);
@@ -888,7 +892,8 @@ mod tests {
                 ObjectType::Struct(x) if x.name.to_string() == "UpgradeCap" => {
                     match obj.owner() {
                         sui_types::types::Owner::Address(_) => {
-                            upgrade_cap = Some(tx.input(obj.as_input().with_owned_kind()));
+                            let obj: Input = (&obj).into();
+                            upgrade_cap = Some(tx.input(obj.with_owned_kind()))
                         }
                         sui_types::types::Owner::Shared(_) => {
                             upgrade_cap = Some(tx.input(&obj))
@@ -940,8 +945,8 @@ mod tests {
         );
 
         let gas = coins.last().unwrap().id;
-        let gas_obj = client.object(gas.into(), None).await.unwrap().unwrap();
-        tx.add_gas(vec![gas_obj.as_input().with_owned_kind()]);
+        let gas_obj: Input = (&client.object(gas.into(), None).await.unwrap().unwrap()).into();
+        tx.add_gas(vec![gas_obj.with_owned_kind()]);
         tx.add_gas_budget(500000000);
         tx.add_gas_price(1000);
         tx.set_sender(address);

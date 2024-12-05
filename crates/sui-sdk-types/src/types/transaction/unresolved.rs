@@ -1,11 +1,7 @@
 use crate::types::object::Version;
 use crate::types::Address;
-#[cfg(all(feature = "serde", feature = "hash"))]
-use crate::types::Object;
 use crate::types::ObjectDigest;
 use crate::types::ObjectId;
-#[cfg(all(feature = "serde", feature = "hash"))]
-use crate::types::Owner;
 
 use super::Command;
 use super::TransactionExpiration;
@@ -358,13 +354,18 @@ impl From<Value> for serde_json::Value {
 }
 
 #[cfg(all(feature = "serde", feature = "hash"))]
-impl From<&Object> for Input {
-    fn from(object: &Object) -> Self {
+impl From<&crate::types::Object> for Input {
+    fn from(object: &crate::types::Object) -> Self {
+        use crate::types::object::Owner;
+
+        let input = Input::by_id(object.object_id())
+            .with_digest(object.digest())
+            .with_version(object.version());
         match object.owner() {
-            Owner::Address(_) => object.as_input(),
-            Owner::Object(_) => object.as_input().with_owned_kind(),
-            Owner::Shared(at_version) => object.as_input().with_initial_shared_version(*at_version),
-            Owner::Immutable => object.as_input().with_immutable_kind(),
+            Owner::Address(_) => input,
+            Owner::Object(_) => input,
+            Owner::Shared(at_version) => input.with_initial_shared_version(*at_version),
+            Owner::Immutable => input.with_immutable_kind(),
         }
     }
 }
