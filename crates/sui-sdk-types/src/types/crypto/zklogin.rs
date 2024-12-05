@@ -492,7 +492,7 @@ mod serialization {
 
             struct Inner<'a>(&'a [Bn254FieldElement; 2]);
 
-            impl<'a> Serialize for Inner<'a> {
+            impl Serialize for Inner<'_> {
                 fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
                 where
                     S: serde::Serializer,
