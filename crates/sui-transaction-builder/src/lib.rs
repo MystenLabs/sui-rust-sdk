@@ -93,22 +93,12 @@ impl TransactionBuilder {
 
     // Metadata
 
-    /// Set the gas objects that will be used to pay for the transaction. Most commonly the gas
-    /// object can be either passed as literals and the builder will resolve it to the actual
-    /// object, as a reference to an [`Object`], or can created using one of the constructors of the
-    /// [`unresolved::Input`] enum, e.g., [`unresolved::Input::by_id`].
+    /// Add one or more gas objects to use to pay for the transaction.
     ///
-    /// Examples
-    /// ```rust,ignore
-    /// let mut tx = TransactionBuilder::new();
-    /// // using literals
-    /// tx.add_gas(vec!["0x19406ea4d9609cd9422b85e6bf2486908f790b778c757aff805241f3f609f9b4"]);
-    ///
-    /// // using input object and passing an ObjectId to the `by_id` function
-    /// let gas_obj =
-    /// unresolved::Input::by_id("0x19406ea4d9609cd9422b85e6bf2486908f790b778c757aff805241f3f609f9b4".parse().unwrap());
-    /// tx.add_gas(vec![&gas_obj]);
-    pub fn add_gas<O, I>(&mut self, gas: I)
+    /// Most commonly the gas can be passed as a reference to an owned/immutable [`Object`],
+    /// or can created using one of the of the constructors of the [`unresolved::Input`] enum,
+    /// e.g., [`unresolved::Input::owned`].
+    pub fn add_gas_objects<O, I>(&mut self, gas: I)
     where
         O: Into<unresolved::Input>,
         I: IntoIterator<Item = O>,
@@ -117,12 +107,12 @@ impl TransactionBuilder {
     }
 
     /// Set the gas budget for the transaction.
-    pub fn add_gas_budget(&mut self, budget: u64) {
+    pub fn set_gas_budget(&mut self, budget: u64) {
         self.gas_budget = Some(budget);
     }
 
     /// Set the gas price for the transaction.
-    pub fn add_gas_price(&mut self, price: u64) {
+    pub fn set_gas_price(&mut self, price: u64) {
         self.gas_price = Some(price);
     }
 
@@ -136,7 +126,7 @@ impl TransactionBuilder {
         self.sponsor = Some(sponsor);
     }
 
-    /// Set the expiration of the transaction.
+    /// Set the expiration of the transaction to be a specific epoch.
     pub fn set_expiration(&mut self, epoch: u64) {
         self.expiration = TransactionExpiration::Epoch(epoch);
     }
@@ -169,7 +159,7 @@ impl TransactionBuilder {
         self.commands.push(cmd);
     }
 
-    /// Splits a coin by the provided amounts, returning multiple results (as many as there are
+    /// Split a coin by the provided amounts, returning multiple results (as many as there are
     /// amounts). To access the results, use the [`Argument::nested`] method to access the desired
     /// coin by its index.
     pub fn split_coins(&mut self, coin: Argument, amounts: Vec<Argument>) -> Argument {
@@ -197,7 +187,7 @@ impl TransactionBuilder {
     }
 
     /// Publish a list of modules with the given dependencies. The result is the
-    /// `0x2::package::UpgradeCap` move type. Note that the upgrade capability needs to be handled
+    /// `0x2::package::UpgradeCap` Move type. Note that the upgrade capability needs to be handled
     /// after this call:
     ///  - transfer it to the transaction sender or another address
     ///  - burn it
@@ -206,7 +196,7 @@ impl TransactionBuilder {
     ///
     /// The arguments required for this command are:
     ///  - `modules`: is the modules' bytecode to be published
-    ///  - `dependencies`: is the list of IDs of the transitive dependencies of the package to be
+    ///  - `dependencies`: is the list of IDs of the transitive dependencies of the package
     pub fn publish(&mut self, modules: Vec<Vec<u8>>, dependencies: Vec<ObjectId>) -> Argument {
         let cmd = Command::Publish(Publish {
             modules,
@@ -297,7 +287,6 @@ impl TransactionBuilder {
 
     /// Assuming everything is resolved, convert this transaction into the
     /// resolved form. Returns a [`Transaction`] if successful, or an [`Error`] if not.
-    /// Use the [`resolve`] function to resolve the transaction if not all the data is provided.
     pub fn finish(self) -> Result<Transaction, Error> {
         let Some(sender) = self.sender else {
             return Err(Error::MissingSender);
@@ -504,7 +493,6 @@ mod tests {
     use sui_types::types::IdOperation;
     use sui_types::types::ObjectId;
     use sui_types::types::ObjectType;
-    use sui_types::types::Transaction;
     use sui_types::types::TransactionEffects;
     use sui_types::types::TypeTag;
 
@@ -512,6 +500,7 @@ mod tests {
     use crate::Function;
     use crate::Serialized;
     use crate::TransactionBuilder;
+    use sui_types::types::Digest;
 
     /// Type corresponding to the output of `sui move build --dump-bytecode-as-base64`
     #[derive(serde::Deserialize, Debug)]
@@ -568,10 +557,14 @@ mod tests {
         (address, pk)
     }
 
-    /// Generate a private key and its corresponding address, call faucet which returns 5 coin
-    /// objects, set the sender to this address, set the gas object (last coin from the returned
-    /// Vec<CoinInfo>), set gas price, set gas budget, and return the address, private key, and
-    /// coins.
+    /// Helper to:
+    /// - generate a private key and its corresponding address
+    /// - set the sender for the tx to this newly created address
+    /// - set gas price
+    /// - set gas budget
+    /// - call faucet which returns 5 coin objects
+    /// - set the gas object (last coin from the list of the 5 objects returned by faucet)
+    /// - return the address, private key, and coins.
     ///
     /// NB! This assumes that these tests run on a network whose faucet returns 5 coins per
     /// each faucet request.
@@ -587,43 +580,37 @@ mod tests {
             .unwrap()
             .sent;
         let tx_digest = coins.first().unwrap().transfer_tx_digest;
+        wait_for_tx(client, tx_digest.into()).await;
 
-        let mut interval = tokio::time::interval(std::time::Duration::from_millis(500));
-        loop {
-            interval.tick().await;
-            let tx = client.transaction(tx_digest.into()).await.unwrap();
-            if tx.is_some() {
-                break;
-            }
-        }
         let gas = coins.last().unwrap().id;
         // TODO when we have tx resolution, we can just pass an ObjectId
-        let gas_obj = client.object(gas.into(), None).await.unwrap().unwrap();
-        let gas_input: Input = (&gas_obj).into();
-        tx.add_gas(vec![gas_input.with_owned_kind()]);
-        tx.add_gas_budget(500000000);
-        tx.add_gas_price(1000);
+        let gas_obj: Input = (&client.object(gas.into(), None).await.unwrap().unwrap()).into();
+        tx.add_gas_objects(vec![gas_obj.with_owned_kind()]);
+        tx.set_gas_budget(500000000);
+        tx.set_gas_price(1000);
         tx.set_sender(address);
 
         (address, pk, coins)
     }
 
+    /// Wait for the transaction to be finalized and indexed. This queries the GraphQL server until
+    /// it retrieves the requested transaction.
+    async fn wait_for_tx(client: &Client, digest: Digest) {
+        while client.transaction(digest).await.unwrap().is_none() {
+            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+        }
+    }
+
+    /// Wait for the transaction to be finalized and indexed, and check the effects' to ensure the
+    /// transaction was successfully executed.
     async fn wait_for_tx_and_check_effects_status_success(
         client: &Client,
-        tx: &Transaction,
+        digest: Digest,
         effects: Result<Option<TransactionEffects>, sui_graphql_client::error::Error>,
     ) {
         assert!(effects.is_ok(), "Execution failed. Effects: {:?}", effects);
         // wait for the transaction to be finalized
-        while client
-            .transaction(tx.digest().into())
-            .await
-            .unwrap()
-            .is_none()
-        {
-            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-        }
-
+        wait_for_tx(client, digest).await;
         // check that it succeeded
         let status = effects.unwrap();
         let expected_status = ExecutionStatus::Success;
@@ -649,9 +636,9 @@ mod tests {
         assert!(result.is_err());
 
         tx.transfer_objects(vec![coin], recipient);
-        tx.add_gas_budget(500000000);
-        tx.add_gas_price(1000);
-        tx.add_gas(vec![Input::immutable(
+        tx.set_gas_budget(500000000);
+        tx.set_gas_price(1000);
+        tx.add_gas_objects(vec![Input::immutable(
             "0xd8792bce2743e002673752902c0e7348dfffd78638cb5367b0b85857bceb9821"
                 .parse()
                 .unwrap(),
@@ -670,7 +657,6 @@ mod tests {
         assert!(tx.is_ok());
     }
 
-    /// Test TransferObj PTB.
     #[tokio::test]
     async fn test_transfer_obj_execution() {
         let mut tx = TransactionBuilder::new();
@@ -689,7 +675,7 @@ mod tests {
         let sig = pk.sign_transaction(&tx).unwrap();
 
         let effects = client.execute_tx(vec![sig], &tx).await;
-        wait_for_tx_and_check_effects_status_success(&client, &tx, effects).await;
+        wait_for_tx_and_check_effects_status_success(&client, tx.digest().into(), effects).await;
 
         // check that recipient has 1 coin
         let recipient_coins = client
@@ -718,7 +704,7 @@ mod tests {
         let tx = tx.finish().unwrap();
         let sig = pk.sign_transaction(&tx).unwrap();
         let effects = client.execute_tx(vec![sig], &tx).await;
-        wait_for_tx_and_check_effects_status_success(&client, &tx, effects).await;
+        wait_for_tx_and_check_effects_status_success(&client, tx.digest().into(), effects).await;
     }
 
     #[tokio::test]
@@ -738,7 +724,7 @@ mod tests {
         let sig = pk.sign_transaction(&tx).unwrap();
 
         let effects = client.execute_tx(vec![sig], &tx).await;
-        wait_for_tx_and_check_effects_status_success(&client, &tx, effects).await;
+        wait_for_tx_and_check_effects_status_success(&client, tx.digest().into(), effects).await;
 
         // check that recipient has 1 coin
         let recipient_coins = client
@@ -804,7 +790,7 @@ mod tests {
         let sig = pk.sign_transaction(&tx).unwrap();
 
         let effects = client.execute_tx(vec![sig], &tx).await;
-        wait_for_tx_and_check_effects_status_success(&client, &tx, effects).await;
+        wait_for_tx_and_check_effects_status_success(&client, tx.digest().into(), effects).await;
 
         // check that there are two coins
         let coins_after = client
@@ -827,7 +813,7 @@ mod tests {
         let sig = pk.sign_transaction(&tx).unwrap();
 
         let effects = client.execute_tx(vec![sig], &tx).await;
-        wait_for_tx_and_check_effects_status_success(&client, &tx, effects).await;
+        wait_for_tx_and_check_effects_status_success(&client, tx.digest().into(), effects).await;
     }
 
     #[tokio::test]
@@ -843,7 +829,7 @@ mod tests {
         let tx = tx.finish().unwrap();
         let sig = pk.sign_transaction(&tx).unwrap();
         let effects = client.execute_tx(vec![sig], &tx).await;
-        wait_for_tx_and_check_effects_status_success(&client, &tx, effects).await;
+        wait_for_tx_and_check_effects_status_success(&client, tx.digest().into(), effects).await;
     }
 
     #[tokio::test]
@@ -882,7 +868,7 @@ mod tests {
                 _ => panic!("Expected V2 effects"),
             }
         }
-        wait_for_tx_and_check_effects_status_success(&client, &tx, effects).await;
+        wait_for_tx_and_check_effects_status_success(&client, tx.digest().into(), effects).await;
 
         let mut tx = TransactionBuilder::new();
         let mut upgrade_cap = None;
@@ -946,13 +932,13 @@ mod tests {
 
         let gas = coins.last().unwrap().id;
         let gas_obj: Input = (&client.object(gas.into(), None).await.unwrap().unwrap()).into();
-        tx.add_gas(vec![gas_obj.with_owned_kind()]);
-        tx.add_gas_budget(500000000);
-        tx.add_gas_price(1000);
+        tx.add_gas_objects(vec![gas_obj.with_owned_kind()]);
+        tx.set_gas_budget(500000000);
+        tx.set_gas_price(1000);
         tx.set_sender(address);
         let tx = tx.finish().unwrap();
         let sig = pk.sign_transaction(&tx).unwrap();
         let effects = client.execute_tx(vec![sig], &tx).await;
-        wait_for_tx_and_check_effects_status_success(&client, &tx, effects).await;
+        wait_for_tx_and_check_effects_status_success(&client, tx.digest().into(), effects).await;
     }
 }
