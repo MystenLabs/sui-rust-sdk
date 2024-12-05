@@ -1,8 +1,10 @@
 use crate::types::object::Version;
 use crate::types::Address;
+#[cfg(all(feature = "serde", feature = "hash"))]
 use crate::types::Object;
 use crate::types::ObjectDigest;
 use crate::types::ObjectId;
+#[cfg(all(feature = "serde", feature = "hash"))]
 use crate::types::Owner;
 
 use super::Command;
@@ -280,8 +282,8 @@ impl Input {
     /// Set the initial shared version.
     pub fn with_initial_shared_version(self, initial_version: u64) -> Self {
         Self {
-            version: Some(initial_version),
             kind: Some(InputKind::Shared),
+            version: Some(initial_version),
             ..self
         }
     }
@@ -355,26 +357,20 @@ impl From<Value> for serde_json::Value {
     }
 }
 
+#[cfg(all(feature = "serde", feature = "hash"))]
 impl From<&Object> for Input {
     fn from(object: &Object) -> Self {
         match object.owner() {
-            Owner::Address(_) => Input::by_id(object.object_id())
-                .with_version(object.version())
-                .with_digest(object.digest()),
-            Owner::Object(_) => Input::owned(object.object_id(), object.version(), object.digest()),
-
-            Owner::Shared(at_version) => {
-                Input::by_id(object.object_id()).with_initial_shared_version(*at_version)
-            }
-            Owner::Immutable => {
-                Input::immutable(object.object_id(), object.version(), object.digest())
-            }
+            Owner::Address(_) => object.as_input(),
+            Owner::Object(_) => object.as_input().with_owned_kind(),
+            Owner::Shared(at_version) => object.as_input().with_initial_shared_version(*at_version),
+            Owner::Immutable => object.as_input().with_immutable_kind(),
         }
     }
 }
 
-impl From<&ObjectId> for Input {
-    fn from(object_id: &ObjectId) -> Self {
-        Input::by_id(*object_id)
+impl From<ObjectId> for Input {
+    fn from(object_id: ObjectId) -> Self {
+        Input::by_id(object_id)
     }
 }

@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+#[cfg(all(feature = "serde", feature = "hash"))]
 use super::unresolved::Input;
 use super::Address;
 use super::Identifier;
@@ -325,6 +326,7 @@ impl Object {
     }
 
     /// Convert this object into an [`unresolved::Input`] with the object id, digest, and version.
+    #[cfg(all(feature = "serde", feature = "hash"))]
     pub fn as_input(&self) -> Input {
         Input::by_id(self.object_id())
             .with_digest(self.digest())

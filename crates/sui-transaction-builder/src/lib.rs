@@ -70,14 +70,6 @@ pub struct Function {
     type_args: Vec<TypeTag>,
 }
 
-/// A trait to convert a type into an [`unresolved::Input`]. This is mostly used for gas objects,
-/// to pass them either as literals, as an object id, as a reference to an object, or as a
-/// [`unresolved::Input`] object.
-// pub trait IntoInput {
-//     /// Convert the type into an [`unresolved::Input`].
-//     fn into_input(self) -> unresolved::Input;
-// }
-
 /// A transaction builder to build transactions.
 impl TransactionBuilder {
     /// Create a new transaction builder and initialize its elements to default.
@@ -760,14 +752,8 @@ mod tests {
 
         let coin = coins.first().unwrap().id;
         let coin_obj = client.object(coin.into(), None).await.unwrap().unwrap();
-        let coin_digest = coin_obj.digest();
-        let coin_version = coin_obj.version();
+        let coin_input = tx.input(coin_obj.as_input().with_owned_kind());
 
-        let coin_input = tx.input(unresolved::Input::owned(
-            coin_obj.object_id(),
-            coin_version,
-            coin_digest,
-        ));
         // transfer 1 SUI
         let amount = tx.input(Serialized(&1_000_000_000u64));
         tx.split_coins(coin_input, vec![amount]);
@@ -800,26 +786,13 @@ mod tests {
 
         let coin1 = coins.first().unwrap().id;
         let coin1_obj = client.object(coin1.into(), None).await.unwrap().unwrap();
-        let coin1_digest = coin1_obj.digest();
-        let coin1_version = coin1_obj.version();
-
-        let coin_to_merge = tx.input(unresolved::Input::owned(
-            coin1_obj.object_id(),
-            coin1_version,
-            coin1_digest,
-        ));
+        let coin_to_merge = tx.input(coin1_obj.as_input().with_owned_kind());
 
         let mut coins_to_merge = vec![];
         // last coin is used for gas, first coin is the one we merge into
         for c in coins[1..&coins.len() - 1].iter() {
             let coin = client.object(c.id.into(), None).await.unwrap().unwrap();
-            let coin_digest = coin.digest();
-            let coin_version = coin.version();
-            coins_to_merge.push(tx.input(unresolved::Input::owned(
-                coin.object_id(),
-                coin_version,
-                coin_digest,
-            )));
+            coins_to_merge.push(tx.input(coin.as_input().with_owned_kind()));
         }
 
         tx.merge_coins(coin_to_merge, coins_to_merge);
@@ -915,11 +888,10 @@ mod tests {
                 ObjectType::Struct(x) if x.name.to_string() == "UpgradeCap" => {
                     match obj.owner() {
                         sui_types::types::Owner::Address(_) => {
-                            upgrade_cap = Some(
-                            tx.input(unresolved::Input::immutable(o, obj.version(), obj.digest())));
+                            upgrade_cap = Some(tx.input(obj.as_input().with_owned_kind()));
                         }
-                        sui_types::types::Owner::Shared(x) => {
-                            upgrade_cap = Some(tx.input(unresolved::Input::shared(o, *x, true)));
+                        sui_types::types::Owner::Shared(_) => {
+                            upgrade_cap = Some(tx.input(&obj))
                         }
                         // If the capability is owned by an object, then the module defining the owning
                         // object gets to decide how the upgrade capability should be used.
