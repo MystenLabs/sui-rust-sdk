@@ -1,0 +1,26 @@
+[package]
+name = "sui-transaction-builder"
+version = "0.1.0"
+authors = ["Stefan Stanciulescu <stefan@mystenlabs.com>", "Brandon Williams <brandon@mystenlabs.com>"]
+license = "Apache-2.0"
+edition = "2021"
+publish = false
+readme = "README.md"
+description = "Transaction API for the Rust SDK for the Sui Blockchain"
+
+[dependencies]
+base64ct = "1.6"
+bcs = "0.1.6"
+serde = { version = "1.0", features = ["derive"] }
+sui-types = { package = "sui-sdk-types", path = "../sui-sdk-types", features = ["serde", "hash"] }
+sui-graphql-client = { package = "sui-graphql-client", path = "../sui-graphql-client" }
+thiserror = "2.0"
+
+[dev-dependencies]
+anyhow = "1.0"
+rand = "0.8"
+serde_json = "1.0"
+sui-crypto = { package = "sui-crypto", path = "../sui-crypto" , features = ["ed25519"] }
+sui-types = { package = "sui-sdk-types", path = "../sui-sdk-types", features = ["rand"] }
+tokio = { version = "1.0", features = ["full"] }
+
