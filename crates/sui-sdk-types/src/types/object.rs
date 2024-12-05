@@ -731,7 +731,10 @@ mod serialization {
                         }),
                     ) => {
                         // check id matches in contents
-                        if id_opt(&contents).is_none_or(|id| id != object_id) {
+                        // switch to if id_opt(&contents).is_none_or(|id| id != object_id) when the
+                        // API of is_none_or is stabilized as now this would fail in wasm tests
+                        #[allow(clippy::nonminimal_bool)]
+                        if !id_opt(&contents).is_some_and(|id| id == object_id) {
                             return Err(serde::de::Error::custom("id from contents doesn't match"));
                         }
 
@@ -890,7 +893,10 @@ mod serialization {
                         }),
                     ) => {
                         // check id matches in contents
-                        if id_opt(&contents).is_none_or(|id| id != object_id) {
+                        // switch to if id_opt(&contents).is_none_or(|id| id != object_id) when the
+                        // API of is_none_or is stabilized as now this would fail in wasm tests
+                        #[allow(clippy::nonminimal_bool)]
+                        if !id_opt(&contents).is_some_and(|id| id == object_id) {
                             return Err(serde::de::Error::custom("id from contents doesn't match"));
                         }
 
