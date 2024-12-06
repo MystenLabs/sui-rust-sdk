@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["_objects_arguments"],"struct":["__typename","objects"]};
