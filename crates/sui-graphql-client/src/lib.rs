@@ -1293,23 +1293,15 @@ impl Client {
     /// checkpoints, but only records the latest versions of system packages.
     pub async fn packages(
         &self,
-        after: Option<&str>,
-        before: Option<&str>,
-        first: Option<i32>,
-        last: Option<i32>,
+        pagination_filter: PaginationFilter,
         after_checkpoint: Option<u64>,
         before_checkpoint: Option<u64>,
     ) -> Result<Page<MovePackage>> {
-        if first.is_some() && last.is_some() {
-            return Err(Error::from_error(
-                Kind::Other,
-                "Conflicting arguments: either first or last can be provided, but not both.",
-            ));
-        }
+        let (after, before, first, last) = self.pagination_filter(pagination_filter).await;
 
         let operation = PackagesQuery::build(PackagesQueryArgs {
-            after,
-            before,
+            after: after.as_deref(),
+            before: before.as_deref(),
             first,
             last,
             filter: Some(PackageCheckpointFilter {
@@ -2187,7 +2179,9 @@ mod tests {
     #[tokio::test]
     async fn test_packages_query() {
         let client = test_client();
-        let packages = client.packages(None, None, None, None, None, None).await;
+        let packages = client
+            .packages(PaginationFilter::default(), None, None)
+            .await;
         assert!(
             packages.is_ok(),
             "Packages query failed for {} network. Error: {}",
