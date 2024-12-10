@@ -915,12 +915,12 @@ impl Client {
     // Events API
     // ===========================================================================
 
-    /// Return a page of events based on the (optional) event filter.
+    /// Return a page of tuple (event, transaction digest) based on the (optional) event filter.
     pub async fn events(
         &self,
         filter: Option<EventFilter>,
         pagination_filter: PaginationFilter,
-    ) -> Result<Page<Event>> {
+    ) -> Result<Page<(Event, TransactionDigest)>> {
         let (after, before, first, last) = self.pagination_filter(pagination_filter).await;
 
         let operation = EventsQuery::build(EventsQueryArgs {
@@ -942,15 +942,43 @@ impl Client {
             let page_info = ec.page_info;
             let nodes = ec
                 .nodes
-                .into_iter()
-                .map(|e| e.bcs.0)
+                .iter()
+                .map(|e| e.bcs.0.clone())
                 .map(|b| base64ct::Base64::decode_vec(&b))
                 .collect::<Result<Vec<_>, base64ct::Error>>()?
                 .iter()
                 .map(|b| bcs::from_bytes::<Event>(b))
                 .collect::<Result<Vec<_>, bcs::Error>>()?;
 
-            Ok(Page::new(page_info, nodes))
+            let tx_digests = ec
+                .nodes
+                .iter()
+                .map(|e| {
+                    e.transaction_block
+                        .as_ref()
+                        .ok_or_else(Error::empty_response_error)
+                })
+                .collect::<Result<Vec<_>>>()?
+                .iter()
+                .map(|x| {
+                    x.digest.as_ref().ok_or_else(|| {
+                        Error::from_error(
+                            Kind::Deserialization,
+                            "Expected a transaction digest for this event, but it is missing.",
+                        )
+                    })
+                })
+                .collect::<Result<Vec<_>>>()?
+                .iter()
+                .map(|x| TransactionDigest::from_base58(x).map_err(Error::from))
+                .collect::<Result<Vec<_>>>()?;
+
+            let events = nodes
+                .into_iter()
+                .zip(tx_digests.into_iter())
+                .collect::<Vec<_>>();
+
+            Ok(Page::new(page_info, events))
         } else {
             Ok(Page::new_empty())
         }
@@ -961,7 +989,7 @@ impl Client {
         &self,
         filter: Option<EventFilter>,
         streaming_direction: Direction,
-    ) -> impl Stream<Item = Result<Event>> + '_ {
+    ) -> impl Stream<Item = Result<(Event, TransactionDigest)>> + '_ {
         stream_paginated_query(
             move |pag_filter| self.events(filter.clone(), pag_filter),
             streaming_direction,
