@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::query_types::schema;
+use crate::query_types::transaction::TransactionBlockDigest;
 use crate::query_types::Address;
 use crate::query_types::Base64;
 use crate::query_types::PageInfo;
@@ -54,4 +55,5 @@ pub struct EventFilter {
 #[cynic(schema = "rpc", graphql_type = "Event")]
 pub struct Event {
     pub bcs: Base64,
+    pub transaction_block: Option<TransactionBlockDigest>,
 }
