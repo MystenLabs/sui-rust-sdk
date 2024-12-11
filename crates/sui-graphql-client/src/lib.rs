@@ -940,23 +940,27 @@ impl Client {
         if let Some(events) = response.data {
             let ec = events.events;
             let page_info = ec.page_info;
-            
-            let events_with_digests = ec.nodes.into_iter()
+
+            let events_with_digests = ec
+                .nodes
+                .into_iter()
                 .map(|node| -> Result<(Event, TransactionDigest)> {
-                    let event = bcs::from_bytes::<Event>(
-                        &base64ct::Base64::decode_vec(&node.bcs.0)?
-                    )?;
-                    
-                    let tx_digest = node.transaction_block
+                    let event =
+                        bcs::from_bytes::<Event>(&base64ct::Base64::decode_vec(&node.bcs.0)?)?;
+
+                    let tx_digest = node
+                        .transaction_block
                         .ok_or_else(Error::empty_response_error)?
                         .digest
-                        .ok_or_else(|| Error::from_error(
-                            Kind::Deserialization,
-                            "Expected a transaction digest for this event, but it is missing.",
-                        ))?;
-                    
+                        .ok_or_else(|| {
+                            Error::from_error(
+                                Kind::Deserialization,
+                                "Expected a transaction digest for this event, but it is missing.",
+                            )
+                        })?;
+
                     let tx_digest = TransactionDigest::from_base58(&tx_digest)?;
-                    
+
                     Ok((event, tx_digest))
                 })
                 .collect::<Result<Vec<_>>>()?;
