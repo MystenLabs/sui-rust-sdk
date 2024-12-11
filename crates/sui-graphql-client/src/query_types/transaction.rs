@@ -93,6 +93,12 @@ pub struct TransactionBlock {
 
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "TransactionBlock")]
+pub struct TransactionBlockDigest {
+    pub digest: Option<String>,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "TransactionBlock")]
 pub struct TxBlockEffects {
     pub effects: Option<TransactionBlockEffects>,
 }
