@@ -33,7 +33,7 @@ proptest = ["dep:proptest", "dep:test-strategy", "serde"]
 base64ct = { version = "1.6.0", features = ["alloc"] }
 bs58 = "0.5.1"
 hex = "0.4.3"
-roaring = { version = "0.10.6", default-features = false }
+roaring = { version = "=0.10.6", default-features = false }
 bnum = "0.12.0"
 winnow = "0.6.20"
 
