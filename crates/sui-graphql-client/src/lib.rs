@@ -940,45 +940,28 @@ impl Client {
         if let Some(events) = response.data {
             let ec = events.events;
             let page_info = ec.page_info;
-            let nodes = ec
-                .nodes
-                .iter()
-                .map(|e| e.bcs.0.clone())
-                .map(|b| base64ct::Base64::decode_vec(&b))
-                .collect::<Result<Vec<_>, base64ct::Error>>()?
-                .iter()
-                .map(|b| bcs::from_bytes::<Event>(b))
-                .collect::<Result<Vec<_>, bcs::Error>>()?;
-
-            let tx_digests = ec
-                .nodes
-                .iter()
-                .map(|e| {
-                    e.transaction_block
-                        .as_ref()
-                        .ok_or_else(Error::empty_response_error)
-                })
-                .collect::<Result<Vec<_>>>()?
-                .iter()
-                .map(|x| {
-                    x.digest.as_ref().ok_or_else(|| {
-                        Error::from_error(
+            
+            let events_with_digests = ec.nodes.into_iter()
+                .map(|node| -> Result<(Event, TransactionDigest)> {
+                    let event = bcs::from_bytes::<Event>(
+                        &base64ct::Base64::decode_vec(&node.bcs.0)?
+                    )?;
+                    
+                    let tx_digest = node.transaction_block
+                        .ok_or_else(Error::empty_response_error)?
+                        .digest
+                        .ok_or_else(|| Error::from_error(
                             Kind::Deserialization,
                             "Expected a transaction digest for this event, but it is missing.",
-                        )
-                    })
+                        ))?;
+                    
+                    let tx_digest = TransactionDigest::from_base58(&tx_digest)?;
+                    
+                    Ok((event, tx_digest))
                 })
-                .collect::<Result<Vec<_>>>()?
-                .iter()
-                .map(|x| TransactionDigest::from_base58(x).map_err(Error::from))
                 .collect::<Result<Vec<_>>>()?;
 
-            let events = nodes
-                .into_iter()
-                .zip(tx_digests.into_iter())
-                .collect::<Vec<_>>();
-
-            Ok(Page::new(page_info, events))
+            Ok(Page::new(page_info, events_with_digests))
         } else {
             Ok(Page::new_empty())
         }
