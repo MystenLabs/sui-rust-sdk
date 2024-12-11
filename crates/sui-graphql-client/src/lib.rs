@@ -1288,7 +1288,7 @@ impl Client {
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            return Err(Error::msg(format!("{:?}", errors)));
+            return Err(Error::graphql_error(errors));
         }
 
         if let Some(packages) = response.data {
@@ -1306,33 +1306,19 @@ impl Client {
                 let bcs = bcs
                     .as_ref()
                     .map(|b| base64ct::Base64::decode_vec(b.0.as_str()))
-                    .transpose()
-                    .map_err(|e| {
-                        Error::msg(format!("Cannot decode Base64 package bcs bytes: {e}"))
-                    })?;
+                    .transpose()?;
                 let package = bcs
                     .map(|b| bcs::from_bytes::<MovePackage>(&b))
-                    .transpose()
-                    .map_err(|e| {
-                        Error::msg(format!("Cannot decode bcs bytes into MovePackage: {e}"))
-                    })?;
+                    .transpose()?;
 
                 let effects = previous_transaction_block.and_then(|x| x.effects);
                 let effects = effects.and_then(|x| x.bcs);
                 let bcs = effects
                     .map(|x| base64ct::Base64::decode_vec(x.0.as_str()))
-                    .transpose()
-                    .map_err(|e| {
-                        Error::msg(format!("Cannot decode Base64 effects bcs bytes: {e}"))
-                    })?;
+                    .transpose()?;
                 let effects = bcs
                     .map(|b| bcs::from_bytes::<TransactionEffects>(&b))
-                    .transpose()
-                    .map_err(|e| {
-                        Error::msg(format!(
-                            "Cannot decode bcs bytes into TransactionEffects: {e}"
-                        ))
-                    })?;
+                    .transpose()?;
                 let epoch = effects.map(|e| match e {
                     TransactionEffects::V1(e) => e.epoch,
                     TransactionEffects::V2(e) => e.epoch,
