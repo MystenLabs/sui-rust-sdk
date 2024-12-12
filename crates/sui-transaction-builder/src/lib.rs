@@ -500,7 +500,7 @@ mod tests {
     use crate::Function;
     use crate::Serialized;
     use crate::TransactionBuilder;
-    use sui_types::types::Digest;
+    use sui_types::types::TransactionDigest;
 
     /// Type corresponding to the output of `sui move build --dump-bytecode-as-base64`
     #[derive(serde::Deserialize, Debug)]
@@ -580,7 +580,7 @@ mod tests {
             .unwrap()
             .sent;
         let tx_digest = coins.first().unwrap().transfer_tx_digest;
-        wait_for_tx(client, tx_digest.into()).await;
+        wait_for_tx(client, tx_digest).await;
 
         let gas = coins.last().unwrap().id;
         // TODO when we have tx resolution, we can just pass an ObjectId
@@ -595,7 +595,7 @@ mod tests {
 
     /// Wait for the transaction to be finalized and indexed. This queries the GraphQL server until
     /// it retrieves the requested transaction.
-    async fn wait_for_tx(client: &Client, digest: Digest) {
+    async fn wait_for_tx(client: &Client, digest: TransactionDigest) {
         while client.transaction(digest).await.unwrap().is_none() {
             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
         }
@@ -605,7 +605,7 @@ mod tests {
     /// transaction was successfully executed.
     async fn wait_for_tx_and_check_effects_status_success(
         client: &Client,
-        digest: Digest,
+        digest: TransactionDigest,
         effects: Result<Option<TransactionEffects>, sui_graphql_client::error::Error>,
     ) {
         assert!(effects.is_ok(), "Execution failed. Effects: {:?}", effects);
@@ -675,7 +675,7 @@ mod tests {
         let sig = pk.sign_transaction(&tx).unwrap();
 
         let effects = client.execute_tx(vec![sig], &tx).await;
-        wait_for_tx_and_check_effects_status_success(&client, tx.digest().into(), effects).await;
+        wait_for_tx_and_check_effects_status_success(&client, tx.digest(), effects).await;
 
         // check that recipient has 1 coin
         let recipient_coins = client
@@ -704,7 +704,7 @@ mod tests {
         let tx = tx.finish().unwrap();
         let sig = pk.sign_transaction(&tx).unwrap();
         let effects = client.execute_tx(vec![sig], &tx).await;
-        wait_for_tx_and_check_effects_status_success(&client, tx.digest().into(), effects).await;
+        wait_for_tx_and_check_effects_status_success(&client, tx.digest(), effects).await;
     }
 
     #[tokio::test]
@@ -724,7 +724,7 @@ mod tests {
         let sig = pk.sign_transaction(&tx).unwrap();
 
         let effects = client.execute_tx(vec![sig], &tx).await;
-        wait_for_tx_and_check_effects_status_success(&client, tx.digest().into(), effects).await;
+        wait_for_tx_and_check_effects_status_success(&client, tx.digest(), effects).await;
 
         // check that recipient has 1 coin
         let recipient_coins = client
@@ -756,7 +756,7 @@ mod tests {
 
         // wait for the transaction to be finalized
         loop {
-            let tx_digest = client.transaction(tx.digest().into()).await.unwrap();
+            let tx_digest = client.transaction(tx.digest()).await.unwrap();
             if tx_digest.is_some() {
                 break;
             }
@@ -790,7 +790,7 @@ mod tests {
         let sig = pk.sign_transaction(&tx).unwrap();
 
         let effects = client.execute_tx(vec![sig], &tx).await;
-        wait_for_tx_and_check_effects_status_success(&client, tx.digest().into(), effects).await;
+        wait_for_tx_and_check_effects_status_success(&client, tx.digest(), effects).await;
 
         // check that there are two coins
         let coins_after = client
@@ -813,7 +813,7 @@ mod tests {
         let sig = pk.sign_transaction(&tx).unwrap();
 
         let effects = client.execute_tx(vec![sig], &tx).await;
-        wait_for_tx_and_check_effects_status_success(&client, tx.digest().into(), effects).await;
+        wait_for_tx_and_check_effects_status_success(&client, tx.digest(), effects).await;
     }
 
     #[tokio::test]
@@ -829,7 +829,7 @@ mod tests {
         let tx = tx.finish().unwrap();
         let sig = pk.sign_transaction(&tx).unwrap();
         let effects = client.execute_tx(vec![sig], &tx).await;
-        wait_for_tx_and_check_effects_status_success(&client, tx.digest().into(), effects).await;
+        wait_for_tx_and_check_effects_status_success(&client, tx.digest(), effects).await;
     }
 
     #[tokio::test]
@@ -868,7 +868,7 @@ mod tests {
                 _ => panic!("Expected V2 effects"),
             }
         }
-        wait_for_tx_and_check_effects_status_success(&client, tx.digest().into(), effects).await;
+        wait_for_tx_and_check_effects_status_success(&client, tx.digest(), effects).await;
 
         let mut tx = TransactionBuilder::new();
         let mut upgrade_cap = None;
@@ -939,6 +939,6 @@ mod tests {
         let tx = tx.finish().unwrap();
         let sig = pk.sign_transaction(&tx).unwrap();
         let effects = client.execute_tx(vec![sig], &tx).await;
-        wait_for_tx_and_check_effects_status_success(&client, tx.digest().into(), effects).await;
+        wait_for_tx_and_check_effects_status_success(&client, tx.digest(), effects).await;
     }
 }
