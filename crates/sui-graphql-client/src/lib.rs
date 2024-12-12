@@ -2153,9 +2153,8 @@ mod tests {
             .unwrap();
 
         let digest = chckp.digest();
-        let total_transaction_blocks_by_digest = client
-            .total_transaction_blocks_by_digest(digest.into())
-            .await;
+        let total_transaction_blocks_by_digest =
+            client.total_transaction_blocks_by_digest(digest).await;
         assert!(total_transaction_blocks_by_digest.is_ok());
         assert_eq!(
             total_transaction_blocks_by_digest.unwrap().unwrap(),
