@@ -25,7 +25,7 @@ test:
 	cargo test --doc
 
 package_%.json: crates/sui-transaction-builder/tests/%/Move.toml crates/sui-transaction-builder/tests/%/sources/*.move
-	cd crates/sui-transaction-builder/tests/$(*F) && sui move build --dump-bytecode-as-base64 > ../../$@
+	cd crates/sui-transaction-builder/tests/$(*F) && sui move build --ignore-chain --dump-bytecode-as-base64 > ../../$@
 
 .PHONY: test-with-localnet
 test-with-localnet: package_test_example_v1.json package_test_example_v2.json
