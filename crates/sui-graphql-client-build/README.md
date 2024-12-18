@@ -6,7 +6,7 @@ this function in a `build.rs` file in your crate if you need to build custom que
 1. Add this crate as a build dependency in your `Cargo.toml` file.
 ```toml
 [build-dependencies]
-sui_graphql_client_build = { git = "https://github.com/mystenlabs/sui-rust-sdk", package = "sui-graphql-client-build", branch = "master" }
+sui-graphql-client-build = { git = "https://github.com/mystenlabs/sui-rust-sdk", package = "sui-graphql-client-build", branch = "master" }
 ```
 
 2. Add a `build.rs` file in your crate root directory and call the `register_schema` function in it.
@@ -24,9 +24,10 @@ fn main() {
 ...
 [dependencies]
 cynic = "3.8.0"
-...
+sui-graphql-client = { git = "https://github.com/mystenlabs/sui-rust-sdk", package = "sui-graphql-client", branch = "master" }
+
 [build-dependencies]
-sui_graphql_client_build = { git = "https://github.com/mystenlabs/sui-rust-sdk", package = "sui-graphql-client-build", branch = "master" }
+sui-graphql-client-build = { git = "https://github.com/mystenlabs/sui-rust-sdk", package = "sui-graphql-client-build", branch = "master" }
 ```
 
 4. If using `cynic`, use the cynic generator to generate the Rust types from the GraphQL schema. \
