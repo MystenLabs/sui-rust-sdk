@@ -97,7 +97,7 @@ jobs:
       - name: Get the Sui testnet binary and start a local network
         shell: bash
         env:
-          SUI_BINARY_VERSION: "1.39.1" # used for downloading a specific Sui binary versions that matches the GraphQL schema for local network tests
+          SUI_BINARY_VERSION: "1.39.3" # used for downloading a specific Sui binary versions that matches the GraphQL schema for local network tests
           SUI_NETWORK_RELEASE: "testnet" # which release to use
         run: |
           ASSET_NAME="sui-$SUI_NETWORK_RELEASE-v$SUI_BINARY_VERSION-ubuntu-x86_64.tgz"
@@ -110,22 +110,6 @@ jobs:
           echo "Starting local network with a faucet, an indexer (port 5432) and GraphQL. Epoch duration is set to $EPOCH_DURATION_MS ms"
           echo "$(pwd)" >> $GITHUB_PATH # we need it on the path for calling sui move build for some tests
           ./sui start --force-regenesis --with-faucet --with-indexer --with-graphql --pg-port 5432 --pg-db-name sui_indexer_v2 --epoch-duration-ms $EPOCH_DURATION_MS &
-
-      - name: Set up the CLI environment (need a client.yaml for calling some Sui commands)
-        shell: bash
-        run: |
-          mkdir -p $HOME/.sui/sui_config 
-          tee $HOME/.sui/sui_config/client.yaml <<EOF
-          ---
-          keystore:
-            File: home/.sui/sui_config/sui.keystore
-          envs: 
-            - alias: localnet
-              rpc: "http://127.0.0.1:9000"
-              ws: ~
-          active_env: localnet
-          active_address: "0x14e7ac25259adcc373c96627893976d4fe562a3f3fedce493fc187c5ebd53eee"
-          EOF
 
       - name: Run tests that require local network (GraphQL Client and Tx Builder)
         env:
