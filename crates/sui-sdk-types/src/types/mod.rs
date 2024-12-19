@@ -76,7 +76,6 @@ pub use digest::TransactionDigest;
 pub use digest::TransactionEffectsDigest;
 pub use digest::TransactionEventsDigest;
 pub use effects::ChangedObject;
-pub use effects::EffectsObjectChange;
 pub use effects::IdOperation;
 pub use effects::ModifiedAtVersion;
 pub use effects::ObjectIn;

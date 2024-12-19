@@ -5,7 +5,6 @@ pub use v1::ModifiedAtVersion;
 pub use v1::ObjectReferenceWithOwner;
 pub use v1::TransactionEffectsV1;
 pub use v2::ChangedObject;
-pub use v2::EffectsObjectChange;
 pub use v2::IdOperation;
 pub use v2::ObjectIn;
 pub use v2::ObjectOut;

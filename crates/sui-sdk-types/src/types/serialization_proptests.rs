@@ -120,7 +120,6 @@ serialization_test!(TransactionDigest);
 serialization_test!(TransactionEffectsDigest);
 serialization_test!(TransactionEventsDigest);
 serialization_test!(ChangedObject);
-serialization_test!(EffectsObjectChange);
 serialization_test!(IdOperation);
 serialization_test!(ModifiedAtVersion);
 serialization_test!(ObjectIn);

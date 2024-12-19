@@ -52,14 +52,24 @@ pub struct TransactionEffectsV2 {
     pub auxiliary_data_digest: Option<EffectsAuxiliaryDataDigest>,
 }
 
-//XXX Do we maybe want to just fold "EffectsObjectChange" into this struct?
 #[derive(Eq, PartialEq, Clone, Debug)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct ChangedObject {
     pub object_id: ObjectId,
-    #[cfg_attr(feature = "schemars", schemars(flatten))]
-    pub change: EffectsObjectChange,
+    /// State of the object in the store prior to this transaction.
+    pub input_state: ObjectIn,
+    /// State of the object in the store after this transaction.
+    pub output_state: ObjectOut,
+
+    /// Whether this object ID is created or deleted in this transaction.
+    /// This information isn't required by the protocol but is useful for providing more detailed
+    /// semantics on object changes.
+    pub id_operation: IdOperation,
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]
@@ -106,27 +116,6 @@ pub enum UnchangedSharedKind {
     },
     /// Read of a per-epoch config object that should remain the same during an epoch.
     PerEpochConfig,
-}
-
-#[derive(Eq, PartialEq, Clone, Debug)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde_derive::Serialize, serde_derive::Deserialize)
-)]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
-pub struct EffectsObjectChange {
-    // input_state and output_state are the core fields that's required by
-    // the protocol as it tells how an object changes on-chain.
-    /// State of the object in the store prior to this transaction.
-    pub input_state: ObjectIn,
-    /// State of the object in the store after this transaction.
-    pub output_state: ObjectOut,
-
-    /// Whether this object ID is created or deleted in this transaction.
-    /// This information isn't required by the protocol but is useful for providing more detailed
-    /// semantics on object changes.
-    pub id_operation: IdOperation,
 }
 
 /// If an object exists (at root-level) in the store prior to this transaction,
@@ -389,52 +378,6 @@ mod serialization {
                     unchanged_shared_objects,
                     auxiliary_data_digest,
                 })
-            }
-        }
-    }
-
-    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
-    struct ReadableChangedObject {
-        object_id: ObjectId,
-        #[serde(flatten)]
-        change: EffectsObjectChange,
-    }
-
-    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
-    struct BinaryChangedObject {
-        object_id: ObjectId,
-        change: EffectsObjectChange,
-    }
-
-    impl Serialize for ChangedObject {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
-        {
-            let Self { object_id, change } = self.clone();
-            if serializer.is_human_readable() {
-                let readable = ReadableChangedObject { object_id, change };
-                readable.serialize(serializer)
-            } else {
-                let binary = BinaryChangedObject { object_id, change };
-                binary.serialize(serializer)
-            }
-        }
-    }
-
-    impl<'de> Deserialize<'de> for ChangedObject {
-        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            if deserializer.is_human_readable() {
-                let ReadableChangedObject { object_id, change } =
-                    Deserialize::deserialize(deserializer)?;
-                Ok(Self { object_id, change })
-            } else {
-                let BinaryChangedObject { object_id, change } =
-                    Deserialize::deserialize(deserializer)?;
-                Ok(Self { object_id, change })
             }
         }
     }
