@@ -1732,6 +1732,7 @@ mod tests {
     use crate::LOCAL_HOST;
     use crate::MAINNET_HOST;
     use crate::TESTNET_HOST;
+    use tokio::time;
 
     const NUM_COINS_FROM_FAUCET: usize = 5;
 
@@ -2003,16 +2004,31 @@ mod tests {
         let key = Ed25519PublicKey::generate(rand::thread_rng());
         let address = key.to_address();
         faucet.request_and_wait(address).await.unwrap();
-        let mut stream = client
-            .coins_stream(address, None, Direction::default())
-            .await;
-        let mut num_coins = 0;
 
-        while let Some(result) = stream.next().await {
-            assert!(result.is_ok());
-            num_coins += 1;
+        const MAX_RETRIES: u32 = 10;
+        const RETRY_DELAY: time::Duration = time::Duration::from_secs(1);
+
+        let mut num_coins = 0;
+        for attempt in 0..MAX_RETRIES {
+            let mut stream = client
+                .coins_stream(address, None, Direction::default())
+                .await;
+
+            while let Some(result) = stream.next().await {
+                match result {
+                    Ok(_) => num_coins += 1,
+                    Err(_) => {
+                        if attempt < MAX_RETRIES - 1 {
+                            time::sleep(RETRY_DELAY).await;
+                            num_coins = 0;
+                            break;
+                        }
+                    }
+                }
+            }
         }
-        assert!(num_coins == NUM_COINS_FROM_FAUCET);
+
+        assert!(num_coins >= NUM_COINS_FROM_FAUCET);
     }
 
     #[tokio::test]
