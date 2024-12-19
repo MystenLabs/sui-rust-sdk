@@ -39,6 +39,10 @@ impl PasskeyAuthenticator {
         &self.client_data_json
     }
 
+    pub fn challenge(&self) -> &[u8] {
+        &self.challenge
+    }
+
     pub fn signature(&self) -> SimpleSignature {
         SimpleSignature::Secp256r1 {
             signature: self.signature,

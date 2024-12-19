@@ -25,6 +25,7 @@ rustdoc-args = [
 default = []
 ed25519 = ["dep:ed25519-dalek", "dep:rand_core"]
 secp256r1 = ["dep:p256", "dep:rand_core"]
+passkey = ["secp256r1", "dep:sha2"]
 secp256k1 = ["dep:k256", "dep:rand_core", "signature/std"]
 zklogin = [
     "dep:ark-bn254",
@@ -63,6 +64,9 @@ ed25519-dalek = { version = "2.1.1", optional = true }
 
 # secp256r1 support
 p256 = { version = "0.13.2", default-features = false, features = ["ecdsa", "std"], optional = true }
+
+# passkey verification support
+sha2 = { version = "0.10.8", optional = true }
 
 # secp256k1 support
 k256 = { version = "0.13.4", default-features = false, features = ["ecdsa"], optional = true }

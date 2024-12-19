@@ -23,6 +23,10 @@ pub mod secp256k1;
 #[cfg_attr(doc_cfg, doc(cfg(feature = "secp256r1")))]
 pub mod secp256r1;
 
+#[cfg(feature = "passkey")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "passkey")))]
+pub mod passkey;
+
 #[cfg(feature = "zklogin")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "zklogin")))]
 pub mod zklogin;
