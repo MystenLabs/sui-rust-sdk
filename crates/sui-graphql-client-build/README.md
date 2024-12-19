@@ -20,8 +20,8 @@ fn main() {
 
 3. Add the `cynic` and `sui-graphql-client` dependencies in your `Cargo.toml` file. You should have something like this.
 ```toml
-// Cargo.toml
-...
+# Cargo.toml
+# ...
 [dependencies]
 cynic = "3.8.0"
 sui-graphql-client = { git = "https://github.com/mystenlabs/sui-rust-sdk", package = "sui-graphql-client", branch = "master" }
