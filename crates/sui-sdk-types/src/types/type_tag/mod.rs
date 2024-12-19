@@ -51,6 +51,12 @@ impl std::str::FromStr for TypeTag {
     }
 }
 
+impl From<StructTag> for TypeTag {
+    fn from(value: StructTag) -> Self {
+        Self::Struct(Box::new(value))
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TypeParseError {
     source: String,
