@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use base64ct::Encoding;
-use sui_types::types::CheckpointSummary;
+use sui_types::CheckpointSummary;
 
 use crate::error;
 use crate::error::Error;

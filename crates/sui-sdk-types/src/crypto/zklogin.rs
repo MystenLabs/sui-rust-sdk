@@ -1,6 +1,6 @@
 use super::SimpleSignature;
-use crate::types::checkpoint::EpochId;
-use crate::types::u256::U256;
+use crate::checkpoint::EpochId;
+use crate::u256::U256;
 
 /// An zk login authenticator with all the necessary fields.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -255,7 +255,7 @@ mod test {
 #[cfg(feature = "serde")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
 mod serialization {
-    use crate::types::SignatureScheme;
+    use crate::SignatureScheme;
 
     use super::*;
     use serde::Deserialize;

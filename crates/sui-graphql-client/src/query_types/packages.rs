@@ -1,7 +1,7 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use sui_types::types::Address;
+use sui_types::Address;
 
 use crate::query_types::schema;
 use crate::query_types::Base64;

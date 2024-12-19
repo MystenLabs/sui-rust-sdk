@@ -1,8 +1,8 @@
 #![cfg_attr(doc_cfg, feature(doc_cfg))]
 
-use sui_sdk_types::types::PersonalMessage;
-use sui_sdk_types::types::Transaction;
-use sui_sdk_types::types::UserSignature;
+use sui_sdk_types::PersonalMessage;
+use sui_sdk_types::Transaction;
+use sui_sdk_types::UserSignature;
 
 pub use signature::Error as SignatureError;
 pub use signature::Signer;

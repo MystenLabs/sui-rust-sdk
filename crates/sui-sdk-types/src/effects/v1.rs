@@ -1,12 +1,12 @@
-use crate::types::execution_status::ExecutionStatus;
-use crate::types::object::Owner;
-use crate::types::object::Version;
-use crate::types::EpochId;
-use crate::types::GasCostSummary;
-use crate::types::ObjectId;
-use crate::types::ObjectReference;
-use crate::types::TransactionDigest;
-use crate::types::TransactionEventsDigest;
+use crate::execution_status::ExecutionStatus;
+use crate::object::Owner;
+use crate::object::Version;
+use crate::EpochId;
+use crate::GasCostSummary;
+use crate::ObjectId;
+use crate::ObjectReference;
+use crate::TransactionDigest;
+use crate::TransactionEventsDigest;
 
 /// The response from processing a transaction or a certified transaction
 #[derive(Eq, PartialEq, Clone, Debug)]

@@ -1,7 +1,7 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use sui_types::types::ObjectReference;
+use sui_types::ObjectReference;
 
 use crate::query_types::schema;
 use crate::query_types::Address;

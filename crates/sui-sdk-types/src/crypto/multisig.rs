@@ -211,12 +211,12 @@ pub enum MultisigMemberSignature {
 #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
 mod serialization {
     use super::*;
-    use crate::types::crypto::Base64Array33;
-    use crate::types::crypto::Base64Array34;
-    use crate::types::Ed25519PublicKey;
-    use crate::types::Secp256k1PublicKey;
-    use crate::types::Secp256r1PublicKey;
-    use crate::types::SignatureScheme;
+    use crate::crypto::Base64Array33;
+    use crate::crypto::Base64Array34;
+    use crate::Ed25519PublicKey;
+    use crate::Secp256k1PublicKey;
+    use crate::Secp256r1PublicKey;
+    use crate::SignatureScheme;
     use base64ct::Base64;
     use base64ct::Encoding;
     use serde::Deserialize;

@@ -1,11 +1,11 @@
 use crate::SignatureError;
 use crate::Signer;
 use crate::Verifier;
-use sui_sdk_types::types::Ed25519PublicKey;
-use sui_sdk_types::types::Ed25519Signature;
-use sui_sdk_types::types::SignatureScheme;
-use sui_sdk_types::types::SimpleSignature;
-use sui_sdk_types::types::UserSignature;
+use sui_sdk_types::Ed25519PublicKey;
+use sui_sdk_types::Ed25519Signature;
+use sui_sdk_types::SignatureScheme;
+use sui_sdk_types::SimpleSignature;
+use sui_sdk_types::UserSignature;
 
 pub struct Ed25519PrivateKey(ed25519_dalek::SigningKey);
 
@@ -269,7 +269,7 @@ mod test {
     use super::*;
     use crate::SuiSigner;
     use crate::SuiVerifier;
-    use sui_sdk_types::types::PersonalMessage;
+    use sui_sdk_types::PersonalMessage;
     use test_strategy::proptest;
 
     #[cfg(target_arch = "wasm32")]

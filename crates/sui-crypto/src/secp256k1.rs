@@ -4,11 +4,11 @@ use k256::ecdsa::VerifyingKey;
 use k256::elliptic_curve::group::GroupEncoding;
 use signature::Signer;
 use signature::Verifier;
-use sui_sdk_types::types::Secp256k1PublicKey;
-use sui_sdk_types::types::Secp256k1Signature;
-use sui_sdk_types::types::SignatureScheme;
-use sui_sdk_types::types::SimpleSignature;
-use sui_sdk_types::types::UserSignature;
+use sui_sdk_types::Secp256k1PublicKey;
+use sui_sdk_types::Secp256k1Signature;
+use sui_sdk_types::SignatureScheme;
+use sui_sdk_types::SimpleSignature;
+use sui_sdk_types::UserSignature;
 
 pub struct Secp256k1PrivateKey(SigningKey);
 
@@ -271,7 +271,7 @@ mod test {
     use super::*;
     use crate::SuiSigner;
     use crate::SuiVerifier;
-    use sui_sdk_types::types::PersonalMessage;
+    use sui_sdk_types::PersonalMessage;
     use test_strategy::proptest;
 
     #[cfg(target_arch = "wasm32")]

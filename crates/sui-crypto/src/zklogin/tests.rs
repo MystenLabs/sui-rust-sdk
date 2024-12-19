@@ -1,5 +1,5 @@
 use signature::Signer;
-use sui_sdk_types::types::PersonalMessage;
+use sui_sdk_types::PersonalMessage;
 
 use crate::ed25519::Ed25519PrivateKey;
 use crate::SuiVerifier;
