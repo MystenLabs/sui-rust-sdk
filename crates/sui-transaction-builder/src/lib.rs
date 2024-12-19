@@ -851,8 +851,8 @@ mod tests {
             match effects {
                 TransactionEffects::V2(e) => {
                     for obj in e.changed_objects.clone() {
-                        if obj.change.id_operation == IdOperation::Created {
-                            let change = obj.change.output_state;
+                        if obj.id_operation == IdOperation::Created {
+                            let change = obj.output_state;
                             match change {
                                 sui_types::types::ObjectOut::PackageWrite { .. } => {
                                     package_id = Some(obj.object_id);
