@@ -107,7 +107,7 @@ pub use transaction::TransactionBlocksQuery;
 pub use transaction::TransactionBlocksQueryArgs;
 pub use transaction::TransactionsFilter;
 
-use sui_types::types::Address;
+use sui_types::Address;
 
 use cynic::impl_scalar;
 use serde_json::Value as JsonValue;

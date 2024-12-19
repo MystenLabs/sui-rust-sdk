@@ -1,9 +1,9 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use sui_types::types::Address;
-use sui_types::types::ObjectId;
-use sui_types::types::TransactionDigest;
+use sui_types::Address;
+use sui_types::ObjectId;
+use sui_types::TransactionDigest;
 
 use anyhow::anyhow;
 use anyhow::bail;

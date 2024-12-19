@@ -79,21 +79,21 @@ use query_types::TransactionsFilter;
 use query_types::Validator;
 use streams::stream_paginated_query;
 
-use sui_types::types::framework::Coin;
-use sui_types::types::Address;
-use sui_types::types::CheckpointDigest;
-use sui_types::types::CheckpointSequenceNumber;
-use sui_types::types::CheckpointSummary;
-use sui_types::types::Event;
-use sui_types::types::MovePackage;
-use sui_types::types::Object;
-use sui_types::types::SignedTransaction;
-use sui_types::types::Transaction;
-use sui_types::types::TransactionDigest;
-use sui_types::types::TransactionEffects;
-use sui_types::types::TransactionKind;
-use sui_types::types::TypeTag;
-use sui_types::types::UserSignature;
+use sui_types::framework::Coin;
+use sui_types::Address;
+use sui_types::CheckpointDigest;
+use sui_types::CheckpointSequenceNumber;
+use sui_types::CheckpointSummary;
+use sui_types::Event;
+use sui_types::MovePackage;
+use sui_types::Object;
+use sui_types::SignedTransaction;
+use sui_types::Transaction;
+use sui_types::TransactionDigest;
+use sui_types::TransactionEffects;
+use sui_types::TransactionKind;
+use sui_types::TypeTag;
+use sui_types::UserSignature;
 
 use base64ct::Encoding;
 use cynic::serde;
@@ -1011,7 +1011,7 @@ impl Client {
                 .transpose()?;
 
             let object = bcs
-                .map(|b| bcs::from_bytes::<sui_types::types::Object>(&b))
+                .map(|b| bcs::from_bytes::<sui_types::Object>(&b))
                 .transpose()?;
 
             Ok(object)
@@ -1070,7 +1070,7 @@ impl Client {
                 .collect::<Result<Vec<_>, base64ct::Error>>()?;
             let objects = bcs
                 .iter()
-                .map(|b| bcs::from_bytes::<sui_types::types::Object>(b))
+                .map(|b| bcs::from_bytes::<sui_types::Object>(b))
                 .collect::<Result<Vec<_>, bcs::Error>>()?;
 
             Ok(Page::new(page_info, objects))
@@ -1720,8 +1720,8 @@ impl Client {
 mod tests {
     use base64ct::Encoding;
     use futures::StreamExt;
-    use sui_types::types::Ed25519PublicKey;
-    use sui_types::types::TypeTag;
+    use sui_types::Ed25519PublicKey;
+    use sui_types::TypeTag;
 
     use crate::faucet::FaucetClient;
     use crate::BcsName;

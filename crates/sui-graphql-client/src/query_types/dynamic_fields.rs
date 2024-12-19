@@ -4,7 +4,7 @@
 use std::str::FromStr;
 
 use base64ct::Encoding;
-use sui_types::types::TypeTag;
+use sui_types::TypeTag;
 
 use crate::error;
 use crate::query_types::schema;

@@ -1,4 +1,4 @@
-use crate::types::*;
+use crate::*;
 use test_strategy::proptest;
 
 #[cfg(target_arch = "wasm32")]

@@ -63,8 +63,8 @@ impl PasskeyPublicKey {
 #[cfg(feature = "serde")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
 mod serialization {
-    use crate::types::SignatureScheme;
-    use crate::types::SimpleSignature;
+    use crate::SignatureScheme;
+    use crate::SimpleSignature;
 
     use super::*;
     use serde::Deserialize;
@@ -351,7 +351,7 @@ impl proptest::arbitrary::Arbitrary for PasskeyAuthenticator {
 
 #[cfg(test)]
 mod tests {
-    use crate::types::UserSignature;
+    use crate::UserSignature;
 
     #[test]
     fn base64_encoded_passkey_user_signature() {

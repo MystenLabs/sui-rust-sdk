@@ -1,10 +1,10 @@
 use crate::SignatureError;
 use crate::Verifier;
-use sui_sdk_types::types::MultisigAggregatedSignature;
-use sui_sdk_types::types::MultisigCommittee;
-use sui_sdk_types::types::MultisigMemberPublicKey;
-use sui_sdk_types::types::MultisigMemberSignature;
-use sui_sdk_types::types::UserSignature;
+use sui_sdk_types::MultisigAggregatedSignature;
+use sui_sdk_types::MultisigCommittee;
+use sui_sdk_types::MultisigMemberPublicKey;
+use sui_sdk_types::MultisigMemberSignature;
+use sui_sdk_types::UserSignature;
 
 #[derive(Default)]
 pub struct MultisigVerifier {
@@ -267,7 +267,7 @@ pub struct MultisigAggregator {
 impl MultisigAggregator {
     pub fn new_with_transaction(
         committee: MultisigCommittee,
-        transaction: &sui_sdk_types::types::Transaction,
+        transaction: &sui_sdk_types::Transaction,
     ) -> Self {
         Self {
             committee,
@@ -280,7 +280,7 @@ impl MultisigAggregator {
 
     pub fn new_with_message(
         committee: MultisigCommittee,
-        message: &sui_sdk_types::types::PersonalMessage<'_>,
+        message: &sui_sdk_types::PersonalMessage<'_>,
     ) -> Self {
         Self {
             committee,
@@ -360,7 +360,7 @@ impl MultisigAggregator {
 fn multisig_pubkey_and_signature_from_user_signature(
     signature: UserSignature,
 ) -> Result<(MultisigMemberPublicKey, MultisigMemberSignature), SignatureError> {
-    use sui_sdk_types::types::SimpleSignature;
+    use sui_sdk_types::SimpleSignature;
     match signature {
         UserSignature::Simple(SimpleSignature::Ed25519 {
             signature,

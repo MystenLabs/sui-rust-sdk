@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use base64ct::Encoding;
-use sui_types::types::SignedTransaction;
-use sui_types::types::Transaction;
-use sui_types::types::TransactionEffects;
-use sui_types::types::UserSignature;
+use sui_types::SignedTransaction;
+use sui_types::Transaction;
+use sui_types::TransactionEffects;
+use sui_types::UserSignature;
 
 use crate::error;
 use crate::error::Error;

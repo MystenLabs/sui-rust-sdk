@@ -5,24 +5,24 @@ mod error;
 pub mod unresolved;
 
 use error::Error;
-use sui_types::types::Address;
-use sui_types::types::Argument;
-use sui_types::types::Command;
-use sui_types::types::GasPayment;
-use sui_types::types::Identifier;
-use sui_types::types::Input;
-use sui_types::types::MakeMoveVector;
-use sui_types::types::MergeCoins;
-use sui_types::types::MoveCall;
-use sui_types::types::ObjectId;
-use sui_types::types::ObjectReference;
-use sui_types::types::Publish;
-use sui_types::types::SplitCoins;
-use sui_types::types::Transaction;
-use sui_types::types::TransactionExpiration;
-use sui_types::types::TransferObjects;
-use sui_types::types::TypeTag;
-use sui_types::types::Upgrade;
+use sui_types::Address;
+use sui_types::Argument;
+use sui_types::Command;
+use sui_types::GasPayment;
+use sui_types::Identifier;
+use sui_types::Input;
+use sui_types::MakeMoveVector;
+use sui_types::MergeCoins;
+use sui_types::MoveCall;
+use sui_types::ObjectId;
+use sui_types::ObjectReference;
+use sui_types::Publish;
+use sui_types::SplitCoins;
+use sui_types::Transaction;
+use sui_types::TransactionExpiration;
+use sui_types::TransferObjects;
+use sui_types::TypeTag;
+use sui_types::Upgrade;
 
 use base64ct::Encoding;
 use serde::Serialize;
@@ -221,7 +221,7 @@ impl TransactionBuilder {
     ///  ### Upgrade a package with some pre-known data.
     ///  ```rust,ignore
     ///  use sui_graphql_client::Client;
-    ///  use sui_sdk_types::types::unresolved;
+    ///  use sui_sdk_types::unresolved;
     ///  use sui_transaction_builder::TransactionBuilder;
     ///  use sui_transaction_builder::Function;
     ///
@@ -302,8 +302,8 @@ impl TransactionBuilder {
         };
 
         Ok(Transaction {
-            kind: sui_types::types::TransactionKind::ProgrammableTransaction(
-                sui_types::types::ProgrammableTransaction {
+            kind: sui_types::TransactionKind::ProgrammableTransaction(
+                sui_types::ProgrammableTransaction {
                     inputs: self
                         .inputs
                         .into_iter()
@@ -488,19 +488,19 @@ mod tests {
     use sui_graphql_client::faucet::FaucetClient;
     use sui_graphql_client::Client;
     use sui_graphql_client::PaginationFilter;
-    use sui_types::types::Address;
-    use sui_types::types::ExecutionStatus;
-    use sui_types::types::IdOperation;
-    use sui_types::types::ObjectId;
-    use sui_types::types::ObjectType;
-    use sui_types::types::TransactionEffects;
-    use sui_types::types::TypeTag;
+    use sui_types::Address;
+    use sui_types::ExecutionStatus;
+    use sui_types::IdOperation;
+    use sui_types::ObjectId;
+    use sui_types::ObjectType;
+    use sui_types::TransactionEffects;
+    use sui_types::TypeTag;
 
     use crate::unresolved::Input;
     use crate::Function;
     use crate::Serialized;
     use crate::TransactionBuilder;
-    use sui_types::types::TransactionDigest;
+    use sui_types::TransactionDigest;
 
     /// Type corresponding to the output of `sui move build --dump-bytecode-as-base64`
     #[derive(serde::Deserialize, Debug)]
@@ -854,10 +854,10 @@ mod tests {
                         if obj.id_operation == IdOperation::Created {
                             let change = obj.output_state;
                             match change {
-                                sui_types::types::ObjectOut::PackageWrite { .. } => {
+                                sui_types::ObjectOut::PackageWrite { .. } => {
                                     package_id = Some(obj.object_id);
                                 }
-                                sui_types::types::ObjectOut::ObjectWrite { .. } => {
+                                sui_types::ObjectOut::ObjectWrite { .. } => {
                                     created_objs.push(obj.object_id);
                                 }
                                 _ => {}
@@ -877,19 +877,19 @@ mod tests {
             match obj.object_type() {
                 ObjectType::Struct(x) if x.name.to_string() == "UpgradeCap" => {
                     match obj.owner() {
-                        sui_types::types::Owner::Address(_) => {
+                        sui_types::Owner::Address(_) => {
                             let obj: Input = (&obj).into();
                             upgrade_cap = Some(tx.input(obj.with_owned_kind()))
                         }
-                        sui_types::types::Owner::Shared(_) => {
+                        sui_types::Owner::Shared(_) => {
                             upgrade_cap = Some(tx.input(&obj))
                         }
                         // If the capability is owned by an object, then the module defining the owning
                         // object gets to decide how the upgrade capability should be used.
-                        sui_types::types::Owner::Object(_) => {
+                        sui_types::Owner::Object(_) => {
                             panic!("Upgrade capability controlled by object")
                         }
-                        sui_types::types::Owner::Immutable => panic!("Upgrade capability is stored immutably and cannot be used for upgrades"),
+                        sui_types::Owner::Immutable => panic!("Upgrade capability is stored immutably and cannot be used for upgrades"),
                     };
                     break;
                 }
