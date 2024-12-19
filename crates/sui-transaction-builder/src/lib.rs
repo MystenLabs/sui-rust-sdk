@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 mod error;
+pub mod unresolved;
 
 use error::Error;
-use sui_types::types::unresolved;
 use sui_types::types::Address;
 use sui_types::types::Argument;
 use sui_types::types::Command;

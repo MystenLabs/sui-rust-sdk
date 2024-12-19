@@ -109,7 +109,6 @@ pub use object::TypeOrigin;
 pub use object::UpgradeInfo;
 pub use object::Version;
 pub use object_id::ObjectId;
-pub use transaction::unresolved;
 pub use transaction::ActiveJwk;
 pub use transaction::Argument;
 pub use transaction::AuthenticatorStateExpire;

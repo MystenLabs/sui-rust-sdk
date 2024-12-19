@@ -8,19 +8,27 @@ publish = false
 readme = "README.md"
 description = "Transaction API for the Rust SDK for the Sui Blockchain"
 
+[features]
+default = []
+schemars = ["dep:schemars", "sui-types/schemars"]
+
 [dependencies]
 base64ct = "1.6"
 bcs = "0.1.6"
 serde = { version = "1.0", features = ["derive"] }
+serde_with = { version = "3.9", default-features = false, features = ["alloc"] }
 sui-types = { package = "sui-sdk-types", path = "../sui-sdk-types", features = ["serde", "hash"] }
-sui-graphql-client = { package = "sui-graphql-client", path = "../sui-graphql-client" }
 thiserror = "2.0"
+serde_json = { version = "1.0.128" }
+
+# JsonSchema definitions for types, useful for generating an OpenAPI Specificaiton.
+schemars = { version = "0.8.21", optional = true }
 
 [dev-dependencies]
 anyhow = "1.0"
 rand = "0.8"
 serde_json = "1.0"
 sui-crypto = { package = "sui-crypto", path = "../sui-crypto" , features = ["ed25519"] }
+sui-graphql-client = { package = "sui-graphql-client", path = "../sui-graphql-client" }
 sui-types = { package = "sui-sdk-types", path = "../sui-sdk-types", features = ["rand"] }
 tokio = { version = "1.0", features = ["full"] }
-
