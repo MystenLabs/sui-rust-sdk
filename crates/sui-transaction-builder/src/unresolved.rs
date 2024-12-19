@@ -1,105 +1,77 @@
-use crate::types::object::Version;
-use crate::types::Address;
-use crate::types::ObjectDigest;
-use crate::types::ObjectId;
-
-use super::Command;
-use super::TransactionExpiration;
+use sui_types::types::Address;
+use sui_types::types::Command;
+use sui_types::types::ObjectDigest;
+use sui_types::types::ObjectId;
+use sui_types::types::TransactionExpiration;
+use sui_types::types::Version;
 
 // A potentially unresolved user transaction. Note that one can construct a fully resolved
 // transaction using this type by providing all the required data.
-#[cfg_attr(
-    feature = "serde",
-    derive(serde_derive::Serialize, serde_derive::Deserialize),
-    serde(rename = "UnresolvedTransaction")
-)]
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename = "UnresolvedTransaction")]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct Transaction {
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub ptb: ProgrammableTransaction,
     pub sender: Address,
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none",))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub gas_payment: Option<GasPayment>,
     pub expiration: TransactionExpiration,
 }
 
-#[cfg_attr(
-    feature = "serde",
-    derive(serde_derive::Serialize, serde_derive::Deserialize),
-    serde(rename = "UnresolvedProgrammableTransaction")
-)]
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename = "UnresolvedProgrammableTransaction")]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct ProgrammableTransaction {
     pub inputs: Vec<Input>,
     pub commands: Vec<Command>,
 }
 
-#[cfg_attr(
-    feature = "serde",
-    derive(serde_derive::Serialize, serde_derive::Deserialize),
-    serde(rename = "UnresolvedGasPayment")
-)]
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename = "UnresolvedGasPayment")]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct GasPayment {
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, skip_serializing_if = "Vec::is_empty")
-    )]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub objects: Vec<ObjectReference>,
     pub owner: Address,
-    #[cfg_attr(
-        feature = "serde",
-        serde(
-            with = "crate::_serde::OptionReadableDisplay",
-            default,
-            skip_serializing_if = "Option::is_none",
-        )
+    #[serde(
+        with = "OptionReadableDisplay",
+        default,
+        skip_serializing_if = "Option::is_none"
     )]
-    #[cfg_attr(feature = "schemars", schemars(with = "Option<crate::_schemars::U64>"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "Option<_schemars::U64>"))]
     pub price: Option<u64>,
-    #[cfg_attr(
-        feature = "serde",
-        serde(
-            with = "crate::_serde::OptionReadableDisplay",
-            default,
-            skip_serializing_if = "Option::is_none",
-        )
+    #[serde(
+        with = "OptionReadableDisplay",
+        default,
+        skip_serializing_if = "Option::is_none"
     )]
-    #[cfg_attr(feature = "schemars", schemars(with = "Option<crate::_schemars::U64>"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "Option<_schemars::U64>"))]
     pub budget: Option<u64>,
 }
 
 #[derive(Clone, Debug)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde_derive::Serialize, serde_derive::Deserialize),
-    serde(rename = "UnresolvedObjectReference")
-)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename = "UnresolvedObjectReference")]
 pub struct ObjectReference {
     pub object_id: ObjectId,
-    #[cfg_attr(
-        feature = "serde",
-        serde(
-            with = "crate::_serde::OptionReadableDisplay",
-            default,
-            skip_serializing_if = "Option::is_none",
-        )
+    #[serde(
+        with = "OptionReadableDisplay",
+        default,
+        skip_serializing_if = "Option::is_none"
     )]
-    #[cfg_attr(feature = "schemars", schemars(with = "Option<crate::_schemars::U64>"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "Option<_schemars::U64>"))]
     pub version: Option<Version>,
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none",))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub digest: Option<ObjectDigest>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde_derive::Serialize, serde_derive::Deserialize),
-    serde(rename = "UnresolvedInputKind"),
-    serde(rename_all = "snake_case")
-)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename = "UnresolvedInputKind")]
+#[serde(rename_all = "snake_case")]
 pub enum InputKind {
     Pure,
     Shared,
@@ -115,18 +87,15 @@ pub enum InputKind {
 /// If used in the context of transaction builder, make sure to call `tx.resolve` function on the
 /// transaction builder to resolve all unresolved inputs.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde_derive::Serialize, serde_derive::Deserialize),
-    serde(rename = "UnresolvedInput")
-)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename = "UnresolvedInput")]
 pub struct Input {
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none",))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub kind: Option<InputKind>,
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none",))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub value: Option<Value>,
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none",))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     /// Unique identifier for this object.
     pub object_id: Option<ObjectId>,
     /// Either the `initial_shared_version` if object is a shared object, or the `version` if
@@ -134,34 +103,28 @@ pub struct Input {
     /// The semantics of version can change depending on whether the object is shared or not.
     /// For shared objects, this is the initial version the object was shared at. For all other
     /// objects, this is the version of the object.
-    #[cfg_attr(
-        feature = "serde",
-        serde(
-            with = "crate::_serde::OptionReadableDisplay",
-            default,
-            skip_serializing_if = "Option::is_none",
-            alias = "initial_shared_version",
-        )
+    #[serde(
+        with = "OptionReadableDisplay",
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "initial_shared_version"
     )]
-    #[cfg_attr(feature = "schemars", schemars(with = "Option<crate::_schemars::U64>"))]
+    #[cfg_attr(feature = "schemars", schemars(with = "Option<_schemars::U64>"))]
     pub version: Option<Version>,
     /// The digest of this object. This field is only relevant for owned/immutable/receiving
     /// inputs.
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none",))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub digest: Option<ObjectDigest>,
     /// Whether this object is mutable. This field is only relevant for shared objects.
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none",))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub mutable: Option<bool>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde_derive::Serialize, serde_derive::Deserialize),
-    serde(rename = "UnresolvedValue"),
-    serde(try_from = "serde_json::Value", into = "serde_json::Value")
-)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema), schemars(untagged))]
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename = "UnresolvedValue")]
+#[serde(try_from = "serde_json::Value", into = "serde_json::Value")]
 pub enum Value {
     Null,
     Bool(bool),
@@ -314,8 +277,6 @@ impl Input {
     }
 }
 
-#[cfg(feature = "serde")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
 impl TryFrom<serde_json::Value> for Value {
     type Error = &'static str;
 
@@ -339,8 +300,6 @@ impl TryFrom<serde_json::Value> for Value {
     }
 }
 
-#[cfg(feature = "serde")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
 impl From<Value> for serde_json::Value {
     fn from(value: Value) -> Self {
         match value {
@@ -353,10 +312,9 @@ impl From<Value> for serde_json::Value {
     }
 }
 
-#[cfg(all(feature = "serde", feature = "hash"))]
-impl From<&crate::types::Object> for Input {
-    fn from(object: &crate::types::Object) -> Self {
-        use crate::types::object::Owner;
+impl From<&sui_types::types::Object> for Input {
+    fn from(object: &sui_types::types::Object) -> Self {
+        use sui_types::types::Owner;
 
         let input = Input::by_id(object.object_id())
             .with_digest(object.digest())
@@ -373,5 +331,41 @@ impl From<&crate::types::Object> for Input {
 impl From<ObjectId> for Input {
     fn from(object_id: ObjectId) -> Self {
         Input::by_id(object_id)
+    }
+}
+
+pub(crate) type OptionReadableDisplay =
+    ::serde_with::As<Option<::serde_with::IfIsHumanReadable<::serde_with::DisplayFromStr>>>;
+
+#[cfg(feature = "schemars")]
+mod _schemars {
+    use schemars::schema::InstanceType;
+    use schemars::schema::Metadata;
+    use schemars::schema::SchemaObject;
+    use schemars::JsonSchema;
+
+    pub(crate) struct U64;
+
+    impl JsonSchema for U64 {
+        fn schema_name() -> String {
+            "u64".to_owned()
+        }
+
+        fn json_schema(_: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+            SchemaObject {
+                metadata: Some(Box::new(Metadata {
+                    description: Some("Radix-10 encoded 64-bit unsigned integer".to_owned()),
+                    ..Default::default()
+                })),
+                instance_type: Some(InstanceType::String.into()),
+                format: Some("u64".to_owned()),
+                ..Default::default()
+            }
+            .into()
+        }
+
+        fn is_referenceable() -> bool {
+            false
+        }
     }
 }
