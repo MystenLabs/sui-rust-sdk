@@ -244,10 +244,14 @@ impl Verifier<UserSignature> for UserSignatureVerifier {
 
                 zklogin_verifier.verify(message, zklogin_authenticator.as_ref())
             }
-
+            #[cfg(not(feature = "passkey"))]
             UserSignature::Passkey(_) => Err(SignatureError::from_source(
-                "unsupported user signature scheme",
+                "support for passkey is not enabled",
             )),
+            #[cfg(feature = "passkey")]
+            UserSignature::Passkey(passkey_authenticator) => {
+                crate::passkey::PasskeyVerifier::default().verify(message, passkey_authenticator)
+            }
         }
     }
 }
