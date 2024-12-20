@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["gasBudget","gasObjects","gasPrice","gasSponsor","sender"]};

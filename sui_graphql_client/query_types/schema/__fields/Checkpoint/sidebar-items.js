@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["_transaction_blocks_arguments"],"struct":["__typename","bcs","digest","epoch","networkTotalTransactions","previousCheckpointDigest","rollingGasSummary","sequenceNumber","timestamp","transactionBlocks","validatorSignatures"]};

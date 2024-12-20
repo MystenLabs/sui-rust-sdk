@@ -1,0 +1,1 @@
+searchState.loadedDescShard("sui_graphql_client_build", 0, "Description\nRegister the schema to enable building custom queries …")
