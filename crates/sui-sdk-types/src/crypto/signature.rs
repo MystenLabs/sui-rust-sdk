@@ -9,11 +9,6 @@ use super::Secp256r1Signature;
 use super::ZkLoginAuthenticator;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(
-    feature = "schemars",
-    derive(schemars::JsonSchema),
-    schemars(tag = "scheme", rename_all = "lowercase")
-)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum SimpleSignature {
     Ed25519 {
@@ -490,7 +485,6 @@ mod serialization {
     #[derive(serde_derive::Deserialize)]
     #[serde(tag = "scheme", rename_all = "lowercase")]
     #[serde(rename = "UserSignature")]
-    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
     enum ReadableUserSignature {
         Ed25519 {
             signature: Ed25519Signature,
@@ -507,17 +501,6 @@ mod serialization {
         Multisig(MultisigAggregatedSignature),
         ZkLogin(Box<ZkLoginAuthenticator>),
         Passkey(PasskeyAuthenticator),
-    }
-
-    #[cfg(feature = "schemars")]
-    impl schemars::JsonSchema for UserSignature {
-        fn schema_name() -> String {
-            ReadableUserSignature::schema_name()
-        }
-
-        fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
-            ReadableUserSignature::json_schema(gen)
-        }
     }
 
     impl serde::Serialize for UserSignature {

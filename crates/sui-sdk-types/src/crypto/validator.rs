@@ -8,11 +8,9 @@ use crate::checkpoint::StakeUnit;
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct ValidatorCommittee {
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
-    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub epoch: EpochId,
     pub members: Vec<ValidatorCommitteeMember>,
 }
@@ -22,14 +20,11 @@ pub struct ValidatorCommittee {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct ValidatorCommitteeMember {
     #[cfg_attr(feature = "serde", serde(with = "ValidatorPublicKeySerialization"))]
-    #[cfg_attr(feature = "schemars", schemars(with = "Bls12381PublicKey"))]
     pub public_key: Bls12381PublicKey,
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
-    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub stake: StakeUnit,
 }
 
@@ -38,15 +33,12 @@ pub struct ValidatorCommitteeMember {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct ValidatorAggregatedSignature {
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
-    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub epoch: EpochId,
     pub signature: Bls12381Signature,
     #[cfg_attr(feature = "serde", serde(with = "RoaringBitMapSerialization"))]
-    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::Base64"))]
     #[cfg_attr(
         feature = "proptest",
         strategy(proptest::strategy::Just(roaring::RoaringBitmap::default()))
@@ -99,14 +91,11 @@ impl<'de> serde_with::DeserializeAs<'de, Bls12381PublicKey> for BinaryValidatorP
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct ValidatorSignature {
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
-    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
     pub epoch: EpochId,
     #[cfg_attr(feature = "serde", serde(with = "ValidatorPublicKeySerialization"))]
-    #[cfg_attr(feature = "schemars", schemars(with = "Bls12381PublicKey"))]
     pub public_key: Bls12381PublicKey,
     pub signature: Bls12381Signature,
 }

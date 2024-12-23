@@ -84,22 +84,10 @@ mod serialization {
 
     #[derive(serde::Deserialize)]
     #[serde(rename = "PasskeyAuthenticator")]
-    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
     struct Authenticator {
         authenticator_data: Vec<u8>,
         client_data_json: String,
         signature: SimpleSignature,
-    }
-
-    #[cfg(feature = "schemars")]
-    impl schemars::JsonSchema for PasskeyAuthenticator {
-        fn schema_name() -> String {
-            Authenticator::schema_name()
-        }
-
-        fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
-            Authenticator::json_schema(gen)
-        }
     }
 
     impl Serialize for PasskeyAuthenticator {
