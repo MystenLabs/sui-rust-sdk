@@ -94,10 +94,7 @@ hex = "0.4.3"
 serde_json = { version = "1.0.128" }
 
 # proptest support in tests
-#
-# Pin to this specific commit in order to work around an issue where proptest doesn't build properly in wasm environments
-# see https://github.com/proptest-rs/proptest/pull/270 for more info
-proptest = { git = "https://github.com/bmwill/proptest.git", rev = "bc36db126183bce18c8bc595f0c0cfeac48b870c", default-features = false, features = ["std"] }
+proptest = { version = "1.6.0", default-features = false, features = ["std"] }
 test-strategy = "0.4.0"
 
 [target.wasm32-unknown-unknown.dev-dependencies]
