@@ -9,7 +9,6 @@ use sui_types::Version;
 // transaction using this type by providing all the required data.
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename = "UnresolvedTransaction")]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct Transaction {
     #[serde(flatten)]
     pub ptb: ProgrammableTransaction,
@@ -21,7 +20,6 @@ pub struct Transaction {
 
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename = "UnresolvedProgrammableTransaction")]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct ProgrammableTransaction {
     pub inputs: Vec<Input>,
     pub commands: Vec<Command>,
@@ -29,7 +27,6 @@ pub struct ProgrammableTransaction {
 
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename = "UnresolvedGasPayment")]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 pub struct GasPayment {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub objects: Vec<ObjectReference>,
@@ -39,20 +36,16 @@ pub struct GasPayment {
         default,
         skip_serializing_if = "Option::is_none"
     )]
-    #[cfg_attr(feature = "schemars", schemars(with = "Option<_schemars::U64>"))]
     pub price: Option<u64>,
     #[serde(
         with = "OptionReadableDisplay",
         default,
         skip_serializing_if = "Option::is_none"
     )]
-    #[cfg_attr(feature = "schemars", schemars(with = "Option<_schemars::U64>"))]
     pub budget: Option<u64>,
 }
 
-#[derive(Clone, Debug)]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(rename = "UnresolvedObjectReference")]
 pub struct ObjectReference {
     pub object_id: ObjectId,
@@ -61,15 +54,12 @@ pub struct ObjectReference {
         default,
         skip_serializing_if = "Option::is_none"
     )]
-    #[cfg_attr(feature = "schemars", schemars(with = "Option<_schemars::U64>"))]
     pub version: Option<Version>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub digest: Option<ObjectDigest>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename = "UnresolvedInputKind")]
 #[serde(rename_all = "snake_case")]
 pub enum InputKind {
@@ -86,9 +76,7 @@ pub enum InputKind {
 ///
 /// If used in the context of transaction builder, make sure to call `tx.resolve` function on the
 /// transaction builder to resolve all unresolved inputs.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename = "UnresolvedInput")]
 pub struct Input {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -109,7 +97,6 @@ pub struct Input {
         skip_serializing_if = "Option::is_none",
         alias = "initial_shared_version"
     )]
-    #[cfg_attr(feature = "schemars", schemars(with = "Option<_schemars::U64>"))]
     pub version: Option<Version>,
     /// The digest of this object. This field is only relevant for owned/immutable/receiving
     /// inputs.
@@ -120,9 +107,7 @@ pub struct Input {
     pub mutable: Option<bool>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema), schemars(untagged))]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename = "UnresolvedValue")]
 #[serde(try_from = "serde_json::Value", into = "serde_json::Value")]
 pub enum Value {
@@ -336,36 +321,3 @@ impl From<ObjectId> for Input {
 
 pub(crate) type OptionReadableDisplay =
     ::serde_with::As<Option<::serde_with::IfIsHumanReadable<::serde_with::DisplayFromStr>>>;
-
-#[cfg(feature = "schemars")]
-mod _schemars {
-    use schemars::schema::InstanceType;
-    use schemars::schema::Metadata;
-    use schemars::schema::SchemaObject;
-    use schemars::JsonSchema;
-
-    pub(crate) struct U64;
-
-    impl JsonSchema for U64 {
-        fn schema_name() -> String {
-            "u64".to_owned()
-        }
-
-        fn json_schema(_: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
-            SchemaObject {
-                metadata: Some(Box::new(Metadata {
-                    description: Some("Radix-10 encoded 64-bit unsigned integer".to_owned()),
-                    ..Default::default()
-                })),
-                instance_type: Some(InstanceType::String.into()),
-                format: Some("u64".to_owned()),
-                ..Default::default()
-            }
-            .into()
-        }
-
-        fn is_referenceable() -> bool {
-            false
-        }
-    }
-}

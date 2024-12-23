@@ -22,11 +22,6 @@ pub enum ExecutionStatus {
 pub type TypeParameterIndex = u16;
 
 #[derive(Eq, PartialEq, Clone, Debug)]
-#[cfg_attr(
-    feature = "schemars",
-    derive(schemars::JsonSchema),
-    schemars(tag = "error", rename_all = "snake_case")
-)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum ExecutionError {
     //
@@ -42,16 +37,12 @@ pub enum ExecutionError {
     FeatureNotYetSupported,
     /// Move object is larger than the maximum allowed size
     ObjectTooBig {
-        #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
         object_size: u64,
-        #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
         max_object_size: u64,
     },
     /// Package is larger than the maximum allowed size
     PackageTooBig {
-        #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
         object_size: u64,
-        #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
         max_object_size: u64,
     },
     /// Circular Object Ownership
@@ -83,11 +74,7 @@ pub enum ExecutionError {
     ///     Arithmetic error, stack overflow, max value depth, etc."
     MovePrimitiveRuntimeError { location: Option<MoveLocation> },
     /// Move runtime abort
-    MoveAbort {
-        location: MoveLocation,
-        #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
-        code: u64,
-    },
+    MoveAbort { location: MoveLocation, code: u64 },
     /// Bytecode verification error.
     VmVerificationOrDeserializationError,
     /// MoveVm invariant violation
@@ -128,12 +115,7 @@ pub enum ExecutionError {
     // Post-execution errors
     //
     /// Effects from the transaction are too large
-    EffectsTooLarge {
-        #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
-        current_size: u64,
-        #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
-        max_size: u64,
-    },
+    EffectsTooLarge { current_size: u64, max_size: u64 },
 
     /// Publish or Upgrade is missing dependency
     PublishUpgradeMissingDependency,
@@ -146,14 +128,11 @@ pub enum ExecutionError {
     PublishUpgradeDependencyDowngrade,
 
     /// Invalid package upgrade
-    #[cfg_attr(feature = "schemars", schemars(title = "PackageUpgradeError"))]
     PackageUpgradeError { kind: PackageUpgradeError },
 
     /// Indicates the transaction tried to write objects too large to storage
     WrittenObjectsTooLarge {
-        #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
         object_size: u64,
-        #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::U64"))]
         max_object_size: u64,
     },
 
@@ -187,7 +166,6 @@ pub enum ExecutionError {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct MoveLocation {
     pub package: ObjectId,
@@ -200,11 +178,6 @@ pub struct MoveLocation {
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]
-#[cfg_attr(
-    feature = "schemars",
-    derive(schemars::JsonSchema),
-    schemars(tag = "kind", rename_all = "snake_case")
-)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum CommandArgumentError {
     /// The type of the value does not match the expected type
@@ -241,11 +214,6 @@ pub enum CommandArgumentError {
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]
-#[cfg_attr(
-    feature = "schemars",
-    derive(schemars::JsonSchema),
-    schemars(tag = "kind", rename_all = "snake_case")
-)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum PackageUpgradeError {
     /// Unable to fetch package
@@ -271,11 +239,6 @@ pub enum PackageUpgradeError {
     derive(serde_derive::Serialize, serde_derive::Deserialize),
     serde(rename_all = "snake_case")
 )]
-#[cfg_attr(
-    feature = "schemars",
-    derive(schemars::JsonSchema),
-    schemars(rename_all = "snake_case")
-)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum TypeArgumentError {
     /// A type was not found in the module specified
@@ -296,26 +259,13 @@ mod serialization {
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
     #[serde(rename = "ExecutionStatus")]
-    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
     struct ReadableExecutionStatus {
         success: bool,
         #[serde(skip_serializing_if = "Option::is_none")]
         status: Option<FailureStatus>,
     }
 
-    #[cfg(feature = "schemars")]
-    impl schemars::JsonSchema for ExecutionStatus {
-        fn schema_name() -> String {
-            ReadableExecutionStatus::schema_name()
-        }
-
-        fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
-            ReadableExecutionStatus::json_schema(gen)
-        }
-    }
-
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
-    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
     struct FailureStatus {
         error: ExecutionError,
         #[serde(skip_serializing_if = "Option::is_none")]

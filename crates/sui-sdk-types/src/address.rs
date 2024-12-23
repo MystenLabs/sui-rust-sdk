@@ -194,39 +194,6 @@ impl std::fmt::Display for AddressParseError {
 
 impl std::error::Error for AddressParseError {}
 
-#[cfg(feature = "schemars")]
-impl schemars::JsonSchema for Address {
-    fn schema_name() -> String {
-        "Address".to_owned()
-    }
-
-    fn json_schema(_: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
-        use schemars::schema::InstanceType;
-        use schemars::schema::Metadata;
-        use schemars::schema::SchemaObject;
-        use schemars::schema::StringValidation;
-
-        let hex_length = Address::LENGTH * 2;
-        SchemaObject {
-            metadata: Some(Box::new(Metadata {
-                title: Some(Self::schema_name()),
-                description: Some("A 32-byte Sui address, encoded as a hex string.".to_owned()),
-                examples: vec![serde_json::to_value(Address::TWO).unwrap()],
-                ..Default::default()
-            })),
-            instance_type: Some(InstanceType::String.into()),
-            format: Some("hex".to_owned()),
-            string: Some(Box::new(StringValidation {
-                max_length: Some((hex_length + 2) as u32),
-                min_length: None,
-                pattern: Some(format!("0x[a-z0-9]{{1,{hex_length}}}")),
-            })),
-            ..Default::default()
-        }
-        .into()
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;

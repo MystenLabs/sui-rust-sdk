@@ -29,7 +29,6 @@ mod transaction {
     #[derive(serde_derive::Deserialize)]
     #[serde(tag = "version")]
     #[serde(rename = "Transaction")]
-    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
     enum TransactionData {
         #[serde(rename = "1")]
         V1(TransactionV1),
@@ -60,7 +59,6 @@ mod transaction {
 
     #[derive(serde_derive::Deserialize)]
     #[serde(rename = "TransactionV1")]
-    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
     struct TransactionV1 {
         kind: TransactionKind,
         sender: Address,
@@ -115,17 +113,6 @@ mod transaction {
             })
         }
     }
-
-    #[cfg(feature = "schemars")]
-    impl schemars::JsonSchema for Transaction {
-        fn schema_name() -> String {
-            TransactionData::schema_name()
-        }
-
-        fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
-            TransactionData::json_schema(gen)
-        }
-    }
 }
 
 mod transaction_kind {
@@ -160,7 +147,6 @@ mod transaction_kind {
     #[derive(serde_derive::Deserialize)]
     #[serde(tag = "kind", rename_all = "snake_case")]
     #[serde(rename = "TransactionKind")]
-    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
     enum ReadableTransactionKind {
         ProgrammableTransaction(ProgrammableTransaction),
         ChangeEpoch(ChangeEpoch),
@@ -173,17 +159,6 @@ mod transaction_kind {
         RandomnessStateUpdate(RandomnessStateUpdate),
         ConsensusCommitPrologueV2(ConsensusCommitPrologueV2),
         ConsensusCommitPrologueV3(ConsensusCommitPrologueV3),
-    }
-
-    #[cfg(feature = "schemars")]
-    impl schemars::JsonSchema for TransactionKind {
-        fn schema_name() -> String {
-            ReadableTransactionKind::schema_name()
-        }
-
-        fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
-            ReadableTransactionKind::json_schema(gen)
-        }
     }
 
     #[derive(serde_derive::Serialize)]
@@ -743,7 +718,6 @@ mod argument {
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
     #[serde(rename = "Argument", untagged, rename_all = "lowercase")]
-    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
     enum ReadableArgument {
         /// # Gas
         Gas(Gas),
@@ -759,36 +733,6 @@ mod argument {
     #[serde(rename_all = "lowercase")]
     enum Gas {
         Gas,
-    }
-
-    #[cfg(feature = "schemars")]
-    impl schemars::JsonSchema for Gas {
-        fn schema_name() -> std::string::String {
-            "GasArgument".to_owned()
-        }
-
-        fn json_schema(_gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
-            schemars::schema::Schema::Object(schemars::schema::SchemaObject {
-                instance_type: Some(schemars::schema::InstanceType::String.into()),
-                enum_values: Some(vec!["gas".into()]),
-                ..Default::default()
-            })
-        }
-
-        fn is_referenceable() -> bool {
-            false
-        }
-    }
-
-    #[cfg(feature = "schemars")]
-    impl schemars::JsonSchema for Argument {
-        fn schema_name() -> String {
-            ReadableArgument::schema_name()
-        }
-
-        fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
-            ReadableArgument::json_schema(gen)
-        }
     }
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
@@ -1182,37 +1126,6 @@ mod transaction_expiration {
                     BinaryTransactionExpiration::Epoch(epoch) => Self::Epoch(epoch),
                 })
             }
-        }
-    }
-
-    #[cfg(feature = "schemars")]
-    impl schemars::JsonSchema for TransactionExpiration {
-        fn schema_name() -> String {
-            "TransactionExpiration".into()
-        }
-
-        fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
-            use schemars::schema::Schema;
-            use schemars::schema::SchemaObject;
-            schemars::schema::Schema::Object(schemars::schema::SchemaObject {
-                subschemas: Some(Box::new(schemars::schema::SubschemaValidation {
-                    one_of: Some(vec![
-                        schemars::_private::metadata::add_description(
-                            schemars::_private::new_externally_tagged_enum(
-                                "epoch",
-                                gen.subschema_for::<crate::_schemars::U64>(),
-                            ),
-                            "Validators wont sign a transaction unless the expiration Epoch is greater than or equal to the current epoch",
-                        ),
-                        Schema::Object(SchemaObject {
-                            instance_type: Some(schemars::schema::InstanceType::Null.into()),
-                            ..SchemaObject::default()
-                        }),
-                    ]),
-                    ..Default::default()
-                })),
-                ..Default::default()
-            })
         }
     }
 }

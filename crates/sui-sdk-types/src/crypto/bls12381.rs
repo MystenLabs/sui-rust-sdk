@@ -5,7 +5,6 @@
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct Bls12381PublicKey(
     #[cfg_attr(
@@ -14,7 +13,6 @@ pub struct Bls12381PublicKey(
             with = "::serde_with::As::<::serde_with::IfIsHumanReadable<super::Base64Array96, [::serde_with::Same; 96]>>"
         )
     )]
-    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::Base64"))]
     [u8; Self::LENGTH],
 );
 
@@ -106,7 +104,6 @@ impl std::fmt::Debug for Bls12381PublicKey {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct Bls12381Signature(
     #[cfg_attr(
@@ -115,7 +112,6 @@ pub struct Bls12381Signature(
             with = "::serde_with::As::<::serde_with::IfIsHumanReadable<super::Base64Array48, [::serde_with::Same; 48]>>"
         )
     )]
-    #[cfg_attr(feature = "schemars", schemars(with = "crate::_schemars::Base64"))]
     [u8; Self::LENGTH],
 );
 
