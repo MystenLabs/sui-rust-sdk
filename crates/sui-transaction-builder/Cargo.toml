@@ -9,7 +9,7 @@ readme = "README.md"
 description = "Transaction API for the Rust SDK for the Sui Blockchain"
 
 [dependencies]
-base64ct = "1.6"
+base64ct = { version = "1.6", features = ["std"] }
 bcs = "0.1.6"
 serde = { version = "1.0", features = ["derive"] }
 serde_with = { version = "3.9", default-features = false, features = ["alloc"] }
