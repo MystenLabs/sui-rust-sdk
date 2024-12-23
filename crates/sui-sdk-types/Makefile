@@ -17,7 +17,7 @@ test:
 
 .PHONY: wasm
 wasm:
-	CC=clang wasm-pack test --node
+	CC=clang wasm-pack test --node --all-features
 
 %:
 	$(MAKE) -C ../.. $@
