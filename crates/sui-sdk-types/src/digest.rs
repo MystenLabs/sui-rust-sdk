@@ -6,8 +6,7 @@
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct Digest(
-    #[cfg_attr(feature = "serde", serde(with = "DigestSerialization"))]
-    [u8; Self::LENGTH],
+    #[cfg_attr(feature = "serde", serde(with = "DigestSerialization"))] [u8; Self::LENGTH],
 );
 
 impl Digest {

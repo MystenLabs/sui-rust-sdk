@@ -74,10 +74,7 @@ pub enum ExecutionError {
     ///     Arithmetic error, stack overflow, max value depth, etc."
     MovePrimitiveRuntimeError { location: Option<MoveLocation> },
     /// Move runtime abort
-    MoveAbort {
-        location: MoveLocation,
-        code: u64,
-    },
+    MoveAbort { location: MoveLocation, code: u64 },
     /// Bytecode verification error.
     VmVerificationOrDeserializationError,
     /// MoveVm invariant violation
@@ -118,10 +115,7 @@ pub enum ExecutionError {
     // Post-execution errors
     //
     /// Effects from the transaction are too large
-    EffectsTooLarge {
-        current_size: u64,
-        max_size: u64,
-    },
+    EffectsTooLarge { current_size: u64, max_size: u64 },
 
     /// Publish or Upgrade is missing dependency
     PublishUpgradeMissingDependency,

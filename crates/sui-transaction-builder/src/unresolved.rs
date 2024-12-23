@@ -45,8 +45,7 @@ pub struct GasPayment {
     pub budget: Option<u64>,
 }
 
-#[derive(Clone, Debug)]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(rename = "UnresolvedObjectReference")]
 pub struct ObjectReference {
     pub object_id: ObjectId,
@@ -60,8 +59,7 @@ pub struct ObjectReference {
     pub digest: Option<ObjectDigest>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename = "UnresolvedInputKind")]
 #[serde(rename_all = "snake_case")]
 pub enum InputKind {
@@ -78,8 +76,7 @@ pub enum InputKind {
 ///
 /// If used in the context of transaction builder, make sure to call `tx.resolve` function on the
 /// transaction builder to resolve all unresolved inputs.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename = "UnresolvedInput")]
 pub struct Input {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -110,8 +107,7 @@ pub struct Input {
     pub mutable: Option<bool>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename = "UnresolvedValue")]
 #[serde(try_from = "serde_json::Value", into = "serde_json::Value")]
 pub enum Value {

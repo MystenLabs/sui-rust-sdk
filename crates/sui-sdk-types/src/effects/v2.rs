@@ -88,17 +88,11 @@ pub enum UnchangedSharedKind {
         digest: ObjectDigest,
     },
     /// Deleted shared objects that appear mutably/owned in the input.
-    MutateDeleted {
-        version: Version,
-    },
+    MutateDeleted { version: Version },
     /// Deleted shared objects that appear as read-only in the input.
-    ReadDeleted {
-        version: Version,
-    },
+    ReadDeleted { version: Version },
     /// Shared objects in cancelled transaction. The sequence number embed cancellation reason.
-    Cancelled {
-        version: Version,
-    },
+    Cancelled { version: Version },
     /// Read of a per-epoch config object that should remain the same during an epoch.
     PerEpochConfig,
 }
