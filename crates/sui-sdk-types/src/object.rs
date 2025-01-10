@@ -300,6 +300,13 @@ impl Object {
         }
     }
 
+    pub fn as_struct(&self) -> Option<&MoveStruct> {
+        match &self.data {
+            ObjectData::Struct(struct_) => Some(struct_),
+            _ => None,
+        }
+    }
+
     pub fn owner(&self) -> &Owner {
         &self.owner
     }
