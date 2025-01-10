@@ -223,6 +223,7 @@ impl MoveStruct {
         &self.type_
     }
 
+    #[doc(hidden)]
     pub fn has_public_transfer(&self) -> bool {
         self.has_public_transfer
     }
