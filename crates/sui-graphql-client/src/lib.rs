@@ -919,7 +919,7 @@ impl Client {
         }
     }
 
-    /// Return a stream of objects based on the (optional) object filter.
+    /// Return a stream of epochs based on the (optional) object filter.
     pub async fn epochs_stream<'a>(
         &'a self,
         streaming_direction: Direction,
