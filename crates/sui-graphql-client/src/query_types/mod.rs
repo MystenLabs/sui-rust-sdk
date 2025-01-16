@@ -78,6 +78,7 @@ pub use object::ObjectsQuery;
 pub use object::ObjectsQueryArgs;
 pub use packages::LatestPackageQuery;
 pub use packages::MovePackage;
+pub use packages::MovePackageConnection;
 pub use packages::MovePackageVersionFilter;
 pub use packages::PackageArgs;
 pub use packages::PackageByNameArgs;
