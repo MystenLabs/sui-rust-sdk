@@ -920,10 +920,10 @@ impl Client {
     }
 
     /// Return a stream of epochs based on the (optional) object filter.
-    pub async fn epochs_stream<'a>(
-        &'a self,
+    pub async fn epochs_stream(
+        &self,
         streaming_direction: Direction,
-    ) -> impl Stream<Item = Result<Epoch>> + 'a {
+    ) -> impl Stream<Item = Result<Epoch>> + '_ {
         stream_paginated_query(
             move |pag_filter| self.epochs(pag_filter),
             streaming_direction,

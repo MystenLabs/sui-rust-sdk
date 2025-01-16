@@ -116,7 +116,7 @@ pub struct Epoch {
     pub total_stake_subsidies: Option<BigInt>,
     /// The total number of transaction in this epoch.
     pub total_transactions: Option<u64>,
-    /// Validator related properties. For active validators, see [`active_validators`] API.
+    /// Validator related properties. For active validators, see `active_validators` API.
     pub validator_set: Option<ValidatorSet>,
 }
 
