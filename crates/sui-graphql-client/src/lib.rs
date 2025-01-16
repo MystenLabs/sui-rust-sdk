@@ -179,8 +179,8 @@ impl<T> Page<T> {
         &self.data
     }
 
-    /// Internal function to create a new page with the provided data and page information.
-    fn new(page_info: PageInfo, data: Vec<T>) -> Self {
+    /// Create a new page with the provided data and page information.
+    pub fn new(page_info: PageInfo, data: Vec<T>) -> Self {
         Self { page_info, data }
     }
 
@@ -189,8 +189,8 @@ impl<T> Page<T> {
         self.data.is_empty()
     }
 
-    /// Internal function to create a page with no data.
-    fn new_empty() -> Self {
+    /// Create a page with no data.
+    pub fn new_empty() -> Self {
         Self::new(PageInfo::default(), vec![])
     }
 
@@ -328,7 +328,7 @@ impl Client {
 
     /// Internal function to handle pagination filters and return the appropriate values.
     /// If limit is omitted, it will use the max page size from the service config.
-    async fn pagination_filter(
+    pub async fn pagination_filter(
         &self,
         pagination_filter: PaginationFilter,
     ) -> (Option<String>, Option<String>, Option<i32>, Option<i32>) {
