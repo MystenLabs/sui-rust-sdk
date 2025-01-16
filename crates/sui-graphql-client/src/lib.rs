@@ -31,7 +31,9 @@ use query_types::DynamicFieldConnectionArgs;
 use query_types::DynamicFieldQuery;
 use query_types::DynamicFieldsOwnerQuery;
 use query_types::DynamicObjectFieldQuery;
-use query_types::EpochSummaryArgs;
+use query_types::Epoch;
+use query_types::EpochArgs;
+use query_types::EpochQuery;
 use query_types::EpochSummaryQuery;
 use query_types::EventFilter;
 use query_types::EventsQuery;
@@ -400,7 +402,7 @@ impl Client {
     /// This will return `Ok(None)` if the epoch requested is not available in the GraphQL service
     /// (e.g., due to pruning).
     pub async fn reference_gas_price(&self, epoch: Option<u64>) -> Result<Option<u64>> {
-        let operation = EpochSummaryQuery::build(EpochSummaryArgs { id: epoch });
+        let operation = EpochSummaryQuery::build(EpochArgs { id: epoch });
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
@@ -916,8 +918,21 @@ impl Client {
         &self,
         epoch: Option<u64>,
     ) -> Result<GraphQlResponse<EpochSummaryQuery>> {
-        let operation = EpochSummaryQuery::build(EpochSummaryArgs { id: epoch });
+        let operation = EpochSummaryQuery::build(EpochArgs { id: epoch });
         self.run_query(&operation).await
+    }
+
+    /// Return the epoch information for the provided epoch. If no epoch is provided, it will
+    /// return the last known epoch.
+    pub async fn epoch(&self, epoch: Option<u64>) -> Result<Option<Epoch>> {
+        let operation = EpochQuery::build(EpochArgs { id: epoch });
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::graphql_error(errors));
+        }
+
+        Ok(response.data.and_then(|d| d.epoch))
     }
 
     // ===========================================================================
@@ -1991,6 +2006,24 @@ mod tests {
             "Latest checkpoint sequence number query failed for {} network. Error: {}",
             client.rpc_server(),
             last_checkpoint.unwrap_err()
+        );
+    }
+
+    #[tokio::test]
+    async fn test_epoch_query() {
+        let client = test_client();
+        let e = client.epoch(None).await;
+        assert!(
+            e.is_ok(),
+            "Epoch query failed for {} network. Error: {}",
+            client.rpc_server(),
+            e.unwrap_err()
+        );
+
+        assert!(
+            e.unwrap().is_some(),
+            "Epoch query returned None for {} network",
+            client.rpc_server()
         );
     }
 
