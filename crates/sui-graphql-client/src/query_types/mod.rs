@@ -53,6 +53,8 @@ pub use epoch::Epoch;
 pub use epoch::EpochArgs;
 pub use epoch::EpochQuery;
 pub use epoch::EpochSummaryQuery;
+pub use epoch::EpochsArgs;
+pub use epoch::EpochsQuery;
 pub use events::Event;
 pub use events::EventConnection;
 pub use events::EventFilter;
