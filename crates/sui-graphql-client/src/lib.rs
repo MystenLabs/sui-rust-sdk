@@ -110,6 +110,8 @@ use std::str::FromStr;
 use crate::error::Kind;
 use crate::error::Result;
 use crate::query_types::CheckpointTotalTxQuery;
+use query_types::TransactionBlockWithEffectsQuery;
+use query_types::TransactionBlocksWithEffectsQuery;
 
 const DEFAULT_ITEMS_PER_PAGE: i32 = 10;
 const MAINNET_HOST: &str = "https://sui-mainnet.mystenlabs.com/graphql";
@@ -128,6 +130,11 @@ static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_V
 pub struct DryRunResult {
     pub effects: Option<TransactionEffects>,
     pub error: Option<String>,
+}
+
+pub struct TransactionDataEffects {
+    pub tx: SignedTransaction,
+    pub effects: TransactionEffects,
 }
 
 /// The name part of a dynamic field, including its type, bcs, and json representation.
@@ -1292,7 +1299,6 @@ impl Client {
         let response = self.run_query(&operation).await?;
 
         if let Some(errors) = response.errors {
-            println!("{:?}", errors);
             return Err(Error::graphql_error(errors));
         }
 
@@ -1474,6 +1480,41 @@ impl Client {
             .transpose()
     }
 
+    /// Get a transaction's data and effects by its digest.
+    pub async fn transaction_data_effects(
+        &self,
+        digest: TransactionDigest,
+    ) -> Result<Option<TransactionDataEffects>> {
+        let operation = TransactionBlockWithEffectsQuery::build(TransactionBlockArgs {
+            digest: digest.to_string(),
+        });
+        let response = self.run_query(&operation).await?;
+
+        let tx = response
+            .data
+            .and_then(|d| d.transaction_block)
+            .map(|tx| (tx.bcs, tx.effects, tx.signatures));
+
+        match tx {
+            Some((Some(bcs), Some(effects), Some(sigs))) => {
+                let bcs = base64ct::Base64::decode_vec(&bcs.0.as_str())?;
+                let effects = base64ct::Base64::decode_vec(effects.bcs.unwrap().0.as_str())?;
+                let signatures = sigs
+                    .iter()
+                    .map(|s| UserSignature::from_base64(&s.0))
+                    .collect::<Result<Vec<_>, _>>()?;
+                let transaction: Transaction = bcs::from_bytes(&bcs)?;
+                let tx = SignedTransaction {
+                    transaction,
+                    signatures,
+                };
+                let effects: TransactionEffects = bcs::from_bytes(&effects)?;
+                Ok(Some(TransactionDataEffects { tx, effects }))
+            }
+            _ => Ok(None),
+        }
+    }
+
     /// Get a page of transactions based on the provided filters.
     pub async fn transactions<'a>(
         &self,
@@ -1539,6 +1580,72 @@ impl Client {
                 .into_iter()
                 .map(|n| n.try_into())
                 .collect::<Result<Vec<_>>>()?;
+            let page = Page::new(page_info, transactions);
+            Ok(page)
+        } else {
+            Ok(Page::new_empty())
+        }
+    }
+
+    /// Get a page of transactions' data and effects based on the provided filters.
+    pub async fn transactions_data_effects<'a>(
+        &self,
+        filter: Option<TransactionsFilter<'a>>,
+        pagination_filter: PaginationFilter,
+    ) -> Result<Page<TransactionDataEffects>> {
+        let (after, before, first, last) = self.pagination_filter(pagination_filter).await;
+
+        let operation = TransactionBlocksWithEffectsQuery::build(TransactionBlocksQueryArgs {
+            after: after.as_deref(),
+            before: before.as_deref(),
+            filter,
+            first,
+            last,
+        });
+
+        let response = self.run_query(&operation).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(Error::graphql_error(errors));
+        }
+
+        if let Some(txb) = response.data {
+            let txc = txb.transaction_blocks;
+            let page_info = txc.page_info;
+
+            let transactions = {
+                txc.nodes
+                    .iter()
+                    .map(|node| {
+                        match (
+                            node.bcs.as_ref(),
+                            node.effects.as_ref(),
+                            node.signatures.as_ref(),
+                        ) {
+                            (Some(bcs), Some(effects), Some(sigs)) => {
+                                let bcs = base64ct::Base64::decode_vec(&bcs.0.as_str())?;
+                                let effects = base64ct::Base64::decode_vec(
+                                    effects.bcs.as_ref().unwrap().0.as_str(),
+                                )?;
+
+                                let sigs = sigs
+                                    .iter()
+                                    .map(|s| UserSignature::from_base64(&s.0))
+                                    .collect::<Result<Vec<_>, _>>()?;
+                                let tx: Transaction = bcs::from_bytes(&bcs)?;
+                                let tx = SignedTransaction {
+                                    transaction: tx,
+                                    signatures: sigs,
+                                };
+                                let effects: TransactionEffects = bcs::from_bytes(&effects)?;
+                                Ok(TransactionDataEffects { tx, effects })
+                            }
+                            (_, _, _) => Err(Error::empty_response_error()),
+                        }
+                    })
+                    .collect::<Result<Vec<_>>>()?
+            };
+
             let page = Page::new(page_info, transactions);
             Ok(page)
         } else {
