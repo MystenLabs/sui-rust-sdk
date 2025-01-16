@@ -5,13 +5,20 @@ use crate::query_types::schema;
 use crate::query_types::Address;
 use crate::query_types::BigInt;
 use crate::query_types::DateTime;
+use crate::query_types::ProtocolConfigs;
 
 // ===========================================================================
 // Epoch Queries
 // ===========================================================================
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "Query", variables = "EpochArgs")]
+pub struct EpochQuery {
+    #[arguments(id: $id)]
+    pub epoch: Option<Epoch>,
+}
 
 #[derive(cynic::QueryFragment, Debug)]
-#[cynic(schema = "rpc", graphql_type = "Query", variables = "EpochSummaryArgs")]
+#[cynic(schema = "rpc", graphql_type = "Query", variables = "EpochArgs")]
 pub struct EpochSummaryQuery {
     #[arguments(id: $id)]
     pub epoch: Option<EpochSummary>,
@@ -22,7 +29,7 @@ pub struct EpochSummaryQuery {
 // ===========================================================================
 
 #[derive(cynic::QueryVariables, Debug)]
-pub struct EpochSummaryArgs {
+pub struct EpochArgs {
     pub id: Option<u64>,
 }
 
@@ -54,6 +61,7 @@ pub struct Epoch {
     pub fund_size: Option<BigInt>,
     pub live_object_set_digest: Option<String>,
     pub net_inflow: Option<BigInt>,
+    pub protocol_configs: Option<ProtocolConfigs>,
     pub reference_gas_price: Option<BigInt>,
     pub start_timestamp: DateTime,
     pub system_state_version: Option<u64>,
