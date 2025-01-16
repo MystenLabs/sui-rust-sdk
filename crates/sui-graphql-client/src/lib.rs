@@ -1497,7 +1497,7 @@ impl Client {
 
         match tx {
             Some((Some(bcs), Some(effects), Some(sigs))) => {
-                let bcs = base64ct::Base64::decode_vec(&bcs.0.as_str())?;
+                let bcs = base64ct::Base64::decode_vec(bcs.0.as_str())?;
                 let effects = base64ct::Base64::decode_vec(effects.bcs.unwrap().0.as_str())?;
                 let signatures = sigs
                     .iter()
@@ -1623,7 +1623,7 @@ impl Client {
                             node.signatures.as_ref(),
                         ) {
                             (Some(bcs), Some(effects), Some(sigs)) => {
-                                let bcs = base64ct::Base64::decode_vec(&bcs.0.as_str())?;
+                                let bcs = base64ct::Base64::decode_vec(bcs.0.as_str())?;
                                 let effects = base64ct::Base64::decode_vec(
                                     effects.bcs.as_ref().unwrap().0.as_str(),
                                 )?;
