@@ -34,7 +34,7 @@ pub struct ProtocolVersionArgs {
 /// Information about the configuration of the protocol.
 /// Constants that control how the chain operates.
 /// These can only change during protocol upgrades which happen on epoch boundaries.
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment, Clone, Debug)]
 #[cynic(schema = "rpc", graphql_type = "ProtocolConfigs")]
 pub struct ProtocolConfigs {
     /// The protocol is not required to change on every epoch boundary, so the protocol version
@@ -51,7 +51,7 @@ pub struct ProtocolConfigs {
 
 /// Feature flags are a form of boolean configuration that are usually used to gate features while
 /// they are in development. Once a lag has been enabled, it is rare for it to be disabled.
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment, Clone, Debug)]
 #[cynic(schema = "rpc", graphql_type = "ProtocolConfigFeatureFlag")]
 pub struct ProtocolConfigFeatureFlag {
     pub key: String,
@@ -59,7 +59,7 @@ pub struct ProtocolConfigFeatureFlag {
 }
 
 /// A key-value protocol configuration attribute.
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment, Clone, Debug)]
 #[cynic(schema = "rpc", graphql_type = "ProtocolConfigAttr")]
 pub struct ProtocolConfigAttr {
     pub key: String,

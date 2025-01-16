@@ -1,6 +1,7 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 //
+use super::PageInfo;
 use crate::query_types::schema;
 use crate::query_types::Address;
 use crate::query_types::BigInt;
@@ -18,12 +19,25 @@ pub struct EpochQuery {
 }
 
 #[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "Query", variables = "EpochsArgs")]
+pub struct EpochsQuery {
+    #[arguments(first: $first, after: $after, last: $last, before: $before)]
+    pub epochs: EpochConnection,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
 #[cynic(schema = "rpc", graphql_type = "Query", variables = "EpochArgs")]
 pub struct EpochSummaryQuery {
     #[arguments(id: $id)]
     pub epoch: Option<EpochSummary>,
 }
 
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "EpochConnection")]
+pub struct EpochConnection {
+    pub nodes: Vec<Epoch>,
+    pub page_info: PageInfo,
+}
 // ===========================================================================
 // Epoch Summary Args
 // ===========================================================================
@@ -31,6 +45,14 @@ pub struct EpochSummaryQuery {
 #[derive(cynic::QueryVariables, Debug)]
 pub struct EpochArgs {
     pub id: Option<u64>,
+}
+
+#[derive(cynic::QueryVariables, Debug)]
+pub struct EpochsArgs<'a> {
+    pub first: Option<i32>,
+    pub after: Option<&'a str>,
+    pub last: Option<i32>,
+    pub before: Option<&'a str>,
 }
 
 /// A summary of the epoch.
@@ -51,7 +73,7 @@ pub struct EpochSummary {
 // Epoch Types
 // ===========================================================================
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment, Debug, Clone)]
 #[cynic(schema = "rpc", graphql_type = "Epoch")]
 pub struct Epoch {
     pub end_timestamp: Option<DateTime>,
@@ -73,7 +95,7 @@ pub struct Epoch {
     pub validator_set: Option<ValidatorSet>,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment, Debug, Clone)]
 #[cynic(schema = "rpc", graphql_type = "ValidatorSet")]
 pub struct ValidatorSet {
     pub inactive_pools_id: Option<Address>,
