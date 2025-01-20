@@ -9,11 +9,11 @@ check-features: ## Check feature flags for crates
 
 .PHONY: check-fmt
 check-fmt: ## Check code formatting
-	cargo fmt -- --config imports_granularity=Item --check
+	cargo fmt -- --config imports_granularity=Item --config format_code_in_doc_comments=true --check
 
 .PHONY: fmt
 fmt: ## Format code
-	cargo fmt -- --config imports_granularity=Item
+	cargo fmt -- --config imports_granularity=Item --config format_code_in_doc_comments=true
 
 .PHONY: clippy
 clippy: ## Run Clippy linter
