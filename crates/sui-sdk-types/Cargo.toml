@@ -57,7 +57,6 @@ test-strategy = { version = "0.4", optional = true }
 bcs = "0.1.6"
 serde_json = "1.0.128"
 num-bigint = "0.4.6"
-jsonschema = { version = "0.20", default-features = false }
 paste = "1.0.15"
 
 [target.wasm32-unknown-unknown.dev-dependencies]
