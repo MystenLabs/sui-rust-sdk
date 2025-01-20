@@ -22,7 +22,7 @@ clippy: ## Run Clippy linter
 .PHONY: test
 test: ## Run unit tests
 	cargo nextest run --all-features -p sui-sdk-types -p sui-crypto
-	cargo test --doc
+	cargo test --all-features --doc
 
 package_%.json: crates/sui-transaction-builder/tests/%/Move.toml crates/sui-transaction-builder/tests/%/sources/*.move ## Generate JSON files for tests
 	cd crates/sui-transaction-builder/tests/$(*F) && sui move build --ignore-chain --dump-bytecode-as-base64 > ../../$@
