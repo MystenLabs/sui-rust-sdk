@@ -742,12 +742,11 @@ impl Client {
     ///
     /// # Example
     /// ```rust,ignore
-    ///
     /// let client = sui_graphql_client::Client::new_devnet();
     /// let address = Address::from_str("0x5").unwrap();
     /// let df = client.dynamic_field_with_name(address, "u64", 2u64).await.unwrap();
     ///
-    /// # alternatively, pass in the bcs bytes
+    /// // alternatively, pass in the bcs bytes
     /// let bcs = base64ct::Base64::decode_vec("AgAAAAAAAAA=").unwrap();
     /// let df = client.dynamic_field(address, "u64", BcsName(bcs)).await.unwrap();
     /// ```
