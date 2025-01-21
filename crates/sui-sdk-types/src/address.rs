@@ -1,3 +1,58 @@
+/// Unique identifier for an Account on the Sui blockchain.
+///
+/// An `Address` is a 32-byte pseudonymous identifier used to uniquely identify an account and
+/// asset-ownership on the Sui blockchain. Often, human-readable addresses are encoded in
+/// hexadecimal with a `0x` prefix. For example, this is a valid Sui address:
+/// `0x02a212de6a9dfa3a69e22387acfbafbb1a9e591bd9d636e7895dcfc8de05f331`.
+///
+/// ```
+/// use sui_sdk_types::Address;
+///
+/// let hex = "0x02a212de6a9dfa3a69e22387acfbafbb1a9e591bd9d636e7895dcfc8de05f331";
+/// let address = Address::from_hex(hex).unwrap();
+/// println!("Address: {}", address);
+/// assert_eq!(hex, address.to_string());
+/// ```
+///
+/// # Deriving an Address
+///
+/// Addresses are cryptographically derived from a number of user account authenticators, the simplest
+/// of which is an [`Ed25519PublicKey`](crate::Ed25519PublicKey).
+///
+/// Deriving an address consists of the Blake2b256 hash of the sequence of bytes of its
+/// corresponding authenticator, prefixed with a domain-separator. For each authenticator, this
+/// domain-separator is the single byte-value of its [`SignatureScheme`](crate::SignatureScheme)
+/// flag. E.g. `hash(signature schema flag || authenticator bytes)`.
+///
+/// Each authenticator includes a convince method for deriving its `Address` as well as
+/// documentation for the specifics of how the derivation is done. See
+/// [`Ed25519PublicKey::derive_address`] for an example.
+///
+/// [`Ed25519PublicKey::derive_address`]: crate::Ed25519PublicKey::derive_address
+///
+/// ## Relationship to ObjectIds
+///
+/// [`ObjectId`]s and `Address`es share the same 32-byte addressable space but are derived
+/// leveraging different domain-separator values to ensure, cryptographically, that there won't be
+/// any overlap, e.g. there can't be a valid `Object` who's `ObjectId` is equal to that of the
+/// `Address` of a user account.
+///
+/// [`ObjectId`]: crate::ObjectId
+///
+/// # BCS
+///
+/// An `Address`'s BCS serialized form is simply the sequence of 32-bytes of the address.
+///
+/// ```
+/// use sui_sdk_types::Address;
+///
+/// let bytes = [
+///     0x02, 0xa2, 0x12, 0xde, 0x6a, 0x9d, 0xfa, 0x3a, 0x69, 0xe2, 0x23, 0x87, 0xac, 0xfb, 0xaf,
+///     0xbb, 0x1a, 0x9e, 0x59, 0x1b, 0xd9, 0xd6, 0x36, 0xe7, 0x89, 0x5d, 0xcf, 0xc8, 0xde, 0x05,
+///     0xf3, 0x31,
+/// ];
+/// let address: Address = bcs::from_bytes(&bytes).unwrap();
+/// ```
 #[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(
     feature = "serde",

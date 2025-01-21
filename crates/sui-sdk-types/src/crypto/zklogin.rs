@@ -63,8 +63,28 @@ pub struct CircomG1(pub [Bn254FieldElement; 3]);
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct CircomG2(pub [[Bn254FieldElement; 2]; 3]);
 
-/// A wrapper struct to retrofit in [enum PublicKey] for zkLogin.
-/// Useful to construct [struct MultiSigPublicKey].
+/// Public Key equivalent for Zklogin authenticators
+///
+/// A `ZkLoginPublicIdentifier` is the equivalent of a public key for other account authenticators,
+/// and contains the information required to derive the onchain account [`Address`] for a Zklogin
+/// authenticator.
+///
+/// ## Note
+///
+/// Due to a historical bug that was introduced in the Sui Typescript SDK when the zklogin
+/// authenticator was first introduced, there are now possibly two "valid" addresses for each
+/// zklogin authenticator depending on the bit-pattern of the `address_seed` value.
+///
+/// The original bug incorrectly derived a zklogin's address by stripping any leading
+/// zero-bytes that could have been present in the 32-byte length `address_seed` value prior to
+/// hashing, leading to a different derived address. This incorrectly derived address was
+/// presented to users of various wallets, leading them to sending funds to these addresses
+/// that they couldn't access. Instead of letting these users lose any assets that were sent to
+/// these addrsses, the Sui network decided to change the protocol to allow for a zklogin
+/// authenticator who's `address_seed` value had leading zero-bytes be authorized to sign for
+/// both the addresses derived from both the unpadded and padded `address_seed` value.
+///
+/// [`Address`]: crate::Address
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct ZkLoginPublicIdentifier {
