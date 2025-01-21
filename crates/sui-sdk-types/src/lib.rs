@@ -1,8 +1,57 @@
 #![cfg_attr(doc_cfg, feature(doc_cfg))]
 
-#[cfg(feature = "hash")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "hash")))]
-pub mod hash;
+//! Core type definitions for the [Sui] blockchain.
+//!
+//! [Sui] is a next-generation smart contract platform with high throughput, low latency, and an
+//! asset-oriented programming model powered by the Move programming language. This crate provides
+//! type definitions for working with the data that makes up the [Sui] blockchain.
+//!
+//! [Sui]: https://sui.io
+//!
+//! # BCS
+//!
+//! [BCS] is the serialization format used to represent the state of the blockchain and is used
+//! extensively throughout the Sui ecosystem. In particular the BCS format is leveraged because it
+//! _"guarantees canonical serialization, meaning that for any given data type, there is a
+//! one-to-one correspondence between in-memory values and valid byte representations."_ One
+//! benefit of this property of having a canonical serialized representation is to allow different
+//! entities in the ecosystem to all agree on how a particular type should be interpreted and more
+//! importantly define a deterministic representation for hashing and signing.
+//!
+//! This library strives to guarantee that the types defined are fully BCS-compatible with the data
+//! that the network produces. The one caveat to this would be that as the Sui protocol evolves,
+//! new type variants are added and older versions of this library may not support those newly
+//! added variants. The expectation is that the most recent release of this library will support
+//! new variants and types as they are released to Sui's `testnet` network.
+//!
+//! See the documentation for the various types defined by this crate for an example of their BCS
+//! serialized representation. In addition to the format itself, some types have an extra layer of
+//! verification and may impose additional restrictions on valid byte representations above and
+//! beyond those already provided by BCS. In these instances the documentation for those types will
+//! clearly specify these additional restrictions.
+//!
+//! [BCS]: https://docs.rs/bcs
+//!
+//! # Feature flags
+//!
+//! This library uses a set of [feature flags] to reduce the number of dependencies and amount of
+//! compiled code. By default, no features are enabled which allows one to enable a subset
+//! specifically for their use case. Below is a list of the available feature flags.
+//!
+//! - `serde`: Enables support for serializing and deserializing types to/from BCS utilizing
+//!            [serde] library.
+//! - `rand`: Enables support for generating random instances of a number of types via the [rand]
+//!           library.
+//! - `hash`: Enables support for hashing, which is required for deriving addresses and calculating
+//!           digests for various types.
+//! - `proptest`: Enables support for the [proptest] library by providing implementations of
+//!               [proptest::arbitrary::Arbitrary] for many types.
+//!
+//! [feature flags]: https://doc.rust-lang.org/cargo/reference/manifest.html#the-features-section
+//! [serde]: https://docs.rs/serde
+//! [rand]: https://docs.rs/rand
+//! [proptest]: https://docs.rs/proptest
+//! [proptest::arbitrary::Arbitrary]: https://docs.rs/proptest/latest/proptest/arbitrary/trait.Arbitrary.html
 
 mod address;
 mod checkpoint;
@@ -18,6 +67,10 @@ mod object_id;
 mod transaction;
 mod type_tag;
 mod u256;
+
+#[cfg(feature = "hash")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "hash")))]
+pub mod hash;
 
 pub use address::Address;
 pub use address::AddressParseError;
