@@ -553,7 +553,7 @@ mod tests {
     /// Generate a random private key and its corresponding address
     fn helper_address_pk() -> (Address, Ed25519PrivateKey) {
         let pk = Ed25519PrivateKey::generate(rand::thread_rng());
-        let address = pk.public_key().to_address();
+        let address = pk.public_key().derive_address();
         (address, pk)
     }
 

@@ -2001,7 +2001,7 @@ mod tests {
             _ => return,
         };
         let key = Ed25519PublicKey::generate(rand::thread_rng());
-        let address = key.to_address();
+        let address = key.derive_address();
         faucet.request_and_wait(address).await.unwrap();
 
         const MAX_RETRIES: u32 = 10;
