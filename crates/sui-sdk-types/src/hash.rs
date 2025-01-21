@@ -112,6 +112,25 @@ impl crate::ZkLoginPublicIdentifier {
         let digest = hasher.finalize();
         Address::new(digest.into_inner())
     }
+
+    /// Provides an iterator over the addresses that correspond to this zklogin authenticator.
+    ///
+    /// In the majority of instances this will only yield a single address, except for the
+    /// instances where the `address_seed` value has a leading zero-byte, in such cases the
+    /// returned iterator will yield two addresses.
+    pub fn derive_address(&self) -> impl Iterator<Item = Address> {
+        let main_address = self.derive_address_padded();
+        let mut addresses = [Some(main_address), None];
+        // If address_seed starts with a zero byte then we know that this zklogin authenticator has
+        // two addresses
+        if self.address_seed().padded()[0] == 0 {
+            let secondary_address = self.derive_address_unpadded();
+
+            addresses[1] = Some(secondary_address);
+        }
+
+        addresses.into_iter().flatten()
+    }
 }
 
 impl crate::PasskeyPublicKey {
