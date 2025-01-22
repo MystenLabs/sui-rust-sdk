@@ -67,7 +67,7 @@ async fn main() -> Result<()> {
 ```
 
 ### Example for custom faucet service.
-Note that this [`FaucetClient`] is explicitly designed to work with two endpoints: `v1/gas`, and `v1/status`. When passing in the custom faucet URL, skip the final endpoint and only pass in the top-level url (e.g., `https://faucet.devnet.sui.io`).
+Note that this `FaucetClient` is explicitly designed to work with two endpoints: `v1/gas`, and `v1/status`. When passing in the custom faucet URL, skip the final endpoint and only pass in the top-level url (e.g., `https://faucet.devnet.sui.io`).
 ```rust, no_run
 use sui_graphql_client::faucet::FaucetClient;
 use sui_types::Address;
