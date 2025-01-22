@@ -27,7 +27,7 @@ use sui_types::Upgrade;
 use base64ct::Encoding;
 use serde::Serialize;
 
-/// A builder for creating transactions. Use [`resolve`] to finalize the transaction data.
+/// A builder for creating transactions. Use `resolve` to finalize the transaction data.
 #[derive(Clone, Default, Debug)]
 pub struct TransactionBuilder {
     /// The inputs to the transaction.
@@ -95,7 +95,7 @@ impl TransactionBuilder {
 
     /// Add one or more gas objects to use to pay for the transaction.
     ///
-    /// Most commonly the gas can be passed as a reference to an owned/immutable [`Object`],
+    /// Most commonly the gas can be passed as a reference to an owned/immutable `Object`,
     /// or can created using one of the of the constructors of the [`unresolved::Input`] enum,
     /// e.g., [`unresolved::Input::owned`].
     pub fn add_gas_objects<O, I>(&mut self, gas: I)
@@ -227,7 +227,7 @@ impl TransactionBuilder {
     ///
     ///  let mut tx = TransactionBuilder::new();
     ///  let package_id = "0x...".parse().unwrap();
-    ///  let upgrade_cap = tx.input(unresolved::Input::by_id("0x...".parse().unwrap());
+    ///  let upgrade_cap = tx.input(unresolved::Input::by_id("0x...".parse().unwrap()));
     ///  let upgrade_policy = tx.input(Serialized(&0u8));
     ///  // the digest of the new package that was compiled
     ///  let package_digest: &[u8] = &[
@@ -286,7 +286,7 @@ impl TransactionBuilder {
     }
 
     /// Assuming everything is resolved, convert this transaction into the
-    /// resolved form. Returns a [`Transaction`] if successful, or an [`Error`] if not.
+    /// resolved form. Returns a [`Transaction`] if successful, or an `Error` if not.
     pub fn finish(self) -> Result<Transaction, Error> {
         let Some(sender) = self.sender else {
             return Err(Error::MissingSender);
