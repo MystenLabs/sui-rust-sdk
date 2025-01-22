@@ -444,7 +444,7 @@ impl Client {
 
     /// Get the list of active validators for the provided epoch, including related metadata.
     /// If no epoch is provided, it will return the active validators for the current epoch.
-    pub async fn active_validators<'a>(
+    pub async fn active_validators(
         &self,
         epoch: Option<u64>,
         pagination_filter: PaginationFilter,
@@ -571,7 +571,7 @@ impl Client {
     ///
     /// If `coin_type` is not provided, it will default to `0x2::coin::Coin`, which will return all
     /// coins. For SUI coin, pass in the coin type: `0x2::coin::Coin<0x2::sui::SUI>`.
-    pub async fn coins<'a>(
+    pub async fn coins(
         &self,
         owner: Address,
         coin_type: Option<&str>,
@@ -675,7 +675,7 @@ impl Client {
     }
 
     /// Get a page of [`CheckpointSummary`] for the provided parameters.
-    pub async fn checkpoints<'a>(
+    pub async fn checkpoints(
         &self,
         pagination_filter: PaginationFilter,
     ) -> Result<Page<CheckpointSummary>> {
@@ -823,7 +823,7 @@ impl Client {
     /// dynamic fields on wrapped objects.
     ///
     /// This returns [`Page`] of [`DynamicFieldOutput`]s.
-    pub async fn dynamic_fields<'a>(
+    pub async fn dynamic_fields(
         &self,
         address: Address,
         pagination_filter: PaginationFilter,
@@ -1474,9 +1474,9 @@ impl Client {
     }
 
     /// Get a page of transactions based on the provided filters.
-    pub async fn transactions<'a>(
+    pub async fn transactions(
         &self,
-        filter: Option<TransactionsFilter<'a>>,
+        filter: Option<TransactionsFilter<'_>>,
         pagination_filter: PaginationFilter,
     ) -> Result<Page<SignedTransaction>> {
         let (after, before, first, last) = self.pagination_filter(pagination_filter).await;
@@ -1512,9 +1512,9 @@ impl Client {
     }
 
     /// Get a page of transactions' effects based on the provided filters.
-    pub async fn transactions_effects<'a>(
+    pub async fn transactions_effects(
         &self,
-        filter: Option<TransactionsFilter<'a>>,
+        filter: Option<TransactionsFilter<'_>>,
         pagination_filter: PaginationFilter,
     ) -> Result<Page<TransactionEffects>> {
         let (after, before, first, last) = self.pagination_filter(pagination_filter).await;
