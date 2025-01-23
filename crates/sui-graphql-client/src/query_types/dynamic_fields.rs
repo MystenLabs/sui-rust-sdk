@@ -103,11 +103,7 @@ pub struct DynamicFieldName {
 }
 
 #[derive(cynic::QueryFragment, Debug)]
-#[cynic(
-    schema = "rpc",
-    graphql_type = "Owner",
-    variables = "DynamicFieldArgs"
-)]
+#[cynic(schema = "rpc", graphql_type = "Owner", variables = "DynamicFieldArgs")]
 pub struct DynamicObjectField {
     #[arguments(name: $name)]
     pub dynamic_object_field: Option<DynamicField>,
