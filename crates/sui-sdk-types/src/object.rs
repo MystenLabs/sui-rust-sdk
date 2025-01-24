@@ -9,6 +9,7 @@ use super::TransactionDigest;
 
 pub type Version = u64;
 
+/// A reference to an object, which contains the object's id, version, and digest.
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "serde",
@@ -16,13 +17,17 @@ pub type Version = u64;
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct ObjectReference {
+    /// The object id of this object.
     object_id: ObjectId,
+    /// The version of this object.
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     version: Version,
+    /// The digest of this object.
     digest: ObjectDigest,
 }
 
 impl ObjectReference {
+    /// Creates a new object reference from the object's id, version, and digest.
     pub fn new(object_id: ObjectId, version: Version, digest: ObjectDigest) -> Self {
         Self {
             object_id,
@@ -31,18 +36,22 @@ impl ObjectReference {
         }
     }
 
+    /// Returns a reference to the object id that this ObjectReference is referring to.
     pub fn object_id(&self) -> &ObjectId {
         &self.object_id
     }
 
+    /// Returns the version of the object that this ObjectReference is referring to.
     pub fn version(&self) -> Version {
         self.version
     }
 
+    /// Returns the digest of the object that this ObjectReference is referring to.
     pub fn digest(&self) -> &ObjectDigest {
         &self.digest
     }
 
+    /// Returns a 3-tuple containing the object id, version, and digest.
     pub fn into_parts(self) -> (ObjectId, Version, ObjectDigest) {
         let Self {
             object_id,
@@ -54,6 +63,7 @@ impl ObjectReference {
     }
 }
 
+/// An enum representing the different types of owners for an object.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(
     feature = "serde",
