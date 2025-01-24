@@ -1,5 +1,14 @@
 use super::Address;
 
+/// An `ObjectId` is a 32-byte identifier used to uniquely identify an object on the Sui
+/// blockchain.
+///
+/// ## Relationship to Address
+///
+/// [`Address`]es and `ObjectId`s share the same 32-byte addressable space but are derived
+/// leveraging different domain-separator values to ensure, cryptographically, that there won't be
+/// any overlap, e.g. there can't be a valid `Object` whose `ObjectId` is equal to that of the
+/// `Address` of a user account.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(
     feature = "serde",
@@ -12,23 +21,27 @@ impl ObjectId {
     pub const LENGTH: usize = Address::LENGTH;
     pub const ZERO: Self = Self(Address::ZERO);
 
+    /// Generates a new ObjectId from the provided byte array.
     pub const fn new(bytes: [u8; Self::LENGTH]) -> Self {
         Self(Address::new(bytes))
     }
 
-    /// Return the underlying byte array of an ObjectId
+    /// Returns the underlying byte array of an ObjectId.
     pub const fn into_inner(self) -> [u8; Self::LENGTH] {
         self.0.into_inner()
     }
 
+    /// Returns a reference to the underlying byte array of an ObjectId.
     pub const fn inner(&self) -> &[u8; Self::LENGTH] {
         self.0.inner()
     }
 
+    /// Returns a slice of bytes of an ObjectId.
     pub const fn as_bytes(&self) -> &[u8] {
         self.0.as_bytes()
     }
 
+    /// Returns the underlying Address of an ObjectId.
     pub const fn as_address(&self) -> &Address {
         &self.0
     }

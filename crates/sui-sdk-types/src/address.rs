@@ -34,7 +34,7 @@
 ///
 /// [`ObjectId`]s and `Address`es share the same 32-byte addressable space but are derived
 /// leveraging different domain-separator values to ensure, cryptographically, that there won't be
-/// any overlap, e.g. there can't be a valid `Object` who's `ObjectId` is equal to that of the
+/// any overlap, e.g. there can't be a valid `Object` whose `ObjectId` is equal to that of the
 /// `Address` of a user account.
 ///
 /// [`ObjectId`]: crate::ObjectId
