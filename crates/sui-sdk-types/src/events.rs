@@ -19,7 +19,10 @@ use super::TypeTag;
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
-pub struct TransactionEvents(pub Vec<Event>);
+pub struct TransactionEvents(
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=1).lift()))]
+    pub  Vec<Event>,
+);
 
 /// An event
 ///

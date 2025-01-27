@@ -21,7 +21,7 @@ clippy: ## Run Clippy linter
 
 .PHONY: test
 test: ## Run unit tests
-	cargo nextest run --all-features -p sui-sdk-types -p sui-crypto
+	cargo nextest run --all-features -E '!package(sui-graphql-client) and !package(sui-graphql-client-build) and !package(sui-transaction-builder)'
 	cargo test --all-features --doc
 
 package_%.json: crates/sui-transaction-builder/tests/%/Move.toml crates/sui-transaction-builder/tests/%/sources/*.move ## Generate JSON files for tests

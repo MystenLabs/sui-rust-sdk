@@ -25,11 +25,43 @@ jobs:
           rustc --version
           cargo --version
 
-      - uses: taiki-e/install-action@cargo-hack
       - uses: taiki-e/install-action@cargo-nextest
+
+      - name: Run tests
+        run: make test
+
+      - run: make is-dirty
+
+  check-features:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: rust version
+        run: |
+          rustc --version
+          cargo --version
+
+      - uses: taiki-e/install-action@cargo-hack
 
       - name: feature compatibility
         run: make check-features
+
+      - run: make is-dirty
+
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: rust version
+        run: |
+          rustc --version
+          cargo --version
 
       - name: rustfmt
         run: make check-fmt
@@ -37,8 +69,21 @@ jobs:
       - name: clippy
         run: make clippy
 
-      - name: Run tests
-        run: make test
+      - run: make -C crates/sui-rpc proto
+
+      - run: make is-dirty
+
+  docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: rust version
+        run: |
+          rustc --version
+          cargo --version
 
       - name: rustdoc
         run: make doc

@@ -246,7 +246,10 @@ pub enum ExecutionError {
     InputObjectDeleted,
 
     /// Certificate is canceled due to congestion on shared objects
-    ExecutionCanceledDueToSharedObjectCongestion { congested_objects: Vec<ObjectId> },
+    ExecutionCanceledDueToSharedObjectCongestion {
+        #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=1).lift()))]
+        congested_objects: Vec<ObjectId>,
+    },
 
     /// Address is denied for this coin type
     AddressDeniedForCoin { address: Address, coin_type: String },

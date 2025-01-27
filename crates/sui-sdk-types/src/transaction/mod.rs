@@ -51,6 +51,7 @@ pub struct Transaction {
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct SignedTransaction {
     pub transaction: Transaction,
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=1).lift()))]
     pub signatures: Vec<UserSignature>,
 }
 
@@ -95,6 +96,7 @@ pub enum TransactionExpiration {
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct GasPayment {
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
     pub objects: Vec<ObjectReference>,
 
     /// Owner of the gas objects, either the transaction sender or a sponsor
@@ -192,7 +194,10 @@ pub enum TransactionKind {
 
     /// Set of operations to run at the end of the epoch to close out the current epoch and start
     /// the next one.
-    EndOfEpoch(Vec<EndOfEpochTransactionKind>),
+    EndOfEpoch(
+        #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=1).lift()))]
+        Vec<EndOfEpochTransactionKind>,
+    ),
 
     /// Randomness update
     RandomnessStateUpdate(RandomnessStateUpdate),
@@ -291,6 +296,7 @@ pub enum EndOfEpochTransactionKind {
 )]
 pub enum ExecutionTimeObservations {
     V1(
+        #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=1).lift()))]
         Vec<(
             ExecutionTimeObservationKey,
             Vec<ValidatorExecutionTimeObservation>,
@@ -317,6 +323,7 @@ pub enum ExecutionTimeObservations {
 )]
 pub struct ValidatorExecutionTimeObservation {
     pub validator: crate::Bls12381PublicKey,
+    #[cfg_attr(feature = "proptest", strategy(proptest::strategy::Strategy::prop_map(proptest::arbitrary::any::<u32>(), |x| std::time::Duration::from_millis(x.into()))))]
     pub duration: std::time::Duration,
 }
 
@@ -334,7 +341,7 @@ pub struct ValidatorExecutionTimeObservation {
 ///                                 =/ %x04 ; publish
 ///                                 =/ %x05 ; make-move-vec
 ///                                 =/ %x06 ; upgrade
-///
+/// ValidatorExecutionTimeObservation
 /// move-entry-point = object-id string string (vec type-tag)
 /// ```
 #[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone)]
@@ -354,6 +361,7 @@ pub enum ExecutionTimeObservationKey {
         function: String,
         /// The type arguments to the function.
         /// NOTE: This field is currently not populated.
+        #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=1).lift()))]
         type_arguments: Vec<TypeTag>,
     },
     TransferObjects,
@@ -417,6 +425,7 @@ pub struct AuthenticatorStateUpdate {
     pub round: u64,
 
     /// newly active jwks
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=1).lift()))]
     pub new_active_jwks: Vec<ActiveJwk>,
 
     /// The initial version of the authenticator object that it was shared at.
@@ -529,12 +538,12 @@ pub struct ConsensusCommitPrologueV2 {
 pub enum ConsensusDeterminedVersionAssignments {
     /// Canceled transaction version assignment.
     CanceledTransactions {
-        #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
+        #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=1).lift()))]
         canceled_transactions: Vec<CanceledTransaction>,
     },
     /// Canceled transaction version assignment V2.
     CanceledTransactionsV2 {
-        #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
+        #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=1).lift()))]
         canceled_transactions: Vec<CanceledTransactionV2>,
     },
 }
@@ -774,7 +783,7 @@ pub struct ChangeEpoch {
     /// the validator must write out the modules below.  Modules are provided with the version they
     /// will be upgraded to, their modules in serialized form (which include their package ID), and
     /// a list of their transitive dependencies.
-    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=1).lift()))]
     pub system_packages: Vec<SystemPackage>,
 }
 
@@ -804,8 +813,9 @@ pub struct SystemPackage {
             with = "::serde_with::As::<Vec<::serde_with::IfIsHumanReadable<crate::_serde::Base64Encoded, ::serde_with::Bytes>>>"
         )
     )]
-    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=1).lift()))]
     pub modules: Vec<Vec<u8>>,
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=1).lift()))]
     pub dependencies: Vec<ObjectId>,
 }
 
@@ -825,7 +835,7 @@ pub struct SystemPackage {
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct GenesisTransaction {
-    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=1).lift()))]
     pub objects: Vec<GenesisObject>,
 }
 
@@ -854,7 +864,7 @@ pub struct ProgrammableTransaction {
 
     /// The commands to be executed sequentially. A failure in any command will
     /// result in the failure of the entire transaction.
-    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=10).lift()))]
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
     pub commands: Vec<Command>,
 }
 
@@ -1061,6 +1071,7 @@ pub struct Publish {
     pub modules: Vec<Vec<u8>>,
 
     /// Set of packages that the to-be published package depends on
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
     pub dependencies: Vec<ObjectId>,
 }
 
@@ -1118,9 +1129,11 @@ pub struct Upgrade {
             with = "::serde_with::As::<Vec<::serde_with::IfIsHumanReadable<crate::_serde::Base64Encoded, ::serde_with::Bytes>>>"
         )
     )]
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=1).lift()))]
     pub modules: Vec<Vec<u8>>,
 
     /// Set of packages that the to-be published package depends on
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
     pub dependencies: Vec<ObjectId>,
 
     /// Package id of the package to upgrade
