@@ -8,6 +8,26 @@ use super::Secp256r1PublicKey;
 use super::Secp256r1Signature;
 use super::ZkLoginAuthenticator;
 
+/// A basic signature
+///
+/// This enumeration defines the set of simple or basic signature schemes supported by Sui. Most
+/// signature schemes supported by Sui end up comprising of a at least one simple signature scheme.
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// simple-signature-bcs = bytes ; where the contents of the bytes are defined by <simple-signature>
+/// simple-signature = (ed25519-flag ed25519-signature ed25519-public-key) /
+///                    (secp256k1-flag secp256k1-signature secp256k1-public-key) /
+///                    (secp256r1-flag secp256r1-signature secp256r1-public-key)
+/// ```
+///
+/// Note: Due to historical reasons, signatures are serialized slightly different from the majority
+/// of the types in Sui. In particular if a signature is ever embedded in another structure it
+/// generally is serialized as `bytes` meaning it has a length prefix that defines the length of
+/// the completely serialized signature.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum SimpleSignature {
@@ -26,6 +46,7 @@ pub enum SimpleSignature {
 }
 
 impl SimpleSignature {
+    /// Return the flag for this signature scheme
     pub fn scheme(&self) -> SignatureScheme {
         match self {
             SimpleSignature::Ed25519 { .. } => SignatureScheme::Ed25519,
@@ -291,6 +312,23 @@ impl<'de> serde::Deserialize<'de> for SimpleSignature {
     }
 }
 
+/// Flag use to disambiguate the signature schemes supported by Sui.
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// signature-scheme = ed25519-flag / secp256k1-flag / secp256r1-flag /
+///                    multisig-flag / bls-flag / zklogin-flag / passkey-flag
+/// ed25519-flag     = %x00
+/// secp256k1-flag   = %x01
+/// secp256r1-flag   = %x02
+/// multisig-flag    = %x03
+/// bls-flag         = %x04
+/// zklogin-flag     = %x05
+/// passkey-flag     = %x06
+/// ```
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 #[repr(u8)]
@@ -305,6 +343,7 @@ pub enum SignatureScheme {
 }
 
 impl SignatureScheme {
+    /// Return the name of this signature scheme
     pub fn name(self) -> &'static str {
         match self {
             SignatureScheme::Ed25519 => "ed25519",
@@ -317,6 +356,7 @@ impl SignatureScheme {
         }
     }
 
+    /// Try constructing from a byte flag
     pub fn from_byte(flag: u8) -> Result<Self, InvalidSignatureScheme> {
         match flag {
             0x00 => Ok(Self::Ed25519),
@@ -330,36 +370,42 @@ impl SignatureScheme {
         }
     }
 
+    /// Convert to a byte flag
     pub fn to_u8(self) -> u8 {
         self as u8
     }
 }
 
 impl Ed25519PublicKey {
+    /// Return the flag for this signature scheme
     pub fn scheme(&self) -> SignatureScheme {
         SignatureScheme::Ed25519
     }
 }
 
 impl Secp256k1PublicKey {
+    /// Return the flag for this signature scheme
     pub fn scheme(&self) -> SignatureScheme {
         SignatureScheme::Secp256k1
     }
 }
 
 impl Secp256r1PublicKey {
+    /// Return the flag for this signature scheme
     pub fn scheme(&self) -> SignatureScheme {
         SignatureScheme::Secp256r1
     }
 }
 
 impl super::ZkLoginPublicIdentifier {
+    /// Return the flag for this signature scheme
     pub fn scheme(&self) -> SignatureScheme {
         SignatureScheme::ZkLogin
     }
 }
 
 impl super::PasskeyPublicKey {
+    /// Return the flag for this signature scheme
     pub fn scheme(&self) -> SignatureScheme {
         SignatureScheme::Passkey
     }
@@ -374,6 +420,24 @@ impl std::fmt::Display for InvalidSignatureScheme {
     }
 }
 
+/// A signature from a user
+///
+/// A `UserSignature` is most commonly used to authorize the execution and inclusion of a
+/// transaction to the blockchain.
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// user-signature-bcs = bytes ; where the contents of the bytes are defined by <user-signature>
+/// user-signature = simple-signature / multisig / multisig-legacy / zklogin / passkey
+/// ```
+///
+/// Note: Due to historical reasons, signatures are serialized slightly different from the majority
+/// of the types in Sui. In particular if a signature is ever embedded in another structure it
+/// generally is serialized as `bytes` meaning it has a length prefix that defines the length of
+/// the completely serialized signature.
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum UserSignature {
@@ -384,6 +448,7 @@ pub enum UserSignature {
 }
 
 impl UserSignature {
+    /// Return the flag for this signature scheme
     pub fn scheme(&self) -> SignatureScheme {
         match self {
             UserSignature::Simple(simple) => simple.scheme(),

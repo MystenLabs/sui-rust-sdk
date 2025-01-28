@@ -6,6 +6,37 @@ mod serialization;
 
 use super::Address;
 
+/// Type of a move value
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// type-tag = type-tag-u8 \
+///            type-tag-u16 \
+///            type-tag-u32 \
+///            type-tag-u64 \
+///            type-tag-u128 \
+///            type-tag-u256 \
+///            type-tag-bool \
+///            type-tag-address \
+///            type-tag-signer \
+///            type-tag-vector \
+///            type-tag-struct
+///
+/// type-tag-u8 = %x01
+/// type-tag-u16 = %x08
+/// type-tag-u32 = %x09
+/// type-tag-u64 = %x02
+/// type-tag-u128 = %x03
+/// type-tag-u256 = %x0a
+/// type-tag-bool = %x00
+/// type-tag-address = %x04
+/// type-tag-signer = %x05
+/// type-tag-vector = %x06 type-tag
+/// type-tag-struct = %x07 struct-tag
+/// ```
 #[derive(Eq, PartialEq, PartialOrd, Ord, Debug, Clone, Hash)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum TypeTag {
@@ -70,6 +101,19 @@ impl std::fmt::Display for TypeParseError {
 
 impl std::error::Error for TypeParseError {}
 
+/// A move identifier
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// identifier = %x01-80    ; length of the identifier
+///              (ALPHA *127(ALPHA / DIGIT / UNDERSCORE)) /
+///              (UNDERSCORE 1*127(ALPHA / DIGIT / UNDERSCORE))
+///
+/// UNDERSCORE = %x95
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct Identifier(
@@ -123,6 +167,18 @@ impl PartialEq<str> for Identifier {
     }
 }
 
+/// Type information for a move struct
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// struct-tag = address            ; address of the package
+///              identifier         ; name of the module
+///              identifier         ; name of the type
+///              (vector type-tag)  ; type parameters
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct StructTag {

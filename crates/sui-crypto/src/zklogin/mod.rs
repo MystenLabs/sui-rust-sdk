@@ -3,12 +3,12 @@ use std::collections::HashMap;
 use crate::SignatureError;
 use poseidon::POSEIDON;
 use signature::Verifier;
-use sui_sdk_types::Claim;
 use sui_sdk_types::Jwk;
 use sui_sdk_types::JwkId;
 use sui_sdk_types::UserSignature;
 use sui_sdk_types::ZkLoginAuthenticator;
 use sui_sdk_types::ZkLoginInputs;
+use sui_sdk_types::ZkloginClaim;
 
 mod poseidon;
 mod verify;
@@ -138,7 +138,10 @@ impl JwtHeader {
 }
 
 /// Parse the extended claim json value to its claim value, using the expected claim key.
-fn verify_extended_claim(claim: &Claim, expected_key: &str) -> Result<String, SignatureError> {
+fn verify_extended_claim(
+    claim: &ZkloginClaim,
+    expected_key: &str,
+) -> Result<String, SignatureError> {
     /// Map a base64 string to a bit array by taking each char's index and convert it to binary form with one bit per u8
     /// element in the output. Returns SignatureError if one of the characters is not in the base64 charset.
     fn base64_to_bitarray(input: &str) -> Result<Vec<u8>, SignatureError> {

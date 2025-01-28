@@ -38,13 +38,13 @@ pub use validator::ValidatorSignature;
 pub use zklogin::Bn254FieldElement;
 pub use zklogin::CircomG1;
 pub use zklogin::CircomG2;
-pub use zklogin::Claim;
 pub use zklogin::Jwk;
 pub use zklogin::JwkId;
 pub use zklogin::ZkLoginAuthenticator;
 pub use zklogin::ZkLoginInputs;
 pub use zklogin::ZkLoginProof;
 pub use zklogin::ZkLoginPublicIdentifier;
+pub use zklogin::ZkloginClaim;
 
 //
 // Implement various base64 fixed-size array helpers

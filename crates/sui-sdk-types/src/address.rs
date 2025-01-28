@@ -41,17 +41,10 @@
 ///
 /// # BCS
 ///
-/// An `Address`'s BCS serialized form is simply the sequence of 32-bytes of the address.
+/// An `Address`'s BCS serialized form is defined by the following:
 ///
-/// ```
-/// use sui_sdk_types::Address;
-///
-/// let bytes = [
-///     0x02, 0xa2, 0x12, 0xde, 0x6a, 0x9d, 0xfa, 0x3a, 0x69, 0xe2, 0x23, 0x87, 0xac, 0xfb, 0xaf,
-///     0xbb, 0x1a, 0x9e, 0x59, 0x1b, 0xd9, 0xd6, 0x36, 0xe7, 0x89, 0x5d, 0xcf, 0xc8, 0xde, 0x05,
-///     0xf3, 0x31,
-/// ];
-/// let address: Address = bcs::from_bytes(&bytes).unwrap();
+/// ```text
+/// address = 32OCTET
 /// ```
 #[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(
