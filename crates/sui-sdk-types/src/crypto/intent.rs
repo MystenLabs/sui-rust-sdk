@@ -8,6 +8,14 @@
 ///
 /// The serialization of an Intent is a 3-byte array where each field is represented by a byte and
 /// it is prepended onto a message before it is signed in Sui.
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// intent = intent-scope intent-version intent-app-id
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Intent {
     pub scope: IntentScope,
@@ -41,6 +49,15 @@ impl Intent {
     }
 }
 
+/// Byte signifying the scope of an [`Intent`]
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// intent-scope = u8
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u8)]
 #[non_exhaustive]
@@ -56,6 +73,15 @@ pub enum IntentScope {
     ConsensusBlock = 8,    // Used for consensus authority signature on block's digest
 }
 
+/// Byte signifying the version of an [`Intent`]
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// intent-version = u8
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u8)]
 #[non_exhaustive]
@@ -63,6 +89,15 @@ pub enum IntentVersion {
     V0 = 0,
 }
 
+/// Byte signifying the application id of an [`Intent`]
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// intent-app-id = u8
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u8)]
 #[non_exhaustive]

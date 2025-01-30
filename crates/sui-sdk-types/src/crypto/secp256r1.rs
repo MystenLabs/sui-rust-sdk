@@ -1,23 +1,14 @@
 //! Implementation of secp256r1 public-key cryptogrophy.
 
-#[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde_derive::Serialize, serde_derive::Deserialize)
-)]
-pub struct Secp256r1PrivateKey(
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "::serde_with::As::<::serde_with::IfIsHumanReadable<super::Base64Array32>>")
-    )]
-    [u8; Self::LENGTH],
-);
-
-impl Secp256r1PrivateKey {
-    /// The length of an secp256r1 private key in bytes.
-    pub const LENGTH: usize = 32;
-}
-
+/// A secp256r1 public key.
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// secp256r1-public-key = 33OCTECT
+/// ```
 #[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(
     feature = "serde",
@@ -117,6 +108,15 @@ impl std::fmt::Debug for Secp256r1PublicKey {
     }
 }
 
+/// A secp256r1 signature.
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// secp256r1-signature = 64OCTECT
+/// ```
 #[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(
     feature = "serde",

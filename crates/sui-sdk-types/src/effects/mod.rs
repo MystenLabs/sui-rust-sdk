@@ -14,7 +14,16 @@ pub use v2::UnchangedSharedObject;
 
 use crate::execution_status::ExecutionStatus;
 
-/// The response from processing a transaction or a certified transaction
+/// The output or effects of executing a transaction
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// transaction-effects =  %x00 effects-v1
+///                     =/ %x01 effects-v2
+/// ```
 #[derive(Eq, PartialEq, Clone, Debug)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum TransactionEffects {

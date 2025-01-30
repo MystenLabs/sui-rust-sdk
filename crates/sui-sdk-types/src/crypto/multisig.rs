@@ -16,6 +16,34 @@ const MAX_COMMITTEE_SIZE: usize = 10;
 // TODO validate sigs
 // const MAX_BITMAP_VALUE: BitmapUnit = 0b1111111111;
 
+/// Enum of valid public keys for multisig committee members
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// multisig-member-public-key = ed25519-multisig-member-public-key /
+///                              secp256k1-multisig-member-public-key /
+///                              secp256r1-multisig-member-public-key /
+///                              zklogin-multisig-member-public-key
+///
+/// ed25519-multisig-member-public-key   = %x00 ed25519-public-key
+/// secp256k1-multisig-member-public-key = %x01 secp256k1-public-key
+/// secp256r1-multisig-member-public-key = %x02 secp256r1-public-key
+/// zklogin-multisig-member-public-key   = %x03 zklogin-public-identifier
+/// ```
+///
+/// There is also a legacy encoding for this type defined as:
+///
+/// ```text
+/// legacy-multisig-member-public-key = string ; which is valid base64 encoded
+///                                            ; and the decoded bytes are defined
+///                                            ; by legacy-public-key
+/// legacy-public-key = (ed25519-flag ed25519-public-key) /
+///                     (secp256k1-flag secp256k1-public-key) /
+///                     (secp256r1-flag secp256r1-public-key)
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum MultisigMemberPublicKey {
@@ -25,6 +53,23 @@ pub enum MultisigMemberPublicKey {
     ZkLogin(ZkLoginPublicIdentifier),
 }
 
+/// A member in a multisig committee
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// multisig-member = multisig-member-public-key
+///                   u8    ; weight
+/// ```
+///
+/// There is also a legacy encoding for this type defined as:
+///
+/// ```text
+/// legacy-multisig-member = legacy-multisig-member-public-key
+///                          u8     ; weight
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "serde",
@@ -37,19 +82,43 @@ pub struct MultisigMember {
 }
 
 impl MultisigMember {
+    /// Construct a new member from a `MultisigMemberPublicKey` and a `weight`.
     pub fn new(public_key: MultisigMemberPublicKey, weight: WeightUnit) -> Self {
         Self { public_key, weight }
     }
 
+    /// This member's public key.
     pub fn public_key(&self) -> &MultisigMemberPublicKey {
         &self.public_key
     }
 
+    /// Weight of this member's signature.
     pub fn weight(&self) -> WeightUnit {
         self.weight
     }
 }
 
+/// A multisig committee
+///
+/// A `MultisigCommittee` is a set of members who collectively control a single `Address` on the
+/// Sui blockchain. The number of required signautres to authorize the execution of a transaction
+/// is determined by `(signature_0_weight + signature_1_weight ..) >= threshold`.
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// multisig-committee = (vector multisig-member)
+///                      u16    ; threshold
+/// ```
+///
+/// There is also a legacy encoding for this type defined as:
+///
+/// ```text
+/// legacy-multisig-committee = (vector legacy-multisig-member)
+///                             u16     ; threshold
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(
     feature = "serde",
@@ -60,23 +129,33 @@ pub struct MultisigCommittee {
     /// A list of committee members and their corresponding weight.
     #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=10).lift()))]
     members: Vec<MultisigMember>,
-    /// If the total weight of the public keys corresponding to verified signatures is larger than threshold, the Multisig is verified.
+
+    /// If the total weight of the public keys corresponding to verified signatures is larger than
+    /// threshold, the Multisig is verified.
     threshold: ThresholdUnit,
 }
 
 impl MultisigCommittee {
+    /// Construct a new committee from a list of `MultisigMember`s and a `threshold`.
+    ///
+    /// Note that the order of the members is significant towards deriving the `Address` governed
+    /// by this committee.
     pub fn new(members: Vec<MultisigMember>, threshold: ThresholdUnit) -> Self {
         Self { members, threshold }
     }
 
+    /// The members of the committee
     pub fn members(&self) -> &[MultisigMember] {
         &self.members
     }
 
+    /// The total signature weight required to authorize a transaction for the address
+    /// corresponding to this `MultisigCommittee`.
     pub fn threshold(&self) -> ThresholdUnit {
         self.threshold
     }
 
+    /// Return the flag for this signature scheme
     pub fn scheme(&self) -> SignatureScheme {
         SignatureScheme::Multisig
     }
@@ -110,7 +189,31 @@ impl MultisigCommittee {
     }
 }
 
-/// The struct that contains signatures and public keys necessary for authenticating a Multisig.
+/// Aggregated signature from members of a multisig committee.
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// multisig-aggregated-signature = (vector multisig-member-signature)
+///                                 u16     ; bitmap
+///                                 multisig-committee
+/// ```
+///
+/// There is also a legacy encoding for this type defined as:
+///
+/// ```text
+/// legacy-multisig-aggregated-signature = (vector multisig-member-signature)
+///                                        roaring-bitmap   ; bitmap
+///                                        legacy-multisig-committee
+/// roaring-bitmap = bytes  ; where the contents of the bytes are valid
+///                         ; according to the serialized spec for
+///                         ; roaring bitmaps
+/// ```
+///
+/// See [here](https://github.com/RoaringBitmap/RoaringFormatSpec) for the specification for the
+/// serialized format of RoaringBitmaps.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct MultisigAggregatedSignature {
@@ -119,17 +222,25 @@ pub struct MultisigAggregatedSignature {
     /// The signatures must be in the same order as they are listed in the committee.
     #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=10).lift()))]
     signatures: Vec<MultisigMemberSignature>,
-    /// A bitmap that indicates the position of which public key the signature should be authenticated with.
+    /// A bitmap that indicates the position of which public key the signature should be
+    /// authenticated with.
     bitmap: BitmapUnit,
     /// Legacy encoding for the bitmap.
     //TODO implement a strategy for legacy bitmap
     #[cfg_attr(feature = "proptest", strategy(proptest::strategy::Just(None)))]
     legacy_bitmap: Option<roaring::RoaringBitmap>,
-    /// The public key encoded with each public key with its signature scheme used along with the corresponding weight.
+    /// The public key encoded with each public key with its signature scheme used along with the
+    /// corresponding weight.
     committee: MultisigCommittee,
 }
 
 impl MultisigAggregatedSignature {
+    /// Construct a new aggregated multisig signature.
+    ///
+    /// Since the list of signatures doesn't contain sufficient information to identify which
+    /// committee member provided the signature, it is up to the caller to ensure that the provided
+    /// signature list is in the same order as it's corresponding member in the provided committee
+    /// and that it's position in the provided bitmap is set.
     pub fn new(
         committee: MultisigCommittee,
         signatures: Vec<MultisigMemberSignature>,
@@ -143,22 +254,27 @@ impl MultisigAggregatedSignature {
         }
     }
 
+    /// The list of signatures from committee members
     pub fn signatures(&self) -> &[MultisigMemberSignature] {
         &self.signatures
     }
 
+    /// The bitmap that indicates which committee members provided their signature.
     pub fn bitmap(&self) -> BitmapUnit {
         self.bitmap
     }
 
+    /// The legacy roaring bitmap, if this is a legacy formatted signature
     pub fn legacy_bitmap(&self) -> Option<&roaring::RoaringBitmap> {
         self.legacy_bitmap.as_ref()
     }
 
+    /// Configure with a legacy roaring bitmap
     pub fn with_legacy_bitmap(&mut self, legacy_bitmap: roaring::RoaringBitmap) {
         self.legacy_bitmap = Some(legacy_bitmap);
     }
 
+    /// The committee for this aggregated signature
     pub fn committee(&self) -> &MultisigCommittee {
         &self.committee
     }
@@ -188,6 +304,23 @@ fn roaring_bitmap_to_u16(roaring: &roaring::RoaringBitmap) -> Result<BitmapUnit,
     Ok(val)
 }
 
+/// A signature from a member of a multisig committee.
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// multisig-member-signature = ed25519-multisig-member-signature /
+///                             secp256k1-multisig-member-signature /
+///                             secp256r1-multisig-member-signature /
+///                             zklogin-multisig-member-signature
+///
+/// ed25519-multisig-member-signature   = %x00 ed25519-signature
+/// secp256k1-multisig-member-signature = %x01 secp256k1-signature
+/// secp256r1-multisig-member-signature = %x02 secp256r1-signature
+/// zklogin-multisig-member-signature   = %x03 zklogin-authenticator
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum MultisigMemberSignature {

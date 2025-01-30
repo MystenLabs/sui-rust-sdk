@@ -2,47 +2,80 @@ use super::Secp256r1PublicKey;
 use super::Secp256r1Signature;
 use super::SimpleSignature;
 
-/// An passkey authenticator with parsed fields. See field defition below. Can be initialized from [struct RawPasskeyAuthenticator].
+/// A passkey authenticator.
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// passkey-bcs = bytes               ; where the contents of the bytes are
+///                                   ; defined by <passkey>
+/// passkey     = passkey-flag
+///               bytes               ; passkey authenticator data
+///               client-data-json    ; valid json
+///               simple-signature    ; required to be a secp256r1 signature
+///
+/// client-data-json = string ; valid json
+/// ```
+///
+/// See [CollectedClientData](https://www.w3.org/TR/webauthn-2/#dictdef-collectedclientdata) for
+/// the required json-schema for the `client-data-json` rule. In addition, Sui currently requires
+/// that the `CollectedClientData.type` field is required to be `webauthn.get`.
+///
+/// Note: Due to historical reasons, signatures are serialized slightly different from the majority
+/// of the types in Sui. In particular if a signature is ever embedded in another structure it
+/// generally is serialized as `bytes` meaning it has a length prefix that defines the length of
+/// the completely serialized signature.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PasskeyAuthenticator {
-    /// Compact r1 public key upon passkey creation.
-    /// Initialized from `user_signature` in `RawPasskeyAuthenticator`.
+    /// The secp256r1 public key for this passkey.
     public_key: Secp256r1PublicKey,
 
-    /// Normalized r1 signature returned by passkey.
-    /// Initialized from `user_signature` in `RawPasskeyAuthenticator`.
+    /// The secp256r1 signature from the passkey.
     signature: Secp256r1Signature,
 
-    /// Parsed challenge bytes from `client_data_json.challenge`.
+    /// Parsed base64url decoded challenge bytes from `client_data_json.challenge`.
     challenge: Vec<u8>,
 
-    /// `authenticatorData` is a bytearray that encodes
-    /// [Authenticator Data](https://www.w3.org/TR/webauthn-2/#sctn-authenticator-data)
-    /// structure returned by the authenticator attestation
-    /// response as is.
+    /// Opaque authenticator data for this passkey signature.
+    ///
+    /// See [Authenticator Data](https://www.w3.org/TR/webauthn-2/#sctn-authenticator-data) for
+    /// more information on this field.
     authenticator_data: Vec<u8>,
 
-    /// `clientDataJSON` contains a JSON-compatible
-    /// UTF-8 encoded serialization of the client
-    /// data which is passed to the authenticator by
-    ///  the client during the authentication request
-    /// (see [CollectedClientData](https://www.w3.org/TR/webauthn-2/#dictdef-collectedclientdata))
+    /// Structured, unparsed, JSON for this passkey signature.
+    ///
+    /// See [CollectedClientData](https://www.w3.org/TR/webauthn-2/#dictdef-collectedclientdata)
+    /// for more information on this field.
     client_data_json: String,
 }
 
 impl PasskeyAuthenticator {
+    /// Opaque authenticator data for this passkey signature.
+    ///
+    /// See [Authenticator Data](https://www.w3.org/TR/webauthn-2/#sctn-authenticator-data) for
+    /// more information on this field.
     pub fn authenticator_data(&self) -> &[u8] {
         &self.authenticator_data
     }
 
+    /// Structured, unparsed, JSON for this passkey signature.
+    ///
+    /// See [CollectedClientData](https://www.w3.org/TR/webauthn-2/#dictdef-collectedclientdata)
+    /// for more information on this field.
     pub fn client_data_json(&self) -> &str {
         &self.client_data_json
     }
 
+    /// The parsed challenge message for this passkey signature.
+    ///
+    /// This is parsed by decoding the base64url data from the `client_data_json.challenge` field.
     pub fn challenge(&self) -> &[u8] {
         &self.challenge
     }
 
+    /// The passkey signature.
     pub fn signature(&self) -> SimpleSignature {
         SimpleSignature::Secp256r1 {
             signature: self.signature,
@@ -51,10 +84,22 @@ impl PasskeyAuthenticator {
     }
 }
 
+/// Public key of a `PasskeyAuthenticator`.
+///
+/// This is used to derive the onchain `Address` for a `PasskeyAuthenticator`.
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// passkey-public-key = passkey-flag secp256r1-public-key
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PasskeyPublicKey(Secp256r1PublicKey);
 
 impl PasskeyPublicKey {
+    /// The underlying `Secp256r1PublicKey` for this passkey.
     pub fn inner(&self) -> &Secp256r1PublicKey {
         &self.0
     }

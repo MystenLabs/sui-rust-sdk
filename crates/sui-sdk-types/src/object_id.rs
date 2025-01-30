@@ -9,6 +9,14 @@ use super::Address;
 /// leveraging different domain-separator values to ensure, cryptographically, that there won't be
 /// any overlap, e.g. there can't be a valid `Object` whose `ObjectId` is equal to that of the
 /// `Address` of a user account.
+///
+/// # BCS
+///
+/// An `ObjectId`'s BCS serialized form is defined by the following:
+///
+/// ```text
+/// object-id = 32*OCTET
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(
     feature = "serde",

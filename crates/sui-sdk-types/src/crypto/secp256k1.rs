@@ -1,5 +1,14 @@
 //! Implementation of secp256k1 public-key cryptogrophy.
 
+/// A secp256k1 public key.
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// secp256k1-public-key = 33OCTECT
+/// ```
 #[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(
     feature = "serde",
@@ -99,6 +108,15 @@ impl std::fmt::Debug for Secp256k1PublicKey {
     }
 }
 
+/// A secp256k1 signature.
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// secp256k1-signature = 64OCTECT
+/// ```
 #[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(
     feature = "serde",

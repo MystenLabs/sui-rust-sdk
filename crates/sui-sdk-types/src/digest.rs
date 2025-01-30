@@ -1,4 +1,16 @@
-/// A representation of a 32 byte digest.
+/// A 32-byte Blake2b256 hash output.
+///
+/// # BCS
+///
+/// A `Digest`'s BCS serialized form is defined by the following:
+///
+/// ```text
+/// digest = %x20 32OCTET
+/// ```
+///
+/// Due to historical reasons, even though a `Digest` has a fixed-length of 32, Sui's binary
+/// representation of a `Digest` is prefixed with its length meaning its serialized binary form (in
+/// bcs) is 33 bytes long vs a more compact 32 bytes.
 #[derive(Clone, Copy, Default, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(
     feature = "serde",
