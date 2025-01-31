@@ -1,5 +1,3 @@
-#![cfg_attr(doc_cfg, feature(doc_cfg))]
-
 //! Core type definitions for the [Sui] blockchain.
 //!
 //! [Sui] is a next-generation smart contract platform with high throughput, low latency, and an
@@ -92,6 +90,10 @@
 //!
 //! [BCS]: https://docs.rs/bcs
 //! [RFC-5234]: https://datatracker.ietf.org/doc/html/rfc5234
+
+#![cfg_attr(doc_cfg, feature(doc_cfg))]
+// TODO finish documenting all public items
+// #![warn(missing_docs)]
 
 mod address;
 mod checkpoint;
