@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["__typename","durationMs","maxValidatorCount","minValidatorCount","minValidatorJoiningStake","stakeSubsidyStartEpoch","validatorLowStakeGracePeriod","validatorLowStakeThreshold","validatorVeryLowStakeThreshold"]};

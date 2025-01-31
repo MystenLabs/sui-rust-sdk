@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["_received_transaction_blocks_arguments"],"struct":["__typename","bcs","digest","owner","previousTransactionBlock","receivedTransactionBlocks","status","storageRebate","version"]};
