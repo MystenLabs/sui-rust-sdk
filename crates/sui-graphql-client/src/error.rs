@@ -63,7 +63,7 @@ impl Error {
     // Private constructors
 
     /// Convert the given error into a generic error.
-    pub(crate) fn from_error<E: Into<BoxError>>(kind: Kind, error: E) -> Self {
+    pub fn from_error<E: Into<BoxError>>(kind: Kind, error: E) -> Self {
         Self {
             inner: Box::new(InnerError {
                 kind,
@@ -74,7 +74,7 @@ impl Error {
     }
 
     /// Special constructor for queries that expect to return data but it's none.
-    pub(crate) fn empty_response_error() -> Self {
+    pub fn empty_response_error() -> Self {
         Self {
             inner: Box::new(InnerError {
                 kind: Kind::Query,
@@ -85,7 +85,7 @@ impl Error {
     }
 
     /// Create a Query kind of error with the original graphql errors.
-    pub(crate) fn graphql_error(errors: Vec<GraphQlError>) -> Self {
+    pub fn graphql_error(errors: Vec<GraphQlError>) -> Self {
         Self {
             inner: Box::new(InnerError {
                 kind: Kind::Query,
