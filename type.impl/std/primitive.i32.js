@@ -1,0 +1,9 @@
+(function() {
+    var type_impls = Object.fromEntries([["sui_graphql_client",[["<details class=\"toggle implementors-toggle\" open><summary><section id=\"impl-Variable-for-i32\" class=\"impl\"><a class=\"src rightside\" href=\"src/sui_graphql_client/home/runner/work/sui-rust-sdk/sui-rust-sdk/target/debug/build/sui-graphql-client-a88f7908b1997e1f/out/cynic-schemas/rpc.rs.html#1\">Source</a><a href=\"#impl-Variable-for-i32\" class=\"anchor\">§</a><h3 class=\"code-header\">impl <a class=\"trait\" href=\"sui_graphql_client/query_types/schema/variable/trait.Variable.html\" title=\"trait sui_graphql_client::query_types::schema::variable::Variable\">Variable</a> for <a class=\"primitive\" href=\"https://doc.rust-lang.org/1.85.0/std/primitive.i32.html\">i32</a></h3></section></summary><div class=\"impl-items\"><section id=\"associatedconstant.TYPE\" class=\"associatedconstant trait-impl\"><a class=\"src rightside\" href=\"src/sui_graphql_client/home/runner/work/sui-rust-sdk/sui-rust-sdk/target/debug/build/sui-graphql-client-a88f7908b1997e1f/out/cynic-schemas/rpc.rs.html#1\">Source</a><a href=\"#associatedconstant.TYPE\" class=\"anchor\">§</a><h4 class=\"code-header\">const <a href=\"sui_graphql_client/query_types/schema/variable/trait.Variable.html#associatedconstant.TYPE\" class=\"constant\">TYPE</a>: VariableType</h4></section></div></details>","Variable","sui_graphql_client::query_types::schema::Int"]]]]);
+    if (window.register_type_impls) {
+        window.register_type_impls(type_impls);
+    } else {
+        window.pending_type_impls = type_impls;
+    }
+})()
+//{"start":55,"fragment_lengths":[1368]}
