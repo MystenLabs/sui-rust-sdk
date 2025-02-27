@@ -1,3 +1,5 @@
+use crate::Digest;
+
 use super::Address;
 use super::CheckpointTimestamp;
 use super::ConsensusCommitDigest;
@@ -161,6 +163,7 @@ pub struct RandomnessStateUpdate {
 ///                     =/ %x06 randomness-state-update
 ///                     =/ %x07 consensus-commit-prologue-v2
 ///                     =/ %x08 consensus-commit-prologue-v3
+///                     =/ %x09 consensus-commit-prologue-v4
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
@@ -198,6 +201,9 @@ pub enum TransactionKind {
 
     /// V3 consensus commit update
     ConsensusCommitPrologueV3(ConsensusCommitPrologueV3),
+
+    /// V4 consensus commit update
+    ConsensusCommitPrologueV4(ConsensusCommitPrologueV4),
 }
 
 /// Operation run at the end of an epoch
@@ -501,6 +507,55 @@ pub struct ConsensusCommitPrologueV3 {
 
     /// Stores consensus handler determined shared object version assignments.
     pub consensus_determined_version_assignments: ConsensusDeterminedVersionAssignments,
+}
+
+/// V4 of the consensus commit prologue system transaction
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// consensus-commit-prologue-v4 = u64 u64 (option u64) u64 digest
+///                                consensus-determined-version-assignments
+///                                digest
+/// ```
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+pub struct ConsensusCommitPrologueV4 {
+    /// Epoch of the commit prologue transaction
+    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    pub epoch: u64,
+
+    /// Consensus round of the commit
+    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    pub round: u64,
+
+    /// The sub DAG index of the consensus commit. This field will be populated if there
+    /// are multiple consensus commits per round.
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "crate::_serde::OptionReadableDisplay")
+    )]
+    pub sub_dag_index: Option<u64>,
+
+    /// Unix timestamp from consensus
+    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    pub commit_timestamp_ms: CheckpointTimestamp,
+
+    /// Digest of consensus output
+    pub consensus_commit_digest: ConsensusCommitDigest,
+
+    /// Stores consensus handler determined shared object version assignments.
+    pub consensus_determined_version_assignments: ConsensusDeterminedVersionAssignments,
+
+    /// Digest of any additional state computed by the consensus handler.
+    /// Used to detect forking bugs as early as possible.
+    pub additional_state_digest: Digest,
 }
 
 /// System transaction used to change the epoch
