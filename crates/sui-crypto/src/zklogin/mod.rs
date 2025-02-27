@@ -7,8 +7,8 @@ use sui_sdk_types::Jwk;
 use sui_sdk_types::JwkId;
 use sui_sdk_types::UserSignature;
 use sui_sdk_types::ZkLoginAuthenticator;
+use sui_sdk_types::ZkLoginClaim;
 use sui_sdk_types::ZkLoginInputs;
-use sui_sdk_types::ZkloginClaim;
 
 mod poseidon;
 mod verify;
@@ -139,7 +139,7 @@ impl JwtHeader {
 
 /// Parse the extended claim json value to its claim value, using the expected claim key.
 fn verify_extended_claim(
-    claim: &ZkloginClaim,
+    claim: &ZkLoginClaim,
     expected_key: &str,
 ) -> Result<String, SignatureError> {
     /// Map a base64 string to a bit array by taking each char's index and convert it to binary form with one bit per u8
