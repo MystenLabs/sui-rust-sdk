@@ -1046,7 +1046,7 @@ type EndOfEpochTransaction {
 	transactions(first: Int, before: String, last: Int, after: String): EndOfEpochTransactionKindConnection!
 }
 
-union EndOfEpochTransactionKind = ChangeEpochTransaction | AuthenticatorStateCreateTransaction | AuthenticatorStateExpireTransaction | RandomnessStateCreateTransaction | CoinDenyListStateCreateTransaction | BridgeStateCreateTransaction | BridgeCommitteeInitTransaction
+union EndOfEpochTransactionKind = ChangeEpochTransaction | AuthenticatorStateCreateTransaction | AuthenticatorStateExpireTransaction | RandomnessStateCreateTransaction | CoinDenyListStateCreateTransaction | BridgeStateCreateTransaction | BridgeCommitteeInitTransaction | StoreExecutionTimeObservationsTransaction
 
 type EndOfEpochTransactionKindConnection {
 	"""
@@ -2879,7 +2879,7 @@ objects are ones whose
 
 - Type matches the `type` filter,
 - AND, whose owner matches the `owner` filter,
-- AND, whose ID is in `objectIds` OR whose ID and version is in `objectKeys`.
+- AND, whose ID is in `objectIds`.
 """
 input ObjectFilter {
 	"""
@@ -2898,10 +2898,6 @@ input ObjectFilter {
 	Filter for live objects by their IDs.
 	"""
 	objectIds: [SuiAddress!]
-	"""
-	Filter for live or potentially historical objects by their ID and version.
-	"""
-	objectKeys: [ObjectKey!]
 }
 
 input ObjectKey {
@@ -3325,6 +3321,10 @@ type Query {
 	"""
 	transactionBlock(digest: String!): TransactionBlock
 	"""
+	Fetch a list of objects by their IDs and versions.
+	"""
+	multiGetObjects(keys: [ObjectKey!]!): [Object]!
+	"""
 	The coin objects that exist in the network.
 	
 	The type field is a string of the inner type of the coin by which to filter (e.g.
@@ -3598,6 +3598,10 @@ type ServiceConfig {
 	Maximum number of transaction ids that can be passed to a `TransactionBlockFilter`.
 	"""
 	maxTransactionIds: Int!
+	"""
+	Maximum number of keys that can be passed to a `multiGetObjects` query.
+	"""
+	maxMultiGetObjectsKeys: Int!
 	"""
 	Maximum number of candidates to scan when gathering a page of results.
 	"""
@@ -3968,6 +3972,13 @@ type StorageFund {
 	non-refundable balance.
 	"""
 	nonRefundableBalance: BigInt
+}
+
+type StoreExecutionTimeObservationsTransaction {
+	"""
+	A workaround to define an empty variant of a GraphQL union.
+	"""
+	_: Boolean
 }
 
 
