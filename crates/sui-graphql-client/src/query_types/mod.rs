@@ -102,9 +102,12 @@ pub use transaction::TransactionBlock;
 pub use transaction::TransactionBlockArgs;
 pub use transaction::TransactionBlockEffectsQuery;
 pub use transaction::TransactionBlockQuery;
+pub use transaction::TransactionBlockWithEffects;
+pub use transaction::TransactionBlockWithEffectsQuery;
 pub use transaction::TransactionBlocksEffectsQuery;
 pub use transaction::TransactionBlocksQuery;
 pub use transaction::TransactionBlocksQueryArgs;
+pub use transaction::TransactionBlocksWithEffectsQuery;
 pub use transaction::TransactionsFilter;
 
 use sui_types::Address;

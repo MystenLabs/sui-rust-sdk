@@ -36,6 +36,17 @@ pub struct TransactionBlockQuery {
     graphql_type = "Query",
     variables = "TransactionBlockArgs"
 )]
+pub struct TransactionBlockWithEffectsQuery {
+    #[arguments(digest: $digest)]
+    pub transaction_block: Option<TransactionBlockWithEffects>,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(
+    schema = "rpc",
+    graphql_type = "Query",
+    variables = "TransactionBlockArgs"
+)]
 pub struct TransactionBlockEffectsQuery {
     #[arguments(digest: $digest)]
     pub transaction_block: Option<TxBlockEffects>,
@@ -50,6 +61,17 @@ pub struct TransactionBlockEffectsQuery {
 pub struct TransactionBlocksQuery {
     #[arguments(first: $first, after: $after, last: $last, before: $before, filter: $filter)]
     pub transaction_blocks: TransactionBlockConnection,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(
+    schema = "rpc",
+    graphql_type = "Query",
+    variables = "TransactionBlocksQueryArgs"
+)]
+pub struct TransactionBlocksWithEffectsQuery {
+    #[arguments(first: $first, after: $after, last: $last, before: $before, filter: $filter)]
+    pub transaction_blocks: TransactionBlockWithEffectsConnection,
 }
 
 #[derive(cynic::QueryFragment, Debug)]
@@ -88,6 +110,14 @@ pub struct TransactionBlocksQueryArgs<'a> {
 #[cynic(schema = "rpc", graphql_type = "TransactionBlock")]
 pub struct TransactionBlock {
     pub bcs: Option<Base64>,
+    pub signatures: Option<Vec<Base64>>,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "TransactionBlock")]
+pub struct TransactionBlockWithEffects {
+    pub bcs: Option<Base64>,
+    pub effects: Option<TransactionBlockEffects>,
     pub signatures: Option<Vec<Base64>>,
 }
 
@@ -139,6 +169,13 @@ pub struct TransactionsFilter<'a> {
 #[cynic(schema = "rpc", graphql_type = "TransactionBlockConnection")]
 pub struct TransactionBlockConnection {
     pub nodes: Vec<TransactionBlock>,
+    pub page_info: PageInfo,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = "rpc", graphql_type = "TransactionBlockConnection")]
+pub struct TransactionBlockWithEffectsConnection {
+    pub nodes: Vec<TransactionBlockWithEffects>,
     pub page_info: PageInfo,
 }
 
