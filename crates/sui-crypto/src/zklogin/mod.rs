@@ -156,7 +156,7 @@ fn verify_extended_claim(
                 BASE64_URL_CHARSET
                     .find(c)
                     .map(|index| index as u8)
-                    .map(|index| (0..6).rev().map(move |i| index >> i & 1))
+                    .map(|index| (0..6).rev().map(move |i| (index >> i) & 1))
                     .ok_or_else(|| SignatureError::from_source("base64_to_bitarry invalid input"))
             })
             .flatten_ok()

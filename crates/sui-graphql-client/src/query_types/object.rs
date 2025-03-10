@@ -62,7 +62,6 @@ pub struct ObjectFilter<'a> {
     pub type_: Option<&'a str>,
     pub owner: Option<Address>,
     pub object_ids: Option<Vec<Address>>,
-    pub object_keys: Option<Vec<ObjectKey>>,
 }
 
 #[derive(Clone, cynic::InputObject, Debug)]

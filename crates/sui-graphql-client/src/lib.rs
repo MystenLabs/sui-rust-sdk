@@ -583,7 +583,6 @@ impl Client {
                     type_: Some(coin_type.unwrap_or("0x2::coin::Coin")),
                     owner: Some(owner),
                     object_ids: None,
-                    object_keys: None,
                 }),
                 pagination_filter,
             )
@@ -1031,7 +1030,6 @@ impl Client {
     ///     type_: None,
     ///     owner: Some(Address::from_str("test").unwrap().into()),
     ///     object_ids: None,
-    ///     object_keys: None,
     /// };
     ///
     /// let owned_objects = client.objects(None, None, Some(filter), None, None).await;
