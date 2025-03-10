@@ -1,3 +1,53 @@
 [workspace]
 resolver = "2"
 members = ["crates/*"]
+
+[workspace.dependencies]
+anyhow = "1.0.71"
+ark-bn254 = "0.4.0"
+ark-ff = "0.4.2"
+ark-groth16 = { version = "0.4.0", default-features = false }
+ark-snark = "0.4.0"
+ark-std = "0.4.0"
+async-stream = "0.3.3"
+async-trait = "0.1.61"
+base64ct = "1.6.0"
+bcs = "0.1.6"
+blake2 = "0.10.6"
+bnum = "0.12.0"
+bs58 = "0.5.1"
+chrono = "0.4.26"
+cynic = "3.7.3"
+cynic-codegen = "3.8.0"
+ed25519-dalek = "2.1.1"
+futures = "0.3.29"
+hex = "0.4.3"
+itertools = "0.13.0"
+k256 = { version = "0.13.4", default-features = false }
+num-bigint = "0.4.6"
+p256 = { version = "0.13.2", default-features = false }
+paste = "1.0.15"
+pem-rfc7468 = "0.7"
+pkcs8 = "0.10"
+proptest = { version = "1.6.0", default-features = false }
+rand = "0.8.5"
+rand_core = "0.6.4"
+reqwest = { version = "0.12", default-features = false }
+roaring = { version = "0.10.9", default-features = false }
+serde = "1.0.210"
+serde_derive = "1.0.210"
+serde_json = "1.0.128"
+serde_with = { version = "3.9", default-features = false }
+sha2 = "0.10.8"
+signature = "2.2"
+sui-crypto = { path = "crates/sui-crypto" }
+sui-graphql-client = { path = "crates/sui-graphql-client" }
+sui-sdk-types = { version = "0.0.2", path = "crates/sui-sdk-types", default-features = false }
+sui-types = { path = "crates/sui-sdk-types" }
+sui_graphql_client_build = { path = "crates/sui-graphql-client-build" }
+test-strategy = "0.4.0"
+thiserror = "2.0"
+tokio = "1.40.0"
+tracing = "0.1.37"
+url = "2.5.3"
+winnow = "0.7"

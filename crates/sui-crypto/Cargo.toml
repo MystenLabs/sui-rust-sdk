@@ -53,49 +53,49 @@ pem = [
 ]
 
 [dependencies]
-signature = "2.2"
-sui-sdk-types = { version = "0.0.2", path = "../sui-sdk-types", default-features = false, features = ["hash", "serde"] }
+signature = { workspace = true }
+sui-sdk-types = { workspace = true, features = ["hash", "serde"] }
 
 # RNG support
-rand_core = { version = "0.6.4", optional = true }
+rand_core = { workspace = true, optional = true }
 
 # ed25519 support
-ed25519-dalek = { version = "2.1.1", optional = true }
+ed25519-dalek = { workspace = true, optional = true }
 
 # secp256r1 support
-p256 = { version = "0.13.2", default-features = false, features = ["ecdsa", "std"], optional = true }
+p256 = { workspace = true, features = ["ecdsa", "std"], optional = true }
 
 # passkey verification support
-sha2 = { version = "0.10.8", optional = true }
+sha2 = { workspace = true, optional = true }
 
 # secp256k1 support
-k256 = { version = "0.13.4", default-features = false, features = ["ecdsa"], optional = true }
+k256 = { workspace = true, features = ["ecdsa"], optional = true }
 
 # zklogin verification support
-ark-bn254 = { version = "0.4.0", optional = true }
-ark-ff = { version = "0.4.2", features = ["asm"], optional = true }
-ark-groth16 = { version = "0.4.0", default-features = false, optional = true }
-ark-snark = { version = "0.4.0", optional = true }
-ark-std = { version = "0.4.0", optional = true }
-base64ct = { version = "1.6.0", features = ["alloc"], optional = true }
-bnum = { version = "0.12.0", optional = true }
-itertools = { version = "0.13.0", optional = true }
-serde = { version = "1.0.210", optional = true }
-serde_derive = { version = "1.0.210", optional = true }
-serde_json = { version = "1.0.128", optional = true }
+ark-bn254 = { workspace = true, optional = true }
+ark-ff = { workspace = true, features = ["asm"], optional = true }
+ark-groth16 = { workspace = true, optional = true }
+ark-snark = { workspace = true, optional = true }
+ark-std = { workspace = true, optional = true }
+base64ct = { workspace = true, features = ["alloc"], optional = true }
+bnum = { workspace = true, optional = true }
+itertools = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+serde_derive = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
 
 # pkcs8 der and pem support
-pkcs8 = { version = "0.10", optional = true, features = ["std"] }
-pem-rfc7468 = { version = "0.7", optional = true, features = ["std"] }
+pkcs8 = { workspace = true, features = ["std"], optional = true }
+pem-rfc7468 = { workspace = true, features = ["std"], optional = true }
 
 [dev-dependencies]
-bcs = { version = "0.1.6" }
-hex = "0.4.3"
-serde_json = { version = "1.0.128" }
+bcs = { workspace = true }
+hex = { workspace = true }
+serde_json = { workspace = true }
 
 # proptest support in tests
-proptest = { version = "1.6.0", default-features = false, features = ["std"] }
-test-strategy = "0.4.0"
+proptest = { workspace = true, features = ["std"] }
+test-strategy = { workspace = true }
 
 [target.wasm32-unknown-unknown.dev-dependencies]
 wasm-bindgen-test = "0.3"
