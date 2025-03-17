@@ -213,7 +213,7 @@ pub use transaction::ActiveJwk;
 pub use transaction::Argument;
 pub use transaction::AuthenticatorStateExpire;
 pub use transaction::AuthenticatorStateUpdate;
-pub use transaction::CancelledTransaction;
+pub use transaction::CanceledTransaction;
 pub use transaction::ChangeEpoch;
 pub use transaction::Command;
 pub use transaction::ConsensusCommitPrologue;

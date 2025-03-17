@@ -508,36 +508,36 @@ mod end_of_epoch {
 
 mod version_assignments {
     use super::*;
-    use crate::transaction::CancelledTransaction;
+    use crate::transaction::CanceledTransaction;
     use crate::transaction::ConsensusDeterminedVersionAssignments;
 
     #[derive(serde_derive::Serialize)]
     #[serde(tag = "kind", rename_all = "snake_case")]
     enum ReadableConsensusDeterminedVersionAssignmentsRef<'a> {
-        CancelledTransactions {
-            cancelled_transactions: &'a Vec<CancelledTransaction>,
+        CanceledTransactions {
+            canceled_transactions: &'a Vec<CanceledTransaction>,
         },
     }
 
     #[derive(serde_derive::Deserialize)]
     #[serde(tag = "kind", rename_all = "snake_case")]
     enum ReadableConsensusDeterminedVersionAssignments {
-        CancelledTransactions {
-            cancelled_transactions: Vec<CancelledTransaction>,
+        CanceledTransactions {
+            canceled_transactions: Vec<CanceledTransaction>,
         },
     }
 
     #[derive(serde_derive::Serialize)]
     enum BinaryConsensusDeterminedVersionAssignmentsRef<'a> {
-        CancelledTransactions {
-            cancelled_transactions: &'a Vec<CancelledTransaction>,
+        CanceledTransactions {
+            canceled_transactions: &'a Vec<CanceledTransaction>,
         },
     }
 
     #[derive(serde_derive::Deserialize)]
     enum BinaryConsensusDeterminedVersionAssignments {
-        CancelledTransactions {
-            cancelled_transactions: Vec<CancelledTransaction>,
+        CanceledTransactions {
+            canceled_transactions: Vec<CanceledTransaction>,
         },
     }
 
@@ -548,19 +548,19 @@ mod version_assignments {
         {
             if serializer.is_human_readable() {
                 let readable = match self {
-                    Self::CancelledTransactions {
-                        cancelled_transactions,
-                    } => ReadableConsensusDeterminedVersionAssignmentsRef::CancelledTransactions {
-                        cancelled_transactions,
+                    Self::CanceledTransactions {
+                        canceled_transactions,
+                    } => ReadableConsensusDeterminedVersionAssignmentsRef::CanceledTransactions {
+                        canceled_transactions,
                     },
                 };
                 readable.serialize(serializer)
             } else {
                 let binary = match self {
-                    Self::CancelledTransactions {
-                        cancelled_transactions,
-                    } => BinaryConsensusDeterminedVersionAssignmentsRef::CancelledTransactions {
-                        cancelled_transactions,
+                    Self::CanceledTransactions {
+                        canceled_transactions,
+                    } => BinaryConsensusDeterminedVersionAssignmentsRef::CanceledTransactions {
+                        canceled_transactions,
                     },
                 };
                 binary.serialize(serializer)
@@ -576,20 +576,20 @@ mod version_assignments {
             if deserializer.is_human_readable() {
                 ReadableConsensusDeterminedVersionAssignments::deserialize(deserializer).map(
                     |readable| match readable {
-                        ReadableConsensusDeterminedVersionAssignments::CancelledTransactions {
-                            cancelled_transactions,
-                        } => Self::CancelledTransactions {
-                            cancelled_transactions,
+                        ReadableConsensusDeterminedVersionAssignments::CanceledTransactions {
+                            canceled_transactions,
+                        } => Self::CanceledTransactions {
+                            canceled_transactions,
                         },
                     },
                 )
             } else {
                 BinaryConsensusDeterminedVersionAssignments::deserialize(deserializer).map(
                     |binary| match binary {
-                        BinaryConsensusDeterminedVersionAssignments::CancelledTransactions {
-                            cancelled_transactions,
-                        } => Self::CancelledTransactions {
-                            cancelled_transactions,
+                        BinaryConsensusDeterminedVersionAssignments::CanceledTransactions {
+                            canceled_transactions,
+                        } => Self::CanceledTransactions {
+                            canceled_transactions,
                         },
                     },
                 )

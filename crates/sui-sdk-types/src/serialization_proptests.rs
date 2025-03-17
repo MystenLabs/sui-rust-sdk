@@ -128,7 +128,7 @@ serialization_test!(ConsensusCommitPrologue);
 serialization_test!(ConsensusCommitPrologueV2);
 serialization_test!(ConsensusCommitPrologueV3);
 serialization_test!(ConsensusCommitPrologueV4);
-serialization_test!(CancelledTransaction);
+serialization_test!(CanceledTransaction);
 serialization_test!(ConsensusDeterminedVersionAssignments);
 serialization_test!(VersionAssignment);
 serialization_test!(EndOfEpochTransactionKind);

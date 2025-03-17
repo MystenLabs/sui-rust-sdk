@@ -41,7 +41,6 @@ pub enum ExecutionStatus {
 /// The BCS serialized form for this type is defined by the following ABNF:
 ///
 /// ```text
-/// 
 /// execution-error =  insufficient-gas
 ///                 =/ invalid-gas-object
 ///                 =/ invariant-violation
@@ -75,10 +74,10 @@ pub enum ExecutionStatus {
 ///                 =/ sui-move-verification-timedout
 ///                 =/ shared-object-operation-not-allowed
 ///                 =/ input-object-deleted
-///                 =/ execution-cancelled-due-to-shared-object-congestion
+///                 =/ execution-canceled-due-to-shared-object-congestion
 ///                 =/ address-denied-for-coin
 ///                 =/ coin-type-global-pause
-///                 =/ execution-cancelled-due-to-randomness-unavailable
+///                 =/ execution-canceled-due-to-randomness-unavailable
 ///
 /// insufficient-gas                                    = %x00
 /// invalid-gas-object                                  = %x01
@@ -113,10 +112,10 @@ pub enum ExecutionStatus {
 /// sui-move-verification-timedout                      = %x1e
 /// shared-object-operation-not-allowed                 = %x1f
 /// input-object-deleted                                = %x20
-/// execution-cancelled-due-to-shared-object-congestion = %x21 (vector object-id)
+/// execution-canceled-due-to-shared-object-congestion = %x21 (vector object-id)
 /// address-denied-for-coin                             = %x22 address string
 /// coin-type-global-pause                              = %x23 string
-/// execution-cancelled-due-to-randomness-unavailable   = %x24
+/// execution-canceled-due-to-randomness-unavailable   = %x24
 /// ```
 #[derive(Eq, PartialEq, Clone, Debug)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
@@ -246,8 +245,8 @@ pub enum ExecutionError {
     /// Requested shared object has been deleted
     InputObjectDeleted,
 
-    /// Certificate is cancelled due to congestion on shared objects
-    ExecutionCancelledDueToSharedObjectCongestion { congested_objects: Vec<ObjectId> },
+    /// Certificate is canceled due to congestion on shared objects
+    ExecutionCanceledDueToSharedObjectCongestion { congested_objects: Vec<ObjectId> },
 
     /// Address is denied for this coin type
     AddressDeniedForCoin { address: Address, coin_type: String },
@@ -255,8 +254,8 @@ pub enum ExecutionError {
     /// Coin type is globally paused for use
     CoinTypeGlobalPause { coin_type: String },
 
-    /// Certificate is cancelled because randomness could not be generated this epoch
-    ExecutionCancelledDueToRandomnessUnavailable,
+    /// Certificate is canceled because randomness could not be generated this epoch
+    ExecutionCanceledDueToRandomnessUnavailable,
 }
 
 /// Location in move bytecode where an error occurred
@@ -619,7 +618,7 @@ mod serialization {
         SuiMoveVerificationTimedout,
         SharedObjectOperationNotAllowed,
         InputObjectDeleted,
-        ExecutionCancelledDueToSharedObjectCongestion {
+        ExecutionCanceledDueToSharedObjectCongestion {
             congested_objects: Vec<ObjectId>,
         },
 
@@ -632,7 +631,7 @@ mod serialization {
             coin_type: String,
         },
 
-        ExecutionCancelledDueToRandomnessUnavailable,
+        ExecutionCanceledDueToRandomnessUnavailable,
     }
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
@@ -702,7 +701,7 @@ mod serialization {
         SuiMoveVerificationTimedout,
         SharedObjectOperationNotAllowed,
         InputObjectDeleted,
-        ExecutionCancelledDueToSharedObjectCongestion {
+        ExecutionCanceledDueToSharedObjectCongestion {
             congested_objects: Vec<ObjectId>,
         },
 
@@ -715,7 +714,7 @@ mod serialization {
             coin_type: String,
         },
 
-        ExecutionCancelledDueToRandomnessUnavailable,
+        ExecutionCanceledDueToRandomnessUnavailable,
     }
 
     impl Serialize for ExecutionError {
@@ -820,8 +819,8 @@ mod serialization {
                         ReadableExecutionError::SharedObjectOperationNotAllowed
                     }
                     Self::InputObjectDeleted => ReadableExecutionError::InputObjectDeleted,
-                    Self::ExecutionCancelledDueToSharedObjectCongestion { congested_objects } => {
-                        ReadableExecutionError::ExecutionCancelledDueToSharedObjectCongestion {
+                    Self::ExecutionCanceledDueToSharedObjectCongestion { congested_objects } => {
+                        ReadableExecutionError::ExecutionCanceledDueToSharedObjectCongestion {
                             congested_objects,
                         }
                     }
@@ -831,8 +830,8 @@ mod serialization {
                     Self::CoinTypeGlobalPause { coin_type } => {
                         ReadableExecutionError::CoinTypeGlobalPause { coin_type }
                     }
-                    Self::ExecutionCancelledDueToRandomnessUnavailable => {
-                        ReadableExecutionError::ExecutionCancelledDueToRandomnessUnavailable
+                    Self::ExecutionCanceledDueToRandomnessUnavailable => {
+                        ReadableExecutionError::ExecutionCanceledDueToRandomnessUnavailable
                     }
                 };
                 readable.serialize(serializer)
@@ -929,8 +928,8 @@ mod serialization {
                         BinaryExecutionError::SharedObjectOperationNotAllowed
                     }
                     Self::InputObjectDeleted => BinaryExecutionError::InputObjectDeleted,
-                    Self::ExecutionCancelledDueToSharedObjectCongestion { congested_objects } => {
-                        BinaryExecutionError::ExecutionCancelledDueToSharedObjectCongestion {
+                    Self::ExecutionCanceledDueToSharedObjectCongestion { congested_objects } => {
+                        BinaryExecutionError::ExecutionCanceledDueToSharedObjectCongestion {
                             congested_objects,
                         }
                     }
@@ -940,8 +939,8 @@ mod serialization {
                     Self::CoinTypeGlobalPause { coin_type } => {
                         BinaryExecutionError::CoinTypeGlobalPause { coin_type }
                     }
-                    Self::ExecutionCancelledDueToRandomnessUnavailable => {
-                        BinaryExecutionError::ExecutionCancelledDueToRandomnessUnavailable
+                    Self::ExecutionCanceledDueToRandomnessUnavailable => {
+                        BinaryExecutionError::ExecutionCanceledDueToRandomnessUnavailable
                     }
                 };
                 binary.serialize(serializer)
@@ -1051,17 +1050,17 @@ mod serialization {
                         Self::SharedObjectOperationNotAllowed
                     }
                     ReadableExecutionError::InputObjectDeleted => Self::InputObjectDeleted,
-                    ReadableExecutionError::ExecutionCancelledDueToSharedObjectCongestion {
+                    ReadableExecutionError::ExecutionCanceledDueToSharedObjectCongestion {
                         congested_objects,
-                    } => Self::ExecutionCancelledDueToSharedObjectCongestion { congested_objects },
+                    } => Self::ExecutionCanceledDueToSharedObjectCongestion { congested_objects },
                     ReadableExecutionError::AddressDeniedForCoin { address, coin_type } => {
                         Self::AddressDeniedForCoin { address, coin_type }
                     }
                     ReadableExecutionError::CoinTypeGlobalPause { coin_type } => {
                         Self::CoinTypeGlobalPause { coin_type }
                     }
-                    ReadableExecutionError::ExecutionCancelledDueToRandomnessUnavailable => {
-                        Self::ExecutionCancelledDueToRandomnessUnavailable
+                    ReadableExecutionError::ExecutionCanceledDueToRandomnessUnavailable => {
+                        Self::ExecutionCanceledDueToRandomnessUnavailable
                     }
                 })
             } else {
@@ -1157,17 +1156,17 @@ mod serialization {
                         Self::SharedObjectOperationNotAllowed
                     }
                     BinaryExecutionError::InputObjectDeleted => Self::InputObjectDeleted,
-                    BinaryExecutionError::ExecutionCancelledDueToSharedObjectCongestion {
+                    BinaryExecutionError::ExecutionCanceledDueToSharedObjectCongestion {
                         congested_objects,
-                    } => Self::ExecutionCancelledDueToSharedObjectCongestion { congested_objects },
+                    } => Self::ExecutionCanceledDueToSharedObjectCongestion { congested_objects },
                     BinaryExecutionError::AddressDeniedForCoin { address, coin_type } => {
                         Self::AddressDeniedForCoin { address, coin_type }
                     }
                     BinaryExecutionError::CoinTypeGlobalPause { coin_type } => {
                         Self::CoinTypeGlobalPause { coin_type }
                     }
-                    BinaryExecutionError::ExecutionCancelledDueToRandomnessUnavailable => {
-                        Self::ExecutionCancelledDueToRandomnessUnavailable
+                    BinaryExecutionError::ExecutionCanceledDueToRandomnessUnavailable => {
+                        Self::ExecutionCanceledDueToRandomnessUnavailable
                     }
                 })
             }

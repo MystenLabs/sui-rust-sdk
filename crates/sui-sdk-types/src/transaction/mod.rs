@@ -409,28 +409,28 @@ pub struct ConsensusCommitPrologueV2 {
 /// The BCS serialized form for this type is defined by the following ABNF:
 ///
 /// ```text
-/// consensus-determined-version-assignments = cancelled-transactions
+/// consensus-determined-version-assignments = canceled-transactions
 ///
-/// cancelled-transactions = %x00 (vector cancelled-transaction)
+/// canceled-transactions = %x00 (vector canceled-transaction)
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum ConsensusDeterminedVersionAssignments {
-    /// Cancelled transaction version assignment.
-    CancelledTransactions {
+    /// Canceled transaction version assignment.
+    CanceledTransactions {
         #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
-        cancelled_transactions: Vec<CancelledTransaction>,
+        canceled_transactions: Vec<CanceledTransaction>,
     },
 }
 
-/// A transaction that was cancelled
+/// A transaction that was canceled
 ///
 /// # BCS
 ///
 /// The BCS serialized form for this type is defined by the following ABNF:
 ///
 /// ```text
-/// cancelled-transaction = digest (vector version-assignment)
+/// canceled-transaction = digest (vector version-assignment)
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
@@ -438,7 +438,7 @@ pub enum ConsensusDeterminedVersionAssignments {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
-pub struct CancelledTransaction {
+pub struct CanceledTransaction {
     pub digest: TransactionDigest,
     #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
     pub version_assignments: Vec<VersionAssignment>,

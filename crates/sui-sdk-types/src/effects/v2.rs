@@ -137,13 +137,13 @@ pub struct UnchangedSharedObject {
 /// unchanged-shared-object-kind =  read-only-root
 ///                              =/ mutate-deleted
 ///                              =/ read-deleted
-///                              =/ cancelled
+///                              =/ canceled
 ///                              =/ per-epoch-config
 ///
 /// read-only-root      = %x00 u64 digest
 /// mutate-deleted      = %x01 u64
 /// read-deleted        = %x02 u64
-/// cancelled           = %x03 u64
+/// canceled           = %x03 u64
 /// per-epoch-config    = %x04
 /// ```
 #[derive(Eq, PartialEq, Clone, Debug)]
@@ -162,8 +162,8 @@ pub enum UnchangedSharedKind {
     /// Deleted shared objects that appear as read-only in the input.
     ReadDeleted { version: Version },
 
-    /// Shared objects in cancelled transaction. The sequence number embed cancellation reason.
-    Cancelled { version: Version },
+    /// Shared objects in canceled transaction. The sequence number embed cancellation reason.
+    Canceled { version: Version },
 
     /// Read of a per-epoch config object that should remain the same during an epoch.
     PerEpochConfig,
@@ -483,7 +483,7 @@ mod serialization {
             #[serde(with = "crate::_serde::ReadableDisplay")]
             version: Version,
         },
-        Cancelled {
+        Canceled {
             #[serde(with = "crate::_serde::ReadableDisplay")]
             version: Version,
         },
@@ -502,7 +502,7 @@ mod serialization {
         ReadDeleted {
             version: Version,
         },
-        Cancelled {
+        Canceled {
             version: Version,
         },
         PerEpochConfig,
@@ -524,8 +524,8 @@ mod serialization {
                     UnchangedSharedKind::ReadDeleted { version } => {
                         ReadableUnchangedSharedKind::ReadDeleted { version }
                     }
-                    UnchangedSharedKind::Cancelled { version } => {
-                        ReadableUnchangedSharedKind::Cancelled { version }
+                    UnchangedSharedKind::Canceled { version } => {
+                        ReadableUnchangedSharedKind::Canceled { version }
                     }
                     UnchangedSharedKind::PerEpochConfig => {
                         ReadableUnchangedSharedKind::PerEpochConfig
@@ -543,8 +543,8 @@ mod serialization {
                     UnchangedSharedKind::ReadDeleted { version } => {
                         BinaryUnchangedSharedKind::ReadDeleted { version }
                     }
-                    UnchangedSharedKind::Cancelled { version } => {
-                        BinaryUnchangedSharedKind::Cancelled { version }
+                    UnchangedSharedKind::Canceled { version } => {
+                        BinaryUnchangedSharedKind::Canceled { version }
                     }
                     UnchangedSharedKind::PerEpochConfig => {
                         BinaryUnchangedSharedKind::PerEpochConfig
@@ -572,8 +572,8 @@ mod serialization {
                         ReadableUnchangedSharedKind::ReadDeleted { version } => {
                             Self::ReadDeleted { version }
                         }
-                        ReadableUnchangedSharedKind::Cancelled { version } => {
-                            Self::Cancelled { version }
+                        ReadableUnchangedSharedKind::Canceled { version } => {
+                            Self::Canceled { version }
                         }
                         ReadableUnchangedSharedKind::PerEpochConfig => Self::PerEpochConfig,
                     },
@@ -589,7 +589,7 @@ mod serialization {
                     BinaryUnchangedSharedKind::ReadDeleted { version } => {
                         Self::ReadDeleted { version }
                     }
-                    BinaryUnchangedSharedKind::Cancelled { version } => Self::Cancelled { version },
+                    BinaryUnchangedSharedKind::Canceled { version } => Self::Canceled { version },
                     BinaryUnchangedSharedKind::PerEpochConfig => Self::PerEpochConfig,
                 })
             }
