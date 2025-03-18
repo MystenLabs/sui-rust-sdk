@@ -186,8 +186,8 @@ impl<T> Page<T> {
         &self.data
     }
 
-    /// Internal function to create a new page with the provided data and page information.
-    fn new(page_info: PageInfo, data: Vec<T>) -> Self {
+    /// Create a new page with the provided data and page information.
+    pub fn new(page_info: PageInfo, data: Vec<T>) -> Self {
         Self { page_info, data }
     }
 
@@ -196,11 +196,12 @@ impl<T> Page<T> {
         self.data.is_empty()
     }
 
-    /// Internal function to create a page with no data.
-    fn new_empty() -> Self {
+    /// Create a page with no data.
+    pub fn new_empty() -> Self {
         Self::new(PageInfo::default(), vec![])
     }
 
+    /// Return a tuple of page info and the data.
     pub fn into_parts(self) -> (PageInfo, Vec<T>) {
         (self.page_info, self.data)
     }
@@ -333,9 +334,9 @@ impl Client {
         self.rpc.as_str()
     }
 
-    /// Internal function to handle pagination filters and return the appropriate values.
+    /// Handle pagination filters and return the appropriate values (after, before, first, last).
     /// If limit is omitted, it will use the max page size from the service config.
-    async fn pagination_filter(
+    pub async fn pagination_filter(
         &self,
         pagination_filter: PaginationFilter,
     ) -> (Option<String>, Option<String>, Option<i32>, Option<i32>) {
@@ -1585,9 +1586,9 @@ impl Client {
     }
 
     /// Get a page of transactions' data and effects based on the provided filters.
-    pub async fn transactions_data_effects<'a>(
+    pub async fn transactions_data_effects(
         &self,
-        filter: Option<TransactionsFilter<'a>>,
+        filter: Option<TransactionsFilter<'_>>,
         pagination_filter: PaginationFilter,
     ) -> Result<Page<TransactionDataEffects>> {
         let (after, before, first, last) = self.pagination_filter(pagination_filter).await;
