@@ -4,5 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-cynic-codegen = "3.8.0"
+cynic-codegen = "3.10.0"
 

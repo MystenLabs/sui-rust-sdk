@@ -17,7 +17,7 @@
 /// // Cargo.toml
 /// ...
 /// [dependencies]
-/// cynic = "3.8.0"
+/// cynic = "3.10.0"
 /// ...
 /// [build-dependencies]
 /// sui_graphql_client_build = "VERSION_HERE"

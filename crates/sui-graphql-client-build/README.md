@@ -23,7 +23,7 @@ fn main() {
 # Cargo.toml
 # ...
 [dependencies]
-cynic = "3.8.0"
+cynic = "3.10.0"
 sui-graphql-client = { git = "https://github.com/mystenlabs/sui-rust-sdk", package = "sui-graphql-client", branch = "master" }
 
 [build-dependencies]
