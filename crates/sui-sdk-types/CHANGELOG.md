@@ -1,3 +1,22 @@
+# [0.0.3] - 2025-03-20
+
+## Added
+
+- Added `Object::as_struct` getter [#87]
+- Added `ZkLoginPublicIdentifier::derive_address` with provides an iterator
+  over the valid derived addresses [`a9a930d`]
+- Added documentation for a number of types.
+- Added support for the `ConsensusCommitPrologueV4` system transaction [`5e11579`]
+
+## Changed
+
+- Renamed `to_address` to `derive_address` for all authenticators [`2442379`]
+
+[`2442379`]: https://github.com/mystenlabs/sui-rust-sdk/commit/2442379f19bdae8c560d9879ee291560a7cd2e1c
+[`a9a930d`]: https://github.com/mystenlabs/sui-rust-sdk/commit/a9a930d9f8afbfc025f8978e317025798d225790
+[`5e11579`]: https://github.com/mystenlabs/sui-rust-sdk/commit/5e11579031793f086178332219f5847ec94da0c4
+[#87]: https://github.com/MystenLabs/sui-rust-sdk/pull/87
+
 # [0.0.2] - 2025-01-06
 
 ## Added
@@ -28,5 +47,6 @@
 
 Initial release
 
+[0.0.3]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.0.3
 [0.0.2]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.0.2
 [0.0.1]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.0.1

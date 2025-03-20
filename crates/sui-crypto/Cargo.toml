@@ -1,6 +1,6 @@
 [package]
 name = "sui-crypto"
-version = "0.0.2"
+version = "0.0.3"
 authors = ["Brandon Williams <brandon@mystenlabs.com>"]
 repository = "https://github.com/mystenlabs/sui-rust-sdk/"
 license = "Apache-2.0"
@@ -54,7 +54,7 @@ pem = [
 
 [dependencies]
 signature = "2.2"
-sui-sdk-types = { version = "0.0.2", path = "../sui-sdk-types", default-features = false, features = ["hash", "serde"] }
+sui-sdk-types = { version = "0.0.3", path = "../sui-sdk-types", default-features = false, features = ["hash", "serde"] }
 
 # RNG support
 rand_core = { version = "0.6.4", optional = true }
