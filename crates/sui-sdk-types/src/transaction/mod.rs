@@ -252,6 +252,51 @@ pub enum EndOfEpochTransactionKind {
 
     /// Initialize the bridge committee
     BridgeCommitteeInit { bridge_object_version: u64 },
+
+    /// FIXME: have this updated upstream
+    StoreExecutionTimeObservations(StoredExecutionTimeObservations),
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone)]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+pub(crate) enum StoredExecutionTimeObservations {
+    V1(
+        Vec<(
+            ExecutionTimeObservationKey,
+            Vec<(crate::Bls12381PublicKey, std::time::Duration)>,
+        )>,
+    ),
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone)]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+pub(crate) enum ExecutionTimeObservationKey {
+    // Containts all the fields from `ProgrammableMoveCall` besides `arguments`.
+    MoveEntryPoint {
+        /// The package containing the module and function.
+        package: ObjectId,
+        /// The specific module in the package containing the function.
+        module: String,
+        /// The function to be called.
+        function: String,
+        /// The type arguments to the function.
+        /// NOTE: This field is currently not populated.
+        type_arguments: Vec<TypeTag>,
+    },
+    TransferObjects,
+    SplitCoins,
+    MergeCoins,
+    Publish, // special case: should not be used; we only use hard-coded estimate for this
+    MakeMoveVec,
+    Upgrade,
 }
 
 /// Expire old JWKs
