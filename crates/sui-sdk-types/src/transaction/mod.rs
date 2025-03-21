@@ -263,7 +263,7 @@ pub enum EndOfEpochTransactionKind {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
-pub enum StoredExecutionTimeObservations {
+pub(crate) enum StoredExecutionTimeObservations {
     V1(
         Vec<(
             ExecutionTimeObservationKey,
@@ -278,7 +278,7 @@ pub enum StoredExecutionTimeObservations {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
-pub enum ExecutionTimeObservationKey {
+pub(crate) enum ExecutionTimeObservationKey {
     // Containts all the fields from `ProgrammableMoveCall` besides `arguments`.
     MoveEntryPoint {
         /// The package containing the module and function.
