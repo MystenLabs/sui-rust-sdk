@@ -70,7 +70,7 @@ impl Address {
         Self(bytes)
     }
 
-    const fn from_u8(byte: u8) -> Self {
+    pub const fn from_u8(byte: u8) -> Self {
         let mut address = Self::ZERO;
         address.0[31] = byte;
         address

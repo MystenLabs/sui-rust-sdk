@@ -34,6 +34,11 @@ impl ObjectId {
         Self(Address::new(bytes))
     }
 
+    /// Generates a new ObjectId from single byte.
+    pub const fn from_u8(byte: u8) -> Self {
+        Self(Address::from_u8(byte))
+    }
+
     /// Returns the underlying byte array of an ObjectId.
     pub const fn into_inner(self) -> [u8; Self::LENGTH] {
         self.0.into_inner()
