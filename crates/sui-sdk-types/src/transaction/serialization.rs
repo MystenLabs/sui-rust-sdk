@@ -344,6 +344,7 @@ mod end_of_epoch {
             #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
             bridge_object_version: u64,
         },
+        // TODO: readable serialization for StoredExecutionTimeObservations
         StoreExecutionTimeObservations(&'a crate::transaction::StoredExecutionTimeObservations),
     }
 
@@ -362,6 +363,8 @@ mod end_of_epoch {
             #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
             bridge_object_version: u64,
         },
+        // TODO: readable deser for StoredExecutionTimeObservations
+        StoreExecutionTimeObservations(crate::transaction::StoredExecutionTimeObservations),
     }
 
     #[derive(serde_derive::Serialize)]
@@ -482,6 +485,9 @@ mod end_of_epoch {
                         } => Self::BridgeCommitteeInit {
                             bridge_object_version,
                         },
+                        ReadableEndOfEpochTransactionKind::StoreExecutionTimeObservations(obs) => {
+                            Self::StoreExecutionTimeObservations(obs)
+                        }
                     }
                 })
             } else {
