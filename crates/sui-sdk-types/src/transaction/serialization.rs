@@ -344,6 +344,7 @@ mod end_of_epoch {
             #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
             bridge_object_version: u64,
         },
+        StoreExecutionTimeObservations(&'a crate::transaction::StoredExecutionTimeObservations),
     }
 
     #[derive(serde_derive::Deserialize)]
@@ -361,6 +362,7 @@ mod end_of_epoch {
             #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
             bridge_object_version: u64,
         },
+        StoreExecutionTimeObservations(crate::transaction::StoredExecutionTimeObservations),
     }
 
     #[derive(serde_derive::Serialize)]
@@ -372,6 +374,7 @@ mod end_of_epoch {
         DenyListStateCreate,
         BridgeStateCreate { chain_id: &'a CheckpointDigest },
         BridgeCommitteeInit { bridge_object_version: u64 },
+        StoreExecutionTimeObservations(&'a crate::transaction::StoredExecutionTimeObservations),
     }
 
     #[derive(serde_derive::Deserialize)]
@@ -383,6 +386,7 @@ mod end_of_epoch {
         DenyListStateCreate,
         BridgeStateCreate { chain_id: CheckpointDigest },
         BridgeCommitteeInit { bridge_object_version: u64 },
+        StoreExecutionTimeObservations(crate::transaction::StoredExecutionTimeObservations),
     }
 
     impl Serialize for EndOfEpochTransactionKind {
@@ -413,6 +417,9 @@ mod end_of_epoch {
                     } => ReadableEndOfEpochTransactionKindRef::BridgeCommitteeInit {
                         bridge_object_version: *bridge_object_version,
                     },
+                    Self::StoreExecutionTimeObservations(obs) => {
+                        ReadableEndOfEpochTransactionKindRef::StoreExecutionTimeObservations(obs)
+                    }
                 };
                 readable.serialize(serializer)
             } else {
@@ -438,6 +445,9 @@ mod end_of_epoch {
                     } => BinaryEndOfEpochTransactionKindRef::BridgeCommitteeInit {
                         bridge_object_version: *bridge_object_version,
                     },
+                    Self::StoreExecutionTimeObservations(obs) => {
+                        BinaryEndOfEpochTransactionKindRef::StoreExecutionTimeObservations(obs)
+                    }
                 };
                 binary.serialize(serializer)
             }
@@ -473,6 +483,9 @@ mod end_of_epoch {
                         } => Self::BridgeCommitteeInit {
                             bridge_object_version,
                         },
+                        ReadableEndOfEpochTransactionKind::StoreExecutionTimeObservations(obs) => {
+                            Self::StoreExecutionTimeObservations(obs)
+                        }
                     }
                 })
             } else {
@@ -499,6 +512,9 @@ mod end_of_epoch {
                         } => Self::BridgeCommitteeInit {
                             bridge_object_version,
                         },
+                        BinaryEndOfEpochTransactionKind::StoreExecutionTimeObservations(obs) => {
+                            Self::StoreExecutionTimeObservations(obs)
+                        }
                     },
                 )
             }
