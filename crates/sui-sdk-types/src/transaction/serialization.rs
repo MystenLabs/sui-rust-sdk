@@ -385,6 +385,7 @@ mod end_of_epoch {
         DenyListStateCreate,
         BridgeStateCreate { chain_id: CheckpointDigest },
         BridgeCommitteeInit { bridge_object_version: u64 },
+        StoreExecutionTimeObservations(crate::transaction::StoredExecutionTimeObservations),
     }
 
     impl Serialize for EndOfEpochTransactionKind {
@@ -507,6 +508,9 @@ mod end_of_epoch {
                         } => Self::BridgeCommitteeInit {
                             bridge_object_version,
                         },
+                        BinaryEndOfEpochTransactionKind::StoreExecutionTimeObservations(obs) => {
+                            Self::StoreExecutionTimeObservations(obs)
+                        }
                     },
                 )
             }
