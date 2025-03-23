@@ -13,13 +13,13 @@
 //! specifically for their use case. Below is a list of the available feature flags.
 //!
 //! - `serde`: Enables support for serializing and deserializing types to/from BCS utilizing
-//!            [serde] library.
+//!   [serde] library.
 //! - `rand`: Enables support for generating random instances of a number of types via the [rand]
-//!           library.
+//!   library.
 //! - `hash`: Enables support for hashing, which is required for deriving addresses and calculating
-//!           digests for various types.
+//!   digests for various types.
 //! - `proptest`: Enables support for the [proptest] library by providing implementations of
-//!               [proptest::arbitrary::Arbitrary] for many types.
+//!   [proptest::arbitrary::Arbitrary] for many types.
 //!
 //! [feature flags]: https://doc.rust-lang.org/cargo/reference/manifest.html#the-features-section
 //! [serde]: https://docs.rs/serde
