@@ -220,6 +220,7 @@ pub enum TransactionKind {
 ///                                 =/ eoe-deny-list-state-create
 ///                                 =/ eoe-bridge-state-create
 ///                                 =/ eoe-bridge-committee-init
+///                                 =/ eoe-store-execution-time-observations
 ///
 /// eoe-change-epoch                = %x00 change-epoch
 /// eoe-authenticator-state-create  = %x01
@@ -228,6 +229,7 @@ pub enum TransactionKind {
 /// eoe-deny-list-state-create      = %x04
 /// eoe-bridge-state-create         = %x05 digest
 /// eoe-bridge-committee-init       = %x06 u64
+/// eoe-store-execution-time-observations = %x07 stored-execution-time-observations
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
@@ -252,6 +254,99 @@ pub enum EndOfEpochTransactionKind {
 
     /// Initialize the bridge committee
     BridgeCommitteeInit { bridge_object_version: u64 },
+
+    /// Execution time observations from the committee to preserve cross epoch
+    StoreExecutionTimeObservations(StoredExecutionTimeObservations),
+}
+
+/// Set of Execution Time Observations from the committee.
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// stored-execution-time-observations =  %x00 v1-stored-execution-time-observations
+///
+/// v1-stored-execution-time-observations = (vec
+///                                          execution-time-observation-key
+///                                          (vec execution-time-observation)
+///                                         )
+/// ```
+#[derive(Debug, Hash, PartialEq, Eq, Clone)]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+pub enum StoredExecutionTimeObservations {
+    V1(Vec<(ExecutionTimeObservationKey, Vec<ExecutionTimeObservation>)>),
+}
+
+/// An execution time observation from a particular validator
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// execution-time-observation = bls-public-key duration
+/// duration =  u64 ; seconds
+///             u32 ; subsecond nanoseconds
+/// ```
+#[derive(Debug, Hash, PartialEq, Eq, Clone)]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+pub struct ExecutionTimeObservation {
+    pub validator: crate::Bls12381PublicKey,
+    pub duration: std::time::Duration,
+}
+
+/// Key for an execution time observation
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// execution-time-observation-key  =  %x00 move-entry-point
+///                                 =/ %x01 ; transfer-objects
+///                                 =/ %x02 ; split-coins
+///                                 =/ %x03 ; merge-coins
+///                                 =/ %x04 ; publish
+///                                 =/ %x05 ; make-move-vec
+///                                 =/ %x06 ; upgrade
+///
+/// move-entry-point = object-id string string (vec type-tag)
+/// ```
+#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone)]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+pub enum ExecutionTimeObservationKey {
+    // Containts all the fields from `ProgrammableMoveCall` besides `arguments`.
+    MoveEntryPoint {
+        /// The package containing the module and function.
+        package: ObjectId,
+        /// The specific module in the package containing the function.
+        module: String,
+        /// The function to be called.
+        function: String,
+        /// The type arguments to the function.
+        /// NOTE: This field is currently not populated.
+        type_arguments: Vec<TypeTag>,
+    },
+    TransferObjects,
+    SplitCoins,
+    MergeCoins,
+    Publish, // special case: should not be used; we only use hard-coded estimate for this
+    MakeMoveVec,
+    Upgrade,
 }
 
 /// Expire old JWKs
