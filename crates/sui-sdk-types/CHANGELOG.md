@@ -1,3 +1,11 @@
+# [0.0.4] - 2025-03-31
+
+## Added
+
+- Added new `EndOfEpochTransactionKind::StoreExecutionTimeObservations` type [#105]
+
+[#105]: https://github.com/MystenLabs/sui-rust-sdk/pull/105
+
 # [0.0.3] - 2025-03-20
 
 ## Added
@@ -47,6 +55,7 @@
 
 Initial release
 
+[0.0.4]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.0.4
 [0.0.3]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.0.3
 [0.0.2]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.0.2
 [0.0.1]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.0.1
