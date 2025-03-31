@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Direction"],"mod":["error","faucet","query_types","streams"],"struct":["BcsName","Client","DryRunResult","DynamicFieldName","DynamicFieldOutput","NameValue","Page","PaginationFilter","TransactionDataEffects"]};
