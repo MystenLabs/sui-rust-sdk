@@ -256,7 +256,7 @@ pub enum EndOfEpochTransactionKind {
     BridgeCommitteeInit { bridge_object_version: u64 },
 
     /// Execution time observations from the committee to preserve cross epoch
-    StoreExecutionTimeObservations(StoredExecutionTimeObservations),
+    StoreExecutionTimeObservations(ExecutionTimeObservations),
 }
 
 /// Set of Execution Time Observations from the committee.
@@ -279,8 +279,13 @@ pub enum EndOfEpochTransactionKind {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
-pub enum StoredExecutionTimeObservations {
-    V1(Vec<(ExecutionTimeObservationKey, Vec<ExecutionTimeObservation>)>),
+pub enum ExecutionTimeObservations {
+    V1(
+        Vec<(
+            ExecutionTimeObservationKey,
+            Vec<ValidatorExecutionTimeObservation>,
+        )>,
+    ),
 }
 
 /// An execution time observation from a particular validator
@@ -300,7 +305,7 @@ pub enum StoredExecutionTimeObservations {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
-pub struct ExecutionTimeObservation {
+pub struct ValidatorExecutionTimeObservation {
     pub validator: crate::Bls12381PublicKey,
     pub duration: std::time::Duration,
 }
