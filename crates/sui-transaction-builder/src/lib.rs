@@ -482,17 +482,20 @@ mod tests {
     use serde::de;
     use serde::Deserialize;
     use serde::Deserializer;
+
     use sui_crypto::ed25519::Ed25519PrivateKey;
     use sui_crypto::SuiSigner;
-    use sui_graphql_client::faucet::CoinInfo;
     use sui_graphql_client::faucet::FaucetClient;
     use sui_graphql_client::Client;
     use sui_graphql_client::PaginationFilter;
+
+    use sui_types::framework::Coin;
     use sui_types::Address;
     use sui_types::ExecutionStatus;
     use sui_types::IdOperation;
     use sui_types::ObjectId;
     use sui_types::ObjectType;
+    use sui_types::TransactionDigest;
     use sui_types::TransactionEffects;
     use sui_types::TypeTag;
 
@@ -500,7 +503,6 @@ mod tests {
     use crate::Function;
     use crate::Serialized;
     use crate::TransactionBuilder;
-    use sui_types::TransactionDigest;
 
     /// Type corresponding to the output of `sui move build --dump-bytecode-as-base64`
     #[derive(serde::Deserialize, Debug)]
@@ -562,35 +564,42 @@ mod tests {
     /// - set the sender for the tx to this newly created address
     /// - set gas price
     /// - set gas budget
-    /// - call faucet which returns 5 coin objects
+    /// - call faucet which returns 1 coin object; we need a few so we make 3 requests
     /// - set the gas object (last coin from the list of the 5 objects returned by faucet)
     /// - return the address, private key, and coins.
-    ///
-    /// NB! This assumes that these tests run on a network whose faucet returns 5 coins per
-    /// each faucet request.
-    async fn helper_setup(
+    async fn helper_setup<'a>(
         tx: &mut TransactionBuilder,
-        client: &Client,
-    ) -> (Address, Ed25519PrivateKey, Vec<CoinInfo>) {
+        client: &'a Client,
+    ) -> (Address, Ed25519PrivateKey, Vec<Coin<'a>>) {
         let (address, pk) = helper_address_pk();
-        let coins = FaucetClient::local()
-            .request_and_wait(address)
-            .await
-            .unwrap()
-            .unwrap()
-            .sent;
-        let tx_digest = coins.first().unwrap().transfer_tx_digest;
-        wait_for_tx(client, tx_digest).await;
+        let faucet = FaucetClient::local();
+        let faucet_resp = faucet.request(address).await.unwrap();
+        wait_for_tx(
+            client,
+            faucet_resp
+                .coins_sent
+                .unwrap()
+                .first()
+                .unwrap()
+                .transfer_tx_digest,
+        )
+        .await;
 
-        let gas = coins.last().unwrap().id;
+        let coins = client
+            .coins(address, None, PaginationFilter::default())
+            .await
+            .unwrap();
+        let coins = coins.data();
+
+        let gas = coins.last().unwrap().id();
         // TODO when we have tx resolution, we can just pass an ObjectId
-        let gas_obj: Input = (&client.object(gas.into(), None).await.unwrap().unwrap()).into();
+        let gas_obj: Input = (&client.object((*gas).into(), None).await.unwrap().unwrap()).into();
         tx.add_gas_objects(vec![gas_obj.with_owned_kind()]);
         tx.set_gas_budget(500000000);
         tx.set_gas_price(1000);
         tx.set_sender(address);
 
-        (address, pk, coins)
+        (address, pk, coins.to_vec())
     }
 
     /// Wait for the transaction to be finalized and indexed. This queries the GraphQL server until
@@ -660,12 +669,12 @@ mod tests {
     #[tokio::test]
     async fn test_transfer_obj_execution() {
         let mut tx = TransactionBuilder::new();
-        let (_, pk, coins) = helper_setup(&mut tx, &Client::new_localhost()).await;
+        let client = Client::new_localhost();
+        let (_, pk, coins) = helper_setup(&mut tx, &client).await;
 
         // get the object information from the client
-        let client = Client::new_localhost();
-        let first = coins.first().unwrap().id;
-        let coin: Input = (&client.object(first.into(), None).await.unwrap().unwrap()).into();
+        let first = coins.first().unwrap().id();
+        let coin: Input = (&client.object((*first).into(), None).await.unwrap().unwrap()).into();
         let coin_input = tx.input(coin.with_owned_kind());
         let recipient = Address::generate(rand::thread_rng());
         let recipient_input = tx.input(Serialized(&recipient));
@@ -740,8 +749,8 @@ mod tests {
         let mut tx = TransactionBuilder::new();
         let (_, pk, coins) = helper_setup(&mut tx, &client).await;
 
-        let coin = coins.first().unwrap().id;
-        let coin_obj: Input = (&client.object(coin.into(), None).await.unwrap().unwrap()).into();
+        let coin = coins.first().unwrap().id();
+        let coin_obj: Input = (&client.object((*coin).into(), None).await.unwrap().unwrap()).into();
         let coin_input = tx.input(coin_obj.with_owned_kind());
 
         // transfer 1 SUI
@@ -774,14 +783,20 @@ mod tests {
         let mut tx = TransactionBuilder::new();
         let (address, pk, coins) = helper_setup(&mut tx, &client).await;
 
-        let coin1 = coins.first().unwrap().id;
-        let coin1_obj: Input = (&client.object(coin1.into(), None).await.unwrap().unwrap()).into();
+        let coin1 = coins.first().unwrap().id();
+        let coin1_obj: Input =
+            (&client.object((*coin1).into(), None).await.unwrap().unwrap()).into();
         let coin_to_merge = tx.input(coin1_obj.with_owned_kind());
 
         let mut coins_to_merge = vec![];
         // last coin is used for gas, first coin is the one we merge into
         for c in coins[1..&coins.len() - 1].iter() {
-            let coin: Input = (&client.object(c.id.into(), None).await.unwrap().unwrap()).into();
+            let coin: Input = (&client
+                .object((*c.id()).into(), None)
+                .await
+                .unwrap()
+                .unwrap())
+                .into();
             coins_to_merge.push(tx.input(coin.with_owned_kind()));
         }
 
@@ -930,8 +945,8 @@ mod tests {
             vec![upgrade_cap.unwrap(), upgrade_receipt],
         );
 
-        let gas = coins.last().unwrap().id;
-        let gas_obj: Input = (&client.object(gas.into(), None).await.unwrap().unwrap()).into();
+        let gas = coins.last().unwrap().id();
+        let gas_obj: Input = (&client.object((*gas).into(), None).await.unwrap().unwrap()).into();
         tx.add_gas_objects(vec![gas_obj.with_owned_kind()]);
         tx.set_gas_budget(500000000);
         tx.set_gas_price(1000);

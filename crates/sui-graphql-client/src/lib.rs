@@ -2176,7 +2176,7 @@ mod tests {
         };
         let key = Ed25519PublicKey::generate(rand::thread_rng());
         let address = key.derive_address();
-        faucet.request_and_wait(address).await.unwrap();
+        faucet.request(address).await.unwrap();
 
         const MAX_RETRIES: u32 = 10;
         const RETRY_DELAY: time::Duration = time::Duration::from_secs(1);
