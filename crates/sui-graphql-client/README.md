@@ -37,7 +37,7 @@ async fn main() -> Result<()> {
 ```
 
 ## Requesting gas from the faucet
-The client provides an API to request gas from the faucet. The `request_and_wait` function sends a request to the faucet and waits until the transaction is confirmed. The function returns the transaction details if the request is successful.
+The client provides an API to request gas from the faucet. The `request` function sends a request to the faucet and waits until the transaction is confirmed. The function returns the transaction details if the request is successful.
 
 ### Example for standard devnet/testnet/local networks.
 ```rust, no_run
@@ -52,7 +52,7 @@ async fn main() -> Result<()> {
     let address = Address::from_str("SUI_ADDRESS_HERE")?;
     // Request gas from the faucet and wait until a coin is received
     // As the client is set to devnet, faucet will use the devnet faucet.
-    let faucet = FaucetClient::devnet().request_and_wait(address).await?;
+    let faucet = FaucetClient::devnet().request(address).await?;
     if let Some(resp) = faucet {
         let coins = resp.sent;
         for coin in coins {
@@ -61,13 +61,13 @@ async fn main() -> Result<()> {
     }
 
     // Request gas from the testnet faucet by explicitly setting the faucet to testnet
-    let faucet_testnet = FaucetClient::testnet().request_and_wait(address).await?;
+    let faucet_testnet = FaucetClient::testnet().request(address).await?;
     Ok(())
 }
 ```
 
 ### Example for custom faucet service.
-Note that this `FaucetClient` is explicitly designed to work with two endpoints: `v1/gas`, and `v1/status`. When passing in the custom faucet URL, skip the final endpoint and only pass in the top-level url (e.g., `https://faucet.devnet.sui.io`).
+Note that this `FaucetClient` is explicitly designed to work with this endpoint: `v2/gas`, When passing in the custom faucet URL, skip the final endpoint and only pass in the top-level url (e.g., `https://faucet.devnet.sui.io`).
 ```rust, no_run
 use sui_graphql_client::faucet::FaucetClient;
 use sui_types::Address;
@@ -80,7 +80,7 @@ async fn main() -> Result<()> {
     let address = Address::from_str("SUI_ADDRESS_HERE")?;
     // Request gas from the faucet and wait until a coin is received
     // As the client is set to devnet, faucet will use the devnet faucet.
-    let faucet = FaucetClient::new("https://myfaucet_testnet.com").request_and_wait(address).await?;
+    let faucet = FaucetClient::new("https://myfaucet_testnet.com").request(address).await?;
     if let Some(resp) = faucet {
         let coins = resp.sent;
         for coin in coins {
