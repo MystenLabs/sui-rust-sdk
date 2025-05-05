@@ -52,10 +52,9 @@ async fn main() -> Result<()> {
     let address = Address::from_str("SUI_ADDRESS_HERE")?;
     // Request gas from the faucet and wait until a coin is received
     // As the client is set to devnet, faucet will use the devnet faucet.
-    let faucet = FaucetClient::devnet().request(address).await?;
-    if let Some(resp) = faucet {
-        let coins = resp.sent;
-        for coin in coins {
+    let faucet = FaucetClient::devnet().request(address).await;
+    if let Ok(resp) = faucet {
+        for coin in resp.coins_sent {
             println!("coin: {:?}", coin);
         }
     }
@@ -80,10 +79,9 @@ async fn main() -> Result<()> {
     let address = Address::from_str("SUI_ADDRESS_HERE")?;
     // Request gas from the faucet and wait until a coin is received
     // As the client is set to devnet, faucet will use the devnet faucet.
-    let faucet = FaucetClient::new("https://myfaucet_testnet.com").request(address).await?;
-    if let Some(resp) = faucet {
-        let coins = resp.sent;
-        for coin in coins {
+    let faucet = FaucetClient::new("https://myfaucet_testnet.com").request(address).await;
+    if let Ok(resp) = faucet {
+        for coin in resp.coins_sent {
             println!("coin: {:?}", coin);
         }
     }
