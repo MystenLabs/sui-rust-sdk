@@ -564,7 +564,7 @@ mod tests {
     /// - set the sender for the tx to this newly created address
     /// - set gas price
     /// - set gas budget
-    /// - call faucet which returns 1 coin object; we need a few so we make 3 requests
+    /// - call faucet which returns 5 coin objects (by default)
     /// - set the gas object (last coin from the list of the 5 objects returned by faucet)
     /// - return the address, private key, and coins.
     async fn helper_setup<'a>(
