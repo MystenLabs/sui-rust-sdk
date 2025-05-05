@@ -97,7 +97,7 @@ jobs:
       - name: Get the Sui testnet binary and start a local network
         shell: bash
         env:
-          SUI_BINARY_VERSION: "1.44.2" # used for downloading a specific Sui binary versions that matches the GraphQL schema for local network tests
+          SUI_BINARY_VERSION: "1.48.0" # used for downloading a specific Sui binary versions that matches the GraphQL schema for local network tests
           SUI_NETWORK_RELEASE: "testnet" # which release to use
         run: |
           ASSET_NAME="sui-$SUI_NETWORK_RELEASE-v$SUI_BINARY_VERSION-ubuntu-x86_64.tgz"
