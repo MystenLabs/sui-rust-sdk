@@ -210,7 +210,7 @@ impl TransactionBuilder {
     ///
     ///  - `modules`: is the modules' bytecode for the modules to be published
     ///  - `dependencies`: is the list of IDs of the transitive dependencies of the package to be
-    ///     upgraded
+    ///    upgraded
     ///  - `package`: is the ID of the current package being upgraded
     ///  - `ticket`: is the upgrade ticket
     ///
