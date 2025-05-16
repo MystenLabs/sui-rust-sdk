@@ -588,7 +588,7 @@ impl Client {
         owner: Address,
         coin_type: Option<&str>,
         pagination_filter: PaginationFilter,
-    ) -> Result<Page<Coin>> {
+    ) -> Result<Page<Coin<'static>>> {
         let response = self
             .objects(
                 Some(ObjectFilter {
@@ -620,7 +620,7 @@ impl Client {
         address: Address,
         coin_type: Option<&'static str>,
         streaming_direction: Direction,
-    ) -> impl Stream<Item = Result<Coin>> {
+    ) -> impl Stream<Item = Result<Coin<'static>>> + use<'_> {
         stream_paginated_query(
             move |filter| self.coins(address, coin_type, filter),
             streaming_direction,
@@ -2176,7 +2176,7 @@ mod tests {
         };
         let key = Ed25519PublicKey::generate(rand::thread_rng());
         let address = key.derive_address();
-        faucet.request_and_wait(address).await.unwrap();
+        faucet.request(address).await.unwrap();
 
         const MAX_RETRIES: u32 = 10;
         const RETRY_DELAY: time::Duration = time::Duration::from_secs(1);
