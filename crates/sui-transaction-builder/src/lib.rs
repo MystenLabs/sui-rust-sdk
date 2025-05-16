@@ -567,10 +567,10 @@ mod tests {
     /// - call faucet which returns 5 coin objects (by default)
     /// - set the gas object (last coin from the list of the 5 objects returned by faucet)
     /// - return the address, private key, and coins.
-    async fn helper_setup<'a>(
+    async fn helper_setup(
         tx: &mut TransactionBuilder,
-        client: &'a Client,
-    ) -> (Address, Ed25519PrivateKey, Vec<Coin<'a>>) {
+        client: &Client,
+    ) -> (Address, Ed25519PrivateKey, Vec<Coin<'static>>) {
         let (address, pk) = helper_address_pk();
         let faucet = FaucetClient::local();
         let faucet_resp = faucet.request(address).await.unwrap();

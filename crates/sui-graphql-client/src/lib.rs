@@ -588,7 +588,7 @@ impl Client {
         owner: Address,
         coin_type: Option<&str>,
         pagination_filter: PaginationFilter,
-    ) -> Result<Page<Coin>> {
+    ) -> Result<Page<Coin<'static>>> {
         let response = self
             .objects(
                 Some(ObjectFilter {
@@ -620,7 +620,7 @@ impl Client {
         address: Address,
         coin_type: Option<&'static str>,
         streaming_direction: Direction,
-    ) -> impl Stream<Item = Result<Coin>> {
+    ) -> impl Stream<Item = Result<Coin<'static>>> + use<'_> {
         stream_paginated_query(
             move |filter| self.coins(address, coin_type, filter),
             streaming_direction,
