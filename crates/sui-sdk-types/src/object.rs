@@ -107,6 +107,18 @@ pub enum Owner {
     ),
     /// Object is immutable, and hence ownership doesn't matter.
     Immutable,
+
+    /// Object is exclusively owned by a single address and sequenced via consensus.
+    ConsensusAddress {
+        /// The version at which the object most recently became a consensus object.
+        /// This serves the same function as `initial_shared_version`, except it may change
+        /// if the object's Owner type changes.
+        #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+        start_version: Version,
+
+        /// The owner of the object.
+        owner: Address,
+    },
 }
 
 /// Object data, either a package or struct

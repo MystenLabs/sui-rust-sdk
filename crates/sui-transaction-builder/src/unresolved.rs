@@ -309,6 +309,9 @@ impl From<&sui_types::Object> for Input {
             Owner::Object(_) => input,
             Owner::Shared(at_version) => input.with_initial_shared_version(*at_version),
             Owner::Immutable => input.with_immutable_kind(),
+            Owner::ConsensusAddress { start_version, .. } => {
+                input.with_initial_shared_version(*start_version)
+            }
         }
     }
 }

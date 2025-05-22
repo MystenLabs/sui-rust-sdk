@@ -905,6 +905,9 @@ mod tests {
                             panic!("Upgrade capability controlled by object")
                         }
                         sui_types::Owner::Immutable => panic!("Upgrade capability is stored immutably and cannot be used for upgrades"),
+                        sui_types::Owner::ConsensusAddress { .. } => {
+                            upgrade_cap = Some(tx.input(&obj))
+                        }
                     };
                     break;
                 }
