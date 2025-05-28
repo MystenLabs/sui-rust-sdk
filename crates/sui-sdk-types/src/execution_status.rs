@@ -256,6 +256,22 @@ pub enum ExecutionError {
 
     /// Certificate is canceled because randomness could not be generated this epoch
     ExecutionCanceledDueToRandomnessUnavailable,
+
+    /// Move vector element (passed to MakeMoveVec) with size {value_size} is larger \
+    /// than the maximum size {max_scaled_size}. Note that this maximum is scaled based on the \
+    /// type of the vector element.
+    MoveVectorElemTooBig {
+        value_size: u64,
+        max_scaled_size: u64,
+    },
+
+    /// Move value (possibly an upgrade ticket or a dev-inspect value) with size {value_size} \
+    /// is larger than the maximum size  {max_scaled_size}. Note that this maximum is scaled based \
+    /// on the type of the value.
+    MoveRawValueTooBig {
+        value_size: u64,
+        max_scaled_size: u64,
+    },
 }
 
 /// Location in move bytecode where an error occurred
@@ -632,6 +648,16 @@ mod serialization {
         },
 
         ExecutionCanceledDueToRandomnessUnavailable,
+
+        MoveVectorElemTooBig {
+            value_size: u64,
+            max_scaled_size: u64,
+        },
+
+        MoveRawValueTooBig {
+            value_size: u64,
+            max_scaled_size: u64,
+        },
     }
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
@@ -715,6 +741,16 @@ mod serialization {
         },
 
         ExecutionCanceledDueToRandomnessUnavailable,
+
+        MoveVectorElemTooBig {
+            value_size: u64,
+            max_scaled_size: u64,
+        },
+
+        MoveRawValueTooBig {
+            value_size: u64,
+            max_scaled_size: u64,
+        },
     }
 
     impl Serialize for ExecutionError {
@@ -833,6 +869,20 @@ mod serialization {
                     Self::ExecutionCanceledDueToRandomnessUnavailable => {
                         ReadableExecutionError::ExecutionCanceledDueToRandomnessUnavailable
                     }
+                    Self::MoveVectorElemTooBig {
+                        value_size,
+                        max_scaled_size,
+                    } => ReadableExecutionError::MoveVectorElemTooBig {
+                        value_size,
+                        max_scaled_size,
+                    },
+                    Self::MoveRawValueTooBig {
+                        value_size,
+                        max_scaled_size,
+                    } => ReadableExecutionError::MoveRawValueTooBig {
+                        value_size,
+                        max_scaled_size,
+                    },
                 };
                 readable.serialize(serializer)
             } else {
@@ -942,6 +992,20 @@ mod serialization {
                     Self::ExecutionCanceledDueToRandomnessUnavailable => {
                         BinaryExecutionError::ExecutionCanceledDueToRandomnessUnavailable
                     }
+                    Self::MoveVectorElemTooBig {
+                        value_size,
+                        max_scaled_size,
+                    } => BinaryExecutionError::MoveVectorElemTooBig {
+                        value_size,
+                        max_scaled_size,
+                    },
+                    Self::MoveRawValueTooBig {
+                        value_size,
+                        max_scaled_size,
+                    } => BinaryExecutionError::MoveRawValueTooBig {
+                        value_size,
+                        max_scaled_size,
+                    },
                 };
                 binary.serialize(serializer)
             }
@@ -1062,6 +1126,20 @@ mod serialization {
                     ReadableExecutionError::ExecutionCanceledDueToRandomnessUnavailable => {
                         Self::ExecutionCanceledDueToRandomnessUnavailable
                     }
+                    ReadableExecutionError::MoveVectorElemTooBig {
+                        value_size,
+                        max_scaled_size,
+                    } => Self::MoveVectorElemTooBig {
+                        value_size,
+                        max_scaled_size,
+                    },
+                    ReadableExecutionError::MoveRawValueTooBig {
+                        value_size,
+                        max_scaled_size,
+                    } => Self::MoveRawValueTooBig {
+                        value_size,
+                        max_scaled_size,
+                    },
                 })
             } else {
                 BinaryExecutionError::deserialize(deserializer).map(|binary| match binary {
@@ -1168,6 +1246,20 @@ mod serialization {
                     BinaryExecutionError::ExecutionCanceledDueToRandomnessUnavailable => {
                         Self::ExecutionCanceledDueToRandomnessUnavailable
                     }
+                    BinaryExecutionError::MoveVectorElemTooBig {
+                        value_size,
+                        max_scaled_size,
+                    } => Self::MoveVectorElemTooBig {
+                        value_size,
+                        max_scaled_size,
+                    },
+                    BinaryExecutionError::MoveRawValueTooBig {
+                        value_size,
+                        max_scaled_size,
+                    } => Self::MoveRawValueTooBig {
+                        value_size,
+                        max_scaled_size,
+                    },
                 })
             }
         }
