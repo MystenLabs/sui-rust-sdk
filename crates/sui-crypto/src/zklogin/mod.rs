@@ -7,7 +7,6 @@ use sui_sdk_types::Jwk;
 use sui_sdk_types::JwkId;
 use sui_sdk_types::UserSignature;
 use sui_sdk_types::ZkLoginAuthenticator;
-use sui_sdk_types::ZkLoginClaim;
 use sui_sdk_types::ZkLoginInputs;
 
 mod poseidon;
@@ -93,11 +92,9 @@ struct JwtDetails {
 
 impl JwtDetails {
     fn from_zklogin_inputs(inputs: &ZkLoginInputs) -> Result<Self, SignatureError> {
-        const ISS: &str = "iss";
-
         let header = JwtHeader::from_base64(&inputs.header_base64)?;
         let id = JwkId {
-            iss: verify_extended_claim(&inputs.iss_base64_details, ISS)?,
+            iss: inputs.iss().map_err(SignatureError::from_source)?,
             kid: header.kid.clone(),
         };
         Ok(JwtDetails { header, id })
@@ -135,123 +132,4 @@ impl JwtHeader {
         }
         Ok(Self { alg, kid, typ })
     }
-}
-
-/// Parse the extended claim json value to its claim value, using the expected claim key.
-fn verify_extended_claim(
-    claim: &ZkLoginClaim,
-    expected_key: &str,
-) -> Result<String, SignatureError> {
-    /// Map a base64 string to a bit array by taking each char's index and convert it to binary form with one bit per u8
-    /// element in the output. Returns SignatureError if one of the characters is not in the base64 charset.
-    fn base64_to_bitarray(input: &str) -> Result<Vec<u8>, SignatureError> {
-        use itertools::Itertools;
-
-        const BASE64_URL_CHARSET: &str =
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-
-        input
-            .chars()
-            .map(|c| {
-                BASE64_URL_CHARSET
-                    .find(c)
-                    .map(|index| index as u8)
-                    .map(|index| (0..6).rev().map(move |i| (index >> i) & 1))
-                    .ok_or_else(|| SignatureError::from_source("base64_to_bitarry invalid input"))
-            })
-            .flatten_ok()
-            .collect()
-    }
-
-    /// Convert a bitarray (each bit is represented by a u8) to a byte array by taking each 8 bits as a
-    /// byte in big-endian format.
-    fn bitarray_to_bytearray(bits: &[u8]) -> Result<Vec<u8>, SignatureError> {
-        if bits.len() % 8 != 0 {
-            return Err(SignatureError::from_source(
-                "bitarray_to_bytearray invalid input",
-            ));
-        }
-        Ok(bits
-            .chunks(8)
-            .map(|chunk| {
-                let mut byte = 0u8;
-                for (i, bit) in chunk.iter().rev().enumerate() {
-                    byte |= bit << i;
-                }
-                byte
-            })
-            .collect())
-    }
-
-    /// Parse the base64 string, add paddings based on offset, and convert to a bytearray.
-    fn decode_base64_url(s: &str, index_mod_4: &u8) -> Result<String, SignatureError> {
-        if s.len() < 2 {
-            return Err(SignatureError::from_source("Base64 string smaller than 2"));
-        }
-        let mut bits = base64_to_bitarray(s)?;
-        match index_mod_4 {
-            0 => {}
-            1 => {
-                bits.drain(..2);
-            }
-            2 => {
-                bits.drain(..4);
-            }
-            _ => {
-                return Err(SignatureError::from_source("Invalid first_char_offset"));
-            }
-        }
-
-        let last_char_offset = (index_mod_4 + s.len() as u8 - 1) % 4;
-        match last_char_offset {
-            3 => {}
-            2 => {
-                bits.drain(bits.len() - 2..);
-            }
-            1 => {
-                bits.drain(bits.len() - 4..);
-            }
-            _ => {
-                return Err(SignatureError::from_source("Invalid last_char_offset"));
-            }
-        }
-
-        if bits.len() % 8 != 0 {
-            return Err(SignatureError::from_source("Invalid bits length"));
-        }
-
-        Ok(std::str::from_utf8(&bitarray_to_bytearray(&bits)?)
-            .map_err(|_| SignatureError::from_source("Invalid UTF8 string"))?
-            .to_owned())
-    }
-
-    let extended_claim = decode_base64_url(&claim.value, &claim.index_mod_4)?;
-
-    // Last character of each extracted_claim must be '}' or ','
-    if !(extended_claim.ends_with('}') || extended_claim.ends_with(',')) {
-        return Err(SignatureError::from_source("Invalid extended claim"));
-    }
-
-    let json_str = format!("{{{}}}", &extended_claim[..extended_claim.len() - 1]);
-
-    serde_json::from_str::<serde_json::Value>(&json_str)
-        .map_err(SignatureError::from_source)?
-        .as_object_mut()
-        .and_then(|o| o.get_mut(expected_key))
-        .map(serde_json::Value::take)
-        .and_then(|v| match v {
-            serde_json::Value::String(s) => Some(s),
-            _ => None,
-        })
-        .ok_or_else(|| SignatureError::from_source("invalid extended claim"))
-}
-
-pub(crate) fn zklogin_identifier_from_inputs(
-    inputs: &ZkLoginInputs,
-) -> Result<sui_sdk_types::ZkLoginPublicIdentifier, SignatureError> {
-    const ISS: &str = "iss";
-
-    let iss = verify_extended_claim(&inputs.iss_base64_details, ISS)?;
-    sui_sdk_types::ZkLoginPublicIdentifier::new(iss, inputs.address_seed.clone())
-        .ok_or_else(|| SignatureError::from_source("invalid iss"))
 }

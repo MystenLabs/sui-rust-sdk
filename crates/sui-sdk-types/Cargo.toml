@@ -23,7 +23,7 @@ rustdoc-args = [
 
 [features]
 default = []
-serde = ["dep:serde", "dep:serde_derive", "dep:serde_with", "dep:bcs", "dep:serde_json", "roaring/std"]
+serde = ["dep:serde", "dep:serde_derive", "dep:serde_with", "dep:bcs", "dep:serde_json", "roaring/std", "dep:itertools"]
 rand = ["dep:rand_core"]
 hash = ["dep:blake2"]
 proptest = ["dep:proptest", "dep:test-strategy", "serde"]
@@ -42,6 +42,7 @@ serde_derive = { version = "1.0.210", optional = true }
 serde_with = { version = "3.9", default-features = false, features = ["alloc"], optional = true }
 bcs = { version = "0.1.6", optional = true }
 serde_json = { version = "1.0.128", optional = true }
+itertools = { version = "0.13.0", optional = true }
 
 # RNG support
 rand_core = { version = "0.6.4", optional = true }

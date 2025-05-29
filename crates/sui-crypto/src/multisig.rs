@@ -72,9 +72,10 @@ impl MultisigVerifier {
 
                 // verify that the member identifier and the authenticator match
                 if zklogin_identifier
-                    != &crate::zklogin::zklogin_identifier_from_inputs(
-                        &zklogin_authenticator.inputs,
-                    )?
+                    != &zklogin_authenticator
+                        .inputs
+                        .public_identifier()
+                        .map_err(SignatureError::from_source)?
                 {
                     return Err(SignatureError::from_source(
                         "member zklogin identifier does not match signature",
@@ -390,8 +391,10 @@ fn multisig_pubkey_and_signature_from_user_signature(
         )),
         #[cfg(feature = "zklogin")]
         UserSignature::ZkLogin(zklogin_authenticator) => {
-            let zklogin_identifier =
-                crate::zklogin::zklogin_identifier_from_inputs(&zklogin_authenticator.inputs)?;
+            let zklogin_identifier = zklogin_authenticator
+                .inputs
+                .public_identifier()
+                .map_err(SignatureError::from_source)?;
             Ok((
                 MultisigMemberPublicKey::ZkLogin(zklogin_identifier),
                 MultisigMemberSignature::ZkLogin(zklogin_authenticator),

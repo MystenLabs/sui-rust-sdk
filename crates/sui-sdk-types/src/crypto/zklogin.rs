@@ -58,6 +58,32 @@ pub struct ZkLoginInputs {
     pub address_seed: Bn254FieldElement,
 }
 
+impl ZkLoginInputs {
+    #[cfg(feature = "serde")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
+    pub fn iss(&self) -> Result<String, InvalidZkLoginClaimError> {
+        const ISS: &str = "iss";
+
+        let iss = self.iss_base64_details.verify_extended_claim(ISS)?;
+
+        if iss.len() > 255 {
+            Err(InvalidZkLoginClaimError::new("invalid iss: too long"))
+        } else {
+            Ok(iss)
+        }
+    }
+
+    #[cfg(feature = "serde")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
+    pub fn public_identifier(&self) -> Result<ZkLoginPublicIdentifier, InvalidZkLoginClaimError> {
+        let iss = self.iss()?;
+        Ok(ZkLoginPublicIdentifier {
+            iss,
+            address_seed: self.address_seed.clone(),
+        })
+    }
+}
+
 /// A claim of the iss in a zklogin proof
 ///
 /// # BCS
@@ -76,6 +102,144 @@ pub struct ZkLoginInputs {
 pub struct ZkLoginClaim {
     pub value: String,
     pub index_mod_4: u8,
+}
+
+#[derive(Debug)]
+pub struct InvalidZkLoginClaimError(String);
+
+#[cfg(feature = "serde")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
+impl InvalidZkLoginClaimError {
+    fn new<T: Into<String>>(err: T) -> Self {
+        Self(err.into())
+    }
+}
+
+impl std::fmt::Display for InvalidZkLoginClaimError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "invalid zklogin claim: {}", self.0)
+    }
+}
+
+impl std::error::Error for InvalidZkLoginClaimError {}
+
+#[cfg(feature = "serde")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
+impl ZkLoginClaim {
+    fn verify_extended_claim(
+        &self,
+        expected_key: &str,
+    ) -> Result<String, InvalidZkLoginClaimError> {
+        /// Map a base64 string to a bit array by taking each char's index and convert it to binary form with one bit per u8
+        /// element in the output. Returns InvalidZkLoginClaimError if one of the characters is not in the base64 charset.
+        fn base64_to_bitarray(input: &str) -> Result<Vec<u8>, InvalidZkLoginClaimError> {
+            use itertools::Itertools;
+
+            const BASE64_URL_CHARSET: &str =
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+
+            input
+                .chars()
+                .map(|c| {
+                    BASE64_URL_CHARSET
+                        .find(c)
+                        .map(|index| index as u8)
+                        .map(|index| (0..6).rev().map(move |i| (index >> i) & 1))
+                        .ok_or_else(|| {
+                            InvalidZkLoginClaimError::new("base64_to_bitarry invalid input")
+                        })
+                })
+                .flatten_ok()
+                .collect()
+        }
+
+        /// Convert a bitarray (each bit is represented by a u8) to a byte array by taking each 8 bits as a
+        /// byte in big-endian format.
+        fn bitarray_to_bytearray(bits: &[u8]) -> Result<Vec<u8>, InvalidZkLoginClaimError> {
+            if bits.len() % 8 != 0 {
+                return Err(InvalidZkLoginClaimError::new(
+                    "bitarray_to_bytearray invalid input",
+                ));
+            }
+            Ok(bits
+                .chunks(8)
+                .map(|chunk| {
+                    let mut byte = 0u8;
+                    for (i, bit) in chunk.iter().rev().enumerate() {
+                        byte |= bit << i;
+                    }
+                    byte
+                })
+                .collect())
+        }
+
+        /// Parse the base64 string, add paddings based on offset, and convert to a bytearray.
+        fn decode_base64_url(
+            s: &str,
+            index_mod_4: &u8,
+        ) -> Result<String, InvalidZkLoginClaimError> {
+            if s.len() < 2 {
+                return Err(InvalidZkLoginClaimError::new(
+                    "Base64 string smaller than 2",
+                ));
+            }
+            let mut bits = base64_to_bitarray(s)?;
+            match index_mod_4 {
+                0 => {}
+                1 => {
+                    bits.drain(..2);
+                }
+                2 => {
+                    bits.drain(..4);
+                }
+                _ => {
+                    return Err(InvalidZkLoginClaimError::new("Invalid first_char_offset"));
+                }
+            }
+
+            let last_char_offset = (index_mod_4 + s.len() as u8 - 1) % 4;
+            match last_char_offset {
+                3 => {}
+                2 => {
+                    bits.drain(bits.len() - 2..);
+                }
+                1 => {
+                    bits.drain(bits.len() - 4..);
+                }
+                _ => {
+                    return Err(InvalidZkLoginClaimError::new("Invalid last_char_offset"));
+                }
+            }
+
+            if bits.len() % 8 != 0 {
+                return Err(InvalidZkLoginClaimError::new("Invalid bits length"));
+            }
+
+            Ok(std::str::from_utf8(&bitarray_to_bytearray(&bits)?)
+                .map_err(|_| InvalidZkLoginClaimError::new("Invalid UTF8 string"))?
+                .to_owned())
+        }
+
+        let extended_claim = decode_base64_url(&self.value, &self.index_mod_4)?;
+
+        // Last character of each extracted_claim must be '}' or ','
+        if !(extended_claim.ends_with('}') || extended_claim.ends_with(',')) {
+            return Err(InvalidZkLoginClaimError::new("Invalid extended claim"));
+        }
+
+        let json_str = format!("{{{}}}", &extended_claim[..extended_claim.len() - 1]);
+
+        serde_json::from_str::<serde_json::Value>(&json_str)
+            .map_err(|e| InvalidZkLoginClaimError::new(e.to_string()))?
+            .as_object_mut()
+            .and_then(|o| o.get_mut(expected_key))
+            .map(serde_json::Value::take)
+            .and_then(|v| match v {
+                serde_json::Value::String(s) => Some(s),
+                _ => None,
+            })
+            .ok_or_else(|| InvalidZkLoginClaimError::new("invalid extended claim"))
+    }
 }
 
 /// A zklogin groth16 proof
