@@ -333,10 +333,6 @@ pub(crate) type U2048 = bnum::BUintD8<256>;
 
 const MAX_HEADER_LEN: u8 = 248;
 const PACK_WIDTH: u8 = 248;
-#[allow(unused)]
-const ISS: &str = "iss";
-#[allow(unused)]
-const BASE64_URL_CHARSET: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 const MAX_EXT_ISS_LEN: u8 = 165;
 const MAX_ISS_LEN_B64: u8 = 4 * (1 + MAX_EXT_ISS_LEN / 3);
 
