@@ -93,12 +93,21 @@ impl PasskeyAuthenticator {
 /// The BCS serialized form for this type is defined by the following ABNF:
 ///
 /// ```text
-/// passkey-public-key = passkey-flag secp256r1-public-key
+/// passkey-public-key = secp256r1-public-key
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct PasskeyPublicKey(Secp256r1PublicKey);
 
 impl PasskeyPublicKey {
+    pub fn new(public_key: Secp256r1PublicKey) -> Self {
+        Self(public_key)
+    }
+
     /// The underlying `Secp256r1PublicKey` for this passkey.
     pub fn inner(&self) -> &Secp256r1PublicKey {
         &self.0

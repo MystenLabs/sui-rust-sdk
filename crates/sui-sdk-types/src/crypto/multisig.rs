@@ -2,6 +2,8 @@ use super::zklogin::ZkLoginAuthenticator;
 use super::zklogin::ZkLoginPublicIdentifier;
 use super::Ed25519PublicKey;
 use super::Ed25519Signature;
+use super::PasskeyAuthenticator;
+use super::PasskeyPublicKey;
 use super::Secp256k1PublicKey;
 use super::Secp256k1Signature;
 use super::Secp256r1PublicKey;
@@ -51,6 +53,7 @@ pub enum MultisigMemberPublicKey {
     Secp256k1(Secp256k1PublicKey),
     Secp256r1(Secp256r1PublicKey),
     ZkLogin(ZkLoginPublicIdentifier),
+    Passkey(PasskeyPublicKey),
 }
 
 /// A member in a multisig committee
@@ -328,6 +331,7 @@ pub enum MultisigMemberSignature {
     Secp256k1(Secp256k1Signature),
     Secp256r1(Secp256r1Signature),
     ZkLogin(Box<ZkLoginAuthenticator>),
+    Passkey(PasskeyAuthenticator),
 }
 
 #[cfg(feature = "serde")]
@@ -337,6 +341,7 @@ mod serialization {
     use crate::crypto::Base64Array33;
     use crate::crypto::Base64Array34;
     use crate::Ed25519PublicKey;
+    use crate::PasskeyPublicKey;
     use crate::Secp256k1PublicKey;
     use crate::Secp256r1PublicKey;
     use crate::SignatureScheme;
@@ -382,6 +387,9 @@ mod serialization {
                 }
                 MultisigMemberPublicKey::ZkLogin(_) => Err(serde::ser::Error::custom(
                     "zklogin not supported in legacy multisig",
+                )),
+                MultisigMemberPublicKey::Passkey(_) => Err(serde::ser::Error::custom(
+                    "passkey not supported in legacy multisig",
                 )),
             }
         }
@@ -652,6 +660,7 @@ mod serialization {
         Secp256k1(Secp256k1PublicKey),
         Secp256r1(Secp256r1PublicKey),
         ZkLogin(ZkLoginPublicIdentifier),
+        Passkey(PasskeyPublicKey),
     }
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
@@ -662,6 +671,7 @@ mod serialization {
         Secp256k1 { public_key: Secp256k1PublicKey },
         Secp256r1 { public_key: Secp256r1PublicKey },
         ZkLogin(ZkLoginPublicIdentifier),
+        Passkey { public_key: PasskeyPublicKey },
     }
 
     impl Serialize for MultisigMemberPublicKey {
@@ -689,6 +699,11 @@ mod serialization {
                     MultisigMemberPublicKey::ZkLogin(public_id) => {
                         ReadableMemberPublicKey::ZkLogin(public_id.clone())
                     }
+                    MultisigMemberPublicKey::Passkey(public_key) => {
+                        ReadableMemberPublicKey::Passkey {
+                            public_key: *public_key,
+                        }
+                    }
                 };
                 readable.serialize(serializer)
             } else {
@@ -704,6 +719,9 @@ mod serialization {
                     }
                     MultisigMemberPublicKey::ZkLogin(public_id) => {
                         MemberPublicKey::ZkLogin(public_id.clone())
+                    }
+                    MultisigMemberPublicKey::Passkey(public_key) => {
+                        MemberPublicKey::Passkey(*public_key)
                     }
                 };
                 binary.serialize(serializer)
@@ -727,6 +745,7 @@ mod serialization {
                         Self::Secp256r1(public_key)
                     }
                     ReadableMemberPublicKey::ZkLogin(public_id) => Self::ZkLogin(public_id),
+                    ReadableMemberPublicKey::Passkey { public_key } => Self::Passkey(public_key),
                 })
             } else {
                 let binary = MemberPublicKey::deserialize(deserializer)?;
@@ -735,6 +754,7 @@ mod serialization {
                     MemberPublicKey::Secp256k1(public_key) => Self::Secp256k1(public_key),
                     MemberPublicKey::Secp256r1(public_key) => Self::Secp256r1(public_key),
                     MemberPublicKey::ZkLogin(public_id) => Self::ZkLogin(public_id),
+                    MemberPublicKey::Passkey(public_key) => Self::Passkey(public_key),
                 })
             }
         }
@@ -746,6 +766,7 @@ mod serialization {
         Secp256k1(Secp256k1Signature),
         Secp256r1(Secp256r1Signature),
         ZkLogin(Box<ZkLoginAuthenticator>),
+        Passkey(PasskeyAuthenticator),
     }
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
@@ -756,6 +777,7 @@ mod serialization {
         Secp256k1 { signature: Secp256k1Signature },
         Secp256r1 { signature: Secp256r1Signature },
         ZkLogin(Box<ZkLoginAuthenticator>),
+        Passkey(PasskeyAuthenticator),
     }
 
     impl Serialize for MultisigMemberSignature {
@@ -783,6 +805,9 @@ mod serialization {
                     MultisigMemberSignature::ZkLogin(authenticator) => {
                         ReadableMemberSignature::ZkLogin(authenticator.clone())
                     }
+                    MultisigMemberSignature::Passkey(authenticator) => {
+                        ReadableMemberSignature::Passkey(authenticator.clone())
+                    }
                 };
                 readable.serialize(serializer)
             } else {
@@ -798,6 +823,9 @@ mod serialization {
                     }
                     MultisigMemberSignature::ZkLogin(authenticator) => {
                         MemberSignature::ZkLogin(authenticator.clone())
+                    }
+                    MultisigMemberSignature::Passkey(authenticator) => {
+                        MemberSignature::Passkey(authenticator.clone())
                     }
                 };
                 binary.serialize(serializer)
@@ -817,6 +845,7 @@ mod serialization {
                     ReadableMemberSignature::Secp256k1 { signature } => Self::Secp256k1(signature),
                     ReadableMemberSignature::Secp256r1 { signature } => Self::Secp256r1(signature),
                     ReadableMemberSignature::ZkLogin(authenticator) => Self::ZkLogin(authenticator),
+                    ReadableMemberSignature::Passkey(authenticator) => Self::Passkey(authenticator),
                 })
             } else {
                 let binary = MemberSignature::deserialize(deserializer)?;
@@ -825,6 +854,7 @@ mod serialization {
                     MemberSignature::Secp256k1(signature) => Self::Secp256k1(signature),
                     MemberSignature::Secp256r1(signature) => Self::Secp256r1(signature),
                     MemberSignature::ZkLogin(authenticator) => Self::ZkLogin(authenticator),
+                    MemberSignature::Passkey(authenticator) => Self::Passkey(authenticator),
                 })
             }
         }

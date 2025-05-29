@@ -220,7 +220,7 @@ impl crate::PasskeyPublicKey {
     /// `Secp256r1PublicKey` that corresponds to this passkey prefixed with the Passkey
     /// `SignatureScheme` flag (`0x06`).
     ///
-    /// `hash( 0x06 || 33-byte secp256r1 public key)`
+    /// `hash( 0x06 || 33-byte secp256r1-public-key)`
     pub fn derive_address(&self) -> Address {
         let mut hasher = Hasher::new();
         self.write_into_hasher(&mut hasher);
@@ -265,6 +265,7 @@ impl crate::MultisigCommittee {
                 Secp256k1(p) => p.write_into_hasher(&mut hasher),
                 Secp256r1(p) => p.write_into_hasher(&mut hasher),
                 ZkLogin(p) => p.write_into_hasher_padded(&mut hasher),
+                Passkey(p) => p.write_into_hasher(&mut hasher),
             }
 
             hasher.update(member.weight().to_le_bytes());

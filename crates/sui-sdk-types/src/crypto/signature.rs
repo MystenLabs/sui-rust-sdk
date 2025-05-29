@@ -793,5 +793,34 @@ mod serialization {
                 assert_eq!(sig, serde_json::from_str(&json).unwrap());
             }
         }
+
+        #[test]
+        fn mutisig_with_passkey() {
+            const FIXTURE: &str = "4wMDAQSPAgYlWA5npzp6kvrYZs+ZuUq2Z1mil2S1cYIfq64uix17NuQdAAAAAIMBeyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoieEtoSGhUU1o4TVJTNjAtLTZNbjBreC1vSW1RWUs1RjNFMmtzQm9iRkk3OCIsIm9yaWdpbiI6Imh0dHBzOi8vd3d3LnN1aS5pbyIsImNyb3NzT3JpZ2luIjpmYWxzZX1iAj6cOZNgD7buVIny/mQVv0gt87gEpo/V6yFusFHc0ED0XBdBXIRO8cDcoKDOPeKpNOwyMn4JvCwh/bA9Z27vBcID4FVY2uPg1vTXoKTq74rVS0uaUzafqn5emXJEfpzp9osQAAUADX2rNYyNrapO+gBJp1sHQ2VVsQo2ghm7aA9wVxNJ13UBAQIOF81ZOeRrGWZBlozXWZELold+J/pz/eOHbbm+xbzrKwECA0f7ryPwOKvEwwiicRF6Kkz/rt28X/gcdRe8bHSn7bQwAQM8G2h0dHBzOi8vaWQudHdpdGNoLnR2L29hdXRoMgVuAvSJovCe0hhp6n7cBfcDd20d7RhhkODYMqLqqMIDAQQD4FVY2uPg1vTXoKTq74rVS0uaUzafqn5emXJEfpzp9osBAQA=";
+
+            let bcs = Base64::decode_vec(FIXTURE).unwrap();
+
+            let sig: UserSignature = bcs::from_bytes(&bcs).unwrap();
+            assert_eq!(SignatureScheme::Multisig, sig.scheme());
+
+            let committee = match &sig {
+                UserSignature::Multisig(multisig) => multisig.committee(),
+                _ => panic!("not a multisig"),
+            };
+            assert_eq!(
+                committee.derive_address(),
+                crate::Address::from_hex(
+                    "0x10f58251fa90d7fd5510f99787ac5c5874fe29c033524ba0275f1ed793ed8598"
+                )
+                .unwrap()
+            );
+
+            let bytes = bcs::to_bytes(&sig).unwrap();
+            assert_eq!(bcs, bytes);
+
+            let json = serde_json::to_string_pretty(&sig).unwrap();
+            println!("{json}");
+            assert_eq!(sig, serde_json::from_str(&json).unwrap());
+        }
     }
 }
