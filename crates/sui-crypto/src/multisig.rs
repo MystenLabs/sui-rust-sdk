@@ -85,6 +85,25 @@ impl MultisigVerifier {
                 zklogin_verifier.verify(message, zklogin_authenticator.as_ref())
             }
 
+            #[cfg(not(feature = "passkey"))]
+            (MultisigMemberPublicKey::Passkey(_), MultisigMemberSignature::Passkey(_)) => Err(
+                SignatureError::from_source("support for passkey is not enabled"),
+            ),
+            #[cfg(feature = "passkey")]
+            (
+                MultisigMemberPublicKey::Passkey(passkey_public_key),
+                MultisigMemberSignature::Passkey(passkey_authenticator),
+            ) => {
+                // Verify that the member pubkey matches the authenticator
+                if passkey_public_key != &passkey_authenticator.public_key() {
+                    return Err(SignatureError::from_source(
+                        "member passkey public_key does not match authenticator",
+                    ));
+                }
+
+                crate::passkey::PasskeyVerifier::default().verify(message, passkey_authenticator)
+            }
+
             _ => Err(SignatureError::from_source(
                 "member and signature scheme do not match",
             )),
@@ -401,8 +420,16 @@ fn multisig_pubkey_and_signature_from_user_signature(
             ))
         }
 
-        UserSignature::Multisig(_) | UserSignature::Passkey(_) => {
-            Err(SignatureError::from_source("invalid siganture scheme"))
-        }
+        #[cfg(not(feature = "passkey"))]
+        UserSignature::Passkey(_) => Err(SignatureError::from_source(
+            "support for passkey is not enabled",
+        )),
+        #[cfg(feature = "passkey")]
+        UserSignature::Passkey(passkey_authenticator) => Ok((
+            MultisigMemberPublicKey::Passkey(passkey_authenticator.public_key()),
+            MultisigMemberSignature::Passkey(passkey_authenticator),
+        )),
+
+        UserSignature::Multisig(_) => Err(SignatureError::from_source("invalid siganture scheme")),
     }
 }
