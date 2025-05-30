@@ -82,6 +82,11 @@ impl PasskeyAuthenticator {
             public_key: self.public_key,
         }
     }
+
+    /// The passkey public key
+    pub fn public_key(&self) -> PasskeyPublicKey {
+        PasskeyPublicKey::new(self.public_key)
+    }
 }
 
 /// Public key of a `PasskeyAuthenticator`.
