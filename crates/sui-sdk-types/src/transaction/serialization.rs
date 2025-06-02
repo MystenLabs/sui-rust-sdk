@@ -525,6 +525,7 @@ mod end_of_epoch {
 mod version_assignments {
     use super::*;
     use crate::transaction::CanceledTransaction;
+    use crate::transaction::CanceledTransactionV2;
     use crate::transaction::ConsensusDeterminedVersionAssignments;
 
     #[derive(serde_derive::Serialize)]
@@ -532,6 +533,9 @@ mod version_assignments {
     enum ReadableConsensusDeterminedVersionAssignmentsRef<'a> {
         CanceledTransactions {
             canceled_transactions: &'a Vec<CanceledTransaction>,
+        },
+        CanceledTransactionsV2 {
+            canceled_transactions: &'a Vec<CanceledTransactionV2>,
         },
     }
 
@@ -541,6 +545,9 @@ mod version_assignments {
         CanceledTransactions {
             canceled_transactions: Vec<CanceledTransaction>,
         },
+        CanceledTransactionsV2 {
+            canceled_transactions: Vec<CanceledTransactionV2>,
+        },
     }
 
     #[derive(serde_derive::Serialize)]
@@ -548,12 +555,18 @@ mod version_assignments {
         CanceledTransactions {
             canceled_transactions: &'a Vec<CanceledTransaction>,
         },
+        CanceledTransactionsV2 {
+            canceled_transactions: &'a Vec<CanceledTransactionV2>,
+        },
     }
 
     #[derive(serde_derive::Deserialize)]
     enum BinaryConsensusDeterminedVersionAssignments {
         CanceledTransactions {
             canceled_transactions: Vec<CanceledTransaction>,
+        },
+        CanceledTransactionsV2 {
+            canceled_transactions: Vec<CanceledTransactionV2>,
         },
     }
 
@@ -569,6 +582,11 @@ mod version_assignments {
                     } => ReadableConsensusDeterminedVersionAssignmentsRef::CanceledTransactions {
                         canceled_transactions,
                     },
+                    Self::CanceledTransactionsV2 {
+                        canceled_transactions,
+                    } => ReadableConsensusDeterminedVersionAssignmentsRef::CanceledTransactionsV2 {
+                        canceled_transactions,
+                    },
                 };
                 readable.serialize(serializer)
             } else {
@@ -576,6 +594,11 @@ mod version_assignments {
                     Self::CanceledTransactions {
                         canceled_transactions,
                     } => BinaryConsensusDeterminedVersionAssignmentsRef::CanceledTransactions {
+                        canceled_transactions,
+                    },
+                    Self::CanceledTransactionsV2 {
+                        canceled_transactions,
+                    } => BinaryConsensusDeterminedVersionAssignmentsRef::CanceledTransactionsV2 {
                         canceled_transactions,
                     },
                 };
@@ -597,6 +620,11 @@ mod version_assignments {
                         } => Self::CanceledTransactions {
                             canceled_transactions,
                         },
+                        ReadableConsensusDeterminedVersionAssignments::CanceledTransactionsV2 {
+                            canceled_transactions,
+                        } => Self::CanceledTransactionsV2 {
+                            canceled_transactions,
+                        },
                     },
                 )
             } else {
@@ -605,6 +633,11 @@ mod version_assignments {
                         BinaryConsensusDeterminedVersionAssignments::CanceledTransactions {
                             canceled_transactions,
                         } => Self::CanceledTransactions {
+                            canceled_transactions,
+                        },
+                        BinaryConsensusDeterminedVersionAssignments::CanceledTransactionsV2 {
+                            canceled_transactions,
+                        } => Self::CanceledTransactionsV2 {
                             canceled_transactions,
                         },
                     },

@@ -512,6 +512,7 @@ pub struct ConsensusCommitPrologueV2 {
 /// consensus-determined-version-assignments = canceled-transactions
 ///
 /// canceled-transactions = %x00 (vector canceled-transaction)
+///                       = %x01 (vector canceled-transaction-v2)
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
@@ -520,6 +521,11 @@ pub enum ConsensusDeterminedVersionAssignments {
     CanceledTransactions {
         #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
         canceled_transactions: Vec<CanceledTransaction>,
+    },
+    /// Canceled transaction version assignment V2.
+    CanceledTransactionsV2 {
+        #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
+        canceled_transactions: Vec<CanceledTransactionV2>,
     },
 }
 
@@ -561,6 +567,50 @@ pub struct CanceledTransaction {
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct VersionAssignment {
     pub object_id: ObjectId,
+    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    pub version: Version,
+}
+
+/// A transaction that was canceled
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// canceled-transaction-v2 = digest (vector version-assignment-v2)
+/// ```
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+pub struct CanceledTransactionV2 {
+    pub digest: TransactionDigest,
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
+    pub version_assignments: Vec<VersionAssignmentV2>,
+}
+
+/// Object version assignment from consensus
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// version-assignment-v2 = object-id u64 u64
+/// ```
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+pub struct VersionAssignmentV2 {
+    pub object_id: ObjectId,
+    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
+    pub start_version: Version,
     #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub version: Version,
 }
