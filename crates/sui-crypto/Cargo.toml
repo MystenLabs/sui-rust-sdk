@@ -99,7 +99,8 @@ test-strategy = "0.4.0"
 
 [target.wasm32-unknown-unknown.dev-dependencies]
 wasm-bindgen-test = "0.3"
-getrandom = { version = "0.2", features = ["js"] }
+getrandom_2 = { version = "0.2", package = "getrandom", features = ["js"] }
+getrandom_3 = { version = "0.3", package = "getrandom", features = ["wasm_js"] }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(doc_cfg)'] }
