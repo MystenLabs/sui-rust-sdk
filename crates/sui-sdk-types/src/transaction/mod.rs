@@ -257,6 +257,9 @@ pub enum EndOfEpochTransactionKind {
 
     /// Execution time observations from the committee to preserve cross epoch
     StoreExecutionTimeObservations(ExecutionTimeObservations),
+
+    /// Create and initialize the accumulator root object
+    AccumulatorRootCreate,
 }
 
 /// Set of Execution Time Observations from the committee.

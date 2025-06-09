@@ -345,6 +345,7 @@ mod end_of_epoch {
             bridge_object_version: u64,
         },
         StoreExecutionTimeObservations(&'a crate::transaction::ExecutionTimeObservations),
+        AccumulatorRootCreate,
     }
 
     #[derive(serde_derive::Deserialize)]
@@ -363,6 +364,7 @@ mod end_of_epoch {
             bridge_object_version: u64,
         },
         StoreExecutionTimeObservations(crate::transaction::ExecutionTimeObservations),
+        AccumulatorRootCreate,
     }
 
     #[derive(serde_derive::Serialize)]
@@ -375,6 +377,7 @@ mod end_of_epoch {
         BridgeStateCreate { chain_id: &'a CheckpointDigest },
         BridgeCommitteeInit { bridge_object_version: u64 },
         StoreExecutionTimeObservations(&'a crate::transaction::ExecutionTimeObservations),
+        AccumulatorRootCreate,
     }
 
     #[derive(serde_derive::Deserialize)]
@@ -387,6 +390,7 @@ mod end_of_epoch {
         BridgeStateCreate { chain_id: CheckpointDigest },
         BridgeCommitteeInit { bridge_object_version: u64 },
         StoreExecutionTimeObservations(crate::transaction::ExecutionTimeObservations),
+        AccumulatorRootCreate,
     }
 
     impl Serialize for EndOfEpochTransactionKind {
@@ -420,6 +424,9 @@ mod end_of_epoch {
                     Self::StoreExecutionTimeObservations(obs) => {
                         ReadableEndOfEpochTransactionKindRef::StoreExecutionTimeObservations(obs)
                     }
+                    Self::AccumulatorRootCreate => {
+                        ReadableEndOfEpochTransactionKindRef::AccumulatorRootCreate
+                    }
                 };
                 readable.serialize(serializer)
             } else {
@@ -447,6 +454,9 @@ mod end_of_epoch {
                     },
                     Self::StoreExecutionTimeObservations(obs) => {
                         BinaryEndOfEpochTransactionKindRef::StoreExecutionTimeObservations(obs)
+                    }
+                    Self::AccumulatorRootCreate => {
+                        BinaryEndOfEpochTransactionKindRef::AccumulatorRootCreate
                     }
                 };
                 binary.serialize(serializer)
@@ -486,6 +496,9 @@ mod end_of_epoch {
                         ReadableEndOfEpochTransactionKind::StoreExecutionTimeObservations(obs) => {
                             Self::StoreExecutionTimeObservations(obs)
                         }
+                        ReadableEndOfEpochTransactionKind::AccumulatorRootCreate => {
+                            Self::AccumulatorRootCreate
+                        }
                     }
                 })
             } else {
@@ -514,6 +527,9 @@ mod end_of_epoch {
                         },
                         BinaryEndOfEpochTransactionKind::StoreExecutionTimeObservations(obs) => {
                             Self::StoreExecutionTimeObservations(obs)
+                        }
+                        BinaryEndOfEpochTransactionKind::AccumulatorRootCreate => {
+                            Self::AccumulatorRootCreate
                         }
                     },
                 )
