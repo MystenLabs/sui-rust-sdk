@@ -272,6 +272,9 @@ pub enum ExecutionError {
         value_size: u64,
         max_scaled_size: u64,
     },
+
+    /// A valid linkage was unable to be determined for the transaction or one of its commands.
+    InvalidLinkage,
 }
 
 /// Location in move bytecode where an error occurred
@@ -662,6 +665,8 @@ mod serialization {
             value_size: u64,
             max_scaled_size: u64,
         },
+
+        InvalidLinkage,
     }
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
@@ -755,6 +760,8 @@ mod serialization {
             value_size: u64,
             max_scaled_size: u64,
         },
+
+        InvalidLinkage,
     }
 
     impl Serialize for ExecutionError {
@@ -887,6 +894,7 @@ mod serialization {
                         value_size,
                         max_scaled_size,
                     },
+                    Self::InvalidLinkage => ReadableExecutionError::InvalidLinkage,
                 };
                 readable.serialize(serializer)
             } else {
@@ -1010,6 +1018,7 @@ mod serialization {
                         value_size,
                         max_scaled_size,
                     },
+                    Self::InvalidLinkage => BinaryExecutionError::InvalidLinkage,
                 };
                 binary.serialize(serializer)
             }
@@ -1144,6 +1153,7 @@ mod serialization {
                         value_size,
                         max_scaled_size,
                     },
+                    ReadableExecutionError::InvalidLinkage => Self::InvalidLinkage,
                 })
             } else {
                 BinaryExecutionError::deserialize(deserializer).map(|binary| match binary {
@@ -1264,6 +1274,7 @@ mod serialization {
                         value_size,
                         max_scaled_size,
                     },
+                    BinaryExecutionError::InvalidLinkage => Self::InvalidLinkage,
                 })
             }
         }
