@@ -144,6 +144,7 @@ mod transaction_kind {
         ConsensusCommitPrologueV2(&'a ConsensusCommitPrologueV2),
         ConsensusCommitPrologueV3(&'a ConsensusCommitPrologueV3),
         ConsensusCommitPrologueV4(&'a ConsensusCommitPrologueV4),
+        ProgrammableSystemTransaction(&'a ProgrammableTransaction),
     }
 
     #[derive(serde_derive::Deserialize)]
@@ -162,6 +163,7 @@ mod transaction_kind {
         ConsensusCommitPrologueV2(ConsensusCommitPrologueV2),
         ConsensusCommitPrologueV3(ConsensusCommitPrologueV3),
         ConsensusCommitPrologueV4(ConsensusCommitPrologueV4),
+        ProgrammableSystemTransaction(ProgrammableTransaction),
     }
 
     #[derive(serde_derive::Serialize)]
@@ -176,6 +178,7 @@ mod transaction_kind {
         ConsensusCommitPrologueV2(&'a ConsensusCommitPrologueV2),
         ConsensusCommitPrologueV3(&'a ConsensusCommitPrologueV3),
         ConsensusCommitPrologueV4(&'a ConsensusCommitPrologueV4),
+        ProgrammableSystemTransaction(&'a ProgrammableTransaction),
     }
     #[derive(serde_derive::Deserialize)]
     enum BinaryTransactionKind {
@@ -189,6 +192,7 @@ mod transaction_kind {
         ConsensusCommitPrologueV2(ConsensusCommitPrologueV2),
         ConsensusCommitPrologueV3(ConsensusCommitPrologueV3),
         ConsensusCommitPrologueV4(ConsensusCommitPrologueV4),
+        ProgrammableSystemTransaction(ProgrammableTransaction),
     }
 
     impl Serialize for TransactionKind {
@@ -224,6 +228,9 @@ mod transaction_kind {
                     Self::ConsensusCommitPrologueV4(k) => {
                         ReadableTransactionKindRef::ConsensusCommitPrologueV4(k)
                     }
+                    Self::ProgrammableSystemTransaction(k) => {
+                        ReadableTransactionKindRef::ProgrammableSystemTransaction(k)
+                    }
                 };
                 readable.serialize(serializer)
             } else {
@@ -251,6 +258,9 @@ mod transaction_kind {
                     }
                     Self::ConsensusCommitPrologueV4(k) => {
                         BinaryTransactionKindRef::ConsensusCommitPrologueV4(k)
+                    }
+                    Self::ProgrammableSystemTransaction(k) => {
+                        BinaryTransactionKindRef::ProgrammableSystemTransaction(k)
                     }
                 };
                 binary.serialize(serializer)
@@ -289,6 +299,9 @@ mod transaction_kind {
                     ReadableTransactionKind::ConsensusCommitPrologueV4(k) => {
                         Self::ConsensusCommitPrologueV4(k)
                     }
+                    ReadableTransactionKind::ProgrammableSystemTransaction(k) => {
+                        Self::ProgrammableSystemTransaction(k)
+                    }
                 })
             } else {
                 BinaryTransactionKind::deserialize(deserializer).map(|binary| match binary {
@@ -315,6 +328,9 @@ mod transaction_kind {
                     }
                     BinaryTransactionKind::ConsensusCommitPrologueV4(k) => {
                         Self::ConsensusCommitPrologueV4(k)
+                    }
+                    BinaryTransactionKind::ProgrammableSystemTransaction(k) => {
+                        Self::ProgrammableSystemTransaction(k)
                     }
                 })
             }
