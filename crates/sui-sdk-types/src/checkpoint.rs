@@ -22,8 +22,8 @@ pub type ProtocolVersion = u64;
 ///
 /// ```text
 /// ; CheckpointCommitment is an enum and each variant is prefixed with its index
-/// checkpoint-commitment = ecmh-live-object-set
 /// ecmh-live-object-set = %x00 digest
+/// checkpoint-artifacts-digest = %x01 digest
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
@@ -35,7 +35,9 @@ pub enum CheckpointCommitment {
     /// An Elliptic Curve Multiset Hash attesting to the set of Objects that comprise the live
     /// state of the Sui blockchain.
     EcmhLiveObjectSet { digest: Digest },
-    // Other commitment types (e.g. merkle roots) go here.
+
+    /// Digest of the checkpoint artifacts.
+    CheckpointArtifactsDigest { digest: Digest },
 }
 
 /// Data, which when included in a [`CheckpointSummary`], signals the end of an `Epoch`.
@@ -380,6 +382,7 @@ mod serialization {
         #[cfg(target_arch = "wasm32")]
         use wasm_bindgen_test::wasm_bindgen_test as test;
 
+        // TODO: Include a checkpoint with the artifacts digest
         #[test]
         fn signed_checkpoint_fixture() {
             const FIXTURES: &[&str] = &[
