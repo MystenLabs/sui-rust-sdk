@@ -140,11 +140,12 @@ pub struct UnchangedSharedObject {
 ///                              =/ canceled
 ///                              =/ per-epoch-config
 ///
-/// read-only-root      = %x00 u64 digest
-/// mutate-deleted      = %x01 u64
-/// read-deleted        = %x02 u64
-/// canceled           = %x03 u64
-/// per-epoch-config    = %x04
+/// read-only-root                           = %x00 u64 digest
+/// mutate-deleted                           = %x01 u64
+/// read-deleted                             = %x02 u64
+/// canceled                                 = %x03 u64
+/// per-epoch-config                         = %x04
+/// per-epoch-config-with-sequence-number    = %x05 u64
 /// ```
 #[derive(Eq, PartialEq, Clone, Debug)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
@@ -166,7 +167,11 @@ pub enum UnchangedSharedKind {
     Canceled { version: Version },
 
     /// Read of a per-epoch config object that should remain the same during an epoch.
+    /// NOTE: Will be deprecated in the near future in favor of `PerEpochConfigWithSequenceNumber`.
     PerEpochConfig,
+
+    /// Read of a per-epoch config and it's starting sequence number in the epoch.
+    PerEpochConfigWithSequenceNumber { version: Version },
 }
 
 /// State of an object prior to execution
@@ -488,6 +493,10 @@ mod serialization {
             version: Version,
         },
         PerEpochConfig,
+        PerEpochConfigWithSequenceNumber {
+            #[serde(with = "crate::_serde::ReadableDisplay")]
+            version: Version,
+        },
     }
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
@@ -506,6 +515,9 @@ mod serialization {
             version: Version,
         },
         PerEpochConfig,
+        PerEpochConfigWithSequenceNumber {
+            version: Version,
+        },
     }
 
     impl Serialize for UnchangedSharedKind {
@@ -530,6 +542,9 @@ mod serialization {
                     UnchangedSharedKind::PerEpochConfig => {
                         ReadableUnchangedSharedKind::PerEpochConfig
                     }
+                    UnchangedSharedKind::PerEpochConfigWithSequenceNumber { version } => {
+                        ReadableUnchangedSharedKind::PerEpochConfigWithSequenceNumber { version }
+                    }
                 };
                 readable.serialize(serializer)
             } else {
@@ -548,6 +563,9 @@ mod serialization {
                     }
                     UnchangedSharedKind::PerEpochConfig => {
                         BinaryUnchangedSharedKind::PerEpochConfig
+                    }
+                    UnchangedSharedKind::PerEpochConfigWithSequenceNumber { version } => {
+                        BinaryUnchangedSharedKind::PerEpochConfigWithSequenceNumber { version }
                     }
                 };
                 binary.serialize(serializer)
@@ -576,6 +594,9 @@ mod serialization {
                             Self::Canceled { version }
                         }
                         ReadableUnchangedSharedKind::PerEpochConfig => Self::PerEpochConfig,
+                        ReadableUnchangedSharedKind::PerEpochConfigWithSequenceNumber {
+                            version,
+                        } => Self::PerEpochConfigWithSequenceNumber { version },
                     },
                 )
             } else {
@@ -591,6 +612,9 @@ mod serialization {
                     }
                     BinaryUnchangedSharedKind::Canceled { version } => Self::Canceled { version },
                     BinaryUnchangedSharedKind::PerEpochConfig => Self::PerEpochConfig,
+                    BinaryUnchangedSharedKind::PerEpochConfigWithSequenceNumber { version } => {
+                        Self::PerEpochConfigWithSequenceNumber { version }
+                    }
                 })
             }
         }
