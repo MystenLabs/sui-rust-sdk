@@ -1,3 +1,14 @@
+# [0.0.5] - 2025-06-12
+
+## Added
+
+- Added support for verifying passkeys in multisigs ([`6d7fab8`])
+
+[`6d7fab8`]: https://github.com/mystenlabs/sui-rust-sdk/commit/6d7fab81c214d9f27555de8a2b8b47233ae9f655
+
+## Changed
+- Update to use version 0.0.5 of `sui-sdk-types`
+
 # [0.0.4] - 2025-03-31
 
 - Update to use version 0.0.4 of `sui-sdk-types`
@@ -26,6 +37,7 @@
 
 Initial release
 
+[0.0.5]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-crypto-0.0.5
 [0.0.4]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-crypto-0.0.4
 [0.0.3]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-crypto-0.0.3
 [0.0.2]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-crypto-0.0.2

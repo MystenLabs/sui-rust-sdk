@@ -1,3 +1,14 @@
+# [0.0.5] - 2025-06-12
+
+## Added
+
+- Added support for various new variants and types.
+- Added support for deriving ZkLoginPublicIdentifier from ZkLoginInputs ([`ce2b6b4d`])
+- Added support for passkeys in multisigs ([`5b61c62a`])
+
+[`ce2b6b4d`]: https://github.com/mystenlabs/sui-rust-sdk/commit/ce2b6b4d149c44d08bc89a1bf051762dfdb30e9e
+[`5b61c62a`]: https://github.com/mystenlabs/sui-rust-sdk/commit/5b61c62acdb36a11ee7df531f8e7f57ed841ae59
+
 # [0.0.4] - 2025-03-31
 
 ## Added
