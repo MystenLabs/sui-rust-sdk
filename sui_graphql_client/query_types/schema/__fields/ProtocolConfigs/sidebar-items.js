@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["_config_arguments","_feature_flag_arguments"],"struct":["__typename","config","configs","featureFlag","featureFlags","protocolVersion"]};
