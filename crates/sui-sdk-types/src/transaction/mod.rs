@@ -164,6 +164,7 @@ pub struct RandomnessStateUpdate {
 ///                     =/ %x07 consensus-commit-prologue-v2
 ///                     =/ %x08 consensus-commit-prologue-v3
 ///                     =/ %x09 consensus-commit-prologue-v4
+///                     =/ %x0A ptb
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
@@ -204,6 +205,9 @@ pub enum TransactionKind {
 
     /// V4 consensus commit update
     ConsensusCommitPrologueV4(ConsensusCommitPrologueV4),
+
+    /// A system transaction comprised of a list of native commands and move calls
+    ProgrammableSystemTransaction(ProgrammableTransaction),
 }
 
 /// Operation run at the end of an epoch
