@@ -264,6 +264,9 @@ pub enum EndOfEpochTransactionKind {
 
     /// Create and initialize the accumulator root object
     AccumulatorRootCreate,
+
+    /// Create and initialize the coin metadata registry object
+    CoinMetadataRegistryCreate,
 }
 
 /// Set of Execution Time Observations from the committee.

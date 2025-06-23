@@ -362,6 +362,7 @@ mod end_of_epoch {
         },
         StoreExecutionTimeObservations(&'a crate::transaction::ExecutionTimeObservations),
         AccumulatorRootCreate,
+        CoinMetadataRegistryCreate,
     }
 
     #[derive(serde_derive::Deserialize)]
@@ -381,6 +382,7 @@ mod end_of_epoch {
         },
         StoreExecutionTimeObservations(crate::transaction::ExecutionTimeObservations),
         AccumulatorRootCreate,
+        CoinMetadataRegistryCreate,
     }
 
     #[derive(serde_derive::Serialize)]
@@ -394,6 +396,7 @@ mod end_of_epoch {
         BridgeCommitteeInit { bridge_object_version: u64 },
         StoreExecutionTimeObservations(&'a crate::transaction::ExecutionTimeObservations),
         AccumulatorRootCreate,
+        CoinMetadataRegistryCreate,
     }
 
     #[derive(serde_derive::Deserialize)]
@@ -407,6 +410,7 @@ mod end_of_epoch {
         BridgeCommitteeInit { bridge_object_version: u64 },
         StoreExecutionTimeObservations(crate::transaction::ExecutionTimeObservations),
         AccumulatorRootCreate,
+        CoinMetadataRegistryCreate,
     }
 
     impl Serialize for EndOfEpochTransactionKind {
@@ -443,6 +447,9 @@ mod end_of_epoch {
                     Self::AccumulatorRootCreate => {
                         ReadableEndOfEpochTransactionKindRef::AccumulatorRootCreate
                     }
+                    Self::CoinMetadataRegistryCreate => {
+                        ReadableEndOfEpochTransactionKindRef::CoinMetadataRegistryCreate
+                    }
                 };
                 readable.serialize(serializer)
             } else {
@@ -473,6 +480,9 @@ mod end_of_epoch {
                     }
                     Self::AccumulatorRootCreate => {
                         BinaryEndOfEpochTransactionKindRef::AccumulatorRootCreate
+                    }
+                    Self::CoinMetadataRegistryCreate => {
+                        BinaryEndOfEpochTransactionKindRef::CoinMetadataRegistryCreate
                     }
                 };
                 binary.serialize(serializer)
@@ -515,6 +525,9 @@ mod end_of_epoch {
                         ReadableEndOfEpochTransactionKind::AccumulatorRootCreate => {
                             Self::AccumulatorRootCreate
                         }
+                        ReadableEndOfEpochTransactionKind::CoinMetadataRegistryCreate => {
+                            Self::CoinMetadataRegistryCreate
+                        }
                     }
                 })
             } else {
@@ -546,6 +559,9 @@ mod end_of_epoch {
                         }
                         BinaryEndOfEpochTransactionKind::AccumulatorRootCreate => {
                             Self::AccumulatorRootCreate
+                        }
+                        BinaryEndOfEpochTransactionKind::CoinMetadataRegistryCreate => {
+                            Self::CoinMetadataRegistryCreate
                         }
                     },
                 )
