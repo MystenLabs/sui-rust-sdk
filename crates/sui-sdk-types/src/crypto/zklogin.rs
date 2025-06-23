@@ -715,7 +715,7 @@ mod serialization {
             let flag = SignatureScheme::from_byte(
                 *bytes
                     .first()
-                    .ok_or_else(|| serde::de::Error::custom("missing signature scheme falg"))?,
+                    .ok_or_else(|| serde::de::Error::custom("missing signature scheme flag"))?,
             )
             .map_err(serde::de::Error::custom)?;
             if flag != SignatureScheme::ZkLogin {
