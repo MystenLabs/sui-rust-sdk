@@ -44,6 +44,10 @@ doc: ## Generate documentation
 doc-open: ## Generate and open documentation
 	RUSTDOCFLAGS="--cfg=doc_cfg -Zunstable-options --generate-link-to-definition" RUSTC_BOOTSTRAP=1 cargo doc --all-features --no-deps --open
 
+.PHONY: is-dirty
+is-dirty: ## Checks if repository is dirty
+	@(test -z "$$(git diff)" || (git diff && false)) && (test -z "$$(git status --porcelain)" || (git status --porcelain && false))
+
 .PHONY: ci
 ci: check-features check-fmt test wasm ## Run the full CI process
 
