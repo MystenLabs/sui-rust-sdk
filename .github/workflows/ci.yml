@@ -43,6 +43,8 @@ jobs:
       - name: rustdoc
         run: make doc
 
+      - run: make is-dirty
+
   wasm:
     runs-on: ubuntu-latest
 
@@ -62,6 +64,8 @@ jobs:
 
       - name: Run tests in wasm
         run: RUSTFLAGS='-Dwarnings --cfg getrandom_backend="wasm_js"' make wasm
+
+      - run: make is-dirty
 
   run_tests_with_network:
     runs-on: ubuntu-latest
