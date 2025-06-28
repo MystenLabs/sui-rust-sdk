@@ -6,7 +6,7 @@ use std::path::PathBuf;
 fn main() {
     let root_dir = PathBuf::from(std::env!("CARGO_MANIFEST_DIR"));
     let proto_dir = root_dir
-        .join("../sui-rpc/vendored/sui-apis/proto")
+        .join("../sui-rpc/vendored/proto")
         .canonicalize()
         .unwrap();
     let out_dir = root_dir

@@ -18,9 +18,18 @@ test:
 
 .PHONY: update-protos
 update-protos:
-	rm -rf vendored/sui-apis
-	git clone --depth=1 https://github.com/MystenLabs/sui-apis.git vendored/sui-apis
-	rm -rf vendored/sui-apis/.git
+	@rm -rf vendored/sui-apis
+	@rm -rf vendored/proto
+	@git clone -q --depth=1 https://github.com/MystenLabs/sui-apis.git vendored/sui-apis
+	@mv vendored/sui-apis/proto vendored/
+	@rm -rf vendored/sui-apis
+
+.PHONY: diff-protos
+diff-protos:
+	@rm -rf vendored/sui-apis
+	@git clone -q --depth=1 https://github.com/MystenLabs/sui-apis.git vendored/sui-apis
+	git diff --no-index vendored/sui-apis/proto vendored/proto
+	@rm -rf vendored/sui-apis
 
 .PHONY: proto
 proto:
