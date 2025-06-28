@@ -27,29 +27,16 @@ default = []
 [dependencies]
 bcs = "0.1.6"
 serde = { version = "1.0.210" }
-sui-sdk-types = { version = "0.0.2", path = "../sui-sdk-types", default-features = false, features = ["serde"] }
+sui-sdk-types = { version = "0.0.5", path = "../sui-sdk-types", default-features = false, features = ["serde"] }
 
 # dependencies for the protobuf and gRPC definitions
 bytes = "1.9"
-tonic = { version = "0.12.3", default-features = false, features = ["channel", "codegen", "prost"] }
+tonic = { version = "0.13", default-features = false, features = ["channel", "codegen", "prost"] }
 prost = "0.13.4"
 prost-types = "0.13.3"
 tap = "1"
 
 [dev-dependencies]
-# codegen for proto and gRPC 
-diffy = "0.3"
-protox = "0.7"
-tonic-build = "0.12.3"
-walkdir = "2"
-
-# proptest support in tests
-proptest = { version = "1.6.0", default-features = false, features = ["std"] }
-test-strategy = "0.4.0"
-
-[target.wasm32-unknown-unknown.dev-dependencies]
-wasm-bindgen-test = "0.3"
-getrandom = { version = "0.2", features = ["js"] }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(doc_cfg)'] }

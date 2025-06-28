@@ -1,0 +1,27 @@
+version: v2
+
+modules:
+  - path: proto
+    lint:
+      use:
+        - STANDARD
+        # Disallow client streaming apis since many clients (eg grpc-web)
+        # cannot properly handle client side streaming requests.
+        - RPC_NO_CLIENT_STREAMING
+      ignore:
+        - proto/google
+      ignore_only:
+        ENUM_VALUE_PREFIX:
+          - proto/sui/rpc/v2beta2
+        ENUM_ZERO_VALUE_SUFFIX:
+          - proto/sui/rpc/v2beta2/signature_scheme.proto
+
+      enum_zero_value_suffix: _UNKNOWN
+      rpc_allow_same_request_response: false
+      rpc_allow_google_protobuf_empty_requests: false
+      rpc_allow_google_protobuf_empty_responses: false
+      service_suffix: Service
+
+breaking:
+  use:
+    - WIRE_JSON
