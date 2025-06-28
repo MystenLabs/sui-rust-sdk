@@ -15,7 +15,6 @@ test:
 	cargo nextest run --all-features
 	cargo test --doc
 
-
 .PHONY: update-protos
 update-protos:
 	@rm -rf vendored/sui-apis
