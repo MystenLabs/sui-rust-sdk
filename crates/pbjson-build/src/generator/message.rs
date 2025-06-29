@@ -304,7 +304,7 @@ fn write_serialize_variable<W: Write>(
                 FieldType::Scalar(ScalarType::Bytes) => {
                     writeln!(
                         writer,
-                        "{}.map(|(k, v)| (k, pbjson::private::base64::encode(v))).collect();",
+                        "{}.map(|(k, v)| (k, crate::_serde::base64::encode(v))).collect();",
                         Indent(indent + 1)
                     )?;
                 }
@@ -329,6 +329,32 @@ fn write_serialize_variable<W: Write>(
                 field_name,
             )
         }
+        FieldType::Message(type_name) if well_known_type_serializer(type_name).is_some() => {
+            let well_known_type_serializer = well_known_type_serializer(type_name).unwrap();
+
+            match field.field_modifier {
+                FieldModifier::Repeated => {
+                    writeln!(
+                        writer,
+                        "{}struct_ser.serialize_field(\"{}\", &{}.iter().map({}).collect::<Vec<_>>())?;",
+                        Indent(indent),
+                        field_name,
+                        variable.raw,
+                        well_known_type_serializer,
+                    )
+                }
+                _ => {
+                    writeln!(
+                        writer,
+                        "{}struct_ser.serialize_field(\"{}\", &{}({}))?;",
+                        Indent(indent),
+                        field_name,
+                        well_known_type_serializer,
+                        variable.as_ref
+                    )
+                }
+            }
+        }
         _ => {
             writeln!(
                 writer,
@@ -351,7 +377,7 @@ fn write_serialize_scalar_variable<W: Write>(
 ) -> Result<()> {
     let conversion = match scalar {
         ScalarType::I64 | ScalarType::U64 => "ToString::to_string",
-        ScalarType::Bytes => "pbjson::private::base64::encode",
+        ScalarType::Bytes => "crate::_serde::base64::encode",
         _ => {
             return writeln!(
                 writer,
@@ -519,6 +545,11 @@ fn write_deserialize_message<W: Write>(
 
     writeln!(writer, "{}struct GeneratedVisitor;", Indent(indent))?;
 
+    writeln!(
+        writer,
+        "{}#[allow(clippy::useless_conversion)]",
+        Indent(indent)
+    )?;
     writeln!(
         writer,
         r#"{indent}impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {{
@@ -936,7 +967,7 @@ fn write_deserialize_field<W: Write>(
                     _ if key.is_numeric() => {
                         write!(
                             writer,
-                            "::pbjson::private::NumberDeserialize<{}>",
+                            "crate::_serde::NumberDeserialize<{}>",
                             key.rust_type()
                         )?;
                         "k.0"
@@ -951,13 +982,13 @@ fn write_deserialize_field<W: Write>(
                     FieldType::Scalar(scalar) if scalar.is_numeric() => {
                         write!(
                             writer,
-                            "::pbjson::private::NumberDeserialize<{}>",
+                            "crate::_serde::NumberDeserialize<{}>",
                             scalar.rust_type()
                         )?;
                         "v.0"
                     }
                     FieldType::Scalar(ScalarType::Bytes) => {
-                        write!(writer, "::pbjson::private::BytesDeserialize<_>",)?;
+                        write!(writer, "crate::_serde::BytesDeserialize<_>",)?;
                         "v.0"
                     }
                     FieldType::Enum(path) => {
@@ -983,13 +1014,34 @@ fn write_deserialize_field<W: Write>(
                 }
                 write!(writer, "{})", Indent(indent + 1))?;
             }
-            FieldType::Message(_) => match field.field_modifier {
-                FieldModifier::Repeated => {
-                    // No explicit presence for repeated fields
-                    write!(writer, "Some(map_.next_value()?)")?;
+            FieldType::Message(type_name) => {
+                if let Some(well_known_type_deserializer) = well_known_type_deserializer(type_name)
+                {
+                    match field.field_modifier {
+                        FieldModifier::Repeated => {
+                            // No explicit presence for repeated fields
+                            write!(
+                                writer,
+                                "Some(map_.next_value::<Vec<{}>>()?.into_iter().map(|x| x.0.into()).collect())",
+                                well_known_type_deserializer
+                            )?;
+                        }
+                        _ => write!(
+                            writer,
+                            "map_.next_value::<::std::option::Option<{}>>()?.map(|x| x.0.into())",
+                            well_known_type_deserializer
+                        )?,
+                    }
+                } else {
+                    match field.field_modifier {
+                        FieldModifier::Repeated => {
+                            // No explicit presence for repeated fields
+                            write!(writer, "Some(map_.next_value()?)")?;
+                        }
+                        _ => write!(writer, "map_.next_value()?")?,
+                    }
                 }
-                _ => write!(writer, "map_.next_value()?")?,
-            },
+            }
         },
     }
     writeln!(writer, ";")?;
@@ -998,8 +1050,35 @@ fn write_deserialize_field<W: Write>(
 
 fn override_deserializer(scalar: ScalarType) -> Option<&'static str> {
     match scalar {
-        ScalarType::Bytes => Some("::pbjson::private::BytesDeserialize<_>"),
-        _ if scalar.is_numeric() => Some("::pbjson::private::NumberDeserialize<_>"),
+        ScalarType::Bytes => Some("crate::_serde::BytesDeserialize<_>"),
+        _ if scalar.is_numeric() => Some("crate::_serde::NumberDeserialize<_>"),
+        _ => None,
+    }
+}
+
+fn well_known_type_deserializer(type_path: &TypePath) -> Option<&'static str> {
+    let type_name = type_path.to_string();
+
+    match type_name.as_str() {
+        "google.protobuf.FieldMask" => Some("crate::_serde::FieldMaskDeserializer"),
+        "google.protobuf.Timestamp" => Some("crate::_serde::TimestampDeserializer"),
+        "google.protobuf.Duration" => Some("crate::_serde::DurationDeserializer"),
+        "google.protobuf.Value" => Some("crate::_serde::ValueDeserializer"),
+        "google.protobuf.Any" => Some("crate::_serde::AnyDeserializer"),
+        _ => None,
+    }
+}
+
+fn well_known_type_serializer(type_path: &TypePath) -> Option<&'static str> {
+    let type_name = type_path.to_string();
+    println!("{type_name}");
+
+    match type_name.as_str() {
+        "google.protobuf.FieldMask" => Some("crate::_serde::FieldMaskSerializer"),
+        "google.protobuf.Timestamp" => Some("crate::_serde::TimestampSerializer"),
+        "google.protobuf.Duration" => Some("crate::_serde::DurationSerializer"),
+        "google.protobuf.Value" => Some("crate::_serde::ValueSerializer"),
+        "google.protobuf.Any" => Some("crate::_serde::AnySerializer"),
         _ => None,
     }
 }
