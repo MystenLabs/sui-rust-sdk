@@ -5,7 +5,8 @@ pub use well_known_types::*;
 pub use base64;
 
 use base64::engine::DecodePaddingMode;
-use base64::engine::{GeneralPurpose, GeneralPurposeConfig};
+use base64::engine::GeneralPurpose;
+use base64::engine::GeneralPurposeConfig;
 use base64::Engine;
 use serde::de::Visitor;
 use serde::Deserialize;
@@ -101,7 +102,8 @@ mod tests {
     use base64::Engine;
     use bytes::Bytes;
     use rand::prelude::*;
-    use serde::de::value::{BorrowedStrDeserializer, Error};
+    use serde::de::value::BorrowedStrDeserializer;
+    use serde::de::value::Error;
 
     #[test]
     fn test_bytes() {

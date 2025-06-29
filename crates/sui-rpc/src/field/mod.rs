@@ -80,7 +80,6 @@ impl MessageField {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

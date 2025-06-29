@@ -1,9 +1,12 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::path::Path;
 
 use proc_macro2::TokenStream;
+use prost_types::DescriptorProto;
+use prost_types::FieldDescriptorProto;
+use prost_types::FileDescriptorSet;
 use prost_types::field_descriptor_proto::Type;
-use prost_types::{DescriptorProto, FieldDescriptorProto, FileDescriptorSet};
 use quote::quote;
 
 pub(crate) fn generate_field_info(packages: &HashMap<String, FileDescriptorSet>, out_dir: &Path) {
