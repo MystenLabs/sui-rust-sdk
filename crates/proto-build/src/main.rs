@@ -76,6 +76,14 @@ fn main() {
 
     generate_fields::generate_field_info(&packages, &out_dir);
 
+    let mut json_builder = pbjson_build::Builder::new();
+
+    for file in packages.values().flat_map(|set| set.file.iter()) {
+        json_builder.register_file_descriptor(file.to_owned());
+    }
+
+    json_builder.out_dir(&out_dir).ignore_unknown_fields().build(&["."]).unwrap();
+
     for (package, fds) in packages {
         let file_name = format!("{package}.fds.bin");
         let file_descriptor_set_path = out_dir.join(&file_name);

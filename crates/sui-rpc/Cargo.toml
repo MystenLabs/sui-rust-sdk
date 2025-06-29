@@ -35,8 +35,10 @@ tonic = { version = "0.13", default-features = false, features = ["channel", "co
 prost = "0.13.4"
 prost-types = "0.13.3"
 tap = "1"
+base64 = "0.22.1"
 
 [dev-dependencies]
+rand = "0.8"
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(doc_cfg)'] }
