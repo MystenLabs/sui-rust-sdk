@@ -82,7 +82,11 @@ fn main() {
         json_builder.register_file_descriptor(file.to_owned());
     }
 
-    json_builder.out_dir(&out_dir).ignore_unknown_fields().build(&["."]).unwrap();
+    json_builder
+        .out_dir(&out_dir)
+        .ignore_unknown_fields()
+        .build(&[".google.rpc", ".sui"])
+        .unwrap();
 
     for (package, fds) in packages {
         let file_name = format!("{package}.fds.bin");
