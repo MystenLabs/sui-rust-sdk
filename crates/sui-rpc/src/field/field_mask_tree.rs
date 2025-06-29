@@ -102,7 +102,9 @@ impl FieldMaskTree {
     /// assert!(tree.contains("foo.bar"));
     /// assert!(!tree.contains("foo.baz"));
     /// ```
-    pub fn contains(&self, path: &str) -> bool {
+    pub fn contains<P: AsRef<str>>(&self, path: P) -> bool {
+        let path = path.as_ref();
+
         if path.is_empty() {
             return false;
         }
@@ -131,7 +133,9 @@ impl FieldMaskTree {
         true
     }
 
-    pub fn subtree(&self, path: &str) -> Option<Self> {
+    pub fn subtree<P: AsRef<str>>(&self, path: P) -> Option<Self> {
+        let path = path.as_ref();
+
         if path.is_empty() {
             return None;
         }

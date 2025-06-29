@@ -60,6 +60,12 @@ pub struct MessageField {
     pub message_fields: Option<&'static [&'static MessageField]>,
 }
 
+impl AsRef<str> for MessageField {
+    fn as_ref(&self) -> &str {
+        self.name
+    }
+}
+
 #[doc(hidden)]
 impl MessageField {
     pub const fn new(name: &'static str) -> Self {
