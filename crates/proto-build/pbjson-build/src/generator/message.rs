@@ -1071,7 +1071,6 @@ fn well_known_type_deserializer(type_path: &TypePath) -> Option<&'static str> {
 
 fn well_known_type_serializer(type_path: &TypePath) -> Option<&'static str> {
     let type_name = type_path.to_string();
-    println!("{type_name}");
 
     match type_name.as_str() {
         "google.protobuf.FieldMask" => Some("crate::_serde::FieldMaskSerializer"),
