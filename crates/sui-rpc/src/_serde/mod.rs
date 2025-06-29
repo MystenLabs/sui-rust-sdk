@@ -1,4 +1,5 @@
 mod well_known_types;
+pub use well_known_types::*;
 
 /// Re-export base64
 pub use base64;
@@ -125,5 +126,20 @@ mod tests {
                 assert_eq!(raw.as_slice(), &b);
             }
         }
+    }
+
+    #[test]
+    fn value() {
+        let v = serde_json::json!({
+            "foo": 4,
+            "bar": "abc",
+            "baz": [1, 2, 3],
+            "foobar": null,
+        });
+        let proto: ValueDeserializer = serde_json::from_value(v).unwrap();
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&ValueSerializer(&proto.0)).unwrap()
+        );
     }
 }

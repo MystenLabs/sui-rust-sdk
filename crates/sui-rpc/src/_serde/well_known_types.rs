@@ -146,7 +146,7 @@ impl serde::Serialize for DurationSerializer<'_> {
     where
         S: serde::Serializer,
     {
-        if !is_duration_valid(&self.0) {
+        if !is_duration_valid(self.0) {
             return Err(serde::ser::Error::custom(format!(
                 "duration is invalid: d={:?}",
                 self.0

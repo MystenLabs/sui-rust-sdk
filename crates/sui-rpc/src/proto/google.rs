@@ -20,6 +20,9 @@ pub mod rpc {
     /// Byte encoded FILE_DESCRIPTOR_SET.
     pub const FILE_DESCRIPTOR_SET: &[u8] = include_bytes!("generated/google.rpc.fds.bin");
 
+    // Include generated serde impls
+    include!("generated/google.rpc.serde.rs");
+
     impl ::prost::Name for Status {
         const NAME: &'static str = "Status";
         const PACKAGE: &'static str = "google.rpc";

@@ -1,3 +1,6 @@
+#![allow(clippy::large_enum_variant)]
+#![allow(clippy::doc_overindented_list_items)]
+
 pub mod google;
 pub mod sui;
 
