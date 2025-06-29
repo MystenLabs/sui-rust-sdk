@@ -94,7 +94,7 @@ impl FieldMaskTree {
     /// paths, including if it is an exact match.
     ///
     /// ```
-    /// # use sui_rpc_api::field_mask::FieldMaskTree;
+    /// # use sui_rpc::field::FieldMaskTree;
     /// let mut tree = FieldMaskTree::default();
     /// tree.add_field_path("foo.bar");
     ///

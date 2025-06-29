@@ -6,7 +6,7 @@ repository = "https://github.com/mystenlabs/sui-rust-sdk/"
 license = "Apache-2.0"
 edition = "2021"
 readme = "README.md"
-description = "RPC interface definitions and clients for the Sui Sdk"
+description = "RPC interface definitions and client for the Sui Sdk"
 
 [package.metadata.docs.rs]
 # To build locally:

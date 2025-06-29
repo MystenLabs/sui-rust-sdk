@@ -178,10 +178,14 @@ mod tests {
             const FIELDS: &'static [&'static MessageField] = &[
                 &MessageField {
                     name: "a",
+                    json_name: "a",
+                    number: 1,
                     message_fields: None,
                 },
                 &MessageField {
                     name: "b",
+                    json_name: "b",
+                    number: 2,
                     message_fields: None,
                 },
             ];

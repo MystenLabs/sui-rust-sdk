@@ -55,6 +55,8 @@ pub trait MessageFields {
 
 pub struct MessageField {
     pub name: &'static str,
+    pub json_name: &'static str,
+    pub number: i32,
     pub message_fields: Option<&'static [&'static MessageField]>,
 }
 
@@ -63,6 +65,8 @@ impl MessageField {
     pub const fn new(name: &'static str) -> Self {
         Self {
             name,
+            json_name: "",
+            number: 0,
             message_fields: None,
         }
     }

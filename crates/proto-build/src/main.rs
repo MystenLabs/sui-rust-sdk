@@ -3,6 +3,8 @@ use protox::prost::Message as _;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+mod generate_fields;
+
 fn main() {
     let root_dir = PathBuf::from(std::env!("CARGO_MANIFEST_DIR"));
     let proto_dir = root_dir
@@ -71,6 +73,8 @@ fn main() {
             .file
             .push(file);
     }
+
+    generate_fields::generate_field_info(&packages, &out_dir);
 
     for (package, fds) in packages {
         let file_name = format!("{package}.fds.bin");

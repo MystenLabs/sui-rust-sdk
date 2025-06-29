@@ -3,6 +3,9 @@
 // Include the generated proto definitions
 include!("../../../generated/sui.rpc.v2beta2.rs");
 
+// Include generated field info impls
+include!("../../../generated/sui.rpc.v2beta2.field_info.rs");
+
 pub use descriptor::FILE_DESCRIPTOR_SET;
 mod descriptor {
     /// Byte encoded FILE_DESCRIPTOR_SET.
