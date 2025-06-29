@@ -1,3 +1,4 @@
 [workspace]
 resolver = "2"
 members = ["crates/*"]
+exclude = ["crates/proto-build/pbjson-build"]

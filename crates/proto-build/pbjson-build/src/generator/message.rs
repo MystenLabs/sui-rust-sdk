@@ -21,21 +21,14 @@
 //!
 //! [1]: https://developers.google.com/protocol-buffers/docs/proto3#json
 
-use std::io::Result;
-use std::io::Write;
+use std::io::{Result, Write};
 
-use crate::message::Field;
-use crate::message::FieldModifier;
-use crate::message::FieldType;
-use crate::message::Message;
-use crate::message::OneOf;
-use crate::message::ScalarType;
+use crate::message::{Field, FieldModifier, FieldType, Message, OneOf, ScalarType};
 
-use super::write_deserialize_end;
-use super::write_deserialize_start;
-use super::write_serialize_end;
-use super::write_serialize_start;
-use super::Indent;
+use super::{
+    write_deserialize_end, write_deserialize_start, write_serialize_end, write_serialize_start,
+    Indent,
+};
 use crate::descriptor::TypePath;
 use crate::escape::escape_type;
 use crate::generator::write_fields_array;

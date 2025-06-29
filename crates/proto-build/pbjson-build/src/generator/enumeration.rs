@@ -4,18 +4,15 @@
 //! An enumeration should be decode-able from the full string variant name
 //! or its integer tag number, and should encode to the string representation
 
-use super::write_deserialize_end;
-use super::write_deserialize_start;
-use super::write_serialize_end;
-use super::write_serialize_start;
-use super::Indent;
-use crate::descriptor::EnumDescriptor;
-use crate::descriptor::TypePath;
+use super::{
+    write_deserialize_end, write_deserialize_start, write_serialize_end, write_serialize_start,
+    Indent,
+};
+use crate::descriptor::{EnumDescriptor, TypePath};
 use crate::generator::write_fields_array;
 use crate::resolver::Resolver;
 use std::collections::HashSet;
-use std::io::Result;
-use std::io::Write;
+use std::io::{Result, Write};
 
 pub fn generate_enum<W: Write>(
     resolver: &Resolver<'_>,

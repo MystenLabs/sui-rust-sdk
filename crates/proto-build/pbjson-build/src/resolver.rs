@@ -1,5 +1,4 @@
-use crate::descriptor::Package;
-use crate::descriptor::TypePath;
+use crate::descriptor::{Package, TypePath};
 
 #[derive(Debug)]
 pub struct Resolver<'a> {

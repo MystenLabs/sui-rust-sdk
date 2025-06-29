@@ -1,9 +1,7 @@
 //! This module contains the actual code generation logic
 
-use std::fmt::Display;
-use std::fmt::Formatter;
-use std::io::Result;
-use std::io::Write;
+use std::fmt::{Display, Formatter};
+use std::io::{Result, Write};
 
 mod enumeration;
 mod message;

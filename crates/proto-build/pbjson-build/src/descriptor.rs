@@ -3,25 +3,16 @@
 
 use std::collections::btree_map::Entry;
 use std::collections::BTreeMap;
-use std::fmt::Display;
-use std::fmt::Formatter;
-use std::io::Error;
-use std::io::ErrorKind;
-use std::io::Result;
+use std::fmt::{Display, Formatter};
+use std::io::{Error, ErrorKind, Result};
 
-use itertools::EitherOrBoth;
-use itertools::Itertools;
-use prost_types::DescriptorProto;
-use prost_types::EnumDescriptorProto;
-use prost_types::EnumValueDescriptorProto;
-use prost_types::FieldDescriptorProto;
-use prost_types::FileDescriptorProto;
-use prost_types::FileDescriptorSet;
-use prost_types::MessageOptions;
-use prost_types::OneofDescriptorProto;
+use itertools::{EitherOrBoth, Itertools};
+use prost_types::{
+    DescriptorProto, EnumDescriptorProto, EnumValueDescriptorProto, FieldDescriptorProto,
+    FileDescriptorProto, FileDescriptorSet, MessageOptions, OneofDescriptorProto,
+};
 
-use crate::escape::escape_ident;
-use crate::escape::escape_type;
+use crate::escape::{escape_ident, escape_type};
 
 #[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct Package {
