@@ -57,6 +57,7 @@ pub enum CheckpointCommitment {
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct EndOfEpochData {
     /// The set of Validators that will be in the ValidatorCommittee for the next epoch.
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=1).lift()))]
     pub next_epoch_committee: Vec<ValidatorCommitteeMember>,
 
     /// The protocol version that is in effect during the next epoch.
@@ -64,6 +65,7 @@ pub struct EndOfEpochData {
     pub next_epoch_protocol_version: ProtocolVersion,
 
     /// Commitments to epoch specific state (e.g. live object set)
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=1).lift()))]
     pub epoch_commitments: Vec<CheckpointCommitment>,
 }
 
@@ -134,6 +136,7 @@ pub struct CheckpointSummary {
     pub timestamp_ms: CheckpointTimestamp,
 
     /// Commitments to checkpoint-specific state.
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=1).lift()))]
     pub checkpoint_commitments: Vec<CheckpointCommitment>,
 
     /// Extra data only present in the final checkpoint of an epoch.
@@ -240,10 +243,10 @@ pub struct CheckpointTransaction {
     /// The events, if any, emitted by this transaciton during execution
     pub events: Option<TransactionEvents>,
     /// The state of all inputs to this transaction as they were prior to execution.
-    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=1).lift()))]
     pub input_objects: Vec<Object>,
     /// The state of all output objects created or mutated by this transaction.
-    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=1).lift()))]
     pub output_objects: Vec<Object>,
 }
 

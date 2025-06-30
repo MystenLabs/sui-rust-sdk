@@ -375,3 +375,8 @@ mod _serde {
 
     pub(crate) use super::SignedTransactionWithIntentMessage;
 }
+
+// declare `roaring` as a public dependency (for the moment) since its currently exposed in a few
+// types
+#[doc(hidden)]
+pub use roaring;

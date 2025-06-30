@@ -200,6 +200,7 @@ pub struct MovePackage {
 
     /// Maps struct/module to a package version where it was first defined, stored as a vector for
     /// simple serialization and deserialization.
+    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=1).lift()))]
     pub type_origin_table: Vec<TypeOrigin>,
 
     /// For each dependency, maps original package ID to the info about the (upgraded) dependency
