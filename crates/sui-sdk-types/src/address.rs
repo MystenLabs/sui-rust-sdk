@@ -184,7 +184,7 @@ impl std::fmt::Display for Address {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "0x")?;
         for byte in &self.0 {
-            write!(f, "{:02x}", byte)?;
+            write!(f, "{byte:02x}")?;
         }
 
         Ok(())
@@ -194,7 +194,7 @@ impl std::fmt::Display for Address {
 impl std::fmt::Debug for Address {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("Address")
-            .field(&format_args!("\"{}\"", self))
+            .field(&format_args!("\"{self}\""))
             .finish()
     }
 }

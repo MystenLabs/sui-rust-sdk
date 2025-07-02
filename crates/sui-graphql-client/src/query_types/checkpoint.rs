@@ -93,7 +93,7 @@ impl TryInto<CheckpointSummary> for Checkpoint {
                 bcs::from_bytes::<CheckpointSummary>(&bcs).map_err(|e| {
                     Error::from_error(
                         Kind::Other,
-                        format!("Failed to deserialize checkpoint summary: {}", e),
+                        format!("Failed to deserialize checkpoint summary: {e}"),
                     )
                 })
             })

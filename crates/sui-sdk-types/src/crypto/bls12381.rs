@@ -107,7 +107,7 @@ impl std::fmt::Display for Bls12381PublicKey {
 impl std::fmt::Debug for Bls12381PublicKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("Bls12381PublicKey")
-            .field(&format_args!("\"{}\"", self))
+            .field(&format_args!("\"{self}\""))
             .finish()
     }
 }
@@ -215,7 +215,7 @@ impl std::fmt::Display for Bls12381Signature {
 impl std::fmt::Debug for Bls12381Signature {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("Bls12381Signature")
-            .field(&format_args!("\"{}\"", self))
+            .field(&format_args!("\"{self}\""))
             .finish()
     }
 }

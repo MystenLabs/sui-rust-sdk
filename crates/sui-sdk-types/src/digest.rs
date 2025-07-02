@@ -133,7 +133,7 @@ impl std::fmt::Display for Digest {
 impl std::fmt::Debug for Digest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("Digest")
-            .field(&format_args!("\"{}\"", self))
+            .field(&format_args!("\"{self}\""))
             .finish()
     }
 }
@@ -145,7 +145,7 @@ impl std::fmt::LowerHex for Digest {
         }
 
         for byte in self.0 {
-            write!(f, "{:02x}", byte)?;
+            write!(f, "{byte:02x}")?;
         }
 
         Ok(())
