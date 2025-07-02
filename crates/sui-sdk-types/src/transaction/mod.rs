@@ -66,6 +66,10 @@ pub struct SignedTransaction {
 ///                        =/ %x01 u64  ; epoch
 /// ```
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum TransactionExpiration {
     /// The transaction has no expiration
@@ -105,11 +109,9 @@ pub struct GasPayment {
     /// Gas unit price to use when charging for computation
     ///
     /// Must be greater-than-or-equal-to the network's current RGP (reference gas price)
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub price: u64,
 
     /// Total budget willing to spend for the execution of a transaction
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub budget: u64,
 }
 
@@ -130,11 +132,9 @@ pub struct GasPayment {
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct RandomnessStateUpdate {
     /// Epoch of the randomness state update transaction
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub epoch: u64,
 
     /// Randomness round of the update
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub randomness_round: u64,
 
     /// Updated random bytes
@@ -145,7 +145,6 @@ pub struct RandomnessStateUpdate {
     pub random_bytes: Vec<u8>,
 
     /// The initial version of the randomness object that it was shared at.
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub randomness_obj_initial_shared_version: u64,
 }
 
@@ -169,6 +168,10 @@ pub struct RandomnessStateUpdate {
 ///                     =/ %x0A ptb
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum TransactionKind {
     /// A user transaction comprised of a list of native commands and move calls
@@ -241,6 +244,10 @@ pub enum TransactionKind {
 /// eoe-store-execution-time-observations = %x07 stored-execution-time-observations
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum EndOfEpochTransactionKind {
     /// End the epoch and start the next one
@@ -389,11 +396,9 @@ pub enum ExecutionTimeObservationKey {
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct AuthenticatorStateExpire {
     /// expire JWKs that have a lower epoch than this
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub min_epoch: u64,
 
     /// The initial version of the authenticator object that it was shared at.
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub authenticator_object_initial_shared_version: u64,
 }
 
@@ -417,11 +422,9 @@ pub struct AuthenticatorStateExpire {
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct AuthenticatorStateUpdate {
     /// Epoch of the authenticator state update transaction
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub epoch: u64,
 
     /// Consensus round of the authenticator state update
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub round: u64,
 
     /// newly active jwks
@@ -429,7 +432,6 @@ pub struct AuthenticatorStateUpdate {
     pub new_active_jwks: Vec<ActiveJwk>,
 
     /// The initial version of the authenticator object that it was shared at.
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub authenticator_obj_initial_shared_version: u64,
 }
 
@@ -456,7 +458,6 @@ pub struct ActiveJwk {
     pub jwk: Jwk,
 
     /// Most recent epoch in which the jwk was validated
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub epoch: u64,
 }
 
@@ -477,15 +478,12 @@ pub struct ActiveJwk {
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct ConsensusCommitPrologue {
     /// Epoch of the commit prologue transaction
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub epoch: u64,
 
     /// Consensus round of the commit
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub round: u64,
 
     /// Unix timestamp from consensus
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub commit_timestamp_ms: CheckpointTimestamp,
 }
 
@@ -506,15 +504,12 @@ pub struct ConsensusCommitPrologue {
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct ConsensusCommitPrologueV2 {
     /// Epoch of the commit prologue transaction
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub epoch: u64,
 
     /// Consensus round of the commit
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub round: u64,
 
     /// Unix timestamp from consensus
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub commit_timestamp_ms: CheckpointTimestamp,
 
     /// Digest of consensus output
@@ -534,6 +529,10 @@ pub struct ConsensusCommitPrologueV2 {
 ///                       = %x01 (vector canceled-transaction-v2)
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum ConsensusDeterminedVersionAssignments {
     /// Canceled transaction version assignment.
@@ -586,7 +585,6 @@ pub struct CanceledTransaction {
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct VersionAssignment {
     pub object_id: ObjectId,
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub version: Version,
 }
 
@@ -628,9 +626,7 @@ pub struct CanceledTransactionV2 {
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct VersionAssignmentV2 {
     pub object_id: ObjectId,
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub start_version: Version,
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub version: Version,
 }
 
@@ -652,23 +648,16 @@ pub struct VersionAssignmentV2 {
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct ConsensusCommitPrologueV3 {
     /// Epoch of the commit prologue transaction
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub epoch: u64,
 
     /// Consensus round of the commit
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub round: u64,
 
     /// The sub DAG index of the consensus commit. This field will be populated if there
     /// are multiple consensus commits per round.
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "crate::_serde::OptionReadableDisplay")
-    )]
     pub sub_dag_index: Option<u64>,
 
     /// Unix timestamp from consensus
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub commit_timestamp_ms: CheckpointTimestamp,
 
     /// Digest of consensus output
@@ -697,23 +686,16 @@ pub struct ConsensusCommitPrologueV3 {
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct ConsensusCommitPrologueV4 {
     /// Epoch of the commit prologue transaction
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub epoch: u64,
 
     /// Consensus round of the commit
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub round: u64,
 
     /// The sub DAG index of the consensus commit. This field will be populated if there
     /// are multiple consensus commits per round.
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "crate::_serde::OptionReadableDisplay")
-    )]
     pub sub_dag_index: Option<u64>,
 
     /// Unix timestamp from consensus
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub commit_timestamp_ms: CheckpointTimestamp,
 
     /// Digest of consensus output
@@ -751,31 +733,24 @@ pub struct ConsensusCommitPrologueV4 {
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct ChangeEpoch {
     /// The next (to become) epoch ID.
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub epoch: EpochId,
 
     /// The protocol version in effect in the new epoch.
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub protocol_version: ProtocolVersion,
 
     /// The total amount of gas charged for storage during the epoch.
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub storage_charge: u64,
 
     /// The total amount of gas charged for computation during the epoch.
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub computation_charge: u64,
 
     /// The amount of storage rebate refunded to the txn senders.
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub storage_rebate: u64,
 
     /// The non-refundable storage fee.
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub non_refundable_storage_fee: u64,
 
     /// Unix timestamp when epoch started
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub epoch_start_timestamp_ms: u64,
 
     /// System packages (specifically framework and move stdlib) that are written before the new
@@ -805,7 +780,6 @@ pub struct ChangeEpoch {
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct SystemPackage {
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub version: Version,
     #[cfg_attr(
         feature = "serde",
@@ -932,6 +906,10 @@ pub enum Input {
 /// command-upgrade             = %x06 upgrade
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum Command {
     /// A call to either an entry or a public Move function
@@ -1161,6 +1139,10 @@ pub struct Upgrade {
 /// argument-nested-result  = %x03 u16 u16
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum Argument {
     /// The gas coin. The gas coin can only be used by-ref, except for with

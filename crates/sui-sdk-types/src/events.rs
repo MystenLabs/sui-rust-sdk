@@ -79,6 +79,5 @@ pub struct BalanceChange {
     /// The amount indicate the balance value changes.
     ///
     /// A negative amount means spending coin value and positive means receiving coin value.
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub amount: i128,
 }

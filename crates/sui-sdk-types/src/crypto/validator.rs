@@ -20,7 +20,6 @@ use crate::checkpoint::StakeUnit;
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct ValidatorCommittee {
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub epoch: EpochId,
     pub members: Vec<ValidatorCommitteeMember>,
 }
@@ -43,7 +42,6 @@ pub struct ValidatorCommittee {
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct ValidatorCommitteeMember {
     pub public_key: Bls12381PublicKey,
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub stake: StakeUnit,
 }
 
@@ -71,7 +69,6 @@ pub struct ValidatorCommitteeMember {
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct ValidatorAggregatedSignature {
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub epoch: EpochId,
     pub signature: Bls12381Signature,
     #[cfg_attr(feature = "serde", serde(with = "RoaringBitMapSerialization"))]
@@ -108,7 +105,6 @@ type RoaringBitMapSerialization = ::serde_with::As<
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct ValidatorSignature {
-    #[cfg_attr(feature = "serde", serde(with = "crate::_serde::ReadableDisplay"))]
     pub epoch: EpochId,
     pub public_key: Bls12381PublicKey,
     pub signature: Bls12381Signature,
