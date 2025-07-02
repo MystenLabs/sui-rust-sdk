@@ -103,7 +103,7 @@ impl std::fmt::Display for Secp256k1PublicKey {
 impl std::fmt::Debug for Secp256k1PublicKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("Secp256k1PublicKey")
-            .field(&format_args!("\"{}\"", self))
+            .field(&format_args!("\"{self}\""))
             .finish()
     }
 }
@@ -211,7 +211,7 @@ impl std::fmt::Display for Secp256k1Signature {
 impl std::fmt::Debug for Secp256k1Signature {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("Secp256k1Signature")
-            .field(&format_args!("\"{}\"", self))
+            .field(&format_args!("\"{self}\""))
             .finish()
     }
 }

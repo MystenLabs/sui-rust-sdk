@@ -58,7 +58,7 @@ fn main() {
         .out_dir(&out_dir)
         .compile_fds(fds.clone())
     {
-        panic!("failed to compile protos: {}", error);
+        panic!("failed to compile protos: {error}");
     }
 
     // Group the files by their package, in order to have a single fds file per package, and have
@@ -102,7 +102,7 @@ fn main() {
         .status();
     match status {
         Ok(status) if !status.success() => panic!("You should commit the protobuf files"),
-        Err(error) => panic!("failed to run `git diff`: {}", error),
+        Err(error) => panic!("failed to run `git diff`: {error}"),
         Ok(_) => {}
     }
 }

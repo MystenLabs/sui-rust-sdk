@@ -1,3 +1,5 @@
+#![allow(clippy::uninlined_format_args)]
+
 // Include the generated proto definitions
 include!("../../../generated/sui.rpc.v2beta2.rs");
 

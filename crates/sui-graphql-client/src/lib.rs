@@ -263,9 +263,7 @@ impl DynamicFieldOutput {
         assert_eq!(
             Some(&expected_type),
             typetag.as_ref(),
-            "Expected type {}, but got {:?}",
-            expected_type,
-            typetag
+            "Expected type {expected_type}, but got {typetag:?}"
         );
 
         if let Some((_, bcs)) = &self.value {

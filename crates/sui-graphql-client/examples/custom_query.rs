@@ -52,7 +52,7 @@ async fn main() -> Result<()> {
     let response = client
         .run_query::<CustomQuery, CustomVariables>(&operation)
         .await;
-    println!("{:?}", response);
+    println!("{response:?}");
 
     // Query the data for epoch 1.
     let epoch_id = 1;
@@ -60,7 +60,7 @@ async fn main() -> Result<()> {
     let response = client
         .run_query::<CustomQuery, CustomVariables>(&operation)
         .await;
-    println!("{:?}", response);
+    println!("{response:?}");
 
     // When the query has no variables, just pass () as the type argument
     let operation = ChainIdQuery::build(());

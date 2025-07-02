@@ -112,7 +112,7 @@ impl std::fmt::Display for Error {
         write!(f, "{}", self.inner.kind)?;
 
         if let Some(source) = &self.inner.source {
-            writeln!(f, " {}", source)?;
+            writeln!(f, " {source}")?;
         }
         Ok(())
     }
