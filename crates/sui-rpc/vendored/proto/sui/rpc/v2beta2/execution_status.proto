@@ -331,7 +331,7 @@ message PackageUpgradeError {
     INCOMPATIBLE_UPGRADE = 3;
 
     // Digest in upgrade ticket and computed digest differ.
-    DIGETS_DOES_NOT_MATCH = 4;
+    DIGEST_DOES_NOT_MATCH = 4;
 
     // Upgrade policy is not valid.
     UNKNOWN_UPGRADE_POLICY = 5;

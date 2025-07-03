@@ -5746,6 +5746,9 @@ impl serde::Serialize for DynamicField {
         if self.dynamic_object_id.is_some() {
             len += 1;
         }
+        if self.object.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("sui.rpc.v2beta2.DynamicField", len)?;
         if let Some(v) = self.kind.as_ref() {
             let v = dynamic_field::DynamicFieldKind::try_from(*v)
@@ -5772,6 +5775,9 @@ impl serde::Serialize for DynamicField {
         if let Some(v) = self.dynamic_object_id.as_ref() {
             struct_ser.serialize_field("dynamicObjectId", v)?;
         }
+        if let Some(v) = self.object.as_ref() {
+            struct_ser.serialize_field("object", v)?;
+        }
         struct_ser.end()
     }
 }
@@ -5794,6 +5800,7 @@ impl<'de> serde::Deserialize<'de> for DynamicField {
             "valueType",
             "dynamic_object_id",
             "dynamicObjectId",
+            "object",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -5805,6 +5812,7 @@ impl<'de> serde::Deserialize<'de> for DynamicField {
             NameValue,
             ValueType,
             DynamicObjectId,
+            Object,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -5834,6 +5842,7 @@ impl<'de> serde::Deserialize<'de> for DynamicField {
                             "nameValue" | "name_value" => Ok(GeneratedField::NameValue),
                             "valueType" | "value_type" => Ok(GeneratedField::ValueType),
                             "dynamicObjectId" | "dynamic_object_id" => Ok(GeneratedField::DynamicObjectId),
+                            "object" => Ok(GeneratedField::Object),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -5862,6 +5871,7 @@ impl<'de> serde::Deserialize<'de> for DynamicField {
                 let mut name_value__ = None;
                 let mut value_type__ = None;
                 let mut dynamic_object_id__ = None;
+                let mut object__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Kind => {
@@ -5908,6 +5918,12 @@ impl<'de> serde::Deserialize<'de> for DynamicField {
                             }
                             dynamic_object_id__ = map_.next_value()?;
                         }
+                        GeneratedField::Object => {
+                            if object__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("object"));
+                            }
+                            object__ = map_.next_value()?;
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -5921,6 +5937,7 @@ impl<'de> serde::Deserialize<'de> for DynamicField {
                     name_value: name_value__,
                     value_type: value_type__,
                     dynamic_object_id: dynamic_object_id__,
+                    object: object__,
                 })
             }
         }
@@ -12835,6 +12852,9 @@ impl serde::Serialize for ListDynamicFieldsRequest {
         if self.page_token.is_some() {
             len += 1;
         }
+        if self.read_mask.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("sui.rpc.v2beta2.ListDynamicFieldsRequest", len)?;
         if let Some(v) = self.parent.as_ref() {
             struct_ser.serialize_field("parent", v)?;
@@ -12846,6 +12866,9 @@ impl serde::Serialize for ListDynamicFieldsRequest {
             #[allow(clippy::needless_borrow)]
             #[allow(clippy::needless_borrows_for_generic_args)]
             struct_ser.serialize_field("pageToken", crate::_serde::base64::encode(&v).as_str())?;
+        }
+        if let Some(v) = self.read_mask.as_ref() {
+            struct_ser.serialize_field("readMask", &crate::_serde::FieldMaskSerializer(v))?;
         }
         struct_ser.end()
     }
@@ -12862,6 +12885,8 @@ impl<'de> serde::Deserialize<'de> for ListDynamicFieldsRequest {
             "pageSize",
             "page_token",
             "pageToken",
+            "read_mask",
+            "readMask",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -12869,6 +12894,7 @@ impl<'de> serde::Deserialize<'de> for ListDynamicFieldsRequest {
             Parent,
             PageSize,
             PageToken,
+            ReadMask,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -12894,6 +12920,7 @@ impl<'de> serde::Deserialize<'de> for ListDynamicFieldsRequest {
                             "parent" => Ok(GeneratedField::Parent),
                             "pageSize" | "page_size" => Ok(GeneratedField::PageSize),
                             "pageToken" | "page_token" => Ok(GeneratedField::PageToken),
+                            "readMask" | "read_mask" => Ok(GeneratedField::ReadMask),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -12918,6 +12945,7 @@ impl<'de> serde::Deserialize<'de> for ListDynamicFieldsRequest {
                 let mut parent__ = None;
                 let mut page_size__ = None;
                 let mut page_token__ = None;
+                let mut read_mask__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Parent => {
@@ -12942,6 +12970,12 @@ impl<'de> serde::Deserialize<'de> for ListDynamicFieldsRequest {
                                 map_.next_value::<::std::option::Option<crate::_serde::BytesDeserialize<_>>>()?.map(|x| x.0)
                             ;
                         }
+                        GeneratedField::ReadMask => {
+                            if read_mask__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("readMask"));
+                            }
+                            read_mask__ = map_.next_value::<::std::option::Option<crate::_serde::FieldMaskDeserializer>>()?.map(|x| x.0.into());
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -12951,6 +12985,7 @@ impl<'de> serde::Deserialize<'de> for ListDynamicFieldsRequest {
                     parent: parent__,
                     page_size: page_size__,
                     page_token: page_token__,
+                    read_mask: read_mask__,
                 })
             }
         }
@@ -13088,21 +13123,21 @@ impl serde::Serialize for ListOwnedObjectsRequest {
         if self.owner.is_some() {
             len += 1;
         }
-        if self.object_type.is_some() {
-            len += 1;
-        }
         if self.page_size.is_some() {
             len += 1;
         }
         if self.page_token.is_some() {
             len += 1;
         }
+        if self.read_mask.is_some() {
+            len += 1;
+        }
+        if self.object_type.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("sui.rpc.v2beta2.ListOwnedObjectsRequest", len)?;
         if let Some(v) = self.owner.as_ref() {
             struct_ser.serialize_field("owner", v)?;
-        }
-        if let Some(v) = self.object_type.as_ref() {
-            struct_ser.serialize_field("objectType", v)?;
         }
         if let Some(v) = self.page_size.as_ref() {
             struct_ser.serialize_field("pageSize", v)?;
@@ -13111,6 +13146,12 @@ impl serde::Serialize for ListOwnedObjectsRequest {
             #[allow(clippy::needless_borrow)]
             #[allow(clippy::needless_borrows_for_generic_args)]
             struct_ser.serialize_field("pageToken", crate::_serde::base64::encode(&v).as_str())?;
+        }
+        if let Some(v) = self.read_mask.as_ref() {
+            struct_ser.serialize_field("readMask", &crate::_serde::FieldMaskSerializer(v))?;
+        }
+        if let Some(v) = self.object_type.as_ref() {
+            struct_ser.serialize_field("objectType", v)?;
         }
         struct_ser.end()
     }
@@ -13123,20 +13164,23 @@ impl<'de> serde::Deserialize<'de> for ListOwnedObjectsRequest {
     {
         const FIELDS: &[&str] = &[
             "owner",
-            "object_type",
-            "objectType",
             "page_size",
             "pageSize",
             "page_token",
             "pageToken",
+            "read_mask",
+            "readMask",
+            "object_type",
+            "objectType",
         ];
 
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             Owner,
-            ObjectType,
             PageSize,
             PageToken,
+            ReadMask,
+            ObjectType,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -13160,9 +13204,10 @@ impl<'de> serde::Deserialize<'de> for ListOwnedObjectsRequest {
                     {
                         match value {
                             "owner" => Ok(GeneratedField::Owner),
-                            "objectType" | "object_type" => Ok(GeneratedField::ObjectType),
                             "pageSize" | "page_size" => Ok(GeneratedField::PageSize),
                             "pageToken" | "page_token" => Ok(GeneratedField::PageToken),
+                            "readMask" | "read_mask" => Ok(GeneratedField::ReadMask),
+                            "objectType" | "object_type" => Ok(GeneratedField::ObjectType),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -13185,9 +13230,10 @@ impl<'de> serde::Deserialize<'de> for ListOwnedObjectsRequest {
                     V: serde::de::MapAccess<'de>,
             {
                 let mut owner__ = None;
-                let mut object_type__ = None;
                 let mut page_size__ = None;
                 let mut page_token__ = None;
+                let mut read_mask__ = None;
+                let mut object_type__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Owner => {
@@ -13195,12 +13241,6 @@ impl<'de> serde::Deserialize<'de> for ListOwnedObjectsRequest {
                                 return Err(serde::de::Error::duplicate_field("owner"));
                             }
                             owner__ = map_.next_value()?;
-                        }
-                        GeneratedField::ObjectType => {
-                            if object_type__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("objectType"));
-                            }
-                            object_type__ = map_.next_value()?;
                         }
                         GeneratedField::PageSize => {
                             if page_size__.is_some() {
@@ -13218,6 +13258,18 @@ impl<'de> serde::Deserialize<'de> for ListOwnedObjectsRequest {
                                 map_.next_value::<::std::option::Option<crate::_serde::BytesDeserialize<_>>>()?.map(|x| x.0)
                             ;
                         }
+                        GeneratedField::ReadMask => {
+                            if read_mask__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("readMask"));
+                            }
+                            read_mask__ = map_.next_value::<::std::option::Option<crate::_serde::FieldMaskDeserializer>>()?.map(|x| x.0.into());
+                        }
+                        GeneratedField::ObjectType => {
+                            if object_type__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("objectType"));
+                            }
+                            object_type__ = map_.next_value()?;
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -13225,9 +13277,10 @@ impl<'de> serde::Deserialize<'de> for ListOwnedObjectsRequest {
                 }
                 Ok(ListOwnedObjectsRequest {
                     owner: owner__,
-                    object_type: object_type__,
                     page_size: page_size__,
                     page_token: page_token__,
+                    read_mask: read_mask__,
+                    object_type: object_type__,
                 })
             }
         }
@@ -15308,6 +15361,9 @@ impl serde::Serialize for Object {
         if self.json.is_some() {
             len += 1;
         }
+        if self.balance.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("sui.rpc.v2beta2.Object", len)?;
         if let Some(v) = self.bcs.as_ref() {
             struct_ser.serialize_field("bcs", v)?;
@@ -15349,6 +15405,11 @@ impl serde::Serialize for Object {
         if let Some(v) = self.json.as_ref() {
             struct_ser.serialize_field("json", &crate::_serde::ValueSerializer(v))?;
         }
+        if let Some(v) = self.balance.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("balance", ToString::to_string(&v).as_str())?;
+        }
         struct_ser.end()
     }
 }
@@ -15376,6 +15437,7 @@ impl<'de> serde::Deserialize<'de> for Object {
             "storage_rebate",
             "storageRebate",
             "json",
+            "balance",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -15392,6 +15454,7 @@ impl<'de> serde::Deserialize<'de> for Object {
             PreviousTransaction,
             StorageRebate,
             Json,
+            Balance,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -15426,6 +15489,7 @@ impl<'de> serde::Deserialize<'de> for Object {
                             "previousTransaction" | "previous_transaction" => Ok(GeneratedField::PreviousTransaction),
                             "storageRebate" | "storage_rebate" => Ok(GeneratedField::StorageRebate),
                             "json" => Ok(GeneratedField::Json),
+                            "balance" => Ok(GeneratedField::Balance),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -15459,6 +15523,7 @@ impl<'de> serde::Deserialize<'de> for Object {
                 let mut previous_transaction__ = None;
                 let mut storage_rebate__ = None;
                 let mut json__ = None;
+                let mut balance__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Bcs => {
@@ -15537,6 +15602,14 @@ impl<'de> serde::Deserialize<'de> for Object {
                             }
                             json__ = map_.next_value::<::std::option::Option<crate::_serde::ValueDeserializer>>()?.map(|x| x.0.into());
                         }
+                        GeneratedField::Balance => {
+                            if balance__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("balance"));
+                            }
+                            balance__ = 
+                                map_.next_value::<::std::option::Option<crate::_serde::NumberDeserialize<_>>>()?.map(|x| x.0)
+                            ;
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -15555,6 +15628,7 @@ impl<'de> serde::Deserialize<'de> for Object {
                     previous_transaction: previous_transaction__,
                     storage_rebate: storage_rebate__,
                     json: json__,
+                    balance: balance__,
                 })
             }
         }
@@ -16141,198 +16215,6 @@ impl<'de> serde::Deserialize<'de> for open_signature_body::Type {
             }
         }
         deserializer.deserialize_any(GeneratedVisitor)
-    }
-}
-impl serde::Serialize for OwnedObject {
-    #[allow(deprecated)]
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        use serde::ser::SerializeStruct;
-        let mut len = 0;
-        if self.object_id.is_some() {
-            len += 1;
-        }
-        if self.version.is_some() {
-            len += 1;
-        }
-        if self.digest.is_some() {
-            len += 1;
-        }
-        if self.owner.is_some() {
-            len += 1;
-        }
-        if self.object_type.is_some() {
-            len += 1;
-        }
-        if self.balance.is_some() {
-            len += 1;
-        }
-        let mut struct_ser = serializer.serialize_struct("sui.rpc.v2beta2.OwnedObject", len)?;
-        if let Some(v) = self.object_id.as_ref() {
-            struct_ser.serialize_field("objectId", v)?;
-        }
-        if let Some(v) = self.version.as_ref() {
-            #[allow(clippy::needless_borrow)]
-            #[allow(clippy::needless_borrows_for_generic_args)]
-            struct_ser.serialize_field("version", ToString::to_string(&v).as_str())?;
-        }
-        if let Some(v) = self.digest.as_ref() {
-            struct_ser.serialize_field("digest", v)?;
-        }
-        if let Some(v) = self.owner.as_ref() {
-            struct_ser.serialize_field("owner", v)?;
-        }
-        if let Some(v) = self.object_type.as_ref() {
-            struct_ser.serialize_field("objectType", v)?;
-        }
-        if let Some(v) = self.balance.as_ref() {
-            #[allow(clippy::needless_borrow)]
-            #[allow(clippy::needless_borrows_for_generic_args)]
-            struct_ser.serialize_field("balance", ToString::to_string(&v).as_str())?;
-        }
-        struct_ser.end()
-    }
-}
-impl<'de> serde::Deserialize<'de> for OwnedObject {
-    #[allow(deprecated)]
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        const FIELDS: &[&str] = &[
-            "object_id",
-            "objectId",
-            "version",
-            "digest",
-            "owner",
-            "object_type",
-            "objectType",
-            "balance",
-        ];
-
-        #[allow(clippy::enum_variant_names)]
-        enum GeneratedField {
-            ObjectId,
-            Version,
-            Digest,
-            Owner,
-            ObjectType,
-            Balance,
-            __SkipField__,
-        }
-        impl<'de> serde::Deserialize<'de> for GeneratedField {
-            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
-            where
-                D: serde::Deserializer<'de>,
-            {
-                struct GeneratedVisitor;
-
-                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-                    type Value = GeneratedField;
-
-                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                        write!(formatter, "expected one of: {:?}", &FIELDS)
-                    }
-
-                    #[allow(unused_variables)]
-                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
-                    where
-                        E: serde::de::Error,
-                    {
-                        match value {
-                            "objectId" | "object_id" => Ok(GeneratedField::ObjectId),
-                            "version" => Ok(GeneratedField::Version),
-                            "digest" => Ok(GeneratedField::Digest),
-                            "owner" => Ok(GeneratedField::Owner),
-                            "objectType" | "object_type" => Ok(GeneratedField::ObjectType),
-                            "balance" => Ok(GeneratedField::Balance),
-                            _ => Ok(GeneratedField::__SkipField__),
-                        }
-                    }
-                }
-                deserializer.deserialize_identifier(GeneratedVisitor)
-            }
-        }
-        struct GeneratedVisitor;
-        #[allow(clippy::useless_conversion)]
-        #[allow(clippy::unit_arg)]
-        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-            type Value = OwnedObject;
-
-            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                formatter.write_str("struct sui.rpc.v2beta2.OwnedObject")
-            }
-
-            fn visit_map<V>(self, mut map_: V) -> std::result::Result<OwnedObject, V::Error>
-                where
-                    V: serde::de::MapAccess<'de>,
-            {
-                let mut object_id__ = None;
-                let mut version__ = None;
-                let mut digest__ = None;
-                let mut owner__ = None;
-                let mut object_type__ = None;
-                let mut balance__ = None;
-                while let Some(k) = map_.next_key()? {
-                    match k {
-                        GeneratedField::ObjectId => {
-                            if object_id__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("objectId"));
-                            }
-                            object_id__ = map_.next_value()?;
-                        }
-                        GeneratedField::Version => {
-                            if version__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("version"));
-                            }
-                            version__ = 
-                                map_.next_value::<::std::option::Option<crate::_serde::NumberDeserialize<_>>>()?.map(|x| x.0)
-                            ;
-                        }
-                        GeneratedField::Digest => {
-                            if digest__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("digest"));
-                            }
-                            digest__ = map_.next_value()?;
-                        }
-                        GeneratedField::Owner => {
-                            if owner__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("owner"));
-                            }
-                            owner__ = map_.next_value()?;
-                        }
-                        GeneratedField::ObjectType => {
-                            if object_type__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("objectType"));
-                            }
-                            object_type__ = map_.next_value()?;
-                        }
-                        GeneratedField::Balance => {
-                            if balance__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("balance"));
-                            }
-                            balance__ = 
-                                map_.next_value::<::std::option::Option<crate::_serde::NumberDeserialize<_>>>()?.map(|x| x.0)
-                            ;
-                        }
-                        GeneratedField::__SkipField__ => {
-                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
-                        }
-                    }
-                }
-                Ok(OwnedObject {
-                    object_id: object_id__,
-                    version: version__,
-                    digest: digest__,
-                    owner: owner__,
-                    object_type: object_type__,
-                    balance: balance__,
-                })
-            }
-        }
-        deserializer.deserialize_struct("sui.rpc.v2beta2.OwnedObject", FIELDS, GeneratedVisitor)
     }
 }
 impl serde::Serialize for Owner {
@@ -16926,7 +16808,7 @@ impl serde::Serialize for package_upgrade_error::PackageUpgradeErrorKind {
             Self::UnableToFetchPackage => "UNABLE_TO_FETCH_PACKAGE",
             Self::NotAPackage => "NOT_A_PACKAGE",
             Self::IncompatibleUpgrade => "INCOMPATIBLE_UPGRADE",
-            Self::DigetsDoesNotMatch => "DIGETS_DOES_NOT_MATCH",
+            Self::DigestDoesNotMatch => "DIGEST_DOES_NOT_MATCH",
             Self::UnknownUpgradePolicy => "UNKNOWN_UPGRADE_POLICY",
             Self::PackageIdDoesNotMatch => "PACKAGE_ID_DOES_NOT_MATCH",
         };
@@ -16944,7 +16826,7 @@ impl<'de> serde::Deserialize<'de> for package_upgrade_error::PackageUpgradeError
             "UNABLE_TO_FETCH_PACKAGE",
             "NOT_A_PACKAGE",
             "INCOMPATIBLE_UPGRADE",
-            "DIGETS_DOES_NOT_MATCH",
+            "DIGEST_DOES_NOT_MATCH",
             "UNKNOWN_UPGRADE_POLICY",
             "PACKAGE_ID_DOES_NOT_MATCH",
         ];
@@ -16991,7 +16873,7 @@ impl<'de> serde::Deserialize<'de> for package_upgrade_error::PackageUpgradeError
                     "UNABLE_TO_FETCH_PACKAGE" => Ok(package_upgrade_error::PackageUpgradeErrorKind::UnableToFetchPackage),
                     "NOT_A_PACKAGE" => Ok(package_upgrade_error::PackageUpgradeErrorKind::NotAPackage),
                     "INCOMPATIBLE_UPGRADE" => Ok(package_upgrade_error::PackageUpgradeErrorKind::IncompatibleUpgrade),
-                    "DIGETS_DOES_NOT_MATCH" => Ok(package_upgrade_error::PackageUpgradeErrorKind::DigetsDoesNotMatch),
+                    "DIGEST_DOES_NOT_MATCH" => Ok(package_upgrade_error::PackageUpgradeErrorKind::DigestDoesNotMatch),
                     "UNKNOWN_UPGRADE_POLICY" => Ok(package_upgrade_error::PackageUpgradeErrorKind::UnknownUpgradePolicy),
                     "PACKAGE_ID_DOES_NOT_MATCH" => Ok(package_upgrade_error::PackageUpgradeErrorKind::PackageIdDoesNotMatch),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),

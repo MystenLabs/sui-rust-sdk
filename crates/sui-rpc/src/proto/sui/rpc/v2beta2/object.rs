@@ -31,6 +31,7 @@ impl Merge<&Object> for Object {
             previous_transaction,
             storage_rebate,
             json,
+            balance,
         } = source;
 
         if mask.contains(Self::BCS_FIELD.name) {
@@ -79,6 +80,10 @@ impl Merge<&Object> for Object {
 
         if mask.contains(Self::JSON_FIELD.name) {
             self.json = json.clone();
+        }
+
+        if mask.contains(Self::BALANCE_FIELD) {
+            self.balance = *balance;
         }
     }
 }

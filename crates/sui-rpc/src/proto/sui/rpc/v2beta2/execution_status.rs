@@ -514,46 +514,46 @@ impl TryFrom<&ExecutionError> for sui_sdk_types::ExecutionError {
 impl From<sui_sdk_types::CommandArgumentError> for CommandArgumentError {
     fn from(value: sui_sdk_types::CommandArgumentError) -> Self {
         use command_argument_error::CommandArgumentErrorKind;
-        use sui_sdk_types::CommandArgumentError::*;
+        use sui_sdk_types::CommandArgumentError as E;
 
         let mut message = Self::default();
 
         let kind = match value {
-            TypeMismatch => CommandArgumentErrorKind::TypeMismatch,
-            InvalidBcsBytes => CommandArgumentErrorKind::InvalidBcsBytes,
-            InvalidUsageOfPureArgument => CommandArgumentErrorKind::InvalidUsageOfPureArgument,
-            InvalidArgumentToPrivateEntryFunction => {
+            E::TypeMismatch => CommandArgumentErrorKind::TypeMismatch,
+            E::InvalidBcsBytes => CommandArgumentErrorKind::InvalidBcsBytes,
+            E::InvalidUsageOfPureArgument => CommandArgumentErrorKind::InvalidUsageOfPureArgument,
+            E::InvalidArgumentToPrivateEntryFunction => {
                 CommandArgumentErrorKind::InvalidArgumentToPrivateEntryFunction
             }
-            IndexOutOfBounds { index } => {
+            E::IndexOutOfBounds { index } => {
                 message.index_error = Some(IndexError {
                     index: Some(index.into()),
                     subresult: None,
                 });
                 CommandArgumentErrorKind::IndexOutOfBounds
             }
-            SecondaryIndexOutOfBounds { result, subresult } => {
+            E::SecondaryIndexOutOfBounds { result, subresult } => {
                 message.index_error = Some(IndexError {
                     index: Some(result.into()),
                     subresult: Some(subresult.into()),
                 });
                 CommandArgumentErrorKind::SecondaryIndexOutOfBounds
             }
-            InvalidResultArity { result } => {
+            E::InvalidResultArity { result } => {
                 message.index_error = Some(IndexError {
                     index: Some(result.into()),
                     subresult: None,
                 });
                 CommandArgumentErrorKind::InvalidResultArity
             }
-            InvalidGasCoinUsage => CommandArgumentErrorKind::InvalidGasCoinUsage,
-            InvalidValueUsage => CommandArgumentErrorKind::InvalidValueUsage,
-            InvalidObjectByValue => CommandArgumentErrorKind::InvalidObjectByValue,
-            InvalidObjectByMutRef => CommandArgumentErrorKind::InvalidObjectByMutRef,
-            SharedObjectOperationNotAllowed => {
+            E::InvalidGasCoinUsage => CommandArgumentErrorKind::InvalidGasCoinUsage,
+            E::InvalidValueUsage => CommandArgumentErrorKind::InvalidValueUsage,
+            E::InvalidObjectByValue => CommandArgumentErrorKind::InvalidObjectByValue,
+            E::InvalidObjectByMutRef => CommandArgumentErrorKind::InvalidObjectByMutRef,
+            E::SharedObjectOperationNotAllowed => {
                 CommandArgumentErrorKind::SharedObjectOperationNotAllowed
             }
-            InvalidArgumentArity => CommandArgumentErrorKind::InvalidArgumentArity,
+            E::InvalidArgumentArity => CommandArgumentErrorKind::InvalidArgumentArity,
         };
 
         message.set_kind(kind);
@@ -565,20 +565,20 @@ impl TryFrom<&CommandArgumentError> for sui_sdk_types::CommandArgumentError {
     type Error = TryFromProtoError;
 
     fn try_from(value: &CommandArgumentError) -> Result<Self, Self::Error> {
-        use command_argument_error::CommandArgumentErrorKind::*;
+        use command_argument_error::CommandArgumentErrorKind as K;
 
         match value.kind() {
-            Unknown => {
+            K::Unknown => {
                 return Err(TryFromProtoError::invalid(
                     CommandArgumentError::KIND_FIELD,
                     "unknown CommandArgumentErrorKind",
                 ))
             }
-            TypeMismatch => Self::TypeMismatch,
-            InvalidBcsBytes => Self::InvalidBcsBytes,
-            InvalidUsageOfPureArgument => Self::InvalidUsageOfPureArgument,
-            InvalidArgumentToPrivateEntryFunction => Self::InvalidArgumentToPrivateEntryFunction,
-            IndexOutOfBounds => Self::IndexOutOfBounds {
+            K::TypeMismatch => Self::TypeMismatch,
+            K::InvalidBcsBytes => Self::InvalidBcsBytes,
+            K::InvalidUsageOfPureArgument => Self::InvalidUsageOfPureArgument,
+            K::InvalidArgumentToPrivateEntryFunction => Self::InvalidArgumentToPrivateEntryFunction,
+            K::IndexOutOfBounds => Self::IndexOutOfBounds {
                 index: value
                     .index_error
                     .ok_or_else(|| TryFromProtoError::missing("index_error"))?
@@ -587,7 +587,7 @@ impl TryFrom<&CommandArgumentError> for sui_sdk_types::CommandArgumentError {
                     .try_into()
                     .map_err(|e| TryFromProtoError::invalid(IndexError::INDEX_FIELD, e))?,
             },
-            SecondaryIndexOutOfBounds => {
+            K::SecondaryIndexOutOfBounds => {
                 let index_error = value
                     .index_error
                     .ok_or_else(|| TryFromProtoError::missing("index_error"))?;
@@ -604,7 +604,7 @@ impl TryFrom<&CommandArgumentError> for sui_sdk_types::CommandArgumentError {
                         .map_err(|e| TryFromProtoError::invalid(IndexError::SUBRESULT_FIELD, e))?,
                 }
             }
-            InvalidResultArity => Self::InvalidResultArity {
+            K::InvalidResultArity => Self::InvalidResultArity {
                 result: value
                     .index_error
                     .ok_or_else(|| TryFromProtoError::missing("index_error"))?
@@ -613,12 +613,12 @@ impl TryFrom<&CommandArgumentError> for sui_sdk_types::CommandArgumentError {
                     .try_into()
                     .map_err(|e| TryFromProtoError::invalid(IndexError::INDEX_FIELD, e))?,
             },
-            InvalidGasCoinUsage => Self::InvalidGasCoinUsage,
-            InvalidValueUsage => Self::InvalidValueUsage,
-            InvalidObjectByValue => Self::InvalidObjectByValue,
-            InvalidObjectByMutRef => Self::InvalidObjectByMutRef,
-            SharedObjectOperationNotAllowed => Self::SharedObjectOperationNotAllowed,
-            InvalidArgumentArity => Self::InvalidArgumentArity,
+            K::InvalidGasCoinUsage => Self::InvalidGasCoinUsage,
+            K::InvalidValueUsage => Self::InvalidValueUsage,
+            K::InvalidObjectByValue => Self::InvalidObjectByValue,
+            K::InvalidObjectByMutRef => Self::InvalidObjectByMutRef,
+            K::SharedObjectOperationNotAllowed => Self::SharedObjectOperationNotAllowed,
+            K::InvalidArgumentArity => Self::InvalidArgumentArity,
         }
         .pipe(Ok)
     }
@@ -643,17 +643,17 @@ impl TryFrom<type_argument_error::TypeArgumentErrorKind> for sui_sdk_types::Type
     type Error = TryFromProtoError;
 
     fn try_from(value: type_argument_error::TypeArgumentErrorKind) -> Result<Self, Self::Error> {
-        use type_argument_error::TypeArgumentErrorKind::*;
+        use type_argument_error::TypeArgumentErrorKind as K;
 
         match value {
-            Unknown => {
+            K::Unknown => {
                 return Err(TryFromProtoError::invalid(
                     "kind",
                     "unknown TypeArgumentErrorKind",
                 ))
             }
-            TypeNotFound => Self::TypeNotFound,
-            ConstraintNotSatisfied => Self::ConstraintNotSatisfied,
+            K::TypeNotFound => Self::TypeNotFound,
+            K::ConstraintNotSatisfied => Self::ConstraintNotSatisfied,
         }
         .pipe(Ok)
     }
@@ -666,29 +666,29 @@ impl TryFrom<type_argument_error::TypeArgumentErrorKind> for sui_sdk_types::Type
 impl From<sui_sdk_types::PackageUpgradeError> for PackageUpgradeError {
     fn from(value: sui_sdk_types::PackageUpgradeError) -> Self {
         use package_upgrade_error::PackageUpgradeErrorKind;
-        use sui_sdk_types::PackageUpgradeError::*;
+        use sui_sdk_types::PackageUpgradeError as E;
 
         let mut message = Self::default();
 
         let kind = match value {
-            UnableToFetchPackage { package_id } => {
+            E::UnableToFetchPackage { package_id } => {
                 message.package_id = Some(package_id.to_string());
                 PackageUpgradeErrorKind::UnableToFetchPackage
             }
-            NotAPackage { object_id } => {
+            E::NotAPackage { object_id } => {
                 message.package_id = Some(object_id.to_string());
                 PackageUpgradeErrorKind::NotAPackage
             }
-            IncompatibleUpgrade => PackageUpgradeErrorKind::IncompatibleUpgrade,
-            DigestDoesNotMatch { digest } => {
+            E::IncompatibleUpgrade => PackageUpgradeErrorKind::IncompatibleUpgrade,
+            E::DigestDoesNotMatch { digest } => {
                 message.digest = Some(digest.to_string());
-                PackageUpgradeErrorKind::DigetsDoesNotMatch
+                PackageUpgradeErrorKind::DigestDoesNotMatch
             }
-            UnknownUpgradePolicy { policy } => {
+            E::UnknownUpgradePolicy { policy } => {
                 message.policy = Some(policy.into());
                 PackageUpgradeErrorKind::UnknownUpgradePolicy
             }
-            PackageIdDoesNotMatch {
+            E::PackageIdDoesNotMatch {
                 package_id,
                 ticket_id,
             } => {
@@ -707,16 +707,16 @@ impl TryFrom<&PackageUpgradeError> for sui_sdk_types::PackageUpgradeError {
     type Error = TryFromProtoError;
 
     fn try_from(value: &PackageUpgradeError) -> Result<Self, Self::Error> {
-        use package_upgrade_error::PackageUpgradeErrorKind::*;
+        use package_upgrade_error::PackageUpgradeErrorKind as K;
 
         match value.kind() {
-            Unknown => {
+            K::Unknown => {
                 return Err(TryFromProtoError::invalid(
                     PackageUpgradeError::KIND_FIELD,
                     "unknown PackageUpgradeErrorKind",
                 ))
             }
-            UnableToFetchPackage => Self::UnableToFetchPackage {
+            K::UnableToFetchPackage => Self::UnableToFetchPackage {
                 package_id: value
                     .package_id
                     .as_ref()
@@ -726,7 +726,7 @@ impl TryFrom<&PackageUpgradeError> for sui_sdk_types::PackageUpgradeError {
                         TryFromProtoError::invalid(PackageUpgradeError::PACKAGE_ID_FIELD, e)
                     })?,
             },
-            NotAPackage => Self::NotAPackage {
+            K::NotAPackage => Self::NotAPackage {
                 object_id: value
                     .package_id
                     .as_ref()
@@ -736,8 +736,8 @@ impl TryFrom<&PackageUpgradeError> for sui_sdk_types::PackageUpgradeError {
                         TryFromProtoError::invalid(PackageUpgradeError::PACKAGE_ID_FIELD, e)
                     })?,
             },
-            IncompatibleUpgrade => Self::IncompatibleUpgrade,
-            DigetsDoesNotMatch => Self::DigestDoesNotMatch {
+            K::IncompatibleUpgrade => Self::IncompatibleUpgrade,
+            K::DigestDoesNotMatch => Self::DigestDoesNotMatch {
                 digest: value
                     .digest
                     .as_ref()
@@ -747,7 +747,7 @@ impl TryFrom<&PackageUpgradeError> for sui_sdk_types::PackageUpgradeError {
                         TryFromProtoError::invalid(PackageUpgradeError::DIGEST_FIELD, e)
                     })?,
             },
-            UnknownUpgradePolicy => Self::UnknownUpgradePolicy {
+            K::UnknownUpgradePolicy => Self::UnknownUpgradePolicy {
                 policy: value
                     .policy
                     .ok_or_else(|| TryFromProtoError::missing("policy"))?
@@ -756,7 +756,7 @@ impl TryFrom<&PackageUpgradeError> for sui_sdk_types::PackageUpgradeError {
                         TryFromProtoError::invalid(PackageUpgradeError::POLICY_FIELD, e)
                     })?,
             },
-            PackageIdDoesNotMatch => Self::PackageIdDoesNotMatch {
+            K::PackageIdDoesNotMatch => Self::PackageIdDoesNotMatch {
                 package_id: value
                     .package_id
                     .as_ref()

@@ -1242,7 +1242,7 @@ pub mod package_upgrade_error {
         /// Package upgrade is incompatible with previous version.
         IncompatibleUpgrade = 3,
         /// Digest in upgrade ticket and computed digest differ.
-        DigetsDoesNotMatch = 4,
+        DigestDoesNotMatch = 4,
         /// Upgrade policy is not valid.
         UnknownUpgradePolicy = 5,
         /// Package ID does not match `PackageId` in upgrade ticket.
@@ -1259,7 +1259,7 @@ pub mod package_upgrade_error {
                 Self::UnableToFetchPackage => "UNABLE_TO_FETCH_PACKAGE",
                 Self::NotAPackage => "NOT_A_PACKAGE",
                 Self::IncompatibleUpgrade => "INCOMPATIBLE_UPGRADE",
-                Self::DigetsDoesNotMatch => "DIGETS_DOES_NOT_MATCH",
+                Self::DigestDoesNotMatch => "DIGEST_DOES_NOT_MATCH",
                 Self::UnknownUpgradePolicy => "UNKNOWN_UPGRADE_POLICY",
                 Self::PackageIdDoesNotMatch => "PACKAGE_ID_DOES_NOT_MATCH",
             }
@@ -1271,7 +1271,7 @@ pub mod package_upgrade_error {
                 "UNABLE_TO_FETCH_PACKAGE" => Some(Self::UnableToFetchPackage),
                 "NOT_A_PACKAGE" => Some(Self::NotAPackage),
                 "INCOMPATIBLE_UPGRADE" => Some(Self::IncompatibleUpgrade),
-                "DIGETS_DOES_NOT_MATCH" => Some(Self::DigetsDoesNotMatch),
+                "DIGEST_DOES_NOT_MATCH" => Some(Self::DigestDoesNotMatch),
                 "UNKNOWN_UPGRADE_POLICY" => Some(Self::UnknownUpgradePolicy),
                 "PACKAGE_ID_DOES_NOT_MATCH" => Some(Self::PackageIdDoesNotMatch),
                 _ => None,
@@ -2536,6 +2536,8 @@ pub struct ListDynamicFieldsRequest {
     /// match the call that provided the page token.
     #[prost(bytes = "bytes", optional, tag = "3")]
     pub page_token: ::core::option::Option<::prost::bytes::Bytes>,
+    #[prost(message, optional, tag = "4")]
+    pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
 }
 /// Response message for `NodeService.ListDynamicFields`
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -2578,6 +2580,9 @@ pub struct DynamicField {
     /// is a dynamic field or a dynamic child object
     #[prost(string, optional, tag = "7")]
     pub dynamic_object_id: ::core::option::Option<::prost::alloc::string::String>,
+    /// The object itself when a child is a dynamic object field.
+    #[prost(message, optional, tag = "8")]
+    pub object: ::core::option::Option<Object>,
 }
 /// Nested message and enum types in `DynamicField`.
 pub mod dynamic_field {
@@ -2711,16 +2716,6 @@ pub struct ListOwnedObjectsRequest {
     /// Required. The address of the account that owns the objects.
     #[prost(string, optional, tag = "1")]
     pub owner: ::core::option::Option<::prost::alloc::string::String>,
-    /// Optional type filter to limit the types of objects listed.
-    ///
-    /// Providing an object type with no type params will return objects of that
-    /// type with any type parameter, e.g. `0x2::coin::Coin` will return all
-    /// `Coin<T>` objects regardless of the type parameter `T`. Providing a type
-    /// with a type param will retrict the returned objects to only those objects
-    /// that match the provided type parameters, e.g.
-    /// `0x2::coin::Coin<0x2::sui::SUI>` will only return `Coin<SUI>` objects.
-    #[prost(string, optional, tag = "4")]
-    pub object_type: ::core::option::Option<::prost::alloc::string::String>,
     /// The maximum number of entries return. The service may return fewer than this value.
     /// If unspecified, at most `50` entries will be returned.
     /// The maximum value is `1000`; values above `1000` will be coerced to `1000`.
@@ -2733,32 +2728,28 @@ pub struct ListOwnedObjectsRequest {
     /// match the call that provided the page token.
     #[prost(bytes = "bytes", optional, tag = "3")]
     pub page_token: ::core::option::Option<::prost::bytes::Bytes>,
+    #[prost(message, optional, tag = "4")]
+    pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
+    /// Optional type filter to limit the types of objects listed.
+    ///
+    /// Providing an object type with no type params will return objects of that
+    /// type with any type parameter, e.g. `0x2::coin::Coin` will return all
+    /// `Coin<T>` objects regardless of the type parameter `T`. Providing a type
+    /// with a type param will retrict the returned objects to only those objects
+    /// that match the provided type parameters, e.g.
+    /// `0x2::coin::Coin<0x2::sui::SUI>` will only return `Coin<SUI>` objects.
+    #[prost(string, optional, tag = "5")]
+    pub object_type: ::core::option::Option<::prost::alloc::string::String>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListOwnedObjectsResponse {
     /// Page of dynamic fields owned by the specified parent.
     #[prost(message, repeated, tag = "1")]
-    pub objects: ::prost::alloc::vec::Vec<OwnedObject>,
+    pub objects: ::prost::alloc::vec::Vec<Object>,
     /// A token, which can be sent as `page_token` to retrieve the next page.
     /// If this field is omitted, there are no subsequent pages.
     #[prost(bytes = "bytes", optional, tag = "2")]
     pub next_page_token: ::core::option::Option<::prost::bytes::Bytes>,
-}
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct OwnedObject {
-    #[prost(string, optional, tag = "2")]
-    pub object_id: ::core::option::Option<::prost::alloc::string::String>,
-    #[prost(uint64, optional, tag = "3")]
-    pub version: ::core::option::Option<u64>,
-    #[prost(string, optional, tag = "4")]
-    pub digest: ::core::option::Option<::prost::alloc::string::String>,
-    #[prost(message, optional, tag = "5")]
-    pub owner: ::core::option::Option<Owner>,
-    #[prost(string, optional, tag = "6")]
-    pub object_type: ::core::option::Option<::prost::alloc::string::String>,
-    /// Current balance if this object is a `0x2::coin::Coin<T>`
-    #[prost(uint64, optional, tag = "200")]
-    pub balance: ::core::option::Option<u64>,
 }
 /// Generated client implementations.
 pub mod live_data_service_client {
@@ -4577,6 +4568,9 @@ pub struct Object {
     /// JSON rendering of the object.
     #[prost(message, optional, boxed, tag = "100")]
     pub json: ::core::option::Option<::prost::alloc::boxed::Box<::prost_types::Value>>,
+    /// Current balance if this object is a `0x2::coin::Coin<T>`
+    #[prost(uint64, optional, tag = "101")]
+    pub balance: ::core::option::Option<u64>,
 }
 /// Reference to an object.
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -5441,7 +5435,7 @@ pub mod subscription_service_client {
         /// This API provides a subscription to the checkpoint stream for the Sui
         /// blockchain. When a subscription is initialized the stream will begin with
         /// the latest executed checkpoint as seen by the server. Responses are
-        /// gaurenteed to return checkpoints in-order and without gaps. This enables
+        /// guaranteed to return checkpoints in-order and without gaps. This enables
         /// clients to know exactly the last checkpoint they have processed and in the
         /// event the subscription terminates (either by the client/server or by the
         /// connection breaking), clients will be able to reinitailize a subscription
@@ -5507,7 +5501,7 @@ pub mod subscription_service_server {
         /// This API provides a subscription to the checkpoint stream for the Sui
         /// blockchain. When a subscription is initialized the stream will begin with
         /// the latest executed checkpoint as seen by the server. Responses are
-        /// gaurenteed to return checkpoints in-order and without gaps. This enables
+        /// guaranteed to return checkpoints in-order and without gaps. This enables
         /// clients to know exactly the last checkpoint they have processed and in the
         /// event the subscription terminates (either by the client/server or by the
         /// connection breaking), clients will be able to reinitailize a subscription

@@ -10,7 +10,7 @@ import "google/protobuf/struct.proto";
 import "sui/rpc/v2beta2/argument.proto";
 import "sui/rpc/v2beta2/bcs.proto";
 import "sui/rpc/v2beta2/executed_transaction.proto";
-import "sui/rpc/v2beta2/owner.proto";
+import "sui/rpc/v2beta2/object.proto";
 import "sui/rpc/v2beta2/transaction.proto";
 
 service LiveDataService {
@@ -152,6 +152,8 @@ message ListDynamicFieldsRequest {
   // When paginating, all other parameters provided to `ListDynamicFields` must
   // match the call that provided the page token.
   optional bytes page_token = 3;
+
+  optional google.protobuf.FieldMask read_mask = 4;
 }
 
 // Response message for `NodeService.ListDynamicFields`
@@ -198,6 +200,9 @@ message DynamicField {
   // The presence or absence of this field can be used to determine if a child
   // is a dynamic field or a dynamic child object
   optional string dynamic_object_id = 7;
+
+  // The object itself when a child is a dynamic object field.
+  optional Object object = 8;
 }
 
 message SimulateTransactionRequest {
@@ -243,16 +248,6 @@ message ListOwnedObjectsRequest {
   // Required. The address of the account that owns the objects.
   optional string owner = 1;
 
-  // Optional type filter to limit the types of objects listed.
-  //
-  // Providing an object type with no type params will return objects of that
-  // type with any type parameter, e.g. `0x2::coin::Coin` will return all
-  // `Coin<T>` objects regardless of the type parameter `T`. Providing a type
-  // with a type param will retrict the returned objects to only those objects
-  // that match the provided type parameters, e.g.
-  // `0x2::coin::Coin<0x2::sui::SUI>` will only return `Coin<SUI>` objects.
-  optional string object_type = 4;
-
   // The maximum number of entries return. The service may return fewer than this value.
   // If unspecified, at most `50` entries will be returned.
   // The maximum value is `1000`; values above `1000` will be coerced to `1000`.
@@ -264,26 +259,25 @@ message ListOwnedObjectsRequest {
   // When paginating, all other parameters provided to `ListOwnedObjects` must
   // match the call that provided the page token.
   optional bytes page_token = 3;
+
+  optional google.protobuf.FieldMask read_mask = 4;
+
+  // Optional type filter to limit the types of objects listed.
+  //
+  // Providing an object type with no type params will return objects of that
+  // type with any type parameter, e.g. `0x2::coin::Coin` will return all
+  // `Coin<T>` objects regardless of the type parameter `T`. Providing a type
+  // with a type param will retrict the returned objects to only those objects
+  // that match the provided type parameters, e.g.
+  // `0x2::coin::Coin<0x2::sui::SUI>` will only return `Coin<SUI>` objects.
+  optional string object_type = 5;
 }
 
 message ListOwnedObjectsResponse {
   // Page of dynamic fields owned by the specified parent.
-  repeated OwnedObject objects = 1;
+  repeated Object objects = 1;
 
   // A token, which can be sent as `page_token` to retrieve the next page.
   // If this field is omitted, there are no subsequent pages.
   optional bytes next_page_token = 2;
-}
-
-message OwnedObject {
-  optional string object_id = 2;
-  optional uint64 version = 3;
-  optional string digest = 4;
-  optional Owner owner = 5;
-  optional string object_type = 6;
-
-  // Current balance if this object is a `0x2::coin::Coin<T>`
-  optional uint64 balance = 200;
-
-  // TODO: Note field numbers match sui.rpc.v2beta2.Object in case we want to just use that message
 }
