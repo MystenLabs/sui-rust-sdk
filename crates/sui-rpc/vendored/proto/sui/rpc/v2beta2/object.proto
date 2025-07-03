@@ -56,4 +56,7 @@ message Object {
 
   // JSON rendering of the object.
   optional google.protobuf.Value json = 100;
+
+  // Current balance if this object is a `0x2::coin::Coin<T>`
+  optional uint64 balance = 101;
 }

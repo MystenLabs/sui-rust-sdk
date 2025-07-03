@@ -1814,12 +1814,19 @@ mod _field_impls {
             number: 3i32,
             message_fields: None,
         };
+        pub const READ_MASK_FIELD: &'static MessageField = &MessageField {
+            name: "read_mask",
+            json_name: "readMask",
+            number: 4i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for ListDynamicFieldsRequest {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::PARENT_FIELD,
             Self::PAGE_SIZE_FIELD,
             Self::PAGE_TOKEN_FIELD,
+            Self::READ_MASK_FIELD,
         ];
     }
     impl ListDynamicFieldsResponse {
@@ -1885,6 +1892,12 @@ mod _field_impls {
             number: 7i32,
             message_fields: None,
         };
+        pub const OBJECT_FIELD: &'static MessageField = &MessageField {
+            name: "object",
+            json_name: "object",
+            number: 8i32,
+            message_fields: Some(Object::FIELDS),
+        };
     }
     impl MessageFields for DynamicField {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -1895,6 +1908,7 @@ mod _field_impls {
             Self::NAME_VALUE_FIELD,
             Self::VALUE_TYPE_FIELD,
             Self::DYNAMIC_OBJECT_ID_FIELD,
+            Self::OBJECT_FIELD,
         ];
     }
     impl SimulateTransactionRequest {
@@ -2005,12 +2019,6 @@ mod _field_impls {
             number: 1i32,
             message_fields: None,
         };
-        pub const OBJECT_TYPE_FIELD: &'static MessageField = &MessageField {
-            name: "object_type",
-            json_name: "objectType",
-            number: 4i32,
-            message_fields: None,
-        };
         pub const PAGE_SIZE_FIELD: &'static MessageField = &MessageField {
             name: "page_size",
             json_name: "pageSize",
@@ -2023,13 +2031,26 @@ mod _field_impls {
             number: 3i32,
             message_fields: None,
         };
+        pub const READ_MASK_FIELD: &'static MessageField = &MessageField {
+            name: "read_mask",
+            json_name: "readMask",
+            number: 4i32,
+            message_fields: None,
+        };
+        pub const OBJECT_TYPE_FIELD: &'static MessageField = &MessageField {
+            name: "object_type",
+            json_name: "objectType",
+            number: 5i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for ListOwnedObjectsRequest {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::OWNER_FIELD,
-            Self::OBJECT_TYPE_FIELD,
             Self::PAGE_SIZE_FIELD,
             Self::PAGE_TOKEN_FIELD,
+            Self::READ_MASK_FIELD,
+            Self::OBJECT_TYPE_FIELD,
         ];
     }
     impl ListOwnedObjectsResponse {
@@ -2037,7 +2058,7 @@ mod _field_impls {
             name: "objects",
             json_name: "objects",
             number: 1i32,
-            message_fields: Some(OwnedObject::FIELDS),
+            message_fields: Some(Object::FIELDS),
         };
         pub const NEXT_PAGE_TOKEN_FIELD: &'static MessageField = &MessageField {
             name: "next_page_token",
@@ -2050,54 +2071,6 @@ mod _field_impls {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::OBJECTS_FIELD,
             Self::NEXT_PAGE_TOKEN_FIELD,
-        ];
-    }
-    impl OwnedObject {
-        pub const OBJECT_ID_FIELD: &'static MessageField = &MessageField {
-            name: "object_id",
-            json_name: "objectId",
-            number: 2i32,
-            message_fields: None,
-        };
-        pub const VERSION_FIELD: &'static MessageField = &MessageField {
-            name: "version",
-            json_name: "version",
-            number: 3i32,
-            message_fields: None,
-        };
-        pub const DIGEST_FIELD: &'static MessageField = &MessageField {
-            name: "digest",
-            json_name: "digest",
-            number: 4i32,
-            message_fields: None,
-        };
-        pub const OWNER_FIELD: &'static MessageField = &MessageField {
-            name: "owner",
-            json_name: "owner",
-            number: 5i32,
-            message_fields: Some(Owner::FIELDS),
-        };
-        pub const OBJECT_TYPE_FIELD: &'static MessageField = &MessageField {
-            name: "object_type",
-            json_name: "objectType",
-            number: 6i32,
-            message_fields: None,
-        };
-        pub const BALANCE_FIELD: &'static MessageField = &MessageField {
-            name: "balance",
-            json_name: "balance",
-            number: 200i32,
-            message_fields: None,
-        };
-    }
-    impl MessageFields for OwnedObject {
-        const FIELDS: &'static [&'static MessageField] = &[
-            Self::OBJECT_ID_FIELD,
-            Self::VERSION_FIELD,
-            Self::DIGEST_FIELD,
-            Self::OWNER_FIELD,
-            Self::OBJECT_TYPE_FIELD,
-            Self::BALANCE_FIELD,
         ];
     }
     impl Package {
@@ -2719,6 +2692,12 @@ mod _field_impls {
             number: 100i32,
             message_fields: None,
         };
+        pub const BALANCE_FIELD: &'static MessageField = &MessageField {
+            name: "balance",
+            json_name: "balance",
+            number: 101i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for Object {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -2734,6 +2713,7 @@ mod _field_impls {
             Self::PREVIOUS_TRANSACTION_FIELD,
             Self::STORAGE_REBATE_FIELD,
             Self::JSON_FIELD,
+            Self::BALANCE_FIELD,
         ];
     }
     impl ObjectReference {
