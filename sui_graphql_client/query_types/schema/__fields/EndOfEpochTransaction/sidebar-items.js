@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["_transactions_arguments"],"struct":["__typename","transactions"]};
