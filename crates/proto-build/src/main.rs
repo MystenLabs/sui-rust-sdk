@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 mod generate_fields;
+mod generate_getters;
 
 fn main() {
     let root_dir = PathBuf::from(std::env!("CARGO_MANIFEST_DIR"));
@@ -78,6 +79,7 @@ fn main() {
     }
 
     generate_fields::generate_field_info(&packages, &out_dir);
+    generate_getters::generate_getters(&packages, &out_dir);
 
     let mut json_builder = pbjson_build::Builder::new();
 

@@ -8,6 +8,7 @@ include!("../../../generated/sui.rpc.v2beta2.field_info.rs");
 
 // Include generated serde impls
 include!("../../../generated/sui.rpc.v2beta2.serde.rs");
+include!("../../../generated/sui.rpc.v2beta2.getters.rs");
 
 pub use descriptor::FILE_DESCRIPTOR_SET;
 mod descriptor {
@@ -42,7 +43,6 @@ mod move_package_service;
 mod name_service;
 mod object;
 mod signatures;
-mod state_service;
 mod transaction;
 mod transaction_execution_service;
 
@@ -60,11 +60,6 @@ impl Bcs {
 
     pub fn deserialize<'de, T: serde::Deserialize<'de>>(&'de self) -> Result<T, bcs::Error> {
         bcs::from_bytes(self.value.as_deref().unwrap_or(&[]))
-    }
-
-    pub fn with_name(mut self, name: String) -> Self {
-        self.name = Some(name);
-        self
     }
 }
 

@@ -63,16 +63,6 @@ impl ListPackageVersionsRequest {
             page_token: None,
         }
     }
-
-    pub fn with_page_size(mut self, page_size: u32) -> Self {
-        self.page_size = Some(page_size);
-        self
-    }
-
-    pub fn with_page_token(mut self, page_token: Bytes) -> Self {
-        self.page_token = Some(page_token);
-        self
-    }
 }
 
 impl ListPackageVersionsResponse {

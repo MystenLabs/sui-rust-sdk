@@ -96,7 +96,7 @@ message CheckpointCommitment {
     ECMH_LIVE_OBJECT_SET = 1;
 
     // Digest of the checkpoint artifacts.
-    CHECKPOINT_ARTIFACTS_DIGEST = 2;
+    CHECKPOINT_ARTIFACTS = 2;
   }
 
   optional CheckpointCommitmentKind kind = 1;

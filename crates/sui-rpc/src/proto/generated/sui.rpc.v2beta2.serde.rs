@@ -2719,7 +2719,7 @@ impl serde::Serialize for checkpoint_commitment::CheckpointCommitmentKind {
         let variant = match self {
             Self::Unknown => "CHECKPOINT_COMMITMENT_KIND_UNKNOWN",
             Self::EcmhLiveObjectSet => "ECMH_LIVE_OBJECT_SET",
-            Self::CheckpointArtifactsDigest => "CHECKPOINT_ARTIFACTS_DIGEST",
+            Self::CheckpointArtifacts => "CHECKPOINT_ARTIFACTS",
         };
         serializer.serialize_str(variant)
     }
@@ -2733,7 +2733,7 @@ impl<'de> serde::Deserialize<'de> for checkpoint_commitment::CheckpointCommitmen
         const FIELDS: &[&str] = &[
             "CHECKPOINT_COMMITMENT_KIND_UNKNOWN",
             "ECMH_LIVE_OBJECT_SET",
-            "CHECKPOINT_ARTIFACTS_DIGEST",
+            "CHECKPOINT_ARTIFACTS",
         ];
 
         struct GeneratedVisitor;
@@ -2776,7 +2776,7 @@ impl<'de> serde::Deserialize<'de> for checkpoint_commitment::CheckpointCommitmen
                 match value {
                     "CHECKPOINT_COMMITMENT_KIND_UNKNOWN" => Ok(checkpoint_commitment::CheckpointCommitmentKind::Unknown),
                     "ECMH_LIVE_OBJECT_SET" => Ok(checkpoint_commitment::CheckpointCommitmentKind::EcmhLiveObjectSet),
-                    "CHECKPOINT_ARTIFACTS_DIGEST" => Ok(checkpoint_commitment::CheckpointCommitmentKind::CheckpointArtifactsDigest),
+                    "CHECKPOINT_ARTIFACTS" => Ok(checkpoint_commitment::CheckpointCommitmentKind::CheckpointArtifacts),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }

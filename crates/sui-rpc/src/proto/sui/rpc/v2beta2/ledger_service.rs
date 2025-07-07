@@ -13,11 +13,6 @@ impl GetObjectRequest {
         }
     }
 
-    pub fn with_version(mut self, version: u64) -> Self {
-        self.version = Some(version);
-        self
-    }
-
     pub fn with_read_mask(mut self, read_mask: FieldMask) -> Self {
         self.read_mask = Some(read_mask);
         self
@@ -66,14 +61,6 @@ impl GetObjectResult {
                 code: tonic::Code::NotFound.into(),
                 ..Default::default()
             }),
-        }
-    }
-
-    pub fn object(&self) -> Option<&Object> {
-        if let Some(get_object_result::Result::Object(object)) = &self.result {
-            Some(object)
-        } else {
-            None
         }
     }
 
@@ -142,14 +129,6 @@ impl GetTransactionResult {
                 code: tonic::Code::NotFound.into(),
                 ..Default::default()
             }),
-        }
-    }
-
-    pub fn transaction(&self) -> Option<&ExecutedTransaction> {
-        if let Some(get_transaction_result::Result::Transaction(transaction)) = &self.result {
-            Some(transaction)
-        } else {
-            None
         }
     }
 
