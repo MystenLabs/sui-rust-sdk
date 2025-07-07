@@ -9,6 +9,8 @@ pub use response_ext::ResponseExt;
 mod auth;
 pub use auth::AuthInterceptor;
 
+mod staking_rewards;
+
 use crate::proto::sui::rpc::v2beta2::ledger_service_client::LedgerServiceClient;
 use crate::proto::sui::rpc::v2beta2::live_data_service_client::LiveDataServiceClient;
 use crate::proto::sui::rpc::v2beta2::move_package_service_client::MovePackageServiceClient;
