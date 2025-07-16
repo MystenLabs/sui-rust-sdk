@@ -1,3 +1,16 @@
+# [0.0.6] - 2025-07-16
+
+## Added
+
+- Added EndOfEpochTransactionKind::CoinRegistryCreate [#117]
+
+## Removed
+
+- Removed bespoke json serde impls for various types [`0c383a17`]
+
+[#117]: https://github.com/MystenLabs/sui-rust-sdk/pull/117
+[`0c383a17`]: https://github.com/mystenlabs/sui-rust-sdk/commit/0c383a177f80ac44876e70367c51b1ab3c5ea043
+
 # [0.0.5] - 2025-06-12
 
 ## Added
@@ -66,6 +79,8 @@
 
 Initial release
 
+[0.0.6]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.0.6
+[0.0.5]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.0.5
 [0.0.4]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.0.4
 [0.0.3]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.0.3
 [0.0.2]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.0.2

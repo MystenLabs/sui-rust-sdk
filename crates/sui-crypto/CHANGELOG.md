@@ -1,3 +1,7 @@
+# [0.0.6] - 2025-07-16
+
+- Update to use version 0.0.6 of `sui-sdk-types`
+
 # [0.0.5] - 2025-06-12
 
 ## Added
