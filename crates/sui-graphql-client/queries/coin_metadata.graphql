@@ -1,5 +1,6 @@
 query CoinMetadataQuery($coinType: String!) {
   coinMetadata(coinType: $coinType) {
+    address
     decimals
     description
     iconUrl
