@@ -24,7 +24,7 @@ use sui_sdk_types::ZkLoginProof;
 
 use super::POSEIDON;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Default)]
 pub struct VerifyingKey {
     inner: PreparedVerifyingKey<ark_bn254::Bn254>,
 }

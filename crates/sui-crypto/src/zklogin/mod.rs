@@ -15,6 +15,7 @@ mod verify;
 #[cfg(test)]
 mod tests;
 
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct ZkloginVerifier {
     proof_verifying_key: verify::VerifyingKey,
     jwks: HashMap<JwkId, Jwk>,
