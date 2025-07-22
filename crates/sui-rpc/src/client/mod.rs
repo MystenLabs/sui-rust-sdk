@@ -23,6 +23,11 @@ type Channel<'a> = tonic::service::interceptor::InterceptedService<
     &'a mut AuthInterceptor,
 >;
 
+const MAINNET_HOST: &str = "https://fullnode.mainnet.sui.io:443";
+const TESTNET_HOST: &str = "https://fullnode.testnet.sui.io:443";
+const DEVNET_HOST: &str = "https://fullnode.devnet.sui.io:443";
+const LOCAL_HOST: &str = "http://localhost:9000";
+
 #[derive(Clone)]
 pub struct Client {
     uri: http::Uri,
@@ -60,6 +65,26 @@ impl Client {
             auth: Default::default(),
             max_decoding_message_size: None,
         })
+    }
+
+    // Create a new client connected to the mainnet
+    pub fn new_mainnet() -> Result<Self> {
+        Self::new(MAINNET_HOST)
+    }
+
+    // Create a new client connected to the testnet
+    pub fn new_testnet() -> Result<Self> {
+        Self::new(TESTNET_HOST)
+    }
+
+    // Create a new client connected to the devnet
+    pub fn new_devnet() -> Result<Self> {
+        Self::new(DEVNET_HOST)
+    }
+
+    // Create a new client connected to the localhost
+    pub fn new_localhost() -> Result<Self> {
+        Self::new(LOCAL_HOST)
     }
 
     pub fn with_auth(mut self, auth: AuthInterceptor) -> Self {
