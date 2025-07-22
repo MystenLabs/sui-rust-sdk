@@ -22255,8 +22255,8 @@ impl serde::Serialize for unchanged_shared_object::UnchangedSharedObjectKind {
         let variant = match self {
             Self::Unknown => "UNCHANGED_SHARED_OBJECT_KIND_UNKNOWN",
             Self::ReadOnlyRoot => "READ_ONLY_ROOT",
-            Self::MutateDeleted => "MUTATE_DELETED",
-            Self::ReadDeleted => "READ_DELETED",
+            Self::MutateConsensusStreamEnded => "MUTATE_CONSENSUS_STREAM_ENDED",
+            Self::ReadConsensusStreamEnded => "READ_CONSENSUS_STREAM_ENDED",
             Self::Canceled => "CANCELED",
             Self::PerEpochConfig => "PER_EPOCH_CONFIG",
         };
@@ -22272,8 +22272,8 @@ impl<'de> serde::Deserialize<'de> for unchanged_shared_object::UnchangedSharedOb
         const FIELDS: &[&str] = &[
             "UNCHANGED_SHARED_OBJECT_KIND_UNKNOWN",
             "READ_ONLY_ROOT",
-            "MUTATE_DELETED",
-            "READ_DELETED",
+            "MUTATE_CONSENSUS_STREAM_ENDED",
+            "READ_CONSENSUS_STREAM_ENDED",
             "CANCELED",
             "PER_EPOCH_CONFIG",
         ];
@@ -22318,8 +22318,8 @@ impl<'de> serde::Deserialize<'de> for unchanged_shared_object::UnchangedSharedOb
                 match value {
                     "UNCHANGED_SHARED_OBJECT_KIND_UNKNOWN" => Ok(unchanged_shared_object::UnchangedSharedObjectKind::Unknown),
                     "READ_ONLY_ROOT" => Ok(unchanged_shared_object::UnchangedSharedObjectKind::ReadOnlyRoot),
-                    "MUTATE_DELETED" => Ok(unchanged_shared_object::UnchangedSharedObjectKind::MutateDeleted),
-                    "READ_DELETED" => Ok(unchanged_shared_object::UnchangedSharedObjectKind::ReadDeleted),
+                    "MUTATE_CONSENSUS_STREAM_ENDED" => Ok(unchanged_shared_object::UnchangedSharedObjectKind::MutateConsensusStreamEnded),
+                    "READ_CONSENSUS_STREAM_ENDED" => Ok(unchanged_shared_object::UnchangedSharedObjectKind::ReadConsensusStreamEnded),
                     "CANCELED" => Ok(unchanged_shared_object::UnchangedSharedObjectKind::Canceled),
                     "PER_EPOCH_CONFIG" => Ok(unchanged_shared_object::UnchangedSharedObjectKind::PerEpochConfig),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),

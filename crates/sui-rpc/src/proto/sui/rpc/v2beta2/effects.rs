@@ -639,11 +639,11 @@ impl From<sui_sdk_types::UnchangedSharedObject> for UnchangedSharedObject {
             }
             MutateDeleted { version } => {
                 message.version = Some(version);
-                UnchangedSharedObjectKind::MutateDeleted
+                UnchangedSharedObjectKind::MutateConsensusStreamEnded
             }
             ReadDeleted { version } => {
                 message.version = Some(version);
-                UnchangedSharedObjectKind::ReadDeleted
+                UnchangedSharedObjectKind::ReadConsensusStreamEnded
             }
             Canceled { version } => {
                 message.version = Some(version);
@@ -697,16 +697,20 @@ impl TryFrom<&UnchangedSharedObject> for sui_sdk_types::UnchangedSharedObject {
                         TryFromProtoError::invalid(UnchangedSharedObject::DIGEST_FIELD, e)
                     })?,
             },
-            UnchangedSharedObjectKind::MutateDeleted => UnchangedSharedKind::MutateDeleted {
-                version: value
-                    .version
-                    .ok_or_else(|| TryFromProtoError::missing("version"))?,
-            },
-            UnchangedSharedObjectKind::ReadDeleted => UnchangedSharedKind::ReadDeleted {
-                version: value
-                    .version
-                    .ok_or_else(|| TryFromProtoError::missing("version"))?,
-            },
+            UnchangedSharedObjectKind::MutateConsensusStreamEnded => {
+                UnchangedSharedKind::MutateDeleted {
+                    version: value
+                        .version
+                        .ok_or_else(|| TryFromProtoError::missing("version"))?,
+                }
+            }
+            UnchangedSharedObjectKind::ReadConsensusStreamEnded => {
+                UnchangedSharedKind::ReadDeleted {
+                    version: value
+                        .version
+                        .ok_or_else(|| TryFromProtoError::missing("version"))?,
+                }
+            }
             UnchangedSharedObjectKind::Canceled => UnchangedSharedKind::Canceled {
                 version: value
                     .version

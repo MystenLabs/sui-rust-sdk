@@ -116,18 +116,22 @@ message ChangedObject {
 // A shared object that wasn't changed during execution.
 message UnchangedSharedObject {
   enum UnchangedSharedObjectKind {
+    option allow_alias = true;
+
     UNCHANGED_SHARED_OBJECT_KIND_UNKNOWN = 0;
 
     // Read-only shared object from the input.
     READ_ONLY_ROOT = 1;
 
-    // Deleted shared objects that appear mutably/owned in the input.
-    MUTATE_DELETED = 2;
+    // Objects with ended consensus streams that appear mutably/owned in the input.  
+    MUTATE_CONSENSUS_STREAM_ENDED = 2;
+    MUTATE_DELETED = 2; // deprecated old name
 
-    // Deleted shared objects that appear as read-only in the input.
-    READ_DELETED = 3;
+    // Objects with ended consensus streams objects that appear as read-only in the input.
+    READ_CONSENSUS_STREAM_ENDED = 3;
+    READ_DELETED = 3; // deprecated old name
 
-    // Shared objects that was congested and resulted in this transaction being
+    // Consensus objects that were congested and resulted in this transaction being
     // canceled.
     CANCELED = 4;
 

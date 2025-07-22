@@ -529,11 +529,11 @@ pub mod unchanged_shared_object {
         Unknown = 0,
         /// Read-only shared object from the input.
         ReadOnlyRoot = 1,
-        /// Deleted shared objects that appear mutably/owned in the input.
-        MutateDeleted = 2,
-        /// Deleted shared objects that appear as read-only in the input.
-        ReadDeleted = 3,
-        /// Shared objects that was congested and resulted in this transaction being
+        /// Objects with ended consensus streams that appear mutably/owned in the input.
+        MutateConsensusStreamEnded = 2,
+        /// Objects with ended consensus streams objects that appear as read-only in the input.
+        ReadConsensusStreamEnded = 3,
+        /// Consensus objects that were congested and resulted in this transaction being
         /// canceled.
         Canceled = 4,
         /// Read of a per-epoch config object that should remain the same during an
@@ -550,8 +550,8 @@ pub mod unchanged_shared_object {
             match self {
                 Self::Unknown => "UNCHANGED_SHARED_OBJECT_KIND_UNKNOWN",
                 Self::ReadOnlyRoot => "READ_ONLY_ROOT",
-                Self::MutateDeleted => "MUTATE_DELETED",
-                Self::ReadDeleted => "READ_DELETED",
+                Self::MutateConsensusStreamEnded => "MUTATE_CONSENSUS_STREAM_ENDED",
+                Self::ReadConsensusStreamEnded => "READ_CONSENSUS_STREAM_ENDED",
                 Self::Canceled => "CANCELED",
                 Self::PerEpochConfig => "PER_EPOCH_CONFIG",
             }
@@ -561,8 +561,8 @@ pub mod unchanged_shared_object {
             match value {
                 "UNCHANGED_SHARED_OBJECT_KIND_UNKNOWN" => Some(Self::Unknown),
                 "READ_ONLY_ROOT" => Some(Self::ReadOnlyRoot),
-                "MUTATE_DELETED" => Some(Self::MutateDeleted),
-                "READ_DELETED" => Some(Self::ReadDeleted),
+                "MUTATE_CONSENSUS_STREAM_ENDED" => Some(Self::MutateConsensusStreamEnded),
+                "READ_CONSENSUS_STREAM_ENDED" => Some(Self::ReadConsensusStreamEnded),
                 "CANCELED" => Some(Self::Canceled),
                 "PER_EPOCH_CONFIG" => Some(Self::PerEpochConfig),
                 _ => None,
