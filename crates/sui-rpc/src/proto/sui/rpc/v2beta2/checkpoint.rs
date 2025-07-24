@@ -318,11 +318,13 @@ impl TryFrom<&CheckpointCommitment> for sui_sdk_types::CheckpointCommitment {
                     TryFromProtoError::invalid(CheckpointCommitment::DIGEST_FIELD, e)
                 })?,
             },
-            CheckpointCommitmentKind::CheckpointArtifactsDigest => Self::CheckpointArtifactsDigest {
-                digest: value.digest().parse().map_err(|e| {
-                    TryFromProtoError::invalid(CheckpointCommitment::DIGEST_FIELD, e)
-                })?,
-            },
+            CheckpointCommitmentKind::CheckpointArtifactsDigest => {
+                Self::CheckpointArtifactsDigest {
+                    digest: value.digest().parse().map_err(|e| {
+                        TryFromProtoError::invalid(CheckpointCommitment::DIGEST_FIELD, e)
+                    })?,
+                }
+            }
         }
         .pipe(Ok)
     }
