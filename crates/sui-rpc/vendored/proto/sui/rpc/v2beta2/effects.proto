@@ -121,13 +121,13 @@ message UnchangedSharedObject {
     // Read-only shared object from the input.
     READ_ONLY_ROOT = 1;
 
-    // Deleted shared objects that appear mutably/owned in the input.
-    MUTATE_DELETED = 2;
+    // Objects with ended consensus streams that appear mutably/owned in the input.
+    MUTATE_CONSENSUS_STREAM_ENDED = 2;
 
-    // Deleted shared objects that appear as read-only in the input.
-    READ_DELETED = 3;
+    // Objects with ended consensus streams objects that appear as read-only in the input.
+    READ_CONSENSUS_STREAM_ENDED = 3;
 
-    // Shared objects that was congested and resulted in this transaction being
+    // Consensus objects that were congested and resulted in this transaction being
     // canceled.
     CANCELED = 4;
 
