@@ -10,6 +10,7 @@ use sui_sdk_types::SignatureScheme;
 use sui_sdk_types::SimpleSignature;
 use sui_sdk_types::UserSignature;
 
+#[derive(Clone)]
 pub struct Secp256r1PrivateKey(SigningKey);
 
 impl std::fmt::Debug for Secp256r1PrivateKey {
@@ -135,7 +136,7 @@ impl Signer<UserSignature> for Secp256r1PrivateKey {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Secp256r1VerifyingKey(VerifyingKey);
 
 impl Secp256r1VerifyingKey {
