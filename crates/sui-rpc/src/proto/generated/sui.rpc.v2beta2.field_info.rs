@@ -1639,6 +1639,12 @@ mod _field_impls {
             number: 6i32,
             message_fields: None,
         };
+        pub const METADATA_CAP_ID_FIELD: &'static MessageField = &MessageField {
+            name: "metadata_cap_id",
+            json_name: "metadataCapId",
+            number: 7i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for CoinMetadata {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -1648,6 +1654,7 @@ mod _field_impls {
             Self::SYMBOL_FIELD,
             Self::DESCRIPTION_FIELD,
             Self::ICON_URL_FIELD,
+            Self::METADATA_CAP_ID_FIELD,
         ];
     }
     impl CoinTreasury {
@@ -1663,11 +1670,18 @@ mod _field_impls {
             number: 2i32,
             message_fields: None,
         };
+        pub const SUPPLY_STATE_FIELD: &'static MessageField = &MessageField {
+            name: "supply_state",
+            json_name: "supplyState",
+            number: 3i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for CoinTreasury {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::ID_FIELD,
             Self::TOTAL_SUPPLY_FIELD,
+            Self::SUPPLY_STATE_FIELD,
         ];
     }
     impl RegulatedCoinMetadata {

@@ -2417,7 +2417,8 @@ pub struct GetCoinInfoResponse {
 /// Metadata for a coin type
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CoinMetadata {
-    /// ObjectId of the `0x2::coin::CoinMetadata` object.
+    /// ObjectId of the `0x2::coin::CoinMetadata` object or
+    /// 0x2::sui::coin_registry::CoinData object (when registered with CoinRegistry).
     #[prost(string, optional, tag = "1")]
     pub id: ::core::option::Option<::prost::alloc::string::String>,
     /// Number of decimal places to coin uses.
@@ -2435,6 +2436,11 @@ pub struct CoinMetadata {
     /// URL for the token logo
     #[prost(string, optional, tag = "6")]
     pub icon_url: ::core::option::Option<::prost::alloc::string::String>,
+    /// The MetadataCap ID if it has been claimed for this coin type.
+    /// This capability allows updating the coin's metadata fields.
+    /// Only populated when metadata is from CoinRegistry.
+    #[prost(string, optional, tag = "7")]
+    pub metadata_cap_id: ::core::option::Option<::prost::alloc::string::String>,
 }
 /// Information about a coin type's `0x2::coin::TreasuryCap` and its total available supply
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -2445,6 +2451,51 @@ pub struct CoinTreasury {
     /// Total available supply for this coin type.
     #[prost(uint64, optional, tag = "2")]
     pub total_supply: ::core::option::Option<u64>,
+    /// Supply state indicating if the supply is fixed or can still be minted
+    #[prost(enumeration = "coin_treasury::SupplyState", optional, tag = "3")]
+    pub supply_state: ::core::option::Option<i32>,
+}
+/// Nested message and enum types in `CoinTreasury`.
+pub mod coin_treasury {
+    /// Supply state of a coin, matching the Move SupplyState enum
+    #[derive(
+        Clone,
+        Copy,
+        Debug,
+        PartialEq,
+        Eq,
+        Hash,
+        PartialOrd,
+        Ord,
+        ::prost::Enumeration
+    )]
+    #[repr(i32)]
+    pub enum SupplyState {
+        /// Supply is unknown or TreasuryCap still exists (minting still possible)
+        Unknown = 0,
+        /// Supply is fixed (TreasuryCap consumed, no more minting possible)
+        Fixed = 1,
+    }
+    impl SupplyState {
+        /// String value of the enum field names used in the ProtoBuf definition.
+        ///
+        /// The values are not transformed in any way and thus are considered stable
+        /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+        pub fn as_str_name(&self) -> &'static str {
+            match self {
+                Self::Unknown => "SUPPLY_STATE_UNKNOWN",
+                Self::Fixed => "FIXED",
+            }
+        }
+        /// Creates an enum from field names used in the ProtoBuf definition.
+        pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+            match value {
+                "SUPPLY_STATE_UNKNOWN" => Some(Self::Unknown),
+                "FIXED" => Some(Self::Fixed),
+                _ => None,
+            }
+        }
+    }
 }
 /// Information about a regulated coin, which indicates that it makes use of the transfer deny list.
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -2452,7 +2503,7 @@ pub struct RegulatedCoinMetadata {
     /// ObjectId of the `0x2::coin::RegulatedCoinMetadata` object.
     #[prost(string, optional, tag = "1")]
     pub id: ::core::option::Option<::prost::alloc::string::String>,
-    /// The ID of the coin's `CoinMetadata` object.
+    /// The ID of the coin's `CoinMetadata` or `CoinData` object.
     #[prost(string, optional, tag = "2")]
     pub coin_metadata_object: ::core::option::Option<::prost::alloc::string::String>,
     /// The ID of the coin's `DenyCap` object.
