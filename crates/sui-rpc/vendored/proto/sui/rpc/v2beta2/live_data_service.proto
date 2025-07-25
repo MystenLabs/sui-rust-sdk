@@ -50,7 +50,8 @@ message GetCoinInfoResponse {
 
 // Metadata for a coin type
 message CoinMetadata {
-  // ObjectId of the `0x2::coin::CoinMetadata` object.
+  // ObjectId of the `0x2::coin::CoinMetadata` object or
+  // 0x2::sui::coin_registry::CoinData object (when registered with CoinRegistry).
   optional string id = 1;
   // Number of decimal places to coin uses.
   optional uint32 decimals = 2;
@@ -62,21 +63,35 @@ message CoinMetadata {
   optional string description = 5;
   // URL for the token logo
   optional string icon_url = 6;
+
+  // The MetadataCap ID if it has been claimed for this coin type.
+  // This capability allows updating the coin's metadata fields.
+  // Only populated when metadata is from CoinRegistry.
+  optional string metadata_cap_id = 7;
 }
 
 // Information about a coin type's `0x2::coin::TreasuryCap` and its total available supply
 message CoinTreasury {
+  // Supply state of a coin, matching the Move SupplyState enum
+  enum SupplyState {
+    // Supply is unknown or TreasuryCap still exists (minting still possible)
+    SUPPLY_STATE_UNKNOWN = 0;
+    // Supply is fixed (TreasuryCap consumed, no more minting possible)
+    FIXED = 1;
+  }
   // ObjectId of the `0x2::coin::TreasuryCap` object.
   optional string id = 1;
   // Total available supply for this coin type.
   optional uint64 total_supply = 2;
+  // Supply state indicating if the supply is fixed or can still be minted
+  optional SupplyState supply_state = 3;
 }
 
 // Information about a regulated coin, which indicates that it makes use of the transfer deny list.
 message RegulatedCoinMetadata {
   // ObjectId of the `0x2::coin::RegulatedCoinMetadata` object.
   optional string id = 1;
-  // The ID of the coin's `CoinMetadata` object.
+  // The ID of the coin's `CoinMetadata` or `CoinData` object.
   optional string coin_metadata_object = 2;
   // The ID of the coin's `DenyCap` object.
   optional string deny_cap_object = 3;
