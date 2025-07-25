@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["_active_validators_arguments"],"struct":["__typename","activeValidators","inactivePoolsId","inactivePoolsSize","pendingActiveValidatorsId","pendingActiveValidatorsSize","pendingRemovals","stakingPoolMappingsId","stakingPoolMappingsSize","totalStake","validatorCandidatesId","validatorCandidatesSize"]};

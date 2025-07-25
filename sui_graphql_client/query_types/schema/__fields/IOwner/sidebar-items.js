@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["_balance_arguments","_balances_arguments","_coins_arguments","_default_suins_name_arguments","_objects_arguments","_staked_suis_arguments","_suins_registrations_arguments"],"struct":["__typename","address","balance","balances","coins","defaultSuinsName","objects","stakedSuis","suinsRegistrations"]};
