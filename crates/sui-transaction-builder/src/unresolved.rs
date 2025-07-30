@@ -1,7 +1,6 @@
 use sui_types::Address;
 use sui_types::Command;
 use sui_types::ObjectDigest;
-use sui_types::ObjectId;
 use sui_types::TransactionExpiration;
 use sui_types::Version;
 
@@ -48,7 +47,7 @@ pub struct GasPayment {
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(rename = "UnresolvedObjectReference")]
 pub struct ObjectReference {
-    pub object_id: ObjectId,
+    pub object_id: Address,
     #[serde(
         with = "OptionReadableDisplay",
         default,
@@ -85,7 +84,7 @@ pub struct Input {
     pub value: Option<Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     /// Unique identifier for this object.
-    pub object_id: Option<ObjectId>,
+    pub object_id: Option<Address>,
     /// Either the `initial_shared_version` if object is a shared object, or the `version` if
     /// this is an owned object.
     /// The semantics of version can change depending on whether the object is shared or not.
@@ -120,7 +119,7 @@ pub enum Value {
 
 impl Input {
     /// Return an owned kind of object with all required fields.
-    pub fn owned(object_id: ObjectId, version: u64, digest: ObjectDigest) -> Self {
+    pub fn owned(object_id: Address, version: u64, digest: ObjectDigest) -> Self {
         Self {
             kind: Some(InputKind::ImmutableOrOwned),
             object_id: Some(object_id),
@@ -131,7 +130,7 @@ impl Input {
     }
 
     /// Return an immutable kind of object with all required fields.
-    pub fn immutable(object_id: ObjectId, version: u64, digest: ObjectDigest) -> Self {
+    pub fn immutable(object_id: Address, version: u64, digest: ObjectDigest) -> Self {
         Self {
             kind: Some(InputKind::ImmutableOrOwned),
             object_id: Some(object_id),
@@ -142,7 +141,7 @@ impl Input {
     }
 
     /// Return a receiving kind of object with all required fields.
-    pub fn receiving(object_id: ObjectId, version: u64, digest: ObjectDigest) -> Self {
+    pub fn receiving(object_id: Address, version: u64, digest: ObjectDigest) -> Self {
         Self {
             kind: Some(InputKind::Receiving),
             object_id: Some(object_id),
@@ -155,7 +154,7 @@ impl Input {
     /// Return a shared object.
     /// - `mutable` controls whether a command can accept the object by value or mutable reference.
     /// - `initial_shared_version` is the first version the object was shared at.
-    pub fn shared(object_id: ObjectId, initial_shared_version: u64, mutable: bool) -> Self {
+    pub fn shared(object_id: Address, initial_shared_version: u64, mutable: bool) -> Self {
         Self {
             kind: Some(InputKind::Shared),
             object_id: Some(object_id),
@@ -166,7 +165,7 @@ impl Input {
     }
 
     /// Return an object with only its unique identifier.
-    pub fn by_id(object_id: ObjectId) -> Self {
+    pub fn by_id(object_id: Address) -> Self {
         Self {
             object_id: Some(object_id),
             ..Default::default()
@@ -316,8 +315,8 @@ impl From<&sui_types::Object> for Input {
     }
 }
 
-impl From<ObjectId> for Input {
-    fn from(object_id: ObjectId) -> Self {
+impl From<Address> for Input {
+    fn from(object_id: Address) -> Self {
         Input::by_id(object_id)
     }
 }

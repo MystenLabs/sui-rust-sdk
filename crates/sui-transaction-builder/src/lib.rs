@@ -14,7 +14,6 @@ use sui_types::Input;
 use sui_types::MakeMoveVector;
 use sui_types::MergeCoins;
 use sui_types::MoveCall;
-use sui_types::ObjectId;
 use sui_types::ObjectReference;
 use sui_types::Publish;
 use sui_types::SplitCoins;
@@ -143,7 +142,7 @@ impl TransactionBuilder {
     /// [`Argument::nested`] method.
     pub fn move_call(&mut self, function: Function, arguments: Vec<Argument>) -> Argument {
         let cmd = Command::MoveCall(MoveCall {
-            package: function.package.into(),
+            package: function.package,
             module: function.module,
             function: function.function,
             type_arguments: function.type_args,
@@ -197,7 +196,7 @@ impl TransactionBuilder {
     /// The arguments required for this command are:
     ///  - `modules`: is the modules' bytecode to be published
     ///  - `dependencies`: is the list of IDs of the transitive dependencies of the package
-    pub fn publish(&mut self, modules: Vec<Vec<u8>>, dependencies: Vec<ObjectId>) -> Argument {
+    pub fn publish(&mut self, modules: Vec<Vec<u8>>, dependencies: Vec<Address>) -> Argument {
         let cmd = Command::Publish(Publish {
             modules,
             dependencies,
@@ -271,8 +270,8 @@ impl TransactionBuilder {
     pub fn upgrade(
         &mut self,
         modules: Vec<Vec<u8>>,
-        dependencies: Vec<ObjectId>,
-        package: ObjectId,
+        dependencies: Vec<Address>,
+        package: Address,
         ticket: Argument,
     ) -> Argument {
         let cmd = Command::Upgrade(Upgrade {
@@ -493,7 +492,6 @@ mod tests {
     use sui_types::Address;
     use sui_types::ExecutionStatus;
     use sui_types::IdOperation;
-    use sui_types::ObjectId;
     use sui_types::ObjectType;
     use sui_types::TransactionDigest;
     use sui_types::TransactionEffects;
@@ -510,7 +508,7 @@ mod tests {
         #[serde(deserialize_with = "bcs_from_str")]
         modules: Vec<Vec<u8>>,
         #[serde(deserialize_with = "deps_from_str")]
-        dependencies: Vec<ObjectId>,
+        dependencies: Vec<Address>,
         digest: Vec<u8>,
     }
 
@@ -524,13 +522,13 @@ mod tests {
             .collect()
     }
 
-    fn deps_from_str<'de, D>(deserializer: D) -> Result<Vec<ObjectId>, D::Error>
+    fn deps_from_str<'de, D>(deserializer: D) -> Result<Vec<Address>, D::Error>
     where
         D: Deserializer<'de>,
     {
         let deps = Vec::<String>::deserialize(deserializer)?;
         deps.into_iter()
-            .map(|s| ObjectId::from_str(&s).map_err(de::Error::custom))
+            .map(|s| Address::from_str(&s).map_err(de::Error::custom))
             .collect()
     }
 
@@ -593,7 +591,7 @@ mod tests {
 
         let gas = coins.last().unwrap().id();
         // TODO when we have tx resolution, we can just pass an ObjectId
-        let gas_obj: Input = (&client.object((*gas).into(), None).await.unwrap().unwrap()).into();
+        let gas_obj: Input = (&client.object(*gas, None).await.unwrap().unwrap()).into();
         tx.add_gas_objects(vec![gas_obj.with_owned_kind()]);
         tx.set_gas_budget(500000000);
         tx.set_gas_price(1000);
@@ -674,7 +672,7 @@ mod tests {
 
         // get the object information from the client
         let first = coins.first().unwrap().id();
-        let coin: Input = (&client.object((*first).into(), None).await.unwrap().unwrap()).into();
+        let coin: Input = (&client.object(*first, None).await.unwrap().unwrap()).into();
         let coin_input = tx.input(coin.with_owned_kind());
         let recipient = Address::generate(rand::thread_rng());
         let recipient_input = tx.input(Serialized(&recipient));
@@ -750,7 +748,7 @@ mod tests {
         let (_, pk, coins) = helper_setup(&mut tx, &client).await;
 
         let coin = coins.first().unwrap().id();
-        let coin_obj: Input = (&client.object((*coin).into(), None).await.unwrap().unwrap()).into();
+        let coin_obj: Input = (&client.object(*coin, None).await.unwrap().unwrap()).into();
         let coin_input = tx.input(coin_obj.with_owned_kind());
 
         // transfer 1 SUI
@@ -784,19 +782,13 @@ mod tests {
         let (address, pk, coins) = helper_setup(&mut tx, &client).await;
 
         let coin1 = coins.first().unwrap().id();
-        let coin1_obj: Input =
-            (&client.object((*coin1).into(), None).await.unwrap().unwrap()).into();
+        let coin1_obj: Input = (&client.object(*coin1, None).await.unwrap().unwrap()).into();
         let coin_to_merge = tx.input(coin1_obj.with_owned_kind());
 
         let mut coins_to_merge = vec![];
         // last coin is used for gas, first coin is the one we merge into
         for c in coins[1..&coins.len() - 1].iter() {
-            let coin: Input = (&client
-                .object((*c.id()).into(), None)
-                .await
-                .unwrap()
-                .unwrap())
-                .into();
+            let coin: Input = (&client.object(*c.id(), None).await.unwrap().unwrap()).into();
             coins_to_merge.push(tx.input(coin.with_owned_kind()));
         }
 
@@ -860,7 +852,7 @@ mod tests {
         let tx = tx.finish().unwrap();
         let sig = pk.sign_transaction(&tx).unwrap();
         let effects = client.execute_tx(vec![sig], &tx).await;
-        let mut package_id: Option<ObjectId> = None;
+        let mut package_id: Option<Address> = None;
         let mut created_objs = vec![];
         if let Ok(Some(ref effects)) = effects {
             match effects {
@@ -888,7 +880,7 @@ mod tests {
         let mut tx = TransactionBuilder::new();
         let mut upgrade_cap = None;
         for o in created_objs {
-            let obj = client.object(*o.as_address(), None).await.unwrap().unwrap();
+            let obj = client.object(o, None).await.unwrap().unwrap();
             match obj.object_type() {
                 ObjectType::Struct(x) if x.name.to_string() == "UpgradeCap" => {
                     match obj.owner() {
@@ -949,7 +941,7 @@ mod tests {
         );
 
         let gas = coins.last().unwrap().id();
-        let gas_obj: Input = (&client.object((*gas).into(), None).await.unwrap().unwrap()).into();
+        let gas_obj: Input = (&client.object(*gas, None).await.unwrap().unwrap()).into();
         tx.add_gas_objects(vec![gas_obj.with_owned_kind()]);
         tx.set_gas_budget(500000000);
         tx.set_gas_price(1000);

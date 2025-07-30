@@ -117,7 +117,6 @@ serialization_test!(ObjectReference);
 serialization_test!(Owner);
 serialization_test!(TypeOrigin);
 serialization_test!(UpgradeInfo);
-serialization_test!(ObjectId);
 serialization_test!(ActiveJwk);
 serialization_test!(Argument);
 serialization_test!(AuthenticatorStateExpire);

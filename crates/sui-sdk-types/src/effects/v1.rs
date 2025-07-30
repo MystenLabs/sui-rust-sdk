@@ -1,9 +1,9 @@
 use crate::execution_status::ExecutionStatus;
 use crate::object::Owner;
 use crate::object::Version;
+use crate::Address;
 use crate::EpochId;
 use crate::GasCostSummary;
-use crate::ObjectId;
 use crate::ObjectReference;
 use crate::TransactionDigest;
 use crate::TransactionEventsDigest;
@@ -105,7 +105,7 @@ pub struct TransactionEffectsV1 {
 /// The BCS serialized form for this type is defined by the following ABNF:
 ///
 /// ```text
-/// modified-at-version = object-id u64
+/// modified-at-version = address u64
 /// ```
 #[derive(Eq, PartialEq, Clone, Debug)]
 #[cfg_attr(
@@ -114,7 +114,7 @@ pub struct TransactionEffectsV1 {
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct ModifiedAtVersion {
-    pub object_id: ObjectId,
+    pub object_id: Address,
     pub version: Version,
 }
 

@@ -425,7 +425,7 @@ enum HashingIntent {
     RegularObjectId = 0xf1,
 }
 
-impl crate::ObjectId {
+impl crate::Address {
     /// Create an ObjectId from `TransactionDigest` and `count`.
     ///
     /// `count` is the number of objects that have been created during a transactions.

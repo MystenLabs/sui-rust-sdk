@@ -2,10 +2,10 @@ use crate::digest::EffectsAuxiliaryDataDigest;
 use crate::execution_status::ExecutionStatus;
 use crate::object::Owner;
 use crate::object::Version;
+use crate::Address;
 use crate::EpochId;
 use crate::GasCostSummary;
 use crate::ObjectDigest;
-use crate::ObjectId;
 use crate::TransactionDigest;
 use crate::TransactionEventsDigest;
 
@@ -87,7 +87,7 @@ pub struct TransactionEffectsV2 {
 /// The BCS serialized form for this type is defined by the following ABNF:
 ///
 /// ```text
-/// changed-object = object-id object-in object-out id-operation
+/// changed-object = address object-in object-out id-operation
 /// ```
 #[derive(Eq, PartialEq, Clone, Debug)]
 #[cfg_attr(
@@ -97,7 +97,7 @@ pub struct TransactionEffectsV2 {
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct ChangedObject {
     /// Id of the object
-    pub object_id: ObjectId,
+    pub object_id: Address,
 
     /// State of the object in the store prior to this transaction.
     pub input_state: ObjectIn,
@@ -118,7 +118,7 @@ pub struct ChangedObject {
 /// The BCS serialized form for this type is defined by the following ABNF:
 ///
 /// ```text
-/// unchanged-shared-object = object-id unchanged-shared-object-kind
+/// unchanged-shared-object = address unchanged-shared-object-kind
 /// ```
 #[derive(Eq, PartialEq, Clone, Debug)]
 #[cfg_attr(
@@ -127,7 +127,7 @@ pub struct ChangedObject {
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct UnchangedSharedObject {
-    pub object_id: ObjectId,
+    pub object_id: Address,
     pub kind: UnchangedSharedKind,
 }
 

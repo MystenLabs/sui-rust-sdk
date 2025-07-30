@@ -1,14 +1,14 @@
 //! Rust definitions of move/sui framework types.
 
+use super::Address;
 use super::Object;
-use super::ObjectId;
 use super::TypeTag;
 use std::borrow::Cow;
 
 #[derive(Debug, Clone)]
 pub struct Coin<'a> {
     coin_type: Cow<'a, TypeTag>,
-    id: ObjectId,
+    id: Address,
     balance: u64,
 }
 
@@ -17,7 +17,7 @@ impl<'a> Coin<'a> {
         &self.coin_type
     }
 
-    pub fn id(&self) -> &ObjectId {
+    pub fn id(&self) -> &Address {
         &self.id
     }
 
@@ -31,13 +31,13 @@ impl<'a> Coin<'a> {
                 let coin_type = move_struct.type_.is_coin()?;
 
                 let contents = &move_struct.contents;
-                if contents.len() != ObjectId::LENGTH + std::mem::size_of::<u64>() {
+                if contents.len() != Address::LENGTH + std::mem::size_of::<u64>() {
                     return None;
                 }
 
-                let id = ObjectId::new((&contents[..ObjectId::LENGTH]).try_into().unwrap());
+                let id = Address::new((&contents[..Address::LENGTH]).try_into().unwrap());
                 let balance =
-                    u64::from_le_bytes((&contents[ObjectId::LENGTH..]).try_into().unwrap());
+                    u64::from_le_bytes((&contents[Address::LENGTH..]).try_into().unwrap());
 
                 Some(Self {
                     coin_type: Cow::Borrowed(coin_type),

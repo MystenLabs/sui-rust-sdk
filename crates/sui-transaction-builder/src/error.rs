@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use base64ct::Error as Base64Error;
-use sui_types::ObjectId;
+use sui_types::Address;
 
 #[derive(thiserror::Error, Debug, Clone)]
 #[non_exhaustive]
@@ -16,9 +16,9 @@ pub enum Error {
     #[error("Missing object id")]
     MissingObjectId,
     #[error("Missing version for object {0}")]
-    MissingVersion(ObjectId),
+    MissingVersion(Address),
     #[error("Missing digest for object {0}")]
-    MissingDigest(ObjectId),
+    MissingDigest(Address),
     #[error("Missing sender")]
     MissingSender,
     #[error("Missing gas objects")]
@@ -28,13 +28,13 @@ pub enum Error {
     #[error("Missing gas price")]
     MissingGasPrice,
     #[error("Missing object kind for object {0}")]
-    MissingObjectKind(ObjectId),
+    MissingObjectKind(Address),
     #[error("Missing initial shared version for object {0}")]
-    MissingInitialSharedVersion(ObjectId),
+    MissingInitialSharedVersion(Address),
     #[error("Missing pure value")]
     MissingPureValue,
     #[error("Unknown shared object mutability for object {0}")]
-    SharedObjectMutability(ObjectId),
+    SharedObjectMutability(Address),
     #[error("Unsupported literal")]
     UnsupportedLiteral,
 }

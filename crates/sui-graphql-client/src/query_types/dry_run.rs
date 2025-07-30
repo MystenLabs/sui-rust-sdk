@@ -49,9 +49,8 @@ pub struct ObjectRef {
 
 impl From<ObjectReference> for ObjectRef {
     fn from(value: ObjectReference) -> Self {
-        let address: Address = (*value.object_id()).into();
         ObjectRef {
-            address,
+            address: *value.object_id(),
             version: value.version(),
             digest: value.digest().to_string(),
         }

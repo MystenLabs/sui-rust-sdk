@@ -1,7 +1,6 @@
 use super::Address;
 use super::Digest;
 use super::Identifier;
-use super::ObjectId;
 
 /// The status of an executed Transaction
 ///
@@ -89,7 +88,7 @@ pub enum ExecutionStatus {
 /// feature-not-yet-supported                           = %x03
 /// object-too-big                                      = %x04 u64 u64
 /// package-too-big                                     = %x05 u64 u64
-/// circular-object-ownership                           = %x06 object-id
+/// circular-object-ownership                           = %x06 address
 /// insufficient-coin-balance                           = %x07
 /// coin-balance-overflow                               = %x08
 /// publish-error-non-zero-address                      = %x09
@@ -116,7 +115,7 @@ pub enum ExecutionStatus {
 /// sui-move-verification-timedout                      = %x1e
 /// shared-object-operation-not-allowed                 = %x1f
 /// input-object-deleted                                = %x20
-/// execution-canceled-due-to-shared-object-congestion = %x21 (vector object-id)
+/// execution-canceled-due-to-shared-object-congestion = %x21 (vector address)
 /// address-denied-for-coin                             = %x22 address string
 /// coin-type-global-pause                              = %x23 string
 /// execution-canceled-due-to-randomness-unavailable   = %x24
@@ -150,7 +149,7 @@ pub enum ExecutionError {
         max_object_size: u64,
     },
     /// Circular Object Ownership
-    CircularObjectOwnership { object: ObjectId },
+    CircularObjectOwnership { object: Address },
 
     //
     // Coin errors
@@ -256,7 +255,7 @@ pub enum ExecutionError {
     /// Certificate is canceled due to congestion on shared objects
     ExecutionCanceledDueToSharedObjectCongestion {
         #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=1).lift()))]
-        congested_objects: Vec<ObjectId>,
+        congested_objects: Vec<Address>,
     },
 
     /// Address is denied for this coin type
@@ -295,7 +294,7 @@ pub enum ExecutionError {
 /// The BCS serialized form for this type is defined by the following ABNF:
 ///
 /// ```text
-/// move-location = object-id identifier u16 u16 (option identifier)
+/// move-location = address identifier u16 u16 (option identifier)
 /// ```
 #[derive(Eq, PartialEq, Clone, Debug)]
 #[cfg_attr(
@@ -305,7 +304,7 @@ pub enum ExecutionError {
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct MoveLocation {
     /// The package id
-    pub package: ObjectId,
+    pub package: Address,
 
     /// The module name
     pub module: Identifier,
@@ -423,12 +422,12 @@ pub enum CommandArgumentError {
 ///                         unknown-upgrade-policy  /
 ///                         package-id-does-not-match
 ///
-/// unable-to-fetch-package     = %x00 object-id
-/// not-a-package               = %x01 object-id
+/// unable-to-fetch-package     = %x00 address
+/// not-a-package               = %x01 address
 /// incompatible-upgrade        = %x02
 /// digest-does-not-match       = %x03 digest
 /// unknown-upgrade-policy      = %x04 u8
-/// package-id-does-not-match   = %x05 object-id object-id
+/// package-id-does-not-match   = %x05 address address
 /// ```
 #[derive(Eq, PartialEq, Clone, Debug)]
 #[cfg_attr(
@@ -438,10 +437,10 @@ pub enum CommandArgumentError {
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub enum PackageUpgradeError {
     /// Unable to fetch package
-    UnableToFetchPackage { package_id: ObjectId },
+    UnableToFetchPackage { package_id: Address },
 
     /// Object is not a package
-    NotAPackage { object_id: ObjectId },
+    NotAPackage { object_id: Address },
 
     /// Package upgrade is incompatible with previous version
     IncompatibleUpgrade,
@@ -454,8 +453,8 @@ pub enum PackageUpgradeError {
 
     /// PackageId does not matach PackageId in upgrade ticket
     PackageIdDoesNotMatch {
-        package_id: ObjectId,
-        ticket_id: ObjectId,
+        package_id: Address,
+        ticket_id: Address,
     },
 }
 
