@@ -5,7 +5,7 @@ use serde::Serializer;
 use serde_with::DeserializeAs;
 use serde_with::SerializeAs;
 
-use crate::ObjectId;
+use crate::Address;
 use crate::ObjectReference;
 
 mod transaction {
@@ -99,7 +99,7 @@ mod input_argument {
     enum ObjectArg {
         ImmutableOrOwned(ObjectReference),
         Shared {
-            object_id: ObjectId,
+            object_id: Address,
             initial_shared_version: u64,
             mutable: bool,
         },

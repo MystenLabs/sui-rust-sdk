@@ -14,10 +14,10 @@
 /// assert_eq!(hex, address.to_string());
 /// ```
 ///
-/// # Deriving an Address
+/// # Deriving an account Address
 ///
-/// Addresses are cryptographically derived from a number of user account authenticators, the simplest
-/// of which is an [`Ed25519PublicKey`](crate::Ed25519PublicKey).
+/// Account addresses are cryptographically derived from a number of user account authenticators,
+/// the simplest of which is an [`Ed25519PublicKey`](crate::Ed25519PublicKey).
 ///
 /// Deriving an address consists of the Blake2b256 hash of the sequence of bytes of its
 /// corresponding authenticator, prefixed with a domain-separator. For each authenticator, this
@@ -30,14 +30,16 @@
 ///
 /// [`Ed25519PublicKey::derive_address`]: crate::Ed25519PublicKey::derive_address
 ///
-/// ## Relationship to ObjectIds
+/// # Usage as ObjectIds
 ///
-/// [`ObjectId`]s and `Address`es share the same 32-byte addressable space but are derived
-/// leveraging different domain-separator values to ensure, cryptographically, that there won't be
-/// any overlap, e.g. there can't be a valid `Object` whose `ObjectId` is equal to that of the
+/// `Address`es are also used as a way to uniquely identify an [`Object`]. When an `Address` is
+/// used as an object identifierit can also be referred to as an `ObjectId`. `ObjectId`s and
+/// account `Address`es share the same 32-byte addressable space but are derived leveraging
+/// different domain-separator values to ensure, cryptographically, that there won't be any
+/// overlap, e.g. there can't be a valid `Object` whose `ObjectId` is equal to that of the
 /// `Address` of a user account.
 ///
-/// [`ObjectId`]: crate::ObjectId
+/// [`Object`]: crate::Object
 ///
 /// # BCS
 ///
@@ -52,6 +54,7 @@
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[doc(alias = "ObjectId")]
 pub struct Address(
     #[cfg_attr(
         feature = "serde",
@@ -171,12 +174,6 @@ impl From<[u8; 32]> for Address {
 impl From<Address> for Vec<u8> {
     fn from(value: Address) -> Self {
         value.0.to_vec()
-    }
-}
-
-impl From<super::ObjectId> for Address {
-    fn from(value: super::ObjectId) -> Self {
-        Self::new(value.into_inner())
     }
 }
 

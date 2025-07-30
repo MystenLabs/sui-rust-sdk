@@ -1,6 +1,5 @@
 use super::Address;
 use super::Identifier;
-use super::ObjectId;
 use super::StructTag;
 use super::TypeTag;
 
@@ -31,7 +30,7 @@ pub struct TransactionEvents(
 /// The BCS serialized form for this type is defined by the following ABNF:
 ///
 /// ```text
-/// event = object-id identifier address struct-tag bytes
+/// event = address identifier address struct-tag bytes
 /// ```
 #[derive(PartialEq, Eq, Debug, Clone)]
 #[cfg_attr(
@@ -42,7 +41,7 @@ pub struct TransactionEvents(
 pub struct Event {
     /// Package id of the top-level function invoked by a MoveCall command which triggered this
     /// event to be emitted.
-    pub package_id: ObjectId,
+    pub package_id: Address,
 
     /// Module name of the top-level function invoked by a MoveCall command which triggered this
     /// event to be emitted.

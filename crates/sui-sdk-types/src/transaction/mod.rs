@@ -8,7 +8,6 @@ use super::GenesisObject;
 use super::Identifier;
 use super::Jwk;
 use super::JwkId;
-use super::ObjectId;
 use super::ObjectReference;
 use super::ProtocolVersion;
 use super::TransactionDigest;
@@ -349,7 +348,7 @@ pub struct ValidatorExecutionTimeObservation {
 ///                                 =/ %x05 ; make-move-vec
 ///                                 =/ %x06 ; upgrade
 /// ValidatorExecutionTimeObservation
-/// move-entry-point = object-id string string (vec type-tag)
+/// move-entry-point = address string string (vec type-tag)
 /// ```
 #[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
@@ -361,7 +360,7 @@ pub enum ExecutionTimeObservationKey {
     // Containts all the fields from `ProgrammableMoveCall` besides `arguments`.
     MoveEntryPoint {
         /// The package containing the module and function.
-        package: ObjectId,
+        package: Address,
         /// The specific module in the package containing the function.
         module: String,
         /// The function to be called.
@@ -575,7 +574,7 @@ pub struct CanceledTransaction {
 /// The BCS serialized form for this type is defined by the following ABNF:
 ///
 /// ```text
-/// version-assignment = object-id u64
+/// version-assignment = address u64
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
@@ -584,7 +583,7 @@ pub struct CanceledTransaction {
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct VersionAssignment {
-    pub object_id: ObjectId,
+    pub object_id: Address,
     pub version: Version,
 }
 
@@ -616,7 +615,7 @@ pub struct CanceledTransactionV2 {
 /// The BCS serialized form for this type is defined by the following ABNF:
 ///
 /// ```text
-/// version-assignment-v2 = object-id u64 u64
+/// version-assignment-v2 = address u64 u64
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
@@ -625,7 +624,7 @@ pub struct CanceledTransactionV2 {
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct VersionAssignmentV2 {
-    pub object_id: ObjectId,
+    pub object_id: Address,
     pub start_version: Version,
     pub version: Version,
 }
@@ -771,7 +770,7 @@ pub struct ChangeEpoch {
 /// ```text
 /// system-package = u64                ; version
 ///                  (vector bytes)     ; modules
-///                  (vector object-id) ; dependencies
+///                  (vector address) ; dependencies
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
@@ -790,7 +789,7 @@ pub struct SystemPackage {
     #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=1).lift()))]
     pub modules: Vec<Vec<u8>>,
     #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=1).lift()))]
-    pub dependencies: Vec<ObjectId>,
+    pub dependencies: Vec<Address>,
 }
 
 /// The genesis transaction
@@ -853,7 +852,7 @@ pub struct ProgrammableTransaction {
 ///
 /// input-pure                  = %x00 bytes
 /// input-immutable-or-owned    = %x01 object-ref
-/// input-shared                = %x02 object-id u64 bool
+/// input-shared                = %x02 address u64 bool
 /// input-receiving             = %x04 object-ref
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -870,7 +869,7 @@ pub enum Input {
 
     /// A move object whose owner is "Shared"
     Shared {
-        object_id: ObjectId,
+        object_id: Address,
         initial_shared_version: u64,
 
         /// Controls whether the caller asks for a mutable reference to the shared object.
@@ -1030,7 +1029,7 @@ pub struct MergeCoins {
 ///
 /// ```text
 /// publish = (vector bytes)        ; the serialized move modules
-///           (vector object-id)    ; the set of package dependencies
+///           (vector address)    ; the set of package dependencies
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
@@ -1050,7 +1049,7 @@ pub struct Publish {
 
     /// Set of packages that the to-be published package depends on
     #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
-    pub dependencies: Vec<ObjectId>,
+    pub dependencies: Vec<Address>,
 }
 
 /// Command to build a move vector out of a set of individual elements
@@ -1089,8 +1088,8 @@ pub struct MakeMoveVector {
 ///
 /// ```text
 /// upgrade = (vector bytes)        ; move modules
-///           (vector object-id)    ; dependencies
-///           object-id             ; package-id of the package
+///           (vector address)    ; dependencies
+///           address             ; package-id of the package
 ///           argument              ; upgrade ticket
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -1112,10 +1111,10 @@ pub struct Upgrade {
 
     /// Set of packages that the to-be published package depends on
     #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
-    pub dependencies: Vec<ObjectId>,
+    pub dependencies: Vec<Address>,
 
     /// Package id of the package to upgrade
-    pub package: ObjectId,
+    pub package: Address,
 
     /// Ticket authorizing the upgrade
     pub ticket: Argument,
@@ -1182,7 +1181,7 @@ impl Argument {
 /// The BCS serialized form for this type is defined by the following ABNF:
 ///
 /// ```text
-/// move-call = object-id           ; package id
+/// move-call = address           ; package id
 ///             identifier          ; module name
 ///             identifier          ; function name
 ///             (vector type-tag)   ; type arguments, if any
@@ -1196,7 +1195,7 @@ impl Argument {
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct MoveCall {
     /// The package containing the module and function.
-    pub package: ObjectId,
+    pub package: Address,
 
     /// The specific module in the package containing the function.
     pub module: Identifier,

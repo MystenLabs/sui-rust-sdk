@@ -3,7 +3,6 @@ use std::collections::BTreeMap;
 use super::Address;
 use super::Identifier;
 use super::ObjectDigest;
-use super::ObjectId;
 use super::StructTag;
 use super::TransactionDigest;
 
@@ -18,7 +17,7 @@ pub type Version = u64;
 /// The BCS serialized form for this type is defined by the following ABNF:
 ///
 /// ```text
-/// object-ref = object-id u64 digest
+/// object-ref = address u64 digest
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
@@ -28,7 +27,7 @@ pub type Version = u64;
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct ObjectReference {
     /// The object id of this object.
-    object_id: ObjectId,
+    object_id: Address,
     /// The version of this object.
     version: Version,
     /// The digest of this object.
@@ -37,7 +36,7 @@ pub struct ObjectReference {
 
 impl ObjectReference {
     /// Creates a new object reference from the object's id, version, and digest.
-    pub fn new(object_id: ObjectId, version: Version, digest: ObjectDigest) -> Self {
+    pub fn new(object_id: Address, version: Version, digest: ObjectDigest) -> Self {
         Self {
             object_id,
             version,
@@ -46,7 +45,7 @@ impl ObjectReference {
     }
 
     /// Returns a reference to the object id that this ObjectReference is referring to.
-    pub fn object_id(&self) -> &ObjectId {
+    pub fn object_id(&self) -> &Address {
         &self.object_id
     }
 
@@ -61,7 +60,7 @@ impl ObjectReference {
     }
 
     /// Returns a 3-tuple containing the object id, version, and digest.
-    pub fn into_parts(self) -> (ObjectId, Version, ObjectDigest) {
+    pub fn into_parts(self) -> (Address, Version, ObjectDigest) {
         let Self {
             object_id,
             version,
@@ -82,7 +81,7 @@ impl ObjectReference {
 /// owner = owner-address / owner-object / owner-shared / owner-immutable
 ///
 /// owner-address   = %x00 address
-/// owner-object    = %x01 object-id
+/// owner-object    = %x01 address
 /// owner-shared    = %x02 u64
 /// owner-immutable = %x03
 /// ```
@@ -97,7 +96,7 @@ pub enum Owner {
     /// Object is exclusively owned by a single address, and is mutable.
     Address(Address),
     /// Object is exclusively owned by a single object, and is mutable.
-    Object(ObjectId),
+    Object(Address),
     /// Object is shared, can be used by any address, and is mutable.
     Shared(
         /// The version at which the object became shared
@@ -153,11 +152,11 @@ pub enum ObjectData {
 /// The BCS serialized form for this type is defined by the following ABNF:
 ///
 /// ```text
-/// object-move-package = object-id u64 move-modules type-origin-table linkage-table
+/// object-move-package = address u64 move-modules type-origin-table linkage-table
 ///
 /// move-modules = map (identifier bytes)
 /// type-origin-table = vector type-origin
-/// linkage-table = map (object-id upgrade-info)
+/// linkage-table = map (address upgrade-info)
 /// ```
 #[derive(Eq, PartialEq, Debug, Clone, Hash)]
 #[cfg_attr(
@@ -167,7 +166,7 @@ pub enum ObjectData {
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct MovePackage {
     /// Address or Id of this package
-    pub id: ObjectId,
+    pub id: Address,
 
     /// Most move packages are uniquely identified by their ID (i.e. there is only one version per
     /// ID), but the version is still stored because one package may be an upgrade of another (at a
@@ -204,10 +203,10 @@ pub struct MovePackage {
     #[cfg_attr(
         feature = "proptest",
         strategy(
-            proptest::collection::btree_map(proptest::arbitrary::any::<ObjectId>(), proptest::arbitrary::any::<UpgradeInfo>(), 0..=5)
+            proptest::collection::btree_map(proptest::arbitrary::any::<Address>(), proptest::arbitrary::any::<UpgradeInfo>(), 0..=5)
         )
     )]
-    pub linkage_table: BTreeMap<ObjectId, UpgradeInfo>,
+    pub linkage_table: BTreeMap<Address, UpgradeInfo>,
 }
 
 /// Identifies a struct and the module it was defined in
@@ -217,7 +216,7 @@ pub struct MovePackage {
 /// The BCS serialized form for this type is defined by the following ABNF:
 ///
 /// ```text
-/// type-origin = identifier identifier object-id
+/// type-origin = identifier identifier address
 /// ```
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[cfg_attr(
@@ -228,7 +227,7 @@ pub struct MovePackage {
 pub struct TypeOrigin {
     pub module_name: Identifier,
     pub struct_name: Identifier,
-    pub package: ObjectId,
+    pub package: Address,
 }
 
 /// Upgraded package info for the linkage table
@@ -238,7 +237,7 @@ pub struct TypeOrigin {
 /// The BCS serialized form for this type is defined by the following ABNF:
 ///
 /// ```text
-/// upgrade-info = object-id u64
+/// upgrade-info = address u64
 /// ```
 #[derive(Eq, PartialEq, Debug, Clone, Hash)]
 #[cfg_attr(
@@ -248,7 +247,7 @@ pub struct TypeOrigin {
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct UpgradeInfo {
     /// Id of the upgraded packages
-    pub upgraded_id: ObjectId,
+    pub upgraded_id: Address,
     /// Version of the upgraded package
     pub upgraded_version: Version,
 }
@@ -268,8 +267,8 @@ pub struct UpgradeInfo {
 /// staked-sui-type       = %x02
 /// coin-type             = %x03 type-tag
 ///
-/// ; first 32 bytes of the contents are the object's object-id
-/// object-contents = uleb128 (object-id *OCTET) ; length followed by contents
+/// ; first 32 bytes of the contents are the object's address
+/// object-contents = uleb128 (address *OCTET) ; length followed by contents
 /// ```
 #[derive(Eq, PartialEq, Debug, Clone, Hash)]
 //TODO hand-roll a Deserialize impl to enforce that an objectid is present
@@ -346,7 +345,7 @@ impl MoveStruct {
     }
 
     /// Return the ObjectId of this object
-    pub fn object_id(&self) -> ObjectId {
+    pub fn object_id(&self) -> Address {
         id_opt(self.contents()).unwrap()
     }
 }
@@ -408,7 +407,7 @@ impl Object {
     }
 
     /// Return this object's id
-    pub fn object_id(&self) -> ObjectId {
+    pub fn object_id(&self) -> Address {
         match &self.data {
             ObjectData::Struct(struct_) => id_opt(&struct_.contents).unwrap(),
             ObjectData::Package(package) => package.id,
@@ -463,14 +462,12 @@ impl Object {
     }
 }
 
-fn id_opt(contents: &[u8]) -> Option<ObjectId> {
-    if ObjectId::LENGTH > contents.len() {
+fn id_opt(contents: &[u8]) -> Option<Address> {
+    if Address::LENGTH > contents.len() {
         return None;
     }
 
-    Some(ObjectId::from(
-        Address::from_bytes(&contents[..ObjectId::LENGTH]).unwrap(),
-    ))
+    Some(Address::from_bytes(&contents[..Address::LENGTH]).unwrap())
 }
 
 /// An object part of the initial chain state
@@ -497,7 +494,7 @@ impl GenesisObject {
         Self { data, owner }
     }
 
-    pub fn object_id(&self) -> ObjectId {
+    pub fn object_id(&self) -> Address {
         match &self.data {
             ObjectData::Struct(struct_) => id_opt(&struct_.contents).unwrap(),
             ObjectData::Package(package) => package.id,

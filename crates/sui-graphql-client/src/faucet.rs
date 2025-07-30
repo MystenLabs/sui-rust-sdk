@@ -10,7 +10,6 @@ use reqwest::Url;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_json::json;
-use sui_types::ObjectId;
 use thiserror::Error;
 use tracing::error as tracing_error;
 use tracing::info;
@@ -42,7 +41,7 @@ pub struct FaucetResponse {
 #[serde(rename_all = "camelCase")]
 pub struct CoinInfo {
     pub amount: u64,
-    pub id: ObjectId,
+    pub id: Address,
     pub transfer_tx_digest: TransactionDigest,
 }
 
