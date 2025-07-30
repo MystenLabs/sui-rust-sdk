@@ -280,68 +280,50 @@ impl crate::MultisigCommittee {
 #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
 mod type_digest {
     use super::Hasher;
-    use crate::CheckpointContents;
-    use crate::CheckpointContentsDigest;
-    use crate::CheckpointDigest;
-    use crate::CheckpointSummary;
     use crate::Digest;
-    use crate::Object;
-    use crate::ObjectDigest;
-    use crate::Transaction;
-    use crate::TransactionDigest;
-    use crate::TransactionEffects;
-    use crate::TransactionEffectsDigest;
-    use crate::TransactionEvents;
-    use crate::TransactionEventsDigest;
 
-    impl Object {
+    impl crate::Object {
         /// Calculate the digest of this `Object`
         ///
         /// This is done by hashing the BCS bytes of this `Object` prefixed
-        pub fn digest(&self) -> ObjectDigest {
+        pub fn digest(&self) -> Digest {
             const SALT: &str = "Object::";
-            let digest = type_digest(SALT, self);
-            ObjectDigest::new(digest.into_inner())
+            type_digest(SALT, self)
         }
     }
 
-    impl CheckpointSummary {
-        pub fn digest(&self) -> CheckpointDigest {
+    impl crate::CheckpointSummary {
+        pub fn digest(&self) -> Digest {
             const SALT: &str = "CheckpointSummary::";
-            let digest = type_digest(SALT, self);
-            CheckpointDigest::new(digest.into_inner())
+            type_digest(SALT, self)
         }
     }
 
-    impl CheckpointContents {
-        pub fn digest(&self) -> CheckpointContentsDigest {
+    impl crate::CheckpointContents {
+        pub fn digest(&self) -> Digest {
             const SALT: &str = "CheckpointContents::";
-            let digest = type_digest(SALT, self);
-            CheckpointContentsDigest::new(digest.into_inner())
+            type_digest(SALT, self)
         }
     }
 
-    impl Transaction {
-        pub fn digest(&self) -> TransactionDigest {
+    impl crate::Transaction {
+        pub fn digest(&self) -> Digest {
             const SALT: &str = "TransactionData::";
-            let digest = type_digest(SALT, self);
-            TransactionDigest::new(digest.into_inner())
+            type_digest(SALT, self)
         }
     }
 
-    impl TransactionEffects {
-        pub fn digest(&self) -> TransactionEffectsDigest {
+    impl crate::TransactionEffects {
+        pub fn digest(&self) -> Digest {
             const SALT: &str = "TransactionEffects::";
-            let digest = type_digest(SALT, self);
-            TransactionEffectsDigest::new(digest.into_inner())
+            type_digest(SALT, self)
         }
     }
 
-    impl TransactionEvents {
-        pub fn digest(&self) -> TransactionEventsDigest {
+    impl crate::TransactionEvents {
+        pub fn digest(&self) -> Digest {
             const SALT: &str = "TransactionEvents::";
-            let digest = type_digest(SALT, self);
-            TransactionEventsDigest::new(digest.into_inner())
+            type_digest(SALT, self)
         }
     }
 
@@ -429,7 +411,7 @@ impl crate::Address {
     /// Create an ObjectId from `TransactionDigest` and `count`.
     ///
     /// `count` is the number of objects that have been created during a transactions.
-    pub fn derive_id(digest: crate::TransactionDigest, count: u64) -> Self {
+    pub fn derive_id(digest: crate::Digest, count: u64) -> Self {
         let mut hasher = Hasher::new();
         hasher.update([HashingIntent::RegularObjectId as u8]);
         hasher.update(digest);

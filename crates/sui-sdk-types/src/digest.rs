@@ -17,6 +17,8 @@
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[doc(alias = "CheckpointDigest")]
+#[doc(alias = "TransactionDigest")]
 pub struct Digest(
     #[cfg_attr(feature = "serde", serde(with = "DigestSerialization"))] [u8; Self::LENGTH],
 );
@@ -200,138 +202,6 @@ impl std::fmt::Display for DigestParseError {
 }
 
 impl std::error::Error for DigestParseError {}
-
-//
-// Implement Various Digest wrappers
-//
-
-macro_rules! impl_digest {
-    ($t:ident) => {
-        #[derive(Clone, Copy, Default, Hash, PartialEq, Eq, PartialOrd, Ord)]
-        #[cfg_attr(
-            feature = "serde",
-            derive(serde_derive::Serialize, serde_derive::Deserialize)
-        )]
-        #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
-        pub struct $t(Digest);
-
-        impl $t {
-            pub const LENGTH: usize = Digest::LENGTH;
-            pub const ZERO: Self = Self::new([0; Self::LENGTH]);
-
-            pub const fn new(digest: [u8; Self::LENGTH]) -> Self {
-                Self(Digest::new(digest))
-            }
-
-            #[cfg(feature = "rand")]
-            #[cfg_attr(doc_cfg, doc(cfg(feature = "rand")))]
-            pub fn generate<R>(rng: R) -> Self
-            where
-                R: rand_core::RngCore + rand_core::CryptoRng,
-            {
-                Self(Digest::generate(rng))
-            }
-
-            pub const fn inner(&self) -> &[u8; Self::LENGTH] {
-                self.0.inner()
-            }
-
-            pub const fn into_inner(self) -> [u8; Self::LENGTH] {
-                self.0.into_inner()
-            }
-
-            pub const fn as_bytes(&self) -> &[u8] {
-                self.0.as_bytes()
-            }
-
-            pub fn from_base58<T: AsRef<[u8]>>(base58: T) -> Result<Self, DigestParseError> {
-                Digest::from_base58(base58).map(Self)
-            }
-
-            #[allow(clippy::wrong_self_convention)]
-            pub fn to_base58(&self) -> String {
-                self.to_string()
-            }
-
-            pub fn from_bytes<T: AsRef<[u8]>>(bytes: T) -> Result<Self, DigestParseError> {
-                Digest::from_bytes(bytes).map(Self)
-            }
-        }
-
-        impl std::str::FromStr for $t {
-            type Err = DigestParseError;
-
-            fn from_str(s: &str) -> Result<Self, Self::Err> {
-                Self::from_base58(s)
-            }
-        }
-
-        impl AsRef<[u8]> for $t {
-            fn as_ref(&self) -> &[u8] {
-                self.0.as_ref()
-            }
-        }
-
-        impl AsRef<[u8; Self::LENGTH]> for $t {
-            fn as_ref(&self) -> &[u8; Self::LENGTH] {
-                self.0.as_ref()
-            }
-        }
-
-        impl From<$t> for [u8; $t::LENGTH] {
-            fn from(digest: $t) -> Self {
-                digest.into_inner()
-            }
-        }
-
-        impl From<[u8; Self::LENGTH]> for $t {
-            fn from(digest: [u8; Self::LENGTH]) -> Self {
-                Self::new(digest)
-            }
-        }
-
-        impl From<Digest> for $t {
-            fn from(digest: Digest) -> Self {
-                Self(digest)
-            }
-        }
-
-        impl From<$t> for Digest {
-            fn from(digest: $t) -> Self {
-                digest.0
-            }
-        }
-
-        impl std::fmt::Display for $t {
-            fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-                std::fmt::Display::fmt(&self.0, f)
-            }
-        }
-
-        impl std::fmt::Debug for $t {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                f.debug_tuple(stringify!($t))
-                    .field(&format_args!("\"{}\"", self))
-                    .finish()
-            }
-        }
-
-        impl std::fmt::LowerHex for $t {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                std::fmt::LowerHex::fmt(&self.0, f)
-            }
-        }
-    };
-}
-
-impl_digest!(CheckpointDigest);
-impl_digest!(CheckpointContentsDigest);
-impl_digest!(TransactionDigest);
-impl_digest!(TransactionEffectsDigest);
-impl_digest!(TransactionEventsDigest);
-impl_digest!(ObjectDigest);
-impl_digest!(ConsensusCommitDigest);
-impl_digest!(EffectsAuxiliaryDataDigest);
 
 // Don't implement like the other digest types since this isn't intended to be serialized
 pub type SigningDigest = [u8; Digest::LENGTH];

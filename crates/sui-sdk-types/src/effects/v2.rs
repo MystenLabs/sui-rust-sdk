@@ -1,13 +1,10 @@
-use crate::digest::EffectsAuxiliaryDataDigest;
 use crate::execution_status::ExecutionStatus;
 use crate::object::Owner;
 use crate::object::Version;
 use crate::Address;
+use crate::Digest;
 use crate::EpochId;
 use crate::GasCostSummary;
-use crate::ObjectDigest;
-use crate::TransactionDigest;
-use crate::TransactionEventsDigest;
 
 /// Version 2 of TransactionEffects
 ///
@@ -45,7 +42,7 @@ pub struct TransactionEffectsV2 {
     pub gas_used: GasCostSummary,
 
     /// The transaction digest
-    pub transaction_digest: TransactionDigest,
+    pub transaction_digest: Digest,
 
     /// The updated gas object reference, as an index into the `changed_objects` vector.
     /// Having a dedicated field for convenient access.
@@ -54,11 +51,11 @@ pub struct TransactionEffectsV2 {
 
     /// The digest of the events emitted during execution,
     /// can be None if the transaction does not emit any event.
-    pub events_digest: Option<TransactionEventsDigest>,
+    pub events_digest: Option<Digest>,
 
     /// The set of transaction digests this transaction depends on.
     #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=5).lift()))]
-    pub dependencies: Vec<TransactionDigest>,
+    pub dependencies: Vec<Digest>,
 
     /// The version number of all the written Move objects by this transaction.
     pub lamport_version: Version,
@@ -77,7 +74,7 @@ pub struct TransactionEffectsV2 {
     /// Auxiliary data that are not protocol-critical, generated as part of the effects but are stored separately.
     /// Storing it separately allows us to avoid bloating the effects with data that are not critical.
     /// It also provides more flexibility on the format and type of the data.
-    pub auxiliary_data_digest: Option<EffectsAuxiliaryDataDigest>,
+    pub auxiliary_data_digest: Option<Digest>,
 }
 
 /// Input/output state of an object that was changed during execution
@@ -160,10 +157,7 @@ pub struct UnchangedSharedObject {
 pub enum UnchangedSharedKind {
     /// Read-only shared objects from the input. We don't really need ObjectDigest
     /// for protocol correctness, but it will make it easier to verify untrusted read.
-    ReadOnlyRoot {
-        version: Version,
-        digest: ObjectDigest,
-    },
+    ReadOnlyRoot { version: Version, digest: Digest },
 
     /// Deleted shared objects that appear mutably/owned in the input.
     MutateDeleted { version: Version },
@@ -210,7 +204,7 @@ pub enum ObjectIn {
     /// The old version, digest and owner.
     Exist {
         version: Version,
-        digest: ObjectDigest,
+        digest: Digest,
         owner: Owner,
     },
 }
@@ -242,14 +236,11 @@ pub enum ObjectOut {
     NotExist,
 
     /// Any written object, including all of mutated, created, unwrapped today.
-    ObjectWrite { digest: ObjectDigest, owner: Owner },
+    ObjectWrite { digest: Digest, owner: Owner },
 
     /// Packages writes need to be tracked separately with version because
     /// we don't use lamport version for package publish and upgrades.
-    PackageWrite {
-        version: Version,
-        digest: ObjectDigest,
-    },
+    PackageWrite { version: Version, digest: Digest },
 }
 
 /// Defines what happened to an ObjectId during execution

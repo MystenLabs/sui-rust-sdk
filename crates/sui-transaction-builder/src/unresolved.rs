@@ -1,6 +1,6 @@
 use sui_types::Address;
 use sui_types::Command;
-use sui_types::ObjectDigest;
+use sui_types::Digest;
 use sui_types::TransactionExpiration;
 use sui_types::Version;
 
@@ -55,7 +55,7 @@ pub struct ObjectReference {
     )]
     pub version: Option<Version>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub digest: Option<ObjectDigest>,
+    pub digest: Option<Digest>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -100,7 +100,7 @@ pub struct Input {
     /// The digest of this object. This field is only relevant for owned/immutable/receiving
     /// inputs.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub digest: Option<ObjectDigest>,
+    pub digest: Option<Digest>,
     /// Whether this object is mutable. This field is only relevant for shared objects.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mutable: Option<bool>,
@@ -119,7 +119,7 @@ pub enum Value {
 
 impl Input {
     /// Return an owned kind of object with all required fields.
-    pub fn owned(object_id: Address, version: u64, digest: ObjectDigest) -> Self {
+    pub fn owned(object_id: Address, version: u64, digest: Digest) -> Self {
         Self {
             kind: Some(InputKind::ImmutableOrOwned),
             object_id: Some(object_id),
@@ -130,7 +130,7 @@ impl Input {
     }
 
     /// Return an immutable kind of object with all required fields.
-    pub fn immutable(object_id: Address, version: u64, digest: ObjectDigest) -> Self {
+    pub fn immutable(object_id: Address, version: u64, digest: Digest) -> Self {
         Self {
             kind: Some(InputKind::ImmutableOrOwned),
             object_id: Some(object_id),
@@ -141,7 +141,7 @@ impl Input {
     }
 
     /// Return a receiving kind of object with all required fields.
-    pub fn receiving(object_id: Address, version: u64, digest: ObjectDigest) -> Self {
+    pub fn receiving(object_id: Address, version: u64, digest: Digest) -> Self {
         Self {
             kind: Some(InputKind::Receiving),
             object_id: Some(object_id),
@@ -213,7 +213,7 @@ impl Input {
     }
 
     /// Set the specified digest.
-    pub fn with_digest(self, digest: ObjectDigest) -> Self {
+    pub fn with_digest(self, digest: Digest) -> Self {
         Self {
             digest: Some(digest),
             ..self

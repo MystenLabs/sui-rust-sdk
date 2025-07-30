@@ -1,8 +1,8 @@
-use sui_sdk_types::CheckpointDigest;
+use sui_sdk_types::Digest;
 
 /// Extension trait used to facilitate retrieval of Sui specific data from responses
 pub trait ResponseExt: sealed::Sealed {
-    fn chain_id(&self) -> Option<CheckpointDigest>;
+    fn chain_id(&self) -> Option<Digest>;
     fn chain(&self) -> Option<&str>;
     fn epoch(&self) -> Option<u64>;
     fn checkpoint_height(&self) -> Option<u64>;
@@ -13,10 +13,10 @@ pub trait ResponseExt: sealed::Sealed {
 }
 
 impl ResponseExt for http::header::HeaderMap {
-    fn chain_id(&self) -> Option<CheckpointDigest> {
+    fn chain_id(&self) -> Option<Digest> {
         self.get(crate::headers::X_SUI_CHAIN_ID)
             .map(http::header::HeaderValue::as_bytes)
-            .and_then(|s| CheckpointDigest::from_base58(s).ok())
+            .and_then(|s| Digest::from_base58(s).ok())
     }
 
     fn chain(&self) -> Option<&str> {
@@ -61,7 +61,7 @@ impl ResponseExt for http::header::HeaderMap {
 }
 
 impl ResponseExt for tonic::metadata::MetadataMap {
-    fn chain_id(&self) -> Option<CheckpointDigest> {
+    fn chain_id(&self) -> Option<Digest> {
         self.as_ref().chain_id()
     }
 
@@ -95,7 +95,7 @@ impl ResponseExt for tonic::metadata::MetadataMap {
 }
 
 impl<T> ResponseExt for tonic::Response<T> {
-    fn chain_id(&self) -> Option<CheckpointDigest> {
+    fn chain_id(&self) -> Option<Digest> {
         self.metadata().chain_id()
     }
 
@@ -129,7 +129,7 @@ impl<T> ResponseExt for tonic::Response<T> {
 }
 
 impl ResponseExt for tonic::Status {
-    fn chain_id(&self) -> Option<CheckpointDigest> {
+    fn chain_id(&self) -> Option<Digest> {
         self.metadata().chain_id()
     }
 

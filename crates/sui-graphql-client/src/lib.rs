@@ -83,15 +83,14 @@ use streams::stream_paginated_query;
 
 use sui_types::framework::Coin;
 use sui_types::Address;
-use sui_types::CheckpointDigest;
 use sui_types::CheckpointSequenceNumber;
 use sui_types::CheckpointSummary;
+use sui_types::Digest;
 use sui_types::Event;
 use sui_types::MovePackage;
 use sui_types::Object;
 use sui_types::SignedTransaction;
 use sui_types::Transaction;
-use sui_types::TransactionDigest;
 use sui_types::TransactionEffects;
 use sui_types::TransactionKind;
 use sui_types::TypeTag;
@@ -493,10 +492,7 @@ impl Client {
 
     /// The total number of transaction blocks in the network by the end of the provided
     /// checkpoint digest.
-    pub async fn total_transaction_blocks_by_digest(
-        &self,
-        digest: CheckpointDigest,
-    ) -> Result<Option<u64>> {
+    pub async fn total_transaction_blocks_by_digest(&self, digest: Digest) -> Result<Option<u64>> {
         self.internal_total_transaction_blocks(Some(digest.to_string()), None)
             .await
     }
@@ -655,7 +651,7 @@ impl Client {
     /// provided, it will use the last known checkpoint id.
     pub async fn checkpoint(
         &self,
-        digest: Option<CheckpointDigest>,
+        digest: Option<Digest>,
         seq_num: Option<u64>,
     ) -> Result<Option<CheckpointSummary>> {
         if digest.is_some() && seq_num.is_some() {
@@ -977,7 +973,7 @@ impl Client {
         &self,
         filter: Option<EventFilter>,
         pagination_filter: PaginationFilter,
-    ) -> Result<Page<(Event, TransactionDigest)>> {
+    ) -> Result<Page<(Event, Digest)>> {
         let (after, before, first, last) = self.pagination_filter(pagination_filter).await;
 
         let operation = EventsQuery::build(EventsQueryArgs {
@@ -1001,7 +997,7 @@ impl Client {
             let events_with_digests = ec
                 .nodes
                 .into_iter()
-                .map(|node| -> Result<(Event, TransactionDigest)> {
+                .map(|node| -> Result<(Event, Digest)> {
                     let event =
                         bcs::from_bytes::<Event>(&base64ct::Base64::decode_vec(&node.bcs.0)?)?;
 
@@ -1016,7 +1012,7 @@ impl Client {
                             )
                         })?;
 
-                    let tx_digest = TransactionDigest::from_base58(&tx_digest)?;
+                    let tx_digest = Digest::from_base58(&tx_digest)?;
 
                     Ok((event, tx_digest))
                 })
@@ -1033,7 +1029,7 @@ impl Client {
         &self,
         filter: Option<EventFilter>,
         streaming_direction: Direction,
-    ) -> impl Stream<Item = Result<(Event, TransactionDigest)>> + '_ {
+    ) -> impl Stream<Item = Result<(Event, Digest)>> + '_ {
         stream_paginated_query(
             move |pag_filter| self.events(filter.clone(), pag_filter),
             streaming_direction,
@@ -1489,10 +1485,7 @@ impl Client {
     // ===========================================================================
 
     /// Get a transaction by its digest.
-    pub async fn transaction(
-        &self,
-        digest: TransactionDigest,
-    ) -> Result<Option<SignedTransaction>> {
+    pub async fn transaction(&self, digest: Digest) -> Result<Option<SignedTransaction>> {
         let operation = TransactionBlockQuery::build(TransactionBlockArgs {
             digest: digest.to_string(),
         });
@@ -1510,10 +1503,7 @@ impl Client {
     }
 
     /// Get a transaction's effects by its digest.
-    pub async fn transaction_effects(
-        &self,
-        digest: TransactionDigest,
-    ) -> Result<Option<TransactionEffects>> {
+    pub async fn transaction_effects(&self, digest: Digest) -> Result<Option<TransactionEffects>> {
         let operation = TransactionBlockEffectsQuery::build(TransactionBlockArgs {
             digest: digest.to_string(),
         });
@@ -1529,7 +1519,7 @@ impl Client {
     /// Get a transaction's data and effects by its digest.
     pub async fn transaction_data_effects(
         &self,
-        digest: TransactionDigest,
+        digest: Digest,
     ) -> Result<Option<TransactionDataEffects>> {
         let operation = TransactionBlockWithEffectsQuery::build(TransactionBlockArgs {
             digest: digest.to_string(),

@@ -2,7 +2,6 @@ use crate::Digest;
 
 use super::Address;
 use super::CheckpointTimestamp;
-use super::ConsensusCommitDigest;
 use super::EpochId;
 use super::GenesisObject;
 use super::Identifier;
@@ -10,7 +9,6 @@ use super::Jwk;
 use super::JwkId;
 use super::ObjectReference;
 use super::ProtocolVersion;
-use super::TransactionDigest;
 use super::TypeTag;
 use super::UserSignature;
 use super::Version;
@@ -265,7 +263,7 @@ pub enum EndOfEpochTransactionKind {
     DenyListStateCreate,
 
     /// Create and initialize the bridge object
-    BridgeStateCreate { chain_id: super::CheckpointDigest },
+    BridgeStateCreate { chain_id: Digest },
 
     /// Initialize the bridge committee
     BridgeCommitteeInit { bridge_object_version: u64 },
@@ -512,7 +510,7 @@ pub struct ConsensusCommitPrologueV2 {
     pub commit_timestamp_ms: CheckpointTimestamp,
 
     /// Digest of consensus output
-    pub consensus_commit_digest: ConsensusCommitDigest,
+    pub consensus_commit_digest: Digest,
 }
 
 /// Version assignments performed by consensus
@@ -562,7 +560,7 @@ pub enum ConsensusDeterminedVersionAssignments {
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct CanceledTransaction {
-    pub digest: TransactionDigest,
+    pub digest: Digest,
     #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
     pub version_assignments: Vec<VersionAssignment>,
 }
@@ -603,7 +601,7 @@ pub struct VersionAssignment {
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct CanceledTransactionV2 {
-    pub digest: TransactionDigest,
+    pub digest: Digest,
     #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
     pub version_assignments: Vec<VersionAssignmentV2>,
 }
@@ -660,7 +658,7 @@ pub struct ConsensusCommitPrologueV3 {
     pub commit_timestamp_ms: CheckpointTimestamp,
 
     /// Digest of consensus output
-    pub consensus_commit_digest: ConsensusCommitDigest,
+    pub consensus_commit_digest: Digest,
 
     /// Stores consensus handler determined shared object version assignments.
     pub consensus_determined_version_assignments: ConsensusDeterminedVersionAssignments,
@@ -698,7 +696,7 @@ pub struct ConsensusCommitPrologueV4 {
     pub commit_timestamp_ms: CheckpointTimestamp,
 
     /// Digest of consensus output
-    pub consensus_commit_digest: ConsensusCommitDigest,
+    pub consensus_commit_digest: Digest,
 
     /// Stores consensus handler determined shared object version assignments.
     pub consensus_determined_version_assignments: ConsensusDeterminedVersionAssignments,
