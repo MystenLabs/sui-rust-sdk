@@ -51,6 +51,7 @@ pem = [
     "p256?/pem",
     "k256?/pem",
 ]
+bls12381 = ["dep:blst", "dep:rand_core", "signature/std"]
 
 [dependencies]
 signature = "2.2"
@@ -88,6 +89,9 @@ serde_json = { version = "1.0.128", optional = true }
 pkcs8 = { version = "0.10", optional = true, features = ["std"] }
 pem-rfc7468 = { version = "0.7", optional = true, features = ["std"] }
 
+# bls12381 support
+blst = { version = "0.3.13", optional = true }
+
 [dev-dependencies]
 bcs = { version = "0.1.6" }
 hex = "0.4.3"
@@ -96,6 +100,7 @@ serde_json = { version = "1.0.128" }
 # proptest support in tests
 proptest = { version = "1.6.0", default-features = false, features = ["std"] }
 test-strategy = "0.4.0"
+sui-sdk-types = { version = "0.0.6", path = "../sui-sdk-types", default-features = false, features = ["proptest"] }
 
 [target.wasm32-unknown-unknown.dev-dependencies]
 wasm-bindgen-test = "0.3"
