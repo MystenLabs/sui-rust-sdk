@@ -1,10 +1,9 @@
 use std::collections::BTreeMap;
 
 use super::Address;
+use super::Digest;
 use super::Identifier;
-use super::ObjectDigest;
 use super::StructTag;
-use super::TransactionDigest;
 
 pub type Version = u64;
 
@@ -31,12 +30,12 @@ pub struct ObjectReference {
     /// The version of this object.
     version: Version,
     /// The digest of this object.
-    digest: ObjectDigest,
+    digest: Digest,
 }
 
 impl ObjectReference {
     /// Creates a new object reference from the object's id, version, and digest.
-    pub fn new(object_id: Address, version: Version, digest: ObjectDigest) -> Self {
+    pub fn new(object_id: Address, version: Version, digest: Digest) -> Self {
         Self {
             object_id,
             version,
@@ -55,12 +54,12 @@ impl ObjectReference {
     }
 
     /// Returns the digest of the object that this ObjectReference is referring to.
-    pub fn digest(&self) -> &ObjectDigest {
+    pub fn digest(&self) -> &Digest {
         &self.digest
     }
 
     /// Returns a 3-tuple containing the object id, version, and digest.
-    pub fn into_parts(self) -> (Address, Version, ObjectDigest) {
+    pub fn into_parts(self) -> (Address, Version, Digest) {
         let Self {
             object_id,
             version,
@@ -382,7 +381,7 @@ pub struct Object {
     owner: Owner,
 
     /// The digest of the transaction that created or last mutated this object
-    previous_transaction: TransactionDigest,
+    previous_transaction: Digest,
 
     /// The amount of SUI we would rebate if this object gets deleted.
     /// This number is re-calculated each time the object is mutated based on
@@ -395,7 +394,7 @@ impl Object {
     pub fn new(
         data: ObjectData,
         owner: Owner,
-        previous_transaction: TransactionDigest,
+        previous_transaction: Digest,
         storage_rebate: u64,
     ) -> Self {
         Self {
@@ -449,7 +448,7 @@ impl Object {
     }
 
     /// Return the digest of the transaction that last modified this object
-    pub fn previous_transaction(&self) -> TransactionDigest {
+    pub fn previous_transaction(&self) -> Digest {
         self.previous_transaction
     }
 

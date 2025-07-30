@@ -1,12 +1,8 @@
-use super::CheckpointContentsDigest;
-use super::CheckpointDigest;
 use super::Digest;
 use super::GasCostSummary;
 use super::Object;
 use super::SignedTransaction;
-use super::TransactionDigest;
 use super::TransactionEffects;
-use super::TransactionEffectsDigest;
 use super::TransactionEvents;
 use super::UserSignature;
 use super::ValidatorAggregatedSignature;
@@ -126,12 +122,12 @@ pub struct CheckpointSummary {
     pub network_total_transactions: u64,
 
     /// The hash of the [`CheckpointContents`] for this checkpoint.
-    pub content_digest: CheckpointContentsDigest,
+    pub content_digest: Digest,
 
     /// The hash of the previous `CheckpointSummary`.
     ///
     /// This will be only be `None` for the first, or genesis checkpoint.
-    pub previous_digest: Option<CheckpointDigest>,
+    pub previous_digest: Option<Digest>,
 
     /// The running total gas costs of all transactions included in the current epoch so far
     /// until this checkpoint.
@@ -213,8 +209,8 @@ impl CheckpointContents {
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct CheckpointTransactionInfo {
-    pub transaction: TransactionDigest,
-    pub effects: TransactionEffectsDigest,
+    pub transaction: Digest,
+    pub effects: Digest,
     #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
     pub signatures: Vec<UserSignature>,
 }
@@ -277,8 +273,8 @@ mod serialization {
 
             #[derive(serde_derive::Serialize)]
             struct Digests<'a> {
-                transaction: &'a TransactionDigest,
-                effects: &'a TransactionEffectsDigest,
+                transaction: &'a Digest,
+                effects: &'a Digest,
             }
 
             struct DigestSeq<'a>(&'a CheckpointContents);
@@ -322,8 +318,8 @@ mod serialization {
 
     #[derive(serde_derive::Deserialize)]
     struct ExecutionDigests {
-        transaction: TransactionDigest,
-        effects: TransactionEffectsDigest,
+        transaction: Digest,
+        effects: Digest,
     }
 
     #[derive(serde_derive::Deserialize)]

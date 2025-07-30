@@ -2,11 +2,10 @@ use crate::execution_status::ExecutionStatus;
 use crate::object::Owner;
 use crate::object::Version;
 use crate::Address;
+use crate::Digest;
 use crate::EpochId;
 use crate::GasCostSummary;
 use crate::ObjectReference;
-use crate::TransactionDigest;
-use crate::TransactionEventsDigest;
 
 /// Version 1 of TransactionEffects
 ///
@@ -57,7 +56,7 @@ pub struct TransactionEffectsV1 {
     pub shared_objects: Vec<ObjectReference>,
 
     /// The transaction digest
-    pub transaction_digest: TransactionDigest,
+    pub transaction_digest: Digest,
 
     /// ObjectReference and owner of new objects created.
     #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=5).lift()))]
@@ -91,11 +90,11 @@ pub struct TransactionEffectsV1 {
 
     /// The digest of the events emitted during execution,
     /// can be None if the transaction does not emit any event.
-    pub events_digest: Option<TransactionEventsDigest>,
+    pub events_digest: Option<Digest>,
 
     /// The set of transaction digests this transaction depends on.
     #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=5).lift()))]
-    pub dependencies: Vec<TransactionDigest>,
+    pub dependencies: Vec<Digest>,
 }
 
 /// Indicates that an Object was modified at a specific version

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use sui_types::Address;
-use sui_types::TransactionDigest;
+use sui_types::Digest;
 
 use anyhow::bail;
 use reqwest::StatusCode;
@@ -42,7 +42,7 @@ pub struct FaucetResponse {
 pub struct CoinInfo {
     pub amount: u64,
     pub id: Address,
-    pub transfer_tx_digest: TransactionDigest,
+    pub transfer_tx_digest: Digest,
 }
 
 #[derive(Serialize, Deserialize, Error, Debug, PartialEq, Eq)]

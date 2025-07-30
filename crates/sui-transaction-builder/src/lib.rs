@@ -490,10 +490,10 @@ mod tests {
 
     use sui_types::framework::Coin;
     use sui_types::Address;
+    use sui_types::Digest;
     use sui_types::ExecutionStatus;
     use sui_types::IdOperation;
     use sui_types::ObjectType;
-    use sui_types::TransactionDigest;
     use sui_types::TransactionEffects;
     use sui_types::TypeTag;
 
@@ -602,7 +602,7 @@ mod tests {
 
     /// Wait for the transaction to be finalized and indexed. This queries the GraphQL server until
     /// it retrieves the requested transaction.
-    async fn wait_for_tx(client: &Client, digest: TransactionDigest) {
+    async fn wait_for_tx(client: &Client, digest: Digest) {
         while client.transaction(digest).await.unwrap().is_none() {
             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
         }
@@ -612,7 +612,7 @@ mod tests {
     /// transaction was successfully executed.
     async fn wait_for_tx_and_check_effects_status_success(
         client: &Client,
-        digest: TransactionDigest,
+        digest: Digest,
         effects: Result<Option<TransactionEffects>, sui_graphql_client::error::Error>,
     ) {
         assert!(effects.is_ok(), "Execution failed. Effects: {effects:?}");
