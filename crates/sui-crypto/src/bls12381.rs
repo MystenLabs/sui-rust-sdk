@@ -23,7 +23,7 @@ struct BlstError(blst::BLST_ERROR);
 
 impl std::fmt::Display for BlstError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 
@@ -203,8 +203,7 @@ impl ExtendedValidatorCommittee {
             .and_then(|idx| self.verifying_keys.get(*idx))
             .ok_or_else(|| {
                 SignatureError::from_source(format!(
-                    "signature from public_key {} does not belong to this committee",
-                    public_key,
+                    "signature from public_key {public_key} does not belong to this committee",
                 ))
             })
     }
@@ -214,8 +213,7 @@ impl ExtendedValidatorCommittee {
             .get(public_key)
             .ok_or_else(|| {
                 SignatureError::from_source(format!(
-                    "signature from public_key {} does not belong to this committee",
-                    public_key,
+                    "signature from public_key {public_key} does not belong to this committee",
                 ))
             })
             .and_then(|idx| self.member_by_idx(*idx))
