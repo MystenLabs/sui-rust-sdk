@@ -31,7 +31,7 @@ roaring = { version = "0.10.9", default-features = false }
 
 # dependencies for the protobuf and gRPC definitions
 bytes = "1.9"
-tonic = { version = "0.13", default-features = false, features = ["channel", "codegen", "prost", "tls-webpki-roots", "zstd"] }
+tonic = { version = "0.13", default-features = false, features = ["channel", "codegen", "prost", "tls-ring", "tls-webpki-roots", "zstd"] }
 prost = "0.13.4"
 prost-types = "0.13.3"
 tap = "1"
