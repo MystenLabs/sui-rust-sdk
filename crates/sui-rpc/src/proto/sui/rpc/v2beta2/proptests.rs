@@ -43,7 +43,7 @@ protobuf_roundtrip_test!(CheckpointContents, super::CheckpointContents);
 protobuf_roundtrip_test!(Transaction, super::Transaction);
 protobuf_roundtrip_test!(TransactionEffects, super::TransactionEffects);
 protobuf_roundtrip_test!(ChangedObject, super::ChangedObject);
-protobuf_roundtrip_test!(UnchangedSharedObject, super::UnchangedSharedObject);
+protobuf_roundtrip_test!(UnchangedConsensusObject, super::UnchangedConsensusObject);
 protobuf_roundtrip_test!(TransactionEvents, super::TransactionEvents);
 protobuf_roundtrip_test!(Object, super::Object);
 protobuf_roundtrip_test!(UserSignature, super::UserSignature);

@@ -18,7 +18,7 @@ use crate::ObjectReference;
 ///              u64                            ; epoch
 ///              gas-cost-summary
 ///              (vector modified-at-version)
-///              (vector object-ref)            ; shared object references
+///              (vector object-ref)            ; consensus object references
 ///              digest                         ; transaction digest
 ///              (vector object-ref-with-owner) ; created objects
 ///              (vector object-ref-with-owner) ; mutated objects
@@ -51,9 +51,9 @@ pub struct TransactionEffectsV1 {
     #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=5).lift()))]
     pub modified_at_versions: Vec<ModifiedAtVersion>,
 
-    /// The object references of the shared objects used in this transaction. Empty if no shared objects were used.
+    /// The object references of the consensus objects used in this transaction. Empty if no consensus objects were used.
     #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=5).lift()))]
-    pub shared_objects: Vec<ObjectReference>,
+    pub consensus_objects: Vec<ObjectReference>,
 
     /// The transaction digest
     pub transaction_digest: Digest,

@@ -314,12 +314,12 @@ pub struct TransactionEffects {
     /// Objects whose state are changed by this transaction.
     #[prost(message, repeated, tag = "12")]
     pub changed_objects: ::prost::alloc::vec::Vec<ChangedObject>,
-    /// Shared objects that are not mutated in this transaction. Unlike owned objects,
-    /// read-only shared objects' version are not committed in the transaction,
+    /// Consensus objects that are not mutated in this transaction. Unlike owned objects,
+    /// read-only consensus objects' version are not committed in the transaction,
     /// and in order for a node to catch up and execute it without consensus sequencing,
     /// the version needs to be committed in the effects.
     #[prost(message, repeated, tag = "13")]
-    pub unchanged_shared_objects: ::prost::alloc::vec::Vec<UnchangedSharedObject>,
+    pub unchanged_consensus_objects: ::prost::alloc::vec::Vec<UnchangedConsensusObject>,
     /// Auxiliary data that are not protocol-critical, generated as part of the effects but are stored separately.
     /// Storing it separately allows us to avoid bloating the effects with data that are not critical.
     /// It also provides more flexibility on the format and type of the data.
@@ -488,22 +488,22 @@ pub mod changed_object {
         }
     }
 }
-/// A shared object that wasn't changed during execution.
+/// A consensus object that wasn't changed during execution.
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct UnchangedSharedObject {
+pub struct UnchangedConsensusObject {
     #[prost(
-        enumeration = "unchanged_shared_object::UnchangedSharedObjectKind",
+        enumeration = "unchanged_consensus_object::UnchangedConsensusObjectKind",
         optional,
         tag = "1"
     )]
     pub kind: ::core::option::Option<i32>,
-    /// ObjectId of the shared object.
+    /// ObjectId of the consensus object.
     #[prost(string, optional, tag = "2")]
     pub object_id: ::core::option::Option<::prost::alloc::string::String>,
-    /// Version of the shared object.
+    /// Version of the consensus object.
     #[prost(uint64, optional, tag = "3")]
     pub version: ::core::option::Option<u64>,
-    /// Digest of the shared object.
+    /// Digest of the consensus object.
     #[prost(string, optional, tag = "4")]
     pub digest: ::core::option::Option<::prost::alloc::string::String>,
     /// Type information is not provided by the effects structure but is instead
@@ -511,8 +511,8 @@ pub struct UnchangedSharedObject {
     #[prost(string, optional, tag = "5")]
     pub object_type: ::core::option::Option<::prost::alloc::string::String>,
 }
-/// Nested message and enum types in `UnchangedSharedObject`.
-pub mod unchanged_shared_object {
+/// Nested message and enum types in `UnchangedConsensusObject`.
+pub mod unchanged_consensus_object {
     #[derive(
         Clone,
         Copy,
@@ -525,9 +525,9 @@ pub mod unchanged_shared_object {
         ::prost::Enumeration
     )]
     #[repr(i32)]
-    pub enum UnchangedSharedObjectKind {
+    pub enum UnchangedConsensusObjectKind {
         Unknown = 0,
-        /// Read-only shared object from the input.
+        /// Read-only consensus object from the input.
         ReadOnlyRoot = 1,
         /// Objects with ended consensus streams that appear mutably/owned in the input.
         MutateConsensusStreamEnded = 2,
@@ -541,14 +541,14 @@ pub mod unchanged_shared_object {
         /// object at the start of the epoch.
         PerEpochConfig = 5,
     }
-    impl UnchangedSharedObjectKind {
+    impl UnchangedConsensusObjectKind {
         /// String value of the enum field names used in the ProtoBuf definition.
         ///
         /// The values are not transformed in any way and thus are considered stable
         /// (if the ProtoBuf definition does not change) and safe for programmatic use.
         pub fn as_str_name(&self) -> &'static str {
             match self {
-                Self::Unknown => "UNCHANGED_SHARED_OBJECT_KIND_UNKNOWN",
+                Self::Unknown => "UNCHANGED_CONSENSUS_OBJECT_KIND_UNKNOWN",
                 Self::ReadOnlyRoot => "READ_ONLY_ROOT",
                 Self::MutateConsensusStreamEnded => "MUTATE_CONSENSUS_STREAM_ENDED",
                 Self::ReadConsensusStreamEnded => "READ_CONSENSUS_STREAM_ENDED",
@@ -559,7 +559,7 @@ pub mod unchanged_shared_object {
         /// Creates an enum from field names used in the ProtoBuf definition.
         pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
             match value {
-                "UNCHANGED_SHARED_OBJECT_KIND_UNKNOWN" => Some(Self::Unknown),
+                "UNCHANGED_CONSENSUS_OBJECT_KIND_UNKNOWN" => Some(Self::Unknown),
                 "READ_ONLY_ROOT" => Some(Self::ReadOnlyRoot),
                 "MUTATE_CONSENSUS_STREAM_ENDED" => Some(Self::MutateConsensusStreamEnded),
                 "READ_CONSENSUS_STREAM_ENDED" => Some(Self::ReadConsensusStreamEnded),
@@ -815,12 +815,12 @@ pub mod execution_error {
         CertificateDenied = 30,
         /// Sui Move bytecode verification timed out.
         SuiMoveVerificationTimedout = 31,
-        /// The requested shared object operation is not allowed.
-        SharedObjectOperationNotAllowed = 32,
-        /// Requested shared object has been deleted.
+        /// The requested consensus object operation is not allowed.
+        ConsensusObjectOperationNotAllowed = 32,
+        /// Requested consensus object has been deleted.
         InputObjectDeleted = 33,
-        /// Certificate is canceled due to congestion on shared objects.
-        ExecutionCanceledDueToSharedObjectCongestion = 34,
+        /// Certificate is canceled due to congestion on consensus objects.
+        ExecutionCanceledDueToConsensusObjectCongestion = 34,
         /// Address is denied for this coin type.
         AddressDeniedForCoin = 35,
         /// Coin type is globally paused for use.
@@ -878,12 +878,12 @@ pub mod execution_error {
                 Self::WrittenObjectsTooLarge => "WRITTEN_OBJECTS_TOO_LARGE",
                 Self::CertificateDenied => "CERTIFICATE_DENIED",
                 Self::SuiMoveVerificationTimedout => "SUI_MOVE_VERIFICATION_TIMEDOUT",
-                Self::SharedObjectOperationNotAllowed => {
-                    "SHARED_OBJECT_OPERATION_NOT_ALLOWED"
+                Self::ConsensusObjectOperationNotAllowed => {
+                    "CONSENSUS_OBJECT_OPERATION_NOT_ALLOWED"
                 }
                 Self::InputObjectDeleted => "INPUT_OBJECT_DELETED",
-                Self::ExecutionCanceledDueToSharedObjectCongestion => {
-                    "EXECUTION_CANCELED_DUE_TO_SHARED_OBJECT_CONGESTION"
+                Self::ExecutionCanceledDueToConsensusObjectCongestion => {
+                    "EXECUTION_CANCELED_DUE_TO_CONSENSUS_OBJECT_CONGESTION"
                 }
                 Self::AddressDeniedForCoin => "ADDRESS_DENIED_FOR_COIN",
                 Self::CoinTypeGlobalPause => "COIN_TYPE_GLOBAL_PAUSE",
@@ -942,12 +942,12 @@ pub mod execution_error {
                 "SUI_MOVE_VERIFICATION_TIMEDOUT" => {
                     Some(Self::SuiMoveVerificationTimedout)
                 }
-                "SHARED_OBJECT_OPERATION_NOT_ALLOWED" => {
-                    Some(Self::SharedObjectOperationNotAllowed)
+                "CONSENSUS_OBJECT_OPERATION_NOT_ALLOWED" => {
+                    Some(Self::ConsensusObjectOperationNotAllowed)
                 }
                 "INPUT_OBJECT_DELETED" => Some(Self::InputObjectDeleted),
-                "EXECUTION_CANCELED_DUE_TO_SHARED_OBJECT_CONGESTION" => {
-                    Some(Self::ExecutionCanceledDueToSharedObjectCongestion)
+                "EXECUTION_CANCELED_DUE_TO_CONSENSUS_OBJECT_CONGESTION" => {
+                    Some(Self::ExecutionCanceledDueToConsensusObjectCongestion)
                 }
                 "ADDRESS_DENIED_FOR_COIN" => Some(Self::AddressDeniedForCoin),
                 "COIN_TYPE_GLOBAL_PAUSE" => Some(Self::CoinTypeGlobalPause),
@@ -1135,9 +1135,9 @@ pub mod command_argument_error {
         InvalidObjectByValue = 10,
         /// Immutable objects cannot be passed by mutable reference, `&mut`.
         InvalidObjectByMutRef = 11,
-        /// Shared object operations such as wrapping, freezing, or converting to owned are not
+        /// Consensus object operations such as wrapping, freezing, or converting to owned are not
         /// allowed.
-        SharedObjectOperationNotAllowed = 12,
+        ConsensusObjectOperationNotAllowed = 12,
         /// Invalid argument arity. Expected a single argument but found a result that expanded to
         /// multiple arguments.
         InvalidArgumentArity = 13,
@@ -1163,8 +1163,8 @@ pub mod command_argument_error {
                 Self::InvalidValueUsage => "INVALID_VALUE_USAGE",
                 Self::InvalidObjectByValue => "INVALID_OBJECT_BY_VALUE",
                 Self::InvalidObjectByMutRef => "INVALID_OBJECT_BY_MUT_REF",
-                Self::SharedObjectOperationNotAllowed => {
-                    "SHARED_OBJECT_OPERATION_NOT_ALLOWED"
+                Self::ConsensusObjectOperationNotAllowed => {
+                    "CONSENSUS_OBJECT_OPERATION_NOT_ALLOWED"
                 }
                 Self::InvalidArgumentArity => "INVALID_ARGUMENT_ARITY",
             }
@@ -1188,8 +1188,8 @@ pub mod command_argument_error {
                 "INVALID_VALUE_USAGE" => Some(Self::InvalidValueUsage),
                 "INVALID_OBJECT_BY_VALUE" => Some(Self::InvalidObjectByValue),
                 "INVALID_OBJECT_BY_MUT_REF" => Some(Self::InvalidObjectByMutRef),
-                "SHARED_OBJECT_OPERATION_NOT_ALLOWED" => {
-                    Some(Self::SharedObjectOperationNotAllowed)
+                "CONSENSUS_OBJECT_OPERATION_NOT_ALLOWED" => {
+                    Some(Self::ConsensusObjectOperationNotAllowed)
                 }
                 "INVALID_ARGUMENT_ARITY" => Some(Self::InvalidArgumentArity),
                 _ => None,
@@ -6488,7 +6488,7 @@ pub struct ConsensusCommitPrologue {
     /// Present in V3, V4.
     #[prost(uint64, optional, tag = "5")]
     pub sub_dag_index: ::core::option::Option<u64>,
-    /// Stores consensus handler determined shared object version assignments.
+    /// Stores consensus handler determined consensus object version assignments.
     ///
     /// Present in V3, V4.
     #[prost(message, optional, tag = "6")]

@@ -148,14 +148,14 @@ message ExecutionError {
     // Sui Move bytecode verification timed out.
     SUI_MOVE_VERIFICATION_TIMEDOUT = 31;
 
-    // The requested shared object operation is not allowed.
-    SHARED_OBJECT_OPERATION_NOT_ALLOWED = 32;
+    // The requested consensus object operation is not allowed.
+    CONSENSUS_OBJECT_OPERATION_NOT_ALLOWED = 32;
 
-    // Requested shared object has been deleted.
+    // Requested consensus object has been deleted.
     INPUT_OBJECT_DELETED = 33;
 
-    // Certificate is canceled due to congestion on shared objects.
-    EXECUTION_CANCELED_DUE_TO_SHARED_OBJECT_CONGESTION = 34;
+    // Certificate is canceled due to congestion on consensus objects.
+    EXECUTION_CANCELED_DUE_TO_CONSENSUS_OBJECT_CONGESTION = 34;
 
     // Address is denied for this coin type.
     ADDRESS_DENIED_FOR_COIN = 35;
@@ -302,9 +302,9 @@ message CommandArgumentError {
     // Immutable objects cannot be passed by mutable reference, `&mut`.
     INVALID_OBJECT_BY_MUT_REF = 11;
 
-    // Shared object operations such as wrapping, freezing, or converting to owned are not
+    // Consensus object operations such as wrapping, freezing, or converting to owned are not
     // allowed.
-    SHARED_OBJECT_OPERATION_NOT_ALLOWED = 12;
+    CONSENSUS_OBJECT_OPERATION_NOT_ALLOWED = 12;
 
     // Invalid argument arity. Expected a single argument but found a result that expanded to
     // multiple arguments.

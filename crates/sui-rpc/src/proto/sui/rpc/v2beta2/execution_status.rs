@@ -186,16 +186,16 @@ impl From<sui_sdk_types::ExecutionError> for ExecutionError {
             }
             E::CertificateDenied => ExecutionErrorKind::CertificateDenied,
             E::SuiMoveVerificationTimedout => ExecutionErrorKind::SuiMoveVerificationTimedout,
-            E::SharedObjectOperationNotAllowed => {
-                ExecutionErrorKind::SharedObjectOperationNotAllowed
+            E::ConsensusObjectOperationNotAllowed => {
+                ExecutionErrorKind::ConsensusObjectOperationNotAllowed
             }
             E::InputObjectDeleted => ExecutionErrorKind::InputObjectDeleted,
-            E::ExecutionCanceledDueToSharedObjectCongestion { congested_objects } => {
+            E::ExecutionCanceledDueToConsensusObjectCongestion { congested_objects } => {
                 message.error_details = Some(ErrorDetails::CongestedObjects(CongestedObjects {
                     objects: congested_objects.iter().map(ToString::to_string).collect(),
                 }));
 
-                ExecutionErrorKind::ExecutionCanceledDueToSharedObjectCongestion
+                ExecutionErrorKind::ExecutionCanceledDueToConsensusObjectCongestion
             }
             E::AddressDeniedForCoin { address, coin_type } => {
                 message.error_details = Some(ErrorDetails::CoinDenyListError(CoinDenyListError {
@@ -420,16 +420,16 @@ impl TryFrom<&ExecutionError> for sui_sdk_types::ExecutionError {
             }
             K::CertificateDenied => Self::CertificateDenied,
             K::SuiMoveVerificationTimedout => Self::SuiMoveVerificationTimedout,
-            K::SharedObjectOperationNotAllowed => Self::SharedObjectOperationNotAllowed,
+            K::ConsensusObjectOperationNotAllowed => Self::ConsensusObjectOperationNotAllowed,
             K::InputObjectDeleted => Self::InputObjectDeleted,
-            K::ExecutionCanceledDueToSharedObjectCongestion => {
+            K::ExecutionCanceledDueToConsensusObjectCongestion => {
                 let Some(ErrorDetails::CongestedObjects(CongestedObjects { objects })) =
                     &value.error_details
                 else {
                     return Err(TryFromProtoError::missing("congested_objects"));
                 };
 
-                Self::ExecutionCanceledDueToSharedObjectCongestion {
+                Self::ExecutionCanceledDueToConsensusObjectCongestion {
                     congested_objects: objects
                         .iter()
                         .map(|s| s.parse())
@@ -550,8 +550,8 @@ impl From<sui_sdk_types::CommandArgumentError> for CommandArgumentError {
             E::InvalidValueUsage => CommandArgumentErrorKind::InvalidValueUsage,
             E::InvalidObjectByValue => CommandArgumentErrorKind::InvalidObjectByValue,
             E::InvalidObjectByMutRef => CommandArgumentErrorKind::InvalidObjectByMutRef,
-            E::SharedObjectOperationNotAllowed => {
-                CommandArgumentErrorKind::SharedObjectOperationNotAllowed
+            E::ConsensusObjectOperationNotAllowed => {
+                CommandArgumentErrorKind::ConsensusObjectOperationNotAllowed
             }
             E::InvalidArgumentArity => CommandArgumentErrorKind::InvalidArgumentArity,
         };
@@ -617,7 +617,7 @@ impl TryFrom<&CommandArgumentError> for sui_sdk_types::CommandArgumentError {
             K::InvalidValueUsage => Self::InvalidValueUsage,
             K::InvalidObjectByValue => Self::InvalidObjectByValue,
             K::InvalidObjectByMutRef => Self::InvalidObjectByMutRef,
-            K::SharedObjectOperationNotAllowed => Self::SharedObjectOperationNotAllowed,
+            K::ConsensusObjectOperationNotAllowed => Self::ConsensusObjectOperationNotAllowed,
             K::InvalidArgumentArity => Self::InvalidArgumentArity,
         }
         .pipe(Ok)
