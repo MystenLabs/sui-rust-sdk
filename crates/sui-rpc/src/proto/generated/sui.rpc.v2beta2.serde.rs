@@ -4745,7 +4745,7 @@ impl serde::Serialize for command_argument_error::CommandArgumentErrorKind {
             Self::InvalidValueUsage => "INVALID_VALUE_USAGE",
             Self::InvalidObjectByValue => "INVALID_OBJECT_BY_VALUE",
             Self::InvalidObjectByMutRef => "INVALID_OBJECT_BY_MUT_REF",
-            Self::SharedObjectOperationNotAllowed => "SHARED_OBJECT_OPERATION_NOT_ALLOWED",
+            Self::ConsensusObjectOperationNotAllowed => "CONSENSUS_OBJECT_OPERATION_NOT_ALLOWED",
             Self::InvalidArgumentArity => "INVALID_ARGUMENT_ARITY",
         };
         serializer.serialize_str(variant)
@@ -4770,7 +4770,7 @@ impl<'de> serde::Deserialize<'de> for command_argument_error::CommandArgumentErr
             "INVALID_VALUE_USAGE",
             "INVALID_OBJECT_BY_VALUE",
             "INVALID_OBJECT_BY_MUT_REF",
-            "SHARED_OBJECT_OPERATION_NOT_ALLOWED",
+            "CONSENSUS_OBJECT_OPERATION_NOT_ALLOWED",
             "INVALID_ARGUMENT_ARITY",
         ];
 
@@ -4824,7 +4824,7 @@ impl<'de> serde::Deserialize<'de> for command_argument_error::CommandArgumentErr
                     "INVALID_VALUE_USAGE" => Ok(command_argument_error::CommandArgumentErrorKind::InvalidValueUsage),
                     "INVALID_OBJECT_BY_VALUE" => Ok(command_argument_error::CommandArgumentErrorKind::InvalidObjectByValue),
                     "INVALID_OBJECT_BY_MUT_REF" => Ok(command_argument_error::CommandArgumentErrorKind::InvalidObjectByMutRef),
-                    "SHARED_OBJECT_OPERATION_NOT_ALLOWED" => Ok(command_argument_error::CommandArgumentErrorKind::SharedObjectOperationNotAllowed),
+                    "CONSENSUS_OBJECT_OPERATION_NOT_ALLOWED" => Ok(command_argument_error::CommandArgumentErrorKind::ConsensusObjectOperationNotAllowed),
                     "INVALID_ARGUMENT_ARITY" => Ok(command_argument_error::CommandArgumentErrorKind::InvalidArgumentArity),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
@@ -7910,9 +7910,9 @@ impl serde::Serialize for execution_error::ExecutionErrorKind {
             Self::WrittenObjectsTooLarge => "WRITTEN_OBJECTS_TOO_LARGE",
             Self::CertificateDenied => "CERTIFICATE_DENIED",
             Self::SuiMoveVerificationTimedout => "SUI_MOVE_VERIFICATION_TIMEDOUT",
-            Self::SharedObjectOperationNotAllowed => "SHARED_OBJECT_OPERATION_NOT_ALLOWED",
+            Self::ConsensusObjectOperationNotAllowed => "CONSENSUS_OBJECT_OPERATION_NOT_ALLOWED",
             Self::InputObjectDeleted => "INPUT_OBJECT_DELETED",
-            Self::ExecutionCanceledDueToSharedObjectCongestion => "EXECUTION_CANCELED_DUE_TO_SHARED_OBJECT_CONGESTION",
+            Self::ExecutionCanceledDueToConsensusObjectCongestion => "EXECUTION_CANCELED_DUE_TO_CONSENSUS_OBJECT_CONGESTION",
             Self::AddressDeniedForCoin => "ADDRESS_DENIED_FOR_COIN",
             Self::CoinTypeGlobalPause => "COIN_TYPE_GLOBAL_PAUSE",
             Self::ExecutionCanceledDueToRandomnessUnavailable => "EXECUTION_CANCELED_DUE_TO_RANDOMNESS_UNAVAILABLE",
@@ -7962,9 +7962,9 @@ impl<'de> serde::Deserialize<'de> for execution_error::ExecutionErrorKind {
             "WRITTEN_OBJECTS_TOO_LARGE",
             "CERTIFICATE_DENIED",
             "SUI_MOVE_VERIFICATION_TIMEDOUT",
-            "SHARED_OBJECT_OPERATION_NOT_ALLOWED",
+            "CONSENSUS_OBJECT_OPERATION_NOT_ALLOWED",
             "INPUT_OBJECT_DELETED",
-            "EXECUTION_CANCELED_DUE_TO_SHARED_OBJECT_CONGESTION",
+            "EXECUTION_CANCELED_DUE_TO_CONSENSUS_OBJECT_CONGESTION",
             "ADDRESS_DENIED_FOR_COIN",
             "COIN_TYPE_GLOBAL_PAUSE",
             "EXECUTION_CANCELED_DUE_TO_RANDOMNESS_UNAVAILABLE",
@@ -8043,9 +8043,9 @@ impl<'de> serde::Deserialize<'de> for execution_error::ExecutionErrorKind {
                     "WRITTEN_OBJECTS_TOO_LARGE" => Ok(execution_error::ExecutionErrorKind::WrittenObjectsTooLarge),
                     "CERTIFICATE_DENIED" => Ok(execution_error::ExecutionErrorKind::CertificateDenied),
                     "SUI_MOVE_VERIFICATION_TIMEDOUT" => Ok(execution_error::ExecutionErrorKind::SuiMoveVerificationTimedout),
-                    "SHARED_OBJECT_OPERATION_NOT_ALLOWED" => Ok(execution_error::ExecutionErrorKind::SharedObjectOperationNotAllowed),
+                    "CONSENSUS_OBJECT_OPERATION_NOT_ALLOWED" => Ok(execution_error::ExecutionErrorKind::ConsensusObjectOperationNotAllowed),
                     "INPUT_OBJECT_DELETED" => Ok(execution_error::ExecutionErrorKind::InputObjectDeleted),
-                    "EXECUTION_CANCELED_DUE_TO_SHARED_OBJECT_CONGESTION" => Ok(execution_error::ExecutionErrorKind::ExecutionCanceledDueToSharedObjectCongestion),
+                    "EXECUTION_CANCELED_DUE_TO_CONSENSUS_OBJECT_CONGESTION" => Ok(execution_error::ExecutionErrorKind::ExecutionCanceledDueToConsensusObjectCongestion),
                     "ADDRESS_DENIED_FOR_COIN" => Ok(execution_error::ExecutionErrorKind::AddressDeniedForCoin),
                     "COIN_TYPE_GLOBAL_PAUSE" => Ok(execution_error::ExecutionErrorKind::CoinTypeGlobalPause),
                     "EXECUTION_CANCELED_DUE_TO_RANDOMNESS_UNAVAILABLE" => Ok(execution_error::ExecutionErrorKind::ExecutionCanceledDueToRandomnessUnavailable),
@@ -20634,7 +20634,7 @@ impl serde::Serialize for TransactionEffects {
         if !self.changed_objects.is_empty() {
             len += 1;
         }
-        if !self.unchanged_shared_objects.is_empty() {
+        if !self.unchanged_consensus_objects.is_empty() {
             len += 1;
         }
         if self.auxiliary_data_digest.is_some() {
@@ -20681,8 +20681,8 @@ impl serde::Serialize for TransactionEffects {
         if !self.changed_objects.is_empty() {
             struct_ser.serialize_field("changedObjects", &self.changed_objects)?;
         }
-        if !self.unchanged_shared_objects.is_empty() {
-            struct_ser.serialize_field("unchangedSharedObjects", &self.unchanged_shared_objects)?;
+        if !self.unchanged_consensus_objects.is_empty() {
+            struct_ser.serialize_field("unchangedConsensusObjects", &self.unchanged_consensus_objects)?;
         }
         if let Some(v) = self.auxiliary_data_digest.as_ref() {
             struct_ser.serialize_field("auxiliaryDataDigest", v)?;
@@ -20715,8 +20715,8 @@ impl<'de> serde::Deserialize<'de> for TransactionEffects {
             "lamportVersion",
             "changed_objects",
             "changedObjects",
-            "unchanged_shared_objects",
-            "unchangedSharedObjects",
+            "unchanged_consensus_objects",
+            "unchangedConsensusObjects",
             "auxiliary_data_digest",
             "auxiliaryDataDigest",
         ];
@@ -20735,7 +20735,7 @@ impl<'de> serde::Deserialize<'de> for TransactionEffects {
             Dependencies,
             LamportVersion,
             ChangedObjects,
-            UnchangedSharedObjects,
+            UnchangedConsensusObjects,
             AuxiliaryDataDigest,
             __SkipField__,
         }
@@ -20771,7 +20771,7 @@ impl<'de> serde::Deserialize<'de> for TransactionEffects {
                             "dependencies" => Ok(GeneratedField::Dependencies),
                             "lamportVersion" | "lamport_version" => Ok(GeneratedField::LamportVersion),
                             "changedObjects" | "changed_objects" => Ok(GeneratedField::ChangedObjects),
-                            "unchangedSharedObjects" | "unchanged_shared_objects" => Ok(GeneratedField::UnchangedSharedObjects),
+                            "unchangedConsensusObjects" | "unchanged_consensus_objects" => Ok(GeneratedField::UnchangedConsensusObjects),
                             "auxiliaryDataDigest" | "auxiliary_data_digest" => Ok(GeneratedField::AuxiliaryDataDigest),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
@@ -20806,7 +20806,7 @@ impl<'de> serde::Deserialize<'de> for TransactionEffects {
                 let mut dependencies__ = None;
                 let mut lamport_version__ = None;
                 let mut changed_objects__ = None;
-                let mut unchanged_shared_objects__ = None;
+                let mut unchanged_consensus_objects__ = None;
                 let mut auxiliary_data_digest__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
@@ -20888,11 +20888,11 @@ impl<'de> serde::Deserialize<'de> for TransactionEffects {
                             }
                             changed_objects__ = Some(map_.next_value()?);
                         }
-                        GeneratedField::UnchangedSharedObjects => {
-                            if unchanged_shared_objects__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("unchangedSharedObjects"));
+                        GeneratedField::UnchangedConsensusObjects => {
+                            if unchanged_consensus_objects__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("unchangedConsensusObjects"));
                             }
-                            unchanged_shared_objects__ = Some(map_.next_value()?);
+                            unchanged_consensus_objects__ = Some(map_.next_value()?);
                         }
                         GeneratedField::AuxiliaryDataDigest => {
                             if auxiliary_data_digest__.is_some() {
@@ -20918,7 +20918,7 @@ impl<'de> serde::Deserialize<'de> for TransactionEffects {
                     dependencies: dependencies__.unwrap_or_default(),
                     lamport_version: lamport_version__,
                     changed_objects: changed_objects__.unwrap_or_default(),
-                    unchanged_shared_objects: unchanged_shared_objects__.unwrap_or_default(),
+                    unchanged_consensus_objects: unchanged_consensus_objects__.unwrap_or_default(),
                     auxiliary_data_digest: auxiliary_data_digest__,
                 })
             }
@@ -22182,7 +22182,7 @@ impl<'de> serde::Deserialize<'de> for TypeParameter {
         deserializer.deserialize_struct("sui.rpc.v2beta2.TypeParameter", FIELDS, GeneratedVisitor)
     }
 }
-impl serde::Serialize for UnchangedSharedObject {
+impl serde::Serialize for UnchangedConsensusObject {
     #[allow(deprecated)]
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
     where
@@ -22205,9 +22205,9 @@ impl serde::Serialize for UnchangedSharedObject {
         if self.object_type.is_some() {
             len += 1;
         }
-        let mut struct_ser = serializer.serialize_struct("sui.rpc.v2beta2.UnchangedSharedObject", len)?;
+        let mut struct_ser = serializer.serialize_struct("sui.rpc.v2beta2.UnchangedConsensusObject", len)?;
         if let Some(v) = self.kind.as_ref() {
-            let v = unchanged_shared_object::UnchangedSharedObjectKind::try_from(*v)
+            let v = unchanged_consensus_object::UnchangedConsensusObjectKind::try_from(*v)
                 .map_err(|_| serde::ser::Error::custom(format!("Invalid variant {}", *v)))?;
             struct_ser.serialize_field("kind", &v)?;
         }
@@ -22228,7 +22228,7 @@ impl serde::Serialize for UnchangedSharedObject {
         struct_ser.end()
     }
 }
-impl<'de> serde::Deserialize<'de> for UnchangedSharedObject {
+impl<'de> serde::Deserialize<'de> for UnchangedConsensusObject {
     #[allow(deprecated)]
     fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
     where
@@ -22289,13 +22289,13 @@ impl<'de> serde::Deserialize<'de> for UnchangedSharedObject {
         #[allow(clippy::useless_conversion)]
         #[allow(clippy::unit_arg)]
         impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-            type Value = UnchangedSharedObject;
+            type Value = UnchangedConsensusObject;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                formatter.write_str("struct sui.rpc.v2beta2.UnchangedSharedObject")
+                formatter.write_str("struct sui.rpc.v2beta2.UnchangedConsensusObject")
             }
 
-            fn visit_map<V>(self, mut map_: V) -> std::result::Result<UnchangedSharedObject, V::Error>
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<UnchangedConsensusObject, V::Error>
                 where
                     V: serde::de::MapAccess<'de>,
             {
@@ -22310,7 +22310,7 @@ impl<'de> serde::Deserialize<'de> for UnchangedSharedObject {
                             if kind__.is_some() {
                                 return Err(serde::de::Error::duplicate_field("kind"));
                             }
-                            kind__ = map_.next_value::<::std::option::Option<unchanged_shared_object::UnchangedSharedObjectKind>>()?.map(|x| x as i32);
+                            kind__ = map_.next_value::<::std::option::Option<unchanged_consensus_object::UnchangedConsensusObjectKind>>()?.map(|x| x as i32);
                         }
                         GeneratedField::ObjectId => {
                             if object_id__.is_some() {
@@ -22343,7 +22343,7 @@ impl<'de> serde::Deserialize<'de> for UnchangedSharedObject {
                         }
                     }
                 }
-                Ok(UnchangedSharedObject {
+                Ok(UnchangedConsensusObject {
                     kind: kind__,
                     object_id: object_id__,
                     version: version__,
@@ -22352,17 +22352,17 @@ impl<'de> serde::Deserialize<'de> for UnchangedSharedObject {
                 })
             }
         }
-        deserializer.deserialize_struct("sui.rpc.v2beta2.UnchangedSharedObject", FIELDS, GeneratedVisitor)
+        deserializer.deserialize_struct("sui.rpc.v2beta2.UnchangedConsensusObject", FIELDS, GeneratedVisitor)
     }
 }
-impl serde::Serialize for unchanged_shared_object::UnchangedSharedObjectKind {
+impl serde::Serialize for unchanged_consensus_object::UnchangedConsensusObjectKind {
     #[allow(deprecated)]
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
         let variant = match self {
-            Self::Unknown => "UNCHANGED_SHARED_OBJECT_KIND_UNKNOWN",
+            Self::Unknown => "UNCHANGED_CONSENSUS_OBJECT_KIND_UNKNOWN",
             Self::ReadOnlyRoot => "READ_ONLY_ROOT",
             Self::MutateConsensusStreamEnded => "MUTATE_CONSENSUS_STREAM_ENDED",
             Self::ReadConsensusStreamEnded => "READ_CONSENSUS_STREAM_ENDED",
@@ -22372,14 +22372,14 @@ impl serde::Serialize for unchanged_shared_object::UnchangedSharedObjectKind {
         serializer.serialize_str(variant)
     }
 }
-impl<'de> serde::Deserialize<'de> for unchanged_shared_object::UnchangedSharedObjectKind {
+impl<'de> serde::Deserialize<'de> for unchanged_consensus_object::UnchangedConsensusObjectKind {
     #[allow(deprecated)]
     fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
         const FIELDS: &[&str] = &[
-            "UNCHANGED_SHARED_OBJECT_KIND_UNKNOWN",
+            "UNCHANGED_CONSENSUS_OBJECT_KIND_UNKNOWN",
             "READ_ONLY_ROOT",
             "MUTATE_CONSENSUS_STREAM_ENDED",
             "READ_CONSENSUS_STREAM_ENDED",
@@ -22390,7 +22390,7 @@ impl<'de> serde::Deserialize<'de> for unchanged_shared_object::UnchangedSharedOb
         struct GeneratedVisitor;
 
         impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-            type Value = unchanged_shared_object::UnchangedSharedObjectKind;
+            type Value = unchanged_consensus_object::UnchangedConsensusObjectKind;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 write!(formatter, "expected one of: {:?}", &FIELDS)
@@ -22425,12 +22425,12 @@ impl<'de> serde::Deserialize<'de> for unchanged_shared_object::UnchangedSharedOb
                 E: serde::de::Error,
             {
                 match value {
-                    "UNCHANGED_SHARED_OBJECT_KIND_UNKNOWN" => Ok(unchanged_shared_object::UnchangedSharedObjectKind::Unknown),
-                    "READ_ONLY_ROOT" => Ok(unchanged_shared_object::UnchangedSharedObjectKind::ReadOnlyRoot),
-                    "MUTATE_CONSENSUS_STREAM_ENDED" => Ok(unchanged_shared_object::UnchangedSharedObjectKind::MutateConsensusStreamEnded),
-                    "READ_CONSENSUS_STREAM_ENDED" => Ok(unchanged_shared_object::UnchangedSharedObjectKind::ReadConsensusStreamEnded),
-                    "CANCELED" => Ok(unchanged_shared_object::UnchangedSharedObjectKind::Canceled),
-                    "PER_EPOCH_CONFIG" => Ok(unchanged_shared_object::UnchangedSharedObjectKind::PerEpochConfig),
+                    "UNCHANGED_CONSENSUS_OBJECT_KIND_UNKNOWN" => Ok(unchanged_consensus_object::UnchangedConsensusObjectKind::Unknown),
+                    "READ_ONLY_ROOT" => Ok(unchanged_consensus_object::UnchangedConsensusObjectKind::ReadOnlyRoot),
+                    "MUTATE_CONSENSUS_STREAM_ENDED" => Ok(unchanged_consensus_object::UnchangedConsensusObjectKind::MutateConsensusStreamEnded),
+                    "READ_CONSENSUS_STREAM_ENDED" => Ok(unchanged_consensus_object::UnchangedConsensusObjectKind::ReadConsensusStreamEnded),
+                    "CANCELED" => Ok(unchanged_consensus_object::UnchangedConsensusObjectKind::Canceled),
+                    "PER_EPOCH_CONFIG" => Ok(unchanged_consensus_object::UnchangedConsensusObjectKind::PerEpochConfig),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }

@@ -75,9 +75,9 @@ pub enum ExecutionStatus {
 ///                 =/ written-objects-too-large
 ///                 =/ certificate-denied
 ///                 =/ sui-move-verification-timedout
-///                 =/ shared-object-operation-not-allowed
+///                 =/ consensus-object-operation-not-allowed
 ///                 =/ input-object-deleted
-///                 =/ execution-canceled-due-to-shared-object-congestion
+///                 =/ execution-canceled-due-to-consensus-object-congestion
 ///                 =/ address-denied-for-coin
 ///                 =/ coin-type-global-pause
 ///                 =/ execution-canceled-due-to-randomness-unavailable
@@ -113,9 +113,9 @@ pub enum ExecutionStatus {
 /// written-objects-too-large                           = %x1c u64 u64
 /// certificate-denied                                  = %x1d
 /// sui-move-verification-timedout                      = %x1e
-/// shared-object-operation-not-allowed                 = %x1f
+/// consensus-object-operation-not-allowed                 = %x1f
 /// input-object-deleted                                = %x20
-/// execution-canceled-due-to-shared-object-congestion = %x21 (vector address)
+/// execution-canceled-due-to-consensus-object-congestion = %x21 (vector address)
 /// address-denied-for-coin                             = %x22 address string
 /// coin-type-global-pause                              = %x23 string
 /// execution-canceled-due-to-randomness-unavailable   = %x24
@@ -246,14 +246,14 @@ pub enum ExecutionError {
     /// Sui Move Bytecode verification timed out.
     SuiMoveVerificationTimedout,
 
-    /// The requested shared object operation is not allowed
-    SharedObjectOperationNotAllowed,
+    /// The requested consensus object operation is not allowed
+    ConsensusObjectOperationNotAllowed,
 
-    /// Requested shared object has been deleted
+    /// Requested consensus object has been deleted
     InputObjectDeleted,
 
-    /// Certificate is canceled due to congestion on shared objects
-    ExecutionCanceledDueToSharedObjectCongestion {
+    /// Certificate is canceled due to congestion on consensus objects
+    ExecutionCanceledDueToConsensusObjectCongestion {
         #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=1).lift()))]
         congested_objects: Vec<Address>,
     },
@@ -338,7 +338,7 @@ pub struct MoveLocation {
 ///                        =/ invalid-value-usage
 ///                        =/ invalid-object-by-value
 ///                        =/ invalid-object-by-mut-ref
-///                        =/ shared-object-operation-not-allowed
+///                        =/ consensus-object-operation-not-allowed
 ///
 /// type-mismatch                               = %x00
 /// invalid-bcs-bytes                           = %x01
@@ -351,7 +351,7 @@ pub struct MoveLocation {
 /// invalid-value-usage                         = %x08
 /// invalid-object-by-value                     = %x09
 /// invalid-object-by-mut-ref                   = %x0a
-/// shared-object-operation-not-allowed         = %x0b
+/// consensus-object-operation-not-allowed         = %x0b
 /// ```
 #[derive(Eq, PartialEq, Clone, Debug)]
 #[cfg_attr(
@@ -399,9 +399,9 @@ pub enum CommandArgumentError {
     /// Immutable objects cannot be passed by mutable reference, &mut.
     InvalidObjectByMutRef,
 
-    /// Shared object operations such a wrapping, freezing, or converting to owned are not
+    /// consensus object operations such a wrapping, freezing, or converting to owned are not
     /// allowed.
-    SharedObjectOperationNotAllowed,
+    ConsensusObjectOperationNotAllowed,
 
     /// Invalid argument arity. Expected a single argument but found a result that expanded to
     /// multiple arguments.

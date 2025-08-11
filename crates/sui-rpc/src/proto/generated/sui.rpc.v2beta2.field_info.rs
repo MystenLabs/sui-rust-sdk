@@ -402,11 +402,11 @@ mod _field_impls {
             number: 12i32,
             message_fields: Some(ChangedObject::FIELDS),
         };
-        pub const UNCHANGED_SHARED_OBJECTS_FIELD: &'static MessageField = &MessageField {
-            name: "unchanged_shared_objects",
-            json_name: "unchangedSharedObjects",
+        pub const UNCHANGED_CONSENSUS_OBJECTS_FIELD: &'static MessageField = &MessageField {
+            name: "unchanged_consensus_objects",
+            json_name: "unchangedConsensusObjects",
             number: 13i32,
-            message_fields: Some(UnchangedSharedObject::FIELDS),
+            message_fields: Some(UnchangedConsensusObject::FIELDS),
         };
         pub const AUXILIARY_DATA_DIGEST_FIELD: &'static MessageField = &MessageField {
             name: "auxiliary_data_digest",
@@ -429,7 +429,7 @@ mod _field_impls {
             Self::DEPENDENCIES_FIELD,
             Self::LAMPORT_VERSION_FIELD,
             Self::CHANGED_OBJECTS_FIELD,
-            Self::UNCHANGED_SHARED_OBJECTS_FIELD,
+            Self::UNCHANGED_CONSENSUS_OBJECTS_FIELD,
             Self::AUXILIARY_DATA_DIGEST_FIELD,
         ];
     }
@@ -516,7 +516,7 @@ mod _field_impls {
             Self::OBJECT_TYPE_FIELD,
         ];
     }
-    impl UnchangedSharedObject {
+    impl UnchangedConsensusObject {
         pub const KIND_FIELD: &'static MessageField = &MessageField {
             name: "kind",
             json_name: "kind",
@@ -548,7 +548,7 @@ mod _field_impls {
             message_fields: None,
         };
     }
-    impl MessageFields for UnchangedSharedObject {
+    impl MessageFields for UnchangedConsensusObject {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::KIND_FIELD,
             Self::OBJECT_ID_FIELD,

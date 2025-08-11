@@ -22,7 +22,7 @@ use crate::GasCostSummary;
 ///              (vector digest)                    ; list of transaction dependencies
 ///              u64                                ; lamport version
 ///              (vector changed-object)
-///              (vector unchanged-shared-object)
+///              (vector unchanged-consensus-object)
 ///              (option digest)                    ; auxiliary data digest
 /// ```
 #[derive(Eq, PartialEq, Clone, Debug)]
@@ -64,12 +64,12 @@ pub struct TransactionEffectsV2 {
     #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
     pub changed_objects: Vec<ChangedObject>,
 
-    /// Shared objects that are not mutated in this transaction. Unlike owned objects,
-    /// read-only shared objects' version are not committed in the transaction,
+    /// Consensus objects that are not mutated in this transaction. Unlike owned objects,
+    /// read-only consensus objects' version are not committed in the transaction,
     /// and in order for a node to catch up and execute it without consensus sequencing,
     /// the version needs to be committed in the effects.
     #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
-    pub unchanged_shared_objects: Vec<UnchangedSharedObject>,
+    pub unchanged_consensus_objects: Vec<UnchangedConsensusObject>,
 
     /// Auxiliary data that are not protocol-critical, generated as part of the effects but are stored separately.
     /// Storing it separately allows us to avoid bloating the effects with data that are not critical.
@@ -108,14 +108,14 @@ pub struct ChangedObject {
     pub id_operation: IdOperation,
 }
 
-/// A shared object that wasn't changed during execution
+/// A Consensus object that wasn't changed during execution
 ///
 /// # BCS
 ///
 /// The BCS serialized form for this type is defined by the following ABNF:
 ///
 /// ```text
-/// unchanged-shared-object = address unchanged-shared-object-kind
+/// unchanged-consensus-object = address unchanged-consensus-object-kind
 /// ```
 #[derive(Eq, PartialEq, Clone, Debug)]
 #[cfg_attr(
@@ -123,23 +123,23 @@ pub struct ChangedObject {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
-pub struct UnchangedSharedObject {
+pub struct UnchangedConsensusObject {
     pub object_id: Address,
-    pub kind: UnchangedSharedKind,
+    pub kind: UnchangedConsensusKind,
 }
 
-/// Type of unchanged shared object
+/// Type of unchanged consensus object
 ///
 /// # BCS
 ///
 /// The BCS serialized form for this type is defined by the following ABNF:
 ///
 /// ```text
-/// unchanged-shared-object-kind =  read-only-root
-///                              =/ mutate-deleted
-///                              =/ read-deleted
-///                              =/ canceled
-///                              =/ per-epoch-config
+/// unchanged-consensus-object-kind =  read-only-root
+///                                 =/ mutate-deleted
+///                                 =/ read-deleted
+///                                 =/ canceled
+///                                 =/ per-epoch-config
 ///
 /// read-only-root                           = %x00 u64 digest
 /// mutate-deleted                           = %x01 u64
@@ -154,18 +154,18 @@ pub struct UnchangedSharedObject {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
-pub enum UnchangedSharedKind {
-    /// Read-only shared objects from the input. We don't really need ObjectDigest
+pub enum UnchangedConsensusKind {
+    /// Read-only consensus objects from the input. We don't really need ObjectDigest
     /// for protocol correctness, but it will make it easier to verify untrusted read.
     ReadOnlyRoot { version: Version, digest: Digest },
 
-    /// Deleted shared objects that appear mutably/owned in the input.
+    /// Deleted consensus objects that appear mutably/owned in the input.
     MutateDeleted { version: Version },
 
-    /// Deleted shared objects that appear as read-only in the input.
+    /// Deleted consensus objects that appear as read-only in the input.
     ReadDeleted { version: Version },
 
-    /// Shared objects in canceled transaction. The sequence number embed cancellation reason.
+    /// Consensus objects in canceled transaction. The sequence number embed cancellation reason.
     Canceled { version: Version },
 
     /// Read of a per-epoch config object that should remain the same during an epoch.

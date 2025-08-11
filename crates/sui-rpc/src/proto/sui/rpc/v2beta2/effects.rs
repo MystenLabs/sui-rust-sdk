@@ -49,7 +49,7 @@ impl Merge<&TransactionEffects> for TransactionEffects {
             dependencies,
             lamport_version,
             changed_objects,
-            unchanged_shared_objects,
+            unchanged_consensus_objects,
             auxiliary_data_digest,
         }: &TransactionEffects,
         mask: &FieldMaskTree,
@@ -101,8 +101,8 @@ impl Merge<&TransactionEffects> for TransactionEffects {
             self.changed_objects = changed_objects.clone();
         }
 
-        if mask.contains(Self::UNCHANGED_SHARED_OBJECTS_FIELD.name) {
-            self.unchanged_shared_objects = unchanged_shared_objects.clone();
+        if mask.contains(Self::UNCHANGED_CONSENSUS_OBJECTS_FIELD.name) {
+            self.unchanged_consensus_objects = unchanged_consensus_objects.clone();
         }
 
         if mask.contains(Self::AUXILIARY_DATA_DIGEST_FIELD.name) {
@@ -136,7 +136,7 @@ impl Merge<&sui_sdk_types::TransactionEffectsV1> for TransactionEffects {
             epoch,
             gas_used,
             modified_at_versions,
-            shared_objects,
+            consensus_objects,
             transaction_digest,
             created,
             mutated,
@@ -179,11 +179,11 @@ impl Merge<&sui_sdk_types::TransactionEffectsV1> for TransactionEffects {
         }
 
         if mask.contains(Self::CHANGED_OBJECTS_FIELD.name)
-            || mask.contains(Self::UNCHANGED_SHARED_OBJECTS_FIELD.name)
+            || mask.contains(Self::UNCHANGED_CONSENSUS_OBJECTS_FIELD.name)
             || mask.contains(Self::GAS_OBJECT_FIELD.name)
         {
             let mut changed_objects = Vec::new();
-            let mut unchanged_shared_objects = Vec::new();
+            let mut unchanged_consensus_objects = Vec::new();
 
             for object in created {
                 let change = ChangedObject {
@@ -304,7 +304,7 @@ impl Merge<&sui_sdk_types::TransactionEffectsV1> for TransactionEffects {
                 }
             }
 
-            for object in shared_objects {
+            for object in consensus_objects {
                 let object_id = object.object_id().to_string();
                 let version = object.version();
                 let digest = object.digest().to_string();
@@ -316,9 +316,10 @@ impl Merge<&sui_sdk_types::TransactionEffectsV1> for TransactionEffects {
                     changed_object.input_version = Some(version);
                     changed_object.input_digest = Some(digest);
                 } else {
-                    let unchanged_shared_object = UnchangedSharedObject {
+                    let unchanged_consensus_object = UnchangedConsensusObject {
                         kind: Some(
-                            unchanged_shared_object::UnchangedSharedObjectKind::ReadOnlyRoot.into(),
+                            unchanged_consensus_object::UnchangedConsensusObjectKind::ReadOnlyRoot
+                                .into(),
                         ),
                         object_id: Some(object_id),
                         version: Some(version),
@@ -326,7 +327,7 @@ impl Merge<&sui_sdk_types::TransactionEffectsV1> for TransactionEffects {
                         object_type: None,
                     };
 
-                    unchanged_shared_objects.push(unchanged_shared_object);
+                    unchanged_consensus_objects.push(unchanged_consensus_object);
                 }
             }
 
@@ -342,8 +343,8 @@ impl Merge<&sui_sdk_types::TransactionEffectsV1> for TransactionEffects {
                 self.changed_objects = changed_objects;
             }
 
-            if mask.contains(Self::UNCHANGED_SHARED_OBJECTS_FIELD.name) {
-                self.unchanged_shared_objects = unchanged_shared_objects;
+            if mask.contains(Self::UNCHANGED_CONSENSUS_OBJECTS_FIELD.name) {
+                self.unchanged_consensus_objects = unchanged_consensus_objects;
             }
         }
     }
@@ -366,7 +367,7 @@ impl Merge<&sui_sdk_types::TransactionEffectsV2> for TransactionEffects {
             dependencies,
             lamport_version,
             changed_objects,
-            unchanged_shared_objects,
+            unchanged_consensus_objects,
             auxiliary_data_digest,
         }: &sui_sdk_types::TransactionEffectsV2,
         mask: &FieldMaskTree,
@@ -423,8 +424,8 @@ impl Merge<&sui_sdk_types::TransactionEffectsV2> for TransactionEffects {
             }
         }
 
-        if mask.contains(Self::UNCHANGED_SHARED_OBJECTS_FIELD.name) {
-            self.unchanged_shared_objects = unchanged_shared_objects
+        if mask.contains(Self::UNCHANGED_CONSENSUS_OBJECTS_FIELD.name) {
+            self.unchanged_consensus_objects = unchanged_consensus_objects
                 .clone()
                 .into_iter()
                 .map(Into::into)
@@ -618,13 +619,13 @@ impl TryFrom<changed_object::IdOperation> for sui_sdk_types::IdOperation {
 }
 
 //
-// UnchangedSharedObject
+// UnchangedConsensusObject
 //
 
-impl From<sui_sdk_types::UnchangedSharedObject> for UnchangedSharedObject {
-    fn from(value: sui_sdk_types::UnchangedSharedObject) -> Self {
-        use sui_sdk_types::UnchangedSharedKind::*;
-        use unchanged_shared_object::UnchangedSharedObjectKind;
+impl From<sui_sdk_types::UnchangedConsensusObject> for UnchangedConsensusObject {
+    fn from(value: sui_sdk_types::UnchangedConsensusObject) -> Self {
+        use sui_sdk_types::UnchangedConsensusKind::*;
+        use unchanged_consensus_object::UnchangedConsensusObjectKind;
 
         let mut message = Self {
             object_id: Some(value.object_id.to_string()),
@@ -635,24 +636,24 @@ impl From<sui_sdk_types::UnchangedSharedObject> for UnchangedSharedObject {
             ReadOnlyRoot { version, digest } => {
                 message.version = Some(version);
                 message.digest = Some(digest.to_string());
-                UnchangedSharedObjectKind::ReadOnlyRoot
+                UnchangedConsensusObjectKind::ReadOnlyRoot
             }
             MutateDeleted { version } => {
                 message.version = Some(version);
-                UnchangedSharedObjectKind::MutateConsensusStreamEnded
+                UnchangedConsensusObjectKind::MutateConsensusStreamEnded
             }
             ReadDeleted { version } => {
                 message.version = Some(version);
-                UnchangedSharedObjectKind::ReadConsensusStreamEnded
+                UnchangedConsensusObjectKind::ReadConsensusStreamEnded
             }
             Canceled { version } => {
                 message.version = Some(version);
-                UnchangedSharedObjectKind::Canceled
+                UnchangedConsensusObjectKind::Canceled
             }
-            PerEpochConfig => UnchangedSharedObjectKind::PerEpochConfig,
+            PerEpochConfig => UnchangedConsensusObjectKind::PerEpochConfig,
             PerEpochConfigWithSequenceNumber { version } => {
                 message.version = Some(version);
-                UnchangedSharedObjectKind::PerEpochConfig
+                UnchangedConsensusObjectKind::PerEpochConfig
             }
         };
 
@@ -661,29 +662,31 @@ impl From<sui_sdk_types::UnchangedSharedObject> for UnchangedSharedObject {
     }
 }
 
-impl TryFrom<&UnchangedSharedObject> for sui_sdk_types::UnchangedSharedObject {
+impl TryFrom<&UnchangedConsensusObject> for sui_sdk_types::UnchangedConsensusObject {
     type Error = TryFromProtoError;
 
-    fn try_from(value: &UnchangedSharedObject) -> Result<Self, Self::Error> {
-        use sui_sdk_types::UnchangedSharedKind;
-        use unchanged_shared_object::UnchangedSharedObjectKind;
+    fn try_from(value: &UnchangedConsensusObject) -> Result<Self, Self::Error> {
+        use sui_sdk_types::UnchangedConsensusKind;
+        use unchanged_consensus_object::UnchangedConsensusObjectKind;
 
         let object_id = value
             .object_id
             .as_ref()
             .ok_or_else(|| TryFromProtoError::missing("object_id"))?
             .parse()
-            .map_err(|e| TryFromProtoError::invalid(UnchangedSharedObject::OBJECT_ID_FIELD, e))?;
+            .map_err(|e| {
+                TryFromProtoError::invalid(UnchangedConsensusObject::OBJECT_ID_FIELD, e)
+            })?;
 
         let kind = match value.kind() {
-            UnchangedSharedObjectKind::Unknown => {
+            UnchangedConsensusObjectKind::Unknown => {
                 return Err(TryFromProtoError::invalid(
-                    UnchangedSharedObject::KIND_FIELD,
+                    UnchangedConsensusObject::KIND_FIELD,
                     "unknown InputKind",
                 ))
             }
 
-            UnchangedSharedObjectKind::ReadOnlyRoot => UnchangedSharedKind::ReadOnlyRoot {
+            UnchangedConsensusObjectKind::ReadOnlyRoot => UnchangedConsensusKind::ReadOnlyRoot {
                 version: value
                     .version
                     .ok_or_else(|| TryFromProtoError::missing("version"))?,
@@ -694,33 +697,33 @@ impl TryFrom<&UnchangedSharedObject> for sui_sdk_types::UnchangedSharedObject {
                     .ok_or_else(|| TryFromProtoError::missing("digest"))?
                     .parse()
                     .map_err(|e| {
-                        TryFromProtoError::invalid(UnchangedSharedObject::DIGEST_FIELD, e)
+                        TryFromProtoError::invalid(UnchangedConsensusObject::DIGEST_FIELD, e)
                     })?,
             },
-            UnchangedSharedObjectKind::MutateConsensusStreamEnded => {
-                UnchangedSharedKind::MutateDeleted {
+            UnchangedConsensusObjectKind::MutateConsensusStreamEnded => {
+                UnchangedConsensusKind::MutateDeleted {
                     version: value
                         .version
                         .ok_or_else(|| TryFromProtoError::missing("version"))?,
                 }
             }
-            UnchangedSharedObjectKind::ReadConsensusStreamEnded => {
-                UnchangedSharedKind::ReadDeleted {
+            UnchangedConsensusObjectKind::ReadConsensusStreamEnded => {
+                UnchangedConsensusKind::ReadDeleted {
                     version: value
                         .version
                         .ok_or_else(|| TryFromProtoError::missing("version"))?,
                 }
             }
-            UnchangedSharedObjectKind::Canceled => UnchangedSharedKind::Canceled {
+            UnchangedConsensusObjectKind::Canceled => UnchangedConsensusKind::Canceled {
                 version: value
                     .version
                     .ok_or_else(|| TryFromProtoError::missing("version"))?,
             },
-            UnchangedSharedObjectKind::PerEpochConfig => {
+            UnchangedConsensusObjectKind::PerEpochConfig => {
                 if let Some(version) = value.version {
-                    UnchangedSharedKind::PerEpochConfigWithSequenceNumber { version }
+                    UnchangedConsensusKind::PerEpochConfigWithSequenceNumber { version }
                 } else {
-                    UnchangedSharedKind::PerEpochConfig
+                    UnchangedConsensusKind::PerEpochConfig
                 }
             }
         };

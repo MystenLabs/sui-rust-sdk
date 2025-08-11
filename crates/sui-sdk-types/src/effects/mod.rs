@@ -9,8 +9,8 @@ pub use v2::IdOperation;
 pub use v2::ObjectIn;
 pub use v2::ObjectOut;
 pub use v2::TransactionEffectsV2;
-pub use v2::UnchangedSharedKind;
-pub use v2::UnchangedSharedObject;
+pub use v2::UnchangedConsensusKind;
+pub use v2::UnchangedConsensusObject;
 
 use crate::execution_status::ExecutionStatus;
 
