@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/*"]
+members = ["crates/*", "examples"]
 
 # pbjson-build is vendored with a patch to generate compliant protobuf json
 # bindings

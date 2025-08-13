@@ -34,6 +34,30 @@ In an effort to be modular, functionality is split between a number of crates.
     [![Documentation (latest release)](https://img.shields.io/badge/docs-latest-brightgreen)](https://docs.rs/sui-graphql-client)
     [![Documentation (master)](https://img.shields.io/badge/docs-master-59f)](https://mystenlabs.github.io/sui-rust-sdk/sui-graphql-client/)
 
+## Examples
+
+Runnable examples live in the top-level [examples](examples/) crate.
+
+| Example | Focus | What it shows |
+|---------|-------|---------------|
+| `graphql_basic.rs` | Core GraphQL reads | Connect to public testnet; fetch chain id, SUI balance for address `0x1`, first page of coins, latest checkpoint summary. |
+| `objects_read.rs` | Object listing | List objects owned by a demo address (first page) and debug-print the first object. |
+| `governance_basic.rs` | Network / governance data | Active validators (subset), reference gas price, protocol version, total transaction blocks. |
+| `transaction_build.rs` | Transaction construction | Build (but do not execute) a simple programmable transaction using `sui-transaction-builder`. |
+
+### Run examples
+
+From the repository root (network access required for GraphQL queries):
+
+```shell
+cargo run --example graphql_basic
+cargo run --example objects_read
+cargo run --example governance_basic
+cargo run --example transaction_build
+```
+
+Each example is small and self-contained; open the corresponding file under `examples/` to explore the code.
+
 ## License
 
 This project is available under the terms of the [Apache 2.0 license](LICENSE).
