@@ -31,8 +31,8 @@ where
     T: serde::Serialize + for<'de> serde::Deserialize<'de> + PartialEq + std::fmt::Debug,
 {
     // println!("{instance:?}");
-    let bcs_bytes = bcs::to_bytes(instance).unwrap();
-    let deser_from_bcs_bytes = bcs::from_bytes::<T>(&bcs_bytes).unwrap();
+    let bcs_bytes = instance.to_bcs_bytes().unwrap();
+    let deser_from_bcs_bytes = T::from_bcs_bytes(&bcs_bytes).unwrap();
     assert_eq!(instance, &deser_from_bcs_bytes);
 
     let json = serde_json::to_string(instance).unwrap();
