@@ -71,12 +71,7 @@ impl MultisigVerifier {
                     .ok_or_else(|| SignatureError::from_source("no zklogin verifier provided"))?;
 
                 // verify that the member identifier and the authenticator match
-                if zklogin_identifier
-                    != &zklogin_authenticator
-                        .inputs
-                        .public_identifier()
-                        .map_err(SignatureError::from_source)?
-                {
+                if zklogin_identifier != zklogin_authenticator.inputs.public_identifier() {
                     return Err(SignatureError::from_source(
                         "member zklogin identifier does not match signature",
                     ));
@@ -411,10 +406,7 @@ fn multisig_pubkey_and_signature_from_user_signature(
         )),
         #[cfg(feature = "zklogin")]
         UserSignature::ZkLogin(zklogin_authenticator) => {
-            let zklogin_identifier = zklogin_authenticator
-                .inputs
-                .public_identifier()
-                .map_err(SignatureError::from_source)?;
+            let zklogin_identifier = zklogin_authenticator.inputs.public_identifier().to_owned();
             Ok((
                 MultisigMemberPublicKey::ZkLogin(zklogin_identifier),
                 MultisigMemberSignature::ZkLogin(zklogin_authenticator),
