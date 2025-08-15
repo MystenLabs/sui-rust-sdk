@@ -257,7 +257,7 @@ impl VerifyingKey {
         let modulus = Base64UrlUnpadded::decode_vec(&jwk.n)
             .map_err(|e| SignatureError::from_source(e.to_string()))?;
 
-        let proof = zklogin_proof_to_arkworks(&inputs.proof_points).unwrap();
+        let proof = zklogin_proof_to_arkworks(inputs.proof_points()).unwrap();
         let input_hash = calculate_all_inputs_hash(inputs, signature, &modulus, max_epoch).unwrap();
 
         self.verify_proof(&proof, &[input_hash])
@@ -445,22 +445,23 @@ pub fn calculate_all_inputs_hash(
     modulus: &[u8],
     max_epoch: u64,
 ) -> Result<Fr, SignatureError> {
-    if inputs.header_base64.len() > MAX_HEADER_LEN as usize {
+    if inputs.header_base64().len() > MAX_HEADER_LEN as usize {
         return Err(SignatureError::from_source("header too long"));
     }
 
     let (first, second) = public_key_to_frs(signature);
 
-    let address_seed = bn254_to_fr(&inputs.address_seed);
+    let address_seed = bn254_to_fr(inputs.address_seed());
     let max_epoch_f = Fr::from_be_bytes_mod_order(U256::from(max_epoch).to_be().digits());
     let index_mod_4_f = Fr::from_be_bytes_mod_order(
-        U256::from(inputs.iss_base64_details.index_mod_4)
+        U256::from(inputs.iss_base64_details().index_mod_4)
             .to_be()
             .digits(),
     );
 
-    let iss_base64_f = hash_ascii_str_to_field(&inputs.iss_base64_details.value, MAX_ISS_LEN_B64)?;
-    let header_f = hash_ascii_str_to_field(&inputs.header_base64, MAX_HEADER_LEN)?;
+    let iss_base64_f =
+        hash_ascii_str_to_field(&inputs.iss_base64_details().value, MAX_ISS_LEN_B64)?;
+    let header_f = hash_ascii_str_to_field(inputs.header_base64(), MAX_HEADER_LEN)?;
     let modulus_f = hash_to_field(&[U2048::from_be_slice(modulus).unwrap()], 2048, PACK_WIDTH)?;
 
     POSEIDON

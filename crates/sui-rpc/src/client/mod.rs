@@ -79,7 +79,7 @@ impl Client {
         &self.uri
     }
 
-    pub fn ledger_client(&mut self) -> LedgerServiceClient<Channel> {
+    pub fn ledger_client(&mut self) -> LedgerServiceClient<Channel<'_>> {
         LedgerServiceClient::with_interceptor(&mut self.channel, &mut self.auth)
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
@@ -91,7 +91,7 @@ impl Client {
             })
     }
 
-    pub fn live_data_client(&mut self) -> LiveDataServiceClient<Channel> {
+    pub fn live_data_client(&mut self) -> LiveDataServiceClient<Channel<'_>> {
         LiveDataServiceClient::with_interceptor(&mut self.channel, &mut self.auth)
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
@@ -103,7 +103,7 @@ impl Client {
             })
     }
 
-    pub fn execution_client(&mut self) -> TransactionExecutionServiceClient<Channel> {
+    pub fn execution_client(&mut self) -> TransactionExecutionServiceClient<Channel<'_>> {
         TransactionExecutionServiceClient::with_interceptor(&mut self.channel, &mut self.auth)
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
@@ -115,7 +115,7 @@ impl Client {
             })
     }
 
-    pub fn package_client(&mut self) -> MovePackageServiceClient<Channel> {
+    pub fn package_client(&mut self) -> MovePackageServiceClient<Channel<'_>> {
         MovePackageServiceClient::with_interceptor(&mut self.channel, &mut self.auth)
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
@@ -127,7 +127,9 @@ impl Client {
             })
     }
 
-    pub fn signature_verification_client(&mut self) -> SignatureVerificationServiceClient<Channel> {
+    pub fn signature_verification_client(
+        &mut self,
+    ) -> SignatureVerificationServiceClient<Channel<'_>> {
         SignatureVerificationServiceClient::with_interceptor(&mut self.channel, &mut self.auth)
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
@@ -139,7 +141,7 @@ impl Client {
             })
     }
 
-    pub fn subscription_client(&mut self) -> SubscriptionServiceClient<Channel> {
+    pub fn subscription_client(&mut self) -> SubscriptionServiceClient<Channel<'_>> {
         SubscriptionServiceClient::with_interceptor(&mut self.channel, &mut self.auth)
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
