@@ -382,7 +382,6 @@ mod serialization {
         #[cfg(target_arch = "wasm32")]
         use wasm_bindgen_test::wasm_bindgen_test as test;
 
-        // TODO: Run test when other errors are fixed
         #[test]
         fn signed_checkpoint_fixture() {
             const FIXTURES: &[&str] = &[
