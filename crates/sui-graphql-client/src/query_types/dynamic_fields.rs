@@ -58,11 +58,6 @@ pub struct DynamicFieldArgs {
 }
 
 #[derive(cynic::QueryVariables, Debug)]
-pub struct DynamicFieldsQueryArgs {
-    pub address: Address,
-}
-
-#[derive(cynic::QueryVariables, Debug)]
 pub struct DynamicFieldConnectionArgs<'a> {
     pub address: Address,
     pub after: Option<&'a str>,
