@@ -127,7 +127,9 @@ impl Client {
             })
     }
 
-    pub fn signature_verification_client(&mut self) -> SignatureVerificationServiceClient<Channel<'_>> {
+    pub fn signature_verification_client(
+        &mut self,
+    ) -> SignatureVerificationServiceClient<Channel<'_>> {
         SignatureVerificationServiceClient::with_interceptor(&mut self.channel, &mut self.auth)
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
