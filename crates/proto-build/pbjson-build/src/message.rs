@@ -128,7 +128,7 @@ impl Message {
 
 /// Resolve the provided message descriptor into a slightly less obtuse representation
 ///
-/// Returns None if the provided message is auto-generated
+/// Returns None if the provided provided message is auto-generated
 pub fn resolve_message(
     descriptors: &DescriptorSet,
     message: &MessageDescriptor,
