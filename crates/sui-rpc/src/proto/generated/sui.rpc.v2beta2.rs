@@ -5788,7 +5788,7 @@ pub struct SystemState {
     /// Nonrefundable storage fees accumulated during safe_mode
     #[prost(uint64, optional, tag = "14")]
     pub safe_mode_non_refundable_storage_fee: ::core::option::Option<u64>,
-    /// Unix timestamp of when this this epoch started
+    /// Unix timestamp of when this epoch started
     #[prost(uint64, optional, tag = "15")]
     pub epoch_start_timestamp_ms: ::core::option::Option<u64>,
     /// Any extra fields that's not defined statically.
