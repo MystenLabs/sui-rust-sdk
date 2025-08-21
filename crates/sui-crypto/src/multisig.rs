@@ -423,6 +423,6 @@ fn multisig_pubkey_and_signature_from_user_signature(
             MultisigMemberSignature::Passkey(passkey_authenticator),
         )),
 
-        UserSignature::Multisig(_) => Err(SignatureError::from_source("invalid siganture scheme")),
+        UserSignature::Multisig(_) => Err(SignatureError::from_source("invalid signature scheme")),
     }
 }

@@ -5032,7 +5032,7 @@ pub struct VerifySignatureRequest {
     /// message is being verified.
     #[prost(message, optional, tag = "1")]
     pub message: ::core::option::Option<Bcs>,
-    /// The siganture to verify.
+    /// The signature to verify.
     #[prost(message, optional, tag = "2")]
     pub signature: ::core::option::Option<UserSignature>,
     /// Optional. Address to validate against the provided signature.
@@ -6750,7 +6750,7 @@ pub struct ExecuteTransactionRequest {
     /// The transaction to execute.
     #[prost(message, optional, tag = "1")]
     pub transaction: ::core::option::Option<Transaction>,
-    /// Set of `UserSiganture`s authorizing the execution of the provided
+    /// Set of `UserSignature' authorizing the execution of the provided
     /// transaction.
     #[prost(message, repeated, tag = "2")]
     pub signatures: ::prost::alloc::vec::Vec<UserSignature>,
