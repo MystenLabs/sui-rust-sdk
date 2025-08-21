@@ -22,7 +22,7 @@ message VerifySignatureRequest {
   // message is being verified.
   optional Bcs message = 1;
 
-  // The siganture to verify.
+  // The signature to verify.
   optional UserSignature signature = 2;
 
   // Optional. Address to validate against the provided signature.
