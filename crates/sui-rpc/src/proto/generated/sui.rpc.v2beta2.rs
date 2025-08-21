@@ -4714,7 +4714,7 @@ pub struct ProtocolConfig {
 /// A signature from a user.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct UserSignature {
-    /// This signature serialized as as BCS.
+    /// This signature serialized as BCS.
     ///
     /// When provided as input this will support both the form that is length
     /// prefixed as well as not length prefixed.
@@ -5037,7 +5037,7 @@ pub struct VerifySignatureRequest {
     pub signature: ::core::option::Option<UserSignature>,
     /// Optional. Address to validate against the provided signature.
     ///
-    /// If provided, this address will be compared against the the address derived
+    /// If provided, this address will be compared against the address derived
     /// from the provide signature and a successful response will only be returned
     /// if they match.
     #[prost(string, optional, tag = "3")]
