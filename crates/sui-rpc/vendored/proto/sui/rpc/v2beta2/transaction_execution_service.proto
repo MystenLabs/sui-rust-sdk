@@ -19,7 +19,7 @@ message ExecuteTransactionRequest {
   // The transaction to execute.
   optional Transaction transaction = 1;
 
-  // Set of `UserSiganture`s authorizing the execution of the provided
+  // Set of `UserSignatures authorizing the execution of the provided
   // transaction.
   repeated UserSignature signatures = 2;
 
