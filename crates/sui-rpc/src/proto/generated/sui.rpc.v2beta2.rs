@@ -5969,7 +5969,7 @@ pub struct Validator {
     /// uses to establish TLS connections
     #[prost(bytes = "bytes", optional, tag = "10")]
     pub network_public_key: ::core::option::Option<::prost::bytes::Bytes>,
-    /// The public key bytes correstponding to the Narwhal Worker
+    /// The public key bytes corresponding to the Narwhal Worker
     #[prost(bytes = "bytes", optional, tag = "12")]
     pub worker_public_key: ::core::option::Option<::prost::bytes::Bytes>,
     /// The network address of the validator (could also contain extra info such as port, DNS and etc.).

@@ -38,7 +38,7 @@ message ExecuteTransactionResponse {
 
 // Indicates the finality of the executed transaction.
 message TransactionFinality {
-  oneof finality {
+  one of finality {
     // A quorum certificate certifying that a transaction is final but might not
     // be included in a checkpoint yet.
     ValidatorAggregatedSignature certified = 1;

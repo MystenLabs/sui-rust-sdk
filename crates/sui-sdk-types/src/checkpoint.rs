@@ -135,7 +135,7 @@ pub struct CheckpointSummary {
 
     /// Timestamp of the checkpoint - number of milliseconds from the Unix epoch
     /// Checkpoint timestamps are monotonic, but not strongly monotonic - subsequent
-    /// checkpoints can have same timestamp if they originate from the same underlining consensus commit
+    /// checkpoints can have same timestamp if they originate from the same underlying consensus commit
     pub timestamp_ms: CheckpointTimestamp,
 
     /// Commitments to checkpoint-specific state.
@@ -243,7 +243,7 @@ pub struct CheckpointTransaction {
     pub transaction: SignedTransaction,
     /// The effects produced by executing this transaction
     pub effects: TransactionEffects,
-    /// The events, if any, emitted by this transaciton during execution
+    /// The events, if any, emitted by this transaction during execution
     pub events: Option<TransactionEvents>,
     /// The state of all inputs to this transaction as they were prior to execution.
     #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=1).lift()))]
