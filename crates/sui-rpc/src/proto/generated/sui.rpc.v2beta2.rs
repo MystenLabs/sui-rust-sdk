@@ -5032,7 +5032,7 @@ pub struct VerifySignatureRequest {
     /// message is being verified.
     #[prost(message, optional, tag = "1")]
     pub message: ::core::option::Option<Bcs>,
-    /// The siganture to verify.
+    /// The signature to verify.
     #[prost(message, optional, tag = "2")]
     pub signature: ::core::option::Option<UserSignature>,
     /// Optional. Address to validate against the provided signature.
