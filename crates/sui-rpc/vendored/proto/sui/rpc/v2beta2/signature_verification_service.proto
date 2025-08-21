@@ -27,7 +27,7 @@ message VerifySignatureRequest {
 
   // Optional. Address to validate against the provided signature.
   //
-  // If provided, this address will be compared against the the address derived
+  // If provided, this address will be compared against the address derived
   // from the provide signature and a successful response will only be returned
   // if they match.
   optional string address = 3;
