@@ -10,7 +10,7 @@ import "sui/rpc/v2beta2/signature_scheme.proto";
 
 // A signature from a user.
 message UserSignature {
-  // This signature serialized as as BCS.
+  // This signature serialized as BCS.
   //
   // When provided as input this will support both the form that is length
   // prefixed as well as not length prefixed.

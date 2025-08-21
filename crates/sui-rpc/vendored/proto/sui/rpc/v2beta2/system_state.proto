@@ -59,7 +59,7 @@ message SystemState {
   // Nonrefundable storage fees accumulated during safe_mode
   optional uint64 safe_mode_non_refundable_storage_fee = 14;
 
-  // Unix timestamp of when this this epoch started
+  // Unix timestamp of when this epoch started
   optional uint64 epoch_start_timestamp_ms = 15;
 
   // Any extra fields that's not defined statically.

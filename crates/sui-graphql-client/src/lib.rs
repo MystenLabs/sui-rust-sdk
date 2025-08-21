@@ -322,7 +322,7 @@ impl Client {
         Self::new(LOCAL_HOST).expect("Invalid localhost URL")
     }
 
-    /// Set the server address for the GraphQL GraphQL client. It should be a valid URL with a host and
+    /// Set the server address for the GraphQL client. It should be a valid URL with a host and
     /// optionally a port number.
     pub fn set_rpc_server(&mut self, server: &str) -> Result<()> {
         let rpc = reqwest::Url::parse(server)?;

@@ -95,7 +95,7 @@ impl TransactionBuilder {
     /// Add one or more gas objects to use to pay for the transaction.
     ///
     /// Most commonly the gas can be passed as a reference to an owned/immutable `Object`,
-    /// or can created using one of the of the constructors of the [`unresolved::Input`] enum,
+    /// or can created using one of the constructors of the [`unresolved::Input`] enum,
     /// e.g., [`unresolved::Input::owned`].
     pub fn add_gas_objects<O, I>(&mut self, gas: I)
     where

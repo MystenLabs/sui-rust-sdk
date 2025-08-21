@@ -4714,7 +4714,7 @@ pub struct ProtocolConfig {
 /// A signature from a user.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct UserSignature {
-    /// This signature serialized as as BCS.
+    /// This signature serialized as BCS.
     ///
     /// When provided as input this will support both the form that is length
     /// prefixed as well as not length prefixed.
@@ -5037,7 +5037,7 @@ pub struct VerifySignatureRequest {
     pub signature: ::core::option::Option<UserSignature>,
     /// Optional. Address to validate against the provided signature.
     ///
-    /// If provided, this address will be compared against the the address derived
+    /// If provided, this address will be compared against the address derived
     /// from the provide signature and a successful response will only be returned
     /// if they match.
     #[prost(string, optional, tag = "3")]
@@ -5788,7 +5788,7 @@ pub struct SystemState {
     /// Nonrefundable storage fees accumulated during safe_mode
     #[prost(uint64, optional, tag = "14")]
     pub safe_mode_non_refundable_storage_fee: ::core::option::Option<u64>,
-    /// Unix timestamp of when this this epoch started
+    /// Unix timestamp of when this epoch started
     #[prost(uint64, optional, tag = "15")]
     pub epoch_start_timestamp_ms: ::core::option::Option<u64>,
     /// Any extra fields that's not defined statically.
