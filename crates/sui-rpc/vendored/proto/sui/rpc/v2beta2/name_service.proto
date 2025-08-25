@@ -1,0 +1,33 @@
+// Copyright (c) Mysten Labs, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package sui.rpc.v2beta2;
+
+service NameService {
+  rpc LookupName(LookupNameRequest) returns (LookupNameResponse);
+  rpc ReverseLookupName(ReverseLookupNameRequest) returns (ReverseLookupNameResponse);
+}
+
+message LookupNameRequest {
+  // Required. The SuiNS name to lookup.
+  //
+  // Supports both `@name` as well as `name.sui` formats.
+  optional string name = 1;
+}
+
+message LookupNameResponse {
+  // The linked address
+  optional string address = 1;
+}
+
+message ReverseLookupNameRequest {
+  // Required. The address to perform a reverse lookup for.
+  optional string address = 1;
+}
+
+message ReverseLookupNameResponse {
+  // The linked SuiNS name
+  optional string name = 1;
+}

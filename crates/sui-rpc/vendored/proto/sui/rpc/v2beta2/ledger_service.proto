@@ -116,7 +116,7 @@ message BatchGetTransactionsRequest {
   repeated string digests = 1;
 
   // Mask specifying which fields to read.
-  // If no mask is specified, defaults to `object_id,version,digest`.
+  // If no mask is specified, defaults to `digest`.
   optional google.protobuf.FieldMask read_mask = 2;
 }
 
@@ -142,7 +142,7 @@ message GetCheckpointRequest {
   }
 
   // Mask specifying which fields to read.
-  // If no mask is specified, defaults to `object_id,version,digest`.
+  // If no mask is specified, defaults to `sequence_number,digest`.
   optional google.protobuf.FieldMask read_mask = 3;
 }
 

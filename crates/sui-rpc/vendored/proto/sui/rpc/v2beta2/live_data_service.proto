@@ -168,6 +168,8 @@ message ListDynamicFieldsRequest {
   // match the call that provided the page token.
   optional bytes page_token = 3;
 
+  // Mask specifying which fields to read.
+  // If no mask is specified, defaults to `parent,field_id`.
   optional google.protobuf.FieldMask read_mask = 4;
 }
 
@@ -222,6 +224,8 @@ message DynamicField {
 
 message SimulateTransactionRequest {
   optional Transaction transaction = 1;
+
+  // Mask specifying which fields to read.
   optional google.protobuf.FieldMask read_mask = 2;
 
   // buf:lint:ignore ENUM_ZERO_VALUE_SUFFIX
@@ -275,6 +279,8 @@ message ListOwnedObjectsRequest {
   // match the call that provided the page token.
   optional bytes page_token = 3;
 
+  // Mask specifying which fields to read.
+  // If no mask is specified, defaults to `object_id,version,object_type`.
   optional google.protobuf.FieldMask read_mask = 4;
 
   // Optional type filter to limit the types of objects listed.
