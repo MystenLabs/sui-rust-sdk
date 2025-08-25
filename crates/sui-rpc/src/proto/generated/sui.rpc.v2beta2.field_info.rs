@@ -2633,6 +2633,28 @@ mod _field_impls {
             Self::VERSION_FIELD,
         ];
     }
+    impl LookupNameRequest {
+        pub const NAME_FIELD: &'static MessageField = &MessageField {
+            name: "name",
+            json_name: "name",
+            number: 1i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for LookupNameRequest {
+        const FIELDS: &'static [&'static MessageField] = &[Self::NAME_FIELD];
+    }
+    impl LookupNameResponse {
+        pub const ADDRESS_FIELD: &'static MessageField = &MessageField {
+            name: "address",
+            json_name: "address",
+            number: 1i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for LookupNameResponse {
+        const FIELDS: &'static [&'static MessageField] = &[Self::ADDRESS_FIELD];
+    }
     impl Object {
         pub const BCS_FIELD: &'static MessageField = &MessageField {
             name: "bcs",

@@ -13,6 +13,8 @@ import "sui/rpc/v2beta2/transaction.proto";
 
 service TransactionExecutionService {
   rpc ExecuteTransaction(ExecuteTransactionRequest) returns (ExecuteTransactionResponse);
+  // TODO move simulate transaction here for GA release
+  //rpc SimulateTransaction(SimulateTransactionRequest) returns (SimulateTransactionResponse);
 }
 
 message ExecuteTransactionRequest {
