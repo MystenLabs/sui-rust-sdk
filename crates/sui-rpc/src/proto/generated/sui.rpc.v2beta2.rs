@@ -4586,9 +4586,9 @@ pub struct LookupNameRequest {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct LookupNameResponse {
-    /// The linked address
-    #[prost(string, optional, tag = "1")]
-    pub address: ::core::option::Option<::prost::alloc::string::String>,
+    /// The record for the requested name
+    #[prost(message, optional, tag = "1")]
+    pub record: ::core::option::Option<NameRecord>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ReverseLookupNameRequest {
@@ -4598,9 +4598,45 @@ pub struct ReverseLookupNameRequest {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ReverseLookupNameResponse {
-    /// The linked SuiNS name
+    /// The record for the SuiNS name linked to the requested address
+    #[prost(message, optional, tag = "1")]
+    pub record: ::core::option::Option<NameRecord>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct NameRecord {
+    /// Id of this record.
+    ///
+    /// Note that records are stored on chain as dynamic fields of the type
+    /// `Field<Domain,NameRecord>`.
     #[prost(string, optional, tag = "1")]
+    pub id: ::core::option::Option<::prost::alloc::string::String>,
+    /// The SuiNS name of this record
+    #[prost(string, optional, tag = "2")]
     pub name: ::core::option::Option<::prost::alloc::string::String>,
+    /// The ID of the `RegistrationNFT` assigned to this record.
+    ///
+    /// The owner of the corrisponding `RegistrationNFT` has the rights to
+    /// be able to change and adjust the `target_address` of this domain.
+    ///
+    /// It is possible that the ID changes if the record expires and is
+    /// purchased by someone else.
+    #[prost(string, optional, tag = "3")]
+    pub registration_nft_id: ::core::option::Option<::prost::alloc::string::String>,
+    /// Timestamp when the record expires.
+    ///
+    /// This is either the expiration of the record itself or the expiration of
+    /// this record's parent if this is a leaf record.
+    #[prost(message, optional, tag = "4")]
+    pub expiration_timestamp: ::core::option::Option<::prost_types::Timestamp>,
+    /// The target address that this name points to
+    #[prost(string, optional, tag = "5")]
+    pub target_address: ::core::option::Option<::prost::alloc::string::String>,
+    /// Additional data which may be stored in a record
+    #[prost(map = "string, string", tag = "6")]
+    pub data: ::std::collections::HashMap<
+        ::prost::alloc::string::String,
+        ::prost::alloc::string::String,
+    >,
 }
 /// Generated client implementations.
 pub mod name_service_client {
