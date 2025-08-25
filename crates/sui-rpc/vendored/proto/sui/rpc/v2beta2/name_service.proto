@@ -7,6 +7,7 @@ package sui.rpc.v2beta2;
 
 service NameService {
   rpc LookupName(LookupNameRequest) returns (LookupNameResponse);
+  rpc ReverseLookupName(ReverseLookupNameRequest) returns (ReverseLookupNameResponse);
 }
 
 message LookupNameRequest {
@@ -19,4 +20,14 @@ message LookupNameRequest {
 message LookupNameResponse {
   // The linked address
   optional string address = 1;
+}
+
+message ReverseLookupNameRequest {
+  // Required. The address to perform a reverse lookup for.
+  optional string address = 1;
+}
+
+message ReverseLookupNameResponse {
+  // The linked SuiNS name
+  optional string name = 1;
 }

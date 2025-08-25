@@ -2655,6 +2655,28 @@ mod _field_impls {
     impl MessageFields for LookupNameResponse {
         const FIELDS: &'static [&'static MessageField] = &[Self::ADDRESS_FIELD];
     }
+    impl ReverseLookupNameRequest {
+        pub const ADDRESS_FIELD: &'static MessageField = &MessageField {
+            name: "address",
+            json_name: "address",
+            number: 1i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for ReverseLookupNameRequest {
+        const FIELDS: &'static [&'static MessageField] = &[Self::ADDRESS_FIELD];
+    }
+    impl ReverseLookupNameResponse {
+        pub const NAME_FIELD: &'static MessageField = &MessageField {
+            name: "name",
+            json_name: "name",
+            number: 1i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for ReverseLookupNameResponse {
+        const FIELDS: &'static [&'static MessageField] = &[Self::NAME_FIELD];
+    }
     impl Object {
         pub const BCS_FIELD: &'static MessageField = &MessageField {
             name: "bcs",
