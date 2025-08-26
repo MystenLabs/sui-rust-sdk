@@ -15786,7 +15786,7 @@ impl<'de> serde::Deserialize<'de> for NameRecord {
                                 return Err(serde::de::Error::duplicate_field("data"));
                             }
                             data__ = Some(
-                                map_.next_value::<std::collections::HashMap<_, _>>()?
+                                map_.next_value::<std::collections::BTreeMap<_, _>>()?
                             );
                         }
                         GeneratedField::__SkipField__ => {
@@ -17858,7 +17858,7 @@ impl<'de> serde::Deserialize<'de> for ProtocolConfig {
                                 return Err(serde::de::Error::duplicate_field("featureFlags"));
                             }
                             feature_flags__ = Some(
-                                map_.next_value::<std::collections::HashMap<_, _>>()?
+                                map_.next_value::<std::collections::BTreeMap<_, _>>()?
                             );
                         }
                         GeneratedField::Attributes => {
@@ -17866,7 +17866,7 @@ impl<'de> serde::Deserialize<'de> for ProtocolConfig {
                                 return Err(serde::de::Error::duplicate_field("attributes"));
                             }
                             attributes__ = Some(
-                                map_.next_value::<std::collections::HashMap<_, _>>()?
+                                map_.next_value::<std::collections::BTreeMap<_, _>>()?
                             );
                         }
                         GeneratedField::__SkipField__ => {
@@ -24707,7 +24707,7 @@ impl serde::Serialize for ValidatorSet {
             struct_ser.serialize_field("validatorCandidates", v)?;
         }
         if !self.at_risk_validators.is_empty() {
-            let v: std::collections::HashMap<_, _> = self.at_risk_validators.iter()
+            let v: std::collections::BTreeMap<_, _> = self.at_risk_validators.iter()
                 .map(|(k, v)| (k, v.to_string())).collect();
             struct_ser.serialize_field("atRiskValidators", &v)?;
         }
@@ -24870,7 +24870,7 @@ impl<'de> serde::Deserialize<'de> for ValidatorSet {
                                 return Err(serde::de::Error::duplicate_field("atRiskValidators"));
                             }
                             at_risk_validators__ = Some(
-                                map_.next_value::<std::collections::HashMap<_, crate::_serde::NumberDeserialize<u64>>>()?
+                                map_.next_value::<std::collections::BTreeMap<_, crate::_serde::NumberDeserialize<u64>>>()?
                                     .into_iter().map(|(k,v)| (k, v.0)).collect()
                             );
                         }

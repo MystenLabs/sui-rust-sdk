@@ -4747,8 +4747,8 @@ pub struct NameRecord {
     #[prost(string, optional, tag = "5")]
     pub target_address: ::core::option::Option<::prost::alloc::string::String>,
     /// Additional data which may be stored in a record
-    #[prost(map = "string, string", tag = "6")]
-    pub data: ::std::collections::HashMap<
+    #[prost(btree_map = "string, string", tag = "6")]
+    pub data: ::prost::alloc::collections::BTreeMap<
         ::prost::alloc::string::String,
         ::prost::alloc::string::String,
     >,
@@ -5268,10 +5268,13 @@ pub mod owner {
 pub struct ProtocolConfig {
     #[prost(uint64, optional, tag = "1")]
     pub protocol_version: ::core::option::Option<u64>,
-    #[prost(map = "string, bool", tag = "2")]
-    pub feature_flags: ::std::collections::HashMap<::prost::alloc::string::String, bool>,
-    #[prost(map = "string, string", tag = "3")]
-    pub attributes: ::std::collections::HashMap<
+    #[prost(btree_map = "string, bool", tag = "2")]
+    pub feature_flags: ::prost::alloc::collections::BTreeMap<
+        ::prost::alloc::string::String,
+        bool,
+    >,
+    #[prost(btree_map = "string, string", tag = "3")]
+    pub attributes: ::prost::alloc::collections::BTreeMap<
         ::prost::alloc::string::String,
         ::prost::alloc::string::String,
     >,
@@ -6527,8 +6530,8 @@ pub struct ValidatorSet {
     #[prost(message, optional, tag = "7")]
     pub validator_candidates: ::core::option::Option<MoveTable>,
     /// Table storing the number of epochs during which a validator's stake has been below the low stake threshold.
-    #[prost(map = "string, uint64", tag = "8")]
-    pub at_risk_validators: ::std::collections::HashMap<
+    #[prost(btree_map = "string, uint64", tag = "8")]
+    pub at_risk_validators: ::prost::alloc::collections::BTreeMap<
         ::prost::alloc::string::String,
         u64,
     >,

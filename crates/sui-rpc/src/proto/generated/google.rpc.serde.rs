@@ -475,7 +475,7 @@ impl<'de> serde::Deserialize<'de> for ErrorInfo {
                                 return Err(serde::de::Error::duplicate_field("metadata"));
                             }
                             metadata__ = Some(
-                                map_.next_value::<std::collections::HashMap<_, _>>()?
+                                map_.next_value::<std::collections::BTreeMap<_, _>>()?
                             );
                         }
                         GeneratedField::__SkipField__ => {

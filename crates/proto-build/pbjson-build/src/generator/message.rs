@@ -288,7 +288,7 @@ fn write_serialize_variable<W: Write>(
         {
             writeln!(
                 writer,
-                "{}let v: std::collections::HashMap<_, _> = {}.iter()",
+                "{}let v: std::collections::BTreeMap<_, _> = {}.iter()",
                 Indent(indent),
                 variable.raw
             )?;
