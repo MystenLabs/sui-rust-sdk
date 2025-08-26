@@ -291,19 +291,12 @@ impl TryFrom<&ZkLoginProof> for sui_sdk_types::ZkLoginProof {
 //
 
 impl From<sui_sdk_types::ZkLoginInputs> for ZkLoginInputs {
-    fn from(
-        sui_sdk_types::ZkLoginInputs {
-            proof_points,
-            iss_base64_details,
-            header_base64,
-            address_seed,
-        }: sui_sdk_types::ZkLoginInputs,
-    ) -> Self {
+    fn from(value: sui_sdk_types::ZkLoginInputs) -> Self {
         Self {
-            proof_points: Some(proof_points.into()),
-            iss_base64_details: Some(iss_base64_details.into()),
-            header_base64: Some(header_base64),
-            address_seed: Some(address_seed.to_string()),
+            proof_points: Some(value.proof_points().clone().into()),
+            iss_base64_details: Some(value.iss_base64_details().clone().into()),
+            header_base64: Some(value.header_base64().into()),
+            address_seed: Some(value.address_seed().to_string()),
         }
     }
 }
@@ -334,12 +327,13 @@ impl TryFrom<&ZkLoginInputs> for sui_sdk_types::ZkLoginInputs {
             .parse()
             .map_err(|e| TryFromProtoError::invalid(ZkLoginInputs::ADDRESS_SEED_FIELD, e))?;
 
-        Ok(Self {
+        Self::new(
             proof_points,
             iss_base64_details,
             header_base64,
             address_seed,
-        })
+        )
+        .map_err(|e| TryFromProtoError::invalid("inputs", e))
     }
 }
 

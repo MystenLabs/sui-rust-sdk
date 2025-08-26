@@ -38,6 +38,7 @@ pub use validator::ValidatorSignature;
 pub use zklogin::Bn254FieldElement;
 pub use zklogin::CircomG1;
 pub use zklogin::CircomG2;
+pub use zklogin::InvalidZkLoginAuthenticatorError;
 pub use zklogin::Jwk;
 pub use zklogin::JwkId;
 pub use zklogin::ZkLoginAuthenticator;

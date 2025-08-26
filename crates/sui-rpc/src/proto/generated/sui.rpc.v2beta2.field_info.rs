@@ -2633,6 +2633,98 @@ mod _field_impls {
             Self::VERSION_FIELD,
         ];
     }
+    impl LookupNameRequest {
+        pub const NAME_FIELD: &'static MessageField = &MessageField {
+            name: "name",
+            json_name: "name",
+            number: 1i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for LookupNameRequest {
+        const FIELDS: &'static [&'static MessageField] = &[Self::NAME_FIELD];
+    }
+    impl LookupNameResponse {
+        pub const RECORD_FIELD: &'static MessageField = &MessageField {
+            name: "record",
+            json_name: "record",
+            number: 1i32,
+            message_fields: Some(NameRecord::FIELDS),
+        };
+    }
+    impl MessageFields for LookupNameResponse {
+        const FIELDS: &'static [&'static MessageField] = &[Self::RECORD_FIELD];
+    }
+    impl ReverseLookupNameRequest {
+        pub const ADDRESS_FIELD: &'static MessageField = &MessageField {
+            name: "address",
+            json_name: "address",
+            number: 1i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for ReverseLookupNameRequest {
+        const FIELDS: &'static [&'static MessageField] = &[Self::ADDRESS_FIELD];
+    }
+    impl ReverseLookupNameResponse {
+        pub const RECORD_FIELD: &'static MessageField = &MessageField {
+            name: "record",
+            json_name: "record",
+            number: 1i32,
+            message_fields: Some(NameRecord::FIELDS),
+        };
+    }
+    impl MessageFields for ReverseLookupNameResponse {
+        const FIELDS: &'static [&'static MessageField] = &[Self::RECORD_FIELD];
+    }
+    impl NameRecord {
+        pub const ID_FIELD: &'static MessageField = &MessageField {
+            name: "id",
+            json_name: "id",
+            number: 1i32,
+            message_fields: None,
+        };
+        pub const NAME_FIELD: &'static MessageField = &MessageField {
+            name: "name",
+            json_name: "name",
+            number: 2i32,
+            message_fields: None,
+        };
+        pub const REGISTRATION_NFT_ID_FIELD: &'static MessageField = &MessageField {
+            name: "registration_nft_id",
+            json_name: "registrationNftId",
+            number: 3i32,
+            message_fields: None,
+        };
+        pub const EXPIRATION_TIMESTAMP_FIELD: &'static MessageField = &MessageField {
+            name: "expiration_timestamp",
+            json_name: "expirationTimestamp",
+            number: 4i32,
+            message_fields: None,
+        };
+        pub const TARGET_ADDRESS_FIELD: &'static MessageField = &MessageField {
+            name: "target_address",
+            json_name: "targetAddress",
+            number: 5i32,
+            message_fields: None,
+        };
+        pub const DATA_FIELD: &'static MessageField = &MessageField {
+            name: "data",
+            json_name: "data",
+            number: 6i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for NameRecord {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::ID_FIELD,
+            Self::NAME_FIELD,
+            Self::REGISTRATION_NFT_ID_FIELD,
+            Self::EXPIRATION_TIMESTAMP_FIELD,
+            Self::TARGET_ADDRESS_FIELD,
+            Self::DATA_FIELD,
+        ];
+    }
     impl Object {
         pub const BCS_FIELD: &'static MessageField = &MessageField {
             name: "bcs",

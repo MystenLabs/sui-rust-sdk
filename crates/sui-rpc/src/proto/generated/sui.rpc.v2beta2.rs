@@ -1547,7 +1547,7 @@ pub struct BatchGetTransactionsRequest {
     #[prost(string, repeated, tag = "1")]
     pub digests: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
     /// Mask specifying which fields to read.
-    /// If no mask is specified, defaults to `object_id,version,digest`.
+    /// If no mask is specified, defaults to `digest`.
     #[prost(message, optional, tag = "2")]
     pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
 }
@@ -1574,7 +1574,7 @@ pub mod get_transaction_result {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetCheckpointRequest {
     /// Mask specifying which fields to read.
-    /// If no mask is specified, defaults to `object_id,version,digest`.
+    /// If no mask is specified, defaults to `sequence_number,digest`.
     #[prost(message, optional, tag = "3")]
     pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
     /// If neither is provided, return the latest
@@ -2591,6 +2591,8 @@ pub struct ListDynamicFieldsRequest {
     /// match the call that provided the page token.
     #[prost(bytes = "bytes", optional, tag = "3")]
     pub page_token: ::core::option::Option<::prost::bytes::Bytes>,
+    /// Mask specifying which fields to read.
+    /// If no mask is specified, defaults to `parent,field_id`.
     #[prost(message, optional, tag = "4")]
     pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
 }
@@ -2685,6 +2687,7 @@ pub mod dynamic_field {
 pub struct SimulateTransactionRequest {
     #[prost(message, optional, tag = "1")]
     pub transaction: ::core::option::Option<Transaction>,
+    /// Mask specifying which fields to read.
     #[prost(message, optional, tag = "2")]
     pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
     /// Specify whether checks should be ENABLED (default) or DISABLED while executing the transaction
@@ -2783,6 +2786,8 @@ pub struct ListOwnedObjectsRequest {
     /// match the call that provided the page token.
     #[prost(bytes = "bytes", optional, tag = "3")]
     pub page_token: ::core::option::Option<::prost::bytes::Bytes>,
+    /// Mask specifying which fields to read.
+    /// If no mask is specified, defaults to `object_id,version,object_type`.
     #[prost(message, optional, tag = "4")]
     pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
     /// Optional type filter to limit the types of objects listed.
@@ -4572,6 +4577,446 @@ pub mod move_package_service_server {
     /// Generated gRPC service name
     pub const SERVICE_NAME: &str = "sui.rpc.v2beta2.MovePackageService";
     impl<T> tonic::server::NamedService for MovePackageServiceServer<T> {
+        const NAME: &'static str = SERVICE_NAME;
+    }
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct LookupNameRequest {
+    /// Required. The SuiNS name to lookup.
+    ///
+    /// Supports both `@name` as well as `name.sui` formats.
+    #[prost(string, optional, tag = "1")]
+    pub name: ::core::option::Option<::prost::alloc::string::String>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct LookupNameResponse {
+    /// The record for the requested name
+    #[prost(message, optional, tag = "1")]
+    pub record: ::core::option::Option<NameRecord>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ReverseLookupNameRequest {
+    /// Required. The address to perform a reverse lookup for.
+    #[prost(string, optional, tag = "1")]
+    pub address: ::core::option::Option<::prost::alloc::string::String>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ReverseLookupNameResponse {
+    /// The record for the SuiNS name linked to the requested address
+    #[prost(message, optional, tag = "1")]
+    pub record: ::core::option::Option<NameRecord>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct NameRecord {
+    /// Id of this record.
+    ///
+    /// Note that records are stored on chain as dynamic fields of the type
+    /// `Field<Domain,NameRecord>`.
+    #[prost(string, optional, tag = "1")]
+    pub id: ::core::option::Option<::prost::alloc::string::String>,
+    /// The SuiNS name of this record
+    #[prost(string, optional, tag = "2")]
+    pub name: ::core::option::Option<::prost::alloc::string::String>,
+    /// The ID of the `RegistrationNFT` assigned to this record.
+    ///
+    /// The owner of the corrisponding `RegistrationNFT` has the rights to
+    /// be able to change and adjust the `target_address` of this domain.
+    ///
+    /// It is possible that the ID changes if the record expires and is
+    /// purchased by someone else.
+    #[prost(string, optional, tag = "3")]
+    pub registration_nft_id: ::core::option::Option<::prost::alloc::string::String>,
+    /// Timestamp when the record expires.
+    ///
+    /// This is either the expiration of the record itself or the expiration of
+    /// this record's parent if this is a leaf record.
+    #[prost(message, optional, tag = "4")]
+    pub expiration_timestamp: ::core::option::Option<::prost_types::Timestamp>,
+    /// The target address that this name points to
+    #[prost(string, optional, tag = "5")]
+    pub target_address: ::core::option::Option<::prost::alloc::string::String>,
+    /// Additional data which may be stored in a record
+    #[prost(map = "string, string", tag = "6")]
+    pub data: ::std::collections::HashMap<
+        ::prost::alloc::string::String,
+        ::prost::alloc::string::String,
+    >,
+}
+/// Generated client implementations.
+pub mod name_service_client {
+    #![allow(
+        unused_variables,
+        dead_code,
+        missing_docs,
+        clippy::wildcard_imports,
+        clippy::let_unit_value,
+    )]
+    use tonic::codegen::*;
+    use tonic::codegen::http::Uri;
+    #[derive(Debug, Clone)]
+    pub struct NameServiceClient<T> {
+        inner: tonic::client::Grpc<T>,
+    }
+    impl NameServiceClient<tonic::transport::Channel> {
+        /// Attempt to create a new client by connecting to a given endpoint.
+        pub async fn connect<D>(dst: D) -> Result<Self, tonic::transport::Error>
+        where
+            D: TryInto<tonic::transport::Endpoint>,
+            D::Error: Into<StdError>,
+        {
+            let conn = tonic::transport::Endpoint::new(dst)?.connect().await?;
+            Ok(Self::new(conn))
+        }
+    }
+    impl<T> NameServiceClient<T>
+    where
+        T: tonic::client::GrpcService<tonic::body::Body>,
+        T::Error: Into<StdError>,
+        T::ResponseBody: Body<Data = Bytes> + std::marker::Send + 'static,
+        <T::ResponseBody as Body>::Error: Into<StdError> + std::marker::Send,
+    {
+        pub fn new(inner: T) -> Self {
+            let inner = tonic::client::Grpc::new(inner);
+            Self { inner }
+        }
+        pub fn with_origin(inner: T, origin: Uri) -> Self {
+            let inner = tonic::client::Grpc::with_origin(inner, origin);
+            Self { inner }
+        }
+        pub fn with_interceptor<F>(
+            inner: T,
+            interceptor: F,
+        ) -> NameServiceClient<InterceptedService<T, F>>
+        where
+            F: tonic::service::Interceptor,
+            T::ResponseBody: Default,
+            T: tonic::codegen::Service<
+                http::Request<tonic::body::Body>,
+                Response = http::Response<
+                    <T as tonic::client::GrpcService<tonic::body::Body>>::ResponseBody,
+                >,
+            >,
+            <T as tonic::codegen::Service<
+                http::Request<tonic::body::Body>,
+            >>::Error: Into<StdError> + std::marker::Send + std::marker::Sync,
+        {
+            NameServiceClient::new(InterceptedService::new(inner, interceptor))
+        }
+        /// Compress requests with the given encoding.
+        ///
+        /// This requires the server to support it otherwise it might respond with an
+        /// error.
+        #[must_use]
+        pub fn send_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.inner = self.inner.send_compressed(encoding);
+            self
+        }
+        /// Enable decompressing responses.
+        #[must_use]
+        pub fn accept_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.inner = self.inner.accept_compressed(encoding);
+            self
+        }
+        /// Limits the maximum size of a decoded message.
+        ///
+        /// Default: `4MB`
+        #[must_use]
+        pub fn max_decoding_message_size(mut self, limit: usize) -> Self {
+            self.inner = self.inner.max_decoding_message_size(limit);
+            self
+        }
+        /// Limits the maximum size of an encoded message.
+        ///
+        /// Default: `usize::MAX`
+        #[must_use]
+        pub fn max_encoding_message_size(mut self, limit: usize) -> Self {
+            self.inner = self.inner.max_encoding_message_size(limit);
+            self
+        }
+        pub async fn lookup_name(
+            &mut self,
+            request: impl tonic::IntoRequest<super::LookupNameRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::LookupNameResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/sui.rpc.v2beta2.NameService/LookupName",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("sui.rpc.v2beta2.NameService", "LookupName"));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn reverse_lookup_name(
+            &mut self,
+            request: impl tonic::IntoRequest<super::ReverseLookupNameRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::ReverseLookupNameResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/sui.rpc.v2beta2.NameService/ReverseLookupName",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new("sui.rpc.v2beta2.NameService", "ReverseLookupName"),
+                );
+            self.inner.unary(req, path, codec).await
+        }
+    }
+}
+/// Generated server implementations.
+pub mod name_service_server {
+    #![allow(
+        unused_variables,
+        dead_code,
+        missing_docs,
+        clippy::wildcard_imports,
+        clippy::let_unit_value,
+    )]
+    use tonic::codegen::*;
+    /// Generated trait containing gRPC methods that should be implemented for use with NameServiceServer.
+    #[async_trait]
+    pub trait NameService: std::marker::Send + std::marker::Sync + 'static {
+        async fn lookup_name(
+            &self,
+            request: tonic::Request<super::LookupNameRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::LookupNameResponse>,
+            tonic::Status,
+        >;
+        async fn reverse_lookup_name(
+            &self,
+            request: tonic::Request<super::ReverseLookupNameRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::ReverseLookupNameResponse>,
+            tonic::Status,
+        >;
+    }
+    #[derive(Debug)]
+    pub struct NameServiceServer<T> {
+        inner: Arc<T>,
+        accept_compression_encodings: EnabledCompressionEncodings,
+        send_compression_encodings: EnabledCompressionEncodings,
+        max_decoding_message_size: Option<usize>,
+        max_encoding_message_size: Option<usize>,
+    }
+    impl<T> NameServiceServer<T> {
+        pub fn new(inner: T) -> Self {
+            Self::from_arc(Arc::new(inner))
+        }
+        pub fn from_arc(inner: Arc<T>) -> Self {
+            Self {
+                inner,
+                accept_compression_encodings: Default::default(),
+                send_compression_encodings: Default::default(),
+                max_decoding_message_size: None,
+                max_encoding_message_size: None,
+            }
+        }
+        pub fn with_interceptor<F>(
+            inner: T,
+            interceptor: F,
+        ) -> InterceptedService<Self, F>
+        where
+            F: tonic::service::Interceptor,
+        {
+            InterceptedService::new(Self::new(inner), interceptor)
+        }
+        /// Enable decompressing requests with the given encoding.
+        #[must_use]
+        pub fn accept_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.accept_compression_encodings.enable(encoding);
+            self
+        }
+        /// Compress responses with the given encoding, if the client supports it.
+        #[must_use]
+        pub fn send_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.send_compression_encodings.enable(encoding);
+            self
+        }
+        /// Limits the maximum size of a decoded message.
+        ///
+        /// Default: `4MB`
+        #[must_use]
+        pub fn max_decoding_message_size(mut self, limit: usize) -> Self {
+            self.max_decoding_message_size = Some(limit);
+            self
+        }
+        /// Limits the maximum size of an encoded message.
+        ///
+        /// Default: `usize::MAX`
+        #[must_use]
+        pub fn max_encoding_message_size(mut self, limit: usize) -> Self {
+            self.max_encoding_message_size = Some(limit);
+            self
+        }
+    }
+    impl<T, B> tonic::codegen::Service<http::Request<B>> for NameServiceServer<T>
+    where
+        T: NameService,
+        B: Body + std::marker::Send + 'static,
+        B::Error: Into<StdError> + std::marker::Send + 'static,
+    {
+        type Response = http::Response<tonic::body::Body>;
+        type Error = std::convert::Infallible;
+        type Future = BoxFuture<Self::Response, Self::Error>;
+        fn poll_ready(
+            &mut self,
+            _cx: &mut Context<'_>,
+        ) -> Poll<std::result::Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
+        }
+        fn call(&mut self, req: http::Request<B>) -> Self::Future {
+            match req.uri().path() {
+                "/sui.rpc.v2beta2.NameService/LookupName" => {
+                    #[allow(non_camel_case_types)]
+                    struct LookupNameSvc<T: NameService>(pub Arc<T>);
+                    impl<
+                        T: NameService,
+                    > tonic::server::UnaryService<super::LookupNameRequest>
+                    for LookupNameSvc<T> {
+                        type Response = super::LookupNameResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::LookupNameRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as NameService>::lookup_name(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = LookupNameSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/sui.rpc.v2beta2.NameService/ReverseLookupName" => {
+                    #[allow(non_camel_case_types)]
+                    struct ReverseLookupNameSvc<T: NameService>(pub Arc<T>);
+                    impl<
+                        T: NameService,
+                    > tonic::server::UnaryService<super::ReverseLookupNameRequest>
+                    for ReverseLookupNameSvc<T> {
+                        type Response = super::ReverseLookupNameResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::ReverseLookupNameRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as NameService>::reverse_lookup_name(&inner, request)
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = ReverseLookupNameSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                _ => {
+                    Box::pin(async move {
+                        let mut response = http::Response::new(
+                            tonic::body::Body::default(),
+                        );
+                        let headers = response.headers_mut();
+                        headers
+                            .insert(
+                                tonic::Status::GRPC_STATUS,
+                                (tonic::Code::Unimplemented as i32).into(),
+                            );
+                        headers
+                            .insert(
+                                http::header::CONTENT_TYPE,
+                                tonic::metadata::GRPC_CONTENT_TYPE,
+                            );
+                        Ok(response)
+                    })
+                }
+            }
+        }
+    }
+    impl<T> Clone for NameServiceServer<T> {
+        fn clone(&self) -> Self {
+            let inner = self.inner.clone();
+            Self {
+                inner,
+                accept_compression_encodings: self.accept_compression_encodings,
+                send_compression_encodings: self.send_compression_encodings,
+                max_decoding_message_size: self.max_decoding_message_size,
+                max_encoding_message_size: self.max_encoding_message_size,
+            }
+        }
+    }
+    /// Generated gRPC service name
+    pub const SERVICE_NAME: &str = "sui.rpc.v2beta2.NameService";
+    impl<T> tonic::server::NamedService for NameServiceServer<T> {
         const NAME: &'static str = SERVICE_NAME;
     }
 }
