@@ -55,6 +55,8 @@ fn main() {
         .boxed(".sui.rpc.v2beta2.Input.literal")
         .boxed(".sui.rpc.v2beta2.Epoch.system_state")
         .boxed("json")
+        .message_attribute(".sui.rpc", "#[non_exhaustive]")
+        .enum_attribute(".sui.rpc", "#[non_exhaustive]")
         .out_dir(&out_dir)
         .compile_fds(fds.clone())
     {
