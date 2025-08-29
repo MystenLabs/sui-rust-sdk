@@ -12,7 +12,7 @@ impl Serialize for Identifier {
     where
         S: Serializer,
     {
-        serde_with::DisplayFromStr::serialize_as(self, serializer)
+        self.as_str().serialize(serializer)
     }
 }
 

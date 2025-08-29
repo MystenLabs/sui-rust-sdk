@@ -103,6 +103,38 @@ fn generics(input: &mut &str) -> ModalResult<Vec<TypeTag>> {
     separated(1.., delimited(space0, type_tag, space0), ",").parse_next(input)
 }
 
+//
+// const identifier validity check
+//
+pub(super) const fn is_valid_identifier(s: &str) -> bool {
+    const fn is_valid_remainder_byte(b: u8) -> bool {
+        matches!(b, b'_' | b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9')
+    }
+
+    let bytes = s.as_bytes();
+    if bytes.is_empty() || bytes.len() > MAX_IDENTIFIER_LENGTH {
+        return false;
+    }
+
+    // Check that the identifier either starts with an alpha or an underscore + at least one more
+    // byte
+    let remainder = match bytes {
+        [b'a'..=b'z', remainder @ ..] | [b'A'..=b'Z', remainder @ ..] => remainder,
+        [b'_', remainder @ ..] if !remainder.is_empty() => remainder,
+        _ => return false,
+    };
+
+    let mut i = 0;
+    while i < remainder.len() {
+        if !is_valid_remainder_byte(remainder[i]) {
+            return false;
+        }
+        i += 1;
+    }
+
+    true
+}
+
 //TODO add proptests
 #[cfg(test)]
 mod tests {
@@ -227,6 +259,14 @@ mod tests {
                     .replace("0x1", &Address::from_str("0x1").unwrap().to_string()),
                 "text: {text:?}, StructTag: {st:?}"
             );
+        }
+    }
+
+    #[test_strategy::proptest]
+    fn test_identifier_parsing_matches(s: String) {
+        match Identifier::new(&s) {
+            Ok(_) => assert!(is_valid_identifier(&s)),
+            Err(_) => assert!(!is_valid_identifier(&s)),
         }
     }
 }
