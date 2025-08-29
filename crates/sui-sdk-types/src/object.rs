@@ -323,7 +323,7 @@ impl MoveStruct {
         &self.type_
     }
 
-    /// Return if this object can be publicly transfered
+    /// Return if this object can be publicly transferred
     ///
     /// DEPRECATED
     ///
