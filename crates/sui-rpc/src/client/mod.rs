@@ -35,6 +35,21 @@ pub struct Client {
 }
 
 impl Client {
+    /// URL for the public-good, Sui Foundation provided fullnodes for mainnet.
+    pub const MAINNET_FULLNODE: &str = "https://fullnode.mainnet.sui.io";
+
+    /// URL for the public-good, Sui Foundation provided fullnodes for testnet.
+    pub const TESTNET_FULLNODE: &str = "https://fullnode.testnet.sui.io";
+
+    /// URL for the public-good, Sui Foundation provided fullnodes for devnet.
+    pub const DEVNET_FULLNODE: &str = "https://fullnode.devnet.sui.io";
+
+    /// URL for the public-good, Sui Foundation provided archive for mainnet.
+    pub const MAINNET_ARCHIVE: &str = "https://archive.mainnet.sui.io";
+
+    /// URL for the public-good, Sui Foundation provided archive for testnet.
+    pub const TESTNET_ARCHIVE: &str = "https://archive.testnet.sui.io";
+
     #[allow(clippy::result_large_err)]
     pub fn new<T>(uri: T) -> Result<Self>
     where
