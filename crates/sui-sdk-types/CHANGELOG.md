@@ -1,3 +1,35 @@
+# [0.0.7] - 2025-08-29
+
+## Added
+
+- Added const constructor for Identifier ([`c08b6b69`])
+- Added const parsing constructors for Address and Digest ([`c5cc14b6`])
+- Added wrapper around RoaringBitmap ([`8b9c14f0`])
+- Introduced type safety with ZkLoginInputs ([`ceeee4a3`])
+
+## Changed
+
+- Marked public enums with non_exhaustive ([`fd36eb13`])
+- Renamed shared -> consensus ([`cab42748`])
+- Removed digest wrappers and use Digest everywhere ([`2e24c6d6`])
+- Removed ObjectId type in favor of Address ([`358569a7`])
+- Updated UnchangedSharedObjectKind to match new names in sui repo ([`d9719506`])
+
+## Fixed
+
+- Fixed typos ([`4c426996`])
+
+[`c08b6b69`]: https://github.com/mystenlabs/sui-rust-sdk/commit/c08b6b69
+[`c5cc14b6`]: https://github.com/mystenlabs/sui-rust-sdk/commit/c5cc14b6
+[`fd36eb13`]: https://github.com/mystenlabs/sui-rust-sdk/commit/fd36eb13
+[`8b9c14f0`]: https://github.com/mystenlabs/sui-rust-sdk/commit/8b9c14f0
+[`ceeee4a3`]: https://github.com/mystenlabs/sui-rust-sdk/commit/ceeee4a3
+[`cab42748`]: https://github.com/mystenlabs/sui-rust-sdk/commit/cab42748
+[`2e24c6d6`]: https://github.com/mystenlabs/sui-rust-sdk/commit/2e24c6d6
+[`358569a7`]: https://github.com/mystenlabs/sui-rust-sdk/commit/358569a7
+[`d9719506`]: https://github.com/mystenlabs/sui-rust-sdk/commit/d9719506
+[`4c426996`]: https://github.com/mystenlabs/sui-rust-sdk/commit/4c426996
+
 # [0.0.6] - 2025-07-16
 
 ## Added
@@ -79,6 +111,7 @@
 
 Initial release
 
+[0.0.7]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.0.7
 [0.0.6]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.0.6
 [0.0.5]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.0.5
 [0.0.4]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.0.4
