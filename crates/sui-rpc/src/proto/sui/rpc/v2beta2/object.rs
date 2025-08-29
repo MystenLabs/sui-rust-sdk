@@ -525,6 +525,7 @@ impl From<sui_sdk_types::Owner> for Owner {
                 message.address = Some(owner.to_string());
                 OwnerKind::ConsensusAddress
             }
+            _ => OwnerKind::Unknown,
         };
 
         message.set_kind(kind);

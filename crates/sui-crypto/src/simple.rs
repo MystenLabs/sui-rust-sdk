@@ -21,7 +21,6 @@ impl Verifier<SimpleSignature> for SimpleVerifier {
             SimpleSignature::Ed25519 { .. } => Err(SignatureError::from_source(
                 "support for ed25519 is not enabled",
             )),
-
             #[cfg(feature = "secp256k1")]
             SimpleSignature::Secp256k1 {
                 signature,
@@ -34,7 +33,6 @@ impl Verifier<SimpleSignature> for SimpleVerifier {
             SimpleSignature::Secp256k1 { .. } => Err(SignatureError::from_source(
                 "support for secp256k1 is not enabled",
             )),
-
             #[cfg(feature = "secp256r1")]
             SimpleSignature::Secp256r1 {
                 signature,
@@ -47,6 +45,7 @@ impl Verifier<SimpleSignature> for SimpleVerifier {
             SimpleSignature::Secp256r1 { .. } => Err(SignatureError::from_source(
                 "support for secp256r1 is not enabled",
             )),
+            _ => Err(SignatureError::from_source("unknown signature scheme")),
         }
     }
 }

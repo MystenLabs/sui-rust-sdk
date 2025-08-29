@@ -289,6 +289,7 @@ impl From<sui_sdk_types::CheckpointCommitment> for CheckpointCommitment {
                 message.digest = Some(digest.to_string());
                 CheckpointCommitmentKind::EcmhLiveObjectSet
             }
+            _ => CheckpointCommitmentKind::Unknown,
         };
 
         message.set_kind(kind);

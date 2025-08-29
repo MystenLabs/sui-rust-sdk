@@ -30,6 +30,7 @@ use super::ZkLoginAuthenticator;
 /// the completely serialized signature.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[non_exhaustive]
 pub enum SimpleSignature {
     Ed25519 {
         signature: Ed25519Signature,
@@ -331,6 +332,7 @@ impl<'de> serde::Deserialize<'de> for SimpleSignature {
 /// ```
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[non_exhaustive]
 #[repr(u8)]
 pub enum SignatureScheme {
     Ed25519 = 0x00,
@@ -440,6 +442,7 @@ impl std::fmt::Display for InvalidSignatureScheme {
 /// the completely serialized signature.
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[non_exhaustive]
 pub enum UserSignature {
     Simple(SimpleSignature),
     Multisig(MultisigAggregatedSignature),

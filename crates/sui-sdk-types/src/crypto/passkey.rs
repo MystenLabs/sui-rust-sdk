@@ -300,7 +300,7 @@ mod serialization {
     /// [5.8.1.1 Serialization]: https://w3c.github.io/webauthn/#clientdatajson-serialization
     #[derive(Debug, Clone, Serialize, Deserialize)]
     #[serde(rename_all = "camelCase")]
-    pub struct CollectedClientData {
+    pub(super) struct CollectedClientData {
         /// This member contains the value [`ClientDataType::Create`] when creating new credentials, and
         /// [`ClientDataType::Get`] when getting an assertion from an existing credential. The purpose
         /// of this member is to prevent certain types of signature confusion attacks (where an attacker
@@ -335,7 +335,7 @@ mod serialization {
 
     /// Used to limit the values of [`CollectedClientData::ty`] and serializes to static strings.
     #[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
-    pub enum ClientDataType {
+    pub(super) enum ClientDataType {
         /// Serializes to the string `"webauthn.get"`
         ///
         /// Passkey's in Sui only support the value `"webauthn.get"`, other values will be rejected.

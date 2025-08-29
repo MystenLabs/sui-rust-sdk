@@ -126,6 +126,7 @@ pub enum ExecutionStatus {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[non_exhaustive]
 pub enum ExecutionError {
     //
     // General transaction errors
@@ -359,6 +360,7 @@ pub struct MoveLocation {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[non_exhaustive]
 pub enum CommandArgumentError {
     /// The type of the value does not match the expected type
     TypeMismatch,
@@ -435,6 +437,7 @@ pub enum CommandArgumentError {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[non_exhaustive]
 pub enum PackageUpgradeError {
     /// Unable to fetch package
     UnableToFetchPackage { package_id: Address },
@@ -475,6 +478,7 @@ pub enum PackageUpgradeError {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[non_exhaustive]
 pub enum TypeArgumentError {
     /// A type was not found in the module specified
     TypeNotFound,

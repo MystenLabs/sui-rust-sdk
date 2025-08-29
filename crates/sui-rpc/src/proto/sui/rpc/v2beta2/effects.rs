@@ -465,6 +465,7 @@ impl From<sui_sdk_types::ChangedObject> for ChangedObject {
                 message.input_owner = Some(owner.into());
                 InputObjectState::Exists
             }
+            _ => InputObjectState::Unknown,
         };
         message.set_input_state(input_state);
 
@@ -481,6 +482,7 @@ impl From<sui_sdk_types::ChangedObject> for ChangedObject {
                 message.output_digest = Some(digest.to_string());
                 OutputObjectState::PackageWrite
             }
+            _ => OutputObjectState::Unknown,
         };
         message.set_output_state(output_state);
 
@@ -593,6 +595,7 @@ impl From<sui_sdk_types::IdOperation> for changed_object::IdOperation {
             None => Self::None,
             Created => Self::Created,
             Deleted => Self::Deleted,
+            _ => Self::Unknown,
         }
     }
 }
@@ -655,6 +658,7 @@ impl From<sui_sdk_types::UnchangedConsensusObject> for UnchangedConsensusObject 
                 message.version = Some(version);
                 UnchangedConsensusObjectKind::PerEpochConfig
             }
+            _ => UnchangedConsensusObjectKind::Unknown,
         };
 
         message.set_kind(kind);

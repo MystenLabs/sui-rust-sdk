@@ -48,6 +48,7 @@ const MAX_COMMITTEE_SIZE: usize = 10;
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[non_exhaustive]
 pub enum MultisigMemberPublicKey {
     Ed25519(Ed25519PublicKey),
     Secp256k1(Secp256k1PublicKey),
@@ -326,6 +327,7 @@ fn roaring_bitmap_to_u16(roaring: &crate::Bitmap) -> Result<BitmapUnit, &'static
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[non_exhaustive]
 pub enum MultisigMemberSignature {
     Ed25519(Ed25519Signature),
     Secp256k1(Secp256k1Signature),

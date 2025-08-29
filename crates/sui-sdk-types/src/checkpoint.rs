@@ -31,6 +31,7 @@ pub type ProtocolVersion = u64;
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[non_exhaustive]
 pub enum CheckpointCommitment {
     /// An Elliptic Curve Multiset Hash attesting to the set of Objects that comprise the live
     /// state of the Sui blockchain.
