@@ -1,0 +1,202 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="sui-graphql-client"><title>sui_graphql_client - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-84e720fa.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="sui_graphql_client" data-themes="" data-resource-suffix="" data-rustdoc-version="1.89.0 (29483883e 2025-08-04)" data-channel="1.89.0" data-search-js="search-92309212.js" data-settings-js="settings-5514c975.js" ><script src="../static.files/storage-4e99c027.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-fd3af306.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-32bb7600.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../sui_graphql_client/index.html">sui_<wbr>graphql_<wbr>client</a><span class="version">0.0.7</span></h2></div><div class="sidebar-elems"><ul class="block"><li><a id="all-types" href="all.html">All Items</a></li></ul><section id="rustdoc-toc"><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#sui-graphql-client" title="sui-graphql-client">sui-graphql-client</a></li><li><a href="#design-principles" title="Design Principles">Design Principles</a></li><li><a href="#usage" title="Usage">Usage</a><ul><li><a href="#connecting-to-a-graphql-server" title="Connecting to a GraphQL server">Connecting to a GraphQL server</a></li><li><a href="#requesting-gas-from-the-faucet" title="Requesting gas from the faucet">Requesting gas from the faucet</a></li><li><a href="#custom-queries" title="Custom Queries">Custom Queries</a></li></ul></li></ul><h3><a href="#modules">Crate Items</a></h3><ul class="block"><li><a href="#modules" title="Modules">Modules</a></li><li><a href="#structs" title="Structs">Structs</a></li><li><a href="#enums" title="Enums">Enums</a></li></ul></section><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1>Crate <span>sui_graphql_client</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/sui_graphql_client/lib.rs.html#4-2405">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><h2 id="sui-graphql-client"><a class="doc-anchor" href="#sui-graphql-client">§</a>sui-graphql-client</h2>
+<p><a href="https://crates.io/crates/sui-graphql-client"><img src="https://img.shields.io/crates/v/sui-graphql-client" alt="sui-graphql-client on crates.io" /></a>
+<a href="https://docs.rs/sui-graphql-client"><img src="https://img.shields.io/badge/docs-latest-brightgreen" alt="Documentation (latest release)" /></a>
+<a href="https://mystenlabs.github.io/sui-rust-sdk/sui-graphql-client/"><img src="https://img.shields.io/badge/docs-master-59f" alt="Documentation (master)" /></a></p>
+<p>The Sui GraphQL client is a client for interacting with the Sui blockchain via GraphQL.
+It provides a set of APIs for querying the blockchain for information such as chain identifier,
+reference gas price, protocol configuration, service configuration, checkpoint, epoch,
+executing transactions and more.</p>
+<h2 id="design-principles"><a class="doc-anchor" href="#design-principles">§</a>Design Principles</h2>
+<ol>
+<li><strong>Type Safety</strong>: The client uses the <code>cynic</code> library to generate types from the schema. This ensures that the queries are type-safe.</li>
+<li><strong>Convenience</strong>: The client provides a set of APIs for common queries such as chain identifier, reference gas price, protocol configuration, service configuration, checkpoint, epoch, executing transactions and more.</li>
+<li><strong>Custom Queries</strong>: The client provides a way to run custom queries using the <code>cynic</code> library.</li>
+</ol>
+<h2 id="usage"><a class="doc-anchor" href="#usage">§</a>Usage</h2><h3 id="connecting-to-a-graphql-server"><a class="doc-anchor" href="#connecting-to-a-graphql-server">§</a>Connecting to a GraphQL server</h3>
+<p>Instantiate a client with [<code>Client::new(server: &amp;str)</code>] or use one of the predefined functions for different networks <a href="struct.Client.html" title="struct sui_graphql_client::Client"><code>Client</code></a>.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>sui_graphql_client::Client;
+<span class="kw">use </span>anyhow::Result;
+
+<span class="attr">#[tokio::main]
+</span><span class="kw">async fn </span>main() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+
+   <span class="comment">// Connect to the mainnet GraphQL server
+   </span><span class="kw">let </span>client = Client::new_mainnet();
+   <span class="kw">let </span>chain_id = client.chain_id().<span class="kw">await</span><span class="question-mark">?</span>;
+   <span class="macro">println!</span>(<span class="string">"{:?}"</span>, chain_id);
+
+   <span class="prelude-val">Ok</span>(())
+}</code></pre></div>
+<h3 id="requesting-gas-from-the-faucet"><a class="doc-anchor" href="#requesting-gas-from-the-faucet">§</a>Requesting gas from the faucet</h3>
+<p>The client provides an API to request gas from the faucet. The <code>request</code> function sends a request to the faucet and waits until the transaction is confirmed. The function returns the transaction details if the request is successful.</p>
+<h4 id="example-for-standard-devnettestnetlocal-networks"><a class="doc-anchor" href="#example-for-standard-devnettestnetlocal-networks">§</a>Example for standard devnet/testnet/local networks.</h4>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>sui_graphql_client::faucet::FaucetClient;
+<span class="kw">use </span>sui_types::Address;
+
+<span class="kw">use </span>anyhow::Result;
+<span class="kw">use </span>std::str::FromStr;
+
+<span class="attr">#[tokio::main]
+</span><span class="kw">async fn </span>main() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+    <span class="kw">let </span>address = Address::from_str(<span class="string">"SUI_ADDRESS_HERE"</span>)<span class="question-mark">?</span>;
+    <span class="comment">// Request gas from the faucet and wait until a coin is received
+    // As the client is set to devnet, faucet will use the devnet faucet.
+    </span><span class="kw">let </span>faucet = FaucetClient::devnet().request(address).<span class="kw">await</span>;
+    <span class="kw">if let </span><span class="prelude-val">Ok</span>(resp) = faucet {
+        <span class="kw">for </span>coin <span class="kw">in </span>resp.coins_sent {
+            <span class="macro">println!</span>(<span class="string">"coin: {:?}"</span>, coin);
+        }
+    }
+
+    <span class="comment">// Request gas from the testnet faucet by explicitly setting the faucet to testnet
+    </span><span class="kw">let </span>faucet_testnet = FaucetClient::testnet().request(address).<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(())
+}</code></pre></div>
+<h4 id="example-for-custom-faucet-service"><a class="doc-anchor" href="#example-for-custom-faucet-service">§</a>Example for custom faucet service.</h4>
+<p>Note that this <code>FaucetClient</code> is explicitly designed to work with this endpoint: <code>v2/gas</code>, When passing in the custom faucet URL, skip the final endpoint and only pass in the top-level url (e.g., <code>https://faucet.devnet.sui.io</code>).</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>sui_graphql_client::faucet::FaucetClient;
+<span class="kw">use </span>sui_types::Address;
+
+<span class="kw">use </span>anyhow::Result;
+<span class="kw">use </span>std::str::FromStr;
+
+<span class="attr">#[tokio::main]
+</span><span class="kw">async fn </span>main() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+    <span class="kw">let </span>address = Address::from_str(<span class="string">"SUI_ADDRESS_HERE"</span>)<span class="question-mark">?</span>;
+    <span class="comment">// Request gas from the faucet and wait until a coin is received
+    // As the client is set to devnet, faucet will use the devnet faucet.
+    </span><span class="kw">let </span>faucet = FaucetClient::new(<span class="string">"https://myfaucet_testnet.com"</span>).request(address).<span class="kw">await</span>;
+    <span class="kw">if let </span><span class="prelude-val">Ok</span>(resp) = faucet {
+        <span class="kw">for </span>coin <span class="kw">in </span>resp.coins_sent {
+            <span class="macro">println!</span>(<span class="string">"coin: {:?}"</span>, coin);
+        }
+    }
+    <span class="prelude-val">Ok</span>(())
+}</code></pre></div>
+<h3 id="custom-queries"><a class="doc-anchor" href="#custom-queries">§</a>Custom Queries</h3>
+<p>There are several options for running custom queries.</p>
+<ol>
+<li>Use a GraphQL client library of your choosing.</li>
+<li>Use the <a href="https://generator.cynic-rs.dev/">cynic’s web generator</a> that accepts as input the schema and generates the query types.</li>
+<li>Use the <a href="https://github.com/obmarg/cynic/tree/main/cynic-cli">cynic’s CLI</a> and use the <code>cynic querygen</code> command to generate the query types.</li>
+</ol>
+<p>Below is an example that uses the <code>cynic querygen</code> CLI to generate the query types from the schema and the following query:</p>
+<div class="example-wrap"><pre class="language-bash"><code>cynic querygen --schema rpc.graphql --query custom_query.graphql</code></pre></div>
+<p>where <code>custom_query.graphql</code> contains the following query:</p>
+<div class="example-wrap"><pre class="language-graphql"><code>query CustomQuery($id: UInt53) {
+  epoch(id: $id) {
+    referenceGasPrice
+    totalGasFees
+    totalCheckpoints
+    totalTransactions
+  }
+}</code></pre></div>
+<p>When using <code>cynic</code> and <code>sui-graphql-client</code>, you will need to register the schema by calling <code>sui-graphql-client-build::register_schema</code> in a <code>build.rs</code> file. See <a href="https://github.com/MystenLabs/sui-rust-sdk/tree/master/crates/sui-graphql-client-build">sui-graphql-client-build</a> for more information.</p>
+<p>The generated query types are defined below. Note that the <code>id</code> variable is optional (to make it mandatory change the schema to $id: Uint53! – note the ! character which indicates a mandatory field). That means that if the <code>id</code> variable is not provided, the query will return the data for the last known epoch.
+Note that instead of using <code>Uint53</code>, the scalar is mapped to <code>u64</code> in the library using <code>impl_scalar(u64, schema::Uint53)</code>, thus all references to <code>Uint53</code> in the schema are replaced with <code>u64</code> in the code below.</p>
+
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="attr">#[derive(cynic::QueryVariables, Debug)]
+</span><span class="kw">pub struct </span>CustomQueryVariables {
+    <span class="kw">pub </span>id: <span class="prelude-ty">Option</span>&lt;u64&gt;,
+}
+
+<span class="attr">#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = <span class="string">"SCHEMA_NAME_HERE"</span>, graphql_type = <span class="string">"Query"</span>, variables = <span class="string">"CustomQueryVariables"</span>)]
+</span><span class="kw">pub struct </span>CustomQuery {
+    <span class="attr">#[arguments(id: <span class="macro-nonterminal">$id</span>)]
+    </span><span class="kw">pub </span>epoch: <span class="prelude-ty">Option</span>&lt;Epoch&gt;,
+}
+
+<span class="attr">#[derive(cynic::QueryFragment, Debug)]
+</span><span class="kw">pub struct </span>Epoch {
+    <span class="kw">pub </span>epoch_id: u64,
+    <span class="kw">pub </span>reference_gas_price: <span class="prelude-ty">Option</span>&lt;BigInt&gt;,
+    <span class="kw">pub </span>total_gas_fees: <span class="prelude-ty">Option</span>&lt;BigInt&gt;,
+    <span class="kw">pub </span>total_checkpoints: <span class="prelude-ty">Option</span>&lt;u64&gt;,
+    <span class="kw">pub </span>total_transactions: <span class="prelude-ty">Option</span>&lt;u64&gt;,
+}
+
+<span class="attr">#[derive(cynic::Scalar, Debug, Clone)]
+</span><span class="kw">pub struct </span>BigInt(<span class="kw">pub </span>String);</code></pre></div>
+<p>The complete example is shown below:</p>
+
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="kw">use </span>anyhow::Result;
+<span class="kw">use </span>cynic::QueryBuilder;
+
+<span class="kw">use </span>sui_graphql_client::{
+    query_types::{schema, BigInt},
+    Client,
+};
+<span class="kw">use </span>sui_types::Address;
+
+<span class="comment">// The data returned by the custom query.
+</span><span class="attr">#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = <span class="string">"SCHEMA_NAME_HERE"</span>, graphql_type = <span class="string">"Epoch"</span>)]
+</span><span class="kw">pub struct </span>EpochData {
+    <span class="kw">pub </span>epoch_id: u64,
+    <span class="kw">pub </span>reference_gas_price: <span class="prelude-ty">Option</span>&lt;BigInt&gt;,
+    <span class="kw">pub </span>total_gas_fees: <span class="prelude-ty">Option</span>&lt;BigInt&gt;,
+    <span class="kw">pub </span>total_checkpoints: <span class="prelude-ty">Option</span>&lt;u64&gt;,
+    <span class="kw">pub </span>total_transactions: <span class="prelude-ty">Option</span>&lt;u64&gt;,
+}
+
+<span class="comment">// The variables to pass to the custom query.
+// If an epoch id is passed, then the query will return the data for that epoch.
+// Otherwise, the query will return the data for the last known epoch.
+</span><span class="attr">#[derive(cynic::QueryVariables, Debug)]
+</span><span class="kw">pub struct </span>CustomVariables {
+    <span class="kw">pub </span>id: <span class="prelude-ty">Option</span>&lt;u64&gt;,
+}
+
+<span class="comment">// The custom query. Note that the variables need to be explicitly declared.
+</span><span class="attr">#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = <span class="string">"SCHEMA_NAME_HERE"</span>, graphql_type = <span class="string">"Query"</span>, variables = <span class="string">"CustomVariables"</span>)]
+</span><span class="kw">pub struct </span>CustomQuery {
+    <span class="attr">#[arguments(id: <span class="macro-nonterminal">$id</span>)]
+    </span><span class="kw">pub </span>epoch: <span class="prelude-ty">Option</span>&lt;EpochData&gt;,
+}
+
+<span class="comment">// Custom query with no variables.
+</span><span class="attr">#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = <span class="string">"SCHEMA_NAME_HERE"</span>, graphql_type = <span class="string">"Query"</span>)]
+</span><span class="kw">pub struct </span>ChainIdQuery {
+    chain_identifier: String,
+}
+
+<span class="attr">#[tokio::main]
+</span><span class="kw">async fn </span>main() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>client = Client::new_devnet();
+
+    <span class="comment">// Query the data for the last known epoch. Note that id variable is None, so last epoch data
+    // will be returned.
+    </span><span class="kw">let </span>operation = CustomQuery::build(CustomVariables { id: <span class="prelude-val">None </span>});
+    <span class="kw">let </span>response = client
+        .run_query::&lt;CustomQuery, CustomVariables&gt;(<span class="kw-2">&amp;</span>operation)
+        .<span class="kw">await</span>;
+    <span class="macro">println!</span>(<span class="string">"{:?}"</span>, response);
+
+    <span class="comment">// Query the data for epoch 1.
+    </span><span class="kw">let </span>epoch_id = <span class="number">1</span>;
+    <span class="kw">let </span>operation = CustomQuery::build(CustomVariables { id: <span class="prelude-val">Some</span>(epoch_id) });
+    <span class="kw">let </span>response = client
+        .run_query::&lt;CustomQuery, CustomVariables&gt;(<span class="kw-2">&amp;</span>operation)
+        .<span class="kw">await</span>;
+    <span class="macro">println!</span>(<span class="string">"{:?}"</span>, response);
+
+    <span class="comment">// When the query has no variables, just pass () as the type argument
+    </span><span class="kw">let </span>operation = ChainIdQuery::build(());
+    <span class="kw">let </span>response = client.run_query::&lt;ChainIdQuery, ()&gt;(<span class="kw-2">&amp;</span>operation).<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(chain_id) = response.data {
+        <span class="macro">println!</span>(<span class="string">"Chain ID: {}"</span>, chain_id.chain_identifier);
+    }
+
+    <span class="prelude-val">Ok</span>(())
+}</code></pre></div>
+</div></details><h2 id="modules" class="section-header">Modules<a href="#modules" class="anchor">§</a></h2><dl class="item-table"><dt><a class="mod" href="error/index.html" title="mod sui_graphql_client::error">error</a></dt><dt><a class="mod" href="faucet/index.html" title="mod sui_graphql_client::faucet">faucet</a></dt><dt><a class="mod" href="query_types/index.html" title="mod sui_graphql_client::query_types">query_<wbr>types</a></dt><dt><a class="mod" href="streams/index.html" title="mod sui_graphql_client::streams">streams</a></dt></dl><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><dl class="item-table"><dt><a class="struct" href="struct.BcsName.html" title="struct sui_graphql_client::BcsName">BcsName</a></dt><dd>Helper struct for passing a raw bcs value.</dd><dt><a class="struct" href="struct.Client.html" title="struct sui_graphql_client::Client">Client</a></dt><dd>The GraphQL client for interacting with the Sui blockchain.
+By default, it uses the <code>reqwest</code> crate as the HTTP client.</dd><dt><a class="struct" href="struct.DryRunResult.html" title="struct sui_graphql_client::DryRunResult">DryRun<wbr>Result</a></dt><dd>The result of a dry run, which includes the effects of the transaction and any errors that may
+have occurred.</dd><dt><a class="struct" href="struct.DynamicFieldName.html" title="struct sui_graphql_client::DynamicFieldName">Dynamic<wbr>Field<wbr>Name</a></dt><dd>The name part of a dynamic field, including its type, bcs, and json representation.</dd><dt><a class="struct" href="struct.DynamicFieldOutput.html" title="struct sui_graphql_client::DynamicFieldOutput">Dynamic<wbr>Field<wbr>Output</a></dt><dd>The output of a dynamic field query, that includes the name, value, and value’s json
+representation.</dd><dt><a class="struct" href="struct.NameValue.html" title="struct sui_graphql_client::NameValue">Name<wbr>Value</a></dt><dd>Helper struct for passing a value that has a type that implements Serialize, for the dynamic
+fields API.</dd><dt><a class="struct" href="struct.Page.html" title="struct sui_graphql_client::Page">Page</a></dt><dd>A page of items returned by the GraphQL server.</dd><dt><a class="struct" href="struct.PaginationFilter.html" title="struct sui_graphql_client::PaginationFilter">Pagination<wbr>Filter</a></dt><dd>Pagination options for querying the GraphQL server. It defaults to forward pagination with the
+GraphQL server’s max page size.</dd><dt><a class="struct" href="struct.TransactionDataEffects.html" title="struct sui_graphql_client::TransactionDataEffects">Transaction<wbr>Data<wbr>Effects</a></dt></dl><h2 id="enums" class="section-header">Enums<a href="#enums" class="anchor">§</a></h2><dl class="item-table"><dt><a class="enum" href="enum.Direction.html" title="enum sui_graphql_client::Direction">Direction</a></dt><dd>Pagination direction.</dd></dl><script type="text/json" id="notable-traits-data">{"&[u8]":"<h3>Notable traits for <code>&amp;[<a class=\"primitive\" href=\"https://doc.rust-lang.org/1.89.0/std/primitive.u8.html\">u8</a>]</code></h3><pre><code><div class=\"where\">impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.89.0/std/io/trait.Read.html\" title=\"trait std::io::Read\">Read</a> for &amp;[<a class=\"primitive\" href=\"https://doc.rust-lang.org/1.89.0/std/primitive.u8.html\">u8</a>]</div>","&mut Vec<u8>":"<h3>Notable traits for <code><a class=\"struct\" href=\"https://doc.rust-lang.org/1.89.0/alloc/vec/struct.Vec.html\" title=\"struct alloc::vec::Vec\">Vec</a>&lt;<a class=\"primitive\" href=\"https://doc.rust-lang.org/1.89.0/std/primitive.u8.html\">u8</a>, A&gt;</code></h3><pre><code><div class=\"where\">impl&lt;A&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/1.89.0/std/io/trait.Write.html\" title=\"trait std::io::Write\">Write</a> for <a class=\"struct\" href=\"https://doc.rust-lang.org/1.89.0/alloc/vec/struct.Vec.html\" title=\"struct alloc::vec::Vec\">Vec</a>&lt;<a class=\"primitive\" href=\"https://doc.rust-lang.org/1.89.0/std/primitive.u8.html\">u8</a>, A&gt;<div class=\"where\">where\n    A: <a class=\"trait\" href=\"https://doc.rust-lang.org/1.89.0/core/alloc/trait.Allocator.html\" title=\"trait core::alloc::Allocator\">Allocator</a>,</div></div>","Vec<u8>":"<h3>Notable traits for <code><a class=\"struct\" href=\"https://doc.rust-lang.org/1.89.0/alloc/vec/struct.Vec.html\" title=\"struct alloc::vec::Vec\">Vec</a>&lt;<a class=\"primitive\" href=\"https://doc.rust-lang.org/1.89.0/std/primitive.u8.html\">u8</a>, A&gt;</code></h3><pre><code><div class=\"where\">impl&lt;A&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/1.89.0/std/io/trait.Write.html\" title=\"trait std::io::Write\">Write</a> for <a class=\"struct\" href=\"https://doc.rust-lang.org/1.89.0/alloc/vec/struct.Vec.html\" title=\"struct alloc::vec::Vec\">Vec</a>&lt;<a class=\"primitive\" href=\"https://doc.rust-lang.org/1.89.0/std/primitive.u8.html\">u8</a>, A&gt;<div class=\"where\">where\n    A: <a class=\"trait\" href=\"https://doc.rust-lang.org/1.89.0/core/alloc/trait.Allocator.html\" title=\"trait core::alloc::Allocator\">Allocator</a>,</div></div>"}</script></section></div></main></body></html>

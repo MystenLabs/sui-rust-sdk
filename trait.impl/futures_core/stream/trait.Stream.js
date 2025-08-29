@@ -1,0 +1,9 @@
+(function() {
+    var implementors = Object.fromEntries([["sui_graphql_client",[["impl&lt;T, F, Fut&gt; Stream for <a class=\"struct\" href=\"sui_graphql_client/streams/struct.PageStream.html\" title=\"struct sui_graphql_client::streams::PageStream\">PageStream</a>&lt;T, F, Fut&gt;<div class=\"where\">where\n    T: <a class=\"trait\" href=\"https://doc.rust-lang.org/1.89.0/core/clone/trait.Clone.html\" title=\"trait core::clone::Clone\">Clone</a> + <a class=\"trait\" href=\"https://doc.rust-lang.org/1.89.0/core/marker/trait.Unpin.html\" title=\"trait core::marker::Unpin\">Unpin</a>,\n    F: <a class=\"trait\" href=\"https://doc.rust-lang.org/1.89.0/core/ops/function/trait.Fn.html\" title=\"trait core::ops::function::Fn\">Fn</a>(<a class=\"struct\" href=\"sui_graphql_client/struct.PaginationFilter.html\" title=\"struct sui_graphql_client::PaginationFilter\">PaginationFilter</a>) -&gt; Fut + <a class=\"trait\" href=\"https://doc.rust-lang.org/1.89.0/core/marker/trait.Unpin.html\" title=\"trait core::marker::Unpin\">Unpin</a>,\n    Fut: <a class=\"trait\" href=\"https://doc.rust-lang.org/1.89.0/core/future/future/trait.Future.html\" title=\"trait core::future::future::Future\">Future</a>&lt;Output = <a class=\"enum\" href=\"https://doc.rust-lang.org/1.89.0/core/result/enum.Result.html\" title=\"enum core::result::Result\">Result</a>&lt;<a class=\"struct\" href=\"sui_graphql_client/struct.Page.html\" title=\"struct sui_graphql_client::Page\">Page</a>&lt;T&gt;, <a class=\"struct\" href=\"sui_graphql_client/error/struct.Error.html\" title=\"struct sui_graphql_client::error::Error\">Error</a>&gt;&gt;,</div>"]]]]);
+    if (window.register_implementors) {
+        window.register_implementors(implementors);
+    } else {
+        window.pending_implementors = implementors;
+    }
+})()
+//{"start":57,"fragment_lengths":[1574]}
