@@ -27,7 +27,6 @@ default = []
 bcs = "0.1.6"
 serde = { version = "1.0.210" }
 sui-sdk-types = { version = "0.0.6", path = "../sui-sdk-types", default-features = false, features = ["serde", "hash"] }
-roaring = { version = "0.10.9", default-features = false }
 
 # dependencies for the protobuf and gRPC definitions
 bytes = "1.9"

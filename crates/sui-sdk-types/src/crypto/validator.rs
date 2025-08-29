@@ -71,21 +71,8 @@ pub struct ValidatorCommitteeMember {
 pub struct ValidatorAggregatedSignature {
     pub epoch: EpochId,
     pub signature: Bls12381Signature,
-    #[cfg_attr(feature = "serde", serde(with = "RoaringBitMapSerialization"))]
-    #[cfg_attr(
-        feature = "proptest",
-        strategy(proptest::strategy::Just(roaring::RoaringBitmap::default()))
-    )]
-    pub bitmap: roaring::RoaringBitmap,
+    pub bitmap: crate::Bitmap,
 }
-
-#[cfg(feature = "serde")]
-type RoaringBitMapSerialization = ::serde_with::As<
-    ::serde_with::IfIsHumanReadable<
-        crate::_serde::Base64RoaringBitmap,
-        crate::_serde::BinaryRoaringBitmap,
-    >,
->;
 
 /// A signature from a Validator
 ///

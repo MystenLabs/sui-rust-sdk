@@ -231,7 +231,7 @@ pub struct MultisigAggregatedSignature {
     /// Legacy encoding for the bitmap.
     //TODO implement a strategy for legacy bitmap
     #[cfg_attr(feature = "proptest", strategy(proptest::strategy::Just(None)))]
-    legacy_bitmap: Option<roaring::RoaringBitmap>,
+    legacy_bitmap: Option<crate::Bitmap>,
     /// The public key encoded with each public key with its signature scheme used along with the
     /// corresponding weight.
     committee: MultisigCommittee,
@@ -268,12 +268,12 @@ impl MultisigAggregatedSignature {
     }
 
     /// The legacy roaring bitmap, if this is a legacy formatted signature
-    pub fn legacy_bitmap(&self) -> Option<&roaring::RoaringBitmap> {
+    pub fn legacy_bitmap(&self) -> Option<&crate::Bitmap> {
         self.legacy_bitmap.as_ref()
     }
 
     /// Configure with a legacy roaring bitmap
-    pub fn with_legacy_bitmap(&mut self, legacy_bitmap: roaring::RoaringBitmap) {
+    pub fn with_legacy_bitmap(&mut self, legacy_bitmap: crate::Bitmap) {
         self.legacy_bitmap = Some(legacy_bitmap);
     }
 
@@ -296,7 +296,7 @@ impl Eq for MultisigAggregatedSignature {}
 
 /// Convert a roaring bitmap to plain bitmap.
 #[cfg(feature = "serde")]
-fn roaring_bitmap_to_u16(roaring: &roaring::RoaringBitmap) -> Result<BitmapUnit, &'static str> {
+fn roaring_bitmap_to_u16(roaring: &crate::Bitmap) -> Result<BitmapUnit, &'static str> {
     let mut val = 0;
     for i in roaring.iter() {
         if i >= MAX_COMMITTEE_SIZE as u32 {
@@ -496,16 +496,14 @@ mod serialization {
     #[derive(serde_derive::Deserialize)]
     pub struct LegacyMultisig {
         signatures: Vec<MultisigMemberSignature>,
-        #[serde(with = "::serde_with::As::<crate::_serde::BinaryRoaringBitmap>")]
-        bitmap: roaring::RoaringBitmap,
+        bitmap: crate::Bitmap,
         committee: LegacyMultisigCommittee,
     }
 
     #[derive(serde_derive::Serialize)]
     pub struct LegacyMultisigRef<'a> {
         signatures: &'a [MultisigMemberSignature],
-        #[serde(with = "::serde_with::As::<crate::_serde::BinaryRoaringBitmap>")]
-        bitmap: &'a roaring::RoaringBitmap,
+        bitmap: &'a crate::Bitmap,
         committee: LegacyMultisigCommitteeRef<'a>,
     }
 
@@ -527,9 +525,7 @@ mod serialization {
     struct ReadableMultisigAggregatedSignature {
         signatures: Vec<MultisigMemberSignature>,
         bitmap: BitmapUnit,
-        #[serde(default)]
-        #[serde(with = "::serde_with::As::<Option<crate::_serde::Base64RoaringBitmap>>")]
-        legacy_bitmap: Option<roaring::RoaringBitmap>,
+        legacy_bitmap: Option<crate::Bitmap>,
         committee: MultisigCommittee,
     }
 
@@ -538,8 +534,7 @@ mod serialization {
         signatures: &'a [MultisigMemberSignature],
         bitmap: BitmapUnit,
         #[serde(skip_serializing_if = "Option::is_none")]
-        #[serde(with = "::serde_with::As::<Option<crate::_serde::Base64RoaringBitmap>>")]
-        legacy_bitmap: &'a Option<roaring::RoaringBitmap>,
+        legacy_bitmap: &'a Option<crate::Bitmap>,
         committee: &'a MultisigCommittee,
     }
 

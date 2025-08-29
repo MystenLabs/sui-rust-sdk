@@ -874,7 +874,7 @@ impl TryFrom<&MultisigAggregatedSignature> for sui_sdk_types::MultisigAggregated
                 .legacy_bitmap
                 .iter()
                 .copied()
-                .collect::<roaring::RoaringBitmap>();
+                .collect::<sui_sdk_types::Bitmap>();
             signature.with_legacy_bitmap(legacy_bitmap);
         }
 
