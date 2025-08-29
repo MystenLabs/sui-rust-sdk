@@ -63,14 +63,21 @@ impl Digest {
 
     /// Decodes a digest from a Base58 encoded string.
     pub fn from_base58<T: AsRef<[u8]>>(base58: T) -> Result<Self, DigestParseError> {
-        let mut buf = [0; Self::LENGTH];
-
-        bs58::decode(base58)
-            .onto(&mut buf)
-            //TODO fix error to contain bs58 parse error
-            .map_err(|_| DigestParseError)?;
+        let buf = bs58::decode(base58.as_ref())
+            .into_array_const::<{ Self::LENGTH }>()
+            .map_err(|e| DigestParseError {
+                bs58_error: Some(e),
+            })?;
 
         Ok(Self(buf))
+    }
+
+    /// Decodes a digest from a Base58 encoded string.
+    ///
+    /// Similar to `from_base58` except any errors are unwrapped, turning them into panics.
+    pub const fn from_base58_unwrap(base58: &[u8]) -> Self {
+        let buf = bs58::decode(base58).into_array_const_unwrap::<{ Self::LENGTH }>();
+        Self(buf)
     }
 
     /// Returns a Base58 encoded string representation of this digest.
@@ -81,7 +88,7 @@ impl Digest {
     /// Generates a digest from bytes.
     pub fn from_bytes<T: AsRef<[u8]>>(bytes: T) -> Result<Self, DigestParseError> {
         <[u8; Self::LENGTH]>::try_from(bytes.as_ref())
-            .map_err(|_| DigestParseError)
+            .map_err(|_| DigestParseError { bs58_error: None })
             .map(Self)
     }
 }
@@ -189,7 +196,9 @@ impl<'de> serde_with::DeserializeAs<'de, [u8; Digest::LENGTH]> for ReadableDiges
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct DigestParseError;
+pub struct DigestParseError {
+    bs58_error: Option<bs58::decode::Error>,
+}
 
 impl std::fmt::Display for DigestParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {

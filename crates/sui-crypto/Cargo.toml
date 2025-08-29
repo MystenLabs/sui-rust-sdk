@@ -94,7 +94,6 @@ blst = { version = "0.3.13", optional = true }
 
 [dev-dependencies]
 bcs = { version = "0.1.6" }
-hex = "0.4.3"
 serde_json = { version = "1.0.128" }
 
 # proptest support in tests
