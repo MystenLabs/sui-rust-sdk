@@ -37,9 +37,14 @@ mod epoch;
 mod events;
 mod executed_transaction;
 mod execution_status;
+mod ledger_service;
+mod move_package_service;
+mod name_service;
 mod object;
 mod signatures;
+mod state_service;
 mod transaction;
+mod transaction_execution_service;
 
 //
 // Bcs
@@ -55,6 +60,11 @@ impl Bcs {
 
     pub fn deserialize<'de, T: serde::Deserialize<'de>>(&'de self) -> Result<T, bcs::Error> {
         bcs::from_bytes(self.value.as_deref().unwrap_or(&[]))
+    }
+
+    pub fn with_name(mut self, name: String) -> Self {
+        self.name = Some(name);
+        self
     }
 }
 
