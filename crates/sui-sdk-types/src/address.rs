@@ -115,8 +115,8 @@ impl Address {
     /// Decodes an address from a hex encoded string.
     ///
     /// Similar to `from_hex` except any errors are unwrapped, turning them into panics.
-    pub const fn from_hex_unwrap(hex: &[u8]) -> Self {
-        match hex_address_bytes(hex) {
+    pub const fn from_hex_unwrap(hex: &str) -> Self {
+        match hex_address_bytes(hex.as_bytes()) {
             Ok(address) => Self(address),
             Err(e) => e.const_panic(),
         }
