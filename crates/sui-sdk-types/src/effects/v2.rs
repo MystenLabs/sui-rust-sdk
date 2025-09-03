@@ -154,6 +154,7 @@ pub struct UnchangedConsensusObject {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[non_exhaustive]
 pub enum UnchangedConsensusKind {
     /// Read-only consensus objects from the input. We don't really need ObjectDigest
     /// for protocol correctness, but it will make it easier to verify untrusted read.
@@ -198,6 +199,7 @@ pub enum UnchangedConsensusKind {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[non_exhaustive]
 pub enum ObjectIn {
     NotExist,
 
@@ -231,6 +233,7 @@ pub enum ObjectIn {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[non_exhaustive]
 pub enum ObjectOut {
     /// Same definition as in ObjectIn.
     NotExist,
@@ -264,6 +267,7 @@ pub enum ObjectOut {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[non_exhaustive]
 pub enum IdOperation {
     None,
     Created,

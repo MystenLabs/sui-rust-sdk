@@ -91,6 +91,7 @@ impl ObjectReference {
     serde(rename_all = "lowercase")
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[non_exhaustive]
 pub enum Owner {
     /// Object is exclusively owned by a single address, and is mutable.
     Address(Address),
@@ -322,7 +323,7 @@ impl MoveStruct {
         &self.type_
     }
 
-    /// Return if this object can be publicly transfered
+    /// Return if this object can be publicly transferred
     ///
     /// DEPRECATED
     ///

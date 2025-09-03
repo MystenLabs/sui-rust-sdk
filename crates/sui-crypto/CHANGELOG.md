@@ -1,3 +1,17 @@
+# [0.0.7] - 2025-08-29
+
+## Added
+
+- Introduced bls12381 support ([`e6d79e1a`])
+- Added QoL derives to keys ([`68bb4ede`])
+
+## Changed
+
+- Update to use version 0.0.7 of `sui-sdk-types`
+
+[`e6d79e1a`]: https://github.com/mystenlabs/sui-rust-sdk/commit/e6d79e1a
+[`68bb4ede`]: https://github.com/mystenlabs/sui-rust-sdk/commit/68bb4ede
+
 # [0.0.6] - 2025-07-16
 
 - Update to use version 0.0.6 of `sui-sdk-types`
@@ -41,6 +55,8 @@
 
 Initial release
 
+[0.0.7]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-crypto-0.0.7
+[0.0.6]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-crypto-0.0.6
 [0.0.5]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-crypto-0.0.5
 [0.0.4]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-crypto-0.0.4
 [0.0.3]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-crypto-0.0.3

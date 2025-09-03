@@ -411,7 +411,7 @@ impl ValidatorCommitteeSignatureAggregator {
             SignatureError::from_source("signature map must have at least one entry")
         })?;
 
-        let mut bitmap = sui_sdk_types::roaring::RoaringBitmap::new();
+        let mut bitmap = sui_sdk_types::Bitmap::new();
         bitmap.insert(*member_idx as u32);
         let agg_sig = AggregateSignature::from_signature(
             &Signature::from_bytes(signature.signature.inner())

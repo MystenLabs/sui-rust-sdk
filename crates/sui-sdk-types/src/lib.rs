@@ -96,6 +96,7 @@
 // #![warn(missing_docs)]
 
 mod address;
+mod bitmap;
 mod checkpoint;
 mod crypto;
 mod digest;
@@ -115,6 +116,7 @@ pub mod hash;
 
 pub use address::Address;
 pub use address::AddressParseError;
+pub use bitmap::Bitmap;
 pub use checkpoint::CheckpointCommitment;
 pub use checkpoint::CheckpointContents;
 pub use checkpoint::CheckpointData;
@@ -259,7 +261,6 @@ mod _serde {
     use serde::Deserializer;
     use serde::Serialize;
     use serde::Serializer;
-    use serde_with::Bytes;
     use serde_with::DeserializeAs;
     use serde_with::SerializeAs;
     use std::borrow::Cow;
@@ -296,72 +297,5 @@ mod _serde {
         }
     }
 
-    /// Serializes a bitmap according to the roaring bitmap on-disk standard.
-    /// <https://github.com/RoaringBitmap/RoaringFormatSpec>
-    pub(crate) struct BinaryRoaringBitmap;
-
-    impl SerializeAs<roaring::RoaringBitmap> for BinaryRoaringBitmap {
-        fn serialize_as<S>(
-            source: &roaring::RoaringBitmap,
-            serializer: S,
-        ) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
-        {
-            let mut bytes = vec![];
-
-            source
-                .serialize_into(&mut bytes)
-                .map_err(serde::ser::Error::custom)?;
-            Bytes::serialize_as(&bytes, serializer)
-        }
-    }
-
-    impl<'de> DeserializeAs<'de, roaring::RoaringBitmap> for BinaryRoaringBitmap {
-        fn deserialize_as<D>(deserializer: D) -> Result<roaring::RoaringBitmap, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            let bytes: Cow<'de, [u8]> = Bytes::deserialize_as(deserializer)?;
-            roaring::RoaringBitmap::deserialize_from(&bytes[..]).map_err(serde::de::Error::custom)
-        }
-    }
-
-    pub(crate) struct Base64RoaringBitmap;
-
-    impl SerializeAs<roaring::RoaringBitmap> for Base64RoaringBitmap {
-        fn serialize_as<S>(
-            source: &roaring::RoaringBitmap,
-            serializer: S,
-        ) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
-        {
-            let mut bytes = vec![];
-
-            source
-                .serialize_into(&mut bytes)
-                .map_err(serde::ser::Error::custom)?;
-            let b64 = Base64::encode_string(&bytes);
-            b64.serialize(serializer)
-        }
-    }
-
-    impl<'de> DeserializeAs<'de, roaring::RoaringBitmap> for Base64RoaringBitmap {
-        fn deserialize_as<D>(deserializer: D) -> Result<roaring::RoaringBitmap, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            let b64: Cow<'de, str> = Deserialize::deserialize(deserializer)?;
-            let bytes = Base64::decode_vec(&b64).map_err(serde::de::Error::custom)?;
-            roaring::RoaringBitmap::deserialize_from(&bytes[..]).map_err(serde::de::Error::custom)
-        }
-    }
-
     pub(crate) use super::SignedTransactionWithIntentMessage;
 }
-
-// declare `roaring` as a public dependency (for the moment) since its currently exposed in a few
-// types
-#[doc(hidden)]
-pub use roaring;

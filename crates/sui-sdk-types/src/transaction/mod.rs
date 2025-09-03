@@ -68,6 +68,7 @@ pub struct SignedTransaction {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[non_exhaustive]
 pub enum TransactionExpiration {
     /// The transaction has no expiration
     #[default]
@@ -170,6 +171,7 @@ pub struct RandomnessStateUpdate {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[non_exhaustive]
 pub enum TransactionKind {
     /// A user transaction comprised of a list of native commands and move calls
     ProgrammableTransaction(ProgrammableTransaction),
@@ -246,6 +248,7 @@ pub enum TransactionKind {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[non_exhaustive]
 pub enum EndOfEpochTransactionKind {
     /// End the epoch and start the next one
     ChangeEpoch(ChangeEpoch),
@@ -298,6 +301,7 @@ pub enum EndOfEpochTransactionKind {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[non_exhaustive]
 pub enum ExecutionTimeObservations {
     V1(
         #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=1).lift()))]
@@ -354,6 +358,7 @@ pub struct ValidatorExecutionTimeObservation {
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
+#[non_exhaustive]
 pub enum ExecutionTimeObservationKey {
     // Containts all the fields from `ProgrammableMoveCall` besides `arguments`.
     MoveEntryPoint {
@@ -531,6 +536,7 @@ pub struct ConsensusCommitPrologueV2 {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[non_exhaustive]
 pub enum ConsensusDeterminedVersionAssignments {
     /// Canceled transaction version assignment.
     CanceledTransactions {
@@ -855,6 +861,7 @@ pub struct ProgrammableTransaction {
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[non_exhaustive]
 pub enum Input {
     /// A move value serialized as BCS.
     ///
@@ -908,6 +915,7 @@ pub enum Input {
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[non_exhaustive]
 pub enum Command {
     /// A call to either an entry or a public Move function
     MoveCall(MoveCall),

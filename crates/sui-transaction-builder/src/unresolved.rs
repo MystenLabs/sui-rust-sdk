@@ -303,6 +303,7 @@ impl From<&sui_types::Object> for Input {
         let input = Input::by_id(object.object_id())
             .with_digest(object.digest())
             .with_version(object.version());
+
         match object.owner() {
             Owner::Address(_) => input,
             Owner::Object(_) => input,
@@ -311,6 +312,7 @@ impl From<&sui_types::Object> for Input {
             Owner::ConsensusAddress { start_version, .. } => {
                 input.with_initial_shared_version(*start_version)
             }
+            _ => input,
         }
     }
 }

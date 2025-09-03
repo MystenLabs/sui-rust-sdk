@@ -1,6 +1,6 @@
 [package]
 name = "sui-sdk-types"
-version = "0.0.6"
+version = "0.0.7"
 authors = ["Brandon Williams <brandon@mystenlabs.com>"]
 repository = "https://github.com/mystenlabs/sui-rust-sdk/"
 license = "Apache-2.0"
@@ -30,10 +30,11 @@ proptest = ["dep:proptest", "dep:test-strategy", "serde"]
 
 [dependencies]
 base64ct = { version = "1.6.0", features = ["alloc"] }
-bs58 = "0.5.1"
-hex = "0.4.3"
-roaring = { version = "0.10.9", default-features = false }
 bnum = "0.12.0"
+bs58 = "0.5.1"
+bytes = { version = "1", default-features = false }
+bytestring = { version = "1", default-features = false }
+roaring = { version = "0.10.9", default-features = false }
 winnow = "0.7"
 
 # Serialization and Deserialization support

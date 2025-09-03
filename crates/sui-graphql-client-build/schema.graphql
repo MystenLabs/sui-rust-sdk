@@ -169,7 +169,7 @@ enum AddressTransactionBlockRelationship {
 	SENT
 	"""
 	Transactions that this address was involved in, either as the sender, sponsor, or as the
-	owner of some object that was created, modified or transfered.
+	owner of some object that was created, modified or transferred.
 	"""
 	AFFECTED
 }
@@ -4352,7 +4352,7 @@ input TransactionBlockFilter {
 	"""
 	kind: TransactionBlockKindInput
 	"""
-	Limit to transactions that occured strictly after the given checkpoint.
+	Limit to transactions that occurred strictly after the given checkpoint.
 	"""
 	afterCheckpoint: UInt53
 	"""
@@ -4360,7 +4360,7 @@ input TransactionBlockFilter {
 	"""
 	atCheckpoint: UInt53
 	"""
-	Limit to transaction that occured strictly before the given checkpoint.
+	Limit to transaction that occurred strictly before the given checkpoint.
 	"""
 	beforeCheckpoint: UInt53
 	"""

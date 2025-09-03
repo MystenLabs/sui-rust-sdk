@@ -420,22 +420,6 @@ impl TryFrom<&ZkLoginPublicIdentifier> for sui_sdk_types::ZkLoginPublicIdentifie
 // SignatureScheme
 //
 
-impl From<sui_sdk_types::SignatureScheme> for SignatureScheme {
-    fn from(value: sui_sdk_types::SignatureScheme) -> Self {
-        use sui_sdk_types::SignatureScheme::*;
-
-        match value {
-            Ed25519 => Self::Ed25519,
-            Secp256k1 => Self::Secp256k1,
-            Secp256r1 => Self::Secp256r1,
-            Multisig => Self::Multisig,
-            Bls12381 => Self::Bls12381,
-            ZkLogin => Self::Zklogin,
-            Passkey => Self::Passkey,
-        }
-    }
-}
-
 impl TryFrom<&SignatureScheme> for sui_sdk_types::SignatureScheme {
     type Error = TryFromProtoError;
 
@@ -461,7 +445,6 @@ impl TryFrom<&SignatureScheme> for sui_sdk_types::SignatureScheme {
 
 impl From<sui_sdk_types::SimpleSignature> for SimpleSignature {
     fn from(value: sui_sdk_types::SimpleSignature) -> Self {
-        let scheme: SignatureScheme = value.scheme().into();
         let (signature, public_key) = match &value {
             sui_sdk_types::SimpleSignature::Ed25519 {
                 signature,
@@ -475,10 +458,11 @@ impl From<sui_sdk_types::SimpleSignature> for SimpleSignature {
                 signature,
                 public_key,
             } => (signature.as_bytes(), public_key.as_bytes()),
+            _ => return Self::default(),
         };
 
         Self {
-            scheme: Some(scheme.into()),
+            scheme: Some(value.scheme().to_u8().into()),
             signature: Some(signature.to_vec().into()),
             public_key: Some(public_key.to_vec().into()),
         }
@@ -622,6 +606,7 @@ impl From<&sui_sdk_types::MultisigMemberPublicKey> for MultisigMemberPublicKey {
                 message.public_key = Some(public_key.inner().as_bytes().to_vec().into());
                 SignatureScheme::Passkey
             }
+            _ => return Self::default(),
         };
 
         message.set_scheme(scheme);
@@ -771,6 +756,7 @@ impl From<&sui_sdk_types::MultisigMemberSignature> for MultisigMemberSignature {
                 message.passkey = Some(p.clone().into());
                 SignatureScheme::Passkey
             }
+            _ => return Self::default(),
         };
 
         message.set_scheme(scheme);
@@ -874,7 +860,7 @@ impl TryFrom<&MultisigAggregatedSignature> for sui_sdk_types::MultisigAggregated
                 .legacy_bitmap
                 .iter()
                 .copied()
-                .collect::<roaring::RoaringBitmap>();
+                .collect::<sui_sdk_types::Bitmap>();
             signature.with_legacy_bitmap(legacy_bitmap);
         }
 
@@ -905,8 +891,7 @@ impl Merge<sui_sdk_types::UserSignature> for UserSignature {
         }
 
         if mask.contains(Self::SCHEME_FIELD.name) {
-            let scheme: SignatureScheme = source.scheme().into();
-            self.set_scheme(scheme);
+            self.scheme = Some(source.scheme().to_u8().into());
         }
 
         match source {
@@ -930,6 +915,7 @@ impl Merge<sui_sdk_types::UserSignature> for UserSignature {
                     self.signature = Some(Signature::Passkey(passkey.into()));
                 }
             }
+            _ => {}
         }
     }
 }

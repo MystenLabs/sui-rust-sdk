@@ -900,6 +900,7 @@ mod tests {
                         sui_types::Owner::ConsensusAddress { .. } => {
                             upgrade_cap = Some(tx.input(&obj))
                         }
+                        _ => panic!("unknwon owner"),
                     };
                     break;
                 }

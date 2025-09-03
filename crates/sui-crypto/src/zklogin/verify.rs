@@ -296,7 +296,7 @@ fn zklogin_proof_to_arkworks(
 
 /// Given a SimpleSignature convert the corrisponding public key, prefixed with the signature
 /// scheme flag, to two Bn254Frs
-pub fn public_key_to_frs(signature: &SimpleSignature) -> (Fr, Fr) {
+fn public_key_to_frs(signature: &SimpleSignature) -> Result<(Fr, Fr), SignatureError> {
     // buf length of the longest public key secp256r1/secp256k1 of 33 bytes plus 1 byte for the
     // scheme
     let mut buf = [0u8; 34];
@@ -316,6 +316,7 @@ pub fn public_key_to_frs(signature: &SimpleSignature) -> (Fr, Fr) {
             buf[1..Secp256r1PublicKey::LENGTH + 1].copy_from_slice(public_key.inner());
             &buf[..Secp256r1PublicKey::LENGTH + 1]
         }
+        _ => return Err(SignatureError::from_source("unknown signature scheme")),
     };
 
     //TODO this comment is wrong...
@@ -325,7 +326,7 @@ pub fn public_key_to_frs(signature: &SimpleSignature) -> (Fr, Fr) {
 
     let eph_public_key_0 = Fr::from_be_bytes_mod_order(first_half);
     let eph_public_key_1 = Fr::from_be_bytes_mod_order(second_half);
-    (eph_public_key_0, eph_public_key_1)
+    Ok((eph_public_key_0, eph_public_key_1))
 }
 
 pub(crate) type U256 = bnum::BUintD8<32>;
@@ -449,7 +450,7 @@ pub fn calculate_all_inputs_hash(
         return Err(SignatureError::from_source("header too long"));
     }
 
-    let (first, second) = public_key_to_frs(signature);
+    let (first, second) = public_key_to_frs(signature)?;
 
     let address_seed = bn254_to_fr(inputs.address_seed());
     let max_epoch_f = Fr::from_be_bytes_mod_order(U256::from(max_epoch).to_be().digits());
@@ -603,7 +604,7 @@ mod test {
             signature: Ed25519Signature::new([0; 64]),
             public_key: pubkey,
         };
-        let (actual_0, actual_1) = public_key_to_frs(&signature);
+        let (actual_0, actual_1) = public_key_to_frs(&signature).unwrap();
         let expect_0 = Fr::from(ark_ff::BigInt([
             1244302228903607218,
             13386648721483054705,

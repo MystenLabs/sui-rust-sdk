@@ -1,6 +1,6 @@
 [package]
 name = "sui-crypto"
-version = "0.0.6"
+version = "0.0.7"
 authors = ["Brandon Williams <brandon@mystenlabs.com>"]
 repository = "https://github.com/mystenlabs/sui-rust-sdk/"
 license = "Apache-2.0"
@@ -55,7 +55,7 @@ bls12381 = ["dep:blst", "dep:rand_core", "signature/std"]
 
 [dependencies]
 signature = "2.2"
-sui-sdk-types = { version = "0.0.6", path = "../sui-sdk-types", default-features = false, features = ["hash", "serde"] }
+sui-sdk-types = { version = "0.0.7", path = "../sui-sdk-types", default-features = false, features = ["hash", "serde"] }
 
 # RNG support
 rand_core = { version = "0.6.4", optional = true }
@@ -94,13 +94,12 @@ blst = { version = "0.3.13", optional = true }
 
 [dev-dependencies]
 bcs = { version = "0.1.6" }
-hex = "0.4.3"
 serde_json = { version = "1.0.128" }
 
 # proptest support in tests
 proptest = { version = "1.6.0", default-features = false, features = ["std"] }
 test-strategy = "0.4.0"
-sui-sdk-types = { version = "0.0.6", path = "../sui-sdk-types", default-features = false, features = ["proptest"] }
+sui-sdk-types = { version = "0.0.7", path = "../sui-sdk-types", default-features = false, features = ["proptest"] }
 
 [target.wasm32-unknown-unknown.dev-dependencies]
 wasm-bindgen-test = "0.3"

@@ -207,6 +207,7 @@ impl From<sui_sdk_types::TransactionExpiration> for TransactionExpiration {
                 message.epoch = Some(epoch);
                 TransactionExpirationKind::Epoch
             }
+            _ => TransactionExpirationKind::Unknown,
         };
 
         message.set_kind(kind);
@@ -265,6 +266,7 @@ impl From<sui_sdk_types::TransactionKind> for TransactionKind {
             ConsensusCommitPrologueV2(prologue) => Kind::ConsensusCommitPrologueV2(prologue.into()),
             ConsensusCommitPrologueV3(prologue) => Kind::ConsensusCommitPrologueV3(prologue.into()),
             ConsensusCommitPrologueV4(prologue) => Kind::ConsensusCommitPrologueV4(prologue.into()),
+            _ => return Self::default(),
         };
 
         Self { kind: Some(kind) }
@@ -582,6 +584,7 @@ impl From<sui_sdk_types::ConsensusDeterminedVersionAssignments>
                     canceled_transactions.into_iter().map(Into::into).collect();
                 2
             }
+            _ => return Self::default(),
         };
 
         message.version = Some(version);
@@ -1116,6 +1119,7 @@ impl From<sui_sdk_types::EndOfEpochTransactionKind> for EndOfEpochTransactionKin
             }
             AccumulatorRootCreate => Kind::AccumulatorRootCreate(()),
             CoinRegistryCreate => Kind::CoinRegistryCreate(()),
+            _ => return Self::default(),
         };
 
         Self { kind: Some(kind) }
@@ -1206,6 +1210,7 @@ impl From<sui_sdk_types::ExecutionTimeObservations> for ExecutionTimeObservation
                 version: Some(1),
                 observations: vec.into_iter().map(Into::into).collect(),
             },
+            _ => Self::default(),
         }
     }
 }
@@ -1270,6 +1275,8 @@ impl
                 ExecutionTimeObservationKind::MakeMoveVector
             }
             ExecutionTimeObservationKey::Upgrade => ExecutionTimeObservationKind::Upgrade,
+
+            _ => ExecutionTimeObservationKind::Unknown,
         };
 
         message.validator_observations = value.1.into_iter().map(Into::into).collect();
@@ -1434,14 +1441,12 @@ impl From<sui_sdk_types::Input> for Input {
                 message.pure = Some(value.into());
                 InputKind::Pure
             }
-
             ImmutableOrOwned(reference) => {
                 message.object_id = Some(reference.object_id().to_string());
                 message.version = Some(reference.version());
                 message.digest = Some(reference.digest().to_string());
                 InputKind::ImmutableOrOwned
             }
-
             Shared {
                 object_id,
                 initial_shared_version,
@@ -1452,13 +1457,13 @@ impl From<sui_sdk_types::Input> for Input {
                 message.mutable = Some(mutable);
                 InputKind::Shared
             }
-
             Receiving(reference) => {
                 message.object_id = Some(reference.object_id().to_string());
                 message.version = Some(reference.version());
                 message.digest = Some(reference.digest().to_string());
                 InputKind::Receiving
             }
+            _ => InputKind::Unknown,
         };
 
         message.set_kind(kind);
@@ -1714,6 +1719,9 @@ impl From<sui_sdk_types::Command> for Command {
             Publish(publish) => Command::Publish(publish.into()),
             MakeMoveVector(make_move_vector) => Command::MakeMoveVector(make_move_vector.into()),
             Upgrade(upgrade) => Command::Upgrade(upgrade.into()),
+
+            //
+            _ => return Self::default(),
         };
 
         Self {
@@ -2039,46 +2047,5 @@ impl TryFrom<&Upgrade> for sui_sdk_types::Upgrade {
             package,
             ticket,
         })
-    }
-}
-
-impl GetTransactionResult {
-    pub fn new_transaction(transaction: ExecutedTransaction) -> Self {
-        Self {
-            result: Some(get_transaction_result::Result::Transaction(transaction)),
-        }
-    }
-
-    pub fn new_error(error: crate::proto::google::rpc::Status) -> Self {
-        Self {
-            result: Some(get_transaction_result::Result::Error(error)),
-        }
-    }
-
-    pub fn to_result(self) -> Result<ExecutedTransaction, crate::proto::google::rpc::Status> {
-        match self.result {
-            Some(get_transaction_result::Result::Transaction(transaction)) => Ok(transaction),
-            Some(get_transaction_result::Result::Error(error)) => Err(error),
-            None => Err(crate::proto::google::rpc::Status {
-                code: tonic::Code::NotFound.into(),
-                ..Default::default()
-            }),
-        }
-    }
-
-    pub fn transaction(&self) -> Option<&ExecutedTransaction> {
-        if let Some(get_transaction_result::Result::Transaction(transaction)) = &self.result {
-            Some(transaction)
-        } else {
-            None
-        }
-    }
-
-    pub fn error(&self) -> Option<&crate::proto::google::rpc::Status> {
-        if let Some(get_transaction_result::Result::Error(error)) = &self.result {
-            Some(error)
-        } else {
-            None
-        }
     }
 }

@@ -246,7 +246,6 @@ impl Verifier<UserSignature> for UserSignatureVerifier {
                 crate::simple::SimpleVerifier.verify(message, simple_signature)
             }
             UserSignature::Multisig(multisig) => self.inner.verify(message, multisig),
-
             #[cfg(not(feature = "zklogin"))]
             UserSignature::ZkLogin(_) => Err(SignatureError::from_source(
                 "support for zklogin is not enabled",
@@ -267,6 +266,7 @@ impl Verifier<UserSignature> for UserSignatureVerifier {
             UserSignature::Passkey(passkey_authenticator) => {
                 crate::passkey::PasskeyVerifier::default().verify(message, passkey_authenticator)
             }
+            _ => Err(SignatureError::from_source("unknown signature scheme")),
         }
     }
 }
@@ -424,5 +424,7 @@ fn multisig_pubkey_and_signature_from_user_signature(
         )),
 
         UserSignature::Multisig(_) => Err(SignatureError::from_source("invalid siganture scheme")),
+
+        _ => Err(SignatureError::from_source("unknown siganture scheme")),
     }
 }

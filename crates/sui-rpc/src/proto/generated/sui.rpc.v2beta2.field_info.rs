@@ -1,4 +1,5 @@
 mod _field_impls {
+    #![allow(clippy::wrong_self_convention)]
     use super::*;
     use crate::field::MessageFields;
     use crate::field::MessageField;
@@ -36,6 +37,43 @@ mod _field_impls {
             Self::SUBRESULT_FIELD,
         ];
     }
+    impl Argument {
+        pub fn path_builder() -> ArgumentFieldPathBuilder {
+            ArgumentFieldPathBuilder::new()
+        }
+    }
+    pub struct ArgumentFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ArgumentFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn kind(mut self) -> String {
+            self.path.push(Argument::KIND_FIELD.name);
+            self.finish()
+        }
+        pub fn input(mut self) -> String {
+            self.path.push(Argument::INPUT_FIELD.name);
+            self.finish()
+        }
+        pub fn result(mut self) -> String {
+            self.path.push(Argument::RESULT_FIELD.name);
+            self.finish()
+        }
+        pub fn subresult(mut self) -> String {
+            self.path.push(Argument::SUBRESULT_FIELD.name);
+            self.finish()
+        }
+    }
     impl BalanceChange {
         pub const ADDRESS_FIELD: &'static MessageField = &MessageField {
             name: "address",
@@ -63,6 +101,39 @@ mod _field_impls {
             Self::AMOUNT_FIELD,
         ];
     }
+    impl BalanceChange {
+        pub fn path_builder() -> BalanceChangeFieldPathBuilder {
+            BalanceChangeFieldPathBuilder::new()
+        }
+    }
+    pub struct BalanceChangeFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl BalanceChangeFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn address(mut self) -> String {
+            self.path.push(BalanceChange::ADDRESS_FIELD.name);
+            self.finish()
+        }
+        pub fn coin_type(mut self) -> String {
+            self.path.push(BalanceChange::COIN_TYPE_FIELD.name);
+            self.finish()
+        }
+        pub fn amount(mut self) -> String {
+            self.path.push(BalanceChange::AMOUNT_FIELD.name);
+            self.finish()
+        }
+    }
     impl Bcs {
         pub const NAME_FIELD: &'static MessageField = &MessageField {
             name: "name",
@@ -82,6 +153,35 @@ mod _field_impls {
             Self::NAME_FIELD,
             Self::VALUE_FIELD,
         ];
+    }
+    impl Bcs {
+        pub fn path_builder() -> BcsFieldPathBuilder {
+            BcsFieldPathBuilder::new()
+        }
+    }
+    pub struct BcsFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl BcsFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn name(mut self) -> String {
+            self.path.push(Bcs::NAME_FIELD.name);
+            self.finish()
+        }
+        pub fn value(mut self) -> String {
+            self.path.push(Bcs::VALUE_FIELD.name);
+            self.finish()
+        }
     }
     impl Checkpoint {
         pub const SEQUENCE_NUMBER_FIELD: &'static MessageField = &MessageField {
@@ -131,6 +231,51 @@ mod _field_impls {
             Self::TRANSACTIONS_FIELD,
         ];
     }
+    impl Checkpoint {
+        pub fn path_builder() -> CheckpointFieldPathBuilder {
+            CheckpointFieldPathBuilder::new()
+        }
+    }
+    pub struct CheckpointFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl CheckpointFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn sequence_number(mut self) -> String {
+            self.path.push(Checkpoint::SEQUENCE_NUMBER_FIELD.name);
+            self.finish()
+        }
+        pub fn digest(mut self) -> String {
+            self.path.push(Checkpoint::DIGEST_FIELD.name);
+            self.finish()
+        }
+        pub fn summary(mut self) -> CheckpointSummaryFieldPathBuilder {
+            self.path.push(Checkpoint::SUMMARY_FIELD.name);
+            CheckpointSummaryFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn signature(mut self) -> ValidatorAggregatedSignatureFieldPathBuilder {
+            self.path.push(Checkpoint::SIGNATURE_FIELD.name);
+            ValidatorAggregatedSignatureFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn contents(mut self) -> CheckpointContentsFieldPathBuilder {
+            self.path.push(Checkpoint::CONTENTS_FIELD.name);
+            CheckpointContentsFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn transactions(mut self) -> ExecutedTransactionFieldPathBuilder {
+            self.path.push(Checkpoint::TRANSACTIONS_FIELD.name);
+            ExecutedTransactionFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl CheckpointContents {
         pub const BCS_FIELD: &'static MessageField = &MessageField {
             name: "bcs",
@@ -165,6 +310,43 @@ mod _field_impls {
             Self::TRANSACTIONS_FIELD,
         ];
     }
+    impl CheckpointContents {
+        pub fn path_builder() -> CheckpointContentsFieldPathBuilder {
+            CheckpointContentsFieldPathBuilder::new()
+        }
+    }
+    pub struct CheckpointContentsFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl CheckpointContentsFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn bcs(mut self) -> BcsFieldPathBuilder {
+            self.path.push(CheckpointContents::BCS_FIELD.name);
+            BcsFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn digest(mut self) -> String {
+            self.path.push(CheckpointContents::DIGEST_FIELD.name);
+            self.finish()
+        }
+        pub fn version(mut self) -> String {
+            self.path.push(CheckpointContents::VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn transactions(mut self) -> CheckpointedTransactionInfoFieldPathBuilder {
+            self.path.push(CheckpointContents::TRANSACTIONS_FIELD.name);
+            CheckpointedTransactionInfoFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl CheckpointedTransactionInfo {
         pub const TRANSACTION_FIELD: &'static MessageField = &MessageField {
             name: "transaction",
@@ -191,6 +373,39 @@ mod _field_impls {
             Self::EFFECTS_FIELD,
             Self::SIGNATURES_FIELD,
         ];
+    }
+    impl CheckpointedTransactionInfo {
+        pub fn path_builder() -> CheckpointedTransactionInfoFieldPathBuilder {
+            CheckpointedTransactionInfoFieldPathBuilder::new()
+        }
+    }
+    pub struct CheckpointedTransactionInfoFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl CheckpointedTransactionInfoFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn transaction(mut self) -> String {
+            self.path.push(CheckpointedTransactionInfo::TRANSACTION_FIELD.name);
+            self.finish()
+        }
+        pub fn effects(mut self) -> String {
+            self.path.push(CheckpointedTransactionInfo::EFFECTS_FIELD.name);
+            self.finish()
+        }
+        pub fn signatures(mut self) -> UserSignatureFieldPathBuilder {
+            self.path.push(CheckpointedTransactionInfo::SIGNATURES_FIELD.name);
+            UserSignatureFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl CheckpointSummary {
         pub const BCS_FIELD: &'static MessageField = &MessageField {
@@ -282,6 +497,77 @@ mod _field_impls {
             Self::VERSION_SPECIFIC_DATA_FIELD,
         ];
     }
+    impl CheckpointSummary {
+        pub fn path_builder() -> CheckpointSummaryFieldPathBuilder {
+            CheckpointSummaryFieldPathBuilder::new()
+        }
+    }
+    pub struct CheckpointSummaryFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl CheckpointSummaryFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn bcs(mut self) -> BcsFieldPathBuilder {
+            self.path.push(CheckpointSummary::BCS_FIELD.name);
+            BcsFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn digest(mut self) -> String {
+            self.path.push(CheckpointSummary::DIGEST_FIELD.name);
+            self.finish()
+        }
+        pub fn epoch(mut self) -> String {
+            self.path.push(CheckpointSummary::EPOCH_FIELD.name);
+            self.finish()
+        }
+        pub fn sequence_number(mut self) -> String {
+            self.path.push(CheckpointSummary::SEQUENCE_NUMBER_FIELD.name);
+            self.finish()
+        }
+        pub fn total_network_transactions(mut self) -> String {
+            self.path.push(CheckpointSummary::TOTAL_NETWORK_TRANSACTIONS_FIELD.name);
+            self.finish()
+        }
+        pub fn content_digest(mut self) -> String {
+            self.path.push(CheckpointSummary::CONTENT_DIGEST_FIELD.name);
+            self.finish()
+        }
+        pub fn previous_digest(mut self) -> String {
+            self.path.push(CheckpointSummary::PREVIOUS_DIGEST_FIELD.name);
+            self.finish()
+        }
+        pub fn epoch_rolling_gas_cost_summary(
+            mut self,
+        ) -> GasCostSummaryFieldPathBuilder {
+            self.path.push(CheckpointSummary::EPOCH_ROLLING_GAS_COST_SUMMARY_FIELD.name);
+            GasCostSummaryFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn timestamp(mut self) -> String {
+            self.path.push(CheckpointSummary::TIMESTAMP_FIELD.name);
+            self.finish()
+        }
+        pub fn commitments(mut self) -> CheckpointCommitmentFieldPathBuilder {
+            self.path.push(CheckpointSummary::COMMITMENTS_FIELD.name);
+            CheckpointCommitmentFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn end_of_epoch_data(mut self) -> EndOfEpochDataFieldPathBuilder {
+            self.path.push(CheckpointSummary::END_OF_EPOCH_DATA_FIELD.name);
+            EndOfEpochDataFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn version_specific_data(mut self) -> String {
+            self.path.push(CheckpointSummary::VERSION_SPECIFIC_DATA_FIELD.name);
+            self.finish()
+        }
+    }
     impl EndOfEpochData {
         pub const NEXT_EPOCH_COMMITTEE_FIELD: &'static MessageField = &MessageField {
             name: "next_epoch_committee",
@@ -309,6 +595,41 @@ mod _field_impls {
             Self::EPOCH_COMMITMENTS_FIELD,
         ];
     }
+    impl EndOfEpochData {
+        pub fn path_builder() -> EndOfEpochDataFieldPathBuilder {
+            EndOfEpochDataFieldPathBuilder::new()
+        }
+    }
+    pub struct EndOfEpochDataFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl EndOfEpochDataFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn next_epoch_committee(
+            mut self,
+        ) -> ValidatorCommitteeMemberFieldPathBuilder {
+            self.path.push(EndOfEpochData::NEXT_EPOCH_COMMITTEE_FIELD.name);
+            ValidatorCommitteeMemberFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn next_epoch_protocol_version(mut self) -> String {
+            self.path.push(EndOfEpochData::NEXT_EPOCH_PROTOCOL_VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn epoch_commitments(mut self) -> CheckpointCommitmentFieldPathBuilder {
+            self.path.push(EndOfEpochData::EPOCH_COMMITMENTS_FIELD.name);
+            CheckpointCommitmentFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl CheckpointCommitment {
         pub const KIND_FIELD: &'static MessageField = &MessageField {
             name: "kind",
@@ -328,6 +649,35 @@ mod _field_impls {
             Self::KIND_FIELD,
             Self::DIGEST_FIELD,
         ];
+    }
+    impl CheckpointCommitment {
+        pub fn path_builder() -> CheckpointCommitmentFieldPathBuilder {
+            CheckpointCommitmentFieldPathBuilder::new()
+        }
+    }
+    pub struct CheckpointCommitmentFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl CheckpointCommitmentFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn kind(mut self) -> String {
+            self.path.push(CheckpointCommitment::KIND_FIELD.name);
+            self.finish()
+        }
+        pub fn digest(mut self) -> String {
+            self.path.push(CheckpointCommitment::DIGEST_FIELD.name);
+            self.finish()
+        }
     }
     impl TransactionEffects {
         pub const BCS_FIELD: &'static MessageField = &MessageField {
@@ -433,6 +783,85 @@ mod _field_impls {
             Self::AUXILIARY_DATA_DIGEST_FIELD,
         ];
     }
+    impl TransactionEffects {
+        pub fn path_builder() -> TransactionEffectsFieldPathBuilder {
+            TransactionEffectsFieldPathBuilder::new()
+        }
+    }
+    pub struct TransactionEffectsFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl TransactionEffectsFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn bcs(mut self) -> BcsFieldPathBuilder {
+            self.path.push(TransactionEffects::BCS_FIELD.name);
+            BcsFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn digest(mut self) -> String {
+            self.path.push(TransactionEffects::DIGEST_FIELD.name);
+            self.finish()
+        }
+        pub fn version(mut self) -> String {
+            self.path.push(TransactionEffects::VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn status(mut self) -> ExecutionStatusFieldPathBuilder {
+            self.path.push(TransactionEffects::STATUS_FIELD.name);
+            ExecutionStatusFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn epoch(mut self) -> String {
+            self.path.push(TransactionEffects::EPOCH_FIELD.name);
+            self.finish()
+        }
+        pub fn gas_used(mut self) -> GasCostSummaryFieldPathBuilder {
+            self.path.push(TransactionEffects::GAS_USED_FIELD.name);
+            GasCostSummaryFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn transaction_digest(mut self) -> String {
+            self.path.push(TransactionEffects::TRANSACTION_DIGEST_FIELD.name);
+            self.finish()
+        }
+        pub fn gas_object(mut self) -> ChangedObjectFieldPathBuilder {
+            self.path.push(TransactionEffects::GAS_OBJECT_FIELD.name);
+            ChangedObjectFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn events_digest(mut self) -> String {
+            self.path.push(TransactionEffects::EVENTS_DIGEST_FIELD.name);
+            self.finish()
+        }
+        pub fn dependencies(mut self) -> String {
+            self.path.push(TransactionEffects::DEPENDENCIES_FIELD.name);
+            self.finish()
+        }
+        pub fn lamport_version(mut self) -> String {
+            self.path.push(TransactionEffects::LAMPORT_VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn changed_objects(mut self) -> ChangedObjectFieldPathBuilder {
+            self.path.push(TransactionEffects::CHANGED_OBJECTS_FIELD.name);
+            ChangedObjectFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn unchanged_consensus_objects(
+            mut self,
+        ) -> UnchangedConsensusObjectFieldPathBuilder {
+            self.path.push(TransactionEffects::UNCHANGED_CONSENSUS_OBJECTS_FIELD.name);
+            UnchangedConsensusObjectFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn auxiliary_data_digest(mut self) -> String {
+            self.path.push(TransactionEffects::AUXILIARY_DATA_DIGEST_FIELD.name);
+            self.finish()
+        }
+    }
     impl ChangedObject {
         pub const OBJECT_ID_FIELD: &'static MessageField = &MessageField {
             name: "object_id",
@@ -516,6 +945,71 @@ mod _field_impls {
             Self::OBJECT_TYPE_FIELD,
         ];
     }
+    impl ChangedObject {
+        pub fn path_builder() -> ChangedObjectFieldPathBuilder {
+            ChangedObjectFieldPathBuilder::new()
+        }
+    }
+    pub struct ChangedObjectFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ChangedObjectFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn object_id(mut self) -> String {
+            self.path.push(ChangedObject::OBJECT_ID_FIELD.name);
+            self.finish()
+        }
+        pub fn input_state(mut self) -> String {
+            self.path.push(ChangedObject::INPUT_STATE_FIELD.name);
+            self.finish()
+        }
+        pub fn input_version(mut self) -> String {
+            self.path.push(ChangedObject::INPUT_VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn input_digest(mut self) -> String {
+            self.path.push(ChangedObject::INPUT_DIGEST_FIELD.name);
+            self.finish()
+        }
+        pub fn input_owner(mut self) -> OwnerFieldPathBuilder {
+            self.path.push(ChangedObject::INPUT_OWNER_FIELD.name);
+            OwnerFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn output_state(mut self) -> String {
+            self.path.push(ChangedObject::OUTPUT_STATE_FIELD.name);
+            self.finish()
+        }
+        pub fn output_version(mut self) -> String {
+            self.path.push(ChangedObject::OUTPUT_VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn output_digest(mut self) -> String {
+            self.path.push(ChangedObject::OUTPUT_DIGEST_FIELD.name);
+            self.finish()
+        }
+        pub fn output_owner(mut self) -> OwnerFieldPathBuilder {
+            self.path.push(ChangedObject::OUTPUT_OWNER_FIELD.name);
+            OwnerFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn id_operation(mut self) -> String {
+            self.path.push(ChangedObject::ID_OPERATION_FIELD.name);
+            self.finish()
+        }
+        pub fn object_type(mut self) -> String {
+            self.path.push(ChangedObject::OBJECT_TYPE_FIELD.name);
+            self.finish()
+        }
+    }
     impl UnchangedConsensusObject {
         pub const KIND_FIELD: &'static MessageField = &MessageField {
             name: "kind",
@@ -556,6 +1050,47 @@ mod _field_impls {
             Self::DIGEST_FIELD,
             Self::OBJECT_TYPE_FIELD,
         ];
+    }
+    impl UnchangedConsensusObject {
+        pub fn path_builder() -> UnchangedConsensusObjectFieldPathBuilder {
+            UnchangedConsensusObjectFieldPathBuilder::new()
+        }
+    }
+    pub struct UnchangedConsensusObjectFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl UnchangedConsensusObjectFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn kind(mut self) -> String {
+            self.path.push(UnchangedConsensusObject::KIND_FIELD.name);
+            self.finish()
+        }
+        pub fn object_id(mut self) -> String {
+            self.path.push(UnchangedConsensusObject::OBJECT_ID_FIELD.name);
+            self.finish()
+        }
+        pub fn version(mut self) -> String {
+            self.path.push(UnchangedConsensusObject::VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn digest(mut self) -> String {
+            self.path.push(UnchangedConsensusObject::DIGEST_FIELD.name);
+            self.finish()
+        }
+        pub fn object_type(mut self) -> String {
+            self.path.push(UnchangedConsensusObject::OBJECT_TYPE_FIELD.name);
+            self.finish()
+        }
     }
     impl Epoch {
         pub const EPOCH_FIELD: &'static MessageField = &MessageField {
@@ -626,6 +1161,63 @@ mod _field_impls {
             Self::PROTOCOL_CONFIG_FIELD,
         ];
     }
+    impl Epoch {
+        pub fn path_builder() -> EpochFieldPathBuilder {
+            EpochFieldPathBuilder::new()
+        }
+    }
+    pub struct EpochFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl EpochFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn epoch(mut self) -> String {
+            self.path.push(Epoch::EPOCH_FIELD.name);
+            self.finish()
+        }
+        pub fn committee(mut self) -> ValidatorCommitteeFieldPathBuilder {
+            self.path.push(Epoch::COMMITTEE_FIELD.name);
+            ValidatorCommitteeFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn system_state(mut self) -> SystemStateFieldPathBuilder {
+            self.path.push(Epoch::SYSTEM_STATE_FIELD.name);
+            SystemStateFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn first_checkpoint(mut self) -> String {
+            self.path.push(Epoch::FIRST_CHECKPOINT_FIELD.name);
+            self.finish()
+        }
+        pub fn last_checkpoint(mut self) -> String {
+            self.path.push(Epoch::LAST_CHECKPOINT_FIELD.name);
+            self.finish()
+        }
+        pub fn start(mut self) -> String {
+            self.path.push(Epoch::START_FIELD.name);
+            self.finish()
+        }
+        pub fn end(mut self) -> String {
+            self.path.push(Epoch::END_FIELD.name);
+            self.finish()
+        }
+        pub fn reference_gas_price(mut self) -> String {
+            self.path.push(Epoch::REFERENCE_GAS_PRICE_FIELD.name);
+            self.finish()
+        }
+        pub fn protocol_config(mut self) -> ProtocolConfigFieldPathBuilder {
+            self.path.push(Epoch::PROTOCOL_CONFIG_FIELD.name);
+            ProtocolConfigFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl TransactionEvents {
         pub const BCS_FIELD: &'static MessageField = &MessageField {
             name: "bcs",
@@ -652,6 +1244,39 @@ mod _field_impls {
             Self::DIGEST_FIELD,
             Self::EVENTS_FIELD,
         ];
+    }
+    impl TransactionEvents {
+        pub fn path_builder() -> TransactionEventsFieldPathBuilder {
+            TransactionEventsFieldPathBuilder::new()
+        }
+    }
+    pub struct TransactionEventsFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl TransactionEventsFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn bcs(mut self) -> BcsFieldPathBuilder {
+            self.path.push(TransactionEvents::BCS_FIELD.name);
+            BcsFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn digest(mut self) -> String {
+            self.path.push(TransactionEvents::DIGEST_FIELD.name);
+            self.finish()
+        }
+        pub fn events(mut self) -> EventFieldPathBuilder {
+            self.path.push(TransactionEvents::EVENTS_FIELD.name);
+            EventFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl Event {
         pub const PACKAGE_ID_FIELD: &'static MessageField = &MessageField {
@@ -700,6 +1325,51 @@ mod _field_impls {
             Self::CONTENTS_FIELD,
             Self::JSON_FIELD,
         ];
+    }
+    impl Event {
+        pub fn path_builder() -> EventFieldPathBuilder {
+            EventFieldPathBuilder::new()
+        }
+    }
+    pub struct EventFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl EventFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn package_id(mut self) -> String {
+            self.path.push(Event::PACKAGE_ID_FIELD.name);
+            self.finish()
+        }
+        pub fn module(mut self) -> String {
+            self.path.push(Event::MODULE_FIELD.name);
+            self.finish()
+        }
+        pub fn sender(mut self) -> String {
+            self.path.push(Event::SENDER_FIELD.name);
+            self.finish()
+        }
+        pub fn event_type(mut self) -> String {
+            self.path.push(Event::EVENT_TYPE_FIELD.name);
+            self.finish()
+        }
+        pub fn contents(mut self) -> BcsFieldPathBuilder {
+            self.path.push(Event::CONTENTS_FIELD.name);
+            BcsFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn json(mut self) -> String {
+            self.path.push(Event::JSON_FIELD.name);
+            self.finish()
+        }
     }
     impl ExecutedTransaction {
         pub const DIGEST_FIELD: &'static MessageField = &MessageField {
@@ -777,6 +1447,67 @@ mod _field_impls {
             Self::OUTPUT_OBJECTS_FIELD,
         ];
     }
+    impl ExecutedTransaction {
+        pub fn path_builder() -> ExecutedTransactionFieldPathBuilder {
+            ExecutedTransactionFieldPathBuilder::new()
+        }
+    }
+    pub struct ExecutedTransactionFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ExecutedTransactionFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn digest(mut self) -> String {
+            self.path.push(ExecutedTransaction::DIGEST_FIELD.name);
+            self.finish()
+        }
+        pub fn transaction(mut self) -> TransactionFieldPathBuilder {
+            self.path.push(ExecutedTransaction::TRANSACTION_FIELD.name);
+            TransactionFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn signatures(mut self) -> UserSignatureFieldPathBuilder {
+            self.path.push(ExecutedTransaction::SIGNATURES_FIELD.name);
+            UserSignatureFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn effects(mut self) -> TransactionEffectsFieldPathBuilder {
+            self.path.push(ExecutedTransaction::EFFECTS_FIELD.name);
+            TransactionEffectsFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn events(mut self) -> TransactionEventsFieldPathBuilder {
+            self.path.push(ExecutedTransaction::EVENTS_FIELD.name);
+            TransactionEventsFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn checkpoint(mut self) -> String {
+            self.path.push(ExecutedTransaction::CHECKPOINT_FIELD.name);
+            self.finish()
+        }
+        pub fn timestamp(mut self) -> String {
+            self.path.push(ExecutedTransaction::TIMESTAMP_FIELD.name);
+            self.finish()
+        }
+        pub fn balance_changes(mut self) -> BalanceChangeFieldPathBuilder {
+            self.path.push(ExecutedTransaction::BALANCE_CHANGES_FIELD.name);
+            BalanceChangeFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn input_objects(mut self) -> ObjectFieldPathBuilder {
+            self.path.push(ExecutedTransaction::INPUT_OBJECTS_FIELD.name);
+            ObjectFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn output_objects(mut self) -> ObjectFieldPathBuilder {
+            self.path.push(ExecutedTransaction::OUTPUT_OBJECTS_FIELD.name);
+            ObjectFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl ExecutionStatus {
         pub const SUCCESS_FIELD: &'static MessageField = &MessageField {
             name: "success",
@@ -796,6 +1527,35 @@ mod _field_impls {
             Self::SUCCESS_FIELD,
             Self::ERROR_FIELD,
         ];
+    }
+    impl ExecutionStatus {
+        pub fn path_builder() -> ExecutionStatusFieldPathBuilder {
+            ExecutionStatusFieldPathBuilder::new()
+        }
+    }
+    pub struct ExecutionStatusFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ExecutionStatusFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn success(mut self) -> String {
+            self.path.push(ExecutionStatus::SUCCESS_FIELD.name);
+            self.finish()
+        }
+        pub fn error(mut self) -> ExecutionErrorFieldPathBuilder {
+            self.path.push(ExecutionStatus::ERROR_FIELD.name);
+            ExecutionErrorFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl ExecutionError {
         pub const DESCRIPTION_FIELD: &'static MessageField = &MessageField {
@@ -887,6 +1647,75 @@ mod _field_impls {
             Self::CONGESTED_OBJECTS_FIELD,
         ];
     }
+    impl ExecutionError {
+        pub fn path_builder() -> ExecutionErrorFieldPathBuilder {
+            ExecutionErrorFieldPathBuilder::new()
+        }
+    }
+    pub struct ExecutionErrorFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ExecutionErrorFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn description(mut self) -> String {
+            self.path.push(ExecutionError::DESCRIPTION_FIELD.name);
+            self.finish()
+        }
+        pub fn command(mut self) -> String {
+            self.path.push(ExecutionError::COMMAND_FIELD.name);
+            self.finish()
+        }
+        pub fn kind(mut self) -> String {
+            self.path.push(ExecutionError::KIND_FIELD.name);
+            self.finish()
+        }
+        pub fn abort(mut self) -> MoveAbortFieldPathBuilder {
+            self.path.push(ExecutionError::ABORT_FIELD.name);
+            MoveAbortFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn size_error(mut self) -> SizeErrorFieldPathBuilder {
+            self.path.push(ExecutionError::SIZE_ERROR_FIELD.name);
+            SizeErrorFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn command_argument_error(mut self) -> CommandArgumentErrorFieldPathBuilder {
+            self.path.push(ExecutionError::COMMAND_ARGUMENT_ERROR_FIELD.name);
+            CommandArgumentErrorFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn type_argument_error(mut self) -> TypeArgumentErrorFieldPathBuilder {
+            self.path.push(ExecutionError::TYPE_ARGUMENT_ERROR_FIELD.name);
+            TypeArgumentErrorFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn package_upgrade_error(mut self) -> PackageUpgradeErrorFieldPathBuilder {
+            self.path.push(ExecutionError::PACKAGE_UPGRADE_ERROR_FIELD.name);
+            PackageUpgradeErrorFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn index_error(mut self) -> IndexErrorFieldPathBuilder {
+            self.path.push(ExecutionError::INDEX_ERROR_FIELD.name);
+            IndexErrorFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn object_id(mut self) -> String {
+            self.path.push(ExecutionError::OBJECT_ID_FIELD.name);
+            self.finish()
+        }
+        pub fn coin_deny_list_error(mut self) -> CoinDenyListErrorFieldPathBuilder {
+            self.path.push(ExecutionError::COIN_DENY_LIST_ERROR_FIELD.name);
+            CoinDenyListErrorFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn congested_objects(mut self) -> CongestedObjectsFieldPathBuilder {
+            self.path.push(ExecutionError::CONGESTED_OBJECTS_FIELD.name);
+            CongestedObjectsFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl MoveAbort {
         pub const ABORT_CODE_FIELD: &'static MessageField = &MessageField {
             name: "abort_code",
@@ -913,6 +1742,39 @@ mod _field_impls {
             Self::LOCATION_FIELD,
             Self::CLEVER_ERROR_FIELD,
         ];
+    }
+    impl MoveAbort {
+        pub fn path_builder() -> MoveAbortFieldPathBuilder {
+            MoveAbortFieldPathBuilder::new()
+        }
+    }
+    pub struct MoveAbortFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl MoveAbortFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn abort_code(mut self) -> String {
+            self.path.push(MoveAbort::ABORT_CODE_FIELD.name);
+            self.finish()
+        }
+        pub fn location(mut self) -> MoveLocationFieldPathBuilder {
+            self.path.push(MoveAbort::LOCATION_FIELD.name);
+            MoveLocationFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn clever_error(mut self) -> CleverErrorFieldPathBuilder {
+            self.path.push(MoveAbort::CLEVER_ERROR_FIELD.name);
+            CleverErrorFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl MoveLocation {
         pub const PACKAGE_FIELD: &'static MessageField = &MessageField {
@@ -954,6 +1816,47 @@ mod _field_impls {
             Self::INSTRUCTION_FIELD,
             Self::FUNCTION_NAME_FIELD,
         ];
+    }
+    impl MoveLocation {
+        pub fn path_builder() -> MoveLocationFieldPathBuilder {
+            MoveLocationFieldPathBuilder::new()
+        }
+    }
+    pub struct MoveLocationFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl MoveLocationFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn package(mut self) -> String {
+            self.path.push(MoveLocation::PACKAGE_FIELD.name);
+            self.finish()
+        }
+        pub fn module(mut self) -> String {
+            self.path.push(MoveLocation::MODULE_FIELD.name);
+            self.finish()
+        }
+        pub fn function(mut self) -> String {
+            self.path.push(MoveLocation::FUNCTION_FIELD.name);
+            self.finish()
+        }
+        pub fn instruction(mut self) -> String {
+            self.path.push(MoveLocation::INSTRUCTION_FIELD.name);
+            self.finish()
+        }
+        pub fn function_name(mut self) -> String {
+            self.path.push(MoveLocation::FUNCTION_NAME_FIELD.name);
+            self.finish()
+        }
     }
     impl CleverError {
         pub const ERROR_CODE_FIELD: &'static MessageField = &MessageField {
@@ -1003,6 +1906,51 @@ mod _field_impls {
             Self::RAW_FIELD,
         ];
     }
+    impl CleverError {
+        pub fn path_builder() -> CleverErrorFieldPathBuilder {
+            CleverErrorFieldPathBuilder::new()
+        }
+    }
+    pub struct CleverErrorFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl CleverErrorFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn error_code(mut self) -> String {
+            self.path.push(CleverError::ERROR_CODE_FIELD.name);
+            self.finish()
+        }
+        pub fn line_number(mut self) -> String {
+            self.path.push(CleverError::LINE_NUMBER_FIELD.name);
+            self.finish()
+        }
+        pub fn constant_name(mut self) -> String {
+            self.path.push(CleverError::CONSTANT_NAME_FIELD.name);
+            self.finish()
+        }
+        pub fn constant_type(mut self) -> String {
+            self.path.push(CleverError::CONSTANT_TYPE_FIELD.name);
+            self.finish()
+        }
+        pub fn rendered(mut self) -> String {
+            self.path.push(CleverError::RENDERED_FIELD.name);
+            self.finish()
+        }
+        pub fn raw(mut self) -> String {
+            self.path.push(CleverError::RAW_FIELD.name);
+            self.finish()
+        }
+    }
     impl SizeError {
         pub const SIZE_FIELD: &'static MessageField = &MessageField {
             name: "size",
@@ -1022,6 +1970,35 @@ mod _field_impls {
             Self::SIZE_FIELD,
             Self::MAX_SIZE_FIELD,
         ];
+    }
+    impl SizeError {
+        pub fn path_builder() -> SizeErrorFieldPathBuilder {
+            SizeErrorFieldPathBuilder::new()
+        }
+    }
+    pub struct SizeErrorFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl SizeErrorFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn size(mut self) -> String {
+            self.path.push(SizeError::SIZE_FIELD.name);
+            self.finish()
+        }
+        pub fn max_size(mut self) -> String {
+            self.path.push(SizeError::MAX_SIZE_FIELD.name);
+            self.finish()
+        }
     }
     impl IndexError {
         pub const INDEX_FIELD: &'static MessageField = &MessageField {
@@ -1043,6 +2020,35 @@ mod _field_impls {
             Self::SUBRESULT_FIELD,
         ];
     }
+    impl IndexError {
+        pub fn path_builder() -> IndexErrorFieldPathBuilder {
+            IndexErrorFieldPathBuilder::new()
+        }
+    }
+    pub struct IndexErrorFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl IndexErrorFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn index(mut self) -> String {
+            self.path.push(IndexError::INDEX_FIELD.name);
+            self.finish()
+        }
+        pub fn subresult(mut self) -> String {
+            self.path.push(IndexError::SUBRESULT_FIELD.name);
+            self.finish()
+        }
+    }
     impl CoinDenyListError {
         pub const ADDRESS_FIELD: &'static MessageField = &MessageField {
             name: "address",
@@ -1063,6 +2069,35 @@ mod _field_impls {
             Self::COIN_TYPE_FIELD,
         ];
     }
+    impl CoinDenyListError {
+        pub fn path_builder() -> CoinDenyListErrorFieldPathBuilder {
+            CoinDenyListErrorFieldPathBuilder::new()
+        }
+    }
+    pub struct CoinDenyListErrorFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl CoinDenyListErrorFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn address(mut self) -> String {
+            self.path.push(CoinDenyListError::ADDRESS_FIELD.name);
+            self.finish()
+        }
+        pub fn coin_type(mut self) -> String {
+            self.path.push(CoinDenyListError::COIN_TYPE_FIELD.name);
+            self.finish()
+        }
+    }
     impl CongestedObjects {
         pub const OBJECTS_FIELD: &'static MessageField = &MessageField {
             name: "objects",
@@ -1073,6 +2108,31 @@ mod _field_impls {
     }
     impl MessageFields for CongestedObjects {
         const FIELDS: &'static [&'static MessageField] = &[Self::OBJECTS_FIELD];
+    }
+    impl CongestedObjects {
+        pub fn path_builder() -> CongestedObjectsFieldPathBuilder {
+            CongestedObjectsFieldPathBuilder::new()
+        }
+    }
+    pub struct CongestedObjectsFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl CongestedObjectsFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn objects(mut self) -> String {
+            self.path.push(CongestedObjects::OBJECTS_FIELD.name);
+            self.finish()
+        }
     }
     impl CommandArgumentError {
         pub const ARGUMENT_FIELD: &'static MessageField = &MessageField {
@@ -1100,6 +2160,39 @@ mod _field_impls {
             Self::KIND_FIELD,
             Self::INDEX_ERROR_FIELD,
         ];
+    }
+    impl CommandArgumentError {
+        pub fn path_builder() -> CommandArgumentErrorFieldPathBuilder {
+            CommandArgumentErrorFieldPathBuilder::new()
+        }
+    }
+    pub struct CommandArgumentErrorFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl CommandArgumentErrorFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn argument(mut self) -> String {
+            self.path.push(CommandArgumentError::ARGUMENT_FIELD.name);
+            self.finish()
+        }
+        pub fn kind(mut self) -> String {
+            self.path.push(CommandArgumentError::KIND_FIELD.name);
+            self.finish()
+        }
+        pub fn index_error(mut self) -> IndexErrorFieldPathBuilder {
+            self.path.push(CommandArgumentError::INDEX_ERROR_FIELD.name);
+            IndexErrorFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl PackageUpgradeError {
         pub const KIND_FIELD: &'static MessageField = &MessageField {
@@ -1142,6 +2235,47 @@ mod _field_impls {
             Self::TICKET_ID_FIELD,
         ];
     }
+    impl PackageUpgradeError {
+        pub fn path_builder() -> PackageUpgradeErrorFieldPathBuilder {
+            PackageUpgradeErrorFieldPathBuilder::new()
+        }
+    }
+    pub struct PackageUpgradeErrorFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl PackageUpgradeErrorFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn kind(mut self) -> String {
+            self.path.push(PackageUpgradeError::KIND_FIELD.name);
+            self.finish()
+        }
+        pub fn package_id(mut self) -> String {
+            self.path.push(PackageUpgradeError::PACKAGE_ID_FIELD.name);
+            self.finish()
+        }
+        pub fn digest(mut self) -> String {
+            self.path.push(PackageUpgradeError::DIGEST_FIELD.name);
+            self.finish()
+        }
+        pub fn policy(mut self) -> String {
+            self.path.push(PackageUpgradeError::POLICY_FIELD.name);
+            self.finish()
+        }
+        pub fn ticket_id(mut self) -> String {
+            self.path.push(PackageUpgradeError::TICKET_ID_FIELD.name);
+            self.finish()
+        }
+    }
     impl TypeArgumentError {
         pub const TYPE_ARGUMENT_FIELD: &'static MessageField = &MessageField {
             name: "type_argument",
@@ -1161,6 +2295,35 @@ mod _field_impls {
             Self::TYPE_ARGUMENT_FIELD,
             Self::KIND_FIELD,
         ];
+    }
+    impl TypeArgumentError {
+        pub fn path_builder() -> TypeArgumentErrorFieldPathBuilder {
+            TypeArgumentErrorFieldPathBuilder::new()
+        }
+    }
+    pub struct TypeArgumentErrorFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl TypeArgumentErrorFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn type_argument(mut self) -> String {
+            self.path.push(TypeArgumentError::TYPE_ARGUMENT_FIELD.name);
+            self.finish()
+        }
+        pub fn kind(mut self) -> String {
+            self.path.push(TypeArgumentError::KIND_FIELD.name);
+            self.finish()
+        }
     }
     impl GasCostSummary {
         pub const COMPUTATION_COST_FIELD: &'static MessageField = &MessageField {
@@ -1195,6 +2358,43 @@ mod _field_impls {
             Self::STORAGE_REBATE_FIELD,
             Self::NON_REFUNDABLE_STORAGE_FEE_FIELD,
         ];
+    }
+    impl GasCostSummary {
+        pub fn path_builder() -> GasCostSummaryFieldPathBuilder {
+            GasCostSummaryFieldPathBuilder::new()
+        }
+    }
+    pub struct GasCostSummaryFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GasCostSummaryFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn computation_cost(mut self) -> String {
+            self.path.push(GasCostSummary::COMPUTATION_COST_FIELD.name);
+            self.finish()
+        }
+        pub fn storage_cost(mut self) -> String {
+            self.path.push(GasCostSummary::STORAGE_COST_FIELD.name);
+            self.finish()
+        }
+        pub fn storage_rebate(mut self) -> String {
+            self.path.push(GasCostSummary::STORAGE_REBATE_FIELD.name);
+            self.finish()
+        }
+        pub fn non_refundable_storage_fee(mut self) -> String {
+            self.path.push(GasCostSummary::NON_REFUNDABLE_STORAGE_FEE_FIELD.name);
+            self.finish()
+        }
     }
     impl Input {
         pub const KIND_FIELD: &'static MessageField = &MessageField {
@@ -1251,9 +2451,79 @@ mod _field_impls {
             Self::LITERAL_FIELD,
         ];
     }
+    impl Input {
+        pub fn path_builder() -> InputFieldPathBuilder {
+            InputFieldPathBuilder::new()
+        }
+    }
+    pub struct InputFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl InputFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn kind(mut self) -> String {
+            self.path.push(Input::KIND_FIELD.name);
+            self.finish()
+        }
+        pub fn pure(mut self) -> String {
+            self.path.push(Input::PURE_FIELD.name);
+            self.finish()
+        }
+        pub fn object_id(mut self) -> String {
+            self.path.push(Input::OBJECT_ID_FIELD.name);
+            self.finish()
+        }
+        pub fn version(mut self) -> String {
+            self.path.push(Input::VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn digest(mut self) -> String {
+            self.path.push(Input::DIGEST_FIELD.name);
+            self.finish()
+        }
+        pub fn mutable(mut self) -> String {
+            self.path.push(Input::MUTABLE_FIELD.name);
+            self.finish()
+        }
+        pub fn literal(mut self) -> String {
+            self.path.push(Input::LITERAL_FIELD.name);
+            self.finish()
+        }
+    }
     impl GetServiceInfoRequest {}
     impl MessageFields for GetServiceInfoRequest {
         const FIELDS: &'static [&'static MessageField] = &[];
+    }
+    impl GetServiceInfoRequest {
+        pub fn path_builder() -> GetServiceInfoRequestFieldPathBuilder {
+            GetServiceInfoRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct GetServiceInfoRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GetServiceInfoRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
     }
     impl GetServiceInfoResponse {
         pub const CHAIN_ID_FIELD: &'static MessageField = &MessageField {
@@ -1317,6 +2587,64 @@ mod _field_impls {
             Self::SERVER_FIELD,
         ];
     }
+    impl GetServiceInfoResponse {
+        pub fn path_builder() -> GetServiceInfoResponseFieldPathBuilder {
+            GetServiceInfoResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct GetServiceInfoResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GetServiceInfoResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn chain_id(mut self) -> String {
+            self.path.push(GetServiceInfoResponse::CHAIN_ID_FIELD.name);
+            self.finish()
+        }
+        pub fn chain(mut self) -> String {
+            self.path.push(GetServiceInfoResponse::CHAIN_FIELD.name);
+            self.finish()
+        }
+        pub fn epoch(mut self) -> String {
+            self.path.push(GetServiceInfoResponse::EPOCH_FIELD.name);
+            self.finish()
+        }
+        pub fn checkpoint_height(mut self) -> String {
+            self.path.push(GetServiceInfoResponse::CHECKPOINT_HEIGHT_FIELD.name);
+            self.finish()
+        }
+        pub fn timestamp(mut self) -> String {
+            self.path.push(GetServiceInfoResponse::TIMESTAMP_FIELD.name);
+            self.finish()
+        }
+        pub fn lowest_available_checkpoint(mut self) -> String {
+            self.path
+                .push(GetServiceInfoResponse::LOWEST_AVAILABLE_CHECKPOINT_FIELD.name);
+            self.finish()
+        }
+        pub fn lowest_available_checkpoint_objects(mut self) -> String {
+            self.path
+                .push(
+                    GetServiceInfoResponse::LOWEST_AVAILABLE_CHECKPOINT_OBJECTS_FIELD
+                        .name,
+                );
+            self.finish()
+        }
+        pub fn server(mut self) -> String {
+            self.path.push(GetServiceInfoResponse::SERVER_FIELD.name);
+            self.finish()
+        }
+    }
     impl GetObjectRequest {
         pub const OBJECT_ID_FIELD: &'static MessageField = &MessageField {
             name: "object_id",
@@ -1344,6 +2672,39 @@ mod _field_impls {
             Self::READ_MASK_FIELD,
         ];
     }
+    impl GetObjectRequest {
+        pub fn path_builder() -> GetObjectRequestFieldPathBuilder {
+            GetObjectRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct GetObjectRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GetObjectRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn object_id(mut self) -> String {
+            self.path.push(GetObjectRequest::OBJECT_ID_FIELD.name);
+            self.finish()
+        }
+        pub fn version(mut self) -> String {
+            self.path.push(GetObjectRequest::VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn read_mask(mut self) -> String {
+            self.path.push(GetObjectRequest::READ_MASK_FIELD.name);
+            self.finish()
+        }
+    }
     impl GetObjectResponse {
         pub const OBJECT_FIELD: &'static MessageField = &MessageField {
             name: "object",
@@ -1354,6 +2715,31 @@ mod _field_impls {
     }
     impl MessageFields for GetObjectResponse {
         const FIELDS: &'static [&'static MessageField] = &[Self::OBJECT_FIELD];
+    }
+    impl GetObjectResponse {
+        pub fn path_builder() -> GetObjectResponseFieldPathBuilder {
+            GetObjectResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct GetObjectResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GetObjectResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn object(mut self) -> ObjectFieldPathBuilder {
+            self.path.push(GetObjectResponse::OBJECT_FIELD.name);
+            ObjectFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl BatchGetObjectsRequest {
         pub const REQUESTS_FIELD: &'static MessageField = &MessageField {
@@ -1375,6 +2761,35 @@ mod _field_impls {
             Self::READ_MASK_FIELD,
         ];
     }
+    impl BatchGetObjectsRequest {
+        pub fn path_builder() -> BatchGetObjectsRequestFieldPathBuilder {
+            BatchGetObjectsRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct BatchGetObjectsRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl BatchGetObjectsRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn requests(mut self) -> GetObjectRequestFieldPathBuilder {
+            self.path.push(BatchGetObjectsRequest::REQUESTS_FIELD.name);
+            GetObjectRequestFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn read_mask(mut self) -> String {
+            self.path.push(BatchGetObjectsRequest::READ_MASK_FIELD.name);
+            self.finish()
+        }
+    }
     impl BatchGetObjectsResponse {
         pub const OBJECTS_FIELD: &'static MessageField = &MessageField {
             name: "objects",
@@ -1385,6 +2800,31 @@ mod _field_impls {
     }
     impl MessageFields for BatchGetObjectsResponse {
         const FIELDS: &'static [&'static MessageField] = &[Self::OBJECTS_FIELD];
+    }
+    impl BatchGetObjectsResponse {
+        pub fn path_builder() -> BatchGetObjectsResponseFieldPathBuilder {
+            BatchGetObjectsResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct BatchGetObjectsResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl BatchGetObjectsResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn objects(mut self) -> GetObjectResultFieldPathBuilder {
+            self.path.push(BatchGetObjectsResponse::OBJECTS_FIELD.name);
+            GetObjectResultFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl GetObjectResult {
         pub const OBJECT_FIELD: &'static MessageField = &MessageField {
@@ -1406,6 +2846,35 @@ mod _field_impls {
             Self::ERROR_FIELD,
         ];
     }
+    impl GetObjectResult {
+        pub fn path_builder() -> GetObjectResultFieldPathBuilder {
+            GetObjectResultFieldPathBuilder::new()
+        }
+    }
+    pub struct GetObjectResultFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GetObjectResultFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn object(mut self) -> ObjectFieldPathBuilder {
+            self.path.push(GetObjectResult::OBJECT_FIELD.name);
+            ObjectFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn error(mut self) -> String {
+            self.path.push(GetObjectResult::ERROR_FIELD.name);
+            self.finish()
+        }
+    }
     impl GetTransactionRequest {
         pub const DIGEST_FIELD: &'static MessageField = &MessageField {
             name: "digest",
@@ -1426,6 +2895,35 @@ mod _field_impls {
             Self::READ_MASK_FIELD,
         ];
     }
+    impl GetTransactionRequest {
+        pub fn path_builder() -> GetTransactionRequestFieldPathBuilder {
+            GetTransactionRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct GetTransactionRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GetTransactionRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn digest(mut self) -> String {
+            self.path.push(GetTransactionRequest::DIGEST_FIELD.name);
+            self.finish()
+        }
+        pub fn read_mask(mut self) -> String {
+            self.path.push(GetTransactionRequest::READ_MASK_FIELD.name);
+            self.finish()
+        }
+    }
     impl GetTransactionResponse {
         pub const TRANSACTION_FIELD: &'static MessageField = &MessageField {
             name: "transaction",
@@ -1436,6 +2934,31 @@ mod _field_impls {
     }
     impl MessageFields for GetTransactionResponse {
         const FIELDS: &'static [&'static MessageField] = &[Self::TRANSACTION_FIELD];
+    }
+    impl GetTransactionResponse {
+        pub fn path_builder() -> GetTransactionResponseFieldPathBuilder {
+            GetTransactionResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct GetTransactionResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GetTransactionResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn transaction(mut self) -> ExecutedTransactionFieldPathBuilder {
+            self.path.push(GetTransactionResponse::TRANSACTION_FIELD.name);
+            ExecutedTransactionFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl BatchGetTransactionsRequest {
         pub const DIGESTS_FIELD: &'static MessageField = &MessageField {
@@ -1457,6 +2980,35 @@ mod _field_impls {
             Self::READ_MASK_FIELD,
         ];
     }
+    impl BatchGetTransactionsRequest {
+        pub fn path_builder() -> BatchGetTransactionsRequestFieldPathBuilder {
+            BatchGetTransactionsRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct BatchGetTransactionsRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl BatchGetTransactionsRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn digests(mut self) -> String {
+            self.path.push(BatchGetTransactionsRequest::DIGESTS_FIELD.name);
+            self.finish()
+        }
+        pub fn read_mask(mut self) -> String {
+            self.path.push(BatchGetTransactionsRequest::READ_MASK_FIELD.name);
+            self.finish()
+        }
+    }
     impl BatchGetTransactionsResponse {
         pub const TRANSACTIONS_FIELD: &'static MessageField = &MessageField {
             name: "transactions",
@@ -1467,6 +3019,31 @@ mod _field_impls {
     }
     impl MessageFields for BatchGetTransactionsResponse {
         const FIELDS: &'static [&'static MessageField] = &[Self::TRANSACTIONS_FIELD];
+    }
+    impl BatchGetTransactionsResponse {
+        pub fn path_builder() -> BatchGetTransactionsResponseFieldPathBuilder {
+            BatchGetTransactionsResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct BatchGetTransactionsResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl BatchGetTransactionsResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn transactions(mut self) -> GetTransactionResultFieldPathBuilder {
+            self.path.push(BatchGetTransactionsResponse::TRANSACTIONS_FIELD.name);
+            GetTransactionResultFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl GetTransactionResult {
         pub const TRANSACTION_FIELD: &'static MessageField = &MessageField {
@@ -1487,6 +3064,35 @@ mod _field_impls {
             Self::TRANSACTION_FIELD,
             Self::ERROR_FIELD,
         ];
+    }
+    impl GetTransactionResult {
+        pub fn path_builder() -> GetTransactionResultFieldPathBuilder {
+            GetTransactionResultFieldPathBuilder::new()
+        }
+    }
+    pub struct GetTransactionResultFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GetTransactionResultFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn transaction(mut self) -> ExecutedTransactionFieldPathBuilder {
+            self.path.push(GetTransactionResult::TRANSACTION_FIELD.name);
+            ExecutedTransactionFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn error(mut self) -> String {
+            self.path.push(GetTransactionResult::ERROR_FIELD.name);
+            self.finish()
+        }
     }
     impl GetCheckpointRequest {
         pub const SEQUENCE_NUMBER_FIELD: &'static MessageField = &MessageField {
@@ -1515,6 +3121,39 @@ mod _field_impls {
             Self::READ_MASK_FIELD,
         ];
     }
+    impl GetCheckpointRequest {
+        pub fn path_builder() -> GetCheckpointRequestFieldPathBuilder {
+            GetCheckpointRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct GetCheckpointRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GetCheckpointRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn sequence_number(mut self) -> String {
+            self.path.push(GetCheckpointRequest::SEQUENCE_NUMBER_FIELD.name);
+            self.finish()
+        }
+        pub fn digest(mut self) -> String {
+            self.path.push(GetCheckpointRequest::DIGEST_FIELD.name);
+            self.finish()
+        }
+        pub fn read_mask(mut self) -> String {
+            self.path.push(GetCheckpointRequest::READ_MASK_FIELD.name);
+            self.finish()
+        }
+    }
     impl GetCheckpointResponse {
         pub const CHECKPOINT_FIELD: &'static MessageField = &MessageField {
             name: "checkpoint",
@@ -1525,6 +3164,31 @@ mod _field_impls {
     }
     impl MessageFields for GetCheckpointResponse {
         const FIELDS: &'static [&'static MessageField] = &[Self::CHECKPOINT_FIELD];
+    }
+    impl GetCheckpointResponse {
+        pub fn path_builder() -> GetCheckpointResponseFieldPathBuilder {
+            GetCheckpointResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct GetCheckpointResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GetCheckpointResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn checkpoint(mut self) -> CheckpointFieldPathBuilder {
+            self.path.push(GetCheckpointResponse::CHECKPOINT_FIELD.name);
+            CheckpointFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl GetEpochRequest {
         pub const EPOCH_FIELD: &'static MessageField = &MessageField {
@@ -1546,6 +3210,35 @@ mod _field_impls {
             Self::READ_MASK_FIELD,
         ];
     }
+    impl GetEpochRequest {
+        pub fn path_builder() -> GetEpochRequestFieldPathBuilder {
+            GetEpochRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct GetEpochRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GetEpochRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn epoch(mut self) -> String {
+            self.path.push(GetEpochRequest::EPOCH_FIELD.name);
+            self.finish()
+        }
+        pub fn read_mask(mut self) -> String {
+            self.path.push(GetEpochRequest::READ_MASK_FIELD.name);
+            self.finish()
+        }
+    }
     impl GetEpochResponse {
         pub const EPOCH_FIELD: &'static MessageField = &MessageField {
             name: "epoch",
@@ -1557,6 +3250,31 @@ mod _field_impls {
     impl MessageFields for GetEpochResponse {
         const FIELDS: &'static [&'static MessageField] = &[Self::EPOCH_FIELD];
     }
+    impl GetEpochResponse {
+        pub fn path_builder() -> GetEpochResponseFieldPathBuilder {
+            GetEpochResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct GetEpochResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GetEpochResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn epoch(mut self) -> EpochFieldPathBuilder {
+            self.path.push(GetEpochResponse::EPOCH_FIELD.name);
+            EpochFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl GetCoinInfoRequest {
         pub const COIN_TYPE_FIELD: &'static MessageField = &MessageField {
             name: "coin_type",
@@ -1567,6 +3285,31 @@ mod _field_impls {
     }
     impl MessageFields for GetCoinInfoRequest {
         const FIELDS: &'static [&'static MessageField] = &[Self::COIN_TYPE_FIELD];
+    }
+    impl GetCoinInfoRequest {
+        pub fn path_builder() -> GetCoinInfoRequestFieldPathBuilder {
+            GetCoinInfoRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct GetCoinInfoRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GetCoinInfoRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn coin_type(mut self) -> String {
+            self.path.push(GetCoinInfoRequest::COIN_TYPE_FIELD.name);
+            self.finish()
+        }
     }
     impl GetCoinInfoResponse {
         pub const COIN_TYPE_FIELD: &'static MessageField = &MessageField {
@@ -1601,6 +3344,43 @@ mod _field_impls {
             Self::TREASURY_FIELD,
             Self::REGULATED_METADATA_FIELD,
         ];
+    }
+    impl GetCoinInfoResponse {
+        pub fn path_builder() -> GetCoinInfoResponseFieldPathBuilder {
+            GetCoinInfoResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct GetCoinInfoResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GetCoinInfoResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn coin_type(mut self) -> String {
+            self.path.push(GetCoinInfoResponse::COIN_TYPE_FIELD.name);
+            self.finish()
+        }
+        pub fn metadata(mut self) -> CoinMetadataFieldPathBuilder {
+            self.path.push(GetCoinInfoResponse::METADATA_FIELD.name);
+            CoinMetadataFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn treasury(mut self) -> CoinTreasuryFieldPathBuilder {
+            self.path.push(GetCoinInfoResponse::TREASURY_FIELD.name);
+            CoinTreasuryFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn regulated_metadata(mut self) -> RegulatedCoinMetadataFieldPathBuilder {
+            self.path.push(GetCoinInfoResponse::REGULATED_METADATA_FIELD.name);
+            RegulatedCoinMetadataFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl CoinMetadata {
         pub const ID_FIELD: &'static MessageField = &MessageField {
@@ -1657,6 +3437,55 @@ mod _field_impls {
             Self::METADATA_CAP_ID_FIELD,
         ];
     }
+    impl CoinMetadata {
+        pub fn path_builder() -> CoinMetadataFieldPathBuilder {
+            CoinMetadataFieldPathBuilder::new()
+        }
+    }
+    pub struct CoinMetadataFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl CoinMetadataFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn id(mut self) -> String {
+            self.path.push(CoinMetadata::ID_FIELD.name);
+            self.finish()
+        }
+        pub fn decimals(mut self) -> String {
+            self.path.push(CoinMetadata::DECIMALS_FIELD.name);
+            self.finish()
+        }
+        pub fn name(mut self) -> String {
+            self.path.push(CoinMetadata::NAME_FIELD.name);
+            self.finish()
+        }
+        pub fn symbol(mut self) -> String {
+            self.path.push(CoinMetadata::SYMBOL_FIELD.name);
+            self.finish()
+        }
+        pub fn description(mut self) -> String {
+            self.path.push(CoinMetadata::DESCRIPTION_FIELD.name);
+            self.finish()
+        }
+        pub fn icon_url(mut self) -> String {
+            self.path.push(CoinMetadata::ICON_URL_FIELD.name);
+            self.finish()
+        }
+        pub fn metadata_cap_id(mut self) -> String {
+            self.path.push(CoinMetadata::METADATA_CAP_ID_FIELD.name);
+            self.finish()
+        }
+    }
     impl CoinTreasury {
         pub const ID_FIELD: &'static MessageField = &MessageField {
             name: "id",
@@ -1683,6 +3512,39 @@ mod _field_impls {
             Self::TOTAL_SUPPLY_FIELD,
             Self::SUPPLY_STATE_FIELD,
         ];
+    }
+    impl CoinTreasury {
+        pub fn path_builder() -> CoinTreasuryFieldPathBuilder {
+            CoinTreasuryFieldPathBuilder::new()
+        }
+    }
+    pub struct CoinTreasuryFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl CoinTreasuryFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn id(mut self) -> String {
+            self.path.push(CoinTreasury::ID_FIELD.name);
+            self.finish()
+        }
+        pub fn total_supply(mut self) -> String {
+            self.path.push(CoinTreasury::TOTAL_SUPPLY_FIELD.name);
+            self.finish()
+        }
+        pub fn supply_state(mut self) -> String {
+            self.path.push(CoinTreasury::SUPPLY_STATE_FIELD.name);
+            self.finish()
+        }
     }
     impl RegulatedCoinMetadata {
         pub const ID_FIELD: &'static MessageField = &MessageField {
@@ -1711,6 +3573,39 @@ mod _field_impls {
             Self::DENY_CAP_OBJECT_FIELD,
         ];
     }
+    impl RegulatedCoinMetadata {
+        pub fn path_builder() -> RegulatedCoinMetadataFieldPathBuilder {
+            RegulatedCoinMetadataFieldPathBuilder::new()
+        }
+    }
+    pub struct RegulatedCoinMetadataFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl RegulatedCoinMetadataFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn id(mut self) -> String {
+            self.path.push(RegulatedCoinMetadata::ID_FIELD.name);
+            self.finish()
+        }
+        pub fn coin_metadata_object(mut self) -> String {
+            self.path.push(RegulatedCoinMetadata::COIN_METADATA_OBJECT_FIELD.name);
+            self.finish()
+        }
+        pub fn deny_cap_object(mut self) -> String {
+            self.path.push(RegulatedCoinMetadata::DENY_CAP_OBJECT_FIELD.name);
+            self.finish()
+        }
+    }
     impl GetBalanceRequest {
         pub const OWNER_FIELD: &'static MessageField = &MessageField {
             name: "owner",
@@ -1731,6 +3626,35 @@ mod _field_impls {
             Self::COIN_TYPE_FIELD,
         ];
     }
+    impl GetBalanceRequest {
+        pub fn path_builder() -> GetBalanceRequestFieldPathBuilder {
+            GetBalanceRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct GetBalanceRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GetBalanceRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn owner(mut self) -> String {
+            self.path.push(GetBalanceRequest::OWNER_FIELD.name);
+            self.finish()
+        }
+        pub fn coin_type(mut self) -> String {
+            self.path.push(GetBalanceRequest::COIN_TYPE_FIELD.name);
+            self.finish()
+        }
+    }
     impl GetBalanceResponse {
         pub const BALANCE_FIELD: &'static MessageField = &MessageField {
             name: "balance",
@@ -1741,6 +3665,31 @@ mod _field_impls {
     }
     impl MessageFields for GetBalanceResponse {
         const FIELDS: &'static [&'static MessageField] = &[Self::BALANCE_FIELD];
+    }
+    impl GetBalanceResponse {
+        pub fn path_builder() -> GetBalanceResponseFieldPathBuilder {
+            GetBalanceResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct GetBalanceResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GetBalanceResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn balance(mut self) -> BalanceFieldPathBuilder {
+            self.path.push(GetBalanceResponse::BALANCE_FIELD.name);
+            BalanceFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl ListBalancesRequest {
         pub const OWNER_FIELD: &'static MessageField = &MessageField {
@@ -1769,6 +3718,39 @@ mod _field_impls {
             Self::PAGE_TOKEN_FIELD,
         ];
     }
+    impl ListBalancesRequest {
+        pub fn path_builder() -> ListBalancesRequestFieldPathBuilder {
+            ListBalancesRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct ListBalancesRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ListBalancesRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn owner(mut self) -> String {
+            self.path.push(ListBalancesRequest::OWNER_FIELD.name);
+            self.finish()
+        }
+        pub fn page_size(mut self) -> String {
+            self.path.push(ListBalancesRequest::PAGE_SIZE_FIELD.name);
+            self.finish()
+        }
+        pub fn page_token(mut self) -> String {
+            self.path.push(ListBalancesRequest::PAGE_TOKEN_FIELD.name);
+            self.finish()
+        }
+    }
     impl ListBalancesResponse {
         pub const BALANCES_FIELD: &'static MessageField = &MessageField {
             name: "balances",
@@ -1789,6 +3771,35 @@ mod _field_impls {
             Self::NEXT_PAGE_TOKEN_FIELD,
         ];
     }
+    impl ListBalancesResponse {
+        pub fn path_builder() -> ListBalancesResponseFieldPathBuilder {
+            ListBalancesResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct ListBalancesResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ListBalancesResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn balances(mut self) -> BalanceFieldPathBuilder {
+            self.path.push(ListBalancesResponse::BALANCES_FIELD.name);
+            BalanceFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn next_page_token(mut self) -> String {
+            self.path.push(ListBalancesResponse::NEXT_PAGE_TOKEN_FIELD.name);
+            self.finish()
+        }
+    }
     impl Balance {
         pub const COIN_TYPE_FIELD: &'static MessageField = &MessageField {
             name: "coin_type",
@@ -1808,6 +3819,35 @@ mod _field_impls {
             Self::COIN_TYPE_FIELD,
             Self::BALANCE_FIELD,
         ];
+    }
+    impl Balance {
+        pub fn path_builder() -> BalanceFieldPathBuilder {
+            BalanceFieldPathBuilder::new()
+        }
+    }
+    pub struct BalanceFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl BalanceFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn coin_type(mut self) -> String {
+            self.path.push(Balance::COIN_TYPE_FIELD.name);
+            self.finish()
+        }
+        pub fn balance(mut self) -> String {
+            self.path.push(Balance::BALANCE_FIELD.name);
+            self.finish()
+        }
     }
     impl ListDynamicFieldsRequest {
         pub const PARENT_FIELD: &'static MessageField = &MessageField {
@@ -1843,6 +3883,43 @@ mod _field_impls {
             Self::READ_MASK_FIELD,
         ];
     }
+    impl ListDynamicFieldsRequest {
+        pub fn path_builder() -> ListDynamicFieldsRequestFieldPathBuilder {
+            ListDynamicFieldsRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct ListDynamicFieldsRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ListDynamicFieldsRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn parent(mut self) -> String {
+            self.path.push(ListDynamicFieldsRequest::PARENT_FIELD.name);
+            self.finish()
+        }
+        pub fn page_size(mut self) -> String {
+            self.path.push(ListDynamicFieldsRequest::PAGE_SIZE_FIELD.name);
+            self.finish()
+        }
+        pub fn page_token(mut self) -> String {
+            self.path.push(ListDynamicFieldsRequest::PAGE_TOKEN_FIELD.name);
+            self.finish()
+        }
+        pub fn read_mask(mut self) -> String {
+            self.path.push(ListDynamicFieldsRequest::READ_MASK_FIELD.name);
+            self.finish()
+        }
+    }
     impl ListDynamicFieldsResponse {
         pub const DYNAMIC_FIELDS_FIELD: &'static MessageField = &MessageField {
             name: "dynamic_fields",
@@ -1862,6 +3939,35 @@ mod _field_impls {
             Self::DYNAMIC_FIELDS_FIELD,
             Self::NEXT_PAGE_TOKEN_FIELD,
         ];
+    }
+    impl ListDynamicFieldsResponse {
+        pub fn path_builder() -> ListDynamicFieldsResponseFieldPathBuilder {
+            ListDynamicFieldsResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct ListDynamicFieldsResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ListDynamicFieldsResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn dynamic_fields(mut self) -> DynamicFieldFieldPathBuilder {
+            self.path.push(ListDynamicFieldsResponse::DYNAMIC_FIELDS_FIELD.name);
+            DynamicFieldFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn next_page_token(mut self) -> String {
+            self.path.push(ListDynamicFieldsResponse::NEXT_PAGE_TOKEN_FIELD.name);
+            self.finish()
+        }
     }
     impl DynamicField {
         pub const KIND_FIELD: &'static MessageField = &MessageField {
@@ -1925,6 +4031,59 @@ mod _field_impls {
             Self::OBJECT_FIELD,
         ];
     }
+    impl DynamicField {
+        pub fn path_builder() -> DynamicFieldFieldPathBuilder {
+            DynamicFieldFieldPathBuilder::new()
+        }
+    }
+    pub struct DynamicFieldFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl DynamicFieldFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn kind(mut self) -> String {
+            self.path.push(DynamicField::KIND_FIELD.name);
+            self.finish()
+        }
+        pub fn parent(mut self) -> String {
+            self.path.push(DynamicField::PARENT_FIELD.name);
+            self.finish()
+        }
+        pub fn field_id(mut self) -> String {
+            self.path.push(DynamicField::FIELD_ID_FIELD.name);
+            self.finish()
+        }
+        pub fn name_type(mut self) -> String {
+            self.path.push(DynamicField::NAME_TYPE_FIELD.name);
+            self.finish()
+        }
+        pub fn name_value(mut self) -> String {
+            self.path.push(DynamicField::NAME_VALUE_FIELD.name);
+            self.finish()
+        }
+        pub fn value_type(mut self) -> String {
+            self.path.push(DynamicField::VALUE_TYPE_FIELD.name);
+            self.finish()
+        }
+        pub fn dynamic_object_id(mut self) -> String {
+            self.path.push(DynamicField::DYNAMIC_OBJECT_ID_FIELD.name);
+            self.finish()
+        }
+        pub fn object(mut self) -> ObjectFieldPathBuilder {
+            self.path.push(DynamicField::OBJECT_FIELD.name);
+            ObjectFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl SimulateTransactionRequest {
         pub const TRANSACTION_FIELD: &'static MessageField = &MessageField {
             name: "transaction",
@@ -1959,6 +4118,43 @@ mod _field_impls {
             Self::DO_GAS_SELECTION_FIELD,
         ];
     }
+    impl SimulateTransactionRequest {
+        pub fn path_builder() -> SimulateTransactionRequestFieldPathBuilder {
+            SimulateTransactionRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct SimulateTransactionRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl SimulateTransactionRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn transaction(mut self) -> TransactionFieldPathBuilder {
+            self.path.push(SimulateTransactionRequest::TRANSACTION_FIELD.name);
+            TransactionFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn read_mask(mut self) -> String {
+            self.path.push(SimulateTransactionRequest::READ_MASK_FIELD.name);
+            self.finish()
+        }
+        pub fn checks(mut self) -> String {
+            self.path.push(SimulateTransactionRequest::CHECKS_FIELD.name);
+            self.finish()
+        }
+        pub fn do_gas_selection(mut self) -> String {
+            self.path.push(SimulateTransactionRequest::DO_GAS_SELECTION_FIELD.name);
+            self.finish()
+        }
+    }
     impl SimulateTransactionResponse {
         pub const TRANSACTION_FIELD: &'static MessageField = &MessageField {
             name: "transaction",
@@ -1979,6 +4175,35 @@ mod _field_impls {
             Self::OUTPUTS_FIELD,
         ];
     }
+    impl SimulateTransactionResponse {
+        pub fn path_builder() -> SimulateTransactionResponseFieldPathBuilder {
+            SimulateTransactionResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct SimulateTransactionResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl SimulateTransactionResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn transaction(mut self) -> ExecutedTransactionFieldPathBuilder {
+            self.path.push(SimulateTransactionResponse::TRANSACTION_FIELD.name);
+            ExecutedTransactionFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn outputs(mut self) -> CommandResultFieldPathBuilder {
+            self.path.push(SimulateTransactionResponse::OUTPUTS_FIELD.name);
+            CommandResultFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl CommandResult {
         pub const RETURN_VALUES_FIELD: &'static MessageField = &MessageField {
             name: "return_values",
@@ -1998,6 +4223,35 @@ mod _field_impls {
             Self::RETURN_VALUES_FIELD,
             Self::MUTATED_BY_REF_FIELD,
         ];
+    }
+    impl CommandResult {
+        pub fn path_builder() -> CommandResultFieldPathBuilder {
+            CommandResultFieldPathBuilder::new()
+        }
+    }
+    pub struct CommandResultFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl CommandResultFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn return_values(mut self) -> CommandOutputFieldPathBuilder {
+            self.path.push(CommandResult::RETURN_VALUES_FIELD.name);
+            CommandOutputFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn mutated_by_ref(mut self) -> CommandOutputFieldPathBuilder {
+            self.path.push(CommandResult::MUTATED_BY_REF_FIELD.name);
+            CommandOutputFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl CommandOutput {
         pub const ARGUMENT_FIELD: &'static MessageField = &MessageField {
@@ -2025,6 +4279,39 @@ mod _field_impls {
             Self::VALUE_FIELD,
             Self::JSON_FIELD,
         ];
+    }
+    impl CommandOutput {
+        pub fn path_builder() -> CommandOutputFieldPathBuilder {
+            CommandOutputFieldPathBuilder::new()
+        }
+    }
+    pub struct CommandOutputFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl CommandOutputFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn argument(mut self) -> ArgumentFieldPathBuilder {
+            self.path.push(CommandOutput::ARGUMENT_FIELD.name);
+            ArgumentFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn value(mut self) -> BcsFieldPathBuilder {
+            self.path.push(CommandOutput::VALUE_FIELD.name);
+            BcsFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn json(mut self) -> String {
+            self.path.push(CommandOutput::JSON_FIELD.name);
+            self.finish()
+        }
     }
     impl ListOwnedObjectsRequest {
         pub const OWNER_FIELD: &'static MessageField = &MessageField {
@@ -2067,6 +4354,47 @@ mod _field_impls {
             Self::OBJECT_TYPE_FIELD,
         ];
     }
+    impl ListOwnedObjectsRequest {
+        pub fn path_builder() -> ListOwnedObjectsRequestFieldPathBuilder {
+            ListOwnedObjectsRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct ListOwnedObjectsRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ListOwnedObjectsRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn owner(mut self) -> String {
+            self.path.push(ListOwnedObjectsRequest::OWNER_FIELD.name);
+            self.finish()
+        }
+        pub fn page_size(mut self) -> String {
+            self.path.push(ListOwnedObjectsRequest::PAGE_SIZE_FIELD.name);
+            self.finish()
+        }
+        pub fn page_token(mut self) -> String {
+            self.path.push(ListOwnedObjectsRequest::PAGE_TOKEN_FIELD.name);
+            self.finish()
+        }
+        pub fn read_mask(mut self) -> String {
+            self.path.push(ListOwnedObjectsRequest::READ_MASK_FIELD.name);
+            self.finish()
+        }
+        pub fn object_type(mut self) -> String {
+            self.path.push(ListOwnedObjectsRequest::OBJECT_TYPE_FIELD.name);
+            self.finish()
+        }
+    }
     impl ListOwnedObjectsResponse {
         pub const OBJECTS_FIELD: &'static MessageField = &MessageField {
             name: "objects",
@@ -2086,6 +4414,35 @@ mod _field_impls {
             Self::OBJECTS_FIELD,
             Self::NEXT_PAGE_TOKEN_FIELD,
         ];
+    }
+    impl ListOwnedObjectsResponse {
+        pub fn path_builder() -> ListOwnedObjectsResponseFieldPathBuilder {
+            ListOwnedObjectsResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct ListOwnedObjectsResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ListOwnedObjectsResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn objects(mut self) -> ObjectFieldPathBuilder {
+            self.path.push(ListOwnedObjectsResponse::OBJECTS_FIELD.name);
+            ObjectFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn next_page_token(mut self) -> String {
+            self.path.push(ListOwnedObjectsResponse::NEXT_PAGE_TOKEN_FIELD.name);
+            self.finish()
+        }
     }
     impl Package {
         pub const STORAGE_ID_FIELD: &'static MessageField = &MessageField {
@@ -2135,6 +4492,51 @@ mod _field_impls {
             Self::LINKAGE_FIELD,
         ];
     }
+    impl Package {
+        pub fn path_builder() -> PackageFieldPathBuilder {
+            PackageFieldPathBuilder::new()
+        }
+    }
+    pub struct PackageFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl PackageFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn storage_id(mut self) -> String {
+            self.path.push(Package::STORAGE_ID_FIELD.name);
+            self.finish()
+        }
+        pub fn original_id(mut self) -> String {
+            self.path.push(Package::ORIGINAL_ID_FIELD.name);
+            self.finish()
+        }
+        pub fn version(mut self) -> String {
+            self.path.push(Package::VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn modules(mut self) -> ModuleFieldPathBuilder {
+            self.path.push(Package::MODULES_FIELD.name);
+            ModuleFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn type_origins(mut self) -> TypeOriginFieldPathBuilder {
+            self.path.push(Package::TYPE_ORIGINS_FIELD.name);
+            TypeOriginFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn linkage(mut self) -> LinkageFieldPathBuilder {
+            self.path.push(Package::LINKAGE_FIELD.name);
+            LinkageFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl Module {
         pub const NAME_FIELD: &'static MessageField = &MessageField {
             name: "name",
@@ -2168,6 +4570,43 @@ mod _field_impls {
             Self::DATATYPES_FIELD,
             Self::FUNCTIONS_FIELD,
         ];
+    }
+    impl Module {
+        pub fn path_builder() -> ModuleFieldPathBuilder {
+            ModuleFieldPathBuilder::new()
+        }
+    }
+    pub struct ModuleFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ModuleFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn name(mut self) -> String {
+            self.path.push(Module::NAME_FIELD.name);
+            self.finish()
+        }
+        pub fn contents(mut self) -> String {
+            self.path.push(Module::CONTENTS_FIELD.name);
+            self.finish()
+        }
+        pub fn datatypes(mut self) -> DatatypeDescriptorFieldPathBuilder {
+            self.path.push(Module::DATATYPES_FIELD.name);
+            DatatypeDescriptorFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn functions(mut self) -> FunctionDescriptorFieldPathBuilder {
+            self.path.push(Module::FUNCTIONS_FIELD.name);
+            FunctionDescriptorFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl DatatypeDescriptor {
         pub const TYPE_NAME_FIELD: &'static MessageField = &MessageField {
@@ -2238,6 +4677,63 @@ mod _field_impls {
             Self::VARIANTS_FIELD,
         ];
     }
+    impl DatatypeDescriptor {
+        pub fn path_builder() -> DatatypeDescriptorFieldPathBuilder {
+            DatatypeDescriptorFieldPathBuilder::new()
+        }
+    }
+    pub struct DatatypeDescriptorFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl DatatypeDescriptorFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn type_name(mut self) -> String {
+            self.path.push(DatatypeDescriptor::TYPE_NAME_FIELD.name);
+            self.finish()
+        }
+        pub fn defining_id(mut self) -> String {
+            self.path.push(DatatypeDescriptor::DEFINING_ID_FIELD.name);
+            self.finish()
+        }
+        pub fn module(mut self) -> String {
+            self.path.push(DatatypeDescriptor::MODULE_FIELD.name);
+            self.finish()
+        }
+        pub fn name(mut self) -> String {
+            self.path.push(DatatypeDescriptor::NAME_FIELD.name);
+            self.finish()
+        }
+        pub fn abilities(mut self) -> String {
+            self.path.push(DatatypeDescriptor::ABILITIES_FIELD.name);
+            self.finish()
+        }
+        pub fn type_parameters(mut self) -> TypeParameterFieldPathBuilder {
+            self.path.push(DatatypeDescriptor::TYPE_PARAMETERS_FIELD.name);
+            TypeParameterFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn kind(mut self) -> String {
+            self.path.push(DatatypeDescriptor::KIND_FIELD.name);
+            self.finish()
+        }
+        pub fn fields(mut self) -> FieldDescriptorFieldPathBuilder {
+            self.path.push(DatatypeDescriptor::FIELDS_FIELD.name);
+            FieldDescriptorFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn variants(mut self) -> VariantDescriptorFieldPathBuilder {
+            self.path.push(DatatypeDescriptor::VARIANTS_FIELD.name);
+            VariantDescriptorFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl TypeParameter {
         pub const CONSTRAINTS_FIELD: &'static MessageField = &MessageField {
             name: "constraints",
@@ -2257,6 +4753,35 @@ mod _field_impls {
             Self::CONSTRAINTS_FIELD,
             Self::IS_PHANTOM_FIELD,
         ];
+    }
+    impl TypeParameter {
+        pub fn path_builder() -> TypeParameterFieldPathBuilder {
+            TypeParameterFieldPathBuilder::new()
+        }
+    }
+    pub struct TypeParameterFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl TypeParameterFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn constraints(mut self) -> String {
+            self.path.push(TypeParameter::CONSTRAINTS_FIELD.name);
+            self.finish()
+        }
+        pub fn is_phantom(mut self) -> String {
+            self.path.push(TypeParameter::IS_PHANTOM_FIELD.name);
+            self.finish()
+        }
     }
     impl FieldDescriptor {
         pub const NAME_FIELD: &'static MessageField = &MessageField {
@@ -2285,6 +4810,39 @@ mod _field_impls {
             Self::TYPE_FIELD,
         ];
     }
+    impl FieldDescriptor {
+        pub fn path_builder() -> FieldDescriptorFieldPathBuilder {
+            FieldDescriptorFieldPathBuilder::new()
+        }
+    }
+    pub struct FieldDescriptorFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl FieldDescriptorFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn name(mut self) -> String {
+            self.path.push(FieldDescriptor::NAME_FIELD.name);
+            self.finish()
+        }
+        pub fn position(mut self) -> String {
+            self.path.push(FieldDescriptor::POSITION_FIELD.name);
+            self.finish()
+        }
+        pub fn r#type(mut self) -> OpenSignatureBodyFieldPathBuilder {
+            self.path.push(FieldDescriptor::TYPE_FIELD.name);
+            OpenSignatureBodyFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl VariantDescriptor {
         pub const NAME_FIELD: &'static MessageField = &MessageField {
             name: "name",
@@ -2311,6 +4869,39 @@ mod _field_impls {
             Self::POSITION_FIELD,
             Self::FIELDS_FIELD,
         ];
+    }
+    impl VariantDescriptor {
+        pub fn path_builder() -> VariantDescriptorFieldPathBuilder {
+            VariantDescriptorFieldPathBuilder::new()
+        }
+    }
+    pub struct VariantDescriptorFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl VariantDescriptorFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn name(mut self) -> String {
+            self.path.push(VariantDescriptor::NAME_FIELD.name);
+            self.finish()
+        }
+        pub fn position(mut self) -> String {
+            self.path.push(VariantDescriptor::POSITION_FIELD.name);
+            self.finish()
+        }
+        pub fn fields(mut self) -> FieldDescriptorFieldPathBuilder {
+            self.path.push(VariantDescriptor::FIELDS_FIELD.name);
+            FieldDescriptorFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl OpenSignatureBody {
         pub const TYPE_FIELD: &'static MessageField = &MessageField {
@@ -2345,6 +4936,43 @@ mod _field_impls {
             Self::TYPE_PARAMETER_INSTANTIATION_FIELD,
             Self::TYPE_PARAMETER_FIELD,
         ];
+    }
+    impl OpenSignatureBody {
+        pub fn path_builder() -> OpenSignatureBodyFieldPathBuilder {
+            OpenSignatureBodyFieldPathBuilder::new()
+        }
+    }
+    pub struct OpenSignatureBodyFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl OpenSignatureBodyFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn r#type(mut self) -> String {
+            self.path.push(OpenSignatureBody::TYPE_FIELD.name);
+            self.finish()
+        }
+        pub fn type_name(mut self) -> String {
+            self.path.push(OpenSignatureBody::TYPE_NAME_FIELD.name);
+            self.finish()
+        }
+        pub fn type_parameter_instantiation(mut self) -> String {
+            self.path.push(OpenSignatureBody::TYPE_PARAMETER_INSTANTIATION_FIELD.name);
+            self.finish()
+        }
+        pub fn type_parameter(mut self) -> String {
+            self.path.push(OpenSignatureBody::TYPE_PARAMETER_FIELD.name);
+            self.finish()
+        }
     }
     impl FunctionDescriptor {
         pub const NAME_FIELD: &'static MessageField = &MessageField {
@@ -2394,6 +5022,51 @@ mod _field_impls {
             Self::RETURNS_FIELD,
         ];
     }
+    impl FunctionDescriptor {
+        pub fn path_builder() -> FunctionDescriptorFieldPathBuilder {
+            FunctionDescriptorFieldPathBuilder::new()
+        }
+    }
+    pub struct FunctionDescriptorFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl FunctionDescriptorFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn name(mut self) -> String {
+            self.path.push(FunctionDescriptor::NAME_FIELD.name);
+            self.finish()
+        }
+        pub fn visibility(mut self) -> String {
+            self.path.push(FunctionDescriptor::VISIBILITY_FIELD.name);
+            self.finish()
+        }
+        pub fn is_entry(mut self) -> String {
+            self.path.push(FunctionDescriptor::IS_ENTRY_FIELD.name);
+            self.finish()
+        }
+        pub fn type_parameters(mut self) -> TypeParameterFieldPathBuilder {
+            self.path.push(FunctionDescriptor::TYPE_PARAMETERS_FIELD.name);
+            TypeParameterFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn parameters(mut self) -> OpenSignatureFieldPathBuilder {
+            self.path.push(FunctionDescriptor::PARAMETERS_FIELD.name);
+            OpenSignatureFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn returns(mut self) -> OpenSignatureFieldPathBuilder {
+            self.path.push(FunctionDescriptor::RETURNS_FIELD.name);
+            OpenSignatureFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl OpenSignature {
         pub const REFERENCE_FIELD: &'static MessageField = &MessageField {
             name: "reference",
@@ -2413,6 +5086,35 @@ mod _field_impls {
             Self::REFERENCE_FIELD,
             Self::BODY_FIELD,
         ];
+    }
+    impl OpenSignature {
+        pub fn path_builder() -> OpenSignatureFieldPathBuilder {
+            OpenSignatureFieldPathBuilder::new()
+        }
+    }
+    pub struct OpenSignatureFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl OpenSignatureFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn reference(mut self) -> String {
+            self.path.push(OpenSignature::REFERENCE_FIELD.name);
+            self.finish()
+        }
+        pub fn body(mut self) -> OpenSignatureBodyFieldPathBuilder {
+            self.path.push(OpenSignature::BODY_FIELD.name);
+            OpenSignatureBodyFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl TypeOrigin {
         pub const MODULE_NAME_FIELD: &'static MessageField = &MessageField {
@@ -2441,6 +5143,39 @@ mod _field_impls {
             Self::PACKAGE_ID_FIELD,
         ];
     }
+    impl TypeOrigin {
+        pub fn path_builder() -> TypeOriginFieldPathBuilder {
+            TypeOriginFieldPathBuilder::new()
+        }
+    }
+    pub struct TypeOriginFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl TypeOriginFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn module_name(mut self) -> String {
+            self.path.push(TypeOrigin::MODULE_NAME_FIELD.name);
+            self.finish()
+        }
+        pub fn datatype_name(mut self) -> String {
+            self.path.push(TypeOrigin::DATATYPE_NAME_FIELD.name);
+            self.finish()
+        }
+        pub fn package_id(mut self) -> String {
+            self.path.push(TypeOrigin::PACKAGE_ID_FIELD.name);
+            self.finish()
+        }
+    }
     impl Linkage {
         pub const ORIGINAL_ID_FIELD: &'static MessageField = &MessageField {
             name: "original_id",
@@ -2468,6 +5203,39 @@ mod _field_impls {
             Self::UPGRADED_VERSION_FIELD,
         ];
     }
+    impl Linkage {
+        pub fn path_builder() -> LinkageFieldPathBuilder {
+            LinkageFieldPathBuilder::new()
+        }
+    }
+    pub struct LinkageFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl LinkageFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn original_id(mut self) -> String {
+            self.path.push(Linkage::ORIGINAL_ID_FIELD.name);
+            self.finish()
+        }
+        pub fn upgraded_id(mut self) -> String {
+            self.path.push(Linkage::UPGRADED_ID_FIELD.name);
+            self.finish()
+        }
+        pub fn upgraded_version(mut self) -> String {
+            self.path.push(Linkage::UPGRADED_VERSION_FIELD.name);
+            self.finish()
+        }
+    }
     impl GetPackageRequest {
         pub const PACKAGE_ID_FIELD: &'static MessageField = &MessageField {
             name: "package_id",
@@ -2479,6 +5247,31 @@ mod _field_impls {
     impl MessageFields for GetPackageRequest {
         const FIELDS: &'static [&'static MessageField] = &[Self::PACKAGE_ID_FIELD];
     }
+    impl GetPackageRequest {
+        pub fn path_builder() -> GetPackageRequestFieldPathBuilder {
+            GetPackageRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct GetPackageRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GetPackageRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn package_id(mut self) -> String {
+            self.path.push(GetPackageRequest::PACKAGE_ID_FIELD.name);
+            self.finish()
+        }
+    }
     impl GetPackageResponse {
         pub const PACKAGE_FIELD: &'static MessageField = &MessageField {
             name: "package",
@@ -2489,6 +5282,31 @@ mod _field_impls {
     }
     impl MessageFields for GetPackageResponse {
         const FIELDS: &'static [&'static MessageField] = &[Self::PACKAGE_FIELD];
+    }
+    impl GetPackageResponse {
+        pub fn path_builder() -> GetPackageResponseFieldPathBuilder {
+            GetPackageResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct GetPackageResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GetPackageResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn package(mut self) -> PackageFieldPathBuilder {
+            self.path.push(GetPackageResponse::PACKAGE_FIELD.name);
+            PackageFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl GetDatatypeRequest {
         pub const PACKAGE_ID_FIELD: &'static MessageField = &MessageField {
@@ -2517,6 +5335,39 @@ mod _field_impls {
             Self::NAME_FIELD,
         ];
     }
+    impl GetDatatypeRequest {
+        pub fn path_builder() -> GetDatatypeRequestFieldPathBuilder {
+            GetDatatypeRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct GetDatatypeRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GetDatatypeRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn package_id(mut self) -> String {
+            self.path.push(GetDatatypeRequest::PACKAGE_ID_FIELD.name);
+            self.finish()
+        }
+        pub fn module_name(mut self) -> String {
+            self.path.push(GetDatatypeRequest::MODULE_NAME_FIELD.name);
+            self.finish()
+        }
+        pub fn name(mut self) -> String {
+            self.path.push(GetDatatypeRequest::NAME_FIELD.name);
+            self.finish()
+        }
+    }
     impl GetDatatypeResponse {
         pub const DATATYPE_FIELD: &'static MessageField = &MessageField {
             name: "datatype",
@@ -2527,6 +5378,31 @@ mod _field_impls {
     }
     impl MessageFields for GetDatatypeResponse {
         const FIELDS: &'static [&'static MessageField] = &[Self::DATATYPE_FIELD];
+    }
+    impl GetDatatypeResponse {
+        pub fn path_builder() -> GetDatatypeResponseFieldPathBuilder {
+            GetDatatypeResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct GetDatatypeResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GetDatatypeResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn datatype(mut self) -> DatatypeDescriptorFieldPathBuilder {
+            self.path.push(GetDatatypeResponse::DATATYPE_FIELD.name);
+            DatatypeDescriptorFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl GetFunctionRequest {
         pub const PACKAGE_ID_FIELD: &'static MessageField = &MessageField {
@@ -2555,6 +5431,39 @@ mod _field_impls {
             Self::NAME_FIELD,
         ];
     }
+    impl GetFunctionRequest {
+        pub fn path_builder() -> GetFunctionRequestFieldPathBuilder {
+            GetFunctionRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct GetFunctionRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GetFunctionRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn package_id(mut self) -> String {
+            self.path.push(GetFunctionRequest::PACKAGE_ID_FIELD.name);
+            self.finish()
+        }
+        pub fn module_name(mut self) -> String {
+            self.path.push(GetFunctionRequest::MODULE_NAME_FIELD.name);
+            self.finish()
+        }
+        pub fn name(mut self) -> String {
+            self.path.push(GetFunctionRequest::NAME_FIELD.name);
+            self.finish()
+        }
+    }
     impl GetFunctionResponse {
         pub const FUNCTION_FIELD: &'static MessageField = &MessageField {
             name: "function",
@@ -2565,6 +5474,31 @@ mod _field_impls {
     }
     impl MessageFields for GetFunctionResponse {
         const FIELDS: &'static [&'static MessageField] = &[Self::FUNCTION_FIELD];
+    }
+    impl GetFunctionResponse {
+        pub fn path_builder() -> GetFunctionResponseFieldPathBuilder {
+            GetFunctionResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct GetFunctionResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GetFunctionResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn function(mut self) -> FunctionDescriptorFieldPathBuilder {
+            self.path.push(GetFunctionResponse::FUNCTION_FIELD.name);
+            FunctionDescriptorFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl ListPackageVersionsRequest {
         pub const PACKAGE_ID_FIELD: &'static MessageField = &MessageField {
@@ -2593,6 +5527,39 @@ mod _field_impls {
             Self::PAGE_TOKEN_FIELD,
         ];
     }
+    impl ListPackageVersionsRequest {
+        pub fn path_builder() -> ListPackageVersionsRequestFieldPathBuilder {
+            ListPackageVersionsRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct ListPackageVersionsRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ListPackageVersionsRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn package_id(mut self) -> String {
+            self.path.push(ListPackageVersionsRequest::PACKAGE_ID_FIELD.name);
+            self.finish()
+        }
+        pub fn page_size(mut self) -> String {
+            self.path.push(ListPackageVersionsRequest::PAGE_SIZE_FIELD.name);
+            self.finish()
+        }
+        pub fn page_token(mut self) -> String {
+            self.path.push(ListPackageVersionsRequest::PAGE_TOKEN_FIELD.name);
+            self.finish()
+        }
+    }
     impl ListPackageVersionsResponse {
         pub const VERSIONS_FIELD: &'static MessageField = &MessageField {
             name: "versions",
@@ -2612,6 +5579,35 @@ mod _field_impls {
             Self::VERSIONS_FIELD,
             Self::NEXT_PAGE_TOKEN_FIELD,
         ];
+    }
+    impl ListPackageVersionsResponse {
+        pub fn path_builder() -> ListPackageVersionsResponseFieldPathBuilder {
+            ListPackageVersionsResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct ListPackageVersionsResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ListPackageVersionsResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn versions(mut self) -> PackageVersionFieldPathBuilder {
+            self.path.push(ListPackageVersionsResponse::VERSIONS_FIELD.name);
+            PackageVersionFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn next_page_token(mut self) -> String {
+            self.path.push(ListPackageVersionsResponse::NEXT_PAGE_TOKEN_FIELD.name);
+            self.finish()
+        }
     }
     impl PackageVersion {
         pub const PACKAGE_ID_FIELD: &'static MessageField = &MessageField {
@@ -2633,6 +5629,35 @@ mod _field_impls {
             Self::VERSION_FIELD,
         ];
     }
+    impl PackageVersion {
+        pub fn path_builder() -> PackageVersionFieldPathBuilder {
+            PackageVersionFieldPathBuilder::new()
+        }
+    }
+    pub struct PackageVersionFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl PackageVersionFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn package_id(mut self) -> String {
+            self.path.push(PackageVersion::PACKAGE_ID_FIELD.name);
+            self.finish()
+        }
+        pub fn version(mut self) -> String {
+            self.path.push(PackageVersion::VERSION_FIELD.name);
+            self.finish()
+        }
+    }
     impl LookupNameRequest {
         pub const NAME_FIELD: &'static MessageField = &MessageField {
             name: "name",
@@ -2643,6 +5668,31 @@ mod _field_impls {
     }
     impl MessageFields for LookupNameRequest {
         const FIELDS: &'static [&'static MessageField] = &[Self::NAME_FIELD];
+    }
+    impl LookupNameRequest {
+        pub fn path_builder() -> LookupNameRequestFieldPathBuilder {
+            LookupNameRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct LookupNameRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl LookupNameRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn name(mut self) -> String {
+            self.path.push(LookupNameRequest::NAME_FIELD.name);
+            self.finish()
+        }
     }
     impl LookupNameResponse {
         pub const RECORD_FIELD: &'static MessageField = &MessageField {
@@ -2655,6 +5705,31 @@ mod _field_impls {
     impl MessageFields for LookupNameResponse {
         const FIELDS: &'static [&'static MessageField] = &[Self::RECORD_FIELD];
     }
+    impl LookupNameResponse {
+        pub fn path_builder() -> LookupNameResponseFieldPathBuilder {
+            LookupNameResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct LookupNameResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl LookupNameResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn record(mut self) -> NameRecordFieldPathBuilder {
+            self.path.push(LookupNameResponse::RECORD_FIELD.name);
+            NameRecordFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl ReverseLookupNameRequest {
         pub const ADDRESS_FIELD: &'static MessageField = &MessageField {
             name: "address",
@@ -2666,6 +5741,31 @@ mod _field_impls {
     impl MessageFields for ReverseLookupNameRequest {
         const FIELDS: &'static [&'static MessageField] = &[Self::ADDRESS_FIELD];
     }
+    impl ReverseLookupNameRequest {
+        pub fn path_builder() -> ReverseLookupNameRequestFieldPathBuilder {
+            ReverseLookupNameRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct ReverseLookupNameRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ReverseLookupNameRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn address(mut self) -> String {
+            self.path.push(ReverseLookupNameRequest::ADDRESS_FIELD.name);
+            self.finish()
+        }
+    }
     impl ReverseLookupNameResponse {
         pub const RECORD_FIELD: &'static MessageField = &MessageField {
             name: "record",
@@ -2676,6 +5776,31 @@ mod _field_impls {
     }
     impl MessageFields for ReverseLookupNameResponse {
         const FIELDS: &'static [&'static MessageField] = &[Self::RECORD_FIELD];
+    }
+    impl ReverseLookupNameResponse {
+        pub fn path_builder() -> ReverseLookupNameResponseFieldPathBuilder {
+            ReverseLookupNameResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct ReverseLookupNameResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ReverseLookupNameResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn record(mut self) -> NameRecordFieldPathBuilder {
+            self.path.push(ReverseLookupNameResponse::RECORD_FIELD.name);
+            NameRecordFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl NameRecord {
         pub const ID_FIELD: &'static MessageField = &MessageField {
@@ -2724,6 +5849,51 @@ mod _field_impls {
             Self::TARGET_ADDRESS_FIELD,
             Self::DATA_FIELD,
         ];
+    }
+    impl NameRecord {
+        pub fn path_builder() -> NameRecordFieldPathBuilder {
+            NameRecordFieldPathBuilder::new()
+        }
+    }
+    pub struct NameRecordFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl NameRecordFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn id(mut self) -> String {
+            self.path.push(NameRecord::ID_FIELD.name);
+            self.finish()
+        }
+        pub fn name(mut self) -> String {
+            self.path.push(NameRecord::NAME_FIELD.name);
+            self.finish()
+        }
+        pub fn registration_nft_id(mut self) -> String {
+            self.path.push(NameRecord::REGISTRATION_NFT_ID_FIELD.name);
+            self.finish()
+        }
+        pub fn expiration_timestamp(mut self) -> String {
+            self.path.push(NameRecord::EXPIRATION_TIMESTAMP_FIELD.name);
+            self.finish()
+        }
+        pub fn target_address(mut self) -> String {
+            self.path.push(NameRecord::TARGET_ADDRESS_FIELD.name);
+            self.finish()
+        }
+        pub fn data(mut self) -> String {
+            self.path.push(NameRecord::DATA_FIELD.name);
+            self.finish()
+        }
     }
     impl Object {
         pub const BCS_FIELD: &'static MessageField = &MessageField {
@@ -2822,6 +5992,79 @@ mod _field_impls {
             Self::BALANCE_FIELD,
         ];
     }
+    impl Object {
+        pub fn path_builder() -> ObjectFieldPathBuilder {
+            ObjectFieldPathBuilder::new()
+        }
+    }
+    pub struct ObjectFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ObjectFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn bcs(mut self) -> BcsFieldPathBuilder {
+            self.path.push(Object::BCS_FIELD.name);
+            BcsFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn object_id(mut self) -> String {
+            self.path.push(Object::OBJECT_ID_FIELD.name);
+            self.finish()
+        }
+        pub fn version(mut self) -> String {
+            self.path.push(Object::VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn digest(mut self) -> String {
+            self.path.push(Object::DIGEST_FIELD.name);
+            self.finish()
+        }
+        pub fn owner(mut self) -> OwnerFieldPathBuilder {
+            self.path.push(Object::OWNER_FIELD.name);
+            OwnerFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn object_type(mut self) -> String {
+            self.path.push(Object::OBJECT_TYPE_FIELD.name);
+            self.finish()
+        }
+        pub fn has_public_transfer(mut self) -> String {
+            self.path.push(Object::HAS_PUBLIC_TRANSFER_FIELD.name);
+            self.finish()
+        }
+        pub fn contents(mut self) -> BcsFieldPathBuilder {
+            self.path.push(Object::CONTENTS_FIELD.name);
+            BcsFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn package(mut self) -> PackageFieldPathBuilder {
+            self.path.push(Object::PACKAGE_FIELD.name);
+            PackageFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn previous_transaction(mut self) -> String {
+            self.path.push(Object::PREVIOUS_TRANSACTION_FIELD.name);
+            self.finish()
+        }
+        pub fn storage_rebate(mut self) -> String {
+            self.path.push(Object::STORAGE_REBATE_FIELD.name);
+            self.finish()
+        }
+        pub fn json(mut self) -> String {
+            self.path.push(Object::JSON_FIELD.name);
+            self.finish()
+        }
+        pub fn balance(mut self) -> String {
+            self.path.push(Object::BALANCE_FIELD.name);
+            self.finish()
+        }
+    }
     impl ObjectReference {
         pub const OBJECT_ID_FIELD: &'static MessageField = &MessageField {
             name: "object_id",
@@ -2848,6 +6091,39 @@ mod _field_impls {
             Self::VERSION_FIELD,
             Self::DIGEST_FIELD,
         ];
+    }
+    impl ObjectReference {
+        pub fn path_builder() -> ObjectReferenceFieldPathBuilder {
+            ObjectReferenceFieldPathBuilder::new()
+        }
+    }
+    pub struct ObjectReferenceFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ObjectReferenceFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn object_id(mut self) -> String {
+            self.path.push(ObjectReference::OBJECT_ID_FIELD.name);
+            self.finish()
+        }
+        pub fn version(mut self) -> String {
+            self.path.push(ObjectReference::VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn digest(mut self) -> String {
+            self.path.push(ObjectReference::DIGEST_FIELD.name);
+            self.finish()
+        }
     }
     impl Owner {
         pub const KIND_FIELD: &'static MessageField = &MessageField {
@@ -2876,6 +6152,39 @@ mod _field_impls {
             Self::VERSION_FIELD,
         ];
     }
+    impl Owner {
+        pub fn path_builder() -> OwnerFieldPathBuilder {
+            OwnerFieldPathBuilder::new()
+        }
+    }
+    pub struct OwnerFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl OwnerFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn kind(mut self) -> String {
+            self.path.push(Owner::KIND_FIELD.name);
+            self.finish()
+        }
+        pub fn address(mut self) -> String {
+            self.path.push(Owner::ADDRESS_FIELD.name);
+            self.finish()
+        }
+        pub fn version(mut self) -> String {
+            self.path.push(Owner::VERSION_FIELD.name);
+            self.finish()
+        }
+    }
     impl ProtocolConfig {
         pub const PROTOCOL_VERSION_FIELD: &'static MessageField = &MessageField {
             name: "protocol_version",
@@ -2902,6 +6211,39 @@ mod _field_impls {
             Self::FEATURE_FLAGS_FIELD,
             Self::ATTRIBUTES_FIELD,
         ];
+    }
+    impl ProtocolConfig {
+        pub fn path_builder() -> ProtocolConfigFieldPathBuilder {
+            ProtocolConfigFieldPathBuilder::new()
+        }
+    }
+    pub struct ProtocolConfigFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ProtocolConfigFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn protocol_version(mut self) -> String {
+            self.path.push(ProtocolConfig::PROTOCOL_VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn feature_flags(mut self) -> String {
+            self.path.push(ProtocolConfig::FEATURE_FLAGS_FIELD.name);
+            self.finish()
+        }
+        pub fn attributes(mut self) -> String {
+            self.path.push(ProtocolConfig::ATTRIBUTES_FIELD.name);
+            self.finish()
+        }
     }
     impl UserSignature {
         pub const BCS_FIELD: &'static MessageField = &MessageField {
@@ -2951,6 +6293,51 @@ mod _field_impls {
             Self::PASSKEY_FIELD,
         ];
     }
+    impl UserSignature {
+        pub fn path_builder() -> UserSignatureFieldPathBuilder {
+            UserSignatureFieldPathBuilder::new()
+        }
+    }
+    pub struct UserSignatureFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl UserSignatureFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn bcs(mut self) -> BcsFieldPathBuilder {
+            self.path.push(UserSignature::BCS_FIELD.name);
+            BcsFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn scheme(mut self) -> String {
+            self.path.push(UserSignature::SCHEME_FIELD.name);
+            self.finish()
+        }
+        pub fn simple(mut self) -> SimpleSignatureFieldPathBuilder {
+            self.path.push(UserSignature::SIMPLE_FIELD.name);
+            SimpleSignatureFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn multisig(mut self) -> MultisigAggregatedSignatureFieldPathBuilder {
+            self.path.push(UserSignature::MULTISIG_FIELD.name);
+            MultisigAggregatedSignatureFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn zklogin(mut self) -> ZkLoginAuthenticatorFieldPathBuilder {
+            self.path.push(UserSignature::ZKLOGIN_FIELD.name);
+            ZkLoginAuthenticatorFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn passkey(mut self) -> PasskeyAuthenticatorFieldPathBuilder {
+            self.path.push(UserSignature::PASSKEY_FIELD.name);
+            PasskeyAuthenticatorFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl SimpleSignature {
         pub const SCHEME_FIELD: &'static MessageField = &MessageField {
             name: "scheme",
@@ -2978,6 +6365,39 @@ mod _field_impls {
             Self::PUBLIC_KEY_FIELD,
         ];
     }
+    impl SimpleSignature {
+        pub fn path_builder() -> SimpleSignatureFieldPathBuilder {
+            SimpleSignatureFieldPathBuilder::new()
+        }
+    }
+    pub struct SimpleSignatureFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl SimpleSignatureFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn scheme(mut self) -> String {
+            self.path.push(SimpleSignature::SCHEME_FIELD.name);
+            self.finish()
+        }
+        pub fn signature(mut self) -> String {
+            self.path.push(SimpleSignature::SIGNATURE_FIELD.name);
+            self.finish()
+        }
+        pub fn public_key(mut self) -> String {
+            self.path.push(SimpleSignature::PUBLIC_KEY_FIELD.name);
+            self.finish()
+        }
+    }
     impl ZkLoginPublicIdentifier {
         pub const ISS_FIELD: &'static MessageField = &MessageField {
             name: "iss",
@@ -2997,6 +6417,35 @@ mod _field_impls {
             Self::ISS_FIELD,
             Self::ADDRESS_SEED_FIELD,
         ];
+    }
+    impl ZkLoginPublicIdentifier {
+        pub fn path_builder() -> ZkLoginPublicIdentifierFieldPathBuilder {
+            ZkLoginPublicIdentifierFieldPathBuilder::new()
+        }
+    }
+    pub struct ZkLoginPublicIdentifierFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ZkLoginPublicIdentifierFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn iss(mut self) -> String {
+            self.path.push(ZkLoginPublicIdentifier::ISS_FIELD.name);
+            self.finish()
+        }
+        pub fn address_seed(mut self) -> String {
+            self.path.push(ZkLoginPublicIdentifier::ADDRESS_SEED_FIELD.name);
+            self.finish()
+        }
     }
     impl MultisigMemberPublicKey {
         pub const SCHEME_FIELD: &'static MessageField = &MessageField {
@@ -3025,6 +6474,39 @@ mod _field_impls {
             Self::ZKLOGIN_FIELD,
         ];
     }
+    impl MultisigMemberPublicKey {
+        pub fn path_builder() -> MultisigMemberPublicKeyFieldPathBuilder {
+            MultisigMemberPublicKeyFieldPathBuilder::new()
+        }
+    }
+    pub struct MultisigMemberPublicKeyFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl MultisigMemberPublicKeyFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn scheme(mut self) -> String {
+            self.path.push(MultisigMemberPublicKey::SCHEME_FIELD.name);
+            self.finish()
+        }
+        pub fn public_key(mut self) -> String {
+            self.path.push(MultisigMemberPublicKey::PUBLIC_KEY_FIELD.name);
+            self.finish()
+        }
+        pub fn zklogin(mut self) -> ZkLoginPublicIdentifierFieldPathBuilder {
+            self.path.push(MultisigMemberPublicKey::ZKLOGIN_FIELD.name);
+            ZkLoginPublicIdentifierFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl MultisigMember {
         pub const PUBLIC_KEY_FIELD: &'static MessageField = &MessageField {
             name: "public_key",
@@ -3045,6 +6527,35 @@ mod _field_impls {
             Self::WEIGHT_FIELD,
         ];
     }
+    impl MultisigMember {
+        pub fn path_builder() -> MultisigMemberFieldPathBuilder {
+            MultisigMemberFieldPathBuilder::new()
+        }
+    }
+    pub struct MultisigMemberFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl MultisigMemberFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn public_key(mut self) -> MultisigMemberPublicKeyFieldPathBuilder {
+            self.path.push(MultisigMember::PUBLIC_KEY_FIELD.name);
+            MultisigMemberPublicKeyFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn weight(mut self) -> String {
+            self.path.push(MultisigMember::WEIGHT_FIELD.name);
+            self.finish()
+        }
+    }
     impl MultisigCommittee {
         pub const MEMBERS_FIELD: &'static MessageField = &MessageField {
             name: "members",
@@ -3064,6 +6575,35 @@ mod _field_impls {
             Self::MEMBERS_FIELD,
             Self::THRESHOLD_FIELD,
         ];
+    }
+    impl MultisigCommittee {
+        pub fn path_builder() -> MultisigCommitteeFieldPathBuilder {
+            MultisigCommitteeFieldPathBuilder::new()
+        }
+    }
+    pub struct MultisigCommitteeFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl MultisigCommitteeFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn members(mut self) -> MultisigMemberFieldPathBuilder {
+            self.path.push(MultisigCommittee::MEMBERS_FIELD.name);
+            MultisigMemberFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn threshold(mut self) -> String {
+            self.path.push(MultisigCommittee::THRESHOLD_FIELD.name);
+            self.finish()
+        }
     }
     impl MultisigAggregatedSignature {
         pub const SIGNATURES_FIELD: &'static MessageField = &MessageField {
@@ -3099,6 +6639,43 @@ mod _field_impls {
             Self::COMMITTEE_FIELD,
         ];
     }
+    impl MultisigAggregatedSignature {
+        pub fn path_builder() -> MultisigAggregatedSignatureFieldPathBuilder {
+            MultisigAggregatedSignatureFieldPathBuilder::new()
+        }
+    }
+    pub struct MultisigAggregatedSignatureFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl MultisigAggregatedSignatureFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn signatures(mut self) -> MultisigMemberSignatureFieldPathBuilder {
+            self.path.push(MultisigAggregatedSignature::SIGNATURES_FIELD.name);
+            MultisigMemberSignatureFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn bitmap(mut self) -> String {
+            self.path.push(MultisigAggregatedSignature::BITMAP_FIELD.name);
+            self.finish()
+        }
+        pub fn legacy_bitmap(mut self) -> String {
+            self.path.push(MultisigAggregatedSignature::LEGACY_BITMAP_FIELD.name);
+            self.finish()
+        }
+        pub fn committee(mut self) -> MultisigCommitteeFieldPathBuilder {
+            self.path.push(MultisigAggregatedSignature::COMMITTEE_FIELD.name);
+            MultisigCommitteeFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl MultisigMemberSignature {
         pub const SCHEME_FIELD: &'static MessageField = &MessageField {
             name: "scheme",
@@ -3133,6 +6710,43 @@ mod _field_impls {
             Self::PASSKEY_FIELD,
         ];
     }
+    impl MultisigMemberSignature {
+        pub fn path_builder() -> MultisigMemberSignatureFieldPathBuilder {
+            MultisigMemberSignatureFieldPathBuilder::new()
+        }
+    }
+    pub struct MultisigMemberSignatureFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl MultisigMemberSignatureFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn scheme(mut self) -> String {
+            self.path.push(MultisigMemberSignature::SCHEME_FIELD.name);
+            self.finish()
+        }
+        pub fn signature(mut self) -> String {
+            self.path.push(MultisigMemberSignature::SIGNATURE_FIELD.name);
+            self.finish()
+        }
+        pub fn zklogin(mut self) -> ZkLoginAuthenticatorFieldPathBuilder {
+            self.path.push(MultisigMemberSignature::ZKLOGIN_FIELD.name);
+            ZkLoginAuthenticatorFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn passkey(mut self) -> PasskeyAuthenticatorFieldPathBuilder {
+            self.path.push(MultisigMemberSignature::PASSKEY_FIELD.name);
+            PasskeyAuthenticatorFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl ZkLoginAuthenticator {
         pub const INPUTS_FIELD: &'static MessageField = &MessageField {
             name: "inputs",
@@ -3159,6 +6773,39 @@ mod _field_impls {
             Self::MAX_EPOCH_FIELD,
             Self::SIGNATURE_FIELD,
         ];
+    }
+    impl ZkLoginAuthenticator {
+        pub fn path_builder() -> ZkLoginAuthenticatorFieldPathBuilder {
+            ZkLoginAuthenticatorFieldPathBuilder::new()
+        }
+    }
+    pub struct ZkLoginAuthenticatorFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ZkLoginAuthenticatorFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn inputs(mut self) -> ZkLoginInputsFieldPathBuilder {
+            self.path.push(ZkLoginAuthenticator::INPUTS_FIELD.name);
+            ZkLoginInputsFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn max_epoch(mut self) -> String {
+            self.path.push(ZkLoginAuthenticator::MAX_EPOCH_FIELD.name);
+            self.finish()
+        }
+        pub fn signature(mut self) -> SimpleSignatureFieldPathBuilder {
+            self.path.push(ZkLoginAuthenticator::SIGNATURE_FIELD.name);
+            SimpleSignatureFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl ZkLoginInputs {
         pub const PROOF_POINTS_FIELD: &'static MessageField = &MessageField {
@@ -3194,6 +6841,43 @@ mod _field_impls {
             Self::ADDRESS_SEED_FIELD,
         ];
     }
+    impl ZkLoginInputs {
+        pub fn path_builder() -> ZkLoginInputsFieldPathBuilder {
+            ZkLoginInputsFieldPathBuilder::new()
+        }
+    }
+    pub struct ZkLoginInputsFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ZkLoginInputsFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn proof_points(mut self) -> ZkLoginProofFieldPathBuilder {
+            self.path.push(ZkLoginInputs::PROOF_POINTS_FIELD.name);
+            ZkLoginProofFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn iss_base64_details(mut self) -> ZkLoginClaimFieldPathBuilder {
+            self.path.push(ZkLoginInputs::ISS_BASE64_DETAILS_FIELD.name);
+            ZkLoginClaimFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn header_base64(mut self) -> String {
+            self.path.push(ZkLoginInputs::HEADER_BASE64_FIELD.name);
+            self.finish()
+        }
+        pub fn address_seed(mut self) -> String {
+            self.path.push(ZkLoginInputs::ADDRESS_SEED_FIELD.name);
+            self.finish()
+        }
+    }
     impl ZkLoginProof {
         pub const A_FIELD: &'static MessageField = &MessageField {
             name: "a",
@@ -3221,6 +6905,39 @@ mod _field_impls {
             Self::C_FIELD,
         ];
     }
+    impl ZkLoginProof {
+        pub fn path_builder() -> ZkLoginProofFieldPathBuilder {
+            ZkLoginProofFieldPathBuilder::new()
+        }
+    }
+    pub struct ZkLoginProofFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ZkLoginProofFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn a(mut self) -> CircomG1FieldPathBuilder {
+            self.path.push(ZkLoginProof::A_FIELD.name);
+            CircomG1FieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn b(mut self) -> CircomG2FieldPathBuilder {
+            self.path.push(ZkLoginProof::B_FIELD.name);
+            CircomG2FieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn c(mut self) -> CircomG1FieldPathBuilder {
+            self.path.push(ZkLoginProof::C_FIELD.name);
+            CircomG1FieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl ZkLoginClaim {
         pub const VALUE_FIELD: &'static MessageField = &MessageField {
             name: "value",
@@ -3240,6 +6957,35 @@ mod _field_impls {
             Self::VALUE_FIELD,
             Self::INDEX_MOD_4_FIELD,
         ];
+    }
+    impl ZkLoginClaim {
+        pub fn path_builder() -> ZkLoginClaimFieldPathBuilder {
+            ZkLoginClaimFieldPathBuilder::new()
+        }
+    }
+    pub struct ZkLoginClaimFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ZkLoginClaimFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn value(mut self) -> String {
+            self.path.push(ZkLoginClaim::VALUE_FIELD.name);
+            self.finish()
+        }
+        pub fn index_mod_4(mut self) -> String {
+            self.path.push(ZkLoginClaim::INDEX_MOD_4_FIELD.name);
+            self.finish()
+        }
     }
     impl CircomG1 {
         pub const E0_FIELD: &'static MessageField = &MessageField {
@@ -3267,6 +7013,39 @@ mod _field_impls {
             Self::E1_FIELD,
             Self::E2_FIELD,
         ];
+    }
+    impl CircomG1 {
+        pub fn path_builder() -> CircomG1FieldPathBuilder {
+            CircomG1FieldPathBuilder::new()
+        }
+    }
+    pub struct CircomG1FieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl CircomG1FieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn e0(mut self) -> String {
+            self.path.push(CircomG1::E0_FIELD.name);
+            self.finish()
+        }
+        pub fn e1(mut self) -> String {
+            self.path.push(CircomG1::E1_FIELD.name);
+            self.finish()
+        }
+        pub fn e2(mut self) -> String {
+            self.path.push(CircomG1::E2_FIELD.name);
+            self.finish()
+        }
     }
     impl CircomG2 {
         pub const E00_FIELD: &'static MessageField = &MessageField {
@@ -3316,6 +7095,51 @@ mod _field_impls {
             Self::E21_FIELD,
         ];
     }
+    impl CircomG2 {
+        pub fn path_builder() -> CircomG2FieldPathBuilder {
+            CircomG2FieldPathBuilder::new()
+        }
+    }
+    pub struct CircomG2FieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl CircomG2FieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn e00(mut self) -> String {
+            self.path.push(CircomG2::E00_FIELD.name);
+            self.finish()
+        }
+        pub fn e01(mut self) -> String {
+            self.path.push(CircomG2::E01_FIELD.name);
+            self.finish()
+        }
+        pub fn e10(mut self) -> String {
+            self.path.push(CircomG2::E10_FIELD.name);
+            self.finish()
+        }
+        pub fn e11(mut self) -> String {
+            self.path.push(CircomG2::E11_FIELD.name);
+            self.finish()
+        }
+        pub fn e20(mut self) -> String {
+            self.path.push(CircomG2::E20_FIELD.name);
+            self.finish()
+        }
+        pub fn e21(mut self) -> String {
+            self.path.push(CircomG2::E21_FIELD.name);
+            self.finish()
+        }
+    }
     impl PasskeyAuthenticator {
         pub const AUTHENTICATOR_DATA_FIELD: &'static MessageField = &MessageField {
             name: "authenticator_data",
@@ -3343,6 +7167,39 @@ mod _field_impls {
             Self::SIGNATURE_FIELD,
         ];
     }
+    impl PasskeyAuthenticator {
+        pub fn path_builder() -> PasskeyAuthenticatorFieldPathBuilder {
+            PasskeyAuthenticatorFieldPathBuilder::new()
+        }
+    }
+    pub struct PasskeyAuthenticatorFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl PasskeyAuthenticatorFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn authenticator_data(mut self) -> String {
+            self.path.push(PasskeyAuthenticator::AUTHENTICATOR_DATA_FIELD.name);
+            self.finish()
+        }
+        pub fn client_data_json(mut self) -> String {
+            self.path.push(PasskeyAuthenticator::CLIENT_DATA_JSON_FIELD.name);
+            self.finish()
+        }
+        pub fn signature(mut self) -> SimpleSignatureFieldPathBuilder {
+            self.path.push(PasskeyAuthenticator::SIGNATURE_FIELD.name);
+            SimpleSignatureFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl ValidatorCommittee {
         pub const EPOCH_FIELD: &'static MessageField = &MessageField {
             name: "epoch",
@@ -3363,6 +7220,35 @@ mod _field_impls {
             Self::MEMBERS_FIELD,
         ];
     }
+    impl ValidatorCommittee {
+        pub fn path_builder() -> ValidatorCommitteeFieldPathBuilder {
+            ValidatorCommitteeFieldPathBuilder::new()
+        }
+    }
+    pub struct ValidatorCommitteeFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ValidatorCommitteeFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn epoch(mut self) -> String {
+            self.path.push(ValidatorCommittee::EPOCH_FIELD.name);
+            self.finish()
+        }
+        pub fn members(mut self) -> ValidatorCommitteeMemberFieldPathBuilder {
+            self.path.push(ValidatorCommittee::MEMBERS_FIELD.name);
+            ValidatorCommitteeMemberFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl ValidatorCommitteeMember {
         pub const PUBLIC_KEY_FIELD: &'static MessageField = &MessageField {
             name: "public_key",
@@ -3382,6 +7268,35 @@ mod _field_impls {
             Self::PUBLIC_KEY_FIELD,
             Self::WEIGHT_FIELD,
         ];
+    }
+    impl ValidatorCommitteeMember {
+        pub fn path_builder() -> ValidatorCommitteeMemberFieldPathBuilder {
+            ValidatorCommitteeMemberFieldPathBuilder::new()
+        }
+    }
+    pub struct ValidatorCommitteeMemberFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ValidatorCommitteeMemberFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn public_key(mut self) -> String {
+            self.path.push(ValidatorCommitteeMember::PUBLIC_KEY_FIELD.name);
+            self.finish()
+        }
+        pub fn weight(mut self) -> String {
+            self.path.push(ValidatorCommitteeMember::WEIGHT_FIELD.name);
+            self.finish()
+        }
     }
     impl ValidatorAggregatedSignature {
         pub const EPOCH_FIELD: &'static MessageField = &MessageField {
@@ -3409,6 +7324,39 @@ mod _field_impls {
             Self::SIGNATURE_FIELD,
             Self::BITMAP_FIELD,
         ];
+    }
+    impl ValidatorAggregatedSignature {
+        pub fn path_builder() -> ValidatorAggregatedSignatureFieldPathBuilder {
+            ValidatorAggregatedSignatureFieldPathBuilder::new()
+        }
+    }
+    pub struct ValidatorAggregatedSignatureFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ValidatorAggregatedSignatureFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn epoch(mut self) -> String {
+            self.path.push(ValidatorAggregatedSignature::EPOCH_FIELD.name);
+            self.finish()
+        }
+        pub fn signature(mut self) -> String {
+            self.path.push(ValidatorAggregatedSignature::SIGNATURE_FIELD.name);
+            self.finish()
+        }
+        pub fn bitmap(mut self) -> String {
+            self.path.push(ValidatorAggregatedSignature::BITMAP_FIELD.name);
+            self.finish()
+        }
     }
     impl VerifySignatureRequest {
         pub const MESSAGE_FIELD: &'static MessageField = &MessageField {
@@ -3444,6 +7392,43 @@ mod _field_impls {
             Self::JWKS_FIELD,
         ];
     }
+    impl VerifySignatureRequest {
+        pub fn path_builder() -> VerifySignatureRequestFieldPathBuilder {
+            VerifySignatureRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct VerifySignatureRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl VerifySignatureRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn message(mut self) -> BcsFieldPathBuilder {
+            self.path.push(VerifySignatureRequest::MESSAGE_FIELD.name);
+            BcsFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn signature(mut self) -> UserSignatureFieldPathBuilder {
+            self.path.push(VerifySignatureRequest::SIGNATURE_FIELD.name);
+            UserSignatureFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn address(mut self) -> String {
+            self.path.push(VerifySignatureRequest::ADDRESS_FIELD.name);
+            self.finish()
+        }
+        pub fn jwks(mut self) -> ActiveJwkFieldPathBuilder {
+            self.path.push(VerifySignatureRequest::JWKS_FIELD.name);
+            ActiveJwkFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl VerifySignatureResponse {
         pub const IS_VALID_FIELD: &'static MessageField = &MessageField {
             name: "is_valid",
@@ -3464,6 +7449,35 @@ mod _field_impls {
             Self::REASON_FIELD,
         ];
     }
+    impl VerifySignatureResponse {
+        pub fn path_builder() -> VerifySignatureResponseFieldPathBuilder {
+            VerifySignatureResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct VerifySignatureResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl VerifySignatureResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn is_valid(mut self) -> String {
+            self.path.push(VerifySignatureResponse::IS_VALID_FIELD.name);
+            self.finish()
+        }
+        pub fn reason(mut self) -> String {
+            self.path.push(VerifySignatureResponse::REASON_FIELD.name);
+            self.finish()
+        }
+    }
     impl SubscribeCheckpointsRequest {
         pub const READ_MASK_FIELD: &'static MessageField = &MessageField {
             name: "read_mask",
@@ -3474,6 +7488,31 @@ mod _field_impls {
     }
     impl MessageFields for SubscribeCheckpointsRequest {
         const FIELDS: &'static [&'static MessageField] = &[Self::READ_MASK_FIELD];
+    }
+    impl SubscribeCheckpointsRequest {
+        pub fn path_builder() -> SubscribeCheckpointsRequestFieldPathBuilder {
+            SubscribeCheckpointsRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct SubscribeCheckpointsRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl SubscribeCheckpointsRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn read_mask(mut self) -> String {
+            self.path.push(SubscribeCheckpointsRequest::READ_MASK_FIELD.name);
+            self.finish()
+        }
     }
     impl SubscribeCheckpointsResponse {
         pub const CURSOR_FIELD: &'static MessageField = &MessageField {
@@ -3494,6 +7533,35 @@ mod _field_impls {
             Self::CURSOR_FIELD,
             Self::CHECKPOINT_FIELD,
         ];
+    }
+    impl SubscribeCheckpointsResponse {
+        pub fn path_builder() -> SubscribeCheckpointsResponseFieldPathBuilder {
+            SubscribeCheckpointsResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct SubscribeCheckpointsResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl SubscribeCheckpointsResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn cursor(mut self) -> String {
+            self.path.push(SubscribeCheckpointsResponse::CURSOR_FIELD.name);
+            self.finish()
+        }
+        pub fn checkpoint(mut self) -> CheckpointFieldPathBuilder {
+            self.path.push(SubscribeCheckpointsResponse::CHECKPOINT_FIELD.name);
+            CheckpointFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl SystemState {
         pub const VERSION_FIELD: &'static MessageField = &MessageField {
@@ -3613,6 +7681,93 @@ mod _field_impls {
             Self::EXTRA_FIELDS_FIELD,
         ];
     }
+    impl SystemState {
+        pub fn path_builder() -> SystemStateFieldPathBuilder {
+            SystemStateFieldPathBuilder::new()
+        }
+    }
+    pub struct SystemStateFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl SystemStateFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn version(mut self) -> String {
+            self.path.push(SystemState::VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn epoch(mut self) -> String {
+            self.path.push(SystemState::EPOCH_FIELD.name);
+            self.finish()
+        }
+        pub fn protocol_version(mut self) -> String {
+            self.path.push(SystemState::PROTOCOL_VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn validators(mut self) -> ValidatorSetFieldPathBuilder {
+            self.path.push(SystemState::VALIDATORS_FIELD.name);
+            ValidatorSetFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn storage_fund(mut self) -> StorageFundFieldPathBuilder {
+            self.path.push(SystemState::STORAGE_FUND_FIELD.name);
+            StorageFundFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn parameters(mut self) -> SystemParametersFieldPathBuilder {
+            self.path.push(SystemState::PARAMETERS_FIELD.name);
+            SystemParametersFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn reference_gas_price(mut self) -> String {
+            self.path.push(SystemState::REFERENCE_GAS_PRICE_FIELD.name);
+            self.finish()
+        }
+        pub fn validator_report_records(
+            mut self,
+        ) -> ValidatorReportRecordFieldPathBuilder {
+            self.path.push(SystemState::VALIDATOR_REPORT_RECORDS_FIELD.name);
+            ValidatorReportRecordFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn stake_subsidy(mut self) -> StakeSubsidyFieldPathBuilder {
+            self.path.push(SystemState::STAKE_SUBSIDY_FIELD.name);
+            StakeSubsidyFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn safe_mode(mut self) -> String {
+            self.path.push(SystemState::SAFE_MODE_FIELD.name);
+            self.finish()
+        }
+        pub fn safe_mode_storage_rewards(mut self) -> String {
+            self.path.push(SystemState::SAFE_MODE_STORAGE_REWARDS_FIELD.name);
+            self.finish()
+        }
+        pub fn safe_mode_computation_rewards(mut self) -> String {
+            self.path.push(SystemState::SAFE_MODE_COMPUTATION_REWARDS_FIELD.name);
+            self.finish()
+        }
+        pub fn safe_mode_storage_rebates(mut self) -> String {
+            self.path.push(SystemState::SAFE_MODE_STORAGE_REBATES_FIELD.name);
+            self.finish()
+        }
+        pub fn safe_mode_non_refundable_storage_fee(mut self) -> String {
+            self.path.push(SystemState::SAFE_MODE_NON_REFUNDABLE_STORAGE_FEE_FIELD.name);
+            self.finish()
+        }
+        pub fn epoch_start_timestamp_ms(mut self) -> String {
+            self.path.push(SystemState::EPOCH_START_TIMESTAMP_MS_FIELD.name);
+            self.finish()
+        }
+        pub fn extra_fields(mut self) -> MoveTableFieldPathBuilder {
+            self.path.push(SystemState::EXTRA_FIELDS_FIELD.name);
+            MoveTableFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl ValidatorReportRecord {
         pub const REPORTED_FIELD: &'static MessageField = &MessageField {
             name: "reported",
@@ -3632,6 +7787,35 @@ mod _field_impls {
             Self::REPORTED_FIELD,
             Self::REPORTERS_FIELD,
         ];
+    }
+    impl ValidatorReportRecord {
+        pub fn path_builder() -> ValidatorReportRecordFieldPathBuilder {
+            ValidatorReportRecordFieldPathBuilder::new()
+        }
+    }
+    pub struct ValidatorReportRecordFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ValidatorReportRecordFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn reported(mut self) -> String {
+            self.path.push(ValidatorReportRecord::REPORTED_FIELD.name);
+            self.finish()
+        }
+        pub fn reporters(mut self) -> String {
+            self.path.push(ValidatorReportRecord::REPORTERS_FIELD.name);
+            self.finish()
+        }
     }
     impl SystemParameters {
         pub const EPOCH_DURATION_MS_FIELD: &'static MessageField = &MessageField {
@@ -3702,6 +7886,65 @@ mod _field_impls {
             Self::EXTRA_FIELDS_FIELD,
         ];
     }
+    impl SystemParameters {
+        pub fn path_builder() -> SystemParametersFieldPathBuilder {
+            SystemParametersFieldPathBuilder::new()
+        }
+    }
+    pub struct SystemParametersFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl SystemParametersFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn epoch_duration_ms(mut self) -> String {
+            self.path.push(SystemParameters::EPOCH_DURATION_MS_FIELD.name);
+            self.finish()
+        }
+        pub fn stake_subsidy_start_epoch(mut self) -> String {
+            self.path.push(SystemParameters::STAKE_SUBSIDY_START_EPOCH_FIELD.name);
+            self.finish()
+        }
+        pub fn min_validator_count(mut self) -> String {
+            self.path.push(SystemParameters::MIN_VALIDATOR_COUNT_FIELD.name);
+            self.finish()
+        }
+        pub fn max_validator_count(mut self) -> String {
+            self.path.push(SystemParameters::MAX_VALIDATOR_COUNT_FIELD.name);
+            self.finish()
+        }
+        pub fn min_validator_joining_stake(mut self) -> String {
+            self.path.push(SystemParameters::MIN_VALIDATOR_JOINING_STAKE_FIELD.name);
+            self.finish()
+        }
+        pub fn validator_low_stake_threshold(mut self) -> String {
+            self.path.push(SystemParameters::VALIDATOR_LOW_STAKE_THRESHOLD_FIELD.name);
+            self.finish()
+        }
+        pub fn validator_very_low_stake_threshold(mut self) -> String {
+            self.path
+                .push(SystemParameters::VALIDATOR_VERY_LOW_STAKE_THRESHOLD_FIELD.name);
+            self.finish()
+        }
+        pub fn validator_low_stake_grace_period(mut self) -> String {
+            self.path
+                .push(SystemParameters::VALIDATOR_LOW_STAKE_GRACE_PERIOD_FIELD.name);
+            self.finish()
+        }
+        pub fn extra_fields(mut self) -> MoveTableFieldPathBuilder {
+            self.path.push(SystemParameters::EXTRA_FIELDS_FIELD.name);
+            MoveTableFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl MoveTable {
         pub const ID_FIELD: &'static MessageField = &MessageField {
             name: "id",
@@ -3721,6 +7964,35 @@ mod _field_impls {
             Self::ID_FIELD,
             Self::SIZE_FIELD,
         ];
+    }
+    impl MoveTable {
+        pub fn path_builder() -> MoveTableFieldPathBuilder {
+            MoveTableFieldPathBuilder::new()
+        }
+    }
+    pub struct MoveTableFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl MoveTableFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn id(mut self) -> String {
+            self.path.push(MoveTable::ID_FIELD.name);
+            self.finish()
+        }
+        pub fn size(mut self) -> String {
+            self.path.push(MoveTable::SIZE_FIELD.name);
+            self.finish()
+        }
     }
     impl StakeSubsidy {
         pub const BALANCE_FIELD: &'static MessageField = &MessageField {
@@ -3770,6 +8042,51 @@ mod _field_impls {
             Self::EXTRA_FIELDS_FIELD,
         ];
     }
+    impl StakeSubsidy {
+        pub fn path_builder() -> StakeSubsidyFieldPathBuilder {
+            StakeSubsidyFieldPathBuilder::new()
+        }
+    }
+    pub struct StakeSubsidyFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl StakeSubsidyFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn balance(mut self) -> String {
+            self.path.push(StakeSubsidy::BALANCE_FIELD.name);
+            self.finish()
+        }
+        pub fn distribution_counter(mut self) -> String {
+            self.path.push(StakeSubsidy::DISTRIBUTION_COUNTER_FIELD.name);
+            self.finish()
+        }
+        pub fn current_distribution_amount(mut self) -> String {
+            self.path.push(StakeSubsidy::CURRENT_DISTRIBUTION_AMOUNT_FIELD.name);
+            self.finish()
+        }
+        pub fn stake_subsidy_period_length(mut self) -> String {
+            self.path.push(StakeSubsidy::STAKE_SUBSIDY_PERIOD_LENGTH_FIELD.name);
+            self.finish()
+        }
+        pub fn stake_subsidy_decrease_rate(mut self) -> String {
+            self.path.push(StakeSubsidy::STAKE_SUBSIDY_DECREASE_RATE_FIELD.name);
+            self.finish()
+        }
+        pub fn extra_fields(mut self) -> MoveTableFieldPathBuilder {
+            self.path.push(StakeSubsidy::EXTRA_FIELDS_FIELD.name);
+            MoveTableFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl StorageFund {
         pub const TOTAL_OBJECT_STORAGE_REBATES_FIELD: &'static MessageField = &MessageField {
             name: "total_object_storage_rebates",
@@ -3789,6 +8106,35 @@ mod _field_impls {
             Self::TOTAL_OBJECT_STORAGE_REBATES_FIELD,
             Self::NON_REFUNDABLE_BALANCE_FIELD,
         ];
+    }
+    impl StorageFund {
+        pub fn path_builder() -> StorageFundFieldPathBuilder {
+            StorageFundFieldPathBuilder::new()
+        }
+    }
+    pub struct StorageFundFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl StorageFundFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn total_object_storage_rebates(mut self) -> String {
+            self.path.push(StorageFund::TOTAL_OBJECT_STORAGE_REBATES_FIELD.name);
+            self.finish()
+        }
+        pub fn non_refundable_balance(mut self) -> String {
+            self.path.push(StorageFund::NON_REFUNDABLE_BALANCE_FIELD.name);
+            self.finish()
+        }
     }
     impl ValidatorSet {
         pub const TOTAL_STAKE_FIELD: &'static MessageField = &MessageField {
@@ -3858,6 +8204,63 @@ mod _field_impls {
             Self::AT_RISK_VALIDATORS_FIELD,
             Self::EXTRA_FIELDS_FIELD,
         ];
+    }
+    impl ValidatorSet {
+        pub fn path_builder() -> ValidatorSetFieldPathBuilder {
+            ValidatorSetFieldPathBuilder::new()
+        }
+    }
+    pub struct ValidatorSetFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ValidatorSetFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn total_stake(mut self) -> String {
+            self.path.push(ValidatorSet::TOTAL_STAKE_FIELD.name);
+            self.finish()
+        }
+        pub fn active_validators(mut self) -> ValidatorFieldPathBuilder {
+            self.path.push(ValidatorSet::ACTIVE_VALIDATORS_FIELD.name);
+            ValidatorFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn pending_active_validators(mut self) -> MoveTableFieldPathBuilder {
+            self.path.push(ValidatorSet::PENDING_ACTIVE_VALIDATORS_FIELD.name);
+            MoveTableFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn pending_removals(mut self) -> String {
+            self.path.push(ValidatorSet::PENDING_REMOVALS_FIELD.name);
+            self.finish()
+        }
+        pub fn staking_pool_mappings(mut self) -> MoveTableFieldPathBuilder {
+            self.path.push(ValidatorSet::STAKING_POOL_MAPPINGS_FIELD.name);
+            MoveTableFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn inactive_validators(mut self) -> MoveTableFieldPathBuilder {
+            self.path.push(ValidatorSet::INACTIVE_VALIDATORS_FIELD.name);
+            MoveTableFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn validator_candidates(mut self) -> MoveTableFieldPathBuilder {
+            self.path.push(ValidatorSet::VALIDATOR_CANDIDATES_FIELD.name);
+            MoveTableFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn at_risk_validators(mut self) -> String {
+            self.path.push(ValidatorSet::AT_RISK_VALIDATORS_FIELD.name);
+            self.finish()
+        }
+        pub fn extra_fields(mut self) -> MoveTableFieldPathBuilder {
+            self.path.push(ValidatorSet::EXTRA_FIELDS_FIELD.name);
+            MoveTableFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl Validator {
         pub const NAME_FIELD: &'static MessageField = &MessageField {
@@ -4082,6 +8485,151 @@ mod _field_impls {
             Self::EXTRA_FIELDS_FIELD,
         ];
     }
+    impl Validator {
+        pub fn path_builder() -> ValidatorFieldPathBuilder {
+            ValidatorFieldPathBuilder::new()
+        }
+    }
+    pub struct ValidatorFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ValidatorFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn name(mut self) -> String {
+            self.path.push(Validator::NAME_FIELD.name);
+            self.finish()
+        }
+        pub fn address(mut self) -> String {
+            self.path.push(Validator::ADDRESS_FIELD.name);
+            self.finish()
+        }
+        pub fn description(mut self) -> String {
+            self.path.push(Validator::DESCRIPTION_FIELD.name);
+            self.finish()
+        }
+        pub fn image_url(mut self) -> String {
+            self.path.push(Validator::IMAGE_URL_FIELD.name);
+            self.finish()
+        }
+        pub fn project_url(mut self) -> String {
+            self.path.push(Validator::PROJECT_URL_FIELD.name);
+            self.finish()
+        }
+        pub fn protocol_public_key(mut self) -> String {
+            self.path.push(Validator::PROTOCOL_PUBLIC_KEY_FIELD.name);
+            self.finish()
+        }
+        pub fn proof_of_possession(mut self) -> String {
+            self.path.push(Validator::PROOF_OF_POSSESSION_FIELD.name);
+            self.finish()
+        }
+        pub fn network_public_key(mut self) -> String {
+            self.path.push(Validator::NETWORK_PUBLIC_KEY_FIELD.name);
+            self.finish()
+        }
+        pub fn worker_public_key(mut self) -> String {
+            self.path.push(Validator::WORKER_PUBLIC_KEY_FIELD.name);
+            self.finish()
+        }
+        pub fn network_address(mut self) -> String {
+            self.path.push(Validator::NETWORK_ADDRESS_FIELD.name);
+            self.finish()
+        }
+        pub fn p2p_address(mut self) -> String {
+            self.path.push(Validator::P2P_ADDRESS_FIELD.name);
+            self.finish()
+        }
+        pub fn primary_address(mut self) -> String {
+            self.path.push(Validator::PRIMARY_ADDRESS_FIELD.name);
+            self.finish()
+        }
+        pub fn worker_address(mut self) -> String {
+            self.path.push(Validator::WORKER_ADDRESS_FIELD.name);
+            self.finish()
+        }
+        pub fn next_epoch_protocol_public_key(mut self) -> String {
+            self.path.push(Validator::NEXT_EPOCH_PROTOCOL_PUBLIC_KEY_FIELD.name);
+            self.finish()
+        }
+        pub fn next_epoch_proof_of_possession(mut self) -> String {
+            self.path.push(Validator::NEXT_EPOCH_PROOF_OF_POSSESSION_FIELD.name);
+            self.finish()
+        }
+        pub fn next_epoch_network_public_key(mut self) -> String {
+            self.path.push(Validator::NEXT_EPOCH_NETWORK_PUBLIC_KEY_FIELD.name);
+            self.finish()
+        }
+        pub fn next_epoch_worker_public_key(mut self) -> String {
+            self.path.push(Validator::NEXT_EPOCH_WORKER_PUBLIC_KEY_FIELD.name);
+            self.finish()
+        }
+        pub fn next_epoch_network_address(mut self) -> String {
+            self.path.push(Validator::NEXT_EPOCH_NETWORK_ADDRESS_FIELD.name);
+            self.finish()
+        }
+        pub fn next_epoch_p2p_address(mut self) -> String {
+            self.path.push(Validator::NEXT_EPOCH_P2P_ADDRESS_FIELD.name);
+            self.finish()
+        }
+        pub fn next_epoch_primary_address(mut self) -> String {
+            self.path.push(Validator::NEXT_EPOCH_PRIMARY_ADDRESS_FIELD.name);
+            self.finish()
+        }
+        pub fn next_epoch_worker_address(mut self) -> String {
+            self.path.push(Validator::NEXT_EPOCH_WORKER_ADDRESS_FIELD.name);
+            self.finish()
+        }
+        pub fn metadata_extra_fields(mut self) -> MoveTableFieldPathBuilder {
+            self.path.push(Validator::METADATA_EXTRA_FIELDS_FIELD.name);
+            MoveTableFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn voting_power(mut self) -> String {
+            self.path.push(Validator::VOTING_POWER_FIELD.name);
+            self.finish()
+        }
+        pub fn operation_cap_id(mut self) -> String {
+            self.path.push(Validator::OPERATION_CAP_ID_FIELD.name);
+            self.finish()
+        }
+        pub fn gas_price(mut self) -> String {
+            self.path.push(Validator::GAS_PRICE_FIELD.name);
+            self.finish()
+        }
+        pub fn staking_pool(mut self) -> StakingPoolFieldPathBuilder {
+            self.path.push(Validator::STAKING_POOL_FIELD.name);
+            StakingPoolFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn commission_rate(mut self) -> String {
+            self.path.push(Validator::COMMISSION_RATE_FIELD.name);
+            self.finish()
+        }
+        pub fn next_epoch_stake(mut self) -> String {
+            self.path.push(Validator::NEXT_EPOCH_STAKE_FIELD.name);
+            self.finish()
+        }
+        pub fn next_epoch_gas_price(mut self) -> String {
+            self.path.push(Validator::NEXT_EPOCH_GAS_PRICE_FIELD.name);
+            self.finish()
+        }
+        pub fn next_epoch_commission_rate(mut self) -> String {
+            self.path.push(Validator::NEXT_EPOCH_COMMISSION_RATE_FIELD.name);
+            self.finish()
+        }
+        pub fn extra_fields(mut self) -> MoveTableFieldPathBuilder {
+            self.path.push(Validator::EXTRA_FIELDS_FIELD.name);
+            MoveTableFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl StakingPool {
         pub const ID_FIELD: &'static MessageField = &MessageField {
             name: "id",
@@ -4165,6 +8713,71 @@ mod _field_impls {
             Self::EXTRA_FIELDS_FIELD,
         ];
     }
+    impl StakingPool {
+        pub fn path_builder() -> StakingPoolFieldPathBuilder {
+            StakingPoolFieldPathBuilder::new()
+        }
+    }
+    pub struct StakingPoolFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl StakingPoolFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn id(mut self) -> String {
+            self.path.push(StakingPool::ID_FIELD.name);
+            self.finish()
+        }
+        pub fn activation_epoch(mut self) -> String {
+            self.path.push(StakingPool::ACTIVATION_EPOCH_FIELD.name);
+            self.finish()
+        }
+        pub fn deactivation_epoch(mut self) -> String {
+            self.path.push(StakingPool::DEACTIVATION_EPOCH_FIELD.name);
+            self.finish()
+        }
+        pub fn sui_balance(mut self) -> String {
+            self.path.push(StakingPool::SUI_BALANCE_FIELD.name);
+            self.finish()
+        }
+        pub fn rewards_pool(mut self) -> String {
+            self.path.push(StakingPool::REWARDS_POOL_FIELD.name);
+            self.finish()
+        }
+        pub fn pool_token_balance(mut self) -> String {
+            self.path.push(StakingPool::POOL_TOKEN_BALANCE_FIELD.name);
+            self.finish()
+        }
+        pub fn exchange_rates(mut self) -> MoveTableFieldPathBuilder {
+            self.path.push(StakingPool::EXCHANGE_RATES_FIELD.name);
+            MoveTableFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn pending_stake(mut self) -> String {
+            self.path.push(StakingPool::PENDING_STAKE_FIELD.name);
+            self.finish()
+        }
+        pub fn pending_total_sui_withdraw(mut self) -> String {
+            self.path.push(StakingPool::PENDING_TOTAL_SUI_WITHDRAW_FIELD.name);
+            self.finish()
+        }
+        pub fn pending_pool_token_withdraw(mut self) -> String {
+            self.path.push(StakingPool::PENDING_POOL_TOKEN_WITHDRAW_FIELD.name);
+            self.finish()
+        }
+        pub fn extra_fields(mut self) -> MoveTableFieldPathBuilder {
+            self.path.push(StakingPool::EXTRA_FIELDS_FIELD.name);
+            MoveTableFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl Transaction {
         pub const BCS_FIELD: &'static MessageField = &MessageField {
             name: "bcs",
@@ -4220,6 +8833,55 @@ mod _field_impls {
             Self::EXPIRATION_FIELD,
         ];
     }
+    impl Transaction {
+        pub fn path_builder() -> TransactionFieldPathBuilder {
+            TransactionFieldPathBuilder::new()
+        }
+    }
+    pub struct TransactionFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl TransactionFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn bcs(mut self) -> BcsFieldPathBuilder {
+            self.path.push(Transaction::BCS_FIELD.name);
+            BcsFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn digest(mut self) -> String {
+            self.path.push(Transaction::DIGEST_FIELD.name);
+            self.finish()
+        }
+        pub fn version(mut self) -> String {
+            self.path.push(Transaction::VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn kind(mut self) -> TransactionKindFieldPathBuilder {
+            self.path.push(Transaction::KIND_FIELD.name);
+            TransactionKindFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn sender(mut self) -> String {
+            self.path.push(Transaction::SENDER_FIELD.name);
+            self.finish()
+        }
+        pub fn gas_payment(mut self) -> GasPaymentFieldPathBuilder {
+            self.path.push(Transaction::GAS_PAYMENT_FIELD.name);
+            GasPaymentFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn expiration(mut self) -> TransactionExpirationFieldPathBuilder {
+            self.path.push(Transaction::EXPIRATION_FIELD.name);
+            TransactionExpirationFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl GasPayment {
         pub const OBJECTS_FIELD: &'static MessageField = &MessageField {
             name: "objects",
@@ -4254,6 +8916,43 @@ mod _field_impls {
             Self::BUDGET_FIELD,
         ];
     }
+    impl GasPayment {
+        pub fn path_builder() -> GasPaymentFieldPathBuilder {
+            GasPaymentFieldPathBuilder::new()
+        }
+    }
+    pub struct GasPaymentFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GasPaymentFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn objects(mut self) -> ObjectReferenceFieldPathBuilder {
+            self.path.push(GasPayment::OBJECTS_FIELD.name);
+            ObjectReferenceFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn owner(mut self) -> String {
+            self.path.push(GasPayment::OWNER_FIELD.name);
+            self.finish()
+        }
+        pub fn price(mut self) -> String {
+            self.path.push(GasPayment::PRICE_FIELD.name);
+            self.finish()
+        }
+        pub fn budget(mut self) -> String {
+            self.path.push(GasPayment::BUDGET_FIELD.name);
+            self.finish()
+        }
+    }
     impl TransactionExpiration {
         pub const KIND_FIELD: &'static MessageField = &MessageField {
             name: "kind",
@@ -4273,6 +8972,35 @@ mod _field_impls {
             Self::KIND_FIELD,
             Self::EPOCH_FIELD,
         ];
+    }
+    impl TransactionExpiration {
+        pub fn path_builder() -> TransactionExpirationFieldPathBuilder {
+            TransactionExpirationFieldPathBuilder::new()
+        }
+    }
+    pub struct TransactionExpirationFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl TransactionExpirationFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn kind(mut self) -> String {
+            self.path.push(TransactionExpiration::KIND_FIELD.name);
+            self.finish()
+        }
+        pub fn epoch(mut self) -> String {
+            self.path.push(TransactionExpiration::EPOCH_FIELD.name);
+            self.finish()
+        }
     }
     impl TransactionKind {
         pub const PROGRAMMABLE_TRANSACTION_FIELD: &'static MessageField = &MessageField {
@@ -4357,6 +9085,87 @@ mod _field_impls {
             Self::CONSENSUS_COMMIT_PROLOGUE_V4_FIELD,
         ];
     }
+    impl TransactionKind {
+        pub fn path_builder() -> TransactionKindFieldPathBuilder {
+            TransactionKindFieldPathBuilder::new()
+        }
+    }
+    pub struct TransactionKindFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl TransactionKindFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn programmable_transaction(
+            mut self,
+        ) -> ProgrammableTransactionFieldPathBuilder {
+            self.path.push(TransactionKind::PROGRAMMABLE_TRANSACTION_FIELD.name);
+            ProgrammableTransactionFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn programmable_system_transaction(
+            mut self,
+        ) -> ProgrammableTransactionFieldPathBuilder {
+            self.path.push(TransactionKind::PROGRAMMABLE_SYSTEM_TRANSACTION_FIELD.name);
+            ProgrammableTransactionFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn change_epoch(mut self) -> ChangeEpochFieldPathBuilder {
+            self.path.push(TransactionKind::CHANGE_EPOCH_FIELD.name);
+            ChangeEpochFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn genesis(mut self) -> GenesisTransactionFieldPathBuilder {
+            self.path.push(TransactionKind::GENESIS_FIELD.name);
+            GenesisTransactionFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn consensus_commit_prologue_v1(
+            mut self,
+        ) -> ConsensusCommitPrologueFieldPathBuilder {
+            self.path.push(TransactionKind::CONSENSUS_COMMIT_PROLOGUE_V1_FIELD.name);
+            ConsensusCommitPrologueFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn authenticator_state_update(
+            mut self,
+        ) -> AuthenticatorStateUpdateFieldPathBuilder {
+            self.path.push(TransactionKind::AUTHENTICATOR_STATE_UPDATE_FIELD.name);
+            AuthenticatorStateUpdateFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn end_of_epoch(mut self) -> EndOfEpochTransactionFieldPathBuilder {
+            self.path.push(TransactionKind::END_OF_EPOCH_FIELD.name);
+            EndOfEpochTransactionFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn randomness_state_update(
+            mut self,
+        ) -> RandomnessStateUpdateFieldPathBuilder {
+            self.path.push(TransactionKind::RANDOMNESS_STATE_UPDATE_FIELD.name);
+            RandomnessStateUpdateFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn consensus_commit_prologue_v2(
+            mut self,
+        ) -> ConsensusCommitPrologueFieldPathBuilder {
+            self.path.push(TransactionKind::CONSENSUS_COMMIT_PROLOGUE_V2_FIELD.name);
+            ConsensusCommitPrologueFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn consensus_commit_prologue_v3(
+            mut self,
+        ) -> ConsensusCommitPrologueFieldPathBuilder {
+            self.path.push(TransactionKind::CONSENSUS_COMMIT_PROLOGUE_V3_FIELD.name);
+            ConsensusCommitPrologueFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn consensus_commit_prologue_v4(
+            mut self,
+        ) -> ConsensusCommitPrologueFieldPathBuilder {
+            self.path.push(TransactionKind::CONSENSUS_COMMIT_PROLOGUE_V4_FIELD.name);
+            ConsensusCommitPrologueFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl ProgrammableTransaction {
         pub const INPUTS_FIELD: &'static MessageField = &MessageField {
             name: "inputs",
@@ -4376,6 +9185,35 @@ mod _field_impls {
             Self::INPUTS_FIELD,
             Self::COMMANDS_FIELD,
         ];
+    }
+    impl ProgrammableTransaction {
+        pub fn path_builder() -> ProgrammableTransactionFieldPathBuilder {
+            ProgrammableTransactionFieldPathBuilder::new()
+        }
+    }
+    pub struct ProgrammableTransactionFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ProgrammableTransactionFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn inputs(mut self) -> InputFieldPathBuilder {
+            self.path.push(ProgrammableTransaction::INPUTS_FIELD.name);
+            InputFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn commands(mut self) -> CommandFieldPathBuilder {
+            self.path.push(ProgrammableTransaction::COMMANDS_FIELD.name);
+            CommandFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl Command {
         pub const MOVE_CALL_FIELD: &'static MessageField = &MessageField {
@@ -4432,6 +9270,55 @@ mod _field_impls {
             Self::UPGRADE_FIELD,
         ];
     }
+    impl Command {
+        pub fn path_builder() -> CommandFieldPathBuilder {
+            CommandFieldPathBuilder::new()
+        }
+    }
+    pub struct CommandFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl CommandFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn move_call(mut self) -> MoveCallFieldPathBuilder {
+            self.path.push(Command::MOVE_CALL_FIELD.name);
+            MoveCallFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn transfer_objects(mut self) -> TransferObjectsFieldPathBuilder {
+            self.path.push(Command::TRANSFER_OBJECTS_FIELD.name);
+            TransferObjectsFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn split_coins(mut self) -> SplitCoinsFieldPathBuilder {
+            self.path.push(Command::SPLIT_COINS_FIELD.name);
+            SplitCoinsFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn merge_coins(mut self) -> MergeCoinsFieldPathBuilder {
+            self.path.push(Command::MERGE_COINS_FIELD.name);
+            MergeCoinsFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn publish(mut self) -> PublishFieldPathBuilder {
+            self.path.push(Command::PUBLISH_FIELD.name);
+            PublishFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn make_move_vector(mut self) -> MakeMoveVectorFieldPathBuilder {
+            self.path.push(Command::MAKE_MOVE_VECTOR_FIELD.name);
+            MakeMoveVectorFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn upgrade(mut self) -> UpgradeFieldPathBuilder {
+            self.path.push(Command::UPGRADE_FIELD.name);
+            UpgradeFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl MoveCall {
         pub const PACKAGE_FIELD: &'static MessageField = &MessageField {
             name: "package",
@@ -4473,6 +9360,47 @@ mod _field_impls {
             Self::ARGUMENTS_FIELD,
         ];
     }
+    impl MoveCall {
+        pub fn path_builder() -> MoveCallFieldPathBuilder {
+            MoveCallFieldPathBuilder::new()
+        }
+    }
+    pub struct MoveCallFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl MoveCallFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn package(mut self) -> String {
+            self.path.push(MoveCall::PACKAGE_FIELD.name);
+            self.finish()
+        }
+        pub fn module(mut self) -> String {
+            self.path.push(MoveCall::MODULE_FIELD.name);
+            self.finish()
+        }
+        pub fn function(mut self) -> String {
+            self.path.push(MoveCall::FUNCTION_FIELD.name);
+            self.finish()
+        }
+        pub fn type_arguments(mut self) -> String {
+            self.path.push(MoveCall::TYPE_ARGUMENTS_FIELD.name);
+            self.finish()
+        }
+        pub fn arguments(mut self) -> ArgumentFieldPathBuilder {
+            self.path.push(MoveCall::ARGUMENTS_FIELD.name);
+            ArgumentFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl TransferObjects {
         pub const OBJECTS_FIELD: &'static MessageField = &MessageField {
             name: "objects",
@@ -4492,6 +9420,35 @@ mod _field_impls {
             Self::OBJECTS_FIELD,
             Self::ADDRESS_FIELD,
         ];
+    }
+    impl TransferObjects {
+        pub fn path_builder() -> TransferObjectsFieldPathBuilder {
+            TransferObjectsFieldPathBuilder::new()
+        }
+    }
+    pub struct TransferObjectsFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl TransferObjectsFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn objects(mut self) -> ArgumentFieldPathBuilder {
+            self.path.push(TransferObjects::OBJECTS_FIELD.name);
+            ArgumentFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn address(mut self) -> ArgumentFieldPathBuilder {
+            self.path.push(TransferObjects::ADDRESS_FIELD.name);
+            ArgumentFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl SplitCoins {
         pub const COIN_FIELD: &'static MessageField = &MessageField {
@@ -4513,6 +9470,35 @@ mod _field_impls {
             Self::AMOUNTS_FIELD,
         ];
     }
+    impl SplitCoins {
+        pub fn path_builder() -> SplitCoinsFieldPathBuilder {
+            SplitCoinsFieldPathBuilder::new()
+        }
+    }
+    pub struct SplitCoinsFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl SplitCoinsFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn coin(mut self) -> ArgumentFieldPathBuilder {
+            self.path.push(SplitCoins::COIN_FIELD.name);
+            ArgumentFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn amounts(mut self) -> ArgumentFieldPathBuilder {
+            self.path.push(SplitCoins::AMOUNTS_FIELD.name);
+            ArgumentFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl MergeCoins {
         pub const COIN_FIELD: &'static MessageField = &MessageField {
             name: "coin",
@@ -4532,6 +9518,35 @@ mod _field_impls {
             Self::COIN_FIELD,
             Self::COINS_TO_MERGE_FIELD,
         ];
+    }
+    impl MergeCoins {
+        pub fn path_builder() -> MergeCoinsFieldPathBuilder {
+            MergeCoinsFieldPathBuilder::new()
+        }
+    }
+    pub struct MergeCoinsFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl MergeCoinsFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn coin(mut self) -> ArgumentFieldPathBuilder {
+            self.path.push(MergeCoins::COIN_FIELD.name);
+            ArgumentFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn coins_to_merge(mut self) -> ArgumentFieldPathBuilder {
+            self.path.push(MergeCoins::COINS_TO_MERGE_FIELD.name);
+            ArgumentFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl Publish {
         pub const MODULES_FIELD: &'static MessageField = &MessageField {
@@ -4553,6 +9568,35 @@ mod _field_impls {
             Self::DEPENDENCIES_FIELD,
         ];
     }
+    impl Publish {
+        pub fn path_builder() -> PublishFieldPathBuilder {
+            PublishFieldPathBuilder::new()
+        }
+    }
+    pub struct PublishFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl PublishFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn modules(mut self) -> String {
+            self.path.push(Publish::MODULES_FIELD.name);
+            self.finish()
+        }
+        pub fn dependencies(mut self) -> String {
+            self.path.push(Publish::DEPENDENCIES_FIELD.name);
+            self.finish()
+        }
+    }
     impl MakeMoveVector {
         pub const ELEMENT_TYPE_FIELD: &'static MessageField = &MessageField {
             name: "element_type",
@@ -4572,6 +9616,35 @@ mod _field_impls {
             Self::ELEMENT_TYPE_FIELD,
             Self::ELEMENTS_FIELD,
         ];
+    }
+    impl MakeMoveVector {
+        pub fn path_builder() -> MakeMoveVectorFieldPathBuilder {
+            MakeMoveVectorFieldPathBuilder::new()
+        }
+    }
+    pub struct MakeMoveVectorFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl MakeMoveVectorFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn element_type(mut self) -> String {
+            self.path.push(MakeMoveVector::ELEMENT_TYPE_FIELD.name);
+            self.finish()
+        }
+        pub fn elements(mut self) -> ArgumentFieldPathBuilder {
+            self.path.push(MakeMoveVector::ELEMENTS_FIELD.name);
+            ArgumentFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl Upgrade {
         pub const MODULES_FIELD: &'static MessageField = &MessageField {
@@ -4607,6 +9680,43 @@ mod _field_impls {
             Self::TICKET_FIELD,
         ];
     }
+    impl Upgrade {
+        pub fn path_builder() -> UpgradeFieldPathBuilder {
+            UpgradeFieldPathBuilder::new()
+        }
+    }
+    pub struct UpgradeFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl UpgradeFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn modules(mut self) -> String {
+            self.path.push(Upgrade::MODULES_FIELD.name);
+            self.finish()
+        }
+        pub fn dependencies(mut self) -> String {
+            self.path.push(Upgrade::DEPENDENCIES_FIELD.name);
+            self.finish()
+        }
+        pub fn package(mut self) -> String {
+            self.path.push(Upgrade::PACKAGE_FIELD.name);
+            self.finish()
+        }
+        pub fn ticket(mut self) -> ArgumentFieldPathBuilder {
+            self.path.push(Upgrade::TICKET_FIELD.name);
+            ArgumentFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl RandomnessStateUpdate {
         pub const EPOCH_FIELD: &'static MessageField = &MessageField {
             name: "epoch",
@@ -4640,6 +9750,47 @@ mod _field_impls {
             Self::RANDOM_BYTES_FIELD,
             Self::RANDOMNESS_OBJECT_INITIAL_SHARED_VERSION_FIELD,
         ];
+    }
+    impl RandomnessStateUpdate {
+        pub fn path_builder() -> RandomnessStateUpdateFieldPathBuilder {
+            RandomnessStateUpdateFieldPathBuilder::new()
+        }
+    }
+    pub struct RandomnessStateUpdateFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl RandomnessStateUpdateFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn epoch(mut self) -> String {
+            self.path.push(RandomnessStateUpdate::EPOCH_FIELD.name);
+            self.finish()
+        }
+        pub fn randomness_round(mut self) -> String {
+            self.path.push(RandomnessStateUpdate::RANDOMNESS_ROUND_FIELD.name);
+            self.finish()
+        }
+        pub fn random_bytes(mut self) -> String {
+            self.path.push(RandomnessStateUpdate::RANDOM_BYTES_FIELD.name);
+            self.finish()
+        }
+        pub fn randomness_object_initial_shared_version(mut self) -> String {
+            self.path
+                .push(
+                    RandomnessStateUpdate::RANDOMNESS_OBJECT_INITIAL_SHARED_VERSION_FIELD
+                        .name,
+                );
+            self.finish()
+        }
     }
     impl ChangeEpoch {
         pub const EPOCH_FIELD: &'static MessageField = &MessageField {
@@ -4703,6 +9854,59 @@ mod _field_impls {
             Self::SYSTEM_PACKAGES_FIELD,
         ];
     }
+    impl ChangeEpoch {
+        pub fn path_builder() -> ChangeEpochFieldPathBuilder {
+            ChangeEpochFieldPathBuilder::new()
+        }
+    }
+    pub struct ChangeEpochFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ChangeEpochFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn epoch(mut self) -> String {
+            self.path.push(ChangeEpoch::EPOCH_FIELD.name);
+            self.finish()
+        }
+        pub fn protocol_version(mut self) -> String {
+            self.path.push(ChangeEpoch::PROTOCOL_VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn storage_charge(mut self) -> String {
+            self.path.push(ChangeEpoch::STORAGE_CHARGE_FIELD.name);
+            self.finish()
+        }
+        pub fn computation_charge(mut self) -> String {
+            self.path.push(ChangeEpoch::COMPUTATION_CHARGE_FIELD.name);
+            self.finish()
+        }
+        pub fn storage_rebate(mut self) -> String {
+            self.path.push(ChangeEpoch::STORAGE_REBATE_FIELD.name);
+            self.finish()
+        }
+        pub fn non_refundable_storage_fee(mut self) -> String {
+            self.path.push(ChangeEpoch::NON_REFUNDABLE_STORAGE_FEE_FIELD.name);
+            self.finish()
+        }
+        pub fn epoch_start_timestamp(mut self) -> String {
+            self.path.push(ChangeEpoch::EPOCH_START_TIMESTAMP_FIELD.name);
+            self.finish()
+        }
+        pub fn system_packages(mut self) -> SystemPackageFieldPathBuilder {
+            self.path.push(ChangeEpoch::SYSTEM_PACKAGES_FIELD.name);
+            SystemPackageFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl SystemPackage {
         pub const VERSION_FIELD: &'static MessageField = &MessageField {
             name: "version",
@@ -4730,6 +9934,39 @@ mod _field_impls {
             Self::DEPENDENCIES_FIELD,
         ];
     }
+    impl SystemPackage {
+        pub fn path_builder() -> SystemPackageFieldPathBuilder {
+            SystemPackageFieldPathBuilder::new()
+        }
+    }
+    pub struct SystemPackageFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl SystemPackageFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn version(mut self) -> String {
+            self.path.push(SystemPackage::VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn modules(mut self) -> String {
+            self.path.push(SystemPackage::MODULES_FIELD.name);
+            self.finish()
+        }
+        pub fn dependencies(mut self) -> String {
+            self.path.push(SystemPackage::DEPENDENCIES_FIELD.name);
+            self.finish()
+        }
+    }
     impl GenesisTransaction {
         pub const OBJECTS_FIELD: &'static MessageField = &MessageField {
             name: "objects",
@@ -4740,6 +9977,31 @@ mod _field_impls {
     }
     impl MessageFields for GenesisTransaction {
         const FIELDS: &'static [&'static MessageField] = &[Self::OBJECTS_FIELD];
+    }
+    impl GenesisTransaction {
+        pub fn path_builder() -> GenesisTransactionFieldPathBuilder {
+            GenesisTransactionFieldPathBuilder::new()
+        }
+    }
+    pub struct GenesisTransactionFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GenesisTransactionFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn objects(mut self) -> ObjectFieldPathBuilder {
+            self.path.push(GenesisTransaction::OBJECTS_FIELD.name);
+            ObjectFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl ConsensusCommitPrologue {
         pub const EPOCH_FIELD: &'static MessageField = &MessageField {
@@ -4796,6 +10058,63 @@ mod _field_impls {
             Self::ADDITIONAL_STATE_DIGEST_FIELD,
         ];
     }
+    impl ConsensusCommitPrologue {
+        pub fn path_builder() -> ConsensusCommitPrologueFieldPathBuilder {
+            ConsensusCommitPrologueFieldPathBuilder::new()
+        }
+    }
+    pub struct ConsensusCommitPrologueFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ConsensusCommitPrologueFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn epoch(mut self) -> String {
+            self.path.push(ConsensusCommitPrologue::EPOCH_FIELD.name);
+            self.finish()
+        }
+        pub fn round(mut self) -> String {
+            self.path.push(ConsensusCommitPrologue::ROUND_FIELD.name);
+            self.finish()
+        }
+        pub fn commit_timestamp(mut self) -> String {
+            self.path.push(ConsensusCommitPrologue::COMMIT_TIMESTAMP_FIELD.name);
+            self.finish()
+        }
+        pub fn consensus_commit_digest(mut self) -> String {
+            self.path.push(ConsensusCommitPrologue::CONSENSUS_COMMIT_DIGEST_FIELD.name);
+            self.finish()
+        }
+        pub fn sub_dag_index(mut self) -> String {
+            self.path.push(ConsensusCommitPrologue::SUB_DAG_INDEX_FIELD.name);
+            self.finish()
+        }
+        pub fn consensus_determined_version_assignments(
+            mut self,
+        ) -> ConsensusDeterminedVersionAssignmentsFieldPathBuilder {
+            self.path
+                .push(
+                    ConsensusCommitPrologue::CONSENSUS_DETERMINED_VERSION_ASSIGNMENTS_FIELD
+                        .name,
+                );
+            ConsensusDeterminedVersionAssignmentsFieldPathBuilder::new_with_base(
+                self.path,
+            )
+        }
+        pub fn additional_state_digest(mut self) -> String {
+            self.path.push(ConsensusCommitPrologue::ADDITIONAL_STATE_DIGEST_FIELD.name);
+            self.finish()
+        }
+    }
     impl VersionAssignment {
         pub const OBJECT_ID_FIELD: &'static MessageField = &MessageField {
             name: "object_id",
@@ -4823,6 +10142,39 @@ mod _field_impls {
             Self::VERSION_FIELD,
         ];
     }
+    impl VersionAssignment {
+        pub fn path_builder() -> VersionAssignmentFieldPathBuilder {
+            VersionAssignmentFieldPathBuilder::new()
+        }
+    }
+    pub struct VersionAssignmentFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl VersionAssignmentFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn object_id(mut self) -> String {
+            self.path.push(VersionAssignment::OBJECT_ID_FIELD.name);
+            self.finish()
+        }
+        pub fn start_version(mut self) -> String {
+            self.path.push(VersionAssignment::START_VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn version(mut self) -> String {
+            self.path.push(VersionAssignment::VERSION_FIELD.name);
+            self.finish()
+        }
+    }
     impl CanceledTransaction {
         pub const DIGEST_FIELD: &'static MessageField = &MessageField {
             name: "digest",
@@ -4843,6 +10195,35 @@ mod _field_impls {
             Self::VERSION_ASSIGNMENTS_FIELD,
         ];
     }
+    impl CanceledTransaction {
+        pub fn path_builder() -> CanceledTransactionFieldPathBuilder {
+            CanceledTransactionFieldPathBuilder::new()
+        }
+    }
+    pub struct CanceledTransactionFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl CanceledTransactionFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn digest(mut self) -> String {
+            self.path.push(CanceledTransaction::DIGEST_FIELD.name);
+            self.finish()
+        }
+        pub fn version_assignments(mut self) -> VersionAssignmentFieldPathBuilder {
+            self.path.push(CanceledTransaction::VERSION_ASSIGNMENTS_FIELD.name);
+            VersionAssignmentFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl ConsensusDeterminedVersionAssignments {
         pub const VERSION_FIELD: &'static MessageField = &MessageField {
             name: "version",
@@ -4862,6 +10243,39 @@ mod _field_impls {
             Self::VERSION_FIELD,
             Self::CANCELED_TRANSACTIONS_FIELD,
         ];
+    }
+    impl ConsensusDeterminedVersionAssignments {
+        pub fn path_builder() -> ConsensusDeterminedVersionAssignmentsFieldPathBuilder {
+            ConsensusDeterminedVersionAssignmentsFieldPathBuilder::new()
+        }
+    }
+    pub struct ConsensusDeterminedVersionAssignmentsFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ConsensusDeterminedVersionAssignmentsFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn version(mut self) -> String {
+            self.path.push(ConsensusDeterminedVersionAssignments::VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn canceled_transactions(mut self) -> CanceledTransactionFieldPathBuilder {
+            self.path
+                .push(
+                    ConsensusDeterminedVersionAssignments::CANCELED_TRANSACTIONS_FIELD
+                        .name,
+                );
+            CanceledTransactionFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl AuthenticatorStateUpdate {
         pub const EPOCH_FIELD: &'static MessageField = &MessageField {
@@ -4897,6 +10311,47 @@ mod _field_impls {
             Self::AUTHENTICATOR_OBJECT_INITIAL_SHARED_VERSION_FIELD,
         ];
     }
+    impl AuthenticatorStateUpdate {
+        pub fn path_builder() -> AuthenticatorStateUpdateFieldPathBuilder {
+            AuthenticatorStateUpdateFieldPathBuilder::new()
+        }
+    }
+    pub struct AuthenticatorStateUpdateFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl AuthenticatorStateUpdateFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn epoch(mut self) -> String {
+            self.path.push(AuthenticatorStateUpdate::EPOCH_FIELD.name);
+            self.finish()
+        }
+        pub fn round(mut self) -> String {
+            self.path.push(AuthenticatorStateUpdate::ROUND_FIELD.name);
+            self.finish()
+        }
+        pub fn new_active_jwks(mut self) -> ActiveJwkFieldPathBuilder {
+            self.path.push(AuthenticatorStateUpdate::NEW_ACTIVE_JWKS_FIELD.name);
+            ActiveJwkFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn authenticator_object_initial_shared_version(mut self) -> String {
+            self.path
+                .push(
+                    AuthenticatorStateUpdate::AUTHENTICATOR_OBJECT_INITIAL_SHARED_VERSION_FIELD
+                        .name,
+                );
+            self.finish()
+        }
+    }
     impl ActiveJwk {
         pub const ID_FIELD: &'static MessageField = &MessageField {
             name: "id",
@@ -4924,6 +10379,39 @@ mod _field_impls {
             Self::EPOCH_FIELD,
         ];
     }
+    impl ActiveJwk {
+        pub fn path_builder() -> ActiveJwkFieldPathBuilder {
+            ActiveJwkFieldPathBuilder::new()
+        }
+    }
+    pub struct ActiveJwkFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ActiveJwkFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn id(mut self) -> JwkIdFieldPathBuilder {
+            self.path.push(ActiveJwk::ID_FIELD.name);
+            JwkIdFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn jwk(mut self) -> JwkFieldPathBuilder {
+            self.path.push(ActiveJwk::JWK_FIELD.name);
+            JwkFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn epoch(mut self) -> String {
+            self.path.push(ActiveJwk::EPOCH_FIELD.name);
+            self.finish()
+        }
+    }
     impl JwkId {
         pub const ISS_FIELD: &'static MessageField = &MessageField {
             name: "iss",
@@ -4943,6 +10431,35 @@ mod _field_impls {
             Self::ISS_FIELD,
             Self::KID_FIELD,
         ];
+    }
+    impl JwkId {
+        pub fn path_builder() -> JwkIdFieldPathBuilder {
+            JwkIdFieldPathBuilder::new()
+        }
+    }
+    pub struct JwkIdFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl JwkIdFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn iss(mut self) -> String {
+            self.path.push(JwkId::ISS_FIELD.name);
+            self.finish()
+        }
+        pub fn kid(mut self) -> String {
+            self.path.push(JwkId::KID_FIELD.name);
+            self.finish()
+        }
     }
     impl Jwk {
         pub const KTY_FIELD: &'static MessageField = &MessageField {
@@ -4978,6 +10495,43 @@ mod _field_impls {
             Self::ALG_FIELD,
         ];
     }
+    impl Jwk {
+        pub fn path_builder() -> JwkFieldPathBuilder {
+            JwkFieldPathBuilder::new()
+        }
+    }
+    pub struct JwkFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl JwkFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn kty(mut self) -> String {
+            self.path.push(Jwk::KTY_FIELD.name);
+            self.finish()
+        }
+        pub fn e(mut self) -> String {
+            self.path.push(Jwk::E_FIELD.name);
+            self.finish()
+        }
+        pub fn n(mut self) -> String {
+            self.path.push(Jwk::N_FIELD.name);
+            self.finish()
+        }
+        pub fn alg(mut self) -> String {
+            self.path.push(Jwk::ALG_FIELD.name);
+            self.finish()
+        }
+    }
     impl EndOfEpochTransaction {
         pub const TRANSACTIONS_FIELD: &'static MessageField = &MessageField {
             name: "transactions",
@@ -4988,6 +10542,31 @@ mod _field_impls {
     }
     impl MessageFields for EndOfEpochTransaction {
         const FIELDS: &'static [&'static MessageField] = &[Self::TRANSACTIONS_FIELD];
+    }
+    impl EndOfEpochTransaction {
+        pub fn path_builder() -> EndOfEpochTransactionFieldPathBuilder {
+            EndOfEpochTransactionFieldPathBuilder::new()
+        }
+    }
+    pub struct EndOfEpochTransactionFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl EndOfEpochTransactionFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn transactions(mut self) -> EndOfEpochTransactionKindFieldPathBuilder {
+            self.path.push(EndOfEpochTransaction::TRANSACTIONS_FIELD.name);
+            EndOfEpochTransactionKindFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl EndOfEpochTransactionKind {
         pub const CHANGE_EPOCH_FIELD: &'static MessageField = &MessageField {
@@ -5065,6 +10644,76 @@ mod _field_impls {
             Self::COIN_REGISTRY_CREATE_FIELD,
         ];
     }
+    impl EndOfEpochTransactionKind {
+        pub fn path_builder() -> EndOfEpochTransactionKindFieldPathBuilder {
+            EndOfEpochTransactionKindFieldPathBuilder::new()
+        }
+    }
+    pub struct EndOfEpochTransactionKindFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl EndOfEpochTransactionKindFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn change_epoch(mut self) -> ChangeEpochFieldPathBuilder {
+            self.path.push(EndOfEpochTransactionKind::CHANGE_EPOCH_FIELD.name);
+            ChangeEpochFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn authenticator_state_expire(
+            mut self,
+        ) -> AuthenticatorStateExpireFieldPathBuilder {
+            self.path
+                .push(EndOfEpochTransactionKind::AUTHENTICATOR_STATE_EXPIRE_FIELD.name);
+            AuthenticatorStateExpireFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn execution_time_observations(
+            mut self,
+        ) -> ExecutionTimeObservationsFieldPathBuilder {
+            self.path
+                .push(EndOfEpochTransactionKind::EXECUTION_TIME_OBSERVATIONS_FIELD.name);
+            ExecutionTimeObservationsFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn authenticator_state_create(mut self) -> String {
+            self.path
+                .push(EndOfEpochTransactionKind::AUTHENTICATOR_STATE_CREATE_FIELD.name);
+            self.finish()
+        }
+        pub fn randomness_state_create(mut self) -> String {
+            self.path
+                .push(EndOfEpochTransactionKind::RANDOMNESS_STATE_CREATE_FIELD.name);
+            self.finish()
+        }
+        pub fn deny_list_state_create(mut self) -> String {
+            self.path.push(EndOfEpochTransactionKind::DENY_LIST_STATE_CREATE_FIELD.name);
+            self.finish()
+        }
+        pub fn bridge_state_create(mut self) -> String {
+            self.path.push(EndOfEpochTransactionKind::BRIDGE_STATE_CREATE_FIELD.name);
+            self.finish()
+        }
+        pub fn bridge_committee_init(mut self) -> String {
+            self.path.push(EndOfEpochTransactionKind::BRIDGE_COMMITTEE_INIT_FIELD.name);
+            self.finish()
+        }
+        pub fn accumulator_root_create(mut self) -> String {
+            self.path
+                .push(EndOfEpochTransactionKind::ACCUMULATOR_ROOT_CREATE_FIELD.name);
+            self.finish()
+        }
+        pub fn coin_registry_create(mut self) -> String {
+            self.path.push(EndOfEpochTransactionKind::COIN_REGISTRY_CREATE_FIELD.name);
+            self.finish()
+        }
+    }
     impl AuthenticatorStateExpire {
         pub const MIN_EPOCH_FIELD: &'static MessageField = &MessageField {
             name: "min_epoch",
@@ -5085,6 +10734,39 @@ mod _field_impls {
             Self::AUTHENTICATOR_OBJECT_INITIAL_SHARED_VERSION_FIELD,
         ];
     }
+    impl AuthenticatorStateExpire {
+        pub fn path_builder() -> AuthenticatorStateExpireFieldPathBuilder {
+            AuthenticatorStateExpireFieldPathBuilder::new()
+        }
+    }
+    pub struct AuthenticatorStateExpireFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl AuthenticatorStateExpireFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn min_epoch(mut self) -> String {
+            self.path.push(AuthenticatorStateExpire::MIN_EPOCH_FIELD.name);
+            self.finish()
+        }
+        pub fn authenticator_object_initial_shared_version(mut self) -> String {
+            self.path
+                .push(
+                    AuthenticatorStateExpire::AUTHENTICATOR_OBJECT_INITIAL_SHARED_VERSION_FIELD
+                        .name,
+                );
+            self.finish()
+        }
+    }
     impl ExecutionTimeObservations {
         pub const VERSION_FIELD: &'static MessageField = &MessageField {
             name: "version",
@@ -5104,6 +10786,35 @@ mod _field_impls {
             Self::VERSION_FIELD,
             Self::OBSERVATIONS_FIELD,
         ];
+    }
+    impl ExecutionTimeObservations {
+        pub fn path_builder() -> ExecutionTimeObservationsFieldPathBuilder {
+            ExecutionTimeObservationsFieldPathBuilder::new()
+        }
+    }
+    pub struct ExecutionTimeObservationsFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ExecutionTimeObservationsFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn version(mut self) -> String {
+            self.path.push(ExecutionTimeObservations::VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn observations(mut self) -> ExecutionTimeObservationFieldPathBuilder {
+            self.path.push(ExecutionTimeObservations::OBSERVATIONS_FIELD.name);
+            ExecutionTimeObservationFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl ExecutionTimeObservation {
         pub const KIND_FIELD: &'static MessageField = &MessageField {
@@ -5132,6 +10843,41 @@ mod _field_impls {
             Self::VALIDATOR_OBSERVATIONS_FIELD,
         ];
     }
+    impl ExecutionTimeObservation {
+        pub fn path_builder() -> ExecutionTimeObservationFieldPathBuilder {
+            ExecutionTimeObservationFieldPathBuilder::new()
+        }
+    }
+    pub struct ExecutionTimeObservationFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ExecutionTimeObservationFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn kind(mut self) -> String {
+            self.path.push(ExecutionTimeObservation::KIND_FIELD.name);
+            self.finish()
+        }
+        pub fn move_entry_point(mut self) -> MoveCallFieldPathBuilder {
+            self.path.push(ExecutionTimeObservation::MOVE_ENTRY_POINT_FIELD.name);
+            MoveCallFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn validator_observations(
+            mut self,
+        ) -> ValidatorExecutionTimeObservationFieldPathBuilder {
+            self.path.push(ExecutionTimeObservation::VALIDATOR_OBSERVATIONS_FIELD.name);
+            ValidatorExecutionTimeObservationFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl ValidatorExecutionTimeObservation {
         pub const VALIDATOR_FIELD: &'static MessageField = &MessageField {
             name: "validator",
@@ -5151,6 +10897,35 @@ mod _field_impls {
             Self::VALIDATOR_FIELD,
             Self::DURATION_FIELD,
         ];
+    }
+    impl ValidatorExecutionTimeObservation {
+        pub fn path_builder() -> ValidatorExecutionTimeObservationFieldPathBuilder {
+            ValidatorExecutionTimeObservationFieldPathBuilder::new()
+        }
+    }
+    pub struct ValidatorExecutionTimeObservationFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ValidatorExecutionTimeObservationFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn validator(mut self) -> String {
+            self.path.push(ValidatorExecutionTimeObservation::VALIDATOR_FIELD.name);
+            self.finish()
+        }
+        pub fn duration(mut self) -> String {
+            self.path.push(ValidatorExecutionTimeObservation::DURATION_FIELD.name);
+            self.finish()
+        }
     }
     impl ExecuteTransactionRequest {
         pub const TRANSACTION_FIELD: &'static MessageField = &MessageField {
@@ -5179,6 +10954,39 @@ mod _field_impls {
             Self::READ_MASK_FIELD,
         ];
     }
+    impl ExecuteTransactionRequest {
+        pub fn path_builder() -> ExecuteTransactionRequestFieldPathBuilder {
+            ExecuteTransactionRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct ExecuteTransactionRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ExecuteTransactionRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn transaction(mut self) -> TransactionFieldPathBuilder {
+            self.path.push(ExecuteTransactionRequest::TRANSACTION_FIELD.name);
+            TransactionFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn signatures(mut self) -> UserSignatureFieldPathBuilder {
+            self.path.push(ExecuteTransactionRequest::SIGNATURES_FIELD.name);
+            UserSignatureFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn read_mask(mut self) -> String {
+            self.path.push(ExecuteTransactionRequest::READ_MASK_FIELD.name);
+            self.finish()
+        }
+    }
     impl ExecuteTransactionResponse {
         pub const FINALITY_FIELD: &'static MessageField = &MessageField {
             name: "finality",
@@ -5198,6 +11006,35 @@ mod _field_impls {
             Self::FINALITY_FIELD,
             Self::TRANSACTION_FIELD,
         ];
+    }
+    impl ExecuteTransactionResponse {
+        pub fn path_builder() -> ExecuteTransactionResponseFieldPathBuilder {
+            ExecuteTransactionResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct ExecuteTransactionResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ExecuteTransactionResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn finality(mut self) -> TransactionFinalityFieldPathBuilder {
+            self.path.push(ExecuteTransactionResponse::FINALITY_FIELD.name);
+            TransactionFinalityFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn transaction(mut self) -> ExecutedTransactionFieldPathBuilder {
+            self.path.push(ExecuteTransactionResponse::TRANSACTION_FIELD.name);
+            ExecutedTransactionFieldPathBuilder::new_with_base(self.path)
+        }
     }
     impl TransactionFinality {
         pub const CERTIFIED_FIELD: &'static MessageField = &MessageField {
@@ -5225,5 +11062,38 @@ mod _field_impls {
             Self::CHECKPOINTED_FIELD,
             Self::QUORUM_EXECUTED_FIELD,
         ];
+    }
+    impl TransactionFinality {
+        pub fn path_builder() -> TransactionFinalityFieldPathBuilder {
+            TransactionFinalityFieldPathBuilder::new()
+        }
+    }
+    pub struct TransactionFinalityFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl TransactionFinalityFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn certified(mut self) -> ValidatorAggregatedSignatureFieldPathBuilder {
+            self.path.push(TransactionFinality::CERTIFIED_FIELD.name);
+            ValidatorAggregatedSignatureFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn checkpointed(mut self) -> String {
+            self.path.push(TransactionFinality::CHECKPOINTED_FIELD.name);
+            self.finish()
+        }
+        pub fn quorum_executed(mut self) -> String {
+            self.path.push(TransactionFinality::QUORUM_EXECUTED_FIELD.name);
+            self.finish()
+        }
     }
 }

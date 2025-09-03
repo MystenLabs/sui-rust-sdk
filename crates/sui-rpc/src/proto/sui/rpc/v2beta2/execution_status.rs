@@ -236,6 +236,7 @@ impl From<sui_sdk_types::ExecutionError> for ExecutionError {
                 ExecutionErrorKind::MoveRawValueTooBig
             }
             E::InvalidLinkage => ExecutionErrorKind::InvalidLinkage,
+            _ => ExecutionErrorKind::Unknown,
         };
 
         message.set_kind(kind);
@@ -554,6 +555,7 @@ impl From<sui_sdk_types::CommandArgumentError> for CommandArgumentError {
                 CommandArgumentErrorKind::ConsensusObjectOperationNotAllowed
             }
             E::InvalidArgumentArity => CommandArgumentErrorKind::InvalidArgumentArity,
+            _ => CommandArgumentErrorKind::Unknown,
         };
 
         message.set_kind(kind);
@@ -635,6 +637,7 @@ impl From<sui_sdk_types::TypeArgumentError> for type_argument_error::TypeArgumen
         match value {
             TypeNotFound => Self::TypeNotFound,
             ConstraintNotSatisfied => Self::ConstraintNotSatisfied,
+            _ => Self::Unknown,
         }
     }
 }
@@ -696,6 +699,7 @@ impl From<sui_sdk_types::PackageUpgradeError> for PackageUpgradeError {
                 message.ticket_id = Some(ticket_id.to_string());
                 PackageUpgradeErrorKind::PackageIdDoesNotMatch
             }
+            _ => PackageUpgradeErrorKind::Unknown,
         };
 
         message.set_kind(kind);

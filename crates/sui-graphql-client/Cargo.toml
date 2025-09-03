@@ -1,6 +1,6 @@
 [package]
 name = "sui-graphql-client"
-version = "0.0.6"
+version = "0.0.7"
 authors = ["Stefan Stanciulescu <stefan@mystenlabs.com>", "Brandon Williams <brandon@mystenlabs.com>"]
 license = "Apache-2.0"
 edition = "2021"
@@ -19,16 +19,16 @@ futures = "0.3.29"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
 serde = { version = "1.0.144" }
 serde_json = {version = "1.0.95"}
-sui-types = { package = "sui-sdk-types", version = "0.0.6", path = "../sui-sdk-types", features = ["serde"] }
+sui-types = { package = "sui-sdk-types", version = "0.0.7", path = "../sui-sdk-types", features = ["serde"] }
 tracing = "0.1.37"
 thiserror = "2.0.12"
 tokio = "1.36.0"
 url = "2.5.3"
 
 [dev-dependencies]
-sui-types = { package = "sui-sdk-types", version = "0.0.6", path = "../sui-sdk-types", features = ["serde", "rand", "hash"] }
+sui-types = { package = "sui-sdk-types", version = "0.0.7", path = "../sui-sdk-types", features = ["serde", "rand", "hash"] }
 rand = "0.8.5"
 tokio = { version = "1.40.0", features = ["full"] }
 
 [build-dependencies]
-sui-graphql-client-build = { version = "0.0.6", path = "../sui-graphql-client-build" }
+sui-graphql-client-build = { version = "0.0.7", path = "../sui-graphql-client-build" }

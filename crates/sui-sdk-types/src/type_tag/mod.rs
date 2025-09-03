@@ -124,7 +124,7 @@ pub struct Identifier(
             Into::into
         ))
     )]
-    Box<str>,
+    bytestring::ByteString,
 );
 
 impl Identifier {
@@ -136,8 +136,13 @@ impl Identifier {
             })
     }
 
-    pub fn into_inner(self) -> Box<str> {
-        self.0
+    /// Construct an Identifier from a `&'static str`, panicking if it is invalid.
+    pub const fn from_static(identifier: &'static str) -> Self {
+        if !parse::is_valid_identifier(identifier) {
+            panic!("invalid identifier");
+        }
+
+        Self(bytestring::ByteString::from_static(identifier))
     }
 
     pub fn as_str(&self) -> &str {
@@ -163,7 +168,15 @@ impl std::str::FromStr for Identifier {
 
 impl PartialEq<str> for Identifier {
     fn eq(&self, other: &str) -> bool {
-        self.0.as_ref() == other
+        self.as_str() == other
+    }
+}
+
+impl std::ops::Deref for Identifier {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
