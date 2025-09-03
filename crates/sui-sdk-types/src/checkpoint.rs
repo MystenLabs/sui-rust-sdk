@@ -22,8 +22,8 @@ pub type ProtocolVersion = u64;
 ///
 /// ```text
 /// ; CheckpointCommitment is an enum and each variant is prefixed with its index
-/// checkpoint-commitment = ecmh-live-object-set
 /// ecmh-live-object-set = %x00 digest
+/// checkpoint-artifacts-digest = %x01 digest
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
@@ -36,7 +36,9 @@ pub enum CheckpointCommitment {
     /// An Elliptic Curve Multiset Hash attesting to the set of Objects that comprise the live
     /// state of the Sui blockchain.
     EcmhLiveObjectSet { digest: Digest },
-    // Other commitment types (e.g. merkle roots) go here.
+
+    /// Digest of the checkpoint artifacts.
+    CheckpointArtifactsDigest { digest: Digest },
 }
 
 /// Data, which when included in a [`CheckpointSummary`], signals the end of an `Epoch`.
@@ -386,6 +388,7 @@ mod serialization {
             const FIXTURES: &[&str] = &[
                 "CgAAAAAAAAAUAAAAAAAAABUAAAAAAAAAIJ6CIMG/6Un4MKNM8h+R9r8bQ6dNTk0WZxBMUQH1XFQBASCWUVucdQkje+4YbXVpvQZcg74nndL1NK7ccj1dDR04agAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACwAAAAAAAAAAAAAKAAAAAAAAAKOonlp6Vf8dJEjQYa/VyigZruaZwSwu3u/ZZVCsdrS1iaGPIAERZcNnfM75tOh10hI6MAAAAQAAAAAAAAAQAAAAAAA=",
                 "AgAAAAAAAAAFAAAAAAAAAAYAAAAAAAAAIINaPEm+WRQV2vGcPR9fe6fYhxl48GpqB+DqDYQqRHkuASBe+6BDLHSRCMiWqBkvVMqWXPWUsZnpc2gbOVdre3vnowAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwAAAAAAAAAAAQFgqGJldzxWMt2CZow1QiLmDf0RdLE6udu0bVdc1xaExX37NByF27rDH5C1DF+mkpLdA6YZnXMvuUw+zoWo71qe2DTdIDU4AcNaSUE3OoEHceuT+fBa6dMib3yDkkhmOZLyECcAAAAAAAAkAAAAAAAAAAAAAgAAAAAAAACvljn+1LWFSpu3PGx4BlIlVZq7blFK+fV7SOPEU0z9nz7lgkv8a12EA9R0tGm8hEYSOjAAAAEAAAAAAAAAEAAAAAAA",
+                "AAAAAAAAAAACAAAAAAAAAAgAAAAAAAAAIJBUX7gl7mh+M/NoHcFa3oR3I+5BFublxXc33/GPUZ79ASAyWbpVsiA3AaeLJkcLPhQy4QKHM66TkJNFPJLaVqfoJQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAjf/gOJgBAAABASDxpIv3q2qAdsaAF16ZXzTSU8tRSJ5ylwIRyOzYsdeZigACAAAAAAAAAAAAALkSpPtV6n0lfTq6upYfSk7ZWw8avL3vaG/tU6s2ELoUKK3ucADvyjsDGNVKkhhGkhI6MAAAAQAAAAAAAAAQAAAAAAA="
             ];
 
             for fixture in FIXTURES {
