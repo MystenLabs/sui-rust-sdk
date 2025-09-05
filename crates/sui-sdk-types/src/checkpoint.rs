@@ -38,7 +38,7 @@ pub enum CheckpointCommitment {
     EcmhLiveObjectSet { digest: Digest },
 
     /// Digest of the checkpoint artifacts.
-    CheckpointArtifactsDigest { digest: Digest },
+    CheckpointArtifacts { digest: Digest },
 }
 
 /// Data, which when included in a [`CheckpointSummary`], signals the end of an `Epoch`.
