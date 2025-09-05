@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["generate_const_default_field","generate_getter_function","generate_getter_functions","generate_getters","generate_getters_for_message","getter_ref_return_type","is_ref_return","resolve_type","type_default"]};

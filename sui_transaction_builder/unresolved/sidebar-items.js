@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["InputKind","Value"],"struct":["GasPayment","Input","ObjectReference","ProgrammableTransaction","Transaction"]};

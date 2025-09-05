@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["_new_active_jwks_arguments"],"struct":["__typename","authenticatorObjInitialSharedVersion","epoch","newActiveJwks","round"]};
