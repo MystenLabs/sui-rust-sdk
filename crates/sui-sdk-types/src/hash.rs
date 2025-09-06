@@ -1,7 +1,5 @@
-use super::Identifier;
-use super::StructTag;
-use super::Address;
-use super::Digest;
+use crate::Address;
+use crate::Digest;
 
 use blake2::Digest as DigestTrait;
 
@@ -450,6 +448,9 @@ impl crate::Address {
     #[cfg(feature = "serde")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
     pub fn derive_object_id(&self, key_type_tag: &crate::TypeTag, key_bytes: &[u8]) -> Self {
+        use crate::Identifier;
+        use crate::StructTag;
+
         let struct_tag = StructTag {
             address: Address::from_hex("0x2").expect("0x2 is a valid address"),
             module: Identifier::new("derived_object")
