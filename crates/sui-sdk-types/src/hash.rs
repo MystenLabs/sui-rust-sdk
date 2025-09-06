@@ -502,6 +502,7 @@ mod test {
     // Snapshot tests that match the on-chain `derive_address` logic.
     // These snapshots can also be found in `derived_object_tests.move` unit tests.
     #[test]
+    #[cfg(feature = "serde")]
     fn test_derive_object_snapshot() {
         // Our key is `UID, Vec<u8>, b"foo"`
         let key_bytes = bcs::to_bytes("foo").unwrap();
