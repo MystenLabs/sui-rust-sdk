@@ -464,7 +464,9 @@ impl crate::Address {
 #[cfg(test)]
 mod test {
     use super::HashingIntent;
-    use crate::{Address, SignatureScheme, TypeTag};
+    use crate::Address;
+    use crate::SignatureScheme;
+    use crate::TypeTag;
     use test_strategy::proptest;
 
     #[cfg(target_arch = "wasm32")]
