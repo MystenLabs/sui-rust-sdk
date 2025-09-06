@@ -1,7 +1,7 @@
-use crate::Address;
-use crate::Digest;
-use crate::Identifier;
-use crate::StructTag;
+use super::Identifier;
+use super::StructTag;
+use super::Address;
+use super::Digest;
 
 use blake2::Digest as DigestTrait;
 
