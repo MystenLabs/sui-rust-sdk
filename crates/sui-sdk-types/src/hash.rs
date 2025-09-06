@@ -447,6 +447,8 @@ impl crate::Address {
     /// Derive the address of a `derived_object`
     ///
     /// hash(parent || len(key) || key || DerivedObjectKey(key_type_tag))
+    #[cfg(feature = "serde")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
     pub fn derive_object_id(&self, key_type_tag: &crate::TypeTag, key_bytes: &[u8]) -> Self {
         let struct_tag = StructTag {
             address: Address::from_hex("0x2").expect("0x2 is a valid address"),
