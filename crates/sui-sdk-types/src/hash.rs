@@ -1,5 +1,7 @@
 use crate::Address;
 use crate::Digest;
+use crate::Identifier;
+use crate::StructTag;
 
 use blake2::Digest as DigestTrait;
 
@@ -441,12 +443,28 @@ impl crate::Address {
 
         Self::new(digest.into_inner())
     }
+
+    /// Derive the address of a `derived_object`
+    ///
+    /// hash(parent || len(key) || key || DerivedObjectKey(key_type_tag))
+    pub fn derive_object_id(&self, key_type_tag: &crate::TypeTag, key_bytes: &[u8]) -> Self {
+        let struct_tag = StructTag {
+            address: Address::from_hex("0x2").expect("0x2 is a valid address"),
+            module: Identifier::new("derived_object")
+                .expect("derived_object is a valid identifier"),
+            name: Identifier::new("DerivedObjectKey")
+                .expect("DerivedObjectKey is a valid identifier"),
+            type_params: vec![key_type_tag.clone()],
+        };
+
+        self.derive_dynamic_child_id(&struct_tag.into(), key_bytes)
+    }
 }
 
 #[cfg(test)]
 mod test {
     use super::HashingIntent;
-    use crate::SignatureScheme;
+    use crate::{Address, SignatureScheme, TypeTag};
     use test_strategy::proptest;
 
     #[cfg(target_arch = "wasm32")]
@@ -475,5 +493,24 @@ mod test {
     #[proptest]
     fn roundtrip_hashing_intent(intent: HashingIntent) {
         assert_eq!(Ok(intent), HashingIntent::from_byte(intent as u8));
+    }
+
+    // Snapshot tests that match the on-chain `derive_address` logic.
+    // These snapshots can also be found in `derived_object_tests.move` unit tests.
+    #[test]
+    fn test_derive_object_snapshot() {
+        // Our key is `UID, Vec<u8>, b"foo"`
+        let key_bytes = bcs::to_bytes("foo").unwrap();
+        let key_type_tag = TypeTag::Vector(Box::new(TypeTag::U8));
+
+        let id = Address::from_hex("0x2")
+            .unwrap()
+            .derive_object_id(&key_type_tag, &key_bytes);
+
+        assert_eq!(
+            id,
+            Address::from_hex("0xa2b411aa9588c398d8e3bc97dddbdd430b5ded7f81545d05e33916c3ca0f30c3")
+                .unwrap()
+        );
     }
 }
