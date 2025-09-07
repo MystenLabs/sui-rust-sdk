@@ -44,6 +44,10 @@ doc: ## Generate documentation
 doc-open: ## Generate and open documentation
 	RUSTDOCFLAGS="--cfg=doc_cfg -Zunstable-options --generate-link-to-definition" RUSTC_BOOTSTRAP=1 cargo doc --all-features --no-deps --open
 
+.PHONY: proto
+proto: ## run protobuf codegen
+	$(MAKE) -C crates/sui-rpc proto
+
 .PHONY: is-dirty
 is-dirty: ## Checks if repository is dirty
 	@(test -z "$$(git diff)" || (git diff && false)) && (test -z "$$(git status --porcelain)" || (git status --porcelain && false))

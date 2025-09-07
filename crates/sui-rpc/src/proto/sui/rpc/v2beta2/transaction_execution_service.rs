@@ -1,5 +1,3 @@
-use prost_types::FieldMask;
-
 use super::*;
 
 impl ExecuteTransactionRequest {
@@ -8,11 +6,6 @@ impl ExecuteTransactionRequest {
             transaction: Some(transaction),
             ..Default::default()
         }
-    }
-
-    pub fn with_read_mask(mut self, read_mask: FieldMask) -> Self {
-        self.read_mask = Some(read_mask);
-        self
     }
 }
 
@@ -31,11 +24,6 @@ impl SimulateTransactionRequest {
             transaction: Some(transaction),
             ..Default::default()
         }
-    }
-
-    pub fn with_read_mask(mut self, read_mask: FieldMask) -> Self {
-        self.read_mask = Some(read_mask);
-        self
     }
 
     pub fn with_checks(mut self, checks: simulate_transaction_request::TransactionChecks) -> Self {

@@ -1,4 +1,3 @@
-use prost_types::FieldMask;
 use sui_sdk_types::Address;
 use sui_sdk_types::Digest;
 
@@ -12,11 +11,6 @@ impl GetObjectRequest {
             read_mask: None,
         }
     }
-
-    pub fn with_read_mask(mut self, read_mask: FieldMask) -> Self {
-        self.read_mask = Some(read_mask);
-        self
-    }
 }
 
 impl GetObjectResponse {
@@ -24,13 +18,6 @@ impl GetObjectResponse {
         Self {
             object: Some(object),
         }
-    }
-}
-
-impl BatchGetObjectsRequest {
-    pub fn with_read_mask(mut self, read_mask: FieldMask) -> Self {
-        self.read_mask = Some(read_mask);
-        self
     }
 }
 
@@ -63,14 +50,6 @@ impl GetObjectResult {
             }),
         }
     }
-
-    pub fn error(&self) -> Option<&crate::proto::google::rpc::Status> {
-        if let Some(get_object_result::Result::Error(error)) = &self.result {
-            Some(error)
-        } else {
-            None
-        }
-    }
 }
 
 impl GetTransactionRequest {
@@ -80,11 +59,6 @@ impl GetTransactionRequest {
             read_mask: None,
         }
     }
-
-    pub fn with_read_mask(mut self, read_mask: FieldMask) -> Self {
-        self.read_mask = Some(read_mask);
-        self
-    }
 }
 
 impl GetTransactionResponse {
@@ -92,13 +66,6 @@ impl GetTransactionResponse {
         Self {
             transaction: Some(transaction),
         }
-    }
-}
-
-impl BatchGetTransactionsRequest {
-    pub fn with_read_mask(mut self, read_mask: FieldMask) -> Self {
-        self.read_mask = Some(read_mask);
-        self
     }
 }
 
@@ -131,14 +98,6 @@ impl GetTransactionResult {
             }),
         }
     }
-
-    pub fn error(&self) -> Option<&crate::proto::google::rpc::Status> {
-        if let Some(get_transaction_result::Result::Error(error)) = &self.result {
-            Some(error)
-        } else {
-            None
-        }
-    }
 }
 
 impl GetCheckpointRequest {
@@ -166,11 +125,6 @@ impl GetCheckpointRequest {
             )),
         }
     }
-
-    pub fn with_read_mask(mut self, read_mask: FieldMask) -> Self {
-        self.read_mask = Some(read_mask);
-        self
-    }
 }
 
 impl GetCheckpointResponse {
@@ -194,11 +148,6 @@ impl GetEpochRequest {
             epoch: Some(epoch),
             read_mask: None,
         }
-    }
-
-    pub fn with_read_mask(mut self, read_mask: FieldMask) -> Self {
-        self.read_mask = Some(read_mask);
-        self
     }
 }
 
