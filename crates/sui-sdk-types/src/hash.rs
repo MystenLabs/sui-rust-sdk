@@ -452,11 +452,9 @@ impl crate::Address {
         use crate::StructTag;
 
         let struct_tag = StructTag {
-            address: Address::from_hex("0x2").expect("0x2 is a valid address"),
-            module: Identifier::new("derived_object")
-                .expect("derived_object is a valid identifier"),
-            name: Identifier::new("DerivedObjectKey")
-                .expect("DerivedObjectKey is a valid identifier"),
+            address: Address::from_hex_unwrap("0x2"),
+            module: Identifier::from_static("derived_object"),
+            name: Identifier::from_static("DerivedObjectKey"),
             type_params: vec![key_type_tag.clone()],
         };
 
