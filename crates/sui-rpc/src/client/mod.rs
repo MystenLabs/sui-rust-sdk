@@ -23,8 +23,6 @@ use crate::proto::sui::rpc::v2beta2::transaction_execution_service_client::Trans
 use crate::proto::sui::rpc::v2beta2::ExecuteTransactionRequest;
 use crate::proto::sui::rpc::v2beta2::ExecutedTransaction;
 use crate::proto::sui::rpc::v2beta2::SubscribeCheckpointsRequest;
-use crate::proto::sui::rpc::v2beta2::Transaction;
-use crate::proto::sui::rpc::v2beta2::UserSignature;
 use prost_types::FieldMask;
 
 type Result<T, E = tonic::Status> = std::result::Result<T, E>;
@@ -183,20 +181,16 @@ impl Client {
     /// this node.
     ///
     /// # Arguments
-    /// * `transaction` - The transaction to execute
-    /// * `signatures` - User signatures for the transaction
+    /// * `request` - The transaction execution request (ExecuteTransactionRequest)
     /// * `timeout` - Maximum time to wait for indexing confirmation
-    /// * `read_mask` - Optional field mask specifying which transaction fields to return
     ///
     /// # Returns
     /// The executed transaction from the execution response, but only after confirming
     /// it has been included in a checkpoint and indexes have been updated.
     pub async fn execute_transaction_and_wait_for_checkpoint(
         &mut self,
-        transaction: Transaction,
-        signatures: Vec<UserSignature>,
+        request: impl tonic::IntoRequest<ExecuteTransactionRequest>,
         timeout: Duration,
-        read_mask: Option<FieldMask>,
     ) -> Result<ExecutedTransaction> {
         // Subscribe to checkpoint stream before execution to avoid missing the transaction.
         // Uses minimal read mask for efficiency since we only nee digest confirmation.
@@ -212,11 +206,7 @@ impl Client {
 
         let executed_transaction = self
             .execution_client()
-            .execute_transaction(ExecuteTransactionRequest {
-                transaction: Some(transaction),
-                signatures,
-                read_mask,
-            })
+            .execute_transaction(request)
             .await?
             .into_inner()
             .transaction()
