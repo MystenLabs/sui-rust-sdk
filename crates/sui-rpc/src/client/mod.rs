@@ -204,6 +204,19 @@ impl Client {
             .await?
             .into_inner();
 
+        // Ensure the execution request includes the digest field in its read_mask
+        let mut request = request.into_request();
+        let execute_transaction_request = request.get_mut();
+        if let Some(existing_mask) = &execute_transaction_request.read_mask {
+            let mut paths = existing_mask.paths.clone();
+            if !paths.iter().any(|p| p == "digest") {
+                paths.push("digest".to_string());
+                execute_transaction_request.read_mask = Some(FieldMask { paths });
+            }
+        } else {
+            execute_transaction_request.read_mask = Some(FieldMask::from_str("digest"));
+        }
+
         let executed_transaction = self
             .execution_client()
             .execute_transaction(request)
