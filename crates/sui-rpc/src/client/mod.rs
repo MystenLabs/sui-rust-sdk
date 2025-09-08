@@ -1,3 +1,4 @@
+use futures::TryStreamExt;
 use std::time::Duration;
 use tap::Pipe;
 use tonic::codec::CompressionEncoding;
@@ -12,12 +13,17 @@ pub use auth::AuthInterceptor;
 mod staking_rewards;
 pub use staking_rewards::DelegatedStake;
 
+use crate::field::FieldMaskUtil;
 use crate::proto::sui::rpc::v2beta2::ledger_service_client::LedgerServiceClient;
 use crate::proto::sui::rpc::v2beta2::live_data_service_client::LiveDataServiceClient;
 use crate::proto::sui::rpc::v2beta2::move_package_service_client::MovePackageServiceClient;
 use crate::proto::sui::rpc::v2beta2::signature_verification_service_client::SignatureVerificationServiceClient;
 use crate::proto::sui::rpc::v2beta2::subscription_service_client::SubscriptionServiceClient;
 use crate::proto::sui::rpc::v2beta2::transaction_execution_service_client::TransactionExecutionServiceClient;
+use crate::proto::sui::rpc::v2beta2::ExecuteTransactionRequest;
+use crate::proto::sui::rpc::v2beta2::ExecutedTransaction;
+use crate::proto::sui::rpc::v2beta2::SubscribeCheckpointsRequest;
+use prost_types::FieldMask;
 
 type Result<T, E = tonic::Status> = std::result::Result<T, E>;
 type BoxError = Box<dyn std::error::Error + Send + Sync + 'static>;
@@ -166,5 +172,85 @@ impl Client {
                     client
                 }
             })
+    }
+
+    /// Executes a transaction and waits for it to be included in a checkpoint.
+    ///
+    /// This method provides "read your writes" consistency by executing the transaction
+    /// and waiting for it to appear in a checkpoint, which gauruntees indexes have been updated on
+    /// this node.
+    ///
+    /// # Arguments
+    /// * `request` - The transaction execution request (ExecuteTransactionRequest)
+    /// * `timeout` - Maximum time to wait for indexing confirmation
+    ///
+    /// # Returns
+    /// The executed transaction from the execution response, but only after confirming
+    /// it has been included in a checkpoint and indexes have been updated.
+    pub async fn execute_transaction_and_wait_for_checkpoint(
+        &mut self,
+        request: impl tonic::IntoRequest<ExecuteTransactionRequest>,
+        timeout: Duration,
+    ) -> Result<ExecutedTransaction> {
+        // Subscribe to checkpoint stream before execution to avoid missing the transaction.
+        // Uses minimal read mask for efficiency since we only nee digest confirmation.
+        // Once server-side filtering is available, we should filter by transaction digest to
+        // further reduce bandwidth.
+        let mut checkpoint_stream = self
+            .subscription_client()
+            .subscribe_checkpoints(SubscribeCheckpointsRequest {
+                read_mask: Some(FieldMask::from_str("transactions.digest,sequence_number")),
+            })
+            .await?
+            .into_inner();
+
+        // Calculate digest from the input transaction to avoid relying on response read mask
+        let request = request.into_request();
+        let transaction = request
+            .get_ref()
+            .transaction
+            .as_ref()
+            .ok_or_else(|| tonic::Status::invalid_argument("transaction is required"))?;
+
+        let executed_txn_digest = sui_sdk_types::Transaction::try_from(transaction)
+            .map_err(|e| tonic::Status::internal(format!("failed to convert transaction: {e}")))?
+            .digest()
+            .to_string();
+
+        let executed_transaction = self
+            .execution_client()
+            .execute_transaction(request)
+            .await?
+            .into_inner()
+            .transaction()
+            .to_owned();
+
+        // Wait for the transaction to appear in a checkpoint. At this point indexes have been
+        // updated.
+        let timeout_future = tokio::time::sleep(timeout);
+        let checkpoint_future = async {
+            while let Some(response) = checkpoint_stream.try_next().await? {
+                let checkpoint = response.checkpoint();
+
+                for tx in checkpoint.transactions() {
+                    let digest = tx.digest();
+
+                    if digest == executed_txn_digest {
+                        return Ok(());
+                    }
+                }
+            }
+            Err(tonic::Status::aborted(
+                "checkpoint stream ended unexpectedly",
+            ))
+        };
+
+        tokio::select! {
+            result = checkpoint_future => {
+                result?;
+                Ok(executed_transaction)
+            },
+            _ = timeout_future => Err(tonic::Status::deadline_exceeded(format!("timeout waiting for checkpoint after {timeout:?}"))),
+        }
     }
 }
