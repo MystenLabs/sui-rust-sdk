@@ -204,18 +204,18 @@ impl Client {
             .await?
             .into_inner();
 
-        // Ensure the execution request includes the digest field in its read_mask
-        let mut request = request.into_request();
-        let execute_transaction_request = request.get_mut();
-        if let Some(existing_mask) = &execute_transaction_request.read_mask {
-            let mut paths = existing_mask.paths.clone();
-            if !paths.iter().any(|p| p == "digest") {
-                paths.push("digest".to_string());
-                execute_transaction_request.read_mask = Some(FieldMask { paths });
-            }
-        } else {
-            execute_transaction_request.read_mask = Some(FieldMask::from_str("digest"));
-        }
+        // Calculate digest from the input transaction to avoid relying on response read mask
+        let request = request.into_request();
+        let transaction = request
+            .get_ref()
+            .transaction
+            .as_ref()
+            .ok_or_else(|| tonic::Status::invalid_argument("transaction is required"))?;
+
+        let executed_txn_digest = sui_sdk_types::Transaction::try_from(transaction)
+            .map_err(|e| tonic::Status::internal(format!("failed to convert transaction: {e}")))?
+            .digest()
+            .to_string();
 
         let executed_transaction = self
             .execution_client()
@@ -224,8 +224,6 @@ impl Client {
             .into_inner()
             .transaction()
             .to_owned();
-
-        let executed_txn_digest = executed_transaction.digest();
 
         // Wait for the transaction to appear in a checkpoint. At this point indexes have been
         // updated.
