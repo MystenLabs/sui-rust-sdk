@@ -447,6 +447,8 @@ message EndOfEpochTransactionKind {
     google.protobuf.Empty accumulator_root_create = 205;
     // Create and initialize the Coin Registry object.
     google.protobuf.Empty coin_registry_create = 206;
+    // Crate and initialize the Registry Root object
+    google.protobuf.Empty registry_root_create = 207;
   }
 }
 

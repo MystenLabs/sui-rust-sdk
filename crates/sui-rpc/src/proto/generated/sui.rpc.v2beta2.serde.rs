@@ -6411,6 +6411,9 @@ impl serde::Serialize for EndOfEpochTransactionKind {
                 end_of_epoch_transaction_kind::Kind::CoinRegistryCreate(v) => {
                     struct_ser.serialize_field("coinRegistryCreate", &crate::_serde::EmptySerializer(v))?;
                 }
+                end_of_epoch_transaction_kind::Kind::RegistryRootCreate(v) => {
+                    struct_ser.serialize_field("registryRootCreate", &crate::_serde::EmptySerializer(v))?;
+                }
             }
         }
         struct_ser.end()
@@ -6443,6 +6446,8 @@ impl<'de> serde::Deserialize<'de> for EndOfEpochTransactionKind {
             "accumulatorRootCreate",
             "coin_registry_create",
             "coinRegistryCreate",
+            "registry_root_create",
+            "registryRootCreate",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -6457,6 +6462,7 @@ impl<'de> serde::Deserialize<'de> for EndOfEpochTransactionKind {
             BridgeCommitteeInit,
             AccumulatorRootCreate,
             CoinRegistryCreate,
+            RegistryRootCreate,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -6489,6 +6495,7 @@ impl<'de> serde::Deserialize<'de> for EndOfEpochTransactionKind {
                             "bridgeCommitteeInit" | "bridge_committee_init" => Ok(GeneratedField::BridgeCommitteeInit),
                             "accumulatorRootCreate" | "accumulator_root_create" => Ok(GeneratedField::AccumulatorRootCreate),
                             "coinRegistryCreate" | "coin_registry_create" => Ok(GeneratedField::CoinRegistryCreate),
+                            "registryRootCreate" | "registry_root_create" => Ok(GeneratedField::RegistryRootCreate),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -6575,6 +6582,12 @@ impl<'de> serde::Deserialize<'de> for EndOfEpochTransactionKind {
                                 return Err(serde::de::Error::duplicate_field("coinRegistryCreate"));
                             }
                             kind__ = map_.next_value::<::std::option::Option<crate::_serde::EmptyDeserializer>>()?.map(|x| end_of_epoch_transaction_kind::Kind::CoinRegistryCreate(x.0));
+                        }
+                        GeneratedField::RegistryRootCreate => {
+                            if kind__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("registryRootCreate"));
+                            }
+                            kind__ = map_.next_value::<::std::option::Option<crate::_serde::EmptyDeserializer>>()?.map(|x| end_of_epoch_transaction_kind::Kind::RegistryRootCreate(x.0));
                         }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;

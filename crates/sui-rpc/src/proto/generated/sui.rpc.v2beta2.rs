@@ -7241,7 +7241,7 @@ pub struct EndOfEpochTransaction {
 pub struct EndOfEpochTransactionKind {
     #[prost(
         oneof = "end_of_epoch_transaction_kind::Kind",
-        tags = "2, 3, 4, 200, 201, 202, 203, 204, 205, 206"
+        tags = "2, 3, 4, 200, 201, 202, 203, 204, 205, 206, 207"
     )]
     pub kind: ::core::option::Option<end_of_epoch_transaction_kind::Kind>,
 }
@@ -7280,6 +7280,9 @@ pub mod end_of_epoch_transaction_kind {
         /// Create and initialize the Coin Registry object.
         #[prost(message, tag = "206")]
         CoinRegistryCreate(()),
+        /// Crate and initialize the Registry Root object
+        #[prost(message, tag = "207")]
+        RegistryRootCreate(()),
     }
 }
 /// Expire old JWKs.

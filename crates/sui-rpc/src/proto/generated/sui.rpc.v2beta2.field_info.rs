@@ -10629,6 +10629,12 @@ mod _field_impls {
             number: 206i32,
             message_fields: None,
         };
+        pub const REGISTRY_ROOT_CREATE_FIELD: &'static MessageField = &MessageField {
+            name: "registry_root_create",
+            json_name: "registryRootCreate",
+            number: 207i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for EndOfEpochTransactionKind {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -10642,6 +10648,7 @@ mod _field_impls {
             Self::BRIDGE_COMMITTEE_INIT_FIELD,
             Self::ACCUMULATOR_ROOT_CREATE_FIELD,
             Self::COIN_REGISTRY_CREATE_FIELD,
+            Self::REGISTRY_ROOT_CREATE_FIELD,
         ];
     }
     impl EndOfEpochTransactionKind {
@@ -10711,6 +10718,10 @@ mod _field_impls {
         }
         pub fn coin_registry_create(mut self) -> String {
             self.path.push(EndOfEpochTransactionKind::COIN_REGISTRY_CREATE_FIELD.name);
+            self.finish()
+        }
+        pub fn registry_root_create(mut self) -> String {
+            self.path.push(EndOfEpochTransactionKind::REGISTRY_ROOT_CREATE_FIELD.name);
             self.finish()
         }
     }
