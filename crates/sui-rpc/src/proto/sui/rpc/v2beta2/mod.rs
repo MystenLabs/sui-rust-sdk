@@ -8,7 +8,8 @@ include!("../../../generated/sui.rpc.v2beta2.field_info.rs");
 
 // Include generated serde impls
 include!("../../../generated/sui.rpc.v2beta2.serde.rs");
-include!("../../../generated/sui.rpc.v2beta2.getters.rs");
+// include!("../../../generated/sui.rpc.v2beta2.getters.rs");
+include!("../../../generated/sui.rpc.v2beta2.accessors.rs");
 
 pub use descriptor::FILE_DESCRIPTOR_SET;
 mod descriptor {

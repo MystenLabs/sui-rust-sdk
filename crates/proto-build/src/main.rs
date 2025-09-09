@@ -3,8 +3,14 @@ use protox::prost::Message as _;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use crate::message_graph::DescriptorGraph;
+
+mod codegen;
+mod comments;
+mod context;
 mod generate_fields;
-mod generate_getters;
+mod ident;
+mod message_graph;
 
 fn main() {
     let root_dir = PathBuf::from(std::env!("CARGO_MANIFEST_DIR"));
@@ -65,6 +71,12 @@ fn main() {
         panic!("failed to compile protos: {error}");
     }
 
+    // Setup for extended codegen
+    let extern_paths = context::extern_paths::ExternPaths::new(&[], true).unwrap();
+    let graph = DescriptorGraph::new(fds.file.iter());
+    let context = context::Context::new(extern_paths, graph);
+    codegen::accessors::generate_accessors(&context, &out_dir);
+
     // Group the files by their package, in order to have a single fds file per package, and have
     // the files in the package sorted by their filename in order have a stable serialized format.
     let mut packages: HashMap<_, FileDescriptorSet> = HashMap::new();
@@ -79,7 +91,6 @@ fn main() {
     }
 
     generate_fields::generate_field_info(&packages, &out_dir);
-    generate_getters::generate_getters(&packages, &out_dir);
 
     let mut json_builder = pbjson_build::Builder::new();
 
