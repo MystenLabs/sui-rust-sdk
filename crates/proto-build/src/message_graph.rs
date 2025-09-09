@@ -1,19 +1,27 @@
-use crate::ident::{to_snake, to_upper_camel};
+use crate::ident::to_snake;
+use crate::ident::to_upper_camel;
 
 use super::comments::Comments;
-use itertools::{Either, Itertools};
+use itertools::Either;
+use itertools::Itertools;
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 
+use petgraph::Graph;
 use petgraph::algo::has_path_connecting;
 use petgraph::graph::NodeIndex;
-use petgraph::Graph;
 
-use prost_types::{
-    field_descriptor_proto::{Label, Type},
-    DescriptorProto, EnumDescriptorProto, EnumValueDescriptorProto, FieldDescriptorProto,
-    FileDescriptorProto, OneofDescriptorProto, ServiceDescriptorProto, SourceCodeInfo,
-};
+use prost_types::DescriptorProto;
+use prost_types::EnumDescriptorProto;
+use prost_types::EnumValueDescriptorProto;
+use prost_types::FieldDescriptorProto;
+use prost_types::FileDescriptorProto;
+use prost_types::OneofDescriptorProto;
+use prost_types::ServiceDescriptorProto;
+use prost_types::SourceCodeInfo;
+use prost_types::field_descriptor_proto::Label;
+use prost_types::field_descriptor_proto::Type;
 
 /// `MessageGraph` builds a graph of messages whose edges correspond to nesting.
 /// The goal is to recognize when message types are recursively nested, so

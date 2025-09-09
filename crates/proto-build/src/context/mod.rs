@@ -1,9 +1,8 @@
 use itertools::Itertools;
 
-use crate::{
-    ident::{to_snake, to_upper_camel},
-    message_graph::DescriptorGraph,
-};
+use crate::ident::to_snake;
+use crate::ident::to_upper_camel;
+use crate::message_graph::DescriptorGraph;
 
 pub mod extern_paths;
 

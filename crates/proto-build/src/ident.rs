@@ -1,6 +1,7 @@
 //! Utility functions for working with identifiers.
 
-use heck::{ToSnakeCase, ToUpperCamelCase};
+use heck::ToSnakeCase;
+use heck::ToUpperCamelCase;
 
 pub fn sanitize_identifier(s: impl AsRef<str>) -> String {
     let ident = s.as_ref();
