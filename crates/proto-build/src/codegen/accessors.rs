@@ -115,13 +115,43 @@ fn generate_accessors_functions_for_field(
         quote! {*field}
     };
 
-    if field.is_map() || field.is_enum() {
-        // TODO skip Maps and enums
-        TokenStream::new()
+    if let Some((key, value)) = &field.map {
+        // Map Types
+        let key_type =
+            TokenStream::from_str(&resolve_rust_type_path(key, context, &package)).unwrap();
+        let value_type =
+            TokenStream::from_str(&resolve_rust_type_path(value, context, &package)).unwrap();
+
+        quote! {
+            pub fn #name(&self) -> &::std::collections::BTreeMap<#key_type, #value_type> {
+                &self.#name
+            }
+
+            pub fn #name_mut(&mut self) -> &mut ::std::collections::BTreeMap<#key_type, #value_type> {
+                &mut self.#name
+            }
+
+            pub fn #set_name(&mut self, field: ::std::collections::BTreeMap<#key_type, #value_type>) {
+                self.#name = field;
+            }
+
+            pub fn #with_name(mut self, field: ::std::collections::BTreeMap<#key_type, #value_type>) -> Self {
+                self.#set_name(field);
+                self
+            }
+        }
     } else if field.is_repeated() {
+        if field.is_enum() {
+            return TokenStream::new();
+        }
+
         quote! {
             pub fn #name(&self) -> &[#field_type_path] {
                 &self.#name
+            }
+
+            pub fn #name_mut(&mut self) -> &mut Vec<#field_type_path> {
+                &mut self.#name
             }
 
             pub fn #set_name(&mut self, field: Vec<#field_type_path>) {
@@ -187,7 +217,7 @@ fn generate_accessors_functions_for_field(
             }
 
             pub fn #with_name<T: Into<#field_type_path>>(mut self, field: T) -> Self {
-                self.#set_name(field);
+                self.#set_name(field.into());
                 self
             }
         }
@@ -206,8 +236,8 @@ fn generate_accessors_functions_for_field(
             });
         }
 
-        // Only include mut getters for non bytes types
-        if field.inner.r#type() != Type::Bytes {
+        // Only include mut getters for non bytes/enum types
+        if !matches!(field.inner.r#type(), Type::Bytes | Type::Enum) {
             accessors.extend(quote! {
                 pub fn #name_opt_mut(&mut self) -> Option<&mut #field_type_path> {
                     self.#name
@@ -222,21 +252,26 @@ fn generate_accessors_functions_for_field(
             });
         }
 
+        // only include _opt and set for non enums (as this already exists for enums from prost)
+        if !matches!(field.inner.r#type(), Type::Enum) {
+            accessors.extend(quote! {
+                pub fn #name_opt(&self) -> Option<#ref_return_type> {
+                    self.#name
+                        .as_ref()
+                        .map(|field| #field_as)
+                }
+
+                pub fn #set_name<T: Into<#field_type_path>>(&mut self, field: T) {
+                    self.#name = Some(field.into().into());
+                }
+            });
+        }
+
         quote! {
             #accessors
 
-            pub fn #name_opt(&self) -> Option<#ref_return_type> {
-                self.#name
-                    .as_ref()
-                    .map(|field| #field_as)
-            }
-
-            pub fn #set_name<T: Into<#field_type_path>>(&mut self, field: T) {
-                self.#name = Some(field.into().into());
-            }
-
             pub fn #with_name<T: Into<#field_type_path>>(mut self, field: T) -> Self {
-                self.#set_name(field);
+                self.#set_name(field.into());
                 self
             }
         }
@@ -261,7 +296,7 @@ fn generate_accessors_functions_for_field(
             }
 
             pub fn #with_name<T: Into<#field_type_path>>(mut self, field: T) -> Self {
-                self.#set_name(field);
+                self.#set_name(field.into());
                 self
             }
         }
@@ -405,5 +440,24 @@ fn is_ref_return(field: &Field) -> bool {
         Type::String => true,
         Type::Bytes => true,
         Type::Group | Type::Message => true,
+    }
+}
+
+pub fn resolve_rust_type_path(
+    field: &prost_types::FieldDescriptorProto,
+    context: &crate::context::Context,
+    package: &str,
+) -> String {
+    match field.r#type() {
+        Type::Float => String::from("f32"),
+        Type::Double => String::from("f64"),
+        Type::Uint32 | Type::Fixed32 => String::from("u32"),
+        Type::Uint64 | Type::Fixed64 => String::from("u64"),
+        Type::Int32 | Type::Sfixed32 | Type::Sint32 | Type::Enum => String::from("i32"),
+        Type::Int64 | Type::Sfixed64 | Type::Sint64 => String::from("i64"),
+        Type::Bool => String::from("bool"),
+        Type::String => String::from("String"),
+        Type::Bytes => String::from("::prost::bytes::Bytes"),
+        Type::Group | Type::Message => context.resolve_ident(package, field.type_name()),
     }
 }

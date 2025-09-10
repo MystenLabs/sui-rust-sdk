@@ -25,9 +25,4 @@ impl SimulateTransactionRequest {
             ..Default::default()
         }
     }
-
-    pub fn with_checks(mut self, checks: simulate_transaction_request::TransactionChecks) -> Self {
-        self.set_checks(checks);
-        self
-    }
 }

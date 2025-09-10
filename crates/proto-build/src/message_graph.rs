@@ -467,12 +467,14 @@ impl Field {
             Type::Double => String::from("f64"),
             Type::Uint32 | Type::Fixed32 => String::from("u32"),
             Type::Uint64 | Type::Fixed64 => String::from("u64"),
-            Type::Int32 | Type::Sfixed32 | Type::Sint32 | Type::Enum => String::from("i32"),
+            Type::Int32 | Type::Sfixed32 | Type::Sint32 => String::from("i32"),
             Type::Int64 | Type::Sfixed64 | Type::Sint64 => String::from("i64"),
             Type::Bool => String::from("bool"),
             Type::String => String::from("String"),
             Type::Bytes => String::from("::prost::bytes::Bytes"),
-            Type::Group | Type::Message => context.resolve_ident(package, self.inner.type_name()),
+            Type::Group | Type::Message | Type::Enum => {
+                context.resolve_ident(package, self.inner.type_name())
+            }
         }
     }
 

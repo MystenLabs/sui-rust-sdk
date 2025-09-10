@@ -14,6 +14,11 @@ mod _accessor_impls {
         pub fn field_violations(&self) -> &[super::bad_request::FieldViolation] {
             &self.field_violations
         }
+        pub fn field_violations_mut(
+            &mut self,
+        ) -> &mut Vec<super::bad_request::FieldViolation> {
+            &mut self.field_violations
+        }
         pub fn set_field_violations(
             &mut self,
             field: Vec<super::bad_request::FieldViolation>,
@@ -49,7 +54,7 @@ mod _accessor_impls {
             self.field = field.into().into();
         }
         pub fn with_field<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_field(field);
+            self.set_field(field.into());
             self
         }
         pub fn description_mut(&mut self) -> &mut String {
@@ -59,7 +64,7 @@ mod _accessor_impls {
             self.description = field.into().into();
         }
         pub fn with_description<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_description(field);
+            self.set_description(field.into());
             self
         }
         pub fn reason_mut(&mut self) -> &mut String {
@@ -69,7 +74,7 @@ mod _accessor_impls {
             self.reason = field.into().into();
         }
         pub fn with_reason<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_reason(field);
+            self.set_reason(field.into());
             self
         }
         pub fn localized_message(&self) -> &super::LocalizedMessage {
@@ -99,7 +104,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_localized_message(field);
+            self.set_localized_message(field.into());
             self
         }
     }
@@ -118,6 +123,9 @@ mod _accessor_impls {
         pub fn stack_entries(&self) -> &[String] {
             &self.stack_entries
         }
+        pub fn stack_entries_mut(&mut self) -> &mut Vec<String> {
+            &mut self.stack_entries
+        }
         pub fn set_stack_entries(&mut self, field: Vec<String>) {
             self.stack_entries = field;
         }
@@ -132,7 +140,7 @@ mod _accessor_impls {
             self.detail = field.into().into();
         }
         pub fn with_detail<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_detail(field);
+            self.set_detail(field.into());
             self
         }
     }
@@ -156,7 +164,7 @@ mod _accessor_impls {
             self.reason = field.into().into();
         }
         pub fn with_reason<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_reason(field);
+            self.set_reason(field.into());
             self
         }
         pub fn domain_mut(&mut self) -> &mut String {
@@ -166,7 +174,28 @@ mod _accessor_impls {
             self.domain = field.into().into();
         }
         pub fn with_domain<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_domain(field);
+            self.set_domain(field.into());
+            self
+        }
+        pub fn metadata(&self) -> &::std::collections::BTreeMap<String, String> {
+            &self.metadata
+        }
+        pub fn metadata_mut(
+            &mut self,
+        ) -> &mut ::std::collections::BTreeMap<String, String> {
+            &mut self.metadata
+        }
+        pub fn set_metadata(
+            &mut self,
+            field: ::std::collections::BTreeMap<String, String>,
+        ) {
+            self.metadata = field;
+        }
+        pub fn with_metadata(
+            mut self,
+            field: ::std::collections::BTreeMap<String, String>,
+        ) -> Self {
+            self.set_metadata(field);
             self
         }
     }
@@ -181,6 +210,9 @@ mod _accessor_impls {
         }
         pub fn links(&self) -> &[super::help::Link] {
             &self.links
+        }
+        pub fn links_mut(&mut self) -> &mut Vec<super::help::Link> {
+            &mut self.links
         }
         pub fn set_links(&mut self, field: Vec<super::help::Link>) {
             self.links = field;
@@ -209,7 +241,7 @@ mod _accessor_impls {
             self.description = field.into().into();
         }
         pub fn with_description<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_description(field);
+            self.set_description(field.into());
             self
         }
         pub fn url_mut(&mut self) -> &mut String {
@@ -219,7 +251,7 @@ mod _accessor_impls {
             self.url = field.into().into();
         }
         pub fn with_url<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_url(field);
+            self.set_url(field.into());
             self
         }
     }
@@ -242,7 +274,7 @@ mod _accessor_impls {
             self.locale = field.into().into();
         }
         pub fn with_locale<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_locale(field);
+            self.set_locale(field.into());
             self
         }
         pub fn message_mut(&mut self) -> &mut String {
@@ -252,7 +284,7 @@ mod _accessor_impls {
             self.message = field.into().into();
         }
         pub fn with_message<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_message(field);
+            self.set_message(field.into());
             self
         }
     }
@@ -267,6 +299,11 @@ mod _accessor_impls {
         }
         pub fn violations(&self) -> &[super::precondition_failure::Violation] {
             &self.violations
+        }
+        pub fn violations_mut(
+            &mut self,
+        ) -> &mut Vec<super::precondition_failure::Violation> {
+            &mut self.violations
         }
         pub fn set_violations(
             &mut self,
@@ -302,7 +339,7 @@ mod _accessor_impls {
             self.r#type = field.into().into();
         }
         pub fn with_type<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_type(field);
+            self.set_type(field.into());
             self
         }
         pub fn subject_mut(&mut self) -> &mut String {
@@ -312,7 +349,7 @@ mod _accessor_impls {
             self.subject = field.into().into();
         }
         pub fn with_subject<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_subject(field);
+            self.set_subject(field.into());
             self
         }
         pub fn description_mut(&mut self) -> &mut String {
@@ -322,7 +359,7 @@ mod _accessor_impls {
             self.description = field.into().into();
         }
         pub fn with_description<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_description(field);
+            self.set_description(field.into());
             self
         }
     }
@@ -337,6 +374,9 @@ mod _accessor_impls {
         }
         pub fn violations(&self) -> &[super::quota_failure::Violation] {
             &self.violations
+        }
+        pub fn violations_mut(&mut self) -> &mut Vec<super::quota_failure::Violation> {
+            &mut self.violations
         }
         pub fn set_violations(&mut self, field: Vec<super::quota_failure::Violation>) {
             self.violations = field;
@@ -368,7 +408,7 @@ mod _accessor_impls {
             self.subject = field.into().into();
         }
         pub fn with_subject<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_subject(field);
+            self.set_subject(field.into());
             self
         }
         pub fn description_mut(&mut self) -> &mut String {
@@ -378,7 +418,7 @@ mod _accessor_impls {
             self.description = field.into().into();
         }
         pub fn with_description<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_description(field);
+            self.set_description(field.into());
             self
         }
     }
@@ -401,7 +441,7 @@ mod _accessor_impls {
             self.request_id = field.into().into();
         }
         pub fn with_request_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_request_id(field);
+            self.set_request_id(field.into());
             self
         }
         pub fn serving_data_mut(&mut self) -> &mut String {
@@ -411,7 +451,7 @@ mod _accessor_impls {
             self.serving_data = field.into().into();
         }
         pub fn with_serving_data<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_serving_data(field);
+            self.set_serving_data(field.into());
             self
         }
     }
@@ -436,7 +476,7 @@ mod _accessor_impls {
             self.resource_type = field.into().into();
         }
         pub fn with_resource_type<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_resource_type(field);
+            self.set_resource_type(field.into());
             self
         }
         pub fn resource_name_mut(&mut self) -> &mut String {
@@ -446,7 +486,7 @@ mod _accessor_impls {
             self.resource_name = field.into().into();
         }
         pub fn with_resource_name<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_resource_name(field);
+            self.set_resource_name(field.into());
             self
         }
         pub fn owner_mut(&mut self) -> &mut String {
@@ -456,7 +496,7 @@ mod _accessor_impls {
             self.owner = field.into().into();
         }
         pub fn with_owner<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_owner(field);
+            self.set_owner(field.into());
             self
         }
         pub fn description_mut(&mut self) -> &mut String {
@@ -466,7 +506,7 @@ mod _accessor_impls {
             self.description = field.into().into();
         }
         pub fn with_description<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_description(field);
+            self.set_description(field.into());
             self
         }
     }
@@ -495,7 +535,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_retry_delay(field);
+            self.set_retry_delay(field.into());
             self
         }
     }
@@ -519,7 +559,7 @@ mod _accessor_impls {
             self.code = field.into().into();
         }
         pub fn with_code<T: Into<i32>>(mut self, field: T) -> Self {
-            self.set_code(field);
+            self.set_code(field.into());
             self
         }
         pub fn message_mut(&mut self) -> &mut String {
@@ -529,11 +569,14 @@ mod _accessor_impls {
             self.message = field.into().into();
         }
         pub fn with_message<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_message(field);
+            self.set_message(field.into());
             self
         }
         pub fn details(&self) -> &[::prost_types::Any] {
             &self.details
+        }
+        pub fn details_mut(&mut self) -> &mut Vec<::prost_types::Any> {
+            &mut self.details
         }
         pub fn set_details(&mut self, field: Vec<::prost_types::Any>) {
             self.details = field;

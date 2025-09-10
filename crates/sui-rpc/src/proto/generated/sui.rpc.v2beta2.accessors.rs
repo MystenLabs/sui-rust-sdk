@@ -32,7 +32,7 @@ mod _accessor_impls {
             self.id = Some(field.into().into());
         }
         pub fn with_id<T: Into<super::JwkId>>(mut self, field: T) -> Self {
-            self.set_id(field);
+            self.set_id(field.into());
             self
         }
         pub fn jwk(&self) -> &super::Jwk {
@@ -54,7 +54,7 @@ mod _accessor_impls {
             self.jwk = Some(field.into().into());
         }
         pub fn with_jwk<T: Into<super::Jwk>>(mut self, field: T) -> Self {
-            self.set_jwk(field);
+            self.set_jwk(field.into());
             self
         }
         pub fn epoch_opt_mut(&mut self) -> Option<&mut u64> {
@@ -70,7 +70,7 @@ mod _accessor_impls {
             self.epoch = Some(field.into().into());
         }
         pub fn with_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch(field);
+            self.set_epoch(field.into());
             self
         }
     }
@@ -88,6 +88,13 @@ mod _accessor_impls {
             static DEFAULT: super::Argument = super::Argument::const_default();
             &DEFAULT
         }
+        pub fn with_kind<T: Into<super::argument::ArgumentKind>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_kind(field.into());
+            self
+        }
         pub fn input_opt_mut(&mut self) -> Option<&mut u32> {
             self.input.as_mut().map(|field| field as _)
         }
@@ -101,7 +108,7 @@ mod _accessor_impls {
             self.input = Some(field.into().into());
         }
         pub fn with_input<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_input(field);
+            self.set_input(field.into());
             self
         }
         pub fn result_opt_mut(&mut self) -> Option<&mut u32> {
@@ -117,7 +124,7 @@ mod _accessor_impls {
             self.result = Some(field.into().into());
         }
         pub fn with_result<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_result(field);
+            self.set_result(field.into());
             self
         }
         pub fn subresult_opt_mut(&mut self) -> Option<&mut u32> {
@@ -133,7 +140,7 @@ mod _accessor_impls {
             self.subresult = Some(field.into().into());
         }
         pub fn with_subresult<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_subresult(field);
+            self.set_subresult(field.into());
             self
         }
     }
@@ -162,7 +169,7 @@ mod _accessor_impls {
             self.min_epoch = Some(field.into().into());
         }
         pub fn with_min_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_min_epoch(field);
+            self.set_min_epoch(field.into());
             self
         }
         pub fn authenticator_object_initial_shared_version_opt_mut(
@@ -188,7 +195,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_authenticator_object_initial_shared_version(field);
+            self.set_authenticator_object_initial_shared_version(field.into());
             self
         }
     }
@@ -219,7 +226,7 @@ mod _accessor_impls {
             self.epoch = Some(field.into().into());
         }
         pub fn with_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch(field);
+            self.set_epoch(field.into());
             self
         }
         pub fn round_opt_mut(&mut self) -> Option<&mut u64> {
@@ -235,11 +242,14 @@ mod _accessor_impls {
             self.round = Some(field.into().into());
         }
         pub fn with_round<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_round(field);
+            self.set_round(field.into());
             self
         }
         pub fn new_active_jwks(&self) -> &[super::ActiveJwk] {
             &self.new_active_jwks
+        }
+        pub fn new_active_jwks_mut(&mut self) -> &mut Vec<super::ActiveJwk> {
+            &mut self.new_active_jwks
         }
         pub fn set_new_active_jwks(&mut self, field: Vec<super::ActiveJwk>) {
             self.new_active_jwks = field;
@@ -271,7 +281,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_authenticator_object_initial_shared_version(field);
+            self.set_authenticator_object_initial_shared_version(field.into());
             self
         }
     }
@@ -300,7 +310,7 @@ mod _accessor_impls {
             self.coin_type = Some(field.into().into());
         }
         pub fn with_coin_type<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_coin_type(field);
+            self.set_coin_type(field.into());
             self
         }
         pub fn balance_opt_mut(&mut self) -> Option<&mut u64> {
@@ -316,7 +326,7 @@ mod _accessor_impls {
             self.balance = Some(field.into().into());
         }
         pub fn with_balance<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_balance(field);
+            self.set_balance(field.into());
             self
         }
     }
@@ -346,7 +356,7 @@ mod _accessor_impls {
             self.address = Some(field.into().into());
         }
         pub fn with_address<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_address(field);
+            self.set_address(field.into());
             self
         }
         pub fn coin_type_opt_mut(&mut self) -> Option<&mut String> {
@@ -362,7 +372,7 @@ mod _accessor_impls {
             self.coin_type = Some(field.into().into());
         }
         pub fn with_coin_type<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_coin_type(field);
+            self.set_coin_type(field.into());
             self
         }
         pub fn amount_opt_mut(&mut self) -> Option<&mut String> {
@@ -378,7 +388,7 @@ mod _accessor_impls {
             self.amount = Some(field.into().into());
         }
         pub fn with_amount<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_amount(field);
+            self.set_amount(field.into());
             self
         }
     }
@@ -396,6 +406,9 @@ mod _accessor_impls {
         }
         pub fn requests(&self) -> &[super::GetObjectRequest] {
             &self.requests
+        }
+        pub fn requests_mut(&mut self) -> &mut Vec<super::GetObjectRequest> {
+            &mut self.requests
         }
         pub fn set_requests(&mut self, field: Vec<super::GetObjectRequest>) {
             self.requests = field;
@@ -420,7 +433,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_read_mask(field);
+            self.set_read_mask(field.into());
             self
         }
     }
@@ -435,6 +448,9 @@ mod _accessor_impls {
         }
         pub fn objects(&self) -> &[super::GetObjectResult] {
             &self.objects
+        }
+        pub fn objects_mut(&mut self) -> &mut Vec<super::GetObjectResult> {
+            &mut self.objects
         }
         pub fn set_objects(&mut self, field: Vec<super::GetObjectResult>) {
             self.objects = field;
@@ -459,6 +475,9 @@ mod _accessor_impls {
         pub fn digests(&self) -> &[String] {
             &self.digests
         }
+        pub fn digests_mut(&mut self) -> &mut Vec<String> {
+            &mut self.digests
+        }
         pub fn set_digests(&mut self, field: Vec<String>) {
             self.digests = field;
         }
@@ -482,7 +501,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_read_mask(field);
+            self.set_read_mask(field.into());
             self
         }
     }
@@ -497,6 +516,9 @@ mod _accessor_impls {
         }
         pub fn transactions(&self) -> &[super::GetTransactionResult] {
             &self.transactions
+        }
+        pub fn transactions_mut(&mut self) -> &mut Vec<super::GetTransactionResult> {
+            &mut self.transactions
         }
         pub fn set_transactions(&mut self, field: Vec<super::GetTransactionResult>) {
             self.transactions = field;
@@ -531,7 +553,7 @@ mod _accessor_impls {
             self.name = Some(field.into().into());
         }
         pub fn with_name<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_name(field);
+            self.set_name(field.into());
             self
         }
         pub fn value_opt(&self) -> Option<&[u8]> {
@@ -541,7 +563,7 @@ mod _accessor_impls {
             self.value = Some(field.into().into());
         }
         pub fn with_value<T: Into<::prost::bytes::Bytes>>(mut self, field: T) -> Self {
-            self.set_value(field);
+            self.set_value(field.into());
             self
         }
     }
@@ -570,11 +592,14 @@ mod _accessor_impls {
             self.digest = Some(field.into().into());
         }
         pub fn with_digest<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_digest(field);
+            self.set_digest(field.into());
             self
         }
         pub fn version_assignments(&self) -> &[super::VersionAssignment] {
             &self.version_assignments
+        }
+        pub fn version_assignments_mut(&mut self) -> &mut Vec<super::VersionAssignment> {
+            &mut self.version_assignments
         }
         pub fn set_version_assignments(&mut self, field: Vec<super::VersionAssignment>) {
             self.version_assignments = field;
@@ -618,7 +643,7 @@ mod _accessor_impls {
             self.epoch = Some(field.into().into());
         }
         pub fn with_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch(field);
+            self.set_epoch(field.into());
             self
         }
         pub fn protocol_version_opt_mut(&mut self) -> Option<&mut u64> {
@@ -634,7 +659,7 @@ mod _accessor_impls {
             self.protocol_version = Some(field.into().into());
         }
         pub fn with_protocol_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_protocol_version(field);
+            self.set_protocol_version(field.into());
             self
         }
         pub fn storage_charge_opt_mut(&mut self) -> Option<&mut u64> {
@@ -650,7 +675,7 @@ mod _accessor_impls {
             self.storage_charge = Some(field.into().into());
         }
         pub fn with_storage_charge<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_storage_charge(field);
+            self.set_storage_charge(field.into());
             self
         }
         pub fn computation_charge_opt_mut(&mut self) -> Option<&mut u64> {
@@ -666,7 +691,7 @@ mod _accessor_impls {
             self.computation_charge = Some(field.into().into());
         }
         pub fn with_computation_charge<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_computation_charge(field);
+            self.set_computation_charge(field.into());
             self
         }
         pub fn storage_rebate_opt_mut(&mut self) -> Option<&mut u64> {
@@ -682,7 +707,7 @@ mod _accessor_impls {
             self.storage_rebate = Some(field.into().into());
         }
         pub fn with_storage_rebate<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_storage_rebate(field);
+            self.set_storage_rebate(field.into());
             self
         }
         pub fn non_refundable_storage_fee_opt_mut(&mut self) -> Option<&mut u64> {
@@ -701,7 +726,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_non_refundable_storage_fee(field);
+            self.set_non_refundable_storage_fee(field.into());
             self
         }
         pub fn epoch_start_timestamp_opt_mut(
@@ -725,11 +750,14 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_epoch_start_timestamp(field);
+            self.set_epoch_start_timestamp(field.into());
             self
         }
         pub fn system_packages(&self) -> &[super::SystemPackage] {
             &self.system_packages
+        }
+        pub fn system_packages_mut(&mut self) -> &mut Vec<super::SystemPackage> {
+            &mut self.system_packages
         }
         pub fn set_system_packages(&mut self, field: Vec<super::SystemPackage>) {
             self.system_packages = field;
@@ -773,7 +801,14 @@ mod _accessor_impls {
             self.object_id = Some(field.into().into());
         }
         pub fn with_object_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_object_id(field);
+            self.set_object_id(field.into());
+            self
+        }
+        pub fn with_input_state<T: Into<super::changed_object::InputObjectState>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_input_state(field.into());
             self
         }
         pub fn input_version_opt_mut(&mut self) -> Option<&mut u64> {
@@ -789,7 +824,7 @@ mod _accessor_impls {
             self.input_version = Some(field.into().into());
         }
         pub fn with_input_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_input_version(field);
+            self.set_input_version(field.into());
             self
         }
         pub fn input_digest_opt_mut(&mut self) -> Option<&mut String> {
@@ -805,7 +840,7 @@ mod _accessor_impls {
             self.input_digest = Some(field.into().into());
         }
         pub fn with_input_digest<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_input_digest(field);
+            self.set_input_digest(field.into());
             self
         }
         pub fn input_owner(&self) -> &super::Owner {
@@ -827,7 +862,14 @@ mod _accessor_impls {
             self.input_owner = Some(field.into().into());
         }
         pub fn with_input_owner<T: Into<super::Owner>>(mut self, field: T) -> Self {
-            self.set_input_owner(field);
+            self.set_input_owner(field.into());
+            self
+        }
+        pub fn with_output_state<T: Into<super::changed_object::OutputObjectState>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_output_state(field.into());
             self
         }
         pub fn output_version_opt_mut(&mut self) -> Option<&mut u64> {
@@ -843,7 +885,7 @@ mod _accessor_impls {
             self.output_version = Some(field.into().into());
         }
         pub fn with_output_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_output_version(field);
+            self.set_output_version(field.into());
             self
         }
         pub fn output_digest_opt_mut(&mut self) -> Option<&mut String> {
@@ -859,7 +901,7 @@ mod _accessor_impls {
             self.output_digest = Some(field.into().into());
         }
         pub fn with_output_digest<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_output_digest(field);
+            self.set_output_digest(field.into());
             self
         }
         pub fn output_owner(&self) -> &super::Owner {
@@ -881,7 +923,14 @@ mod _accessor_impls {
             self.output_owner = Some(field.into().into());
         }
         pub fn with_output_owner<T: Into<super::Owner>>(mut self, field: T) -> Self {
-            self.set_output_owner(field);
+            self.set_output_owner(field.into());
+            self
+        }
+        pub fn with_id_operation<T: Into<super::changed_object::IdOperation>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_id_operation(field.into());
             self
         }
         pub fn object_type_opt_mut(&mut self) -> Option<&mut String> {
@@ -897,7 +946,7 @@ mod _accessor_impls {
             self.object_type = Some(field.into().into());
         }
         pub fn with_object_type<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_object_type(field);
+            self.set_object_type(field.into());
             self
         }
     }
@@ -930,7 +979,7 @@ mod _accessor_impls {
             self.sequence_number = Some(field.into().into());
         }
         pub fn with_sequence_number<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_sequence_number(field);
+            self.set_sequence_number(field.into());
             self
         }
         pub fn digest_opt_mut(&mut self) -> Option<&mut String> {
@@ -946,7 +995,7 @@ mod _accessor_impls {
             self.digest = Some(field.into().into());
         }
         pub fn with_digest<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_digest(field);
+            self.set_digest(field.into());
             self
         }
         pub fn summary(&self) -> &super::CheckpointSummary {
@@ -971,7 +1020,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_summary(field);
+            self.set_summary(field.into());
             self
         }
         pub fn signature(&self) -> &super::ValidatorAggregatedSignature {
@@ -1003,7 +1052,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_signature(field);
+            self.set_signature(field.into());
             self
         }
         pub fn contents(&self) -> &super::CheckpointContents {
@@ -1028,11 +1077,14 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_contents(field);
+            self.set_contents(field.into());
             self
         }
         pub fn transactions(&self) -> &[super::ExecutedTransaction] {
             &self.transactions
+        }
+        pub fn transactions_mut(&mut self) -> &mut Vec<super::ExecutedTransaction> {
+            &mut self.transactions
         }
         pub fn set_transactions(&mut self, field: Vec<super::ExecutedTransaction>) {
             self.transactions = field;
@@ -1054,6 +1106,12 @@ mod _accessor_impls {
             static DEFAULT: super::CheckpointCommitment = super::CheckpointCommitment::const_default();
             &DEFAULT
         }
+        pub fn with_kind<
+            T: Into<super::checkpoint_commitment::CheckpointCommitmentKind>,
+        >(mut self, field: T) -> Self {
+            self.set_kind(field.into());
+            self
+        }
         pub fn digest_opt_mut(&mut self) -> Option<&mut String> {
             self.digest.as_mut().map(|field| field as _)
         }
@@ -1067,7 +1125,7 @@ mod _accessor_impls {
             self.digest = Some(field.into().into());
         }
         pub fn with_digest<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_digest(field);
+            self.set_digest(field.into());
             self
         }
     }
@@ -1104,7 +1162,7 @@ mod _accessor_impls {
             self.bcs = Some(field.into().into());
         }
         pub fn with_bcs<T: Into<super::Bcs>>(mut self, field: T) -> Self {
-            self.set_bcs(field);
+            self.set_bcs(field.into());
             self
         }
         pub fn digest_opt_mut(&mut self) -> Option<&mut String> {
@@ -1120,7 +1178,7 @@ mod _accessor_impls {
             self.digest = Some(field.into().into());
         }
         pub fn with_digest<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_digest(field);
+            self.set_digest(field.into());
             self
         }
         pub fn version_opt_mut(&mut self) -> Option<&mut i32> {
@@ -1136,11 +1194,16 @@ mod _accessor_impls {
             self.version = Some(field.into().into());
         }
         pub fn with_version<T: Into<i32>>(mut self, field: T) -> Self {
-            self.set_version(field);
+            self.set_version(field.into());
             self
         }
         pub fn transactions(&self) -> &[super::CheckpointedTransactionInfo] {
             &self.transactions
+        }
+        pub fn transactions_mut(
+            &mut self,
+        ) -> &mut Vec<super::CheckpointedTransactionInfo> {
+            &mut self.transactions
         }
         pub fn set_transactions(
             &mut self,
@@ -1197,7 +1260,7 @@ mod _accessor_impls {
             self.bcs = Some(field.into().into());
         }
         pub fn with_bcs<T: Into<super::Bcs>>(mut self, field: T) -> Self {
-            self.set_bcs(field);
+            self.set_bcs(field.into());
             self
         }
         pub fn digest_opt_mut(&mut self) -> Option<&mut String> {
@@ -1213,7 +1276,7 @@ mod _accessor_impls {
             self.digest = Some(field.into().into());
         }
         pub fn with_digest<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_digest(field);
+            self.set_digest(field.into());
             self
         }
         pub fn epoch_opt_mut(&mut self) -> Option<&mut u64> {
@@ -1229,7 +1292,7 @@ mod _accessor_impls {
             self.epoch = Some(field.into().into());
         }
         pub fn with_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch(field);
+            self.set_epoch(field.into());
             self
         }
         pub fn sequence_number_opt_mut(&mut self) -> Option<&mut u64> {
@@ -1245,7 +1308,7 @@ mod _accessor_impls {
             self.sequence_number = Some(field.into().into());
         }
         pub fn with_sequence_number<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_sequence_number(field);
+            self.set_sequence_number(field.into());
             self
         }
         pub fn total_network_transactions_opt_mut(&mut self) -> Option<&mut u64> {
@@ -1264,7 +1327,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_total_network_transactions(field);
+            self.set_total_network_transactions(field.into());
             self
         }
         pub fn content_digest_opt_mut(&mut self) -> Option<&mut String> {
@@ -1280,7 +1343,7 @@ mod _accessor_impls {
             self.content_digest = Some(field.into().into());
         }
         pub fn with_content_digest<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_content_digest(field);
+            self.set_content_digest(field.into());
             self
         }
         pub fn previous_digest_opt_mut(&mut self) -> Option<&mut String> {
@@ -1296,7 +1359,7 @@ mod _accessor_impls {
             self.previous_digest = Some(field.into().into());
         }
         pub fn with_previous_digest<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_previous_digest(field);
+            self.set_previous_digest(field.into());
             self
         }
         pub fn epoch_rolling_gas_cost_summary(&self) -> &super::GasCostSummary {
@@ -1330,7 +1393,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_epoch_rolling_gas_cost_summary(field);
+            self.set_epoch_rolling_gas_cost_summary(field.into());
             self
         }
         pub fn timestamp_opt_mut(&mut self) -> Option<&mut ::prost_types::Timestamp> {
@@ -1349,11 +1412,14 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_timestamp(field);
+            self.set_timestamp(field.into());
             self
         }
         pub fn commitments(&self) -> &[super::CheckpointCommitment] {
             &self.commitments
+        }
+        pub fn commitments_mut(&mut self) -> &mut Vec<super::CheckpointCommitment> {
+            &mut self.commitments
         }
         pub fn set_commitments(&mut self, field: Vec<super::CheckpointCommitment>) {
             self.commitments = field;
@@ -1392,7 +1458,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_end_of_epoch_data(field);
+            self.set_end_of_epoch_data(field.into());
             self
         }
         pub fn version_specific_data_opt(&self) -> Option<&[u8]> {
@@ -1408,7 +1474,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_version_specific_data(field);
+            self.set_version_specific_data(field.into());
             self
         }
     }
@@ -1438,7 +1504,7 @@ mod _accessor_impls {
             self.transaction = Some(field.into().into());
         }
         pub fn with_transaction<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_transaction(field);
+            self.set_transaction(field.into());
             self
         }
         pub fn effects_opt_mut(&mut self) -> Option<&mut String> {
@@ -1454,11 +1520,14 @@ mod _accessor_impls {
             self.effects = Some(field.into().into());
         }
         pub fn with_effects<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_effects(field);
+            self.set_effects(field.into());
             self
         }
         pub fn signatures(&self) -> &[super::UserSignature] {
             &self.signatures
+        }
+        pub fn signatures_mut(&mut self) -> &mut Vec<super::UserSignature> {
+            &mut self.signatures
         }
         pub fn set_signatures(&mut self, field: Vec<super::UserSignature>) {
             self.signatures = field;
@@ -1494,7 +1563,7 @@ mod _accessor_impls {
             self.e0 = Some(field.into().into());
         }
         pub fn with_e0<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_e0(field);
+            self.set_e0(field.into());
             self
         }
         pub fn e1_opt_mut(&mut self) -> Option<&mut String> {
@@ -1510,7 +1579,7 @@ mod _accessor_impls {
             self.e1 = Some(field.into().into());
         }
         pub fn with_e1<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_e1(field);
+            self.set_e1(field.into());
             self
         }
         pub fn e2_opt_mut(&mut self) -> Option<&mut String> {
@@ -1526,7 +1595,7 @@ mod _accessor_impls {
             self.e2 = Some(field.into().into());
         }
         pub fn with_e2<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_e2(field);
+            self.set_e2(field.into());
             self
         }
     }
@@ -1559,7 +1628,7 @@ mod _accessor_impls {
             self.e00 = Some(field.into().into());
         }
         pub fn with_e00<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_e00(field);
+            self.set_e00(field.into());
             self
         }
         pub fn e01_opt_mut(&mut self) -> Option<&mut String> {
@@ -1575,7 +1644,7 @@ mod _accessor_impls {
             self.e01 = Some(field.into().into());
         }
         pub fn with_e01<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_e01(field);
+            self.set_e01(field.into());
             self
         }
         pub fn e10_opt_mut(&mut self) -> Option<&mut String> {
@@ -1591,7 +1660,7 @@ mod _accessor_impls {
             self.e10 = Some(field.into().into());
         }
         pub fn with_e10<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_e10(field);
+            self.set_e10(field.into());
             self
         }
         pub fn e11_opt_mut(&mut self) -> Option<&mut String> {
@@ -1607,7 +1676,7 @@ mod _accessor_impls {
             self.e11 = Some(field.into().into());
         }
         pub fn with_e11<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_e11(field);
+            self.set_e11(field.into());
             self
         }
         pub fn e20_opt_mut(&mut self) -> Option<&mut String> {
@@ -1623,7 +1692,7 @@ mod _accessor_impls {
             self.e20 = Some(field.into().into());
         }
         pub fn with_e20<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_e20(field);
+            self.set_e20(field.into());
             self
         }
         pub fn e21_opt_mut(&mut self) -> Option<&mut String> {
@@ -1639,7 +1708,7 @@ mod _accessor_impls {
             self.e21 = Some(field.into().into());
         }
         pub fn with_e21<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_e21(field);
+            self.set_e21(field.into());
             self
         }
     }
@@ -1671,7 +1740,7 @@ mod _accessor_impls {
             self.error_code = Some(field.into().into());
         }
         pub fn with_error_code<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_error_code(field);
+            self.set_error_code(field.into());
             self
         }
         pub fn line_number_opt_mut(&mut self) -> Option<&mut u64> {
@@ -1687,7 +1756,7 @@ mod _accessor_impls {
             self.line_number = Some(field.into().into());
         }
         pub fn with_line_number<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_line_number(field);
+            self.set_line_number(field.into());
             self
         }
         pub fn constant_name_opt_mut(&mut self) -> Option<&mut String> {
@@ -1703,7 +1772,7 @@ mod _accessor_impls {
             self.constant_name = Some(field.into().into());
         }
         pub fn with_constant_name<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_constant_name(field);
+            self.set_constant_name(field.into());
             self
         }
         pub fn constant_type_opt_mut(&mut self) -> Option<&mut String> {
@@ -1719,7 +1788,7 @@ mod _accessor_impls {
             self.constant_type = Some(field.into().into());
         }
         pub fn with_constant_type<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_constant_type(field);
+            self.set_constant_type(field.into());
             self
         }
         pub fn rendered(&self) -> &str {
@@ -1755,7 +1824,7 @@ mod _accessor_impls {
             self.value = Some(super::clever_error::Value::Rendered(field.into().into()));
         }
         pub fn with_rendered<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_rendered(field);
+            self.set_rendered(field.into());
             self
         }
         pub fn raw(&self) -> &[u8] {
@@ -1791,7 +1860,7 @@ mod _accessor_impls {
             self.value = Some(super::clever_error::Value::Raw(field.into().into()));
         }
         pub fn with_raw<T: Into<::prost::bytes::Bytes>>(mut self, field: T) -> Self {
-            self.set_raw(field);
+            self.set_raw(field.into());
             self
         }
     }
@@ -1820,7 +1889,7 @@ mod _accessor_impls {
             self.address = Some(field.into().into());
         }
         pub fn with_address<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_address(field);
+            self.set_address(field.into());
             self
         }
         pub fn coin_type_opt_mut(&mut self) -> Option<&mut String> {
@@ -1836,7 +1905,7 @@ mod _accessor_impls {
             self.coin_type = Some(field.into().into());
         }
         pub fn with_coin_type<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_coin_type(field);
+            self.set_coin_type(field.into());
             self
         }
     }
@@ -1870,7 +1939,7 @@ mod _accessor_impls {
             self.id = Some(field.into().into());
         }
         pub fn with_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_id(field);
+            self.set_id(field.into());
             self
         }
         pub fn decimals_opt_mut(&mut self) -> Option<&mut u32> {
@@ -1886,7 +1955,7 @@ mod _accessor_impls {
             self.decimals = Some(field.into().into());
         }
         pub fn with_decimals<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_decimals(field);
+            self.set_decimals(field.into());
             self
         }
         pub fn name_opt_mut(&mut self) -> Option<&mut String> {
@@ -1902,7 +1971,7 @@ mod _accessor_impls {
             self.name = Some(field.into().into());
         }
         pub fn with_name<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_name(field);
+            self.set_name(field.into());
             self
         }
         pub fn symbol_opt_mut(&mut self) -> Option<&mut String> {
@@ -1918,7 +1987,7 @@ mod _accessor_impls {
             self.symbol = Some(field.into().into());
         }
         pub fn with_symbol<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_symbol(field);
+            self.set_symbol(field.into());
             self
         }
         pub fn description_opt_mut(&mut self) -> Option<&mut String> {
@@ -1934,7 +2003,7 @@ mod _accessor_impls {
             self.description = Some(field.into().into());
         }
         pub fn with_description<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_description(field);
+            self.set_description(field.into());
             self
         }
         pub fn icon_url_opt_mut(&mut self) -> Option<&mut String> {
@@ -1950,7 +2019,7 @@ mod _accessor_impls {
             self.icon_url = Some(field.into().into());
         }
         pub fn with_icon_url<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_icon_url(field);
+            self.set_icon_url(field.into());
             self
         }
         pub fn metadata_cap_id_opt_mut(&mut self) -> Option<&mut String> {
@@ -1966,7 +2035,7 @@ mod _accessor_impls {
             self.metadata_cap_id = Some(field.into().into());
         }
         pub fn with_metadata_cap_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_metadata_cap_id(field);
+            self.set_metadata_cap_id(field.into());
             self
         }
     }
@@ -1996,7 +2065,7 @@ mod _accessor_impls {
             self.id = Some(field.into().into());
         }
         pub fn with_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_id(field);
+            self.set_id(field.into());
             self
         }
         pub fn total_supply_opt_mut(&mut self) -> Option<&mut u64> {
@@ -2012,7 +2081,14 @@ mod _accessor_impls {
             self.total_supply = Some(field.into().into());
         }
         pub fn with_total_supply<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_total_supply(field);
+            self.set_total_supply(field.into());
+            self
+        }
+        pub fn with_supply_state<T: Into<super::coin_treasury::SupplyState>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_supply_state(field.into());
             self
         }
     }
@@ -2058,7 +2134,7 @@ mod _accessor_impls {
             self.command = Some(super::command::Command::MoveCall(field.into().into()));
         }
         pub fn with_move_call<T: Into<super::MoveCall>>(mut self, field: T) -> Self {
-            self.set_move_call(field);
+            self.set_move_call(field.into());
             self
         }
         pub fn transfer_objects(&self) -> &super::TransferObjects {
@@ -2110,7 +2186,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_transfer_objects(field);
+            self.set_transfer_objects(field.into());
             self
         }
         pub fn split_coins(&self) -> &super::SplitCoins {
@@ -2148,7 +2224,7 @@ mod _accessor_impls {
             );
         }
         pub fn with_split_coins<T: Into<super::SplitCoins>>(mut self, field: T) -> Self {
-            self.set_split_coins(field);
+            self.set_split_coins(field.into());
             self
         }
         pub fn merge_coins(&self) -> &super::MergeCoins {
@@ -2186,7 +2262,7 @@ mod _accessor_impls {
             );
         }
         pub fn with_merge_coins<T: Into<super::MergeCoins>>(mut self, field: T) -> Self {
-            self.set_merge_coins(field);
+            self.set_merge_coins(field.into());
             self
         }
         pub fn publish(&self) -> &super::Publish {
@@ -2222,7 +2298,7 @@ mod _accessor_impls {
             self.command = Some(super::command::Command::Publish(field.into().into()));
         }
         pub fn with_publish<T: Into<super::Publish>>(mut self, field: T) -> Self {
-            self.set_publish(field);
+            self.set_publish(field.into());
             self
         }
         pub fn make_move_vector(&self) -> &super::MakeMoveVector {
@@ -2272,7 +2348,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_make_move_vector(field);
+            self.set_make_move_vector(field.into());
             self
         }
         pub fn upgrade(&self) -> &super::Upgrade {
@@ -2308,7 +2384,7 @@ mod _accessor_impls {
             self.command = Some(super::command::Command::Upgrade(field.into().into()));
         }
         pub fn with_upgrade<T: Into<super::Upgrade>>(mut self, field: T) -> Self {
-            self.set_upgrade(field);
+            self.set_upgrade(field.into());
             self
         }
     }
@@ -2338,7 +2414,13 @@ mod _accessor_impls {
             self.argument = Some(field.into().into());
         }
         pub fn with_argument<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_argument(field);
+            self.set_argument(field.into());
+            self
+        }
+        pub fn with_kind<
+            T: Into<super::command_argument_error::CommandArgumentErrorKind>,
+        >(mut self, field: T) -> Self {
+            self.set_kind(field.into());
             self
         }
         pub fn index_error(&self) -> &super::IndexError {
@@ -2360,7 +2442,7 @@ mod _accessor_impls {
             self.index_error = Some(field.into().into());
         }
         pub fn with_index_error<T: Into<super::IndexError>>(mut self, field: T) -> Self {
-            self.set_index_error(field);
+            self.set_index_error(field.into());
             self
         }
     }
@@ -2396,7 +2478,7 @@ mod _accessor_impls {
             self.argument = Some(field.into().into());
         }
         pub fn with_argument<T: Into<super::Argument>>(mut self, field: T) -> Self {
-            self.set_argument(field);
+            self.set_argument(field.into());
             self
         }
         pub fn value(&self) -> &super::Bcs {
@@ -2418,7 +2500,7 @@ mod _accessor_impls {
             self.value = Some(field.into().into());
         }
         pub fn with_value<T: Into<super::Bcs>>(mut self, field: T) -> Self {
-            self.set_value(field);
+            self.set_value(field.into());
             self
         }
         pub fn json_opt_mut(&mut self) -> Option<&mut ::prost_types::Value> {
@@ -2434,7 +2516,7 @@ mod _accessor_impls {
             self.json = Some(field.into().into());
         }
         pub fn with_json<T: Into<::prost_types::Value>>(mut self, field: T) -> Self {
-            self.set_json(field);
+            self.set_json(field.into());
             self
         }
     }
@@ -2453,6 +2535,9 @@ mod _accessor_impls {
         pub fn return_values(&self) -> &[super::CommandOutput] {
             &self.return_values
         }
+        pub fn return_values_mut(&mut self) -> &mut Vec<super::CommandOutput> {
+            &mut self.return_values
+        }
         pub fn set_return_values(&mut self, field: Vec<super::CommandOutput>) {
             self.return_values = field;
         }
@@ -2462,6 +2547,9 @@ mod _accessor_impls {
         }
         pub fn mutated_by_ref(&self) -> &[super::CommandOutput] {
             &self.mutated_by_ref
+        }
+        pub fn mutated_by_ref_mut(&mut self) -> &mut Vec<super::CommandOutput> {
+            &mut self.mutated_by_ref
         }
         pub fn set_mutated_by_ref(&mut self, field: Vec<super::CommandOutput>) {
             self.mutated_by_ref = field;
@@ -2482,6 +2570,9 @@ mod _accessor_impls {
         }
         pub fn objects(&self) -> &[String] {
             &self.objects
+        }
+        pub fn objects_mut(&mut self) -> &mut Vec<String> {
+            &mut self.objects
         }
         pub fn set_objects(&mut self, field: Vec<String>) {
             self.objects = field;
@@ -2521,7 +2612,7 @@ mod _accessor_impls {
             self.epoch = Some(field.into().into());
         }
         pub fn with_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch(field);
+            self.set_epoch(field.into());
             self
         }
         pub fn round_opt_mut(&mut self) -> Option<&mut u64> {
@@ -2537,7 +2628,7 @@ mod _accessor_impls {
             self.round = Some(field.into().into());
         }
         pub fn with_round<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_round(field);
+            self.set_round(field.into());
             self
         }
         pub fn commit_timestamp_opt_mut(
@@ -2561,7 +2652,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_commit_timestamp(field);
+            self.set_commit_timestamp(field.into());
             self
         }
         pub fn consensus_commit_digest_opt_mut(&mut self) -> Option<&mut String> {
@@ -2580,7 +2671,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_consensus_commit_digest(field);
+            self.set_consensus_commit_digest(field.into());
             self
         }
         pub fn sub_dag_index_opt_mut(&mut self) -> Option<&mut u64> {
@@ -2596,7 +2687,7 @@ mod _accessor_impls {
             self.sub_dag_index = Some(field.into().into());
         }
         pub fn with_sub_dag_index<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_sub_dag_index(field);
+            self.set_sub_dag_index(field.into());
             self
         }
         pub fn consensus_determined_version_assignments(
@@ -2636,7 +2727,7 @@ mod _accessor_impls {
         pub fn with_consensus_determined_version_assignments<
             T: Into<super::ConsensusDeterminedVersionAssignments>,
         >(mut self, field: T) -> Self {
-            self.set_consensus_determined_version_assignments(field);
+            self.set_consensus_determined_version_assignments(field.into());
             self
         }
         pub fn additional_state_digest_opt_mut(&mut self) -> Option<&mut String> {
@@ -2655,7 +2746,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_additional_state_digest(field);
+            self.set_additional_state_digest(field.into());
             self
         }
     }
@@ -2684,11 +2775,16 @@ mod _accessor_impls {
             self.version = Some(field.into().into());
         }
         pub fn with_version<T: Into<i32>>(mut self, field: T) -> Self {
-            self.set_version(field);
+            self.set_version(field.into());
             self
         }
         pub fn canceled_transactions(&self) -> &[super::CanceledTransaction] {
             &self.canceled_transactions
+        }
+        pub fn canceled_transactions_mut(
+            &mut self,
+        ) -> &mut Vec<super::CanceledTransaction> {
+            &mut self.canceled_transactions
         }
         pub fn set_canceled_transactions(
             &mut self,
@@ -2736,7 +2832,7 @@ mod _accessor_impls {
             self.type_name = Some(field.into().into());
         }
         pub fn with_type_name<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_type_name(field);
+            self.set_type_name(field.into());
             self
         }
         pub fn defining_id_opt_mut(&mut self) -> Option<&mut String> {
@@ -2752,7 +2848,7 @@ mod _accessor_impls {
             self.defining_id = Some(field.into().into());
         }
         pub fn with_defining_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_defining_id(field);
+            self.set_defining_id(field.into());
             self
         }
         pub fn module_opt_mut(&mut self) -> Option<&mut String> {
@@ -2768,7 +2864,7 @@ mod _accessor_impls {
             self.module = Some(field.into().into());
         }
         pub fn with_module<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_module(field);
+            self.set_module(field.into());
             self
         }
         pub fn name_opt_mut(&mut self) -> Option<&mut String> {
@@ -2784,11 +2880,14 @@ mod _accessor_impls {
             self.name = Some(field.into().into());
         }
         pub fn with_name<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_name(field);
+            self.set_name(field.into());
             self
         }
         pub fn type_parameters(&self) -> &[super::TypeParameter] {
             &self.type_parameters
+        }
+        pub fn type_parameters_mut(&mut self) -> &mut Vec<super::TypeParameter> {
+            &mut self.type_parameters
         }
         pub fn set_type_parameters(&mut self, field: Vec<super::TypeParameter>) {
             self.type_parameters = field;
@@ -2797,8 +2896,18 @@ mod _accessor_impls {
             self.set_type_parameters(field);
             self
         }
+        pub fn with_kind<T: Into<super::datatype_descriptor::DatatypeKind>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_kind(field.into());
+            self
+        }
         pub fn fields(&self) -> &[super::FieldDescriptor] {
             &self.fields
+        }
+        pub fn fields_mut(&mut self) -> &mut Vec<super::FieldDescriptor> {
+            &mut self.fields
         }
         pub fn set_fields(&mut self, field: Vec<super::FieldDescriptor>) {
             self.fields = field;
@@ -2809,6 +2918,9 @@ mod _accessor_impls {
         }
         pub fn variants(&self) -> &[super::VariantDescriptor] {
             &self.variants
+        }
+        pub fn variants_mut(&mut self) -> &mut Vec<super::VariantDescriptor> {
+            &mut self.variants
         }
         pub fn set_variants(&mut self, field: Vec<super::VariantDescriptor>) {
             self.variants = field;
@@ -2836,6 +2948,13 @@ mod _accessor_impls {
             static DEFAULT: super::DynamicField = super::DynamicField::const_default();
             &DEFAULT
         }
+        pub fn with_kind<T: Into<super::dynamic_field::DynamicFieldKind>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_kind(field.into());
+            self
+        }
         pub fn parent_opt_mut(&mut self) -> Option<&mut String> {
             self.parent.as_mut().map(|field| field as _)
         }
@@ -2849,7 +2968,7 @@ mod _accessor_impls {
             self.parent = Some(field.into().into());
         }
         pub fn with_parent<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_parent(field);
+            self.set_parent(field.into());
             self
         }
         pub fn field_id_opt_mut(&mut self) -> Option<&mut String> {
@@ -2865,7 +2984,7 @@ mod _accessor_impls {
             self.field_id = Some(field.into().into());
         }
         pub fn with_field_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_field_id(field);
+            self.set_field_id(field.into());
             self
         }
         pub fn name_type_opt_mut(&mut self) -> Option<&mut String> {
@@ -2881,7 +3000,7 @@ mod _accessor_impls {
             self.name_type = Some(field.into().into());
         }
         pub fn with_name_type<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_name_type(field);
+            self.set_name_type(field.into());
             self
         }
         pub fn name_value_opt(&self) -> Option<&[u8]> {
@@ -2894,7 +3013,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_name_value(field);
+            self.set_name_value(field.into());
             self
         }
         pub fn value_type_opt_mut(&mut self) -> Option<&mut String> {
@@ -2910,7 +3029,7 @@ mod _accessor_impls {
             self.value_type = Some(field.into().into());
         }
         pub fn with_value_type<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_value_type(field);
+            self.set_value_type(field.into());
             self
         }
         pub fn dynamic_object_id_opt_mut(&mut self) -> Option<&mut String> {
@@ -2926,7 +3045,7 @@ mod _accessor_impls {
             self.dynamic_object_id = Some(field.into().into());
         }
         pub fn with_dynamic_object_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_dynamic_object_id(field);
+            self.set_dynamic_object_id(field.into());
             self
         }
         pub fn object(&self) -> &super::Object {
@@ -2948,7 +3067,7 @@ mod _accessor_impls {
             self.object = Some(field.into().into());
         }
         pub fn with_object<T: Into<super::Object>>(mut self, field: T) -> Self {
-            self.set_object(field);
+            self.set_object(field.into());
             self
         }
     }
@@ -2967,6 +3086,11 @@ mod _accessor_impls {
         }
         pub fn next_epoch_committee(&self) -> &[super::ValidatorCommitteeMember] {
             &self.next_epoch_committee
+        }
+        pub fn next_epoch_committee_mut(
+            &mut self,
+        ) -> &mut Vec<super::ValidatorCommitteeMember> {
+            &mut self.next_epoch_committee
         }
         pub fn set_next_epoch_committee(
             &mut self,
@@ -2997,11 +3121,16 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_next_epoch_protocol_version(field);
+            self.set_next_epoch_protocol_version(field.into());
             self
         }
         pub fn epoch_commitments(&self) -> &[super::CheckpointCommitment] {
             &self.epoch_commitments
+        }
+        pub fn epoch_commitments_mut(
+            &mut self,
+        ) -> &mut Vec<super::CheckpointCommitment> {
+            &mut self.epoch_commitments
         }
         pub fn set_epoch_commitments(
             &mut self,
@@ -3028,6 +3157,11 @@ mod _accessor_impls {
         }
         pub fn transactions(&self) -> &[super::EndOfEpochTransactionKind] {
             &self.transactions
+        }
+        pub fn transactions_mut(
+            &mut self,
+        ) -> &mut Vec<super::EndOfEpochTransactionKind> {
+            &mut self.transactions
         }
         pub fn set_transactions(
             &mut self,
@@ -3103,7 +3237,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_change_epoch(field);
+            self.set_change_epoch(field.into());
             self
         }
         pub fn authenticator_state_expire(&self) -> &super::AuthenticatorStateExpire {
@@ -3172,7 +3306,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_authenticator_state_expire(field);
+            self.set_authenticator_state_expire(field.into());
             self
         }
         pub fn execution_time_observations(&self) -> &super::ExecutionTimeObservations {
@@ -3239,7 +3373,7 @@ mod _accessor_impls {
         pub fn with_execution_time_observations<
             T: Into<super::ExecutionTimeObservations>,
         >(mut self, field: T) -> Self {
-            self.set_execution_time_observations(field);
+            self.set_execution_time_observations(field.into());
             self
         }
         pub fn bridge_state_create(&self) -> &str {
@@ -3290,7 +3424,7 @@ mod _accessor_impls {
             );
         }
         pub fn with_bridge_state_create<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_bridge_state_create(field);
+            self.set_bridge_state_create(field.into());
             self
         }
         pub fn bridge_committee_init(&self) -> u64 {
@@ -3341,7 +3475,7 @@ mod _accessor_impls {
             );
         }
         pub fn with_bridge_committee_init<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_bridge_committee_init(field);
+            self.set_bridge_committee_init(field.into());
             self
         }
     }
@@ -3377,7 +3511,7 @@ mod _accessor_impls {
             self.epoch = Some(field.into().into());
         }
         pub fn with_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch(field);
+            self.set_epoch(field.into());
             self
         }
         pub fn committee(&self) -> &super::ValidatorCommittee {
@@ -3402,7 +3536,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_committee(field);
+            self.set_committee(field.into());
             self
         }
         pub fn system_state(&self) -> &super::SystemState {
@@ -3427,7 +3561,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_system_state(field);
+            self.set_system_state(field.into());
             self
         }
         pub fn first_checkpoint_opt_mut(&mut self) -> Option<&mut u64> {
@@ -3443,7 +3577,7 @@ mod _accessor_impls {
             self.first_checkpoint = Some(field.into().into());
         }
         pub fn with_first_checkpoint<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_first_checkpoint(field);
+            self.set_first_checkpoint(field.into());
             self
         }
         pub fn last_checkpoint_opt_mut(&mut self) -> Option<&mut u64> {
@@ -3459,7 +3593,7 @@ mod _accessor_impls {
             self.last_checkpoint = Some(field.into().into());
         }
         pub fn with_last_checkpoint<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_last_checkpoint(field);
+            self.set_last_checkpoint(field.into());
             self
         }
         pub fn start_opt_mut(&mut self) -> Option<&mut ::prost_types::Timestamp> {
@@ -3478,7 +3612,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_start(field);
+            self.set_start(field.into());
             self
         }
         pub fn end_opt_mut(&mut self) -> Option<&mut ::prost_types::Timestamp> {
@@ -3494,7 +3628,7 @@ mod _accessor_impls {
             self.end = Some(field.into().into());
         }
         pub fn with_end<T: Into<::prost_types::Timestamp>>(mut self, field: T) -> Self {
-            self.set_end(field);
+            self.set_end(field.into());
             self
         }
         pub fn reference_gas_price_opt_mut(&mut self) -> Option<&mut u64> {
@@ -3510,7 +3644,7 @@ mod _accessor_impls {
             self.reference_gas_price = Some(field.into().into());
         }
         pub fn with_reference_gas_price<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_reference_gas_price(field);
+            self.set_reference_gas_price(field.into());
             self
         }
         pub fn protocol_config(&self) -> &super::ProtocolConfig {
@@ -3535,7 +3669,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_protocol_config(field);
+            self.set_protocol_config(field.into());
             self
         }
     }
@@ -3568,7 +3702,7 @@ mod _accessor_impls {
             self.package_id = Some(field.into().into());
         }
         pub fn with_package_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_package_id(field);
+            self.set_package_id(field.into());
             self
         }
         pub fn module_opt_mut(&mut self) -> Option<&mut String> {
@@ -3584,7 +3718,7 @@ mod _accessor_impls {
             self.module = Some(field.into().into());
         }
         pub fn with_module<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_module(field);
+            self.set_module(field.into());
             self
         }
         pub fn sender_opt_mut(&mut self) -> Option<&mut String> {
@@ -3600,7 +3734,7 @@ mod _accessor_impls {
             self.sender = Some(field.into().into());
         }
         pub fn with_sender<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_sender(field);
+            self.set_sender(field.into());
             self
         }
         pub fn event_type_opt_mut(&mut self) -> Option<&mut String> {
@@ -3616,7 +3750,7 @@ mod _accessor_impls {
             self.event_type = Some(field.into().into());
         }
         pub fn with_event_type<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_event_type(field);
+            self.set_event_type(field.into());
             self
         }
         pub fn contents(&self) -> &super::Bcs {
@@ -3638,7 +3772,7 @@ mod _accessor_impls {
             self.contents = Some(field.into().into());
         }
         pub fn with_contents<T: Into<super::Bcs>>(mut self, field: T) -> Self {
-            self.set_contents(field);
+            self.set_contents(field.into());
             self
         }
         pub fn json_opt_mut(&mut self) -> Option<&mut ::prost_types::Value> {
@@ -3654,7 +3788,7 @@ mod _accessor_impls {
             self.json = Some(field.into().into());
         }
         pub fn with_json<T: Into<::prost_types::Value>>(mut self, field: T) -> Self {
-            self.set_json(field);
+            self.set_json(field.into());
             self
         }
     }
@@ -3693,11 +3827,14 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_transaction(field);
+            self.set_transaction(field.into());
             self
         }
         pub fn signatures(&self) -> &[super::UserSignature] {
             &self.signatures
+        }
+        pub fn signatures_mut(&mut self) -> &mut Vec<super::UserSignature> {
+            &mut self.signatures
         }
         pub fn set_signatures(&mut self, field: Vec<super::UserSignature>) {
             self.signatures = field;
@@ -3722,7 +3859,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_read_mask(field);
+            self.set_read_mask(field.into());
             self
         }
     }
@@ -3760,7 +3897,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_finality(field);
+            self.set_finality(field.into());
             self
         }
         pub fn transaction(&self) -> &super::ExecutedTransaction {
@@ -3790,7 +3927,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_transaction(field);
+            self.set_transaction(field.into());
             self
         }
     }
@@ -3827,7 +3964,7 @@ mod _accessor_impls {
             self.digest = Some(field.into().into());
         }
         pub fn with_digest<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_digest(field);
+            self.set_digest(field.into());
             self
         }
         pub fn transaction(&self) -> &super::Transaction {
@@ -3852,11 +3989,14 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_transaction(field);
+            self.set_transaction(field.into());
             self
         }
         pub fn signatures(&self) -> &[super::UserSignature] {
             &self.signatures
+        }
+        pub fn signatures_mut(&mut self) -> &mut Vec<super::UserSignature> {
+            &mut self.signatures
         }
         pub fn set_signatures(&mut self, field: Vec<super::UserSignature>) {
             self.signatures = field;
@@ -3887,7 +4027,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_effects(field);
+            self.set_effects(field.into());
             self
         }
         pub fn events(&self) -> &super::TransactionEvents {
@@ -3912,7 +4052,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_events(field);
+            self.set_events(field.into());
             self
         }
         pub fn checkpoint_opt_mut(&mut self) -> Option<&mut u64> {
@@ -3928,7 +4068,7 @@ mod _accessor_impls {
             self.checkpoint = Some(field.into().into());
         }
         pub fn with_checkpoint<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_checkpoint(field);
+            self.set_checkpoint(field.into());
             self
         }
         pub fn timestamp_opt_mut(&mut self) -> Option<&mut ::prost_types::Timestamp> {
@@ -3947,11 +4087,14 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_timestamp(field);
+            self.set_timestamp(field.into());
             self
         }
         pub fn balance_changes(&self) -> &[super::BalanceChange] {
             &self.balance_changes
+        }
+        pub fn balance_changes_mut(&mut self) -> &mut Vec<super::BalanceChange> {
+            &mut self.balance_changes
         }
         pub fn set_balance_changes(&mut self, field: Vec<super::BalanceChange>) {
             self.balance_changes = field;
@@ -3963,6 +4106,9 @@ mod _accessor_impls {
         pub fn input_objects(&self) -> &[super::Object] {
             &self.input_objects
         }
+        pub fn input_objects_mut(&mut self) -> &mut Vec<super::Object> {
+            &mut self.input_objects
+        }
         pub fn set_input_objects(&mut self, field: Vec<super::Object>) {
             self.input_objects = field;
         }
@@ -3972,6 +4118,9 @@ mod _accessor_impls {
         }
         pub fn output_objects(&self) -> &[super::Object] {
             &self.output_objects
+        }
+        pub fn output_objects_mut(&mut self) -> &mut Vec<super::Object> {
+            &mut self.output_objects
         }
         pub fn set_output_objects(&mut self, field: Vec<super::Object>) {
             self.output_objects = field;
@@ -4008,7 +4157,7 @@ mod _accessor_impls {
             self.description = Some(field.into().into());
         }
         pub fn with_description<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_description(field);
+            self.set_description(field.into());
             self
         }
         pub fn command_opt_mut(&mut self) -> Option<&mut u64> {
@@ -4024,7 +4173,14 @@ mod _accessor_impls {
             self.command = Some(field.into().into());
         }
         pub fn with_command<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_command(field);
+            self.set_command(field.into());
+            self
+        }
+        pub fn with_kind<T: Into<super::execution_error::ExecutionErrorKind>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_kind(field.into());
             self
         }
         pub fn abort(&self) -> &super::MoveAbort {
@@ -4070,7 +4226,7 @@ mod _accessor_impls {
             );
         }
         pub fn with_abort<T: Into<super::MoveAbort>>(mut self, field: T) -> Self {
-            self.set_abort(field);
+            self.set_abort(field.into());
             self
         }
         pub fn size_error(&self) -> &super::SizeError {
@@ -4116,7 +4272,7 @@ mod _accessor_impls {
             );
         }
         pub fn with_size_error<T: Into<super::SizeError>>(mut self, field: T) -> Self {
-            self.set_size_error(field);
+            self.set_size_error(field.into());
             self
         }
         pub fn command_argument_error(&self) -> &super::CommandArgumentError {
@@ -4179,7 +4335,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_command_argument_error(field);
+            self.set_command_argument_error(field.into());
             self
         }
         pub fn type_argument_error(&self) -> &super::TypeArgumentError {
@@ -4238,7 +4394,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_type_argument_error(field);
+            self.set_type_argument_error(field.into());
             self
         }
         pub fn package_upgrade_error(&self) -> &super::PackageUpgradeError {
@@ -4297,7 +4453,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_package_upgrade_error(field);
+            self.set_package_upgrade_error(field.into());
             self
         }
         pub fn index_error(&self) -> &super::IndexError {
@@ -4343,7 +4499,7 @@ mod _accessor_impls {
             );
         }
         pub fn with_index_error<T: Into<super::IndexError>>(mut self, field: T) -> Self {
-            self.set_index_error(field);
+            self.set_index_error(field.into());
             self
         }
         pub fn object_id(&self) -> &str {
@@ -4387,7 +4543,7 @@ mod _accessor_impls {
             );
         }
         pub fn with_object_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_object_id(field);
+            self.set_object_id(field.into());
             self
         }
         pub fn coin_deny_list_error(&self) -> &super::CoinDenyListError {
@@ -4446,7 +4602,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_coin_deny_list_error(field);
+            self.set_coin_deny_list_error(field.into());
             self
         }
         pub fn congested_objects(&self) -> &super::CongestedObjects {
@@ -4502,7 +4658,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_congested_objects(field);
+            self.set_congested_objects(field.into());
             self
         }
     }
@@ -4528,7 +4684,7 @@ mod _accessor_impls {
             self.success = Some(field.into().into());
         }
         pub fn with_success<T: Into<bool>>(mut self, field: T) -> Self {
-            self.set_success(field);
+            self.set_success(field.into());
             self
         }
         pub fn error(&self) -> &super::ExecutionError {
@@ -4550,7 +4706,7 @@ mod _accessor_impls {
             self.error = Some(field.into().into());
         }
         pub fn with_error<T: Into<super::ExecutionError>>(mut self, field: T) -> Self {
-            self.set_error(field);
+            self.set_error(field.into());
             self
         }
     }
@@ -4566,6 +4722,12 @@ mod _accessor_impls {
         pub fn default_instance() -> &'static Self {
             static DEFAULT: super::ExecutionTimeObservation = super::ExecutionTimeObservation::const_default();
             &DEFAULT
+        }
+        pub fn with_kind<
+            T: Into<super::execution_time_observation::ExecutionTimeObservationKind>,
+        >(mut self, field: T) -> Self {
+            self.set_kind(field.into());
+            self
         }
         pub fn move_entry_point(&self) -> &super::MoveCall {
             self.move_entry_point
@@ -4589,13 +4751,18 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_move_entry_point(field);
+            self.set_move_entry_point(field.into());
             self
         }
         pub fn validator_observations(
             &self,
         ) -> &[super::ValidatorExecutionTimeObservation] {
             &self.validator_observations
+        }
+        pub fn validator_observations_mut(
+            &mut self,
+        ) -> &mut Vec<super::ValidatorExecutionTimeObservation> {
+            &mut self.validator_observations
         }
         pub fn set_validator_observations(
             &mut self,
@@ -4636,11 +4803,14 @@ mod _accessor_impls {
             self.version = Some(field.into().into());
         }
         pub fn with_version<T: Into<i32>>(mut self, field: T) -> Self {
-            self.set_version(field);
+            self.set_version(field.into());
             self
         }
         pub fn observations(&self) -> &[super::ExecutionTimeObservation] {
             &self.observations
+        }
+        pub fn observations_mut(&mut self) -> &mut Vec<super::ExecutionTimeObservation> {
+            &mut self.observations
         }
         pub fn set_observations(&mut self, field: Vec<super::ExecutionTimeObservation>) {
             self.observations = field;
@@ -4679,7 +4849,7 @@ mod _accessor_impls {
             self.name = Some(field.into().into());
         }
         pub fn with_name<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_name(field);
+            self.set_name(field.into());
             self
         }
         pub fn position_opt_mut(&mut self) -> Option<&mut u32> {
@@ -4695,7 +4865,7 @@ mod _accessor_impls {
             self.position = Some(field.into().into());
         }
         pub fn with_position<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_position(field);
+            self.set_position(field.into());
             self
         }
         pub fn r#type(&self) -> &super::OpenSignatureBody {
@@ -4717,7 +4887,7 @@ mod _accessor_impls {
             self.r#type = Some(field.into().into());
         }
         pub fn with_type<T: Into<super::OpenSignatureBody>>(mut self, field: T) -> Self {
-            self.set_type(field);
+            self.set_type(field.into());
             self
         }
     }
@@ -4750,7 +4920,14 @@ mod _accessor_impls {
             self.name = Some(field.into().into());
         }
         pub fn with_name<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_name(field);
+            self.set_name(field.into());
+            self
+        }
+        pub fn with_visibility<T: Into<super::function_descriptor::Visibility>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_visibility(field.into());
             self
         }
         pub fn is_entry_opt_mut(&mut self) -> Option<&mut bool> {
@@ -4766,11 +4943,14 @@ mod _accessor_impls {
             self.is_entry = Some(field.into().into());
         }
         pub fn with_is_entry<T: Into<bool>>(mut self, field: T) -> Self {
-            self.set_is_entry(field);
+            self.set_is_entry(field.into());
             self
         }
         pub fn type_parameters(&self) -> &[super::TypeParameter] {
             &self.type_parameters
+        }
+        pub fn type_parameters_mut(&mut self) -> &mut Vec<super::TypeParameter> {
+            &mut self.type_parameters
         }
         pub fn set_type_parameters(&mut self, field: Vec<super::TypeParameter>) {
             self.type_parameters = field;
@@ -4782,6 +4962,9 @@ mod _accessor_impls {
         pub fn parameters(&self) -> &[super::OpenSignature] {
             &self.parameters
         }
+        pub fn parameters_mut(&mut self) -> &mut Vec<super::OpenSignature> {
+            &mut self.parameters
+        }
         pub fn set_parameters(&mut self, field: Vec<super::OpenSignature>) {
             self.parameters = field;
         }
@@ -4791,6 +4974,9 @@ mod _accessor_impls {
         }
         pub fn returns(&self) -> &[super::OpenSignature] {
             &self.returns
+        }
+        pub fn returns_mut(&mut self) -> &mut Vec<super::OpenSignature> {
+            &mut self.returns
         }
         pub fn set_returns(&mut self, field: Vec<super::OpenSignature>) {
             self.returns = field;
@@ -4827,7 +5013,7 @@ mod _accessor_impls {
             self.computation_cost = Some(field.into().into());
         }
         pub fn with_computation_cost<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_computation_cost(field);
+            self.set_computation_cost(field.into());
             self
         }
         pub fn storage_cost_opt_mut(&mut self) -> Option<&mut u64> {
@@ -4843,7 +5029,7 @@ mod _accessor_impls {
             self.storage_cost = Some(field.into().into());
         }
         pub fn with_storage_cost<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_storage_cost(field);
+            self.set_storage_cost(field.into());
             self
         }
         pub fn storage_rebate_opt_mut(&mut self) -> Option<&mut u64> {
@@ -4859,7 +5045,7 @@ mod _accessor_impls {
             self.storage_rebate = Some(field.into().into());
         }
         pub fn with_storage_rebate<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_storage_rebate(field);
+            self.set_storage_rebate(field.into());
             self
         }
         pub fn non_refundable_storage_fee_opt_mut(&mut self) -> Option<&mut u64> {
@@ -4878,7 +5064,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_non_refundable_storage_fee(field);
+            self.set_non_refundable_storage_fee(field.into());
             self
         }
     }
@@ -4898,6 +5084,9 @@ mod _accessor_impls {
         }
         pub fn objects(&self) -> &[super::ObjectReference] {
             &self.objects
+        }
+        pub fn objects_mut(&mut self) -> &mut Vec<super::ObjectReference> {
+            &mut self.objects
         }
         pub fn set_objects(&mut self, field: Vec<super::ObjectReference>) {
             self.objects = field;
@@ -4919,7 +5108,7 @@ mod _accessor_impls {
             self.owner = Some(field.into().into());
         }
         pub fn with_owner<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_owner(field);
+            self.set_owner(field.into());
             self
         }
         pub fn price_opt_mut(&mut self) -> Option<&mut u64> {
@@ -4935,7 +5124,7 @@ mod _accessor_impls {
             self.price = Some(field.into().into());
         }
         pub fn with_price<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_price(field);
+            self.set_price(field.into());
             self
         }
         pub fn budget_opt_mut(&mut self) -> Option<&mut u64> {
@@ -4951,7 +5140,7 @@ mod _accessor_impls {
             self.budget = Some(field.into().into());
         }
         pub fn with_budget<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_budget(field);
+            self.set_budget(field.into());
             self
         }
     }
@@ -4966,6 +5155,9 @@ mod _accessor_impls {
         }
         pub fn objects(&self) -> &[super::Object] {
             &self.objects
+        }
+        pub fn objects_mut(&mut self) -> &mut Vec<super::Object> {
+            &mut self.objects
         }
         pub fn set_objects(&mut self, field: Vec<super::Object>) {
             self.objects = field;
@@ -5000,7 +5192,7 @@ mod _accessor_impls {
             self.owner = Some(field.into().into());
         }
         pub fn with_owner<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_owner(field);
+            self.set_owner(field.into());
             self
         }
         pub fn coin_type_opt_mut(&mut self) -> Option<&mut String> {
@@ -5016,7 +5208,7 @@ mod _accessor_impls {
             self.coin_type = Some(field.into().into());
         }
         pub fn with_coin_type<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_coin_type(field);
+            self.set_coin_type(field.into());
             self
         }
     }
@@ -5048,7 +5240,7 @@ mod _accessor_impls {
             self.balance = Some(field.into().into());
         }
         pub fn with_balance<T: Into<super::Balance>>(mut self, field: T) -> Self {
-            self.set_balance(field);
+            self.set_balance(field.into());
             self
         }
     }
@@ -5080,7 +5272,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_read_mask(field);
+            self.set_read_mask(field.into());
             self
         }
         pub fn sequence_number(&self) -> u64 {
@@ -5131,7 +5323,7 @@ mod _accessor_impls {
             );
         }
         pub fn with_sequence_number<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_sequence_number(field);
+            self.set_sequence_number(field.into());
             self
         }
         pub fn digest(&self) -> &str {
@@ -5177,7 +5369,7 @@ mod _accessor_impls {
             );
         }
         pub fn with_digest<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_digest(field);
+            self.set_digest(field.into());
             self
         }
     }
@@ -5209,7 +5401,7 @@ mod _accessor_impls {
             self.checkpoint = Some(field.into().into());
         }
         pub fn with_checkpoint<T: Into<super::Checkpoint>>(mut self, field: T) -> Self {
-            self.set_checkpoint(field);
+            self.set_checkpoint(field.into());
             self
         }
     }
@@ -5235,7 +5427,7 @@ mod _accessor_impls {
             self.coin_type = Some(field.into().into());
         }
         pub fn with_coin_type<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_coin_type(field);
+            self.set_coin_type(field.into());
             self
         }
     }
@@ -5266,7 +5458,7 @@ mod _accessor_impls {
             self.coin_type = Some(field.into().into());
         }
         pub fn with_coin_type<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_coin_type(field);
+            self.set_coin_type(field.into());
             self
         }
         pub fn metadata(&self) -> &super::CoinMetadata {
@@ -5288,7 +5480,7 @@ mod _accessor_impls {
             self.metadata = Some(field.into().into());
         }
         pub fn with_metadata<T: Into<super::CoinMetadata>>(mut self, field: T) -> Self {
-            self.set_metadata(field);
+            self.set_metadata(field.into());
             self
         }
         pub fn treasury(&self) -> &super::CoinTreasury {
@@ -5310,7 +5502,7 @@ mod _accessor_impls {
             self.treasury = Some(field.into().into());
         }
         pub fn with_treasury<T: Into<super::CoinTreasury>>(mut self, field: T) -> Self {
-            self.set_treasury(field);
+            self.set_treasury(field.into());
             self
         }
         pub fn regulated_metadata(&self) -> &super::RegulatedCoinMetadata {
@@ -5340,7 +5532,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_regulated_metadata(field);
+            self.set_regulated_metadata(field.into());
             self
         }
     }
@@ -5370,7 +5562,7 @@ mod _accessor_impls {
             self.package_id = Some(field.into().into());
         }
         pub fn with_package_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_package_id(field);
+            self.set_package_id(field.into());
             self
         }
         pub fn module_name_opt_mut(&mut self) -> Option<&mut String> {
@@ -5386,7 +5578,7 @@ mod _accessor_impls {
             self.module_name = Some(field.into().into());
         }
         pub fn with_module_name<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_module_name(field);
+            self.set_module_name(field.into());
             self
         }
         pub fn name_opt_mut(&mut self) -> Option<&mut String> {
@@ -5402,7 +5594,7 @@ mod _accessor_impls {
             self.name = Some(field.into().into());
         }
         pub fn with_name<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_name(field);
+            self.set_name(field.into());
             self
         }
     }
@@ -5437,7 +5629,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_datatype(field);
+            self.set_datatype(field.into());
             self
         }
     }
@@ -5466,7 +5658,7 @@ mod _accessor_impls {
             self.epoch = Some(field.into().into());
         }
         pub fn with_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch(field);
+            self.set_epoch(field.into());
             self
         }
         pub fn read_mask_opt_mut(&mut self) -> Option<&mut ::prost_types::FieldMask> {
@@ -5485,7 +5677,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_read_mask(field);
+            self.set_read_mask(field.into());
             self
         }
     }
@@ -5517,7 +5709,7 @@ mod _accessor_impls {
             self.epoch = Some(field.into().into());
         }
         pub fn with_epoch<T: Into<super::Epoch>>(mut self, field: T) -> Self {
-            self.set_epoch(field);
+            self.set_epoch(field.into());
             self
         }
     }
@@ -5547,7 +5739,7 @@ mod _accessor_impls {
             self.package_id = Some(field.into().into());
         }
         pub fn with_package_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_package_id(field);
+            self.set_package_id(field.into());
             self
         }
         pub fn module_name_opt_mut(&mut self) -> Option<&mut String> {
@@ -5563,7 +5755,7 @@ mod _accessor_impls {
             self.module_name = Some(field.into().into());
         }
         pub fn with_module_name<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_module_name(field);
+            self.set_module_name(field.into());
             self
         }
         pub fn name_opt_mut(&mut self) -> Option<&mut String> {
@@ -5579,7 +5771,7 @@ mod _accessor_impls {
             self.name = Some(field.into().into());
         }
         pub fn with_name<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_name(field);
+            self.set_name(field.into());
             self
         }
     }
@@ -5614,7 +5806,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_function(field);
+            self.set_function(field.into());
             self
         }
     }
@@ -5644,7 +5836,7 @@ mod _accessor_impls {
             self.object_id = Some(field.into().into());
         }
         pub fn with_object_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_object_id(field);
+            self.set_object_id(field.into());
             self
         }
         pub fn version_opt_mut(&mut self) -> Option<&mut u64> {
@@ -5660,7 +5852,7 @@ mod _accessor_impls {
             self.version = Some(field.into().into());
         }
         pub fn with_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_version(field);
+            self.set_version(field.into());
             self
         }
         pub fn read_mask_opt_mut(&mut self) -> Option<&mut ::prost_types::FieldMask> {
@@ -5679,7 +5871,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_read_mask(field);
+            self.set_read_mask(field.into());
             self
         }
     }
@@ -5711,7 +5903,7 @@ mod _accessor_impls {
             self.object = Some(field.into().into());
         }
         pub fn with_object<T: Into<super::Object>>(mut self, field: T) -> Self {
-            self.set_object(field);
+            self.set_object(field.into());
             self
         }
     }
@@ -5761,7 +5953,7 @@ mod _accessor_impls {
             );
         }
         pub fn with_object<T: Into<super::Object>>(mut self, field: T) -> Self {
-            self.set_object(field);
+            self.set_object(field.into());
             self
         }
         pub fn error(&self) -> &super::super::super::super::google::rpc::Status {
@@ -5815,7 +6007,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_error(field);
+            self.set_error(field.into());
             self
         }
     }
@@ -5841,7 +6033,7 @@ mod _accessor_impls {
             self.package_id = Some(field.into().into());
         }
         pub fn with_package_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_package_id(field);
+            self.set_package_id(field.into());
             self
         }
     }
@@ -5873,7 +6065,7 @@ mod _accessor_impls {
             self.package = Some(field.into().into());
         }
         pub fn with_package<T: Into<super::Package>>(mut self, field: T) -> Self {
-            self.set_package(field);
+            self.set_package(field.into());
             self
         }
     }
@@ -5918,7 +6110,7 @@ mod _accessor_impls {
             self.chain_id = Some(field.into().into());
         }
         pub fn with_chain_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_chain_id(field);
+            self.set_chain_id(field.into());
             self
         }
         pub fn chain_opt_mut(&mut self) -> Option<&mut String> {
@@ -5934,7 +6126,7 @@ mod _accessor_impls {
             self.chain = Some(field.into().into());
         }
         pub fn with_chain<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_chain(field);
+            self.set_chain(field.into());
             self
         }
         pub fn epoch_opt_mut(&mut self) -> Option<&mut u64> {
@@ -5950,7 +6142,7 @@ mod _accessor_impls {
             self.epoch = Some(field.into().into());
         }
         pub fn with_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch(field);
+            self.set_epoch(field.into());
             self
         }
         pub fn checkpoint_height_opt_mut(&mut self) -> Option<&mut u64> {
@@ -5966,7 +6158,7 @@ mod _accessor_impls {
             self.checkpoint_height = Some(field.into().into());
         }
         pub fn with_checkpoint_height<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_checkpoint_height(field);
+            self.set_checkpoint_height(field.into());
             self
         }
         pub fn timestamp_opt_mut(&mut self) -> Option<&mut ::prost_types::Timestamp> {
@@ -5985,7 +6177,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_timestamp(field);
+            self.set_timestamp(field.into());
             self
         }
         pub fn lowest_available_checkpoint_opt_mut(&mut self) -> Option<&mut u64> {
@@ -6004,7 +6196,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_lowest_available_checkpoint(field);
+            self.set_lowest_available_checkpoint(field.into());
             self
         }
         pub fn lowest_available_checkpoint_objects_opt_mut(
@@ -6028,7 +6220,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_lowest_available_checkpoint_objects(field);
+            self.set_lowest_available_checkpoint_objects(field.into());
             self
         }
         pub fn server_opt_mut(&mut self) -> Option<&mut String> {
@@ -6044,7 +6236,7 @@ mod _accessor_impls {
             self.server = Some(field.into().into());
         }
         pub fn with_server<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_server(field);
+            self.set_server(field.into());
             self
         }
     }
@@ -6073,7 +6265,7 @@ mod _accessor_impls {
             self.digest = Some(field.into().into());
         }
         pub fn with_digest<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_digest(field);
+            self.set_digest(field.into());
             self
         }
         pub fn read_mask_opt_mut(&mut self) -> Option<&mut ::prost_types::FieldMask> {
@@ -6092,7 +6284,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_read_mask(field);
+            self.set_read_mask(field.into());
             self
         }
     }
@@ -6132,7 +6324,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_transaction(field);
+            self.set_transaction(field.into());
             self
         }
     }
@@ -6196,7 +6388,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_transaction(field);
+            self.set_transaction(field.into());
             self
         }
         pub fn error(&self) -> &super::super::super::super::google::rpc::Status {
@@ -6254,7 +6446,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_error(field);
+            self.set_error(field.into());
             self
         }
     }
@@ -6283,7 +6475,7 @@ mod _accessor_impls {
             self.index = Some(field.into().into());
         }
         pub fn with_index<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_index(field);
+            self.set_index(field.into());
             self
         }
         pub fn subresult_opt_mut(&mut self) -> Option<&mut u32> {
@@ -6299,7 +6491,7 @@ mod _accessor_impls {
             self.subresult = Some(field.into().into());
         }
         pub fn with_subresult<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_subresult(field);
+            self.set_subresult(field.into());
             self
         }
     }
@@ -6320,6 +6512,10 @@ mod _accessor_impls {
             static DEFAULT: super::Input = super::Input::const_default();
             &DEFAULT
         }
+        pub fn with_kind<T: Into<super::input::InputKind>>(mut self, field: T) -> Self {
+            self.set_kind(field.into());
+            self
+        }
         pub fn pure_opt(&self) -> Option<&[u8]> {
             self.pure.as_ref().map(|field| field as _)
         }
@@ -6327,7 +6523,7 @@ mod _accessor_impls {
             self.pure = Some(field.into().into());
         }
         pub fn with_pure<T: Into<::prost::bytes::Bytes>>(mut self, field: T) -> Self {
-            self.set_pure(field);
+            self.set_pure(field.into());
             self
         }
         pub fn object_id_opt_mut(&mut self) -> Option<&mut String> {
@@ -6343,7 +6539,7 @@ mod _accessor_impls {
             self.object_id = Some(field.into().into());
         }
         pub fn with_object_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_object_id(field);
+            self.set_object_id(field.into());
             self
         }
         pub fn version_opt_mut(&mut self) -> Option<&mut u64> {
@@ -6359,7 +6555,7 @@ mod _accessor_impls {
             self.version = Some(field.into().into());
         }
         pub fn with_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_version(field);
+            self.set_version(field.into());
             self
         }
         pub fn digest_opt_mut(&mut self) -> Option<&mut String> {
@@ -6375,7 +6571,7 @@ mod _accessor_impls {
             self.digest = Some(field.into().into());
         }
         pub fn with_digest<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_digest(field);
+            self.set_digest(field.into());
             self
         }
         pub fn mutable_opt_mut(&mut self) -> Option<&mut bool> {
@@ -6391,7 +6587,7 @@ mod _accessor_impls {
             self.mutable = Some(field.into().into());
         }
         pub fn with_mutable<T: Into<bool>>(mut self, field: T) -> Self {
-            self.set_mutable(field);
+            self.set_mutable(field.into());
             self
         }
         pub fn literal_opt_mut(&mut self) -> Option<&mut ::prost_types::Value> {
@@ -6407,7 +6603,7 @@ mod _accessor_impls {
             self.literal = Some(field.into().into());
         }
         pub fn with_literal<T: Into<::prost_types::Value>>(mut self, field: T) -> Self {
-            self.set_literal(field);
+            self.set_literal(field.into());
             self
         }
     }
@@ -6438,7 +6634,7 @@ mod _accessor_impls {
             self.kty = Some(field.into().into());
         }
         pub fn with_kty<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_kty(field);
+            self.set_kty(field.into());
             self
         }
         pub fn e_opt_mut(&mut self) -> Option<&mut String> {
@@ -6454,7 +6650,7 @@ mod _accessor_impls {
             self.e = Some(field.into().into());
         }
         pub fn with_e<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_e(field);
+            self.set_e(field.into());
             self
         }
         pub fn n_opt_mut(&mut self) -> Option<&mut String> {
@@ -6470,7 +6666,7 @@ mod _accessor_impls {
             self.n = Some(field.into().into());
         }
         pub fn with_n<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_n(field);
+            self.set_n(field.into());
             self
         }
         pub fn alg_opt_mut(&mut self) -> Option<&mut String> {
@@ -6486,7 +6682,7 @@ mod _accessor_impls {
             self.alg = Some(field.into().into());
         }
         pub fn with_alg<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_alg(field);
+            self.set_alg(field.into());
             self
         }
     }
@@ -6512,7 +6708,7 @@ mod _accessor_impls {
             self.iss = Some(field.into().into());
         }
         pub fn with_iss<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_iss(field);
+            self.set_iss(field.into());
             self
         }
         pub fn kid_opt_mut(&mut self) -> Option<&mut String> {
@@ -6528,7 +6724,7 @@ mod _accessor_impls {
             self.kid = Some(field.into().into());
         }
         pub fn with_kid<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_kid(field);
+            self.set_kid(field.into());
             self
         }
     }
@@ -6558,7 +6754,7 @@ mod _accessor_impls {
             self.original_id = Some(field.into().into());
         }
         pub fn with_original_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_original_id(field);
+            self.set_original_id(field.into());
             self
         }
         pub fn upgraded_id_opt_mut(&mut self) -> Option<&mut String> {
@@ -6574,7 +6770,7 @@ mod _accessor_impls {
             self.upgraded_id = Some(field.into().into());
         }
         pub fn with_upgraded_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_upgraded_id(field);
+            self.set_upgraded_id(field.into());
             self
         }
         pub fn upgraded_version_opt_mut(&mut self) -> Option<&mut u64> {
@@ -6590,7 +6786,7 @@ mod _accessor_impls {
             self.upgraded_version = Some(field.into().into());
         }
         pub fn with_upgraded_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_upgraded_version(field);
+            self.set_upgraded_version(field.into());
             self
         }
     }
@@ -6620,7 +6816,7 @@ mod _accessor_impls {
             self.owner = Some(field.into().into());
         }
         pub fn with_owner<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_owner(field);
+            self.set_owner(field.into());
             self
         }
         pub fn page_size_opt_mut(&mut self) -> Option<&mut u32> {
@@ -6636,7 +6832,7 @@ mod _accessor_impls {
             self.page_size = Some(field.into().into());
         }
         pub fn with_page_size<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_page_size(field);
+            self.set_page_size(field.into());
             self
         }
         pub fn page_token_opt(&self) -> Option<&[u8]> {
@@ -6649,7 +6845,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_page_token(field);
+            self.set_page_token(field.into());
             self
         }
     }
@@ -6668,6 +6864,9 @@ mod _accessor_impls {
         pub fn balances(&self) -> &[super::Balance] {
             &self.balances
         }
+        pub fn balances_mut(&mut self) -> &mut Vec<super::Balance> {
+            &mut self.balances
+        }
         pub fn set_balances(&mut self, field: Vec<super::Balance>) {
             self.balances = field;
         }
@@ -6685,7 +6884,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_next_page_token(field);
+            self.set_next_page_token(field.into());
             self
         }
     }
@@ -6716,7 +6915,7 @@ mod _accessor_impls {
             self.parent = Some(field.into().into());
         }
         pub fn with_parent<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_parent(field);
+            self.set_parent(field.into());
             self
         }
         pub fn page_size_opt_mut(&mut self) -> Option<&mut u32> {
@@ -6732,7 +6931,7 @@ mod _accessor_impls {
             self.page_size = Some(field.into().into());
         }
         pub fn with_page_size<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_page_size(field);
+            self.set_page_size(field.into());
             self
         }
         pub fn page_token_opt(&self) -> Option<&[u8]> {
@@ -6745,7 +6944,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_page_token(field);
+            self.set_page_token(field.into());
             self
         }
         pub fn read_mask_opt_mut(&mut self) -> Option<&mut ::prost_types::FieldMask> {
@@ -6764,7 +6963,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_read_mask(field);
+            self.set_read_mask(field.into());
             self
         }
     }
@@ -6783,6 +6982,9 @@ mod _accessor_impls {
         pub fn dynamic_fields(&self) -> &[super::DynamicField] {
             &self.dynamic_fields
         }
+        pub fn dynamic_fields_mut(&mut self) -> &mut Vec<super::DynamicField> {
+            &mut self.dynamic_fields
+        }
         pub fn set_dynamic_fields(&mut self, field: Vec<super::DynamicField>) {
             self.dynamic_fields = field;
         }
@@ -6800,7 +7002,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_next_page_token(field);
+            self.set_next_page_token(field.into());
             self
         }
     }
@@ -6832,7 +7034,7 @@ mod _accessor_impls {
             self.owner = Some(field.into().into());
         }
         pub fn with_owner<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_owner(field);
+            self.set_owner(field.into());
             self
         }
         pub fn page_size_opt_mut(&mut self) -> Option<&mut u32> {
@@ -6848,7 +7050,7 @@ mod _accessor_impls {
             self.page_size = Some(field.into().into());
         }
         pub fn with_page_size<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_page_size(field);
+            self.set_page_size(field.into());
             self
         }
         pub fn page_token_opt(&self) -> Option<&[u8]> {
@@ -6861,7 +7063,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_page_token(field);
+            self.set_page_token(field.into());
             self
         }
         pub fn read_mask_opt_mut(&mut self) -> Option<&mut ::prost_types::FieldMask> {
@@ -6880,7 +7082,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_read_mask(field);
+            self.set_read_mask(field.into());
             self
         }
         pub fn object_type_opt_mut(&mut self) -> Option<&mut String> {
@@ -6896,7 +7098,7 @@ mod _accessor_impls {
             self.object_type = Some(field.into().into());
         }
         pub fn with_object_type<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_object_type(field);
+            self.set_object_type(field.into());
             self
         }
     }
@@ -6915,6 +7117,9 @@ mod _accessor_impls {
         pub fn objects(&self) -> &[super::Object] {
             &self.objects
         }
+        pub fn objects_mut(&mut self) -> &mut Vec<super::Object> {
+            &mut self.objects
+        }
         pub fn set_objects(&mut self, field: Vec<super::Object>) {
             self.objects = field;
         }
@@ -6932,7 +7137,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_next_page_token(field);
+            self.set_next_page_token(field.into());
             self
         }
     }
@@ -6962,7 +7167,7 @@ mod _accessor_impls {
             self.package_id = Some(field.into().into());
         }
         pub fn with_package_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_package_id(field);
+            self.set_package_id(field.into());
             self
         }
         pub fn page_size_opt_mut(&mut self) -> Option<&mut u32> {
@@ -6978,7 +7183,7 @@ mod _accessor_impls {
             self.page_size = Some(field.into().into());
         }
         pub fn with_page_size<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_page_size(field);
+            self.set_page_size(field.into());
             self
         }
         pub fn page_token_opt(&self) -> Option<&[u8]> {
@@ -6991,7 +7196,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_page_token(field);
+            self.set_page_token(field.into());
             self
         }
     }
@@ -7010,6 +7215,9 @@ mod _accessor_impls {
         pub fn versions(&self) -> &[super::PackageVersion] {
             &self.versions
         }
+        pub fn versions_mut(&mut self) -> &mut Vec<super::PackageVersion> {
+            &mut self.versions
+        }
         pub fn set_versions(&mut self, field: Vec<super::PackageVersion>) {
             self.versions = field;
         }
@@ -7027,7 +7235,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_next_page_token(field);
+            self.set_next_page_token(field.into());
             self
         }
     }
@@ -7053,7 +7261,7 @@ mod _accessor_impls {
             self.name = Some(field.into().into());
         }
         pub fn with_name<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_name(field);
+            self.set_name(field.into());
             self
         }
     }
@@ -7085,7 +7293,7 @@ mod _accessor_impls {
             self.record = Some(field.into().into());
         }
         pub fn with_record<T: Into<super::NameRecord>>(mut self, field: T) -> Self {
-            self.set_record(field);
+            self.set_record(field.into());
             self
         }
     }
@@ -7114,11 +7322,14 @@ mod _accessor_impls {
             self.element_type = Some(field.into().into());
         }
         pub fn with_element_type<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_element_type(field);
+            self.set_element_type(field.into());
             self
         }
         pub fn elements(&self) -> &[super::Argument] {
             &self.elements
+        }
+        pub fn elements_mut(&mut self) -> &mut Vec<super::Argument> {
+            &mut self.elements
         }
         pub fn set_elements(&mut self, field: Vec<super::Argument>) {
             self.elements = field;
@@ -7159,11 +7370,14 @@ mod _accessor_impls {
             self.coin = Some(field.into().into());
         }
         pub fn with_coin<T: Into<super::Argument>>(mut self, field: T) -> Self {
-            self.set_coin(field);
+            self.set_coin(field.into());
             self
         }
         pub fn coins_to_merge(&self) -> &[super::Argument] {
             &self.coins_to_merge
+        }
+        pub fn coins_to_merge_mut(&mut self) -> &mut Vec<super::Argument> {
+            &mut self.coins_to_merge
         }
         pub fn set_coins_to_merge(&mut self, field: Vec<super::Argument>) {
             self.coins_to_merge = field;
@@ -7200,7 +7414,7 @@ mod _accessor_impls {
             self.name = Some(field.into().into());
         }
         pub fn with_name<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_name(field);
+            self.set_name(field.into());
             self
         }
         pub fn contents_opt(&self) -> Option<&[u8]> {
@@ -7213,11 +7427,14 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_contents(field);
+            self.set_contents(field.into());
             self
         }
         pub fn datatypes(&self) -> &[super::DatatypeDescriptor] {
             &self.datatypes
+        }
+        pub fn datatypes_mut(&mut self) -> &mut Vec<super::DatatypeDescriptor> {
+            &mut self.datatypes
         }
         pub fn set_datatypes(&mut self, field: Vec<super::DatatypeDescriptor>) {
             self.datatypes = field;
@@ -7228,6 +7445,9 @@ mod _accessor_impls {
         }
         pub fn functions(&self) -> &[super::FunctionDescriptor] {
             &self.functions
+        }
+        pub fn functions_mut(&mut self) -> &mut Vec<super::FunctionDescriptor> {
+            &mut self.functions
         }
         pub fn set_functions(&mut self, field: Vec<super::FunctionDescriptor>) {
             self.functions = field;
@@ -7263,7 +7483,7 @@ mod _accessor_impls {
             self.abort_code = Some(field.into().into());
         }
         pub fn with_abort_code<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_abort_code(field);
+            self.set_abort_code(field.into());
             self
         }
         pub fn location(&self) -> &super::MoveLocation {
@@ -7285,7 +7505,7 @@ mod _accessor_impls {
             self.location = Some(field.into().into());
         }
         pub fn with_location<T: Into<super::MoveLocation>>(mut self, field: T) -> Self {
-            self.set_location(field);
+            self.set_location(field.into());
             self
         }
         pub fn clever_error(&self) -> &super::CleverError {
@@ -7310,7 +7530,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_clever_error(field);
+            self.set_clever_error(field.into());
             self
         }
     }
@@ -7342,7 +7562,7 @@ mod _accessor_impls {
             self.package = Some(field.into().into());
         }
         pub fn with_package<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_package(field);
+            self.set_package(field.into());
             self
         }
         pub fn module_opt_mut(&mut self) -> Option<&mut String> {
@@ -7358,7 +7578,7 @@ mod _accessor_impls {
             self.module = Some(field.into().into());
         }
         pub fn with_module<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_module(field);
+            self.set_module(field.into());
             self
         }
         pub fn function_opt_mut(&mut self) -> Option<&mut String> {
@@ -7374,11 +7594,14 @@ mod _accessor_impls {
             self.function = Some(field.into().into());
         }
         pub fn with_function<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_function(field);
+            self.set_function(field.into());
             self
         }
         pub fn type_arguments(&self) -> &[String] {
             &self.type_arguments
+        }
+        pub fn type_arguments_mut(&mut self) -> &mut Vec<String> {
+            &mut self.type_arguments
         }
         pub fn set_type_arguments(&mut self, field: Vec<String>) {
             self.type_arguments = field;
@@ -7389,6 +7612,9 @@ mod _accessor_impls {
         }
         pub fn arguments(&self) -> &[super::Argument] {
             &self.arguments
+        }
+        pub fn arguments_mut(&mut self) -> &mut Vec<super::Argument> {
+            &mut self.arguments
         }
         pub fn set_arguments(&mut self, field: Vec<super::Argument>) {
             self.arguments = field;
@@ -7426,7 +7652,7 @@ mod _accessor_impls {
             self.package = Some(field.into().into());
         }
         pub fn with_package<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_package(field);
+            self.set_package(field.into());
             self
         }
         pub fn module_opt_mut(&mut self) -> Option<&mut String> {
@@ -7442,7 +7668,7 @@ mod _accessor_impls {
             self.module = Some(field.into().into());
         }
         pub fn with_module<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_module(field);
+            self.set_module(field.into());
             self
         }
         pub fn function_opt_mut(&mut self) -> Option<&mut u32> {
@@ -7458,7 +7684,7 @@ mod _accessor_impls {
             self.function = Some(field.into().into());
         }
         pub fn with_function<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_function(field);
+            self.set_function(field.into());
             self
         }
         pub fn instruction_opt_mut(&mut self) -> Option<&mut u32> {
@@ -7474,7 +7700,7 @@ mod _accessor_impls {
             self.instruction = Some(field.into().into());
         }
         pub fn with_instruction<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_instruction(field);
+            self.set_instruction(field.into());
             self
         }
         pub fn function_name_opt_mut(&mut self) -> Option<&mut String> {
@@ -7490,7 +7716,7 @@ mod _accessor_impls {
             self.function_name = Some(field.into().into());
         }
         pub fn with_function_name<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_function_name(field);
+            self.set_function_name(field.into());
             self
         }
     }
@@ -7516,7 +7742,7 @@ mod _accessor_impls {
             self.id = Some(field.into().into());
         }
         pub fn with_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_id(field);
+            self.set_id(field.into());
             self
         }
         pub fn size_opt_mut(&mut self) -> Option<&mut u64> {
@@ -7532,7 +7758,7 @@ mod _accessor_impls {
             self.size = Some(field.into().into());
         }
         pub fn with_size<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_size(field);
+            self.set_size(field.into());
             self
         }
     }
@@ -7552,6 +7778,9 @@ mod _accessor_impls {
         }
         pub fn signatures(&self) -> &[super::MultisigMemberSignature] {
             &self.signatures
+        }
+        pub fn signatures_mut(&mut self) -> &mut Vec<super::MultisigMemberSignature> {
+            &mut self.signatures
         }
         pub fn set_signatures(&mut self, field: Vec<super::MultisigMemberSignature>) {
             self.signatures = field;
@@ -7576,11 +7805,14 @@ mod _accessor_impls {
             self.bitmap = Some(field.into().into());
         }
         pub fn with_bitmap<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_bitmap(field);
+            self.set_bitmap(field.into());
             self
         }
         pub fn legacy_bitmap(&self) -> &[u32] {
             &self.legacy_bitmap
+        }
+        pub fn legacy_bitmap_mut(&mut self) -> &mut Vec<u32> {
+            &mut self.legacy_bitmap
         }
         pub fn set_legacy_bitmap(&mut self, field: Vec<u32>) {
             self.legacy_bitmap = field;
@@ -7611,7 +7843,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_committee(field);
+            self.set_committee(field.into());
             self
         }
     }
@@ -7629,6 +7861,9 @@ mod _accessor_impls {
         }
         pub fn members(&self) -> &[super::MultisigMember] {
             &self.members
+        }
+        pub fn members_mut(&mut self) -> &mut Vec<super::MultisigMember> {
+            &mut self.members
         }
         pub fn set_members(&mut self, field: Vec<super::MultisigMember>) {
             self.members = field;
@@ -7650,7 +7885,7 @@ mod _accessor_impls {
             self.threshold = Some(field.into().into());
         }
         pub fn with_threshold<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_threshold(field);
+            self.set_threshold(field.into());
             self
         }
     }
@@ -7695,7 +7930,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_public_key(field);
+            self.set_public_key(field.into());
             self
         }
         pub fn weight_opt_mut(&mut self) -> Option<&mut u32> {
@@ -7711,7 +7946,7 @@ mod _accessor_impls {
             self.weight = Some(field.into().into());
         }
         pub fn with_weight<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_weight(field);
+            self.set_weight(field.into());
             self
         }
     }
@@ -7728,6 +7963,10 @@ mod _accessor_impls {
             static DEFAULT: super::MultisigMemberPublicKey = super::MultisigMemberPublicKey::const_default();
             &DEFAULT
         }
+        pub fn with_scheme<T: Into<super::SignatureScheme>>(mut self, field: T) -> Self {
+            self.set_scheme(field.into());
+            self
+        }
         pub fn public_key_opt(&self) -> Option<&[u8]> {
             self.public_key.as_ref().map(|field| field as _)
         }
@@ -7738,7 +7977,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_public_key(field);
+            self.set_public_key(field.into());
             self
         }
         pub fn zklogin(&self) -> &super::ZkLoginPublicIdentifier {
@@ -7770,7 +8009,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_zklogin(field);
+            self.set_zklogin(field.into());
             self
         }
     }
@@ -7788,6 +8027,10 @@ mod _accessor_impls {
             static DEFAULT: super::MultisigMemberSignature = super::MultisigMemberSignature::const_default();
             &DEFAULT
         }
+        pub fn with_scheme<T: Into<super::SignatureScheme>>(mut self, field: T) -> Self {
+            self.set_scheme(field.into());
+            self
+        }
         pub fn signature_opt(&self) -> Option<&[u8]> {
             self.signature.as_ref().map(|field| field as _)
         }
@@ -7798,7 +8041,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_signature(field);
+            self.set_signature(field.into());
             self
         }
         pub fn zklogin(&self) -> &super::ZkLoginAuthenticator {
@@ -7823,7 +8066,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_zklogin(field);
+            self.set_zklogin(field.into());
             self
         }
         pub fn passkey(&self) -> &super::PasskeyAuthenticator {
@@ -7848,7 +8091,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_passkey(field);
+            self.set_passkey(field.into());
             self
         }
     }
@@ -7881,7 +8124,7 @@ mod _accessor_impls {
             self.id = Some(field.into().into());
         }
         pub fn with_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_id(field);
+            self.set_id(field.into());
             self
         }
         pub fn name_opt_mut(&mut self) -> Option<&mut String> {
@@ -7897,7 +8140,7 @@ mod _accessor_impls {
             self.name = Some(field.into().into());
         }
         pub fn with_name<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_name(field);
+            self.set_name(field.into());
             self
         }
         pub fn registration_nft_id_opt_mut(&mut self) -> Option<&mut String> {
@@ -7913,7 +8156,7 @@ mod _accessor_impls {
             self.registration_nft_id = Some(field.into().into());
         }
         pub fn with_registration_nft_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_registration_nft_id(field);
+            self.set_registration_nft_id(field.into());
             self
         }
         pub fn expiration_timestamp_opt_mut(
@@ -7937,7 +8180,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_expiration_timestamp(field);
+            self.set_expiration_timestamp(field.into());
             self
         }
         pub fn target_address_opt_mut(&mut self) -> Option<&mut String> {
@@ -7953,7 +8196,23 @@ mod _accessor_impls {
             self.target_address = Some(field.into().into());
         }
         pub fn with_target_address<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_target_address(field);
+            self.set_target_address(field.into());
+            self
+        }
+        pub fn data(&self) -> &::std::collections::BTreeMap<String, String> {
+            &self.data
+        }
+        pub fn data_mut(&mut self) -> &mut ::std::collections::BTreeMap<String, String> {
+            &mut self.data
+        }
+        pub fn set_data(&mut self, field: ::std::collections::BTreeMap<String, String>) {
+            self.data = field;
+        }
+        pub fn with_data(
+            mut self,
+            field: ::std::collections::BTreeMap<String, String>,
+        ) -> Self {
+            self.set_data(field);
             self
         }
     }
@@ -7999,7 +8258,7 @@ mod _accessor_impls {
             self.bcs = Some(field.into().into());
         }
         pub fn with_bcs<T: Into<super::Bcs>>(mut self, field: T) -> Self {
-            self.set_bcs(field);
+            self.set_bcs(field.into());
             self
         }
         pub fn object_id_opt_mut(&mut self) -> Option<&mut String> {
@@ -8015,7 +8274,7 @@ mod _accessor_impls {
             self.object_id = Some(field.into().into());
         }
         pub fn with_object_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_object_id(field);
+            self.set_object_id(field.into());
             self
         }
         pub fn version_opt_mut(&mut self) -> Option<&mut u64> {
@@ -8031,7 +8290,7 @@ mod _accessor_impls {
             self.version = Some(field.into().into());
         }
         pub fn with_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_version(field);
+            self.set_version(field.into());
             self
         }
         pub fn digest_opt_mut(&mut self) -> Option<&mut String> {
@@ -8047,7 +8306,7 @@ mod _accessor_impls {
             self.digest = Some(field.into().into());
         }
         pub fn with_digest<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_digest(field);
+            self.set_digest(field.into());
             self
         }
         pub fn owner(&self) -> &super::Owner {
@@ -8069,7 +8328,7 @@ mod _accessor_impls {
             self.owner = Some(field.into().into());
         }
         pub fn with_owner<T: Into<super::Owner>>(mut self, field: T) -> Self {
-            self.set_owner(field);
+            self.set_owner(field.into());
             self
         }
         pub fn object_type_opt_mut(&mut self) -> Option<&mut String> {
@@ -8085,7 +8344,7 @@ mod _accessor_impls {
             self.object_type = Some(field.into().into());
         }
         pub fn with_object_type<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_object_type(field);
+            self.set_object_type(field.into());
             self
         }
         pub fn has_public_transfer_opt_mut(&mut self) -> Option<&mut bool> {
@@ -8101,7 +8360,7 @@ mod _accessor_impls {
             self.has_public_transfer = Some(field.into().into());
         }
         pub fn with_has_public_transfer<T: Into<bool>>(mut self, field: T) -> Self {
-            self.set_has_public_transfer(field);
+            self.set_has_public_transfer(field.into());
             self
         }
         pub fn contents(&self) -> &super::Bcs {
@@ -8123,7 +8382,7 @@ mod _accessor_impls {
             self.contents = Some(field.into().into());
         }
         pub fn with_contents<T: Into<super::Bcs>>(mut self, field: T) -> Self {
-            self.set_contents(field);
+            self.set_contents(field.into());
             self
         }
         pub fn package(&self) -> &super::Package {
@@ -8145,7 +8404,7 @@ mod _accessor_impls {
             self.package = Some(field.into().into());
         }
         pub fn with_package<T: Into<super::Package>>(mut self, field: T) -> Self {
-            self.set_package(field);
+            self.set_package(field.into());
             self
         }
         pub fn previous_transaction_opt_mut(&mut self) -> Option<&mut String> {
@@ -8161,7 +8420,7 @@ mod _accessor_impls {
             self.previous_transaction = Some(field.into().into());
         }
         pub fn with_previous_transaction<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_previous_transaction(field);
+            self.set_previous_transaction(field.into());
             self
         }
         pub fn storage_rebate_opt_mut(&mut self) -> Option<&mut u64> {
@@ -8177,7 +8436,7 @@ mod _accessor_impls {
             self.storage_rebate = Some(field.into().into());
         }
         pub fn with_storage_rebate<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_storage_rebate(field);
+            self.set_storage_rebate(field.into());
             self
         }
         pub fn json_opt_mut(&mut self) -> Option<&mut ::prost_types::Value> {
@@ -8193,7 +8452,7 @@ mod _accessor_impls {
             self.json = Some(field.into().into());
         }
         pub fn with_json<T: Into<::prost_types::Value>>(mut self, field: T) -> Self {
-            self.set_json(field);
+            self.set_json(field.into());
             self
         }
         pub fn balance_opt_mut(&mut self) -> Option<&mut u64> {
@@ -8209,7 +8468,7 @@ mod _accessor_impls {
             self.balance = Some(field.into().into());
         }
         pub fn with_balance<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_balance(field);
+            self.set_balance(field.into());
             self
         }
     }
@@ -8239,7 +8498,7 @@ mod _accessor_impls {
             self.object_id = Some(field.into().into());
         }
         pub fn with_object_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_object_id(field);
+            self.set_object_id(field.into());
             self
         }
         pub fn version_opt_mut(&mut self) -> Option<&mut u64> {
@@ -8255,7 +8514,7 @@ mod _accessor_impls {
             self.version = Some(field.into().into());
         }
         pub fn with_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_version(field);
+            self.set_version(field.into());
             self
         }
         pub fn digest_opt_mut(&mut self) -> Option<&mut String> {
@@ -8271,7 +8530,7 @@ mod _accessor_impls {
             self.digest = Some(field.into().into());
         }
         pub fn with_digest<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_digest(field);
+            self.set_digest(field.into());
             self
         }
     }
@@ -8286,6 +8545,13 @@ mod _accessor_impls {
         pub fn default_instance() -> &'static Self {
             static DEFAULT: super::OpenSignature = super::OpenSignature::const_default();
             &DEFAULT
+        }
+        pub fn with_reference<T: Into<super::open_signature::Reference>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_reference(field.into());
+            self
         }
         pub fn body(&self) -> &super::OpenSignatureBody {
             self.body
@@ -8306,7 +8572,7 @@ mod _accessor_impls {
             self.body = Some(field.into().into());
         }
         pub fn with_body<T: Into<super::OpenSignatureBody>>(mut self, field: T) -> Self {
-            self.set_body(field);
+            self.set_body(field.into());
             self
         }
     }
@@ -8324,6 +8590,13 @@ mod _accessor_impls {
             static DEFAULT: super::OpenSignatureBody = super::OpenSignatureBody::const_default();
             &DEFAULT
         }
+        pub fn with_type<T: Into<super::open_signature_body::Type>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_type(field.into());
+            self
+        }
         pub fn type_name_opt_mut(&mut self) -> Option<&mut String> {
             self.type_name.as_mut().map(|field| field as _)
         }
@@ -8337,11 +8610,16 @@ mod _accessor_impls {
             self.type_name = Some(field.into().into());
         }
         pub fn with_type_name<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_type_name(field);
+            self.set_type_name(field.into());
             self
         }
         pub fn type_parameter_instantiation(&self) -> &[super::OpenSignatureBody] {
             &self.type_parameter_instantiation
+        }
+        pub fn type_parameter_instantiation_mut(
+            &mut self,
+        ) -> &mut Vec<super::OpenSignatureBody> {
+            &mut self.type_parameter_instantiation
         }
         pub fn set_type_parameter_instantiation(
             &mut self,
@@ -8369,7 +8647,7 @@ mod _accessor_impls {
             self.type_parameter = Some(field.into().into());
         }
         pub fn with_type_parameter<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_type_parameter(field);
+            self.set_type_parameter(field.into());
             self
         }
     }
@@ -8386,6 +8664,10 @@ mod _accessor_impls {
             static DEFAULT: super::Owner = super::Owner::const_default();
             &DEFAULT
         }
+        pub fn with_kind<T: Into<super::owner::OwnerKind>>(mut self, field: T) -> Self {
+            self.set_kind(field.into());
+            self
+        }
         pub fn address_opt_mut(&mut self) -> Option<&mut String> {
             self.address.as_mut().map(|field| field as _)
         }
@@ -8399,7 +8681,7 @@ mod _accessor_impls {
             self.address = Some(field.into().into());
         }
         pub fn with_address<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_address(field);
+            self.set_address(field.into());
             self
         }
         pub fn version_opt_mut(&mut self) -> Option<&mut u64> {
@@ -8415,7 +8697,7 @@ mod _accessor_impls {
             self.version = Some(field.into().into());
         }
         pub fn with_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_version(field);
+            self.set_version(field.into());
             self
         }
     }
@@ -8448,7 +8730,7 @@ mod _accessor_impls {
             self.storage_id = Some(field.into().into());
         }
         pub fn with_storage_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_storage_id(field);
+            self.set_storage_id(field.into());
             self
         }
         pub fn original_id_opt_mut(&mut self) -> Option<&mut String> {
@@ -8464,7 +8746,7 @@ mod _accessor_impls {
             self.original_id = Some(field.into().into());
         }
         pub fn with_original_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_original_id(field);
+            self.set_original_id(field.into());
             self
         }
         pub fn version_opt_mut(&mut self) -> Option<&mut u64> {
@@ -8480,11 +8762,14 @@ mod _accessor_impls {
             self.version = Some(field.into().into());
         }
         pub fn with_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_version(field);
+            self.set_version(field.into());
             self
         }
         pub fn modules(&self) -> &[super::Module] {
             &self.modules
+        }
+        pub fn modules_mut(&mut self) -> &mut Vec<super::Module> {
+            &mut self.modules
         }
         pub fn set_modules(&mut self, field: Vec<super::Module>) {
             self.modules = field;
@@ -8496,6 +8781,9 @@ mod _accessor_impls {
         pub fn type_origins(&self) -> &[super::TypeOrigin] {
             &self.type_origins
         }
+        pub fn type_origins_mut(&mut self) -> &mut Vec<super::TypeOrigin> {
+            &mut self.type_origins
+        }
         pub fn set_type_origins(&mut self, field: Vec<super::TypeOrigin>) {
             self.type_origins = field;
         }
@@ -8505,6 +8793,9 @@ mod _accessor_impls {
         }
         pub fn linkage(&self) -> &[super::Linkage] {
             &self.linkage
+        }
+        pub fn linkage_mut(&mut self) -> &mut Vec<super::Linkage> {
+            &mut self.linkage
         }
         pub fn set_linkage(&mut self, field: Vec<super::Linkage>) {
             self.linkage = field;
@@ -8529,6 +8820,13 @@ mod _accessor_impls {
             static DEFAULT: super::PackageUpgradeError = super::PackageUpgradeError::const_default();
             &DEFAULT
         }
+        pub fn with_kind<T: Into<super::package_upgrade_error::PackageUpgradeErrorKind>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_kind(field.into());
+            self
+        }
         pub fn package_id_opt_mut(&mut self) -> Option<&mut String> {
             self.package_id.as_mut().map(|field| field as _)
         }
@@ -8542,7 +8840,7 @@ mod _accessor_impls {
             self.package_id = Some(field.into().into());
         }
         pub fn with_package_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_package_id(field);
+            self.set_package_id(field.into());
             self
         }
         pub fn digest_opt_mut(&mut self) -> Option<&mut String> {
@@ -8558,7 +8856,7 @@ mod _accessor_impls {
             self.digest = Some(field.into().into());
         }
         pub fn with_digest<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_digest(field);
+            self.set_digest(field.into());
             self
         }
         pub fn policy_opt_mut(&mut self) -> Option<&mut u32> {
@@ -8574,7 +8872,7 @@ mod _accessor_impls {
             self.policy = Some(field.into().into());
         }
         pub fn with_policy<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_policy(field);
+            self.set_policy(field.into());
             self
         }
         pub fn ticket_id_opt_mut(&mut self) -> Option<&mut String> {
@@ -8590,7 +8888,7 @@ mod _accessor_impls {
             self.ticket_id = Some(field.into().into());
         }
         pub fn with_ticket_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_ticket_id(field);
+            self.set_ticket_id(field.into());
             self
         }
     }
@@ -8619,7 +8917,7 @@ mod _accessor_impls {
             self.package_id = Some(field.into().into());
         }
         pub fn with_package_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_package_id(field);
+            self.set_package_id(field.into());
             self
         }
         pub fn version_opt_mut(&mut self) -> Option<&mut u64> {
@@ -8635,7 +8933,7 @@ mod _accessor_impls {
             self.version = Some(field.into().into());
         }
         pub fn with_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_version(field);
+            self.set_version(field.into());
             self
         }
     }
@@ -8665,7 +8963,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_authenticator_data(field);
+            self.set_authenticator_data(field.into());
             self
         }
         pub fn client_data_json_opt_mut(&mut self) -> Option<&mut String> {
@@ -8681,7 +8979,7 @@ mod _accessor_impls {
             self.client_data_json = Some(field.into().into());
         }
         pub fn with_client_data_json<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_client_data_json(field);
+            self.set_client_data_json(field.into());
             self
         }
         pub fn signature(&self) -> &super::SimpleSignature {
@@ -8706,7 +9004,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_signature(field);
+            self.set_signature(field.into());
             self
         }
     }
@@ -8725,6 +9023,9 @@ mod _accessor_impls {
         pub fn inputs(&self) -> &[super::Input] {
             &self.inputs
         }
+        pub fn inputs_mut(&mut self) -> &mut Vec<super::Input> {
+            &mut self.inputs
+        }
         pub fn set_inputs(&mut self, field: Vec<super::Input>) {
             self.inputs = field;
         }
@@ -8734,6 +9035,9 @@ mod _accessor_impls {
         }
         pub fn commands(&self) -> &[super::Command] {
             &self.commands
+        }
+        pub fn commands_mut(&mut self) -> &mut Vec<super::Command> {
+            &mut self.commands
         }
         pub fn set_commands(&mut self, field: Vec<super::Command>) {
             self.commands = field;
@@ -8769,7 +9073,49 @@ mod _accessor_impls {
             self.protocol_version = Some(field.into().into());
         }
         pub fn with_protocol_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_protocol_version(field);
+            self.set_protocol_version(field.into());
+            self
+        }
+        pub fn feature_flags(&self) -> &::std::collections::BTreeMap<String, bool> {
+            &self.feature_flags
+        }
+        pub fn feature_flags_mut(
+            &mut self,
+        ) -> &mut ::std::collections::BTreeMap<String, bool> {
+            &mut self.feature_flags
+        }
+        pub fn set_feature_flags(
+            &mut self,
+            field: ::std::collections::BTreeMap<String, bool>,
+        ) {
+            self.feature_flags = field;
+        }
+        pub fn with_feature_flags(
+            mut self,
+            field: ::std::collections::BTreeMap<String, bool>,
+        ) -> Self {
+            self.set_feature_flags(field);
+            self
+        }
+        pub fn attributes(&self) -> &::std::collections::BTreeMap<String, String> {
+            &self.attributes
+        }
+        pub fn attributes_mut(
+            &mut self,
+        ) -> &mut ::std::collections::BTreeMap<String, String> {
+            &mut self.attributes
+        }
+        pub fn set_attributes(
+            &mut self,
+            field: ::std::collections::BTreeMap<String, String>,
+        ) {
+            self.attributes = field;
+        }
+        pub fn with_attributes(
+            mut self,
+            field: ::std::collections::BTreeMap<String, String>,
+        ) -> Self {
+            self.set_attributes(field);
             self
         }
     }
@@ -8788,6 +9134,9 @@ mod _accessor_impls {
         pub fn modules(&self) -> &[::prost::bytes::Bytes] {
             &self.modules
         }
+        pub fn modules_mut(&mut self) -> &mut Vec<::prost::bytes::Bytes> {
+            &mut self.modules
+        }
         pub fn set_modules(&mut self, field: Vec<::prost::bytes::Bytes>) {
             self.modules = field;
         }
@@ -8797,6 +9146,9 @@ mod _accessor_impls {
         }
         pub fn dependencies(&self) -> &[String] {
             &self.dependencies
+        }
+        pub fn dependencies_mut(&mut self) -> &mut Vec<String> {
+            &mut self.dependencies
         }
         pub fn set_dependencies(&mut self, field: Vec<String>) {
             self.dependencies = field;
@@ -8833,7 +9185,7 @@ mod _accessor_impls {
             self.epoch = Some(field.into().into());
         }
         pub fn with_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch(field);
+            self.set_epoch(field.into());
             self
         }
         pub fn randomness_round_opt_mut(&mut self) -> Option<&mut u64> {
@@ -8849,7 +9201,7 @@ mod _accessor_impls {
             self.randomness_round = Some(field.into().into());
         }
         pub fn with_randomness_round<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_randomness_round(field);
+            self.set_randomness_round(field.into());
             self
         }
         pub fn random_bytes_opt(&self) -> Option<&[u8]> {
@@ -8862,7 +9214,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_random_bytes(field);
+            self.set_random_bytes(field.into());
             self
         }
         pub fn randomness_object_initial_shared_version_opt_mut(
@@ -8888,7 +9240,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_randomness_object_initial_shared_version(field);
+            self.set_randomness_object_initial_shared_version(field.into());
             self
         }
     }
@@ -8918,7 +9270,7 @@ mod _accessor_impls {
             self.id = Some(field.into().into());
         }
         pub fn with_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_id(field);
+            self.set_id(field.into());
             self
         }
         pub fn coin_metadata_object_opt_mut(&mut self) -> Option<&mut String> {
@@ -8934,7 +9286,7 @@ mod _accessor_impls {
             self.coin_metadata_object = Some(field.into().into());
         }
         pub fn with_coin_metadata_object<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_coin_metadata_object(field);
+            self.set_coin_metadata_object(field.into());
             self
         }
         pub fn deny_cap_object_opt_mut(&mut self) -> Option<&mut String> {
@@ -8950,7 +9302,7 @@ mod _accessor_impls {
             self.deny_cap_object = Some(field.into().into());
         }
         pub fn with_deny_cap_object<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_deny_cap_object(field);
+            self.set_deny_cap_object(field.into());
             self
         }
     }
@@ -8976,7 +9328,7 @@ mod _accessor_impls {
             self.address = Some(field.into().into());
         }
         pub fn with_address<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_address(field);
+            self.set_address(field.into());
             self
         }
     }
@@ -9008,7 +9360,7 @@ mod _accessor_impls {
             self.record = Some(field.into().into());
         }
         pub fn with_record<T: Into<super::NameRecord>>(mut self, field: T) -> Self {
-            self.set_record(field);
+            self.set_record(field.into());
             self
         }
     }
@@ -9025,6 +9377,10 @@ mod _accessor_impls {
             static DEFAULT: super::SimpleSignature = super::SimpleSignature::const_default();
             &DEFAULT
         }
+        pub fn with_scheme<T: Into<super::SignatureScheme>>(mut self, field: T) -> Self {
+            self.set_scheme(field.into());
+            self
+        }
         pub fn signature_opt(&self) -> Option<&[u8]> {
             self.signature.as_ref().map(|field| field as _)
         }
@@ -9035,7 +9391,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_signature(field);
+            self.set_signature(field.into());
             self
         }
         pub fn public_key_opt(&self) -> Option<&[u8]> {
@@ -9048,7 +9404,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_public_key(field);
+            self.set_public_key(field.into());
             self
         }
     }
@@ -9088,7 +9444,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_transaction(field);
+            self.set_transaction(field.into());
             self
         }
         pub fn read_mask_opt_mut(&mut self) -> Option<&mut ::prost_types::FieldMask> {
@@ -9107,7 +9463,13 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_read_mask(field);
+            self.set_read_mask(field.into());
+            self
+        }
+        pub fn with_checks<
+            T: Into<super::simulate_transaction_request::TransactionChecks>,
+        >(mut self, field: T) -> Self {
+            self.set_checks(field.into());
             self
         }
         pub fn do_gas_selection_opt_mut(&mut self) -> Option<&mut bool> {
@@ -9123,7 +9485,7 @@ mod _accessor_impls {
             self.do_gas_selection = Some(field.into().into());
         }
         pub fn with_do_gas_selection<T: Into<bool>>(mut self, field: T) -> Self {
-            self.set_do_gas_selection(field);
+            self.set_do_gas_selection(field.into());
             self
         }
     }
@@ -9166,11 +9528,14 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_transaction(field);
+            self.set_transaction(field.into());
             self
         }
         pub fn outputs(&self) -> &[super::CommandResult] {
             &self.outputs
+        }
+        pub fn outputs_mut(&mut self) -> &mut Vec<super::CommandResult> {
+            &mut self.outputs
         }
         pub fn set_outputs(&mut self, field: Vec<super::CommandResult>) {
             self.outputs = field;
@@ -9202,7 +9567,7 @@ mod _accessor_impls {
             self.size = Some(field.into().into());
         }
         pub fn with_size<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_size(field);
+            self.set_size(field.into());
             self
         }
         pub fn max_size_opt_mut(&mut self) -> Option<&mut u64> {
@@ -9218,7 +9583,7 @@ mod _accessor_impls {
             self.max_size = Some(field.into().into());
         }
         pub fn with_max_size<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_max_size(field);
+            self.set_max_size(field.into());
             self
         }
     }
@@ -9253,11 +9618,14 @@ mod _accessor_impls {
             self.coin = Some(field.into().into());
         }
         pub fn with_coin<T: Into<super::Argument>>(mut self, field: T) -> Self {
-            self.set_coin(field);
+            self.set_coin(field.into());
             self
         }
         pub fn amounts(&self) -> &[super::Argument] {
             &self.amounts
+        }
+        pub fn amounts_mut(&mut self) -> &mut Vec<super::Argument> {
+            &mut self.amounts
         }
         pub fn set_amounts(&mut self, field: Vec<super::Argument>) {
             self.amounts = field;
@@ -9296,7 +9664,7 @@ mod _accessor_impls {
             self.balance = Some(field.into().into());
         }
         pub fn with_balance<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_balance(field);
+            self.set_balance(field.into());
             self
         }
         pub fn distribution_counter_opt_mut(&mut self) -> Option<&mut u64> {
@@ -9312,7 +9680,7 @@ mod _accessor_impls {
             self.distribution_counter = Some(field.into().into());
         }
         pub fn with_distribution_counter<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_distribution_counter(field);
+            self.set_distribution_counter(field.into());
             self
         }
         pub fn current_distribution_amount_opt_mut(&mut self) -> Option<&mut u64> {
@@ -9331,7 +9699,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_current_distribution_amount(field);
+            self.set_current_distribution_amount(field.into());
             self
         }
         pub fn stake_subsidy_period_length_opt_mut(&mut self) -> Option<&mut u64> {
@@ -9350,7 +9718,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_stake_subsidy_period_length(field);
+            self.set_stake_subsidy_period_length(field.into());
             self
         }
         pub fn stake_subsidy_decrease_rate_opt_mut(&mut self) -> Option<&mut u32> {
@@ -9369,7 +9737,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_stake_subsidy_decrease_rate(field);
+            self.set_stake_subsidy_decrease_rate(field.into());
             self
         }
         pub fn extra_fields(&self) -> &super::MoveTable {
@@ -9391,7 +9759,7 @@ mod _accessor_impls {
             self.extra_fields = Some(field.into().into());
         }
         pub fn with_extra_fields<T: Into<super::MoveTable>>(mut self, field: T) -> Self {
-            self.set_extra_fields(field);
+            self.set_extra_fields(field.into());
             self
         }
     }
@@ -9429,7 +9797,7 @@ mod _accessor_impls {
             self.id = Some(field.into().into());
         }
         pub fn with_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_id(field);
+            self.set_id(field.into());
             self
         }
         pub fn activation_epoch_opt_mut(&mut self) -> Option<&mut u64> {
@@ -9445,7 +9813,7 @@ mod _accessor_impls {
             self.activation_epoch = Some(field.into().into());
         }
         pub fn with_activation_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_activation_epoch(field);
+            self.set_activation_epoch(field.into());
             self
         }
         pub fn deactivation_epoch_opt_mut(&mut self) -> Option<&mut u64> {
@@ -9461,7 +9829,7 @@ mod _accessor_impls {
             self.deactivation_epoch = Some(field.into().into());
         }
         pub fn with_deactivation_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_deactivation_epoch(field);
+            self.set_deactivation_epoch(field.into());
             self
         }
         pub fn sui_balance_opt_mut(&mut self) -> Option<&mut u64> {
@@ -9477,7 +9845,7 @@ mod _accessor_impls {
             self.sui_balance = Some(field.into().into());
         }
         pub fn with_sui_balance<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_sui_balance(field);
+            self.set_sui_balance(field.into());
             self
         }
         pub fn rewards_pool_opt_mut(&mut self) -> Option<&mut u64> {
@@ -9493,7 +9861,7 @@ mod _accessor_impls {
             self.rewards_pool = Some(field.into().into());
         }
         pub fn with_rewards_pool<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_rewards_pool(field);
+            self.set_rewards_pool(field.into());
             self
         }
         pub fn pool_token_balance_opt_mut(&mut self) -> Option<&mut u64> {
@@ -9509,7 +9877,7 @@ mod _accessor_impls {
             self.pool_token_balance = Some(field.into().into());
         }
         pub fn with_pool_token_balance<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_pool_token_balance(field);
+            self.set_pool_token_balance(field.into());
             self
         }
         pub fn exchange_rates(&self) -> &super::MoveTable {
@@ -9534,7 +9902,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_exchange_rates(field);
+            self.set_exchange_rates(field.into());
             self
         }
         pub fn pending_stake_opt_mut(&mut self) -> Option<&mut u64> {
@@ -9550,7 +9918,7 @@ mod _accessor_impls {
             self.pending_stake = Some(field.into().into());
         }
         pub fn with_pending_stake<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_pending_stake(field);
+            self.set_pending_stake(field.into());
             self
         }
         pub fn pending_total_sui_withdraw_opt_mut(&mut self) -> Option<&mut u64> {
@@ -9569,7 +9937,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_pending_total_sui_withdraw(field);
+            self.set_pending_total_sui_withdraw(field.into());
             self
         }
         pub fn pending_pool_token_withdraw_opt_mut(&mut self) -> Option<&mut u64> {
@@ -9588,7 +9956,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_pending_pool_token_withdraw(field);
+            self.set_pending_pool_token_withdraw(field.into());
             self
         }
         pub fn extra_fields(&self) -> &super::MoveTable {
@@ -9610,7 +9978,7 @@ mod _accessor_impls {
             self.extra_fields = Some(field.into().into());
         }
         pub fn with_extra_fields<T: Into<super::MoveTable>>(mut self, field: T) -> Self {
-            self.set_extra_fields(field);
+            self.set_extra_fields(field.into());
             self
         }
     }
@@ -9642,7 +10010,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_total_object_storage_rebates(field);
+            self.set_total_object_storage_rebates(field.into());
             self
         }
         pub fn non_refundable_balance_opt_mut(&mut self) -> Option<&mut u64> {
@@ -9658,7 +10026,7 @@ mod _accessor_impls {
             self.non_refundable_balance = Some(field.into().into());
         }
         pub fn with_non_refundable_balance<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_non_refundable_balance(field);
+            self.set_non_refundable_balance(field.into());
             self
         }
     }
@@ -9687,7 +10055,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_read_mask(field);
+            self.set_read_mask(field.into());
             self
         }
     }
@@ -9716,7 +10084,7 @@ mod _accessor_impls {
             self.cursor = Some(field.into().into());
         }
         pub fn with_cursor<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_cursor(field);
+            self.set_cursor(field.into());
             self
         }
         pub fn checkpoint(&self) -> &super::Checkpoint {
@@ -9738,7 +10106,7 @@ mod _accessor_impls {
             self.checkpoint = Some(field.into().into());
         }
         pub fn with_checkpoint<T: Into<super::Checkpoint>>(mut self, field: T) -> Self {
-            self.set_checkpoint(field);
+            self.set_checkpoint(field.into());
             self
         }
     }
@@ -9768,11 +10136,14 @@ mod _accessor_impls {
             self.version = Some(field.into().into());
         }
         pub fn with_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_version(field);
+            self.set_version(field.into());
             self
         }
         pub fn modules(&self) -> &[::prost::bytes::Bytes] {
             &self.modules
+        }
+        pub fn modules_mut(&mut self) -> &mut Vec<::prost::bytes::Bytes> {
+            &mut self.modules
         }
         pub fn set_modules(&mut self, field: Vec<::prost::bytes::Bytes>) {
             self.modules = field;
@@ -9783,6 +10154,9 @@ mod _accessor_impls {
         }
         pub fn dependencies(&self) -> &[String] {
             &self.dependencies
+        }
+        pub fn dependencies_mut(&mut self) -> &mut Vec<String> {
+            &mut self.dependencies
         }
         pub fn set_dependencies(&mut self, field: Vec<String>) {
             self.dependencies = field;
@@ -9824,7 +10198,7 @@ mod _accessor_impls {
             self.epoch_duration_ms = Some(field.into().into());
         }
         pub fn with_epoch_duration_ms<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch_duration_ms(field);
+            self.set_epoch_duration_ms(field.into());
             self
         }
         pub fn stake_subsidy_start_epoch_opt_mut(&mut self) -> Option<&mut u64> {
@@ -9840,7 +10214,7 @@ mod _accessor_impls {
             self.stake_subsidy_start_epoch = Some(field.into().into());
         }
         pub fn with_stake_subsidy_start_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_stake_subsidy_start_epoch(field);
+            self.set_stake_subsidy_start_epoch(field.into());
             self
         }
         pub fn min_validator_count_opt_mut(&mut self) -> Option<&mut u64> {
@@ -9856,7 +10230,7 @@ mod _accessor_impls {
             self.min_validator_count = Some(field.into().into());
         }
         pub fn with_min_validator_count<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_min_validator_count(field);
+            self.set_min_validator_count(field.into());
             self
         }
         pub fn max_validator_count_opt_mut(&mut self) -> Option<&mut u64> {
@@ -9872,7 +10246,7 @@ mod _accessor_impls {
             self.max_validator_count = Some(field.into().into());
         }
         pub fn with_max_validator_count<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_max_validator_count(field);
+            self.set_max_validator_count(field.into());
             self
         }
         pub fn min_validator_joining_stake_opt_mut(&mut self) -> Option<&mut u64> {
@@ -9891,7 +10265,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_min_validator_joining_stake(field);
+            self.set_min_validator_joining_stake(field.into());
             self
         }
         pub fn validator_low_stake_threshold_opt_mut(&mut self) -> Option<&mut u64> {
@@ -9910,7 +10284,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_validator_low_stake_threshold(field);
+            self.set_validator_low_stake_threshold(field.into());
             self
         }
         pub fn validator_very_low_stake_threshold_opt_mut(
@@ -9934,7 +10308,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_validator_very_low_stake_threshold(field);
+            self.set_validator_very_low_stake_threshold(field.into());
             self
         }
         pub fn validator_low_stake_grace_period_opt_mut(&mut self) -> Option<&mut u64> {
@@ -9953,7 +10327,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_validator_low_stake_grace_period(field);
+            self.set_validator_low_stake_grace_period(field.into());
             self
         }
         pub fn extra_fields(&self) -> &super::MoveTable {
@@ -9975,7 +10349,7 @@ mod _accessor_impls {
             self.extra_fields = Some(field.into().into());
         }
         pub fn with_extra_fields<T: Into<super::MoveTable>>(mut self, field: T) -> Self {
-            self.set_extra_fields(field);
+            self.set_extra_fields(field.into());
             self
         }
     }
@@ -10018,7 +10392,7 @@ mod _accessor_impls {
             self.version = Some(field.into().into());
         }
         pub fn with_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_version(field);
+            self.set_version(field.into());
             self
         }
         pub fn epoch_opt_mut(&mut self) -> Option<&mut u64> {
@@ -10034,7 +10408,7 @@ mod _accessor_impls {
             self.epoch = Some(field.into().into());
         }
         pub fn with_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch(field);
+            self.set_epoch(field.into());
             self
         }
         pub fn protocol_version_opt_mut(&mut self) -> Option<&mut u64> {
@@ -10050,7 +10424,7 @@ mod _accessor_impls {
             self.protocol_version = Some(field.into().into());
         }
         pub fn with_protocol_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_protocol_version(field);
+            self.set_protocol_version(field.into());
             self
         }
         pub fn validators(&self) -> &super::ValidatorSet {
@@ -10075,7 +10449,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_validators(field);
+            self.set_validators(field.into());
             self
         }
         pub fn storage_fund(&self) -> &super::StorageFund {
@@ -10100,7 +10474,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_storage_fund(field);
+            self.set_storage_fund(field.into());
             self
         }
         pub fn parameters(&self) -> &super::SystemParameters {
@@ -10125,7 +10499,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_parameters(field);
+            self.set_parameters(field.into());
             self
         }
         pub fn reference_gas_price_opt_mut(&mut self) -> Option<&mut u64> {
@@ -10141,11 +10515,16 @@ mod _accessor_impls {
             self.reference_gas_price = Some(field.into().into());
         }
         pub fn with_reference_gas_price<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_reference_gas_price(field);
+            self.set_reference_gas_price(field.into());
             self
         }
         pub fn validator_report_records(&self) -> &[super::ValidatorReportRecord] {
             &self.validator_report_records
+        }
+        pub fn validator_report_records_mut(
+            &mut self,
+        ) -> &mut Vec<super::ValidatorReportRecord> {
+            &mut self.validator_report_records
         }
         pub fn set_validator_report_records(
             &mut self,
@@ -10182,7 +10561,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_stake_subsidy(field);
+            self.set_stake_subsidy(field.into());
             self
         }
         pub fn safe_mode_opt_mut(&mut self) -> Option<&mut bool> {
@@ -10198,7 +10577,7 @@ mod _accessor_impls {
             self.safe_mode = Some(field.into().into());
         }
         pub fn with_safe_mode<T: Into<bool>>(mut self, field: T) -> Self {
-            self.set_safe_mode(field);
+            self.set_safe_mode(field.into());
             self
         }
         pub fn safe_mode_storage_rewards_opt_mut(&mut self) -> Option<&mut u64> {
@@ -10214,7 +10593,7 @@ mod _accessor_impls {
             self.safe_mode_storage_rewards = Some(field.into().into());
         }
         pub fn with_safe_mode_storage_rewards<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_safe_mode_storage_rewards(field);
+            self.set_safe_mode_storage_rewards(field.into());
             self
         }
         pub fn safe_mode_computation_rewards_opt_mut(&mut self) -> Option<&mut u64> {
@@ -10233,7 +10612,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_safe_mode_computation_rewards(field);
+            self.set_safe_mode_computation_rewards(field.into());
             self
         }
         pub fn safe_mode_storage_rebates_opt_mut(&mut self) -> Option<&mut u64> {
@@ -10249,7 +10628,7 @@ mod _accessor_impls {
             self.safe_mode_storage_rebates = Some(field.into().into());
         }
         pub fn with_safe_mode_storage_rebates<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_safe_mode_storage_rebates(field);
+            self.set_safe_mode_storage_rebates(field.into());
             self
         }
         pub fn safe_mode_non_refundable_storage_fee_opt_mut(
@@ -10273,7 +10652,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_safe_mode_non_refundable_storage_fee(field);
+            self.set_safe_mode_non_refundable_storage_fee(field.into());
             self
         }
         pub fn epoch_start_timestamp_ms_opt_mut(&mut self) -> Option<&mut u64> {
@@ -10289,7 +10668,7 @@ mod _accessor_impls {
             self.epoch_start_timestamp_ms = Some(field.into().into());
         }
         pub fn with_epoch_start_timestamp_ms<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch_start_timestamp_ms(field);
+            self.set_epoch_start_timestamp_ms(field.into());
             self
         }
         pub fn extra_fields(&self) -> &super::MoveTable {
@@ -10311,7 +10690,7 @@ mod _accessor_impls {
             self.extra_fields = Some(field.into().into());
         }
         pub fn with_extra_fields<T: Into<super::MoveTable>>(mut self, field: T) -> Self {
-            self.set_extra_fields(field);
+            self.set_extra_fields(field.into());
             self
         }
     }
@@ -10351,7 +10730,7 @@ mod _accessor_impls {
             self.bcs = Some(field.into().into());
         }
         pub fn with_bcs<T: Into<super::Bcs>>(mut self, field: T) -> Self {
-            self.set_bcs(field);
+            self.set_bcs(field.into());
             self
         }
         pub fn digest_opt_mut(&mut self) -> Option<&mut String> {
@@ -10367,7 +10746,7 @@ mod _accessor_impls {
             self.digest = Some(field.into().into());
         }
         pub fn with_digest<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_digest(field);
+            self.set_digest(field.into());
             self
         }
         pub fn version_opt_mut(&mut self) -> Option<&mut i32> {
@@ -10383,7 +10762,7 @@ mod _accessor_impls {
             self.version = Some(field.into().into());
         }
         pub fn with_version<T: Into<i32>>(mut self, field: T) -> Self {
-            self.set_version(field);
+            self.set_version(field.into());
             self
         }
         pub fn kind(&self) -> &super::TransactionKind {
@@ -10405,7 +10784,7 @@ mod _accessor_impls {
             self.kind = Some(field.into().into());
         }
         pub fn with_kind<T: Into<super::TransactionKind>>(mut self, field: T) -> Self {
-            self.set_kind(field);
+            self.set_kind(field.into());
             self
         }
         pub fn sender_opt_mut(&mut self) -> Option<&mut String> {
@@ -10421,7 +10800,7 @@ mod _accessor_impls {
             self.sender = Some(field.into().into());
         }
         pub fn with_sender<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_sender(field);
+            self.set_sender(field.into());
             self
         }
         pub fn gas_payment(&self) -> &super::GasPayment {
@@ -10443,7 +10822,7 @@ mod _accessor_impls {
             self.gas_payment = Some(field.into().into());
         }
         pub fn with_gas_payment<T: Into<super::GasPayment>>(mut self, field: T) -> Self {
-            self.set_gas_payment(field);
+            self.set_gas_payment(field.into());
             self
         }
         pub fn expiration(&self) -> &super::TransactionExpiration {
@@ -10473,7 +10852,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_expiration(field);
+            self.set_expiration(field.into());
             self
         }
     }
@@ -10520,7 +10899,7 @@ mod _accessor_impls {
             self.bcs = Some(field.into().into());
         }
         pub fn with_bcs<T: Into<super::Bcs>>(mut self, field: T) -> Self {
-            self.set_bcs(field);
+            self.set_bcs(field.into());
             self
         }
         pub fn digest_opt_mut(&mut self) -> Option<&mut String> {
@@ -10536,7 +10915,7 @@ mod _accessor_impls {
             self.digest = Some(field.into().into());
         }
         pub fn with_digest<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_digest(field);
+            self.set_digest(field.into());
             self
         }
         pub fn version_opt_mut(&mut self) -> Option<&mut i32> {
@@ -10552,7 +10931,7 @@ mod _accessor_impls {
             self.version = Some(field.into().into());
         }
         pub fn with_version<T: Into<i32>>(mut self, field: T) -> Self {
-            self.set_version(field);
+            self.set_version(field.into());
             self
         }
         pub fn status(&self) -> &super::ExecutionStatus {
@@ -10574,7 +10953,7 @@ mod _accessor_impls {
             self.status = Some(field.into().into());
         }
         pub fn with_status<T: Into<super::ExecutionStatus>>(mut self, field: T) -> Self {
-            self.set_status(field);
+            self.set_status(field.into());
             self
         }
         pub fn epoch_opt_mut(&mut self) -> Option<&mut u64> {
@@ -10590,7 +10969,7 @@ mod _accessor_impls {
             self.epoch = Some(field.into().into());
         }
         pub fn with_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch(field);
+            self.set_epoch(field.into());
             self
         }
         pub fn gas_used(&self) -> &super::GasCostSummary {
@@ -10615,7 +10994,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_gas_used(field);
+            self.set_gas_used(field.into());
             self
         }
         pub fn transaction_digest_opt_mut(&mut self) -> Option<&mut String> {
@@ -10631,7 +11010,7 @@ mod _accessor_impls {
             self.transaction_digest = Some(field.into().into());
         }
         pub fn with_transaction_digest<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_transaction_digest(field);
+            self.set_transaction_digest(field.into());
             self
         }
         pub fn gas_object(&self) -> &super::ChangedObject {
@@ -10656,7 +11035,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_gas_object(field);
+            self.set_gas_object(field.into());
             self
         }
         pub fn events_digest_opt_mut(&mut self) -> Option<&mut String> {
@@ -10672,11 +11051,14 @@ mod _accessor_impls {
             self.events_digest = Some(field.into().into());
         }
         pub fn with_events_digest<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_events_digest(field);
+            self.set_events_digest(field.into());
             self
         }
         pub fn dependencies(&self) -> &[String] {
             &self.dependencies
+        }
+        pub fn dependencies_mut(&mut self) -> &mut Vec<String> {
+            &mut self.dependencies
         }
         pub fn set_dependencies(&mut self, field: Vec<String>) {
             self.dependencies = field;
@@ -10698,11 +11080,14 @@ mod _accessor_impls {
             self.lamport_version = Some(field.into().into());
         }
         pub fn with_lamport_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_lamport_version(field);
+            self.set_lamport_version(field.into());
             self
         }
         pub fn changed_objects(&self) -> &[super::ChangedObject] {
             &self.changed_objects
+        }
+        pub fn changed_objects_mut(&mut self) -> &mut Vec<super::ChangedObject> {
+            &mut self.changed_objects
         }
         pub fn set_changed_objects(&mut self, field: Vec<super::ChangedObject>) {
             self.changed_objects = field;
@@ -10713,6 +11098,11 @@ mod _accessor_impls {
         }
         pub fn unchanged_consensus_objects(&self) -> &[super::UnchangedConsensusObject] {
             &self.unchanged_consensus_objects
+        }
+        pub fn unchanged_consensus_objects_mut(
+            &mut self,
+        ) -> &mut Vec<super::UnchangedConsensusObject> {
+            &mut self.unchanged_consensus_objects
         }
         pub fn set_unchanged_consensus_objects(
             &mut self,
@@ -10740,7 +11130,7 @@ mod _accessor_impls {
             self.auxiliary_data_digest = Some(field.into().into());
         }
         pub fn with_auxiliary_data_digest<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_auxiliary_data_digest(field);
+            self.set_auxiliary_data_digest(field.into());
             self
         }
     }
@@ -10776,7 +11166,7 @@ mod _accessor_impls {
             self.bcs = Some(field.into().into());
         }
         pub fn with_bcs<T: Into<super::Bcs>>(mut self, field: T) -> Self {
-            self.set_bcs(field);
+            self.set_bcs(field.into());
             self
         }
         pub fn digest_opt_mut(&mut self) -> Option<&mut String> {
@@ -10792,11 +11182,14 @@ mod _accessor_impls {
             self.digest = Some(field.into().into());
         }
         pub fn with_digest<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_digest(field);
+            self.set_digest(field.into());
             self
         }
         pub fn events(&self) -> &[super::Event] {
             &self.events
+        }
+        pub fn events_mut(&mut self) -> &mut Vec<super::Event> {
+            &mut self.events
         }
         pub fn set_events(&mut self, field: Vec<super::Event>) {
             self.events = field;
@@ -10815,6 +11208,12 @@ mod _accessor_impls {
             static DEFAULT: super::TransactionExpiration = super::TransactionExpiration::const_default();
             &DEFAULT
         }
+        pub fn with_kind<
+            T: Into<super::transaction_expiration::TransactionExpirationKind>,
+        >(mut self, field: T) -> Self {
+            self.set_kind(field.into());
+            self
+        }
         pub fn epoch_opt_mut(&mut self) -> Option<&mut u64> {
             self.epoch.as_mut().map(|field| field as _)
         }
@@ -10828,7 +11227,7 @@ mod _accessor_impls {
             self.epoch = Some(field.into().into());
         }
         pub fn with_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch(field);
+            self.set_epoch(field.into());
             self
         }
     }
@@ -10892,7 +11291,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_certified(field);
+            self.set_certified(field.into());
             self
         }
         pub fn checkpointed(&self) -> u64 {
@@ -10936,7 +11335,7 @@ mod _accessor_impls {
             );
         }
         pub fn with_checkpointed<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_checkpointed(field);
+            self.set_checkpointed(field.into());
             self
         }
     }
@@ -11006,7 +11405,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_programmable_transaction(field);
+            self.set_programmable_transaction(field.into());
             self
         }
         pub fn programmable_system_transaction(
@@ -11069,7 +11468,7 @@ mod _accessor_impls {
         pub fn with_programmable_system_transaction<
             T: Into<super::ProgrammableTransaction>,
         >(mut self, field: T) -> Self {
-            self.set_programmable_system_transaction(field);
+            self.set_programmable_system_transaction(field.into());
             self
         }
         pub fn change_epoch(&self) -> &super::ChangeEpoch {
@@ -11114,7 +11513,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_change_epoch(field);
+            self.set_change_epoch(field.into());
             self
         }
         pub fn genesis(&self) -> &super::GenesisTransaction {
@@ -11157,7 +11556,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_genesis(field);
+            self.set_genesis(field.into());
             self
         }
         pub fn consensus_commit_prologue_v1(&self) -> &super::ConsensusCommitPrologue {
@@ -11219,7 +11618,7 @@ mod _accessor_impls {
         pub fn with_consensus_commit_prologue_v1<
             T: Into<super::ConsensusCommitPrologue>,
         >(mut self, field: T) -> Self {
-            self.set_consensus_commit_prologue_v1(field);
+            self.set_consensus_commit_prologue_v1(field.into());
             self
         }
         pub fn authenticator_state_update(&self) -> &super::AuthenticatorStateUpdate {
@@ -11282,7 +11681,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_authenticator_state_update(field);
+            self.set_authenticator_state_update(field.into());
             self
         }
         pub fn end_of_epoch(&self) -> &super::EndOfEpochTransaction {
@@ -11332,7 +11731,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_end_of_epoch(field);
+            self.set_end_of_epoch(field.into());
             self
         }
         pub fn randomness_state_update(&self) -> &super::RandomnessStateUpdate {
@@ -11390,7 +11789,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_randomness_state_update(field);
+            self.set_randomness_state_update(field.into());
             self
         }
         pub fn consensus_commit_prologue_v2(&self) -> &super::ConsensusCommitPrologue {
@@ -11452,7 +11851,7 @@ mod _accessor_impls {
         pub fn with_consensus_commit_prologue_v2<
             T: Into<super::ConsensusCommitPrologue>,
         >(mut self, field: T) -> Self {
-            self.set_consensus_commit_prologue_v2(field);
+            self.set_consensus_commit_prologue_v2(field.into());
             self
         }
         pub fn consensus_commit_prologue_v3(&self) -> &super::ConsensusCommitPrologue {
@@ -11514,7 +11913,7 @@ mod _accessor_impls {
         pub fn with_consensus_commit_prologue_v3<
             T: Into<super::ConsensusCommitPrologue>,
         >(mut self, field: T) -> Self {
-            self.set_consensus_commit_prologue_v3(field);
+            self.set_consensus_commit_prologue_v3(field.into());
             self
         }
         pub fn consensus_commit_prologue_v4(&self) -> &super::ConsensusCommitPrologue {
@@ -11576,7 +11975,7 @@ mod _accessor_impls {
         pub fn with_consensus_commit_prologue_v4<
             T: Into<super::ConsensusCommitPrologue>,
         >(mut self, field: T) -> Self {
-            self.set_consensus_commit_prologue_v4(field);
+            self.set_consensus_commit_prologue_v4(field.into());
             self
         }
     }
@@ -11594,6 +11993,9 @@ mod _accessor_impls {
         }
         pub fn objects(&self) -> &[super::Argument] {
             &self.objects
+        }
+        pub fn objects_mut(&mut self) -> &mut Vec<super::Argument> {
+            &mut self.objects
         }
         pub fn set_objects(&mut self, field: Vec<super::Argument>) {
             self.objects = field;
@@ -11621,7 +12023,7 @@ mod _accessor_impls {
             self.address = Some(field.into().into());
         }
         pub fn with_address<T: Into<super::Argument>>(mut self, field: T) -> Self {
-            self.set_address(field);
+            self.set_address(field.into());
             self
         }
     }
@@ -11650,7 +12052,14 @@ mod _accessor_impls {
             self.type_argument = Some(field.into().into());
         }
         pub fn with_type_argument<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_type_argument(field);
+            self.set_type_argument(field.into());
+            self
+        }
+        pub fn with_kind<T: Into<super::type_argument_error::TypeArgumentErrorKind>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_kind(field.into());
             self
         }
     }
@@ -11680,7 +12089,7 @@ mod _accessor_impls {
             self.module_name = Some(field.into().into());
         }
         pub fn with_module_name<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_module_name(field);
+            self.set_module_name(field.into());
             self
         }
         pub fn datatype_name_opt_mut(&mut self) -> Option<&mut String> {
@@ -11696,7 +12105,7 @@ mod _accessor_impls {
             self.datatype_name = Some(field.into().into());
         }
         pub fn with_datatype_name<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_datatype_name(field);
+            self.set_datatype_name(field.into());
             self
         }
         pub fn package_id_opt_mut(&mut self) -> Option<&mut String> {
@@ -11712,7 +12121,7 @@ mod _accessor_impls {
             self.package_id = Some(field.into().into());
         }
         pub fn with_package_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_package_id(field);
+            self.set_package_id(field.into());
             self
         }
     }
@@ -11741,7 +12150,7 @@ mod _accessor_impls {
             self.is_phantom = Some(field.into().into());
         }
         pub fn with_is_phantom<T: Into<bool>>(mut self, field: T) -> Self {
-            self.set_is_phantom(field);
+            self.set_is_phantom(field.into());
             self
         }
     }
@@ -11760,6 +12169,12 @@ mod _accessor_impls {
             static DEFAULT: super::UnchangedConsensusObject = super::UnchangedConsensusObject::const_default();
             &DEFAULT
         }
+        pub fn with_kind<
+            T: Into<super::unchanged_consensus_object::UnchangedConsensusObjectKind>,
+        >(mut self, field: T) -> Self {
+            self.set_kind(field.into());
+            self
+        }
         pub fn object_id_opt_mut(&mut self) -> Option<&mut String> {
             self.object_id.as_mut().map(|field| field as _)
         }
@@ -11773,7 +12188,7 @@ mod _accessor_impls {
             self.object_id = Some(field.into().into());
         }
         pub fn with_object_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_object_id(field);
+            self.set_object_id(field.into());
             self
         }
         pub fn version_opt_mut(&mut self) -> Option<&mut u64> {
@@ -11789,7 +12204,7 @@ mod _accessor_impls {
             self.version = Some(field.into().into());
         }
         pub fn with_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_version(field);
+            self.set_version(field.into());
             self
         }
         pub fn digest_opt_mut(&mut self) -> Option<&mut String> {
@@ -11805,7 +12220,7 @@ mod _accessor_impls {
             self.digest = Some(field.into().into());
         }
         pub fn with_digest<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_digest(field);
+            self.set_digest(field.into());
             self
         }
         pub fn object_type_opt_mut(&mut self) -> Option<&mut String> {
@@ -11821,7 +12236,7 @@ mod _accessor_impls {
             self.object_type = Some(field.into().into());
         }
         pub fn with_object_type<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_object_type(field);
+            self.set_object_type(field.into());
             self
         }
     }
@@ -11842,6 +12257,9 @@ mod _accessor_impls {
         pub fn modules(&self) -> &[::prost::bytes::Bytes] {
             &self.modules
         }
+        pub fn modules_mut(&mut self) -> &mut Vec<::prost::bytes::Bytes> {
+            &mut self.modules
+        }
         pub fn set_modules(&mut self, field: Vec<::prost::bytes::Bytes>) {
             self.modules = field;
         }
@@ -11851,6 +12269,9 @@ mod _accessor_impls {
         }
         pub fn dependencies(&self) -> &[String] {
             &self.dependencies
+        }
+        pub fn dependencies_mut(&mut self) -> &mut Vec<String> {
+            &mut self.dependencies
         }
         pub fn set_dependencies(&mut self, field: Vec<String>) {
             self.dependencies = field;
@@ -11872,7 +12293,7 @@ mod _accessor_impls {
             self.package = Some(field.into().into());
         }
         pub fn with_package<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_package(field);
+            self.set_package(field.into());
             self
         }
         pub fn ticket(&self) -> &super::Argument {
@@ -11894,7 +12315,7 @@ mod _accessor_impls {
             self.ticket = Some(field.into().into());
         }
         pub fn with_ticket<T: Into<super::Argument>>(mut self, field: T) -> Self {
-            self.set_ticket(field);
+            self.set_ticket(field.into());
             self
         }
     }
@@ -11930,7 +12351,11 @@ mod _accessor_impls {
             self.bcs = Some(field.into().into());
         }
         pub fn with_bcs<T: Into<super::Bcs>>(mut self, field: T) -> Self {
-            self.set_bcs(field);
+            self.set_bcs(field.into());
+            self
+        }
+        pub fn with_scheme<T: Into<super::SignatureScheme>>(mut self, field: T) -> Self {
+            self.set_scheme(field.into());
             self
         }
         pub fn simple(&self) -> &super::SimpleSignature {
@@ -11976,7 +12401,7 @@ mod _accessor_impls {
             );
         }
         pub fn with_simple<T: Into<super::SimpleSignature>>(mut self, field: T) -> Self {
-            self.set_simple(field);
+            self.set_simple(field.into());
             self
         }
         pub fn multisig(&self) -> &super::MultisigAggregatedSignature {
@@ -12030,7 +12455,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_multisig(field);
+            self.set_multisig(field.into());
             self
         }
         pub fn zklogin(&self) -> &super::ZkLoginAuthenticator {
@@ -12079,7 +12504,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_zklogin(field);
+            self.set_zklogin(field.into());
             self
         }
         pub fn passkey(&self) -> &super::PasskeyAuthenticator {
@@ -12128,7 +12553,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_passkey(field);
+            self.set_passkey(field.into());
             self
         }
     }
@@ -12186,7 +12611,7 @@ mod _accessor_impls {
             self.name = Some(field.into().into());
         }
         pub fn with_name<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_name(field);
+            self.set_name(field.into());
             self
         }
         pub fn address_opt_mut(&mut self) -> Option<&mut String> {
@@ -12202,7 +12627,7 @@ mod _accessor_impls {
             self.address = Some(field.into().into());
         }
         pub fn with_address<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_address(field);
+            self.set_address(field.into());
             self
         }
         pub fn description_opt_mut(&mut self) -> Option<&mut String> {
@@ -12218,7 +12643,7 @@ mod _accessor_impls {
             self.description = Some(field.into().into());
         }
         pub fn with_description<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_description(field);
+            self.set_description(field.into());
             self
         }
         pub fn image_url_opt_mut(&mut self) -> Option<&mut String> {
@@ -12234,7 +12659,7 @@ mod _accessor_impls {
             self.image_url = Some(field.into().into());
         }
         pub fn with_image_url<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_image_url(field);
+            self.set_image_url(field.into());
             self
         }
         pub fn project_url_opt_mut(&mut self) -> Option<&mut String> {
@@ -12250,7 +12675,7 @@ mod _accessor_impls {
             self.project_url = Some(field.into().into());
         }
         pub fn with_project_url<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_project_url(field);
+            self.set_project_url(field.into());
             self
         }
         pub fn protocol_public_key_opt(&self) -> Option<&[u8]> {
@@ -12266,7 +12691,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_protocol_public_key(field);
+            self.set_protocol_public_key(field.into());
             self
         }
         pub fn proof_of_possession_opt(&self) -> Option<&[u8]> {
@@ -12282,7 +12707,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_proof_of_possession(field);
+            self.set_proof_of_possession(field.into());
             self
         }
         pub fn network_public_key_opt(&self) -> Option<&[u8]> {
@@ -12298,7 +12723,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_network_public_key(field);
+            self.set_network_public_key(field.into());
             self
         }
         pub fn worker_public_key_opt(&self) -> Option<&[u8]> {
@@ -12314,7 +12739,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_worker_public_key(field);
+            self.set_worker_public_key(field.into());
             self
         }
         pub fn network_address_opt_mut(&mut self) -> Option<&mut String> {
@@ -12330,7 +12755,7 @@ mod _accessor_impls {
             self.network_address = Some(field.into().into());
         }
         pub fn with_network_address<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_network_address(field);
+            self.set_network_address(field.into());
             self
         }
         pub fn p2p_address_opt_mut(&mut self) -> Option<&mut String> {
@@ -12346,7 +12771,7 @@ mod _accessor_impls {
             self.p2p_address = Some(field.into().into());
         }
         pub fn with_p2p_address<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_p2p_address(field);
+            self.set_p2p_address(field.into());
             self
         }
         pub fn primary_address_opt_mut(&mut self) -> Option<&mut String> {
@@ -12362,7 +12787,7 @@ mod _accessor_impls {
             self.primary_address = Some(field.into().into());
         }
         pub fn with_primary_address<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_primary_address(field);
+            self.set_primary_address(field.into());
             self
         }
         pub fn worker_address_opt_mut(&mut self) -> Option<&mut String> {
@@ -12378,7 +12803,7 @@ mod _accessor_impls {
             self.worker_address = Some(field.into().into());
         }
         pub fn with_worker_address<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_worker_address(field);
+            self.set_worker_address(field.into());
             self
         }
         pub fn next_epoch_protocol_public_key_opt(&self) -> Option<&[u8]> {
@@ -12394,7 +12819,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_next_epoch_protocol_public_key(field);
+            self.set_next_epoch_protocol_public_key(field.into());
             self
         }
         pub fn next_epoch_proof_of_possession_opt(&self) -> Option<&[u8]> {
@@ -12410,7 +12835,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_next_epoch_proof_of_possession(field);
+            self.set_next_epoch_proof_of_possession(field.into());
             self
         }
         pub fn next_epoch_network_public_key_opt(&self) -> Option<&[u8]> {
@@ -12426,7 +12851,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_next_epoch_network_public_key(field);
+            self.set_next_epoch_network_public_key(field.into());
             self
         }
         pub fn next_epoch_worker_public_key_opt(&self) -> Option<&[u8]> {
@@ -12442,7 +12867,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_next_epoch_worker_public_key(field);
+            self.set_next_epoch_worker_public_key(field.into());
             self
         }
         pub fn next_epoch_network_address_opt_mut(&mut self) -> Option<&mut String> {
@@ -12461,7 +12886,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_next_epoch_network_address(field);
+            self.set_next_epoch_network_address(field.into());
             self
         }
         pub fn next_epoch_p2p_address_opt_mut(&mut self) -> Option<&mut String> {
@@ -12477,7 +12902,7 @@ mod _accessor_impls {
             self.next_epoch_p2p_address = Some(field.into().into());
         }
         pub fn with_next_epoch_p2p_address<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_next_epoch_p2p_address(field);
+            self.set_next_epoch_p2p_address(field.into());
             self
         }
         pub fn next_epoch_primary_address_opt_mut(&mut self) -> Option<&mut String> {
@@ -12496,7 +12921,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_next_epoch_primary_address(field);
+            self.set_next_epoch_primary_address(field.into());
             self
         }
         pub fn next_epoch_worker_address_opt_mut(&mut self) -> Option<&mut String> {
@@ -12515,7 +12940,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_next_epoch_worker_address(field);
+            self.set_next_epoch_worker_address(field.into());
             self
         }
         pub fn metadata_extra_fields(&self) -> &super::MoveTable {
@@ -12545,7 +12970,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_metadata_extra_fields(field);
+            self.set_metadata_extra_fields(field.into());
             self
         }
         pub fn voting_power_opt_mut(&mut self) -> Option<&mut u64> {
@@ -12561,7 +12986,7 @@ mod _accessor_impls {
             self.voting_power = Some(field.into().into());
         }
         pub fn with_voting_power<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_voting_power(field);
+            self.set_voting_power(field.into());
             self
         }
         pub fn operation_cap_id_opt_mut(&mut self) -> Option<&mut String> {
@@ -12577,7 +13002,7 @@ mod _accessor_impls {
             self.operation_cap_id = Some(field.into().into());
         }
         pub fn with_operation_cap_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_operation_cap_id(field);
+            self.set_operation_cap_id(field.into());
             self
         }
         pub fn gas_price_opt_mut(&mut self) -> Option<&mut u64> {
@@ -12593,7 +13018,7 @@ mod _accessor_impls {
             self.gas_price = Some(field.into().into());
         }
         pub fn with_gas_price<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_gas_price(field);
+            self.set_gas_price(field.into());
             self
         }
         pub fn staking_pool(&self) -> &super::StakingPool {
@@ -12618,7 +13043,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_staking_pool(field);
+            self.set_staking_pool(field.into());
             self
         }
         pub fn commission_rate_opt_mut(&mut self) -> Option<&mut u64> {
@@ -12634,7 +13059,7 @@ mod _accessor_impls {
             self.commission_rate = Some(field.into().into());
         }
         pub fn with_commission_rate<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_commission_rate(field);
+            self.set_commission_rate(field.into());
             self
         }
         pub fn next_epoch_stake_opt_mut(&mut self) -> Option<&mut u64> {
@@ -12650,7 +13075,7 @@ mod _accessor_impls {
             self.next_epoch_stake = Some(field.into().into());
         }
         pub fn with_next_epoch_stake<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_next_epoch_stake(field);
+            self.set_next_epoch_stake(field.into());
             self
         }
         pub fn next_epoch_gas_price_opt_mut(&mut self) -> Option<&mut u64> {
@@ -12666,7 +13091,7 @@ mod _accessor_impls {
             self.next_epoch_gas_price = Some(field.into().into());
         }
         pub fn with_next_epoch_gas_price<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_next_epoch_gas_price(field);
+            self.set_next_epoch_gas_price(field.into());
             self
         }
         pub fn next_epoch_commission_rate_opt_mut(&mut self) -> Option<&mut u64> {
@@ -12685,7 +13110,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_next_epoch_commission_rate(field);
+            self.set_next_epoch_commission_rate(field.into());
             self
         }
         pub fn extra_fields(&self) -> &super::MoveTable {
@@ -12707,7 +13132,7 @@ mod _accessor_impls {
             self.extra_fields = Some(field.into().into());
         }
         pub fn with_extra_fields<T: Into<super::MoveTable>>(mut self, field: T) -> Self {
-            self.set_extra_fields(field);
+            self.set_extra_fields(field.into());
             self
         }
     }
@@ -12737,7 +13162,7 @@ mod _accessor_impls {
             self.epoch = Some(field.into().into());
         }
         pub fn with_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch(field);
+            self.set_epoch(field.into());
             self
         }
         pub fn signature_opt(&self) -> Option<&[u8]> {
@@ -12750,11 +13175,14 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_signature(field);
+            self.set_signature(field.into());
             self
         }
         pub fn bitmap(&self) -> &[u32] {
             &self.bitmap
+        }
+        pub fn bitmap_mut(&mut self) -> &mut Vec<u32> {
+            &mut self.bitmap
         }
         pub fn set_bitmap(&mut self, field: Vec<u32>) {
             self.bitmap = field;
@@ -12789,11 +13217,14 @@ mod _accessor_impls {
             self.epoch = Some(field.into().into());
         }
         pub fn with_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch(field);
+            self.set_epoch(field.into());
             self
         }
         pub fn members(&self) -> &[super::ValidatorCommitteeMember] {
             &self.members
+        }
+        pub fn members_mut(&mut self) -> &mut Vec<super::ValidatorCommitteeMember> {
+            &mut self.members
         }
         pub fn set_members(&mut self, field: Vec<super::ValidatorCommitteeMember>) {
             self.members = field;
@@ -12828,7 +13259,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_public_key(field);
+            self.set_public_key(field.into());
             self
         }
         pub fn weight_opt_mut(&mut self) -> Option<&mut u64> {
@@ -12844,7 +13275,7 @@ mod _accessor_impls {
             self.weight = Some(field.into().into());
         }
         pub fn with_weight<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_weight(field);
+            self.set_weight(field.into());
             self
         }
     }
@@ -12870,7 +13301,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_validator(field);
+            self.set_validator(field.into());
             self
         }
         pub fn duration_opt_mut(&mut self) -> Option<&mut ::prost_types::Duration> {
@@ -12889,7 +13320,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_duration(field);
+            self.set_duration(field.into());
             self
         }
     }
@@ -12918,11 +13349,14 @@ mod _accessor_impls {
             self.reported = Some(field.into().into());
         }
         pub fn with_reported<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_reported(field);
+            self.set_reported(field.into());
             self
         }
         pub fn reporters(&self) -> &[String] {
             &self.reporters
+        }
+        pub fn reporters_mut(&mut self) -> &mut Vec<String> {
+            &mut self.reporters
         }
         pub fn set_reporters(&mut self, field: Vec<String>) {
             self.reporters = field;
@@ -12964,11 +13398,14 @@ mod _accessor_impls {
             self.total_stake = Some(field.into().into());
         }
         pub fn with_total_stake<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_total_stake(field);
+            self.set_total_stake(field.into());
             self
         }
         pub fn active_validators(&self) -> &[super::Validator] {
             &self.active_validators
+        }
+        pub fn active_validators_mut(&mut self) -> &mut Vec<super::Validator> {
+            &mut self.active_validators
         }
         pub fn set_active_validators(&mut self, field: Vec<super::Validator>) {
             self.active_validators = field;
@@ -13004,11 +13441,14 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_pending_active_validators(field);
+            self.set_pending_active_validators(field.into());
             self
         }
         pub fn pending_removals(&self) -> &[u64] {
             &self.pending_removals
+        }
+        pub fn pending_removals_mut(&mut self) -> &mut Vec<u64> {
+            &mut self.pending_removals
         }
         pub fn set_pending_removals(&mut self, field: Vec<u64>) {
             self.pending_removals = field;
@@ -13044,7 +13484,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_staking_pool_mappings(field);
+            self.set_staking_pool_mappings(field.into());
             self
         }
         pub fn inactive_validators(&self) -> &super::MoveTable {
@@ -13069,7 +13509,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_inactive_validators(field);
+            self.set_inactive_validators(field.into());
             self
         }
         pub fn validator_candidates(&self) -> &super::MoveTable {
@@ -13094,7 +13534,28 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_validator_candidates(field);
+            self.set_validator_candidates(field.into());
+            self
+        }
+        pub fn at_risk_validators(&self) -> &::std::collections::BTreeMap<String, u64> {
+            &self.at_risk_validators
+        }
+        pub fn at_risk_validators_mut(
+            &mut self,
+        ) -> &mut ::std::collections::BTreeMap<String, u64> {
+            &mut self.at_risk_validators
+        }
+        pub fn set_at_risk_validators(
+            &mut self,
+            field: ::std::collections::BTreeMap<String, u64>,
+        ) {
+            self.at_risk_validators = field;
+        }
+        pub fn with_at_risk_validators(
+            mut self,
+            field: ::std::collections::BTreeMap<String, u64>,
+        ) -> Self {
+            self.set_at_risk_validators(field);
             self
         }
         pub fn extra_fields(&self) -> &super::MoveTable {
@@ -13116,7 +13577,7 @@ mod _accessor_impls {
             self.extra_fields = Some(field.into().into());
         }
         pub fn with_extra_fields<T: Into<super::MoveTable>>(mut self, field: T) -> Self {
-            self.set_extra_fields(field);
+            self.set_extra_fields(field.into());
             self
         }
     }
@@ -13146,7 +13607,7 @@ mod _accessor_impls {
             self.name = Some(field.into().into());
         }
         pub fn with_name<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_name(field);
+            self.set_name(field.into());
             self
         }
         pub fn position_opt_mut(&mut self) -> Option<&mut u32> {
@@ -13162,11 +13623,14 @@ mod _accessor_impls {
             self.position = Some(field.into().into());
         }
         pub fn with_position<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_position(field);
+            self.set_position(field.into());
             self
         }
         pub fn fields(&self) -> &[super::FieldDescriptor] {
             &self.fields
+        }
+        pub fn fields_mut(&mut self) -> &mut Vec<super::FieldDescriptor> {
+            &mut self.fields
         }
         pub fn set_fields(&mut self, field: Vec<super::FieldDescriptor>) {
             self.fields = field;
@@ -13209,7 +13673,7 @@ mod _accessor_impls {
             self.message = Some(field.into().into());
         }
         pub fn with_message<T: Into<super::Bcs>>(mut self, field: T) -> Self {
-            self.set_message(field);
+            self.set_message(field.into());
             self
         }
         pub fn signature(&self) -> &super::UserSignature {
@@ -13234,7 +13698,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_signature(field);
+            self.set_signature(field.into());
             self
         }
         pub fn address_opt_mut(&mut self) -> Option<&mut String> {
@@ -13250,11 +13714,14 @@ mod _accessor_impls {
             self.address = Some(field.into().into());
         }
         pub fn with_address<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_address(field);
+            self.set_address(field.into());
             self
         }
         pub fn jwks(&self) -> &[super::ActiveJwk] {
             &self.jwks
+        }
+        pub fn jwks_mut(&mut self) -> &mut Vec<super::ActiveJwk> {
+            &mut self.jwks
         }
         pub fn set_jwks(&mut self, field: Vec<super::ActiveJwk>) {
             self.jwks = field;
@@ -13289,7 +13756,7 @@ mod _accessor_impls {
             self.is_valid = Some(field.into().into());
         }
         pub fn with_is_valid<T: Into<bool>>(mut self, field: T) -> Self {
-            self.set_is_valid(field);
+            self.set_is_valid(field.into());
             self
         }
         pub fn reason_opt_mut(&mut self) -> Option<&mut String> {
@@ -13305,7 +13772,7 @@ mod _accessor_impls {
             self.reason = Some(field.into().into());
         }
         pub fn with_reason<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_reason(field);
+            self.set_reason(field.into());
             self
         }
     }
@@ -13335,7 +13802,7 @@ mod _accessor_impls {
             self.object_id = Some(field.into().into());
         }
         pub fn with_object_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_object_id(field);
+            self.set_object_id(field.into());
             self
         }
         pub fn start_version_opt_mut(&mut self) -> Option<&mut u64> {
@@ -13351,7 +13818,7 @@ mod _accessor_impls {
             self.start_version = Some(field.into().into());
         }
         pub fn with_start_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_start_version(field);
+            self.set_start_version(field.into());
             self
         }
         pub fn version_opt_mut(&mut self) -> Option<&mut u64> {
@@ -13367,7 +13834,7 @@ mod _accessor_impls {
             self.version = Some(field.into().into());
         }
         pub fn with_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_version(field);
+            self.set_version(field.into());
             self
         }
     }
@@ -13403,7 +13870,7 @@ mod _accessor_impls {
             self.inputs = Some(field.into().into());
         }
         pub fn with_inputs<T: Into<super::ZkLoginInputs>>(mut self, field: T) -> Self {
-            self.set_inputs(field);
+            self.set_inputs(field.into());
             self
         }
         pub fn max_epoch_opt_mut(&mut self) -> Option<&mut u64> {
@@ -13419,7 +13886,7 @@ mod _accessor_impls {
             self.max_epoch = Some(field.into().into());
         }
         pub fn with_max_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_max_epoch(field);
+            self.set_max_epoch(field.into());
             self
         }
         pub fn signature(&self) -> &super::SimpleSignature {
@@ -13444,7 +13911,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_signature(field);
+            self.set_signature(field.into());
             self
         }
     }
@@ -13473,7 +13940,7 @@ mod _accessor_impls {
             self.value = Some(field.into().into());
         }
         pub fn with_value<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_value(field);
+            self.set_value(field.into());
             self
         }
         pub fn index_mod_4_opt_mut(&mut self) -> Option<&mut u32> {
@@ -13489,7 +13956,7 @@ mod _accessor_impls {
             self.index_mod_4 = Some(field.into().into());
         }
         pub fn with_index_mod_4<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_index_mod_4(field);
+            self.set_index_mod_4(field.into());
             self
         }
     }
@@ -13529,7 +13996,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_proof_points(field);
+            self.set_proof_points(field.into());
             self
         }
         pub fn iss_base64_details(&self) -> &super::ZkLoginClaim {
@@ -13559,7 +14026,7 @@ mod _accessor_impls {
             mut self,
             field: T,
         ) -> Self {
-            self.set_iss_base64_details(field);
+            self.set_iss_base64_details(field.into());
             self
         }
         pub fn header_base64_opt_mut(&mut self) -> Option<&mut String> {
@@ -13575,7 +14042,7 @@ mod _accessor_impls {
             self.header_base64 = Some(field.into().into());
         }
         pub fn with_header_base64<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_header_base64(field);
+            self.set_header_base64(field.into());
             self
         }
         pub fn address_seed_opt_mut(&mut self) -> Option<&mut String> {
@@ -13591,7 +14058,7 @@ mod _accessor_impls {
             self.address_seed = Some(field.into().into());
         }
         pub fn with_address_seed<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_address_seed(field);
+            self.set_address_seed(field.into());
             self
         }
     }
@@ -13623,7 +14090,7 @@ mod _accessor_impls {
             self.a = Some(field.into().into());
         }
         pub fn with_a<T: Into<super::CircomG1>>(mut self, field: T) -> Self {
-            self.set_a(field);
+            self.set_a(field.into());
             self
         }
         pub fn b(&self) -> &super::CircomG2 {
@@ -13645,7 +14112,7 @@ mod _accessor_impls {
             self.b = Some(field.into().into());
         }
         pub fn with_b<T: Into<super::CircomG2>>(mut self, field: T) -> Self {
-            self.set_b(field);
+            self.set_b(field.into());
             self
         }
         pub fn c(&self) -> &super::CircomG1 {
@@ -13667,7 +14134,7 @@ mod _accessor_impls {
             self.c = Some(field.into().into());
         }
         pub fn with_c<T: Into<super::CircomG1>>(mut self, field: T) -> Self {
-            self.set_c(field);
+            self.set_c(field.into());
             self
         }
     }
@@ -13696,7 +14163,7 @@ mod _accessor_impls {
             self.iss = Some(field.into().into());
         }
         pub fn with_iss<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_iss(field);
+            self.set_iss(field.into());
             self
         }
         pub fn address_seed_opt_mut(&mut self) -> Option<&mut String> {
@@ -13712,7 +14179,7 @@ mod _accessor_impls {
             self.address_seed = Some(field.into().into());
         }
         pub fn with_address_seed<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_address_seed(field);
+            self.set_address_seed(field.into());
             self
         }
     }
