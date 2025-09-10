@@ -13,8 +13,7 @@ include!("../../../generated/sui.rpc.v2.accessors.rs");
 pub use descriptor::FILE_DESCRIPTOR_SET;
 mod descriptor {
     /// Byte encoded FILE_DESCRIPTOR_SET.
-    pub const FILE_DESCRIPTOR_SET: &[u8] =
-        include_bytes!("../../../generated/sui.rpc.v2.fds.bin");
+    pub const FILE_DESCRIPTOR_SET: &[u8] = include_bytes!("../../../generated/sui.rpc.v2.fds.bin");
 
     #[cfg(test)]
     mod tests {

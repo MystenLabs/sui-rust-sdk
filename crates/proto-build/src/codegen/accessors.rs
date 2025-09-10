@@ -248,6 +248,7 @@ fn generate_accessors_functions_for_field(
                 self.#name_opt_mut().unwrap()
             }
 
+            //TODO need to change this to not have an Into bound for numbers
             #( #[doc = #set_name_comments] )*
             pub fn #set_name<T: Into<#field_type_path>>(&mut self, field: T) {
                 self.#oneof_field = Some(#oneof_type_path::#variant(field.into().into()));

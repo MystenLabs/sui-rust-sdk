@@ -4,27 +4,19 @@ use tap::Pipe;
 use tonic::codec::CompressionEncoding;
 use tonic::transport::channel::ClientTlsConfig;
 
-mod response_ext;
-pub use response_ext::ResponseExt;
-
-mod auth;
-pub use auth::AuthInterceptor;
-
 mod staking_rewards;
-pub use staking_rewards::DelegatedStake;
 
-pub mod v2;
-
+use crate::client::AuthInterceptor;
 use crate::field::FieldMaskUtil;
-use crate::proto::sui::rpc::v2beta2::ledger_service_client::LedgerServiceClient;
-use crate::proto::sui::rpc::v2beta2::live_data_service_client::LiveDataServiceClient;
-use crate::proto::sui::rpc::v2beta2::move_package_service_client::MovePackageServiceClient;
-use crate::proto::sui::rpc::v2beta2::signature_verification_service_client::SignatureVerificationServiceClient;
-use crate::proto::sui::rpc::v2beta2::subscription_service_client::SubscriptionServiceClient;
-use crate::proto::sui::rpc::v2beta2::transaction_execution_service_client::TransactionExecutionServiceClient;
-use crate::proto::sui::rpc::v2beta2::ExecuteTransactionRequest;
-use crate::proto::sui::rpc::v2beta2::ExecutedTransaction;
-use crate::proto::sui::rpc::v2beta2::SubscribeCheckpointsRequest;
+use crate::proto::sui::rpc::v2::ledger_service_client::LedgerServiceClient;
+use crate::proto::sui::rpc::v2::move_package_service_client::MovePackageServiceClient;
+use crate::proto::sui::rpc::v2::signature_verification_service_client::SignatureVerificationServiceClient;
+use crate::proto::sui::rpc::v2::state_service_client::StateServiceClient;
+use crate::proto::sui::rpc::v2::subscription_service_client::SubscriptionServiceClient;
+use crate::proto::sui::rpc::v2::transaction_execution_service_client::TransactionExecutionServiceClient;
+use crate::proto::sui::rpc::v2::ExecuteTransactionRequest;
+use crate::proto::sui::rpc::v2::ExecutedTransaction;
+use crate::proto::sui::rpc::v2::SubscribeCheckpointsRequest;
 use prost_types::FieldMask;
 
 type Result<T, E = tonic::Status> = std::result::Result<T, E>;
@@ -114,8 +106,8 @@ impl Client {
             })
     }
 
-    pub fn live_data_client(&mut self) -> LiveDataServiceClient<Channel<'_>> {
-        LiveDataServiceClient::with_interceptor(&mut self.channel, &mut self.auth)
+    pub fn state_client(&mut self) -> StateServiceClient<Channel<'_>> {
+        StateServiceClient::with_interceptor(&mut self.channel, &mut self.auth)
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
                 if let Some(limit) = self.max_decoding_message_size {
@@ -200,9 +192,10 @@ impl Client {
         // further reduce bandwidth.
         let mut checkpoint_stream = self
             .subscription_client()
-            .subscribe_checkpoints(SubscribeCheckpointsRequest {
-                read_mask: Some(FieldMask::from_str("transactions.digest,sequence_number")),
-            })
+            .subscribe_checkpoints(
+                SubscribeCheckpointsRequest::default()
+                    .with_read_mask(FieldMask::from_str("transactions.digest,sequence_number")),
+            )
             .await?
             .into_inner();
 
@@ -210,8 +203,7 @@ impl Client {
         let request = request.into_request();
         let transaction = request
             .get_ref()
-            .transaction
-            .as_ref()
+            .transaction_opt()
             .ok_or_else(|| tonic::Status::invalid_argument("transaction is required"))?;
 
         let executed_txn_digest = sui_sdk_types::Transaction::try_from(transaction)
@@ -252,7 +244,10 @@ impl Client {
                 result?;
                 Ok(executed_transaction)
             },
-            _ = timeout_future => Err(tonic::Status::deadline_exceeded(format!("timeout waiting for checkpoint after {timeout:?}"))),
+            _ = timeout_future => {
+                let msg = format!("timeout waiting for checkpoint after {timeout:?}");
+                Err(tonic::Status::deadline_exceeded(msg))
+            }
         }
     }
 }
