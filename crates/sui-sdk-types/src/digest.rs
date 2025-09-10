@@ -139,6 +139,18 @@ impl std::fmt::Display for Digest {
     }
 }
 
+impl From<Digest> for String {
+    fn from(value: Digest) -> Self {
+        value.to_string()
+    }
+}
+
+impl From<&Digest> for String {
+    fn from(value: &Digest) -> Self {
+        value.to_string()
+    }
+}
+
 impl std::fmt::Debug for Digest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("Digest")

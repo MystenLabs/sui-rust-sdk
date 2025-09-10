@@ -74,6 +74,18 @@ impl std::fmt::Display for TypeTag {
     }
 }
 
+impl From<TypeTag> for String {
+    fn from(value: TypeTag) -> Self {
+        value.to_string()
+    }
+}
+
+impl From<&TypeTag> for String {
+    fn from(value: &TypeTag) -> Self {
+        value.to_string()
+    }
+}
+
 impl std::str::FromStr for TypeTag {
     type Err = TypeParseError;
 
@@ -153,6 +165,18 @@ impl Identifier {
 impl std::fmt::Display for Identifier {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.0)
+    }
+}
+
+impl From<Identifier> for String {
+    fn from(value: Identifier) -> Self {
+        value.to_string()
+    }
+}
+
+impl From<&Identifier> for String {
+    fn from(value: &Identifier) -> Self {
+        value.to_string()
     }
 }
 
@@ -263,6 +287,18 @@ impl std::fmt::Display for StructTag {
             write!(f, ">")?;
         }
         Ok(())
+    }
+}
+
+impl From<StructTag> for String {
+    fn from(value: StructTag) -> Self {
+        value.to_string()
+    }
+}
+
+impl From<&StructTag> for String {
+    fn from(value: &StructTag) -> Self {
+        value.to_string()
     }
 }
 
