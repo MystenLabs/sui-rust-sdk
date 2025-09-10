@@ -103,6 +103,23 @@ fn generate_accessors_functions_for_field(
     let name_opt_mut = quote::format_ident!("{}_opt_mut", field.inner.name());
     let with_name = quote::format_ident!("with_{}", field.inner.name());
 
+    // doc comments
+
+    let name_comments = vec![format!(
+        "Returns the value of `{name}`, or the default value if `{name}` is unset."
+    )];
+    let name_opt_comments = vec![format!(
+        "If `{name}` is set, returns [`Some`] with the value; otherwise returns [`None`]."
+    )];
+    let mut set_name_comments = vec![format!("Sets `{name}` with the provided value.")];
+    let mut name_mut_comments = vec![
+        format!("Returns a mutable reference to `{name}`."),
+        "If the field is unset, it is first initialized with the default value.".to_owned(),
+    ];
+    let name_opt_mut_comments = vec![format!(
+        "If `{name}` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`]."
+    )];
+
     let field_type_path =
         TokenStream::from_str(&field.resolve_rust_type_path(context, &package)).unwrap();
 
@@ -123,18 +140,22 @@ fn generate_accessors_functions_for_field(
             TokenStream::from_str(&resolve_rust_type_path(value, context, &package)).unwrap();
 
         quote! {
+            #( #[doc = #name_comments] )*
             pub fn #name(&self) -> &::std::collections::BTreeMap<#key_type, #value_type> {
                 &self.#name
             }
 
+            #( #[doc = #name_mut_comments] )*
             pub fn #name_mut(&mut self) -> &mut ::std::collections::BTreeMap<#key_type, #value_type> {
                 &mut self.#name
             }
 
+            #( #[doc = #set_name_comments] )*
             pub fn #set_name(&mut self, field: ::std::collections::BTreeMap<#key_type, #value_type>) {
                 self.#name = field;
             }
 
+            #( #[doc = #set_name_comments] )*
             pub fn #with_name(mut self, field: ::std::collections::BTreeMap<#key_type, #value_type>) -> Self {
                 self.#set_name(field);
                 self
@@ -146,18 +167,22 @@ fn generate_accessors_functions_for_field(
         }
 
         quote! {
+            #( #[doc = #name_comments] )*
             pub fn #name(&self) -> &[#field_type_path] {
                 &self.#name
             }
 
+            #( #[doc = #name_mut_comments] )*
             pub fn #name_mut(&mut self) -> &mut Vec<#field_type_path> {
                 &mut self.#name
             }
 
+            #( #[doc = #set_name_comments] )*
             pub fn #set_name(&mut self, field: Vec<#field_type_path>) {
                 self.#name = field;
             }
 
+            #( #[doc = #set_name_comments] )*
             pub fn #with_name(mut self, field: Vec<#field_type_path>) -> Self {
                 self.#set_name(field);
                 self
@@ -180,7 +205,15 @@ fn generate_accessors_functions_for_field(
         .unwrap();
         let variant = quote::format_ident!("{}", field.inner.name().to_pascal_case());
 
+        name_mut_comments.push(
+            "If any other oneof field in the same oneof is set, it will be cleared.".to_owned(),
+        );
+        set_name_comments.push(
+            "If any other oneof field in the same oneof is set, it will be cleared.".to_owned(),
+        );
+
         quote! {
+            #( #[doc = #name_comments] )*
             pub fn #name(&self) -> #ref_return_type {
                 if let Some(#oneof_type_path::#variant(field)) = &self.#oneof_field {
                     #field_as
@@ -189,6 +222,7 @@ fn generate_accessors_functions_for_field(
                 }
             }
 
+            #( #[doc = #name_opt_comments] )*
             pub fn #name_opt(&self) -> Option<#ref_return_type> {
                 if let Some(#oneof_type_path::#variant(field)) = &self.#oneof_field {
                     Some(#field_as)
@@ -197,6 +231,7 @@ fn generate_accessors_functions_for_field(
                 }
             }
 
+            #( #[doc = #name_opt_mut_comments] )*
             pub fn #name_opt_mut(&mut self) -> Option<&mut #field_type_path> {
                 if let Some(#oneof_type_path::#variant(field)) = &mut self.#oneof_field {
                     Some(field as _)
@@ -205,6 +240,7 @@ fn generate_accessors_functions_for_field(
                 }
             }
 
+            #( #[doc = #name_mut_comments] )*
             pub fn #name_mut(&mut self) -> &mut #field_type_path {
                 if self.#name_opt_mut().is_none() {
                     self.#oneof_field = Some(#oneof_type_path::#variant(#field_type_path::default()));
@@ -212,10 +248,12 @@ fn generate_accessors_functions_for_field(
                 self.#name_opt_mut().unwrap()
             }
 
+            #( #[doc = #set_name_comments] )*
             pub fn #set_name<T: Into<#field_type_path>>(&mut self, field: T) {
                 self.#oneof_field = Some(#oneof_type_path::#variant(field.into().into()));
             }
 
+            #( #[doc = #set_name_comments] )*
             pub fn #with_name<T: Into<#field_type_path>>(mut self, field: T) -> Self {
                 self.#set_name(field.into());
                 self
@@ -227,6 +265,7 @@ fn generate_accessors_functions_for_field(
         // only include "bare getter" for message types
         if field.is_message() && !field.is_well_known_type() {
             accessors.extend(quote! {
+                #( #[doc = #name_comments] )*
                 pub fn #name(&self) -> #ref_return_type {
                     self.#name
                         .as_ref()
@@ -239,12 +278,14 @@ fn generate_accessors_functions_for_field(
         // Only include mut getters for non bytes/enum types
         if !matches!(field.inner.r#type(), Type::Bytes | Type::Enum) {
             accessors.extend(quote! {
+                #( #[doc = #name_opt_mut_comments] )*
                 pub fn #name_opt_mut(&mut self) -> Option<&mut #field_type_path> {
                     self.#name
                         .as_mut()
                         .map(|field| field as _)
                 }
 
+                #( #[doc = #name_mut_comments] )*
                 pub fn #name_mut(&mut self) -> &mut #field_type_path {
                     self.#name
                         .get_or_insert_default()
@@ -255,12 +296,14 @@ fn generate_accessors_functions_for_field(
         // only include _opt and set for non enums (as this already exists for enums from prost)
         if !matches!(field.inner.r#type(), Type::Enum) {
             accessors.extend(quote! {
+                #( #[doc = #name_opt_comments] )*
                 pub fn #name_opt(&self) -> Option<#ref_return_type> {
                     self.#name
                         .as_ref()
                         .map(|field| #field_as)
                 }
 
+                #( #[doc = #set_name_comments] )*
                 pub fn #set_name<T: Into<#field_type_path>>(&mut self, field: T) {
                     self.#name = Some(field.into().into());
                 }
@@ -270,6 +313,7 @@ fn generate_accessors_functions_for_field(
         quote! {
             #accessors
 
+            #( #[doc = #set_name_comments] )*
             pub fn #with_name<T: Into<#field_type_path>>(mut self, field: T) -> Self {
                 self.#set_name(field.into());
                 self
@@ -282,6 +326,7 @@ fn generate_accessors_functions_for_field(
 
         if field.inner.r#type() != Type::Bytes {
             accessors.extend(quote! {
+            #( #[doc = #name_mut_comments] )*
                 pub fn #name_mut(&mut self) -> &mut #field_type_path {
                     &mut self.#name
                 }
@@ -291,10 +336,12 @@ fn generate_accessors_functions_for_field(
         quote! {
             #accessors
 
+            #( #[doc = #set_name_comments] )*
             pub fn #set_name<T: Into<#field_type_path>>(&mut self, field: T) {
                 self.#name = field.into().into();
             }
 
+            #( #[doc = #set_name_comments] )*
             pub fn #with_name<T: Into<#field_type_path>>(mut self, field: T) -> Self {
                 self.#set_name(field.into());
                 self
