@@ -241,9 +241,9 @@ impl TryFrom<&TransactionExpiration> for sui_sdk_types::TransactionExpiration {
 
 impl From<ProgrammableTransaction> for TransactionKind {
     fn from(value: ProgrammableTransaction) -> Self {
-        Self {
-            kind: Some(transaction_kind::Kind::ProgrammableTransaction(value)),
-        }
+        Self::default()
+            .with_programmable_transaction(value)
+            .with_kind(transaction_kind::Kind::ProgrammableTransaction)
     }
 }
 
@@ -252,32 +252,44 @@ impl From<sui_sdk_types::TransactionKind> for TransactionKind {
         use sui_sdk_types::TransactionKind as K;
         use transaction_kind::Kind;
 
-        let kind = match value {
-            K::ProgrammableTransaction(ptb) => Kind::ProgrammableTransaction(ptb.into()),
-            // ProgrammableSystemTransaction(ptb) => Kind::ProgrammableSystemTransaction(ptb.into()),
-            K::ChangeEpoch(change_epoch) => Kind::ChangeEpoch(change_epoch.into()),
-            K::Genesis(genesis) => Kind::Genesis(genesis.into()),
-            K::ConsensusCommitPrologue(prologue) => {
-                Kind::ConsensusCommitPrologueV1(prologue.into())
-            }
-            K::AuthenticatorStateUpdate(update) => Kind::AuthenticatorStateUpdate(update.into()),
-            K::EndOfEpoch(transactions) => Kind::EndOfEpoch(EndOfEpochTransaction {
-                transactions: transactions.into_iter().map(Into::into).collect(),
-            }),
-            K::RandomnessStateUpdate(update) => Kind::RandomnessStateUpdate(update.into()),
-            K::ConsensusCommitPrologueV2(prologue) => {
-                Kind::ConsensusCommitPrologueV2(prologue.into())
-            }
-            K::ConsensusCommitPrologueV3(prologue) => {
-                Kind::ConsensusCommitPrologueV3(prologue.into())
-            }
-            K::ConsensusCommitPrologueV4(prologue) => {
-                Kind::ConsensusCommitPrologueV4(prologue.into())
-            }
-            _ => return Self::default(),
-        };
+        let message = Self::default();
 
-        Self { kind: Some(kind) }
+        match value {
+            K::ProgrammableTransaction(ptb) => message
+                .with_programmable_transaction(ptb)
+                .with_kind(Kind::ProgrammableTransaction),
+            // K::ProgrammableSystemTransaction(ptb) => message
+            //     .with_programmable_transaction(ptb)
+            //     .with_kind(Kind::ProgrammableSystemTransaction),
+            K::ChangeEpoch(change_epoch) => message
+                .with_change_epoch(change_epoch)
+                .with_kind(Kind::ChangeEpoch),
+            K::Genesis(genesis) => message.with_genesis(genesis).with_kind(Kind::Genesis),
+            K::ConsensusCommitPrologue(prologue) => message
+                .with_consensus_commit_prologue(prologue)
+                .with_kind(Kind::ConsensusCommitPrologueV1),
+            K::AuthenticatorStateUpdate(update) => message
+                .with_authenticator_state_update(update)
+                .with_kind(Kind::AuthenticatorStateUpdate),
+            K::EndOfEpoch(transactions) => message
+                .with_end_of_epoch(EndOfEpochTransaction {
+                    transactions: transactions.into_iter().map(Into::into).collect(),
+                })
+                .with_kind(Kind::EndOfEpoch),
+            K::RandomnessStateUpdate(update) => message
+                .with_randomness_state_update(update)
+                .with_kind(Kind::RandomnessStateUpdate),
+            K::ConsensusCommitPrologueV2(prologue) => message
+                .with_consensus_commit_prologue(prologue)
+                .with_kind(Kind::ConsensusCommitPrologueV2),
+            K::ConsensusCommitPrologueV3(prologue) => message
+                .with_consensus_commit_prologue(prologue)
+                .with_kind(Kind::ConsensusCommitPrologueV3),
+            K::ConsensusCommitPrologueV4(prologue) => message
+                .with_consensus_commit_prologue(prologue)
+                .with_kind(Kind::ConsensusCommitPrologueV4),
+            _ => message,
+        }
     }
 }
 
@@ -287,41 +299,43 @@ impl TryFrom<&TransactionKind> for sui_sdk_types::TransactionKind {
     fn try_from(value: &TransactionKind) -> Result<Self, Self::Error> {
         use transaction_kind::Kind;
 
-        match value
-            .kind
-            .as_ref()
-            .ok_or_else(|| TryFromProtoError::missing("kind"))?
-        {
-            Kind::ProgrammableTransaction(ptb) => Self::ProgrammableTransaction(ptb.try_into()?),
-            Kind::ProgrammableSystemTransaction(_) => {
+        match value.kind() {
+            Kind::Unknown => {
                 return Err(TryFromProtoError::invalid(
                     "kind",
-                    "Unknown TransactionKind",
-                ));
+                    "unknown TransactionKind",
+                ))
             }
-            Kind::ChangeEpoch(change_epoch) => Self::ChangeEpoch(change_epoch.try_into()?),
-            Kind::Genesis(genesis) => Self::Genesis(genesis.try_into()?),
-            Kind::ConsensusCommitPrologueV1(prologue) => {
-                Self::ConsensusCommitPrologue(prologue.try_into()?)
+            Kind::ProgrammableTransaction => {
+                Self::ProgrammableTransaction(value.programmable_transaction().try_into()?)
             }
-            Kind::AuthenticatorStateUpdate(update) => {
-                Self::AuthenticatorStateUpdate(update.try_into()?)
+            Kind::ChangeEpoch => Self::ChangeEpoch(value.change_epoch().try_into()?),
+            Kind::Genesis => Self::Genesis(value.genesis().try_into()?),
+            Kind::ConsensusCommitPrologueV1 => {
+                Self::ConsensusCommitPrologue(value.consensus_commit_prologue().try_into()?)
             }
-            Kind::EndOfEpoch(EndOfEpochTransaction { transactions }) => Self::EndOfEpoch(
-                transactions
+            Kind::AuthenticatorStateUpdate => {
+                Self::AuthenticatorStateUpdate(value.authenticator_state_update().try_into()?)
+            }
+            Kind::EndOfEpoch => Self::EndOfEpoch(
+                value
+                    .end_of_epoch()
+                    .transactions()
                     .iter()
                     .map(TryInto::try_into)
                     .collect::<Result<_, _>>()?,
             ),
-            Kind::RandomnessStateUpdate(update) => Self::RandomnessStateUpdate(update.try_into()?),
-            Kind::ConsensusCommitPrologueV2(prologue) => {
-                Self::ConsensusCommitPrologueV2(prologue.try_into()?)
+            Kind::RandomnessStateUpdate => {
+                Self::RandomnessStateUpdate(value.randomness_state_update().try_into()?)
             }
-            Kind::ConsensusCommitPrologueV3(prologue) => {
-                Self::ConsensusCommitPrologueV3(prologue.try_into()?)
+            Kind::ConsensusCommitPrologueV2 => {
+                Self::ConsensusCommitPrologueV2(value.consensus_commit_prologue().try_into()?)
             }
-            Kind::ConsensusCommitPrologueV4(prologue) => {
-                Self::ConsensusCommitPrologueV4(prologue.try_into()?)
+            Kind::ConsensusCommitPrologueV3 => {
+                Self::ConsensusCommitPrologueV3(value.consensus_commit_prologue().try_into()?)
+            }
+            Kind::ConsensusCommitPrologueV4 => {
+                Self::ConsensusCommitPrologueV4(value.consensus_commit_prologue().try_into()?)
             }
         }
         .pipe(Ok)
@@ -952,6 +966,15 @@ impl From<sui_sdk_types::JwkId> for JwkId {
     }
 }
 
+impl From<&sui_sdk_types::JwkId> for JwkId {
+    fn from(value: &sui_sdk_types::JwkId) -> Self {
+        Self {
+            iss: Some(value.iss.clone()),
+            kid: Some(value.kid.clone()),
+        }
+    }
+}
+
 impl TryFrom<&JwkId> for sui_sdk_types::JwkId {
     type Error = TryFromProtoError;
 
@@ -1115,25 +1138,31 @@ impl From<sui_sdk_types::EndOfEpochTransactionKind> for EndOfEpochTransactionKin
         use end_of_epoch_transaction_kind::Kind;
         use sui_sdk_types::EndOfEpochTransactionKind as K;
 
-        let kind = match value {
-            K::ChangeEpoch(change_epoch) => Kind::ChangeEpoch(change_epoch.into()),
-            K::AuthenticatorStateCreate => Kind::AuthenticatorStateCreate(()),
-            K::AuthenticatorStateExpire(expire) => Kind::AuthenticatorStateExpire(expire.into()),
-            K::RandomnessStateCreate => Kind::RandomnessStateCreate(()),
-            K::DenyListStateCreate => Kind::DenyListStateCreate(()),
-            K::BridgeStateCreate { chain_id } => Kind::BridgeStateCreate(chain_id.to_string()),
+        let message = Self::default();
+
+        match value {
+            K::ChangeEpoch(change_epoch) => message
+                .with_change_epoch(change_epoch)
+                .with_kind(Kind::ChangeEpoch),
+            K::AuthenticatorStateCreate => message.with_kind(Kind::AuthenticatorStateCreate),
+            K::AuthenticatorStateExpire(expire) => message
+                .with_authenticator_state_expire(expire)
+                .with_kind(Kind::AuthenticatorStateExpire),
+            K::RandomnessStateCreate => message.with_kind(Kind::RandomnessStateCreate),
+            K::DenyListStateCreate => message.with_kind(Kind::DenyListStateCreate),
+            K::BridgeStateCreate { chain_id } => message
+                .with_bridge_chain_id(chain_id)
+                .with_kind(Kind::BridgeStateCreate),
             K::BridgeCommitteeInit {
                 bridge_object_version,
-            } => Kind::BridgeCommitteeInit(bridge_object_version),
-            K::StoreExecutionTimeObservations(observations) => {
-                Kind::ExecutionTimeObservations(observations.into())
-            }
-            // K::AccumulatorRootCreate => Kind::AccumulatorRootCreate(()),
-            // K::CoinRegistryCreate => Kind::CoinRegistryCreate(()),
-            _ => return Self::default(),
-        };
-
-        Self { kind: Some(kind) }
+            } => message
+                .with_bridge_object_version(bridge_object_version)
+                .with_kind(Kind::BridgeCommitteeInit),
+            K::StoreExecutionTimeObservations(observations) => message
+                .with_execution_time_observations(observations)
+                .with_kind(Kind::StoreExecutionTimeObservations),
+            _ => message,
+        }
     }
 }
 
@@ -1143,38 +1172,31 @@ impl TryFrom<&EndOfEpochTransactionKind> for sui_sdk_types::EndOfEpochTransactio
     fn try_from(value: &EndOfEpochTransactionKind) -> Result<Self, Self::Error> {
         use end_of_epoch_transaction_kind::Kind;
 
-        match value
-            .kind
-            .as_ref()
-            .ok_or_else(|| TryFromProtoError::missing("kind"))?
-        {
-            Kind::ChangeEpoch(change_epoch) => Self::ChangeEpoch(change_epoch.try_into()?),
-            Kind::AuthenticatorStateExpire(expire) => {
-                Self::AuthenticatorStateExpire(expire.try_into()?)
-            }
-            Kind::AuthenticatorStateCreate(()) => Self::AuthenticatorStateCreate,
-            Kind::RandomnessStateCreate(()) => Self::RandomnessStateCreate,
-            Kind::DenyListStateCreate(()) => Self::DenyListStateCreate,
-            Kind::BridgeStateCreate(digest) => Self::BridgeStateCreate {
-                chain_id: digest.parse().map_err(|e| {
-                    TryFromProtoError::invalid(
-                        EndOfEpochTransactionKind::BRIDGE_STATE_CREATE_FIELD,
-                        e,
-                    )
-                })?,
-            },
-            Kind::BridgeCommitteeInit(version) => Self::BridgeCommitteeInit {
-                bridge_object_version: *version,
-            },
-            Kind::ExecutionTimeObservations(execution_time_observations) => {
-                Self::StoreExecutionTimeObservations(execution_time_observations.try_into()?)
-            }
-            Kind::AccumulatorRootCreate(()) | Kind::CoinRegistryCreate(()) => {
+        match value.kind() {
+            Kind::Unknown => {
                 return Err(TryFromProtoError::invalid(
-                    "kind",
-                    "Unknown EndOfEpochTransactionKind",
+                    EndOfEpochTransactionKind::KIND_FIELD,
+                    "unknown EndOfEpochTransactionKind",
                 ))
             }
+            Kind::ChangeEpoch => Self::ChangeEpoch(value.change_epoch().try_into()?),
+            Kind::AuthenticatorStateCreate => Self::AuthenticatorStateCreate,
+            Kind::AuthenticatorStateExpire => {
+                Self::AuthenticatorStateExpire(value.authenticator_state_expire().try_into()?)
+            }
+            Kind::RandomnessStateCreate => Self::RandomnessStateCreate,
+            Kind::DenyListStateCreate => Self::DenyListStateCreate,
+            Kind::BridgeStateCreate => Self::BridgeStateCreate {
+                chain_id: value.bridge_chain_id().parse().map_err(|e| {
+                    TryFromProtoError::invalid(EndOfEpochTransactionKind::BRIDGE_CHAIN_ID_FIELD, e)
+                })?,
+            },
+            Kind::BridgeCommitteeInit => Self::BridgeCommitteeInit {
+                bridge_object_version: value.bridge_object_version(),
+            },
+            Kind::StoreExecutionTimeObservations => Self::StoreExecutionTimeObservations(
+                value.execution_time_observations().try_into()?,
+            ),
         }
         .pipe(Ok)
     }

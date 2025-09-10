@@ -212,9 +212,8 @@ pub enum TransactionKind {
 
     /// V4 consensus commit update
     ConsensusCommitPrologueV4(ConsensusCommitPrologueV4),
-
-    /// A system transaction comprised of a list of native commands and move calls
-    ProgrammableSystemTransaction(ProgrammableTransaction),
+    // /// A system transaction comprised of a list of native commands and move calls
+    // ProgrammableSystemTransaction(ProgrammableTransaction),
 }
 
 /// Operation run at the end of an epoch
@@ -273,12 +272,11 @@ pub enum EndOfEpochTransactionKind {
 
     /// Execution time observations from the committee to preserve cross epoch
     StoreExecutionTimeObservations(ExecutionTimeObservations),
+    // /// Create and initialize the accumulator root object
+    // AccumulatorRootCreate,
 
-    /// Create and initialize the accumulator root object
-    AccumulatorRootCreate,
-
-    /// Create and initialize the coin metadata registry object
-    CoinRegistryCreate,
+    // /// Create and initialize the coin metadata registry object
+    // CoinRegistryCreate,
 }
 
 /// Set of Execution Time Observations from the committee.
