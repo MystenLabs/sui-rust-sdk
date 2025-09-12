@@ -265,10 +265,14 @@ pub enum EndOfEpochTransactionKind {
     DenyListStateCreate,
 
     /// Create and initialize the bridge object
-    BridgeStateCreate { chain_id: Digest },
+    BridgeStateCreate {
+        chain_id: Digest,
+    },
 
     /// Initialize the bridge committee
-    BridgeCommitteeInit { bridge_object_version: u64 },
+    BridgeCommitteeInit {
+        bridge_object_version: u64,
+    },
 
     /// Execution time observations from the committee to preserve cross epoch
     StoreExecutionTimeObservations(ExecutionTimeObservations),
