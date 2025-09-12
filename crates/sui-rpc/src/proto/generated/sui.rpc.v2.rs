@@ -7140,6 +7140,10 @@ pub mod end_of_epoch_transaction_kind {
         BridgeCommitteeInit = 7,
         /// Execution time observations from the committee to preserve cross epoch
         StoreExecutionTimeObservations = 8,
+        /// Create the accumulator root object.
+        AccumulatorRootCreate = 9,
+        /// Create and initialize the Coin Registry object.
+        CoinRegistryCreate = 10,
     }
     impl Kind {
         /// String value of the enum field names used in the ProtoBuf definition.
@@ -7159,6 +7163,8 @@ pub mod end_of_epoch_transaction_kind {
                 Self::StoreExecutionTimeObservations => {
                     "STORE_EXECUTION_TIME_OBSERVATIONS"
                 }
+                Self::AccumulatorRootCreate => "ACCUMULATOR_ROOT_CREATE",
+                Self::CoinRegistryCreate => "COIN_REGISTRY_CREATE",
             }
         }
         /// Creates an enum from field names used in the ProtoBuf definition.
@@ -7175,6 +7181,8 @@ pub mod end_of_epoch_transaction_kind {
                 "STORE_EXECUTION_TIME_OBSERVATIONS" => {
                     Some(Self::StoreExecutionTimeObservations)
                 }
+                "ACCUMULATOR_ROOT_CREATE" => Some(Self::AccumulatorRootCreate),
+                "COIN_REGISTRY_CREATE" => Some(Self::CoinRegistryCreate),
                 _ => None,
             }
         }

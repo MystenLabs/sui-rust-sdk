@@ -458,10 +458,10 @@ message EndOfEpochTransactionKind {
     STORE_EXECUTION_TIME_OBSERVATIONS = 8;
 
     // Create the accumulator root object.
-    // ACCUMULATOR_ROOT_CREATE = 9;
+    ACCUMULATOR_ROOT_CREATE = 9;
 
     // Create and initialize the Coin Registry object.
-    // COIN_REGISTRY_CREATE = 10;
+    COIN_REGISTRY_CREATE = 10;
   }
 
   optional Kind kind = 1;

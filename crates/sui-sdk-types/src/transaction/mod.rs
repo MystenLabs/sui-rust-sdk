@@ -272,11 +272,12 @@ pub enum EndOfEpochTransactionKind {
 
     /// Execution time observations from the committee to preserve cross epoch
     StoreExecutionTimeObservations(ExecutionTimeObservations),
-    // /// Create and initialize the accumulator root object
-    // AccumulatorRootCreate,
 
-    // /// Create and initialize the coin metadata registry object
-    // CoinRegistryCreate,
+    /// Create and initialize the accumulator root object
+    AccumulatorRootCreate,
+
+    /// Create and initialize the coin metadata registry object
+    CoinRegistryCreate,
 }
 
 /// Set of Execution Time Observations from the committee.

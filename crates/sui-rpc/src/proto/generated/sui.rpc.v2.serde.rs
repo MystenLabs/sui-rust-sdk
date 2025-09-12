@@ -6559,6 +6559,8 @@ impl serde::Serialize for end_of_epoch_transaction_kind::Kind {
             Self::BridgeStateCreate => "BRIDGE_STATE_CREATE",
             Self::BridgeCommitteeInit => "BRIDGE_COMMITTEE_INIT",
             Self::StoreExecutionTimeObservations => "STORE_EXECUTION_TIME_OBSERVATIONS",
+            Self::AccumulatorRootCreate => "ACCUMULATOR_ROOT_CREATE",
+            Self::CoinRegistryCreate => "COIN_REGISTRY_CREATE",
         };
         serializer.serialize_str(variant)
     }
@@ -6579,6 +6581,8 @@ impl<'de> serde::Deserialize<'de> for end_of_epoch_transaction_kind::Kind {
             "BRIDGE_STATE_CREATE",
             "BRIDGE_COMMITTEE_INIT",
             "STORE_EXECUTION_TIME_OBSERVATIONS",
+            "ACCUMULATOR_ROOT_CREATE",
+            "COIN_REGISTRY_CREATE",
         ];
 
         struct GeneratedVisitor;
@@ -6628,6 +6632,8 @@ impl<'de> serde::Deserialize<'de> for end_of_epoch_transaction_kind::Kind {
                     "BRIDGE_STATE_CREATE" => Ok(end_of_epoch_transaction_kind::Kind::BridgeStateCreate),
                     "BRIDGE_COMMITTEE_INIT" => Ok(end_of_epoch_transaction_kind::Kind::BridgeCommitteeInit),
                     "STORE_EXECUTION_TIME_OBSERVATIONS" => Ok(end_of_epoch_transaction_kind::Kind::StoreExecutionTimeObservations),
+                    "ACCUMULATOR_ROOT_CREATE" => Ok(end_of_epoch_transaction_kind::Kind::AccumulatorRootCreate),
+                    "COIN_REGISTRY_CREATE" => Ok(end_of_epoch_transaction_kind::Kind::CoinRegistryCreate),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }

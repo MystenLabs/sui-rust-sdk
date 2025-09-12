@@ -1128,8 +1128,8 @@ impl From<sui_sdk_types::EndOfEpochTransactionKind> for EndOfEpochTransactionKin
             K::StoreExecutionTimeObservations(observations) => {
                 Kind::ExecutionTimeObservations(observations.into())
             }
-            // K::AccumulatorRootCreate => Kind::AccumulatorRootCreate(()),
-            // K::CoinRegistryCreate => Kind::CoinRegistryCreate(()),
+            K::AccumulatorRootCreate => Kind::AccumulatorRootCreate(()),
+            K::CoinRegistryCreate => Kind::CoinRegistryCreate(()),
             _ => return Self::default(),
         };
 
@@ -1169,12 +1169,8 @@ impl TryFrom<&EndOfEpochTransactionKind> for sui_sdk_types::EndOfEpochTransactio
             Kind::ExecutionTimeObservations(execution_time_observations) => {
                 Self::StoreExecutionTimeObservations(execution_time_observations.try_into()?)
             }
-            Kind::AccumulatorRootCreate(()) | Kind::CoinRegistryCreate(()) => {
-                return Err(TryFromProtoError::invalid(
-                    "kind",
-                    "Unknown EndOfEpochTransactionKind",
-                ))
-            }
+            Kind::AccumulatorRootCreate(()) => Self::AccumulatorRootCreate,
+            Kind::CoinRegistryCreate(()) => Self::CoinRegistryCreate,
         }
         .pipe(Ok)
     }

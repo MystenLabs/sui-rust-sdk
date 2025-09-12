@@ -1161,6 +1161,8 @@ impl From<sui_sdk_types::EndOfEpochTransactionKind> for EndOfEpochTransactionKin
             K::StoreExecutionTimeObservations(observations) => message
                 .with_execution_time_observations(observations)
                 .with_kind(Kind::StoreExecutionTimeObservations),
+            K::AccumulatorRootCreate => message.with_kind(Kind::AccumulatorRootCreate),
+            K::CoinRegistryCreate => message.with_kind(Kind::CoinRegistryCreate),
             _ => message,
         }
     }
@@ -1197,6 +1199,8 @@ impl TryFrom<&EndOfEpochTransactionKind> for sui_sdk_types::EndOfEpochTransactio
             Kind::StoreExecutionTimeObservations => Self::StoreExecutionTimeObservations(
                 value.execution_time_observations().try_into()?,
             ),
+            Kind::AccumulatorRootCreate => Self::AccumulatorRootCreate,
+            Kind::CoinRegistryCreate => Self::CoinRegistryCreate,
         }
         .pipe(Ok)
     }
