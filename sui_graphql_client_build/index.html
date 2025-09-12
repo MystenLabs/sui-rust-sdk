@@ -1,0 +1,68 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Description"><title>sui_graphql_client_build - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-84e720fa.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="sui_graphql_client_build" data-themes="" data-resource-suffix="" data-rustdoc-version="1.89.0 (29483883e 2025-08-04)" data-channel="1.89.0" data-search-js="search-92309212.js" data-settings-js="settings-5514c975.js" ><script src="../static.files/storage-4e99c027.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-fd3af306.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-32bb7600.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../sui_graphql_client_build/index.html">sui_<wbr>graphql_<wbr>client_<wbr>build</a><span class="version">0.0.7</span></h2></div><div class="sidebar-elems"><ul class="block"><li><a id="all-types" href="all.html">All Items</a></li></ul><section id="rustdoc-toc"><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#description" title="Description">Description</a></li><li><a href="#usage" title="Usage">Usage</a></li></ul><h3><a href="#functions">Crate Items</a></h3><ul class="block"><li><a href="#functions" title="Functions">Functions</a></li></ul></section><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1>Crate <span>sui_graphql_client_build</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/sui_graphql_client_build/lib.rs.html#4-51">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><h4 id="description"><a class="doc-anchor" href="#description">§</a>Description</h4>
+<p>This crate provides a function to register a schema to enable building custom queries using cynic derive macros queries. Call
+this function in a <code>build.rs</code> file in your crate if you need to build custom queries.</p>
+<h4 id="usage"><a class="doc-anchor" href="#usage">§</a>Usage</h4>
+<ol>
+<li>Add this crate as a build dependency in your <code>Cargo.toml</code> file.</li>
+</ol>
+<div class="example-wrap"><pre class="language-toml"><code>[build-dependencies]
+sui-graphql-client-build = { git = &quot;https://github.com/mystenlabs/sui-rust-sdk&quot;, package = &quot;sui-graphql-client-build&quot;, branch = &quot;master&quot; }</code></pre></div>
+<ol start="2">
+<li>Add a <code>build.rs</code> file in your crate root directory and call the <code>register_schema</code> function in it.</li>
+</ol>
+
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="comment">// build.rs file
+</span><span class="kw">fn </span>main() {
+    <span class="kw">let </span>schema_name = <span class="string">"MYSCHEMA"</span>;
+    sui_graphql_client_build::register_schema(schema_name);
+}</code></pre></div>
+<ol start="3">
+<li>Add the <code>cynic</code> and <code>sui-graphql-client</code> dependencies in your <code>Cargo.toml</code> file. You should have something like this.</li>
+</ol>
+<div class="example-wrap"><pre class="language-toml"><code># Cargo.toml
+# ...
+[dependencies]
+cynic = &quot;3.8.0&quot;
+sui-graphql-client = { git = &quot;https://github.com/mystenlabs/sui-rust-sdk&quot;, package = &quot;sui-graphql-client&quot;, branch = &quot;master&quot; }
+
+[build-dependencies]
+sui-graphql-client-build = { git = &quot;https://github.com/mystenlabs/sui-rust-sdk&quot;, package = &quot;sui-graphql-client-build&quot;, branch = &quot;master&quot; }</code></pre></div>
+<ol start="4">
+<li>
+<p>If using <code>cynic</code>, use the cynic generator to generate the Rust types from the GraphQL schema. <br />
+Go to <a href="https://generator.cynic-rs.dev/">https://generator.cynic-rs.dev/</a> and paste the URL to the GraphQL service or manually copy paste the schema. <br />
+Then you can select the fields in the query you want to have, and the generator will generate the Rust types for you.</p>
+</li>
+<li>
+<p>In your Rust code, you can now use the custom query types generated by <code>cynic</code>.</p>
+</li>
+</ol>
+
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="comment">// lib.rs
+// Custom query
+</span><span class="kw">use </span>cynic::QueryBuilder;
+<span class="kw">use </span>sui_graphql_client::{query_types::schema, Client};
+
+<span class="attr">#[derive(cynic::QueryFragment, Debug)]
+#[cynic(schema = <span class="string">"MYSCHEMA"</span>, graphql_type = <span class="string">"Query"</span>)]
+</span><span class="kw">pub struct </span>MyQuery {
+   <span class="kw">pub </span>chain_identifier: String,
+}
+
+<span class="attr">#[tokio::main]
+</span><span class="kw">async fn </span>main() {
+    <span class="kw">let </span>client = Client::new_mainnet();
+    <span class="kw">let </span>operation = MyQuery::build(());
+    <span class="kw">let </span>q = client.run_query(<span class="kw-2">&amp;</span>operation).<span class="kw">await</span>.unwrap();
+    <span class="macro">println!</span>(<span class="string">"{:?}"</span>, q);
+}</code></pre></div>
+<ol start="6">
+<li>
+<p>For <code>UInt53</code>, you can use <code>u64</code> type directly as the <code>sui-graphql-client</code>’s schema implements the <code>impl_scalar</code>. Similarly for other types (Base64, DateTime). See more available types here: <a href="https://github.com/MystenLabs/sui-rust-sdk/blob/02639f6b09375fe03fa2243868be17bec1dfa33c/crates/sui-graphql-client/src/query_types/mod.rs?plain=1#L124-L126">https://github.com/MystenLabs/sui-rust-sdk/blob/02639f6b09375fe03fa2243868be17bec1dfa33c/crates/sui-graphql-client/src/query_types/mod.rs?plain=1#L124-L126</a></p>
+</li>
+<li>
+<p>Read the <code>cynic</code> <a href="https://cynic-rs.dev/">documentation</a> to learn how to work with it, particularly when it comes to passing arguments to the query.</p>
+</li>
+</ol>
+</div></details><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><dl class="item-table"><dt><a class="fn" href="fn.register_schema.html" title="fn sui_graphql_client_build::register_schema">register_<wbr>schema</a></dt><dd>Register the schema to enable building custom queries using cynic derive macros queries. Call
+this function in a <code>build.rs</code> file in your crate if you need to build custom queries.</dd></dl></section></div></main></body></html>

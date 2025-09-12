@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["_system_packages_arguments"],"struct":["__typename","computationCharge","epoch","nonRefundableStorageFee","protocolVersion","startTimestamp","storageCharge","storageRebate","systemPackages"]};
