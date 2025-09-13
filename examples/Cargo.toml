@@ -1,0 +1,19 @@
+[package]
+name = "examples"
+version = "0.0.1"
+authors = ["Example Maintainers <dev@example.com>"]
+license = "Apache-2.0"
+edition = "2021"
+description = "Executable examples for sui-rust-sdk crates"
+publish = false
+
+[dependencies]
+anyhow = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+sui-graphql-client = { path = "../crates/sui-graphql-client" }
+sui-transaction-builder = { path = "../crates/sui-transaction-builder" }
+sui-sdk-types = { path = "../crates/sui-sdk-types", features = ["serde"] }
+
+[package.metadata]
+# Prevent accidental inclusion as dependency; purely illustrative.
+category = ["examples"]
