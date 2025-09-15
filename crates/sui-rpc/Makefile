@@ -15,7 +15,7 @@ test:
 	cargo nextest run --all-features
 	cargo test --doc
 
-# Update vendored protos and generated code from sui-apis master branch.
+# Update vendored protos from sui-apis master branch.
 .PHONY: update-protos
 update-protos:
 	@rm -rf vendored/sui-apis
@@ -24,7 +24,7 @@ update-protos:
 	@mv vendored/sui-apis/proto vendored/
 	@rm -rf vendored/sui-apis
 
-# Update vendored protos and generated code from a local clone of sui-apis.
+# Update vendored protos from a local clone of sui-apis.
 # Example invocation:
 #     make -C crates/sui-rpc update-protos-local /path/to/sui-apis
 .PHONY: update-protos-local
