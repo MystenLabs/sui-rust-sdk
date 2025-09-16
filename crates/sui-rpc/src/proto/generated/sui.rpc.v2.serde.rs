@@ -4024,6 +4024,9 @@ impl serde::Serialize for CoinMetadata {
         if self.metadata_cap_id.is_some() {
             len += 1;
         }
+        if self.metadata_cap_state.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("sui.rpc.v2.CoinMetadata", len)?;
         if let Some(v) = self.id.as_ref() {
             struct_ser.serialize_field("id", v)?;
@@ -4046,6 +4049,11 @@ impl serde::Serialize for CoinMetadata {
         if let Some(v) = self.metadata_cap_id.as_ref() {
             struct_ser.serialize_field("metadataCapId", v)?;
         }
+        if let Some(v) = self.metadata_cap_state.as_ref() {
+            let v = coin_metadata::MetadataCapState::try_from(*v)
+                .map_err(|_| serde::ser::Error::custom(format!("Invalid variant {}", *v)))?;
+            struct_ser.serialize_field("metadataCapState", &v)?;
+        }
         struct_ser.end()
     }
 }
@@ -4065,6 +4073,8 @@ impl<'de> serde::Deserialize<'de> for CoinMetadata {
             "iconUrl",
             "metadata_cap_id",
             "metadataCapId",
+            "metadata_cap_state",
+            "metadataCapState",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -4076,6 +4086,7 @@ impl<'de> serde::Deserialize<'de> for CoinMetadata {
             Description,
             IconUrl,
             MetadataCapId,
+            MetadataCapState,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -4105,6 +4116,7 @@ impl<'de> serde::Deserialize<'de> for CoinMetadata {
                             "description" => Ok(GeneratedField::Description),
                             "iconUrl" | "icon_url" => Ok(GeneratedField::IconUrl),
                             "metadataCapId" | "metadata_cap_id" => Ok(GeneratedField::MetadataCapId),
+                            "metadataCapState" | "metadata_cap_state" => Ok(GeneratedField::MetadataCapState),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -4133,6 +4145,7 @@ impl<'de> serde::Deserialize<'de> for CoinMetadata {
                 let mut description__ = None;
                 let mut icon_url__ = None;
                 let mut metadata_cap_id__ = None;
+                let mut metadata_cap_state__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Id => {
@@ -4179,6 +4192,12 @@ impl<'de> serde::Deserialize<'de> for CoinMetadata {
                             }
                             metadata_cap_id__ = map_.next_value()?;
                         }
+                        GeneratedField::MetadataCapState => {
+                            if metadata_cap_state__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("metadataCapState"));
+                            }
+                            metadata_cap_state__ = map_.next_value::<::std::option::Option<coin_metadata::MetadataCapState>>()?.map(|x| x as i32);
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -4192,10 +4211,88 @@ impl<'de> serde::Deserialize<'de> for CoinMetadata {
                     description: description__,
                     icon_url: icon_url__,
                     metadata_cap_id: metadata_cap_id__,
+                    metadata_cap_state: metadata_cap_state__,
                 })
             }
         }
         deserializer.deserialize_struct("sui.rpc.v2.CoinMetadata", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for coin_metadata::MetadataCapState {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let variant = match self {
+            Self::Unknown => "METADATA_CAP_STATE_UNKNOWN",
+            Self::Claimed => "CLAIMED",
+            Self::Unclaimed => "UNCLAIMED",
+            Self::Deleted => "DELETED",
+        };
+        serializer.serialize_str(variant)
+    }
+}
+impl<'de> serde::Deserialize<'de> for coin_metadata::MetadataCapState {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "METADATA_CAP_STATE_UNKNOWN",
+            "CLAIMED",
+            "UNCLAIMED",
+            "DELETED",
+        ];
+
+        struct GeneratedVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = coin_metadata::MetadataCapState;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(formatter, "expected one of: {:?}", &FIELDS)
+            }
+
+            fn visit_i64<E>(self, v: i64) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                i32::try_from(v)
+                    .ok()
+                    .and_then(|x| x.try_into().ok())
+                    .ok_or_else(|| {
+                        serde::de::Error::invalid_value(serde::de::Unexpected::Signed(v), &self)
+                    })
+            }
+
+            fn visit_u64<E>(self, v: u64) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                i32::try_from(v)
+                    .ok()
+                    .and_then(|x| x.try_into().ok())
+                    .ok_or_else(|| {
+                        serde::de::Error::invalid_value(serde::de::Unexpected::Unsigned(v), &self)
+                    })
+            }
+
+            fn visit_str<E>(self, value: &str) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                match value {
+                    "METADATA_CAP_STATE_UNKNOWN" => Ok(coin_metadata::MetadataCapState::Unknown),
+                    "CLAIMED" => Ok(coin_metadata::MetadataCapState::Claimed),
+                    "UNCLAIMED" => Ok(coin_metadata::MetadataCapState::Unclaimed),
+                    "DELETED" => Ok(coin_metadata::MetadataCapState::Deleted),
+                    _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
+                }
+            }
+        }
+        deserializer.deserialize_any(GeneratedVisitor)
     }
 }
 impl serde::Serialize for CoinTreasury {
@@ -4346,6 +4443,7 @@ impl serde::Serialize for coin_treasury::SupplyState {
         let variant = match self {
             Self::Unknown => "SUPPLY_STATE_UNKNOWN",
             Self::Fixed => "FIXED",
+            Self::BurnOnly => "BURN_ONLY",
         };
         serializer.serialize_str(variant)
     }
@@ -4359,6 +4457,7 @@ impl<'de> serde::Deserialize<'de> for coin_treasury::SupplyState {
         const FIELDS: &[&str] = &[
             "SUPPLY_STATE_UNKNOWN",
             "FIXED",
+            "BURN_ONLY",
         ];
 
         struct GeneratedVisitor;
@@ -4401,6 +4500,7 @@ impl<'de> serde::Deserialize<'de> for coin_treasury::SupplyState {
                 match value {
                     "SUPPLY_STATE_UNKNOWN" => Ok(coin_treasury::SupplyState::Unknown),
                     "FIXED" => Ok(coin_treasury::SupplyState::Fixed),
+                    "BURN_ONLY" => Ok(coin_treasury::SupplyState::BurnOnly),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }
@@ -18224,6 +18324,15 @@ impl serde::Serialize for RegulatedCoinMetadata {
         if self.deny_cap_object.is_some() {
             len += 1;
         }
+        if self.allow_global_pause.is_some() {
+            len += 1;
+        }
+        if self.variant.is_some() {
+            len += 1;
+        }
+        if self.coin_regulated_state.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("sui.rpc.v2.RegulatedCoinMetadata", len)?;
         if let Some(v) = self.id.as_ref() {
             struct_ser.serialize_field("id", v)?;
@@ -18233,6 +18342,17 @@ impl serde::Serialize for RegulatedCoinMetadata {
         }
         if let Some(v) = self.deny_cap_object.as_ref() {
             struct_ser.serialize_field("denyCapObject", v)?;
+        }
+        if let Some(v) = self.allow_global_pause.as_ref() {
+            struct_ser.serialize_field("allowGlobalPause", v)?;
+        }
+        if let Some(v) = self.variant.as_ref() {
+            struct_ser.serialize_field("variant", v)?;
+        }
+        if let Some(v) = self.coin_regulated_state.as_ref() {
+            let v = regulated_coin_metadata::CoinRegulatedState::try_from(*v)
+                .map_err(|_| serde::ser::Error::custom(format!("Invalid variant {}", *v)))?;
+            struct_ser.serialize_field("coinRegulatedState", &v)?;
         }
         struct_ser.end()
     }
@@ -18249,6 +18369,11 @@ impl<'de> serde::Deserialize<'de> for RegulatedCoinMetadata {
             "coinMetadataObject",
             "deny_cap_object",
             "denyCapObject",
+            "allow_global_pause",
+            "allowGlobalPause",
+            "variant",
+            "coin_regulated_state",
+            "coinRegulatedState",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -18256,6 +18381,9 @@ impl<'de> serde::Deserialize<'de> for RegulatedCoinMetadata {
             Id,
             CoinMetadataObject,
             DenyCapObject,
+            AllowGlobalPause,
+            Variant,
+            CoinRegulatedState,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -18281,6 +18409,9 @@ impl<'de> serde::Deserialize<'de> for RegulatedCoinMetadata {
                             "id" => Ok(GeneratedField::Id),
                             "coinMetadataObject" | "coin_metadata_object" => Ok(GeneratedField::CoinMetadataObject),
                             "denyCapObject" | "deny_cap_object" => Ok(GeneratedField::DenyCapObject),
+                            "allowGlobalPause" | "allow_global_pause" => Ok(GeneratedField::AllowGlobalPause),
+                            "variant" => Ok(GeneratedField::Variant),
+                            "coinRegulatedState" | "coin_regulated_state" => Ok(GeneratedField::CoinRegulatedState),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -18305,6 +18436,9 @@ impl<'de> serde::Deserialize<'de> for RegulatedCoinMetadata {
                 let mut id__ = None;
                 let mut coin_metadata_object__ = None;
                 let mut deny_cap_object__ = None;
+                let mut allow_global_pause__ = None;
+                let mut variant__ = None;
+                let mut coin_regulated_state__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Id => {
@@ -18325,6 +18459,26 @@ impl<'de> serde::Deserialize<'de> for RegulatedCoinMetadata {
                             }
                             deny_cap_object__ = map_.next_value()?;
                         }
+                        GeneratedField::AllowGlobalPause => {
+                            if allow_global_pause__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("allowGlobalPause"));
+                            }
+                            allow_global_pause__ = map_.next_value()?;
+                        }
+                        GeneratedField::Variant => {
+                            if variant__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("variant"));
+                            }
+                            variant__ = 
+                                map_.next_value::<::std::option::Option<crate::_serde::NumberDeserialize<_>>>()?.map(|x| x.0)
+                            ;
+                        }
+                        GeneratedField::CoinRegulatedState => {
+                            if coin_regulated_state__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("coinRegulatedState"));
+                            }
+                            coin_regulated_state__ = map_.next_value::<::std::option::Option<regulated_coin_metadata::CoinRegulatedState>>()?.map(|x| x as i32);
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -18334,10 +18488,87 @@ impl<'de> serde::Deserialize<'de> for RegulatedCoinMetadata {
                     id: id__,
                     coin_metadata_object: coin_metadata_object__,
                     deny_cap_object: deny_cap_object__,
+                    allow_global_pause: allow_global_pause__,
+                    variant: variant__,
+                    coin_regulated_state: coin_regulated_state__,
                 })
             }
         }
         deserializer.deserialize_struct("sui.rpc.v2.RegulatedCoinMetadata", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for regulated_coin_metadata::CoinRegulatedState {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let variant = match self {
+            Self::Unknown => "COIN_REGULATED_STATE_UNKNOWN",
+            Self::Regulated => "REGULATED",
+            Self::Unregulated => "UNREGULATED",
+        };
+        serializer.serialize_str(variant)
+    }
+}
+impl<'de> serde::Deserialize<'de> for regulated_coin_metadata::CoinRegulatedState {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "COIN_REGULATED_STATE_UNKNOWN",
+            "REGULATED",
+            "UNREGULATED",
+        ];
+
+        struct GeneratedVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = regulated_coin_metadata::CoinRegulatedState;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(formatter, "expected one of: {:?}", &FIELDS)
+            }
+
+            fn visit_i64<E>(self, v: i64) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                i32::try_from(v)
+                    .ok()
+                    .and_then(|x| x.try_into().ok())
+                    .ok_or_else(|| {
+                        serde::de::Error::invalid_value(serde::de::Unexpected::Signed(v), &self)
+                    })
+            }
+
+            fn visit_u64<E>(self, v: u64) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                i32::try_from(v)
+                    .ok()
+                    .and_then(|x| x.try_into().ok())
+                    .ok_or_else(|| {
+                        serde::de::Error::invalid_value(serde::de::Unexpected::Unsigned(v), &self)
+                    })
+            }
+
+            fn visit_str<E>(self, value: &str) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                match value {
+                    "COIN_REGULATED_STATE_UNKNOWN" => Ok(regulated_coin_metadata::CoinRegulatedState::Unknown),
+                    "REGULATED" => Ok(regulated_coin_metadata::CoinRegulatedState::Regulated),
+                    "UNREGULATED" => Ok(regulated_coin_metadata::CoinRegulatedState::Unregulated),
+                    _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
+                }
+            }
+        }
+        deserializer.deserialize_any(GeneratedVisitor)
     }
 }
 impl serde::Serialize for ReverseLookupNameRequest {

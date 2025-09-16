@@ -3425,6 +3425,12 @@ mod _field_impls {
             number: 7i32,
             message_fields: None,
         };
+        pub const METADATA_CAP_STATE_FIELD: &'static MessageField = &MessageField {
+            name: "metadata_cap_state",
+            json_name: "metadataCapState",
+            number: 8i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for CoinMetadata {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -3435,6 +3441,7 @@ mod _field_impls {
             Self::DESCRIPTION_FIELD,
             Self::ICON_URL_FIELD,
             Self::METADATA_CAP_ID_FIELD,
+            Self::METADATA_CAP_STATE_FIELD,
         ];
     }
     impl CoinMetadata {
@@ -3483,6 +3490,10 @@ mod _field_impls {
         }
         pub fn metadata_cap_id(mut self) -> String {
             self.path.push(CoinMetadata::METADATA_CAP_ID_FIELD.name);
+            self.finish()
+        }
+        pub fn metadata_cap_state(mut self) -> String {
+            self.path.push(CoinMetadata::METADATA_CAP_STATE_FIELD.name);
             self.finish()
         }
     }
@@ -3565,12 +3576,33 @@ mod _field_impls {
             number: 3i32,
             message_fields: None,
         };
+        pub const ALLOW_GLOBAL_PAUSE_FIELD: &'static MessageField = &MessageField {
+            name: "allow_global_pause",
+            json_name: "allowGlobalPause",
+            number: 4i32,
+            message_fields: None,
+        };
+        pub const VARIANT_FIELD: &'static MessageField = &MessageField {
+            name: "variant",
+            json_name: "variant",
+            number: 5i32,
+            message_fields: None,
+        };
+        pub const COIN_REGULATED_STATE_FIELD: &'static MessageField = &MessageField {
+            name: "coin_regulated_state",
+            json_name: "coinRegulatedState",
+            number: 6i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for RegulatedCoinMetadata {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::ID_FIELD,
             Self::COIN_METADATA_OBJECT_FIELD,
             Self::DENY_CAP_OBJECT_FIELD,
+            Self::ALLOW_GLOBAL_PAUSE_FIELD,
+            Self::VARIANT_FIELD,
+            Self::COIN_REGULATED_STATE_FIELD,
         ];
     }
     impl RegulatedCoinMetadata {
@@ -3603,6 +3635,18 @@ mod _field_impls {
         }
         pub fn deny_cap_object(mut self) -> String {
             self.path.push(RegulatedCoinMetadata::DENY_CAP_OBJECT_FIELD.name);
+            self.finish()
+        }
+        pub fn allow_global_pause(mut self) -> String {
+            self.path.push(RegulatedCoinMetadata::ALLOW_GLOBAL_PAUSE_FIELD.name);
+            self.finish()
+        }
+        pub fn variant(mut self) -> String {
+            self.path.push(RegulatedCoinMetadata::VARIANT_FIELD.name);
+            self.finish()
+        }
+        pub fn coin_regulated_state(mut self) -> String {
+            self.path.push(RegulatedCoinMetadata::COIN_REGULATED_STATE_FIELD.name);
             self.finish()
         }
     }

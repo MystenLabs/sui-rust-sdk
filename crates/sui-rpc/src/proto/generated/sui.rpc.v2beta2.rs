@@ -2478,8 +2478,12 @@ pub struct GetCoinInfoResponse {
     #[prost(message, optional, tag = "3")]
     pub treasury: ::core::option::Option<CoinTreasury>,
     /// If this coin type is a regulated coin, this field will be
-    /// populated with information about its `0x2::coin::RegulatedCoinMetadata`
-    /// object.
+    /// populated with information either from its Currency object
+    /// in the CoinRegistry, or from its `0x2::coin::RegulatedCoinMetadata`
+    /// object for coins that have not been migrated to the CoinRegistry
+    ///
+    /// If this coin is not known to be regulated, only the
+    /// coin_regulated_state field will be populated.
     #[prost(message, optional, tag = "4")]
     pub regulated_metadata: ::core::option::Option<RegulatedCoinMetadata>,
 }
@@ -2488,7 +2492,7 @@ pub struct GetCoinInfoResponse {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CoinMetadata {
     /// ObjectId of the `0x2::coin::CoinMetadata` object or
-    /// 0x2::sui::coin_registry::CoinData object (when registered with CoinRegistry).
+    /// 0x2::sui::coin_registry::Currency object (when registered with CoinRegistry).
     #[prost(string, optional, tag = "1")]
     pub id: ::core::option::Option<::prost::alloc::string::String>,
     /// Number of decimal places to coin uses.
@@ -2511,6 +2515,61 @@ pub struct CoinMetadata {
     /// Only populated when metadata is from CoinRegistry.
     #[prost(string, optional, tag = "7")]
     pub metadata_cap_id: ::core::option::Option<::prost::alloc::string::String>,
+    /// State of the MetadataCap for this coin type.
+    #[prost(enumeration = "coin_metadata::MetadataCapState", optional, tag = "8")]
+    pub metadata_cap_state: ::core::option::Option<i32>,
+}
+/// Nested message and enum types in `CoinMetadata`.
+pub mod coin_metadata {
+    /// Information about the state of the coin's MetadataCap
+    #[non_exhaustive]
+    #[derive(
+        Clone,
+        Copy,
+        Debug,
+        PartialEq,
+        Eq,
+        Hash,
+        PartialOrd,
+        Ord,
+        ::prost::Enumeration
+    )]
+    #[repr(i32)]
+    pub enum MetadataCapState {
+        /// Indicates the state of the MetadataCap is unknown.
+        /// Set when the coin has not been migrated to the CoinRegistry.
+        Unknown = 0,
+        /// Indicates the MetadataCap has been claimed.
+        Claimed = 1,
+        /// Indicates the MetadataCap has not been claimed.
+        Unclaimed = 2,
+        /// Indicates the MetadataCap has been deleted.
+        Deleted = 3,
+    }
+    impl MetadataCapState {
+        /// String value of the enum field names used in the ProtoBuf definition.
+        ///
+        /// The values are not transformed in any way and thus are considered stable
+        /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+        pub fn as_str_name(&self) -> &'static str {
+            match self {
+                Self::Unknown => "METADATA_CAP_STATE_UNKNOWN",
+                Self::Claimed => "CLAIMED",
+                Self::Unclaimed => "UNCLAIMED",
+                Self::Deleted => "DELETED",
+            }
+        }
+        /// Creates an enum from field names used in the ProtoBuf definition.
+        pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+            match value {
+                "METADATA_CAP_STATE_UNKNOWN" => Some(Self::Unknown),
+                "CLAIMED" => Some(Self::Claimed),
+                "UNCLAIMED" => Some(Self::Unclaimed),
+                "DELETED" => Some(Self::Deleted),
+                _ => None,
+            }
+        }
+    }
 }
 /// Information about a coin type's `0x2::coin::TreasuryCap` and its total available supply
 #[non_exhaustive]
@@ -2547,6 +2606,8 @@ pub mod coin_treasury {
         Unknown = 0,
         /// Supply is fixed (TreasuryCap consumed, no more minting possible)
         Fixed = 1,
+        /// Supply can only decrease (burning allowed, minting not allowed)
+        BurnOnly = 2,
     }
     impl SupplyState {
         /// String value of the enum field names used in the ProtoBuf definition.
@@ -2557,6 +2618,7 @@ pub mod coin_treasury {
             match self {
                 Self::Unknown => "SUPPLY_STATE_UNKNOWN",
                 Self::Fixed => "FIXED",
+                Self::BurnOnly => "BURN_ONLY",
             }
         }
         /// Creates an enum from field names used in the ProtoBuf definition.
@@ -2564,6 +2626,7 @@ pub mod coin_treasury {
             match value {
                 "SUPPLY_STATE_UNKNOWN" => Some(Self::Unknown),
                 "FIXED" => Some(Self::Fixed),
+                "BURN_ONLY" => Some(Self::BurnOnly),
                 _ => None,
             }
         }
@@ -2574,6 +2637,7 @@ pub mod coin_treasury {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RegulatedCoinMetadata {
     /// ObjectId of the `0x2::coin::RegulatedCoinMetadata` object.
+    /// Only present for coins that have not been migrated to CoinRegistry.
     #[prost(string, optional, tag = "1")]
     pub id: ::core::option::Option<::prost::alloc::string::String>,
     /// The ID of the coin's `CoinMetadata` or `CoinData` object.
@@ -2582,6 +2646,69 @@ pub struct RegulatedCoinMetadata {
     /// The ID of the coin's `DenyCap` object.
     #[prost(string, optional, tag = "3")]
     pub deny_cap_object: ::core::option::Option<::prost::alloc::string::String>,
+    /// Whether the coin can be globally paused
+    #[prost(bool, optional, tag = "4")]
+    pub allow_global_pause: ::core::option::Option<bool>,
+    /// Variant of the regulated coin metadata
+    #[prost(uint32, optional, tag = "5")]
+    pub variant: ::core::option::Option<u32>,
+    /// Indicates the coin's regulated state.
+    #[prost(
+        enumeration = "regulated_coin_metadata::CoinRegulatedState",
+        optional,
+        tag = "6"
+    )]
+    pub coin_regulated_state: ::core::option::Option<i32>,
+}
+/// Nested message and enum types in `RegulatedCoinMetadata`.
+pub mod regulated_coin_metadata {
+    /// Indicates the state of the regulation of the coin.
+    #[non_exhaustive]
+    #[derive(
+        Clone,
+        Copy,
+        Debug,
+        PartialEq,
+        Eq,
+        Hash,
+        PartialOrd,
+        Ord,
+        ::prost::Enumeration
+    )]
+    #[repr(i32)]
+    pub enum CoinRegulatedState {
+        /// Indicates the regulation state of the coin is unknown.
+        /// This is set when a coin has not been migrated to the
+        /// coin registry and has no `0x2::coin::RegulatedCoinMetadata`
+        /// object.
+        Unknown = 0,
+        /// Indicates a coin is regulated. RegulatedCoinMetadata will be populated.
+        Regulated = 1,
+        /// Indicates a coin is unregulated.
+        Unregulated = 2,
+    }
+    impl CoinRegulatedState {
+        /// String value of the enum field names used in the ProtoBuf definition.
+        ///
+        /// The values are not transformed in any way and thus are considered stable
+        /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+        pub fn as_str_name(&self) -> &'static str {
+            match self {
+                Self::Unknown => "COIN_REGULATED_STATE_UNKNOWN",
+                Self::Regulated => "REGULATED",
+                Self::Unregulated => "UNREGULATED",
+            }
+        }
+        /// Creates an enum from field names used in the ProtoBuf definition.
+        pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+            match value {
+                "COIN_REGULATED_STATE_UNKNOWN" => Some(Self::Unknown),
+                "REGULATED" => Some(Self::Regulated),
+                "UNREGULATED" => Some(Self::Unregulated),
+                _ => None,
+            }
+        }
+    }
 }
 /// Request message for `LiveDataService.GetBalance`.
 #[non_exhaustive]

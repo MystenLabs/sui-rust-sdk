@@ -2442,6 +2442,7 @@ mod _accessor_impls {
                 description: None,
                 icon_url: None,
                 metadata_cap_id: None,
+                metadata_cap_state: None,
             }
         }
         #[doc(hidden)]
@@ -2601,6 +2602,14 @@ mod _accessor_impls {
         ///Sets `metadata_cap_id` with the provided value.
         pub fn with_metadata_cap_id<T: Into<String>>(mut self, field: T) -> Self {
             self.set_metadata_cap_id(field.into());
+            self
+        }
+        ///Sets `metadata_cap_state` with the provided value.
+        pub fn with_metadata_cap_state<T: Into<super::coin_metadata::MetadataCapState>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_metadata_cap_state(field.into());
             self
         }
     }
@@ -11595,6 +11604,9 @@ mod _accessor_impls {
                 id: None,
                 coin_metadata_object: None,
                 deny_cap_object: None,
+                allow_global_pause: None,
+                variant: None,
+                coin_regulated_state: None,
             }
         }
         #[doc(hidden)]
@@ -11666,6 +11678,57 @@ mod _accessor_impls {
         ///Sets `deny_cap_object` with the provided value.
         pub fn with_deny_cap_object<T: Into<String>>(mut self, field: T) -> Self {
             self.set_deny_cap_object(field.into());
+            self
+        }
+        ///If `allow_global_pause` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn allow_global_pause_opt_mut(&mut self) -> Option<&mut bool> {
+            self.allow_global_pause.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `allow_global_pause`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn allow_global_pause_mut(&mut self) -> &mut bool {
+            self.allow_global_pause.get_or_insert_default()
+        }
+        ///If `allow_global_pause` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn allow_global_pause_opt(&self) -> Option<bool> {
+            self.allow_global_pause.as_ref().map(|field| *field)
+        }
+        ///Sets `allow_global_pause` with the provided value.
+        pub fn set_allow_global_pause<T: Into<bool>>(&mut self, field: T) {
+            self.allow_global_pause = Some(field.into().into());
+        }
+        ///Sets `allow_global_pause` with the provided value.
+        pub fn with_allow_global_pause<T: Into<bool>>(mut self, field: T) -> Self {
+            self.set_allow_global_pause(field.into());
+            self
+        }
+        ///If `variant` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn variant_opt_mut(&mut self) -> Option<&mut u32> {
+            self.variant.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `variant`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn variant_mut(&mut self) -> &mut u32 {
+            self.variant.get_or_insert_default()
+        }
+        ///If `variant` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn variant_opt(&self) -> Option<u32> {
+            self.variant.as_ref().map(|field| *field)
+        }
+        ///Sets `variant` with the provided value.
+        pub fn set_variant<T: Into<u32>>(&mut self, field: T) {
+            self.variant = Some(field.into().into());
+        }
+        ///Sets `variant` with the provided value.
+        pub fn with_variant<T: Into<u32>>(mut self, field: T) -> Self {
+            self.set_variant(field.into());
+            self
+        }
+        ///Sets `coin_regulated_state` with the provided value.
+        pub fn with_coin_regulated_state<
+            T: Into<super::regulated_coin_metadata::CoinRegulatedState>,
+        >(mut self, field: T) -> Self {
+            self.set_coin_regulated_state(field.into());
             self
         }
     }
