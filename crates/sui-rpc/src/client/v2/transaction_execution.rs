@@ -12,6 +12,7 @@ use prost_types::FieldMask;
 
 /// Error types that can occur when executing a transaction and waiting for checkpoint
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum ExecuteAndWaitError {
     /// RPC Error (actual tonic::Status from the client/server)
     RpcError(tonic::Status),
@@ -26,6 +27,39 @@ pub enum ExecuteAndWaitError {
         response: Response<ExecuteTransactionResponse>,
         error: tonic::Status,
     },
+}
+
+impl std::fmt::Display for ExecuteAndWaitError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::RpcError(status) => write!(f, "RPC error: {status}"),
+            Self::MissingTransaction => {
+                write!(f, "Request is missing the required transaction field")
+            }
+            Self::ProtoConversionError(e) => write!(f, "Failed to convert transaction: {e}"),
+            Self::CheckpointTimeout(_) => {
+                write!(f, "Transaction executed but checkpoint wait timed out")
+            }
+            Self::CheckpointStreamError { error, .. } => {
+                write!(
+                    f,
+                    "Transaction executed but checkpoint stream had an error: {error}"
+                )
+            }
+        }
+    }
+}
+
+impl std::error::Error for ExecuteAndWaitError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::RpcError(status) => Some(status),
+            Self::ProtoConversionError(e) => Some(e),
+            Self::CheckpointStreamError { error, .. } => Some(error),
+            Self::MissingTransaction => None,
+            Self::CheckpointTimeout(_) => None,
+        }
+    }
 }
 
 impl Client {
