@@ -19,8 +19,6 @@ pub enum ExecuteAndWaitError {
     MissingTransaction,
     /// Failed to parse/convert the transaction for digest calculation
     ProtoConversionError(TryFromProtoError),
-    /// Transaction was sent but failed during execution (includes response with error details)
-    ExecutionFailed(Response<ExecuteTransactionResponse>),
     /// Transaction executed but checkpoint wait timed out
     CheckpointTimeout(Response<ExecuteTransactionResponse>),
     /// Transaction executed but checkpoint stream had an error
@@ -82,17 +80,6 @@ impl Client {
             Ok(resp) => resp,
             Err(e) => return Err(ExecuteAndWaitError::RpcError(e)),
         };
-
-        let status = response
-            .get_ref()
-            .transaction_opt()
-            .and_then(|tx| tx.effects_opt())
-            .and_then(|effects| effects.status_opt());
-
-        match status.and_then(|s| s.success_opt()) {
-            Some(true) => {} // Transaction successful, continue to wait for checkpoint
-            _ => return Err(ExecuteAndWaitError::ExecutionFailed(response)),
-        }
 
         // Wait for the transaction to appear in a checkpoint, at which point indexes will have been
         // updated.
