@@ -571,3 +571,15 @@ impl TryFrom<&Owner> for sui_sdk_types::Owner {
         .pipe(Ok)
     }
 }
+
+impl Merge<&ObjectSet> for ObjectSet {
+    fn merge(&mut self, source: &ObjectSet, mask: &FieldMaskTree) {
+        if let Some(submask) = mask.subtree(Self::OBJECTS_FIELD) {
+            self.objects = source
+                .objects()
+                .iter()
+                .map(|object| Object::merge_from(object, &submask))
+                .collect();
+        }
+    }
+}

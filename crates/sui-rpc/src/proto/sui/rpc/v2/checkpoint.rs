@@ -554,6 +554,7 @@ impl Merge<&Checkpoint> for Checkpoint {
             signature,
             contents,
             transactions,
+            objects,
         } = source;
 
         if mask.contains(Self::SEQUENCE_NUMBER_FIELD.name) {
@@ -585,6 +586,12 @@ impl Merge<&Checkpoint> for Checkpoint {
                 .iter()
                 .map(|transaction| ExecutedTransaction::merge_from(transaction, &submask))
                 .collect();
+        }
+
+        if let Some(submask) = mask.subtree(Self::OBJECTS_FIELD) {
+            self.objects = objects
+                .as_ref()
+                .map(|objects| ObjectSet::merge_from(objects, &submask));
         }
     }
 }

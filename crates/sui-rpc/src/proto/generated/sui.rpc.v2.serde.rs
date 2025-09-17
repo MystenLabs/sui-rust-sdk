@@ -2433,6 +2433,9 @@ impl serde::Serialize for Checkpoint {
         if !self.transactions.is_empty() {
             len += 1;
         }
+        if self.objects.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("sui.rpc.v2.Checkpoint", len)?;
         if let Some(v) = self.sequence_number.as_ref() {
             #[allow(clippy::needless_borrow)]
@@ -2454,6 +2457,9 @@ impl serde::Serialize for Checkpoint {
         if !self.transactions.is_empty() {
             struct_ser.serialize_field("transactions", &self.transactions)?;
         }
+        if let Some(v) = self.objects.as_ref() {
+            struct_ser.serialize_field("objects", v)?;
+        }
         struct_ser.end()
     }
 }
@@ -2471,6 +2477,7 @@ impl<'de> serde::Deserialize<'de> for Checkpoint {
             "signature",
             "contents",
             "transactions",
+            "objects",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -2481,6 +2488,7 @@ impl<'de> serde::Deserialize<'de> for Checkpoint {
             Signature,
             Contents,
             Transactions,
+            Objects,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -2509,6 +2517,7 @@ impl<'de> serde::Deserialize<'de> for Checkpoint {
                             "signature" => Ok(GeneratedField::Signature),
                             "contents" => Ok(GeneratedField::Contents),
                             "transactions" => Ok(GeneratedField::Transactions),
+                            "objects" => Ok(GeneratedField::Objects),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -2536,6 +2545,7 @@ impl<'de> serde::Deserialize<'de> for Checkpoint {
                 let mut signature__ = None;
                 let mut contents__ = None;
                 let mut transactions__ = None;
+                let mut objects__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::SequenceNumber => {
@@ -2576,6 +2586,12 @@ impl<'de> serde::Deserialize<'de> for Checkpoint {
                             }
                             transactions__ = Some(map_.next_value()?);
                         }
+                        GeneratedField::Objects => {
+                            if objects__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("objects"));
+                            }
+                            objects__ = map_.next_value()?;
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -2588,6 +2604,7 @@ impl<'de> serde::Deserialize<'de> for Checkpoint {
                     signature: signature__,
                     contents: contents__,
                     transactions: transactions__.unwrap_or_default(),
+                    objects: objects__,
                 })
             }
         }
@@ -7514,10 +7531,7 @@ impl serde::Serialize for ExecutedTransaction {
         if !self.balance_changes.is_empty() {
             len += 1;
         }
-        if !self.input_objects.is_empty() {
-            len += 1;
-        }
-        if !self.output_objects.is_empty() {
+        if self.objects.is_some() {
             len += 1;
         }
         let mut struct_ser = serializer.serialize_struct("sui.rpc.v2.ExecutedTransaction", len)?;
@@ -7547,11 +7561,8 @@ impl serde::Serialize for ExecutedTransaction {
         if !self.balance_changes.is_empty() {
             struct_ser.serialize_field("balanceChanges", &self.balance_changes)?;
         }
-        if !self.input_objects.is_empty() {
-            struct_ser.serialize_field("inputObjects", &self.input_objects)?;
-        }
-        if !self.output_objects.is_empty() {
-            struct_ser.serialize_field("outputObjects", &self.output_objects)?;
+        if let Some(v) = self.objects.as_ref() {
+            struct_ser.serialize_field("objects", v)?;
         }
         struct_ser.end()
     }
@@ -7572,10 +7583,7 @@ impl<'de> serde::Deserialize<'de> for ExecutedTransaction {
             "timestamp",
             "balance_changes",
             "balanceChanges",
-            "input_objects",
-            "inputObjects",
-            "output_objects",
-            "outputObjects",
+            "objects",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -7588,8 +7596,7 @@ impl<'de> serde::Deserialize<'de> for ExecutedTransaction {
             Checkpoint,
             Timestamp,
             BalanceChanges,
-            InputObjects,
-            OutputObjects,
+            Objects,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -7620,8 +7627,7 @@ impl<'de> serde::Deserialize<'de> for ExecutedTransaction {
                             "checkpoint" => Ok(GeneratedField::Checkpoint),
                             "timestamp" => Ok(GeneratedField::Timestamp),
                             "balanceChanges" | "balance_changes" => Ok(GeneratedField::BalanceChanges),
-                            "inputObjects" | "input_objects" => Ok(GeneratedField::InputObjects),
-                            "outputObjects" | "output_objects" => Ok(GeneratedField::OutputObjects),
+                            "objects" => Ok(GeneratedField::Objects),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -7651,8 +7657,7 @@ impl<'de> serde::Deserialize<'de> for ExecutedTransaction {
                 let mut checkpoint__ = None;
                 let mut timestamp__ = None;
                 let mut balance_changes__ = None;
-                let mut input_objects__ = None;
-                let mut output_objects__ = None;
+                let mut objects__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Digest => {
@@ -7705,17 +7710,11 @@ impl<'de> serde::Deserialize<'de> for ExecutedTransaction {
                             }
                             balance_changes__ = Some(map_.next_value()?);
                         }
-                        GeneratedField::InputObjects => {
-                            if input_objects__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("inputObjects"));
+                        GeneratedField::Objects => {
+                            if objects__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("objects"));
                             }
-                            input_objects__ = Some(map_.next_value()?);
-                        }
-                        GeneratedField::OutputObjects => {
-                            if output_objects__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("outputObjects"));
-                            }
-                            output_objects__ = Some(map_.next_value()?);
+                            objects__ = map_.next_value()?;
                         }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
@@ -7731,8 +7730,7 @@ impl<'de> serde::Deserialize<'de> for ExecutedTransaction {
                     checkpoint: checkpoint__,
                     timestamp: timestamp__,
                     balance_changes: balance_changes__.unwrap_or_default(),
-                    input_objects: input_objects__.unwrap_or_default(),
-                    output_objects: output_objects__.unwrap_or_default(),
+                    objects: objects__,
                 })
             }
         }
@@ -16398,6 +16396,103 @@ impl<'de> serde::Deserialize<'de> for ObjectReference {
             }
         }
         deserializer.deserialize_struct("sui.rpc.v2.ObjectReference", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for ObjectSet {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.objects.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("sui.rpc.v2.ObjectSet", len)?;
+        if !self.objects.is_empty() {
+            struct_ser.serialize_field("objects", &self.objects)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for ObjectSet {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "objects",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Objects,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "objects" => Ok(GeneratedField::Objects),
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = ObjectSet;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2.ObjectSet")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<ObjectSet, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut objects__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Objects => {
+                            if objects__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("objects"));
+                            }
+                            objects__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(ObjectSet {
+                    objects: objects__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer.deserialize_struct("sui.rpc.v2.ObjectSet", FIELDS, GeneratedVisitor)
     }
 }
 impl serde::Serialize for OpenSignature {

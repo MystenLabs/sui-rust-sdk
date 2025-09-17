@@ -60,3 +60,9 @@ message Object {
   // Current balance if this object is a `0x2::coin::Coin<T>`
   optional uint64 balance = 101;
 }
+
+// Set of Objects
+message ObjectSet {
+  // Objects are sorted by the key `(object_id, version)`.
+  repeated Object objects = 1;
+}
