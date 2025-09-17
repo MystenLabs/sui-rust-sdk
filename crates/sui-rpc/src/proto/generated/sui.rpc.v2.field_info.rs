@@ -220,6 +220,12 @@ mod _field_impls {
             number: 6i32,
             message_fields: Some(ExecutedTransaction::FIELDS),
         };
+        pub const OBJECTS_FIELD: &'static MessageField = &MessageField {
+            name: "objects",
+            json_name: "objects",
+            number: 7i32,
+            message_fields: Some(ObjectSet::FIELDS),
+        };
     }
     impl MessageFields for Checkpoint {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -229,6 +235,7 @@ mod _field_impls {
             Self::SIGNATURE_FIELD,
             Self::CONTENTS_FIELD,
             Self::TRANSACTIONS_FIELD,
+            Self::OBJECTS_FIELD,
         ];
     }
     impl Checkpoint {
@@ -274,6 +281,10 @@ mod _field_impls {
         pub fn transactions(mut self) -> ExecutedTransactionFieldPathBuilder {
             self.path.push(Checkpoint::TRANSACTIONS_FIELD.name);
             ExecutedTransactionFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn objects(mut self) -> ObjectSetFieldPathBuilder {
+            self.path.push(Checkpoint::OBJECTS_FIELD.name);
+            ObjectSetFieldPathBuilder::new_with_base(self.path)
         }
     }
     impl CheckpointContents {
@@ -1420,17 +1431,11 @@ mod _field_impls {
             number: 8i32,
             message_fields: Some(BalanceChange::FIELDS),
         };
-        pub const INPUT_OBJECTS_FIELD: &'static MessageField = &MessageField {
-            name: "input_objects",
-            json_name: "inputObjects",
-            number: 10i32,
-            message_fields: Some(Object::FIELDS),
-        };
-        pub const OUTPUT_OBJECTS_FIELD: &'static MessageField = &MessageField {
-            name: "output_objects",
-            json_name: "outputObjects",
-            number: 11i32,
-            message_fields: Some(Object::FIELDS),
+        pub const OBJECTS_FIELD: &'static MessageField = &MessageField {
+            name: "objects",
+            json_name: "objects",
+            number: 9i32,
+            message_fields: Some(ObjectSet::FIELDS),
         };
     }
     impl MessageFields for ExecutedTransaction {
@@ -1443,8 +1448,7 @@ mod _field_impls {
             Self::CHECKPOINT_FIELD,
             Self::TIMESTAMP_FIELD,
             Self::BALANCE_CHANGES_FIELD,
-            Self::INPUT_OBJECTS_FIELD,
-            Self::OUTPUT_OBJECTS_FIELD,
+            Self::OBJECTS_FIELD,
         ];
     }
     impl ExecutedTransaction {
@@ -1499,13 +1503,9 @@ mod _field_impls {
             self.path.push(ExecutedTransaction::BALANCE_CHANGES_FIELD.name);
             BalanceChangeFieldPathBuilder::new_with_base(self.path)
         }
-        pub fn input_objects(mut self) -> ObjectFieldPathBuilder {
-            self.path.push(ExecutedTransaction::INPUT_OBJECTS_FIELD.name);
-            ObjectFieldPathBuilder::new_with_base(self.path)
-        }
-        pub fn output_objects(mut self) -> ObjectFieldPathBuilder {
-            self.path.push(ExecutedTransaction::OUTPUT_OBJECTS_FIELD.name);
-            ObjectFieldPathBuilder::new_with_base(self.path)
+        pub fn objects(mut self) -> ObjectSetFieldPathBuilder {
+            self.path.push(ExecutedTransaction::OBJECTS_FIELD.name);
+            ObjectSetFieldPathBuilder::new_with_base(self.path)
         }
     }
     impl ExecutionStatus {
@@ -5014,6 +5014,42 @@ mod _field_impls {
         pub fn balance(mut self) -> String {
             self.path.push(Object::BALANCE_FIELD.name);
             self.finish()
+        }
+    }
+    impl ObjectSet {
+        pub const OBJECTS_FIELD: &'static MessageField = &MessageField {
+            name: "objects",
+            json_name: "objects",
+            number: 1i32,
+            message_fields: Some(Object::FIELDS),
+        };
+    }
+    impl MessageFields for ObjectSet {
+        const FIELDS: &'static [&'static MessageField] = &[Self::OBJECTS_FIELD];
+    }
+    impl ObjectSet {
+        pub fn path_builder() -> ObjectSetFieldPathBuilder {
+            ObjectSetFieldPathBuilder::new()
+        }
+    }
+    pub struct ObjectSetFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ObjectSetFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn objects(mut self) -> ObjectFieldPathBuilder {
+            self.path.push(ObjectSet::OBJECTS_FIELD.name);
+            ObjectFieldPathBuilder::new_with_base(self.path)
         }
     }
     impl ObjectReference {

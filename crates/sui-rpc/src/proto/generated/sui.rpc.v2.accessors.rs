@@ -1215,6 +1215,7 @@ mod _accessor_impls {
                 signature: None,
                 contents: None,
                 transactions: Vec::new(),
+                objects: None,
             }
         }
         #[doc(hidden)]
@@ -1388,6 +1389,35 @@ mod _accessor_impls {
             field: Vec<super::ExecutedTransaction>,
         ) -> Self {
             self.set_transactions(field);
+            self
+        }
+        ///Returns the value of `objects`, or the default value if `objects` is unset.
+        pub fn objects(&self) -> &super::ObjectSet {
+            self.objects
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::ObjectSet::default_instance() as _)
+        }
+        ///If `objects` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn objects_opt_mut(&mut self) -> Option<&mut super::ObjectSet> {
+            self.objects.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `objects`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn objects_mut(&mut self) -> &mut super::ObjectSet {
+            self.objects.get_or_insert_default()
+        }
+        ///If `objects` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn objects_opt(&self) -> Option<&super::ObjectSet> {
+            self.objects.as_ref().map(|field| field as _)
+        }
+        ///Sets `objects` with the provided value.
+        pub fn set_objects<T: Into<super::ObjectSet>>(&mut self, field: T) {
+            self.objects = Some(field.into().into());
+        }
+        ///Sets `objects` with the provided value.
+        pub fn with_objects<T: Into<super::ObjectSet>>(mut self, field: T) -> Self {
+            self.set_objects(field.into());
             self
         }
     }
@@ -4953,8 +4983,7 @@ mod _accessor_impls {
                 checkpoint: None,
                 timestamp: None,
                 balance_changes: Vec::new(),
-                input_objects: Vec::new(),
-                output_objects: Vec::new(),
+                objects: None,
             }
         }
         #[doc(hidden)]
@@ -5163,40 +5192,33 @@ mod _accessor_impls {
             self.set_balance_changes(field);
             self
         }
-        ///Returns the value of `input_objects`, or the default value if `input_objects` is unset.
-        pub fn input_objects(&self) -> &[super::Object] {
-            &self.input_objects
+        ///Returns the value of `objects`, or the default value if `objects` is unset.
+        pub fn objects(&self) -> &super::ObjectSet {
+            self.objects
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::ObjectSet::default_instance() as _)
         }
-        ///Returns a mutable reference to `input_objects`.
+        ///If `objects` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn objects_opt_mut(&mut self) -> Option<&mut super::ObjectSet> {
+            self.objects.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `objects`.
         ///If the field is unset, it is first initialized with the default value.
-        pub fn input_objects_mut(&mut self) -> &mut Vec<super::Object> {
-            &mut self.input_objects
+        pub fn objects_mut(&mut self) -> &mut super::ObjectSet {
+            self.objects.get_or_insert_default()
         }
-        ///Sets `input_objects` with the provided value.
-        pub fn set_input_objects(&mut self, field: Vec<super::Object>) {
-            self.input_objects = field;
+        ///If `objects` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn objects_opt(&self) -> Option<&super::ObjectSet> {
+            self.objects.as_ref().map(|field| field as _)
         }
-        ///Sets `input_objects` with the provided value.
-        pub fn with_input_objects(mut self, field: Vec<super::Object>) -> Self {
-            self.set_input_objects(field);
-            self
+        ///Sets `objects` with the provided value.
+        pub fn set_objects<T: Into<super::ObjectSet>>(&mut self, field: T) {
+            self.objects = Some(field.into().into());
         }
-        ///Returns the value of `output_objects`, or the default value if `output_objects` is unset.
-        pub fn output_objects(&self) -> &[super::Object] {
-            &self.output_objects
-        }
-        ///Returns a mutable reference to `output_objects`.
-        ///If the field is unset, it is first initialized with the default value.
-        pub fn output_objects_mut(&mut self) -> &mut Vec<super::Object> {
-            &mut self.output_objects
-        }
-        ///Sets `output_objects` with the provided value.
-        pub fn set_output_objects(&mut self, field: Vec<super::Object>) {
-            self.output_objects = field;
-        }
-        ///Sets `output_objects` with the provided value.
-        pub fn with_output_objects(mut self, field: Vec<super::Object>) -> Self {
-            self.set_output_objects(field);
+        ///Sets `objects` with the provided value.
+        pub fn with_objects<T: Into<super::ObjectSet>>(mut self, field: T) -> Self {
+            self.set_objects(field.into());
             self
         }
     }
@@ -10703,6 +10725,34 @@ mod _accessor_impls {
         ///Sets `digest` with the provided value.
         pub fn with_digest<T: Into<String>>(mut self, field: T) -> Self {
             self.set_digest(field.into());
+            self
+        }
+    }
+    impl super::ObjectSet {
+        pub const fn const_default() -> Self {
+            Self { objects: Vec::new() }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::ObjectSet = super::ObjectSet::const_default();
+            &DEFAULT
+        }
+        ///Returns the value of `objects`, or the default value if `objects` is unset.
+        pub fn objects(&self) -> &[super::Object] {
+            &self.objects
+        }
+        ///Returns a mutable reference to `objects`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn objects_mut(&mut self) -> &mut Vec<super::Object> {
+            &mut self.objects
+        }
+        ///Sets `objects` with the provided value.
+        pub fn set_objects(&mut self, field: Vec<super::Object>) {
+            self.objects = field;
+        }
+        ///Sets `objects` with the provided value.
+        pub fn with_objects(mut self, field: Vec<super::Object>) -> Self {
+            self.set_objects(field);
             self
         }
     }

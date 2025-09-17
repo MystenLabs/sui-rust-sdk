@@ -43,9 +43,7 @@ message ExecutedTransaction {
 
   repeated BalanceChange balance_changes = 8;
 
-  // Set of input objects used during the execution of this transaction.
-  repeated Object input_objects = 10;
-
-  // Set of output objects produced from the execution of this transaction.
-  repeated Object output_objects = 11;
+  // Set of objects either referenced as inputs or produced as
+  // outputs from this Transaction.
+  optional ObjectSet objects = 9;
 }

@@ -114,6 +114,15 @@ pub struct Checkpoint {
     /// List of transactions included in this checkpoint.
     #[prost(message, repeated, tag = "6")]
     pub transactions: ::prost::alloc::vec::Vec<ExecutedTransaction>,
+    /// Set of objects either referenced as inputs or produced as
+    /// outputs by transactions included in this checkpoint.
+    ///
+    /// In order to benefit from deduplication of objects that
+    /// appear in multiple transactions in this checkpoint, objects
+    /// will only be present here and the `transactions.objects`
+    /// field will not be populated.
+    #[prost(message, optional, tag = "7")]
+    pub objects: ::core::option::Option<ObjectSet>,
 }
 /// The committed to contents of a checkpoint.
 #[non_exhaustive]
@@ -720,12 +729,10 @@ pub struct ExecutedTransaction {
     pub timestamp: ::core::option::Option<::prost_types::Timestamp>,
     #[prost(message, repeated, tag = "8")]
     pub balance_changes: ::prost::alloc::vec::Vec<BalanceChange>,
-    /// Set of input objects used during the execution of this transaction.
-    #[prost(message, repeated, tag = "10")]
-    pub input_objects: ::prost::alloc::vec::Vec<Object>,
-    /// Set of output objects produced from the execution of this transaction.
-    #[prost(message, repeated, tag = "11")]
-    pub output_objects: ::prost::alloc::vec::Vec<Object>,
+    /// Set of objects either referenced as inputs or produced as
+    /// outputs from this Transaction.
+    #[prost(message, optional, tag = "9")]
+    pub objects: ::core::option::Option<ObjectSet>,
 }
 /// The status of an executed transaction.
 #[non_exhaustive]
@@ -4052,6 +4059,14 @@ pub struct Object {
     /// Current balance if this object is a `0x2::coin::Coin<T>`
     #[prost(uint64, optional, tag = "101")]
     pub balance: ::core::option::Option<u64>,
+}
+/// Set of Objects
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ObjectSet {
+    /// Objects are sorted by the key `(object_id, version)`.
+    #[prost(message, repeated, tag = "1")]
+    pub objects: ::prost::alloc::vec::Vec<Object>,
 }
 /// Reference to an object.
 #[non_exhaustive]

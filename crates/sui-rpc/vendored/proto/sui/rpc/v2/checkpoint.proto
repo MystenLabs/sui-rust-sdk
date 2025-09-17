@@ -8,6 +8,7 @@ package sui.rpc.v2;
 import "sui/rpc/v2/checkpoint_contents.proto";
 import "sui/rpc/v2/checkpoint_summary.proto";
 import "sui/rpc/v2/executed_transaction.proto";
+import "sui/rpc/v2/object.proto";
 import "sui/rpc/v2/signature.proto";
 
 message Checkpoint {
@@ -29,4 +30,13 @@ message Checkpoint {
 
   // List of transactions included in this checkpoint.
   repeated ExecutedTransaction transactions = 6;
+
+  // Set of objects either referenced as inputs or produced as
+  // outputs by transactions included in this checkpoint.
+  //
+  // In order to benefit from deduplication of objects that
+  // appear in multiple transactions in this checkpoint, objects
+  // will only be present here and the `transactions.objects`
+  // field will not be populated.
+  optional ObjectSet objects = 7;
 }

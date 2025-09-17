@@ -13,8 +13,7 @@ impl Merge<&ExecutedTransaction> for ExecutedTransaction {
             checkpoint,
             timestamp,
             balance_changes,
-            input_objects,
-            output_objects,
+            objects,
         } = source;
 
         if mask.contains(Self::DIGEST_FIELD.name) {
@@ -58,18 +57,10 @@ impl Merge<&ExecutedTransaction> for ExecutedTransaction {
             self.balance_changes = balance_changes.clone();
         }
 
-        if let Some(submask) = mask.subtree(Self::INPUT_OBJECTS_FIELD.name) {
-            self.input_objects = input_objects
-                .iter()
-                .map(|object| Object::merge_from(object, &submask))
-                .collect();
-        }
-
-        if let Some(submask) = mask.subtree(Self::OUTPUT_OBJECTS_FIELD.name) {
-            self.output_objects = output_objects
-                .iter()
-                .map(|object| Object::merge_from(object, &submask))
-                .collect();
+        if let Some(submask) = mask.subtree(Self::OBJECTS_FIELD) {
+            self.objects = objects
+                .as_ref()
+                .map(|objects| ObjectSet::merge_from(objects, &submask));
         }
     }
 }

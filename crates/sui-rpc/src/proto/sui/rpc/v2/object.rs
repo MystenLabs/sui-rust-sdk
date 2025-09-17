@@ -571,3 +571,46 @@ impl TryFrom<&Owner> for sui_sdk_types::Owner {
         .pipe(Ok)
     }
 }
+
+impl Merge<&ObjectSet> for ObjectSet {
+    fn merge(&mut self, source: &ObjectSet, mask: &FieldMaskTree) {
+        if let Some(submask) = mask.subtree(Self::OBJECTS_FIELD) {
+            self.objects = source
+                .objects()
+                .iter()
+                .map(|object| Object::merge_from(object, &submask))
+                .collect();
+        }
+    }
+}
+
+impl ObjectSet {
+    // Sorts the objects in this set by the key `(object_id, version)`
+    #[doc(hidden)]
+    pub fn sort_objects(&mut self) {
+        self.objects_mut().sort_by(|a, b| {
+            let a = (a.object_id(), a.version());
+            let b = (b.object_id(), b.version());
+            a.cmp(&b)
+        });
+    }
+
+    // Performs a binary search on the contained object set searching for the specified
+    // (object_id, version). This function assumes that both the `object_id` and `version` fields
+    // are set for all contained objects.
+    pub fn binary_search<'a>(
+        &'a self,
+        object_id: &sui_sdk_types::Address,
+        version: u64,
+    ) -> Option<&'a Object> {
+        let object_id = object_id.to_string();
+        let seek = (object_id.as_str(), version);
+        self.objects()
+            .binary_search_by(|object| {
+                let probe = (object.object_id(), object.version());
+                probe.cmp(&seek)
+            })
+            .ok()
+            .and_then(|found| self.objects().get(found))
+    }
+}
