@@ -18,47 +18,75 @@ impl Client {
     /// # Returns
     /// A stream that yields `Result<Object>` instances. If any RPC call fails, the
     /// tonic::Status from that request is returned.
-    pub fn owned_objects_stream(
+    pub fn list_owned_objects(
         &self,
-        request: ListOwnedObjectsRequest,
-    ) -> impl Stream<Item = Result<Object>> + '_ {
+        request: impl tonic::IntoRequest<ListOwnedObjectsRequest>,
+    ) -> impl Stream<Item = Result<Object>> + 'static {
         let client = self.clone();
+        let request = request.into_request();
+
+        // Extract headers and extensions from the original request
+        let headers = request.metadata().clone();
+        let extensions = request.extensions().clone();
+        let request_inner = request.into_inner();
+
         stream::unfold(
             (
-                vec![],                     // current batch of objects (reversed for pop efficiency)
-                request.page_token.clone(), // current page token
-                true,                       // has_next_page
-                request,                    // original request template
-                client,                     // client for making requests
+                vec![],        // current batch of objects
+                true,          // has_next_page
+                request_inner, // request (page_token will be updated as we paginate)
+                client,        // client for making requests
+                headers,       // original headers to preserve
+                extensions,    // original extensions to preserve
             ),
-            move |(mut data, page_token, has_next_page, mut request, mut client)| async move {
+            move |(mut data, has_next_page, mut request_inner, mut client, headers, extensions)| async move {
                 if let Some(item) = data.pop() {
-                    Some((Ok(item), (data, page_token, has_next_page, request, client)))
+                    Some((
+                        Ok(item),
+                        (
+                            data,
+                            has_next_page,
+                            request_inner,
+                            client,
+                            headers,
+                            extensions,
+                        ),
+                    ))
                 } else if has_next_page {
-                    // Fetch next page
-                    request.page_token = page_token;
+                    let mut new_request = tonic::Request::new(request_inner.clone());
+                    *new_request.metadata_mut() = headers.clone();
+                    *new_request.extensions_mut() = extensions.clone();
 
-                    match client
-                        .state_client()
-                        .list_owned_objects(request.clone())
-                        .await
-                    {
+                    match client.state_client().list_owned_objects(new_request).await {
                         Ok(response) => {
                             let response = response.into_inner();
                             let mut data = response.objects;
                             data.reverse(); // Reverse for efficient pop()
-                            let next_page_token = response.next_page_token;
-                            let has_next_page = next_page_token.is_some();
+
+                            request_inner.page_token = response.next_page_token;
+                            let has_next_page = request_inner.page_token.is_some();
+
                             data.pop().map(|item| {
                                 (
                                     Ok(item),
-                                    (data, next_page_token, has_next_page, request, client),
+                                    (
+                                        data,
+                                        has_next_page,
+                                        request_inner,
+                                        client,
+                                        headers,
+                                        extensions,
+                                    ),
                                 )
                             })
                         }
                         Err(e) => {
                             // Return error and terminate stream
-                            Some((Err(e), (vec![], None, false, request, client)))
+                            request_inner.page_token = None;
+                            Some((
+                                Err(e),
+                                (vec![], false, request_inner, client, headers, extensions),
+                            ))
                         }
                     }
                 } else {
