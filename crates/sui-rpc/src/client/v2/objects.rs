@@ -23,58 +23,64 @@ impl Client {
         request: impl tonic::IntoRequest<ListOwnedObjectsRequest>,
     ) -> impl Stream<Item = Result<Object>> + 'static {
         let client = self.clone();
-        let request = request.into_request();
 
-        // Extract headers and extensions from the original request
-        let headers = request.metadata().clone();
-        let extensions = request.extensions().clone();
-        let request_inner = request.into_inner();
+        let (metadata, extensions, request_inner) = request.into_request().into_parts();
 
         stream::unfold(
             (
-                vec![],        // current batch of objects
-                true,          // has_next_page
-                request_inner, // request (page_token will be updated as we paginate)
-                client,        // client for making requests
-                headers,       // original headers to preserve
-                extensions,    // original extensions to preserve
+                Vec::new().into_iter(), // current batch of objects
+                true,                   // has_next_page
+                request_inner,          // request (page_token will be updated as we paginate)
+                client,                 // client for making requests
+                metadata,               // original metadata to preserve
+                extensions,             // original extensions to preserve
             ),
-            move |(mut data, has_next_page, mut request_inner, mut client, headers, extensions)| async move {
-                if let Some(item) = data.pop() {
-                    Some((
+            move |(
+                mut iter,
+                has_next_page,
+                mut request_inner,
+                mut client,
+                metadata,
+                extensions,
+            )| async move {
+                if let Some(item) = iter.next() {
+                    return Some((
                         Ok(item),
                         (
-                            data,
+                            iter,
                             has_next_page,
                             request_inner,
                             client,
-                            headers,
+                            metadata,
                             extensions,
                         ),
-                    ))
-                } else if has_next_page {
-                    let mut new_request = tonic::Request::new(request_inner.clone());
-                    *new_request.metadata_mut() = headers.clone();
-                    *new_request.extensions_mut() = extensions.clone();
+                    ));
+                }
+
+                if has_next_page {
+                    let new_request = tonic::Request::from_parts(
+                        metadata.clone(),
+                        extensions.clone(),
+                        request_inner.clone(),
+                    );
 
                     match client.state_client().list_owned_objects(new_request).await {
                         Ok(response) => {
                             let response = response.into_inner();
-                            let mut data = response.objects;
-                            data.reverse(); // Reverse for efficient pop()
+                            let mut iter = response.objects.into_iter();
 
                             request_inner.page_token = response.next_page_token;
                             let has_next_page = request_inner.page_token.is_some();
 
-                            data.pop().map(|item| {
+                            iter.next().map(|item| {
                                 (
                                     Ok(item),
                                     (
-                                        data,
+                                        iter,
                                         has_next_page,
                                         request_inner,
                                         client,
-                                        headers,
+                                        metadata,
                                         extensions,
                                     ),
                                 )
@@ -85,7 +91,14 @@ impl Client {
                             request_inner.page_token = None;
                             Some((
                                 Err(e),
-                                (vec![], false, request_inner, client, headers, extensions),
+                                (
+                                    Vec::new().into_iter(),
+                                    false,
+                                    request_inner,
+                                    client,
+                                    metadata,
+                                    extensions,
+                                ),
                             ))
                         }
                     }
