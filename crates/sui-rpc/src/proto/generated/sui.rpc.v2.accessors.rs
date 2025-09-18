@@ -3766,12 +3766,12 @@ mod _accessor_impls {
                 kind: None,
                 parent: None,
                 field_id: None,
-                field: None,
+                field_object: None,
                 name: None,
                 value: None,
                 value_type: None,
-                child_object_id: None,
-                object: None,
+                child_id: None,
+                child_object: None,
             }
         }
         #[doc(hidden)]
@@ -3831,33 +3831,33 @@ mod _accessor_impls {
             self.set_field_id(field.into());
             self
         }
-        ///Returns the value of `field`, or the default value if `field` is unset.
-        pub fn field(&self) -> &super::Object {
-            self.field
+        ///Returns the value of `field_object`, or the default value if `field_object` is unset.
+        pub fn field_object(&self) -> &super::Object {
+            self.field_object
                 .as_ref()
                 .map(|field| field as _)
                 .unwrap_or_else(|| super::Object::default_instance() as _)
         }
-        ///If `field` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn field_opt_mut(&mut self) -> Option<&mut super::Object> {
-            self.field.as_mut().map(|field| field as _)
+        ///If `field_object` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn field_object_opt_mut(&mut self) -> Option<&mut super::Object> {
+            self.field_object.as_mut().map(|field| field as _)
         }
-        ///Returns a mutable reference to `field`.
+        ///Returns a mutable reference to `field_object`.
         ///If the field is unset, it is first initialized with the default value.
-        pub fn field_mut(&mut self) -> &mut super::Object {
-            self.field.get_or_insert_default()
+        pub fn field_object_mut(&mut self) -> &mut super::Object {
+            self.field_object.get_or_insert_default()
         }
-        ///If `field` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn field_opt(&self) -> Option<&super::Object> {
-            self.field.as_ref().map(|field| field as _)
+        ///If `field_object` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn field_object_opt(&self) -> Option<&super::Object> {
+            self.field_object.as_ref().map(|field| field as _)
         }
-        ///Sets `field` with the provided value.
-        pub fn set_field<T: Into<super::Object>>(&mut self, field: T) {
-            self.field = Some(field.into().into());
+        ///Sets `field_object` with the provided value.
+        pub fn set_field_object<T: Into<super::Object>>(&mut self, field: T) {
+            self.field_object = Some(field.into().into());
         }
-        ///Sets `field` with the provided value.
-        pub fn with_field<T: Into<super::Object>>(mut self, field: T) -> Self {
-            self.set_field(field.into());
+        ///Sets `field_object` with the provided value.
+        pub fn with_field_object<T: Into<super::Object>>(mut self, field: T) -> Self {
+            self.set_field_object(field.into());
             self
         }
         ///Returns the value of `name`, or the default value if `name` is unset.
@@ -3940,55 +3940,55 @@ mod _accessor_impls {
             self.set_value_type(field.into());
             self
         }
-        ///If `child_object_id` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn child_object_id_opt_mut(&mut self) -> Option<&mut String> {
-            self.child_object_id.as_mut().map(|field| field as _)
+        ///If `child_id` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn child_id_opt_mut(&mut self) -> Option<&mut String> {
+            self.child_id.as_mut().map(|field| field as _)
         }
-        ///Returns a mutable reference to `child_object_id`.
+        ///Returns a mutable reference to `child_id`.
         ///If the field is unset, it is first initialized with the default value.
-        pub fn child_object_id_mut(&mut self) -> &mut String {
-            self.child_object_id.get_or_insert_default()
+        pub fn child_id_mut(&mut self) -> &mut String {
+            self.child_id.get_or_insert_default()
         }
-        ///If `child_object_id` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn child_object_id_opt(&self) -> Option<&str> {
-            self.child_object_id.as_ref().map(|field| field as _)
+        ///If `child_id` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn child_id_opt(&self) -> Option<&str> {
+            self.child_id.as_ref().map(|field| field as _)
         }
-        ///Sets `child_object_id` with the provided value.
-        pub fn set_child_object_id<T: Into<String>>(&mut self, field: T) {
-            self.child_object_id = Some(field.into().into());
+        ///Sets `child_id` with the provided value.
+        pub fn set_child_id<T: Into<String>>(&mut self, field: T) {
+            self.child_id = Some(field.into().into());
         }
-        ///Sets `child_object_id` with the provided value.
-        pub fn with_child_object_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_child_object_id(field.into());
+        ///Sets `child_id` with the provided value.
+        pub fn with_child_id<T: Into<String>>(mut self, field: T) -> Self {
+            self.set_child_id(field.into());
             self
         }
-        ///Returns the value of `object`, or the default value if `object` is unset.
-        pub fn object(&self) -> &super::Object {
-            self.object
+        ///Returns the value of `child_object`, or the default value if `child_object` is unset.
+        pub fn child_object(&self) -> &super::Object {
+            self.child_object
                 .as_ref()
                 .map(|field| field as _)
                 .unwrap_or_else(|| super::Object::default_instance() as _)
         }
-        ///If `object` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn object_opt_mut(&mut self) -> Option<&mut super::Object> {
-            self.object.as_mut().map(|field| field as _)
+        ///If `child_object` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn child_object_opt_mut(&mut self) -> Option<&mut super::Object> {
+            self.child_object.as_mut().map(|field| field as _)
         }
-        ///Returns a mutable reference to `object`.
+        ///Returns a mutable reference to `child_object`.
         ///If the field is unset, it is first initialized with the default value.
-        pub fn object_mut(&mut self) -> &mut super::Object {
-            self.object.get_or_insert_default()
+        pub fn child_object_mut(&mut self) -> &mut super::Object {
+            self.child_object.get_or_insert_default()
         }
-        ///If `object` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn object_opt(&self) -> Option<&super::Object> {
-            self.object.as_ref().map(|field| field as _)
+        ///If `child_object` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn child_object_opt(&self) -> Option<&super::Object> {
+            self.child_object.as_ref().map(|field| field as _)
         }
-        ///Sets `object` with the provided value.
-        pub fn set_object<T: Into<super::Object>>(&mut self, field: T) {
-            self.object = Some(field.into().into());
+        ///Sets `child_object` with the provided value.
+        pub fn set_child_object<T: Into<super::Object>>(&mut self, field: T) {
+            self.child_object = Some(field.into().into());
         }
-        ///Sets `object` with the provided value.
-        pub fn with_object<T: Into<super::Object>>(mut self, field: T) -> Self {
-            self.set_object(field.into());
+        ///Sets `child_object` with the provided value.
+        pub fn with_child_object<T: Into<super::Object>>(mut self, field: T) -> Self {
+            self.set_child_object(field.into());
             self
         }
     }

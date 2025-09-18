@@ -7244,9 +7244,9 @@ mod _field_impls {
             number: 3i32,
             message_fields: None,
         };
-        pub const FIELD_FIELD: &'static MessageField = &MessageField {
-            name: "field",
-            json_name: "field",
+        pub const FIELD_OBJECT_FIELD: &'static MessageField = &MessageField {
+            name: "field_object",
+            json_name: "fieldObject",
             number: 4i32,
             message_fields: Some(Object::FIELDS),
         };
@@ -7268,15 +7268,15 @@ mod _field_impls {
             number: 7i32,
             message_fields: None,
         };
-        pub const CHILD_OBJECT_ID_FIELD: &'static MessageField = &MessageField {
-            name: "child_object_id",
-            json_name: "childObjectId",
+        pub const CHILD_ID_FIELD: &'static MessageField = &MessageField {
+            name: "child_id",
+            json_name: "childId",
             number: 8i32,
             message_fields: None,
         };
-        pub const OBJECT_FIELD: &'static MessageField = &MessageField {
-            name: "object",
-            json_name: "object",
+        pub const CHILD_OBJECT_FIELD: &'static MessageField = &MessageField {
+            name: "child_object",
+            json_name: "childObject",
             number: 9i32,
             message_fields: Some(Object::FIELDS),
         };
@@ -7286,12 +7286,12 @@ mod _field_impls {
             Self::KIND_FIELD,
             Self::PARENT_FIELD,
             Self::FIELD_ID_FIELD,
-            Self::FIELD_FIELD,
+            Self::FIELD_OBJECT_FIELD,
             Self::NAME_FIELD,
             Self::VALUE_FIELD,
             Self::VALUE_TYPE_FIELD,
-            Self::CHILD_OBJECT_ID_FIELD,
-            Self::OBJECT_FIELD,
+            Self::CHILD_ID_FIELD,
+            Self::CHILD_OBJECT_FIELD,
         ];
     }
     impl DynamicField {
@@ -7326,8 +7326,8 @@ mod _field_impls {
             self.path.push(DynamicField::FIELD_ID_FIELD.name);
             self.finish()
         }
-        pub fn field(mut self) -> ObjectFieldPathBuilder {
-            self.path.push(DynamicField::FIELD_FIELD.name);
+        pub fn field_object(mut self) -> ObjectFieldPathBuilder {
+            self.path.push(DynamicField::FIELD_OBJECT_FIELD.name);
             ObjectFieldPathBuilder::new_with_base(self.path)
         }
         pub fn name(mut self) -> BcsFieldPathBuilder {
@@ -7342,12 +7342,12 @@ mod _field_impls {
             self.path.push(DynamicField::VALUE_TYPE_FIELD.name);
             self.finish()
         }
-        pub fn child_object_id(mut self) -> String {
-            self.path.push(DynamicField::CHILD_OBJECT_ID_FIELD.name);
+        pub fn child_id(mut self) -> String {
+            self.path.push(DynamicField::CHILD_ID_FIELD.name);
             self.finish()
         }
-        pub fn object(mut self) -> ObjectFieldPathBuilder {
-            self.path.push(DynamicField::OBJECT_FIELD.name);
+        pub fn child_object(mut self) -> ObjectFieldPathBuilder {
+            self.path.push(DynamicField::CHILD_OBJECT_FIELD.name);
             ObjectFieldPathBuilder::new_with_base(self.path)
         }
     }

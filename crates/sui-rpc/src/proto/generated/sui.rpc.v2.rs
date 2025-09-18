@@ -5220,7 +5220,7 @@ pub struct DynamicField {
     pub field_id: ::core::option::Option<::prost::alloc::string::String>,
     /// The field object itself
     #[prost(message, optional, tag = "4")]
-    pub field: ::core::option::Option<Object>,
+    pub field_object: ::core::option::Option<Object>,
     /// The dynamic field's "name"
     #[prost(message, optional, tag = "5")]
     pub name: ::core::option::Option<Bcs>,
@@ -5240,10 +5240,10 @@ pub struct DynamicField {
     /// The presence or absence of this field can be used to determine if a child
     /// is a dynamic field or a dynamic child object
     #[prost(string, optional, tag = "8")]
-    pub child_object_id: ::core::option::Option<::prost::alloc::string::String>,
+    pub child_id: ::core::option::Option<::prost::alloc::string::String>,
     /// The object itself when a child is a dynamic object field.
     #[prost(message, optional, tag = "9")]
-    pub object: ::core::option::Option<Object>,
+    pub child_object: ::core::option::Option<Object>,
 }
 /// Nested message and enum types in `DynamicField`.
 pub mod dynamic_field {

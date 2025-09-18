@@ -233,7 +233,7 @@ message DynamicField {
   optional string field_id = 3;
 
   // The field object itself
-  optional Object field = 4;
+  optional Object field_object = 4;
 
   // The dynamic field's "name"
   optional Bcs name = 5;
@@ -253,10 +253,10 @@ message DynamicField {
   //
   // The presence or absence of this field can be used to determine if a child
   // is a dynamic field or a dynamic child object
-  optional string child_object_id = 8;
+  optional string child_id = 8;
 
   // The object itself when a child is a dynamic object field.
-  optional Object object = 9;
+  optional Object child_object = 9;
 }
 
 message ListOwnedObjectsRequest {
