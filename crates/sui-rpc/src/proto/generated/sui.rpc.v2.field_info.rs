@@ -7244,34 +7244,40 @@ mod _field_impls {
             number: 3i32,
             message_fields: None,
         };
-        pub const NAME_TYPE_FIELD: &'static MessageField = &MessageField {
-            name: "name_type",
-            json_name: "nameType",
+        pub const FIELD_FIELD: &'static MessageField = &MessageField {
+            name: "field",
+            json_name: "field",
             number: 4i32,
-            message_fields: None,
+            message_fields: Some(Object::FIELDS),
         };
-        pub const NAME_VALUE_FIELD: &'static MessageField = &MessageField {
-            name: "name_value",
-            json_name: "nameValue",
+        pub const NAME_FIELD: &'static MessageField = &MessageField {
+            name: "name",
+            json_name: "name",
             number: 5i32,
-            message_fields: None,
+            message_fields: Some(Bcs::FIELDS),
+        };
+        pub const VALUE_FIELD: &'static MessageField = &MessageField {
+            name: "value",
+            json_name: "value",
+            number: 6i32,
+            message_fields: Some(Bcs::FIELDS),
         };
         pub const VALUE_TYPE_FIELD: &'static MessageField = &MessageField {
             name: "value_type",
             json_name: "valueType",
-            number: 6i32,
+            number: 7i32,
             message_fields: None,
         };
-        pub const DYNAMIC_OBJECT_ID_FIELD: &'static MessageField = &MessageField {
-            name: "dynamic_object_id",
-            json_name: "dynamicObjectId",
-            number: 7i32,
+        pub const CHILD_OBJECT_ID_FIELD: &'static MessageField = &MessageField {
+            name: "child_object_id",
+            json_name: "childObjectId",
+            number: 8i32,
             message_fields: None,
         };
         pub const OBJECT_FIELD: &'static MessageField = &MessageField {
             name: "object",
             json_name: "object",
-            number: 8i32,
+            number: 9i32,
             message_fields: Some(Object::FIELDS),
         };
     }
@@ -7280,10 +7286,11 @@ mod _field_impls {
             Self::KIND_FIELD,
             Self::PARENT_FIELD,
             Self::FIELD_ID_FIELD,
-            Self::NAME_TYPE_FIELD,
-            Self::NAME_VALUE_FIELD,
+            Self::FIELD_FIELD,
+            Self::NAME_FIELD,
+            Self::VALUE_FIELD,
             Self::VALUE_TYPE_FIELD,
-            Self::DYNAMIC_OBJECT_ID_FIELD,
+            Self::CHILD_OBJECT_ID_FIELD,
             Self::OBJECT_FIELD,
         ];
     }
@@ -7319,20 +7326,24 @@ mod _field_impls {
             self.path.push(DynamicField::FIELD_ID_FIELD.name);
             self.finish()
         }
-        pub fn name_type(mut self) -> String {
-            self.path.push(DynamicField::NAME_TYPE_FIELD.name);
-            self.finish()
+        pub fn field(mut self) -> ObjectFieldPathBuilder {
+            self.path.push(DynamicField::FIELD_FIELD.name);
+            ObjectFieldPathBuilder::new_with_base(self.path)
         }
-        pub fn name_value(mut self) -> String {
-            self.path.push(DynamicField::NAME_VALUE_FIELD.name);
-            self.finish()
+        pub fn name(mut self) -> BcsFieldPathBuilder {
+            self.path.push(DynamicField::NAME_FIELD.name);
+            BcsFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn value(mut self) -> BcsFieldPathBuilder {
+            self.path.push(DynamicField::VALUE_FIELD.name);
+            BcsFieldPathBuilder::new_with_base(self.path)
         }
         pub fn value_type(mut self) -> String {
             self.path.push(DynamicField::VALUE_TYPE_FIELD.name);
             self.finish()
         }
-        pub fn dynamic_object_id(mut self) -> String {
-            self.path.push(DynamicField::DYNAMIC_OBJECT_ID_FIELD.name);
+        pub fn child_object_id(mut self) -> String {
+            self.path.push(DynamicField::CHILD_OBJECT_ID_FIELD.name);
             self.finish()
         }
         pub fn object(mut self) -> ObjectFieldPathBuilder {

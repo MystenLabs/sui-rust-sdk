@@ -6,6 +6,7 @@ syntax = "proto3";
 package sui.rpc.v2;
 
 import "google/protobuf/field_mask.proto";
+import "sui/rpc/v2/bcs.proto";
 import "sui/rpc/v2/object.proto";
 
 service StateService {
@@ -231,28 +232,31 @@ message DynamicField {
   // ObjectId of this dynamic field.
   optional string field_id = 3;
 
-  // The type of the dynamic field "name"
-  optional string name_type = 4;
+  // The field object itself
+  optional Object field = 4;
 
-  // The serialized move value of "name"
-  optional bytes name_value = 5;
+  // The dynamic field's "name"
+  optional Bcs name = 5;
+
+  // The dynamic field's "value"
+  optional Bcs value = 6;
 
   // The type of the dynamic field "value".
   //
   // If this is a dynamic object field then this is the type of the object
   // itself (which is a child of this field), otherwise this is the type of the
   // value of this field.
-  optional string value_type = 6;
+  optional string value_type = 7;
 
   // The ObjectId of the child object when a child is a dynamic
   // object field.
   //
   // The presence or absence of this field can be used to determine if a child
   // is a dynamic field or a dynamic child object
-  optional string dynamic_object_id = 7;
+  optional string child_object_id = 8;
 
   // The object itself when a child is a dynamic object field.
-  optional Object object = 8;
+  optional Object object = 9;
 }
 
 message ListOwnedObjectsRequest {

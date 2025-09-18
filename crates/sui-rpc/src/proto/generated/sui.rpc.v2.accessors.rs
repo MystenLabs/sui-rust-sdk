@@ -3766,10 +3766,11 @@ mod _accessor_impls {
                 kind: None,
                 parent: None,
                 field_id: None,
-                name_type: None,
-                name_value: None,
+                field: None,
+                name: None,
+                value: None,
                 value_type: None,
-                dynamic_object_id: None,
+                child_object_id: None,
                 object: None,
             }
         }
@@ -3830,42 +3831,91 @@ mod _accessor_impls {
             self.set_field_id(field.into());
             self
         }
-        ///If `name_type` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn name_type_opt_mut(&mut self) -> Option<&mut String> {
-            self.name_type.as_mut().map(|field| field as _)
+        ///Returns the value of `field`, or the default value if `field` is unset.
+        pub fn field(&self) -> &super::Object {
+            self.field
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::Object::default_instance() as _)
         }
-        ///Returns a mutable reference to `name_type`.
+        ///If `field` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn field_opt_mut(&mut self) -> Option<&mut super::Object> {
+            self.field.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `field`.
         ///If the field is unset, it is first initialized with the default value.
-        pub fn name_type_mut(&mut self) -> &mut String {
-            self.name_type.get_or_insert_default()
+        pub fn field_mut(&mut self) -> &mut super::Object {
+            self.field.get_or_insert_default()
         }
-        ///If `name_type` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn name_type_opt(&self) -> Option<&str> {
-            self.name_type.as_ref().map(|field| field as _)
+        ///If `field` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn field_opt(&self) -> Option<&super::Object> {
+            self.field.as_ref().map(|field| field as _)
         }
-        ///Sets `name_type` with the provided value.
-        pub fn set_name_type<T: Into<String>>(&mut self, field: T) {
-            self.name_type = Some(field.into().into());
+        ///Sets `field` with the provided value.
+        pub fn set_field<T: Into<super::Object>>(&mut self, field: T) {
+            self.field = Some(field.into().into());
         }
-        ///Sets `name_type` with the provided value.
-        pub fn with_name_type<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_name_type(field.into());
+        ///Sets `field` with the provided value.
+        pub fn with_field<T: Into<super::Object>>(mut self, field: T) -> Self {
+            self.set_field(field.into());
             self
         }
-        ///If `name_value` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn name_value_opt(&self) -> Option<&[u8]> {
-            self.name_value.as_ref().map(|field| field as _)
+        ///Returns the value of `name`, or the default value if `name` is unset.
+        pub fn name(&self) -> &super::Bcs {
+            self.name
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::Bcs::default_instance() as _)
         }
-        ///Sets `name_value` with the provided value.
-        pub fn set_name_value<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
-            self.name_value = Some(field.into().into());
+        ///If `name` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn name_opt_mut(&mut self) -> Option<&mut super::Bcs> {
+            self.name.as_mut().map(|field| field as _)
         }
-        ///Sets `name_value` with the provided value.
-        pub fn with_name_value<T: Into<::prost::bytes::Bytes>>(
-            mut self,
-            field: T,
-        ) -> Self {
-            self.set_name_value(field.into());
+        ///Returns a mutable reference to `name`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn name_mut(&mut self) -> &mut super::Bcs {
+            self.name.get_or_insert_default()
+        }
+        ///If `name` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn name_opt(&self) -> Option<&super::Bcs> {
+            self.name.as_ref().map(|field| field as _)
+        }
+        ///Sets `name` with the provided value.
+        pub fn set_name<T: Into<super::Bcs>>(&mut self, field: T) {
+            self.name = Some(field.into().into());
+        }
+        ///Sets `name` with the provided value.
+        pub fn with_name<T: Into<super::Bcs>>(mut self, field: T) -> Self {
+            self.set_name(field.into());
+            self
+        }
+        ///Returns the value of `value`, or the default value if `value` is unset.
+        pub fn value(&self) -> &super::Bcs {
+            self.value
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::Bcs::default_instance() as _)
+        }
+        ///If `value` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn value_opt_mut(&mut self) -> Option<&mut super::Bcs> {
+            self.value.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `value`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn value_mut(&mut self) -> &mut super::Bcs {
+            self.value.get_or_insert_default()
+        }
+        ///If `value` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn value_opt(&self) -> Option<&super::Bcs> {
+            self.value.as_ref().map(|field| field as _)
+        }
+        ///Sets `value` with the provided value.
+        pub fn set_value<T: Into<super::Bcs>>(&mut self, field: T) {
+            self.value = Some(field.into().into());
+        }
+        ///Sets `value` with the provided value.
+        pub fn with_value<T: Into<super::Bcs>>(mut self, field: T) -> Self {
+            self.set_value(field.into());
             self
         }
         ///If `value_type` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -3890,26 +3940,26 @@ mod _accessor_impls {
             self.set_value_type(field.into());
             self
         }
-        ///If `dynamic_object_id` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn dynamic_object_id_opt_mut(&mut self) -> Option<&mut String> {
-            self.dynamic_object_id.as_mut().map(|field| field as _)
+        ///If `child_object_id` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn child_object_id_opt_mut(&mut self) -> Option<&mut String> {
+            self.child_object_id.as_mut().map(|field| field as _)
         }
-        ///Returns a mutable reference to `dynamic_object_id`.
+        ///Returns a mutable reference to `child_object_id`.
         ///If the field is unset, it is first initialized with the default value.
-        pub fn dynamic_object_id_mut(&mut self) -> &mut String {
-            self.dynamic_object_id.get_or_insert_default()
+        pub fn child_object_id_mut(&mut self) -> &mut String {
+            self.child_object_id.get_or_insert_default()
         }
-        ///If `dynamic_object_id` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn dynamic_object_id_opt(&self) -> Option<&str> {
-            self.dynamic_object_id.as_ref().map(|field| field as _)
+        ///If `child_object_id` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn child_object_id_opt(&self) -> Option<&str> {
+            self.child_object_id.as_ref().map(|field| field as _)
         }
-        ///Sets `dynamic_object_id` with the provided value.
-        pub fn set_dynamic_object_id<T: Into<String>>(&mut self, field: T) {
-            self.dynamic_object_id = Some(field.into().into());
+        ///Sets `child_object_id` with the provided value.
+        pub fn set_child_object_id<T: Into<String>>(&mut self, field: T) {
+            self.child_object_id = Some(field.into().into());
         }
-        ///Sets `dynamic_object_id` with the provided value.
-        pub fn with_dynamic_object_id<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_dynamic_object_id(field.into());
+        ///Sets `child_object_id` with the provided value.
+        pub fn with_child_object_id<T: Into<String>>(mut self, field: T) -> Self {
+            self.set_child_object_id(field.into());
             self
         }
         ///Returns the value of `object`, or the default value if `object` is unset.

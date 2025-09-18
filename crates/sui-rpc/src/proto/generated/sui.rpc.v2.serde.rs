@@ -5963,16 +5963,19 @@ impl serde::Serialize for DynamicField {
         if self.field_id.is_some() {
             len += 1;
         }
-        if self.name_type.is_some() {
+        if self.field.is_some() {
             len += 1;
         }
-        if self.name_value.is_some() {
+        if self.name.is_some() {
+            len += 1;
+        }
+        if self.value.is_some() {
             len += 1;
         }
         if self.value_type.is_some() {
             len += 1;
         }
-        if self.dynamic_object_id.is_some() {
+        if self.child_object_id.is_some() {
             len += 1;
         }
         if self.object.is_some() {
@@ -5990,19 +5993,20 @@ impl serde::Serialize for DynamicField {
         if let Some(v) = self.field_id.as_ref() {
             struct_ser.serialize_field("fieldId", v)?;
         }
-        if let Some(v) = self.name_type.as_ref() {
-            struct_ser.serialize_field("nameType", v)?;
+        if let Some(v) = self.field.as_ref() {
+            struct_ser.serialize_field("field", v)?;
         }
-        if let Some(v) = self.name_value.as_ref() {
-            #[allow(clippy::needless_borrow)]
-            #[allow(clippy::needless_borrows_for_generic_args)]
-            struct_ser.serialize_field("nameValue", crate::_serde::base64::encode(&v).as_str())?;
+        if let Some(v) = self.name.as_ref() {
+            struct_ser.serialize_field("name", v)?;
+        }
+        if let Some(v) = self.value.as_ref() {
+            struct_ser.serialize_field("value", v)?;
         }
         if let Some(v) = self.value_type.as_ref() {
             struct_ser.serialize_field("valueType", v)?;
         }
-        if let Some(v) = self.dynamic_object_id.as_ref() {
-            struct_ser.serialize_field("dynamicObjectId", v)?;
+        if let Some(v) = self.child_object_id.as_ref() {
+            struct_ser.serialize_field("childObjectId", v)?;
         }
         if let Some(v) = self.object.as_ref() {
             struct_ser.serialize_field("object", v)?;
@@ -6021,14 +6025,13 @@ impl<'de> serde::Deserialize<'de> for DynamicField {
             "parent",
             "field_id",
             "fieldId",
-            "name_type",
-            "nameType",
-            "name_value",
-            "nameValue",
+            "field",
+            "name",
+            "value",
             "value_type",
             "valueType",
-            "dynamic_object_id",
-            "dynamicObjectId",
+            "child_object_id",
+            "childObjectId",
             "object",
         ];
 
@@ -6037,10 +6040,11 @@ impl<'de> serde::Deserialize<'de> for DynamicField {
             Kind,
             Parent,
             FieldId,
-            NameType,
-            NameValue,
+            Field,
+            Name,
+            Value,
             ValueType,
-            DynamicObjectId,
+            ChildObjectId,
             Object,
             __SkipField__,
         }
@@ -6067,10 +6071,11 @@ impl<'de> serde::Deserialize<'de> for DynamicField {
                             "kind" => Ok(GeneratedField::Kind),
                             "parent" => Ok(GeneratedField::Parent),
                             "fieldId" | "field_id" => Ok(GeneratedField::FieldId),
-                            "nameType" | "name_type" => Ok(GeneratedField::NameType),
-                            "nameValue" | "name_value" => Ok(GeneratedField::NameValue),
+                            "field" => Ok(GeneratedField::Field),
+                            "name" => Ok(GeneratedField::Name),
+                            "value" => Ok(GeneratedField::Value),
                             "valueType" | "value_type" => Ok(GeneratedField::ValueType),
-                            "dynamicObjectId" | "dynamic_object_id" => Ok(GeneratedField::DynamicObjectId),
+                            "childObjectId" | "child_object_id" => Ok(GeneratedField::ChildObjectId),
                             "object" => Ok(GeneratedField::Object),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
@@ -6096,10 +6101,11 @@ impl<'de> serde::Deserialize<'de> for DynamicField {
                 let mut kind__ = None;
                 let mut parent__ = None;
                 let mut field_id__ = None;
-                let mut name_type__ = None;
-                let mut name_value__ = None;
+                let mut field__ = None;
+                let mut name__ = None;
+                let mut value__ = None;
                 let mut value_type__ = None;
-                let mut dynamic_object_id__ = None;
+                let mut child_object_id__ = None;
                 let mut object__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
@@ -6121,19 +6127,23 @@ impl<'de> serde::Deserialize<'de> for DynamicField {
                             }
                             field_id__ = map_.next_value()?;
                         }
-                        GeneratedField::NameType => {
-                            if name_type__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("nameType"));
+                        GeneratedField::Field => {
+                            if field__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("field"));
                             }
-                            name_type__ = map_.next_value()?;
+                            field__ = map_.next_value()?;
                         }
-                        GeneratedField::NameValue => {
-                            if name_value__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("nameValue"));
+                        GeneratedField::Name => {
+                            if name__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("name"));
                             }
-                            name_value__ = 
-                                map_.next_value::<::std::option::Option<crate::_serde::BytesDeserialize<_>>>()?.map(|x| x.0)
-                            ;
+                            name__ = map_.next_value()?;
+                        }
+                        GeneratedField::Value => {
+                            if value__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("value"));
+                            }
+                            value__ = map_.next_value()?;
                         }
                         GeneratedField::ValueType => {
                             if value_type__.is_some() {
@@ -6141,11 +6151,11 @@ impl<'de> serde::Deserialize<'de> for DynamicField {
                             }
                             value_type__ = map_.next_value()?;
                         }
-                        GeneratedField::DynamicObjectId => {
-                            if dynamic_object_id__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("dynamicObjectId"));
+                        GeneratedField::ChildObjectId => {
+                            if child_object_id__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("childObjectId"));
                             }
-                            dynamic_object_id__ = map_.next_value()?;
+                            child_object_id__ = map_.next_value()?;
                         }
                         GeneratedField::Object => {
                             if object__.is_some() {
@@ -6162,10 +6172,11 @@ impl<'de> serde::Deserialize<'de> for DynamicField {
                     kind: kind__,
                     parent: parent__,
                     field_id: field_id__,
-                    name_type: name_type__,
-                    name_value: name_value__,
+                    field: field__,
+                    name: name__,
+                    value: value__,
                     value_type: value_type__,
-                    dynamic_object_id: dynamic_object_id__,
+                    child_object_id: child_object_id__,
                     object: object__,
                 })
             }

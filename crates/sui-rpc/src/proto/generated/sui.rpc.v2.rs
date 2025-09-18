@@ -5218,28 +5218,31 @@ pub struct DynamicField {
     /// ObjectId of this dynamic field.
     #[prost(string, optional, tag = "3")]
     pub field_id: ::core::option::Option<::prost::alloc::string::String>,
-    /// The type of the dynamic field "name"
-    #[prost(string, optional, tag = "4")]
-    pub name_type: ::core::option::Option<::prost::alloc::string::String>,
-    /// The serialized move value of "name"
-    #[prost(bytes = "bytes", optional, tag = "5")]
-    pub name_value: ::core::option::Option<::prost::bytes::Bytes>,
+    /// The field object itself
+    #[prost(message, optional, tag = "4")]
+    pub field: ::core::option::Option<Object>,
+    /// The dynamic field's "name"
+    #[prost(message, optional, tag = "5")]
+    pub name: ::core::option::Option<Bcs>,
+    /// The dynamic field's "value"
+    #[prost(message, optional, tag = "6")]
+    pub value: ::core::option::Option<Bcs>,
     /// The type of the dynamic field "value".
     ///
     /// If this is a dynamic object field then this is the type of the object
     /// itself (which is a child of this field), otherwise this is the type of the
     /// value of this field.
-    #[prost(string, optional, tag = "6")]
+    #[prost(string, optional, tag = "7")]
     pub value_type: ::core::option::Option<::prost::alloc::string::String>,
     /// The ObjectId of the child object when a child is a dynamic
     /// object field.
     ///
     /// The presence or absence of this field can be used to determine if a child
     /// is a dynamic field or a dynamic child object
-    #[prost(string, optional, tag = "7")]
-    pub dynamic_object_id: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(string, optional, tag = "8")]
+    pub child_object_id: ::core::option::Option<::prost::alloc::string::String>,
     /// The object itself when a child is a dynamic object field.
-    #[prost(message, optional, tag = "8")]
+    #[prost(message, optional, tag = "9")]
     pub object: ::core::option::Option<Object>,
 }
 /// Nested message and enum types in `DynamicField`.
