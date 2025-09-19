@@ -3,6 +3,7 @@ use tap::Pipe;
 use tonic::codec::CompressionEncoding;
 use tonic::transport::channel::ClientTlsConfig;
 
+mod objects;
 mod staking_rewards;
 mod transaction_execution;
 
