@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["__typename","abilities","asMoveEnum","asMoveStruct","module","name","typeParameters"]};

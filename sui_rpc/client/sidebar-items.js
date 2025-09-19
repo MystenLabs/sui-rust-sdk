@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["v2"],"struct":["AuthInterceptor","Client","DelegatedStake"],"trait":["ResponseExt"]};
