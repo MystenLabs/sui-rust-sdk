@@ -196,7 +196,7 @@ impl Client {
         )
     }
 
-    /// Creates a stream of `DynamicField`s based on the provided request.
+    /// Creates a stream of `PackageVersion`s based on the provided request.
     ///
     /// The stream handles pagination automatically by using the page_token from responses
     /// to fetch subsequent pages. The original request's page_token is used as the starting point.
@@ -205,7 +205,7 @@ impl Client {
     /// * `request` - The initial `ListPackageVersionsRequest` with search criteria
     ///
     /// # Returns
-    /// A stream that yields `Result<DynamicField>` instances. If any RPC call fails, the
+    /// A stream that yields `Result<PackageVersion>` instances. If any RPC call fails, the
     /// tonic::Status from that request is returned.
     pub fn list_package_versions(
         &self,
