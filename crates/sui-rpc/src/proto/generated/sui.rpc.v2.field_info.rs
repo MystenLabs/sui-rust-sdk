@@ -775,6 +775,12 @@ mod _field_impls {
             number: 14i32,
             message_fields: None,
         };
+        pub const UNCHANGED_LOADED_RUNTIME_OBJECTS_FIELD: &'static MessageField = &MessageField {
+            name: "unchanged_loaded_runtime_objects",
+            json_name: "unchangedLoadedRuntimeObjects",
+            number: 15i32,
+            message_fields: Some(ObjectReference::FIELDS),
+        };
     }
     impl MessageFields for TransactionEffects {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -792,6 +798,7 @@ mod _field_impls {
             Self::CHANGED_OBJECTS_FIELD,
             Self::UNCHANGED_CONSENSUS_OBJECTS_FIELD,
             Self::AUXILIARY_DATA_DIGEST_FIELD,
+            Self::UNCHANGED_LOADED_RUNTIME_OBJECTS_FIELD,
         ];
     }
     impl TransactionEffects {
@@ -871,6 +878,13 @@ mod _field_impls {
         pub fn auxiliary_data_digest(mut self) -> String {
             self.path.push(TransactionEffects::AUXILIARY_DATA_DIGEST_FIELD.name);
             self.finish()
+        }
+        pub fn unchanged_loaded_runtime_objects(
+            mut self,
+        ) -> ObjectReferenceFieldPathBuilder {
+            self.path
+                .push(TransactionEffects::UNCHANGED_LOADED_RUNTIME_OBJECTS_FIELD.name);
+            ObjectReferenceFieldPathBuilder::new_with_base(self.path)
         }
     }
     impl ChangedObject {

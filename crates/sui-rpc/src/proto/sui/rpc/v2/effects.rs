@@ -51,6 +51,7 @@ impl Merge<&TransactionEffects> for TransactionEffects {
             changed_objects,
             unchanged_consensus_objects,
             auxiliary_data_digest,
+            unchanged_loaded_runtime_objects,
         }: &TransactionEffects,
         mask: &FieldMaskTree,
     ) {
@@ -107,6 +108,10 @@ impl Merge<&TransactionEffects> for TransactionEffects {
 
         if mask.contains(Self::AUXILIARY_DATA_DIGEST_FIELD.name) {
             self.auxiliary_data_digest = auxiliary_data_digest.clone();
+        }
+
+        if mask.contains(Self::UNCHANGED_LOADED_RUNTIME_OBJECTS_FIELD.name) {
+            self.unchanged_loaded_runtime_objects = unchanged_loaded_runtime_objects.clone();
         }
     }
 }

@@ -350,6 +350,8 @@ pub struct TransactionEffects {
     /// It also provides more flexibility on the format and type of the data.
     #[prost(string, optional, tag = "14")]
     pub auxiliary_data_digest: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(message, repeated, tag = "15")]
+    pub unchanged_loaded_runtime_objects: ::prost::alloc::vec::Vec<ObjectReference>,
 }
 /// Input/output state of an object that was changed during execution.
 #[non_exhaustive]
