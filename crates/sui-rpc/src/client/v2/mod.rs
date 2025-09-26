@@ -3,10 +3,12 @@ use tap::Pipe;
 use tonic::codec::CompressionEncoding;
 use tonic::transport::channel::ClientTlsConfig;
 
+mod coin_selection;
 mod lists;
 mod staking_rewards;
 mod transaction_execution;
 
+pub use coin_selection::SUI_COIN_TYPE;
 pub use transaction_execution::ExecuteAndWaitError;
 
 use crate::client::AuthInterceptor;
