@@ -8,6 +8,7 @@ use crate::field::FieldMaskUtil;
 use crate::proto::sui::rpc::v2::ExecuteTransactionRequest;
 use crate::proto::sui::rpc::v2::ExecuteTransactionResponse;
 use crate::proto::sui::rpc::v2::ExecutionError;
+use crate::proto::sui::rpc::v2::GetEpochRequest;
 use crate::proto::sui::rpc::v2::SubscribeCheckpointsRequest;
 use crate::proto::TryFromProtoError;
 use prost_types::FieldMask;
@@ -148,6 +149,13 @@ impl Client {
                 Err(ExecuteAndWaitError::CheckpointTimeout ( response))
             }
         }
+    }
+
+    pub async fn get_reference_gas_price(&mut self) -> Result<u64, tonic::Status> {
+        let request = GetEpochRequest::latest()
+            .with_read_mask(FieldMask::from_paths(["reference_gas_price"]));
+        let response = self.ledger_client().get_epoch(request).await?.into_inner();
+        Ok(response.epoch().reference_gas_price())
     }
 }
 
