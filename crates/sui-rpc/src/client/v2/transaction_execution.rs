@@ -1,4 +1,5 @@
 use futures::TryStreamExt;
+use std::fmt;
 use std::time::Duration;
 use tonic::Response;
 
@@ -6,6 +7,7 @@ use crate::client::v2::Client;
 use crate::field::FieldMaskUtil;
 use crate::proto::sui::rpc::v2::ExecuteTransactionRequest;
 use crate::proto::sui::rpc::v2::ExecuteTransactionResponse;
+use crate::proto::sui::rpc::v2::ExecutionError;
 use crate::proto::sui::rpc::v2::SubscribeCheckpointsRequest;
 use crate::proto::TryFromProtoError;
 use prost_types::FieldMask;
@@ -146,5 +148,17 @@ impl Client {
                 Err(ExecuteAndWaitError::CheckpointTimeout ( response))
             }
         }
+    }
+}
+
+impl fmt::Display for ExecutionError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let description = self.description.as_deref().unwrap_or("No description");
+        write!(
+            f,
+            "ExecutionError: Kind: {:?}, Description: {}",
+            self.kind(),
+            description
+        )
     }
 }
