@@ -28,18 +28,15 @@ impl Client {
     /// Returns an error if there are insufficient funds to meet the required amount or if there is an RPC error
     pub async fn select_coins(
         &self,
-        owner_address: impl Into<Address>,
-        coin_type: impl Into<TypeTag>,
-        amount: impl Into<u64>,
+        owner_address: &Address,
+        coin_type: &TypeTag,
+        amount: u64,
         exclude: &[Address],
     ) -> Result<Vec<Object>> {
-        let owner_address = owner_address.into();
-        let coin_type = coin_type.into();
-        let amount = amount.into();
-        let coin_struct = StructTag::coin(coin_type);
+        let coin_struct = StructTag::coin(coin_type.clone());
         let list_request = ListOwnedObjectsRequest::default()
-            .with_owner(owner_address.to_string())
-            .with_object_type(coin_struct.to_string())
+            .with_owner(owner_address)
+            .with_object_type(&coin_struct)
             .with_page_size(500u32)
             .with_read_mask(FieldMask::from_paths([
                 "object_id",
@@ -87,20 +84,17 @@ impl Client {
     /// Returns an error if there is an RPC error during coin retrieval
     pub async fn select_up_to_n_largest_coins(
         &self,
-        owner_address: impl Into<Address>,
-        coin_type: impl Into<TypeTag>,
-        n: impl Into<usize>,
+        owner_address: &Address,
+        coin_type: &TypeTag,
+        n: usize,
         exclude: &[Address],
     ) -> Result<Vec<Object>> {
         let mut selected_coins = vec![];
 
-        let n = n.into();
-        let coin_type = coin_type.into();
-        let owner_address = owner_address.into();
-        let coin_struct = StructTag::coin(coin_type);
+        let coin_struct = StructTag::coin(coin_type.clone());
         let list_request = ListOwnedObjectsRequest::default()
-            .with_owner(owner_address.to_string())
-            .with_object_type(coin_struct.to_string())
+            .with_owner(owner_address)
+            .with_object_type(&coin_struct)
             .with_page_size(500u32)
             .with_read_mask(FieldMask::from_paths([
                 "object_id",
