@@ -151,6 +151,13 @@ impl Client {
         }
     }
 
+    /// Retrieves the current reference gas price from the latest epoch information.
+    ///
+    /// # Returns
+    /// The reference gas price as a `u64`
+    ///
+    /// # Errors
+    /// Returns an error if there is an RPC error when fetching the epoch information
     pub async fn get_reference_gas_price(&mut self) -> Result<u64, tonic::Status> {
         let request = GetEpochRequest::latest()
             .with_read_mask(FieldMask::from_paths(["reference_gas_price"]));
@@ -164,8 +171,8 @@ impl fmt::Display for ExecutionError {
         let description = self.description.as_deref().unwrap_or("No description");
         write!(
             f,
-            "ExecutionError: Kind: {:?}, Description: {}",
-            self.kind(),
+            "ExecutionError: Kind: {}, Description: {}",
+            self.kind().as_str_name(),
             description
         )
     }
