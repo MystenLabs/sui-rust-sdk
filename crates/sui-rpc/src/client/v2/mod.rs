@@ -8,7 +8,6 @@ mod lists;
 mod staking_rewards;
 mod transaction_execution;
 
-pub use coin_selection::SUI_COIN_TYPE;
 pub use transaction_execution::ExecuteAndWaitError;
 
 use crate::client::AuthInterceptor;
