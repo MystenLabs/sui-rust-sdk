@@ -1,4 +1,5 @@
 use futures::TryStreamExt;
+use std::fmt;
 use std::time::Duration;
 use tonic::Response;
 
@@ -6,6 +7,8 @@ use crate::client::v2::Client;
 use crate::field::FieldMaskUtil;
 use crate::proto::sui::rpc::v2::ExecuteTransactionRequest;
 use crate::proto::sui::rpc::v2::ExecuteTransactionResponse;
+use crate::proto::sui::rpc::v2::ExecutionError;
+use crate::proto::sui::rpc::v2::GetEpochRequest;
 use crate::proto::sui::rpc::v2::SubscribeCheckpointsRequest;
 use crate::proto::TryFromProtoError;
 use prost_types::FieldMask;
@@ -146,5 +149,31 @@ impl Client {
                 Err(ExecuteAndWaitError::CheckpointTimeout ( response))
             }
         }
+    }
+
+    /// Retrieves the current reference gas price from the latest epoch information.
+    ///
+    /// # Returns
+    /// The reference gas price as a `u64`
+    ///
+    /// # Errors
+    /// Returns an error if there is an RPC error when fetching the epoch information
+    pub async fn get_reference_gas_price(&mut self) -> Result<u64, tonic::Status> {
+        let request = GetEpochRequest::latest()
+            .with_read_mask(FieldMask::from_paths(["reference_gas_price"]));
+        let response = self.ledger_client().get_epoch(request).await?.into_inner();
+        Ok(response.epoch().reference_gas_price())
+    }
+}
+
+impl fmt::Display for ExecutionError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let description = self.description.as_deref().unwrap_or("No description");
+        write!(
+            f,
+            "ExecutionError: Kind: {}, Description: {}",
+            self.kind().as_str_name(),
+            description
+        )
     }
 }

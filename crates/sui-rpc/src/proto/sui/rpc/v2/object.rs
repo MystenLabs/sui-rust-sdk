@@ -451,6 +451,16 @@ impl TryFrom<&Object> for sui_sdk_types::GenesisObject {
     }
 }
 
+impl Object {
+    pub fn object_reference(&self) -> ObjectReference {
+        ObjectReference {
+            object_id: self.object_id.clone(),
+            version: self.version,
+            digest: self.digest.clone(),
+        }
+    }
+}
+
 //
 // ObjectReference
 //
