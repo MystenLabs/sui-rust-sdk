@@ -2,7 +2,9 @@ use futures::StreamExt;
 use prost_types::FieldMask;
 use std::str::FromStr;
 
-use sui_sdk_types::{Address, StructTag, TypeTag};
+use sui_sdk_types::Address;
+use sui_sdk_types::StructTag;
+use sui_sdk_types::TypeTag;
 
 use crate::client::v2::Client;
 use crate::client::v2::Result;
