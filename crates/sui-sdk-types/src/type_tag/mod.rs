@@ -227,17 +227,25 @@ pub struct StructTag {
 }
 
 impl StructTag {
-    pub fn gas_coin() -> Self {
-        let sui = Self {
+    /// Returns the struct tag for the native SUI token (without the Coin wrapper).
+    /// This represents `0x2::sui::SUI`.
+    pub fn sui() -> Self {
+        Self {
             address: Address::TWO,
             module: Identifier::new("sui").unwrap(),
             name: Identifier::new("SUI").unwrap(),
             type_params: vec![],
-        };
-
-        Self::coin(TypeTag::Struct(Box::new(sui)))
+        }
     }
 
+    /// Returns the struct tag for SUI wrapped in a Coin.
+    /// This represents `0x2::coin::Coin<0x2::sui::SUI>`.
+    pub fn gas_coin() -> Self {
+        Self::coin(Self::sui().into())
+    }
+
+    /// Wraps any type tag in a Coin type.
+    /// For example, `coin(TypeTag::sui())` returns `0x2::coin::Coin<0x2::sui::SUI>`.
     pub fn coin(type_tag: TypeTag) -> Self {
         Self {
             address: Address::TWO,
