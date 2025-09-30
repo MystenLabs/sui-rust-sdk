@@ -8,6 +8,7 @@ package sui.rpc.v2;
 import "sui/rpc/v2/bcs.proto";
 import "sui/rpc/v2/execution_status.proto";
 import "sui/rpc/v2/gas_cost_summary.proto";
+import "sui/rpc/v2/object_reference.proto";
 import "sui/rpc/v2/owner.proto";
 
 // The effects of executing a transaction.
@@ -61,6 +62,8 @@ message TransactionEffects {
   // Storing it separately allows us to avoid bloating the effects with data that are not critical.
   // It also provides more flexibility on the format and type of the data.
   optional string auxiliary_data_digest = 14;
+
+  repeated ObjectReference unchanged_loaded_runtime_objects = 15;
 }
 
 // Input/output state of an object that was changed during execution.

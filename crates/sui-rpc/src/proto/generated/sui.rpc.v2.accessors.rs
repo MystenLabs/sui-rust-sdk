@@ -13828,6 +13828,7 @@ mod _accessor_impls {
                 changed_objects: Vec::new(),
                 unchanged_consensus_objects: Vec::new(),
                 auxiliary_data_digest: None,
+                unchanged_loaded_runtime_objects: Vec::new(),
             }
         }
         #[doc(hidden)]
@@ -14171,6 +14172,32 @@ mod _accessor_impls {
         ///Sets `auxiliary_data_digest` with the provided value.
         pub fn with_auxiliary_data_digest<T: Into<String>>(mut self, field: T) -> Self {
             self.set_auxiliary_data_digest(field.into());
+            self
+        }
+        ///Returns the value of `unchanged_loaded_runtime_objects`, or the default value if `unchanged_loaded_runtime_objects` is unset.
+        pub fn unchanged_loaded_runtime_objects(&self) -> &[super::ObjectReference] {
+            &self.unchanged_loaded_runtime_objects
+        }
+        ///Returns a mutable reference to `unchanged_loaded_runtime_objects`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn unchanged_loaded_runtime_objects_mut(
+            &mut self,
+        ) -> &mut Vec<super::ObjectReference> {
+            &mut self.unchanged_loaded_runtime_objects
+        }
+        ///Sets `unchanged_loaded_runtime_objects` with the provided value.
+        pub fn set_unchanged_loaded_runtime_objects(
+            &mut self,
+            field: Vec<super::ObjectReference>,
+        ) {
+            self.unchanged_loaded_runtime_objects = field;
+        }
+        ///Sets `unchanged_loaded_runtime_objects` with the provided value.
+        pub fn with_unchanged_loaded_runtime_objects(
+            mut self,
+            field: Vec<super::ObjectReference>,
+        ) -> Self {
+            self.set_unchanged_loaded_runtime_objects(field);
             self
         }
     }

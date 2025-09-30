@@ -21594,6 +21594,9 @@ impl serde::Serialize for TransactionEffects {
         if self.auxiliary_data_digest.is_some() {
             len += 1;
         }
+        if !self.unchanged_loaded_runtime_objects.is_empty() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("sui.rpc.v2.TransactionEffects", len)?;
         if let Some(v) = self.bcs.as_ref() {
             struct_ser.serialize_field("bcs", v)?;
@@ -21641,6 +21644,9 @@ impl serde::Serialize for TransactionEffects {
         if let Some(v) = self.auxiliary_data_digest.as_ref() {
             struct_ser.serialize_field("auxiliaryDataDigest", v)?;
         }
+        if !self.unchanged_loaded_runtime_objects.is_empty() {
+            struct_ser.serialize_field("unchangedLoadedRuntimeObjects", &self.unchanged_loaded_runtime_objects)?;
+        }
         struct_ser.end()
     }
 }
@@ -21673,6 +21679,8 @@ impl<'de> serde::Deserialize<'de> for TransactionEffects {
             "unchangedConsensusObjects",
             "auxiliary_data_digest",
             "auxiliaryDataDigest",
+            "unchanged_loaded_runtime_objects",
+            "unchangedLoadedRuntimeObjects",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -21691,6 +21699,7 @@ impl<'de> serde::Deserialize<'de> for TransactionEffects {
             ChangedObjects,
             UnchangedConsensusObjects,
             AuxiliaryDataDigest,
+            UnchangedLoadedRuntimeObjects,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -21727,6 +21736,7 @@ impl<'de> serde::Deserialize<'de> for TransactionEffects {
                             "changedObjects" | "changed_objects" => Ok(GeneratedField::ChangedObjects),
                             "unchangedConsensusObjects" | "unchanged_consensus_objects" => Ok(GeneratedField::UnchangedConsensusObjects),
                             "auxiliaryDataDigest" | "auxiliary_data_digest" => Ok(GeneratedField::AuxiliaryDataDigest),
+                            "unchangedLoadedRuntimeObjects" | "unchanged_loaded_runtime_objects" => Ok(GeneratedField::UnchangedLoadedRuntimeObjects),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -21762,6 +21772,7 @@ impl<'de> serde::Deserialize<'de> for TransactionEffects {
                 let mut changed_objects__ = None;
                 let mut unchanged_consensus_objects__ = None;
                 let mut auxiliary_data_digest__ = None;
+                let mut unchanged_loaded_runtime_objects__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Bcs => {
@@ -21854,6 +21865,12 @@ impl<'de> serde::Deserialize<'de> for TransactionEffects {
                             }
                             auxiliary_data_digest__ = map_.next_value()?;
                         }
+                        GeneratedField::UnchangedLoadedRuntimeObjects => {
+                            if unchanged_loaded_runtime_objects__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("unchangedLoadedRuntimeObjects"));
+                            }
+                            unchanged_loaded_runtime_objects__ = Some(map_.next_value()?);
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -21874,6 +21891,7 @@ impl<'de> serde::Deserialize<'de> for TransactionEffects {
                     changed_objects: changed_objects__.unwrap_or_default(),
                     unchanged_consensus_objects: unchanged_consensus_objects__.unwrap_or_default(),
                     auxiliary_data_digest: auxiliary_data_digest__,
+                    unchanged_loaded_runtime_objects: unchanged_loaded_runtime_objects__.unwrap_or_default(),
                 })
             }
         }
