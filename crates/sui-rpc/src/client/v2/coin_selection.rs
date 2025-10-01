@@ -43,6 +43,7 @@ impl Client {
                 "version",
                 "digest",
                 "balance",
+                "owner",
             ]));
 
         let mut coin_stream = Box::pin(self.list_owned_objects(list_request));
@@ -101,6 +102,7 @@ impl Client {
                 "version",
                 "digest",
                 "balance",
+                "owner",
             ]));
 
         let mut coin_stream = Box::pin(self.list_owned_objects(list_request));
