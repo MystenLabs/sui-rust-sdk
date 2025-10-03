@@ -198,18 +198,38 @@ impl crate::ZkLoginPublicIdentifier {
     /// In the majority of instances this will only yield a single address, except for the
     /// instances where the `address_seed` value has a leading zero-byte, in such cases the
     /// returned iterator will yield two addresses.
-    pub fn derive_address(&self) -> impl Iterator<Item = Address> {
-        let main_address = self.derive_address_padded();
-        let mut addresses = [Some(main_address), None];
+    pub fn derive_address(&self) -> impl ExactSizeIterator<Item = Address> {
+        self.internal_derive_addresses()
+    }
+
+    // Private internal function
+    fn internal_derive_addresses(&self) -> DerivedAddressIter {
+        let primary = self.derive_address_padded();
+        let mut addresses = DerivedAddressIter::new(primary);
+
         // If address_seed starts with a zero byte then we know that this zklogin authenticator has
         // two addresses
         if self.address_seed().padded()[0] == 0 {
             let secondary_address = self.derive_address_unpadded();
 
-            addresses[1] = Some(secondary_address);
+            addresses.extra = Some(secondary_address);
         }
 
-        addresses.into_iter().flatten()
+        addresses
+    }
+}
+
+impl crate::ZkLoginAuthenticator {
+    pub fn derive_address_padded(&self) -> Address {
+        self.inputs.public_identifier().derive_address_padded()
+    }
+
+    pub fn derive_address_unpadded(&self) -> Address {
+        self.inputs.public_identifier().derive_address_unpadded()
+    }
+
+    pub fn derive_address(&self) -> impl ExactSizeIterator<Item = Address> {
+        self.inputs.public_identifier().derive_address()
     }
 }
 
@@ -231,6 +251,12 @@ impl crate::PasskeyPublicKey {
     fn write_into_hasher(&self, hasher: &mut Hasher) {
         hasher.update([self.scheme().to_u8()]);
         hasher.update(self.inner().inner());
+    }
+}
+
+impl crate::PasskeyAuthenticator {
+    pub fn derive_address(&self) -> Address {
+        self.public_key().derive_address()
     }
 }
 
@@ -273,6 +299,79 @@ impl crate::MultisigCommittee {
 
         let digest = hasher.finalize();
         Address::new(digest.into_inner())
+    }
+}
+
+impl crate::MultisigAggregatedSignature {
+    pub fn derive_address(&self) -> Address {
+        self.committee().derive_address()
+    }
+}
+
+impl crate::SimpleSignature {
+    pub fn derive_address(&self) -> Address {
+        match self {
+            crate::SimpleSignature::Ed25519 { public_key, .. } => public_key.derive_address(),
+            crate::SimpleSignature::Secp256k1 { public_key, .. } => public_key.derive_address(),
+            crate::SimpleSignature::Secp256r1 { public_key, .. } => public_key.derive_address(),
+        }
+    }
+}
+
+impl crate::UserSignature {
+    pub fn derive_address(&self) -> Address {
+        self.derive_addresses().next().unwrap()
+    }
+
+    pub fn derive_addresses(&self) -> impl ExactSizeIterator<Item = Address> {
+        match self {
+            crate::UserSignature::Simple(simple) => {
+                DerivedAddressIter::new(simple.derive_address())
+            }
+            crate::UserSignature::Multisig(multisig) => {
+                DerivedAddressIter::new(multisig.derive_address())
+            }
+            crate::UserSignature::ZkLogin(zk) => {
+                zk.inputs.public_identifier().internal_derive_addresses()
+            }
+            crate::UserSignature::Passkey(passkey) => {
+                DerivedAddressIter::new(passkey.derive_address())
+            }
+        }
+    }
+}
+
+struct DerivedAddressIter {
+    primary: Option<Address>,
+    extra: Option<Address>,
+}
+
+impl DerivedAddressIter {
+    fn new(primary: Address) -> Self {
+        Self {
+            primary: Some(primary),
+            extra: None,
+        }
+    }
+}
+
+impl ExactSizeIterator for DerivedAddressIter {}
+impl Iterator for DerivedAddressIter {
+    type Item = Address;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.primary.is_some() {
+            self.primary.take()
+        } else if self.extra.is_some() {
+            self.extra.take()
+        } else {
+            None
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = self.primary.iter().len() + self.extra.iter().len();
+        (len, Some(len))
     }
 }
 
