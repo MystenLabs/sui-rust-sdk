@@ -29,10 +29,10 @@ In an effort to be modular, functionality is split between a number of crates.
     [![sui-crypto on crates.io](https://img.shields.io/crates/v/sui-crypto)](https://crates.io/crates/sui-crypto)
     [![Documentation (latest release)](https://img.shields.io/badge/docs-latest-brightgreen)](https://docs.rs/sui-crypto)
     [![Documentation (master)](https://img.shields.io/badge/docs-master-59f)](https://mystenlabs.github.io/sui-rust-sdk/sui_crypto/)
-* [`sui-graphql-client`](crates/sui-graphql-client)
-    [![sui-graphql-client on crates.io](https://img.shields.io/crates/v/sui-graphql-client)](https://crates.io/crates/sui-graphql-client)
-    [![Documentation (latest release)](https://img.shields.io/badge/docs-latest-brightgreen)](https://docs.rs/sui-graphql-client)
-    [![Documentation (master)](https://img.shields.io/badge/docs-master-59f)](https://mystenlabs.github.io/sui-rust-sdk/sui-graphql-client/)
+* [`sui-rpc`](crates/sui-rpc)
+    [![sui-rpc on crates.io](https://img.shields.io/crates/v/sui-rpc)](https://crates.io/crates/sui-rpc)
+    [![Documentation (latest release)](https://img.shields.io/badge/docs-latest-brightgreen)](https://docs.rs/sui-rpc)
+    [![Documentation (master)](https://img.shields.io/badge/docs-master-59f)](https://mystenlabs.github.io/sui-rust-sdk/sui-rpc/)
 
 ## License
 
