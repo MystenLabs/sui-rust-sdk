@@ -32,7 +32,7 @@ In an effort to be modular, functionality is split between a number of crates.
 * [`sui-rpc`](crates/sui-rpc)
     [![sui-rpc on crates.io](https://img.shields.io/crates/v/sui-rpc)](https://crates.io/crates/sui-rpc)
     [![Documentation (latest release)](https://img.shields.io/badge/docs-latest-brightgreen)](https://docs.rs/sui-rpc)
-    [![Documentation (master)](https://img.shields.io/badge/docs-master-59f)](https://mystenlabs.github.io/sui-rust-sdk/sui-rpc/)
+    [![Documentation (master)](https://img.shields.io/badge/docs-master-59f)](https://mystenlabs.github.io/sui-rust-sdk/sui_rpc/)
 
 ## License
 

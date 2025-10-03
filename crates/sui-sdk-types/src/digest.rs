@@ -72,11 +72,11 @@ impl Digest {
         Ok(Self(buf))
     }
 
-    /// Decodes a digest from a Base58 encoded string.
+    /// Decodes a digest from a Base58 encoded &'static str.
     ///
     /// Similar to `from_base58` except any errors are unwrapped, turning them into panics.
-    pub const fn from_base58_unwrap(base58: &[u8]) -> Self {
-        let buf = bs58::decode(base58).into_array_const_unwrap::<{ Self::LENGTH }>();
+    pub const fn from_static(base58: &'static str) -> Self {
+        let buf = bs58::decode(base58.as_bytes()).into_array_const_unwrap::<{ Self::LENGTH }>();
         Self(buf)
     }
 

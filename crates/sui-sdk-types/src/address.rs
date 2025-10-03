@@ -112,10 +112,10 @@ impl Address {
             .map_err(|e| AddressParseError { hex_error: Some(e) })
     }
 
-    /// Decodes an address from a hex encoded string.
+    /// Decodes an address from a hex encoded &'static str.
     ///
     /// Similar to `from_hex` except any errors are unwrapped, turning them into panics.
-    pub const fn from_hex_unwrap(hex: &str) -> Self {
+    pub const fn from_static(hex: &'static str) -> Self {
         match hex_address_bytes(hex.as_bytes()) {
             Ok(address) => Self(address),
             Err(e) => e.const_panic(),

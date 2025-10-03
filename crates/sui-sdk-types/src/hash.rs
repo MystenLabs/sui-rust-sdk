@@ -551,7 +551,7 @@ impl crate::Address {
         use crate::StructTag;
 
         let struct_tag = StructTag {
-            address: Address::from_hex_unwrap("0x2"),
+            address: Address::from_static("0x2"),
             module: Identifier::from_static("derived_object"),
             name: Identifier::from_static("DerivedObjectKey"),
             type_params: vec![key_type_tag.clone()],
