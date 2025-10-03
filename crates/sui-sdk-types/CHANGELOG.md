@@ -1,3 +1,20 @@
+# [0.0.8] - 2025-10-03
+
+## Added
+- Helper for deriving `Address` from `UserSignautre` [#165]
+- Implement From for String for Address, Digest and TypeTag [#150]
+- Support for deriving addresses for derived objects [#145]
+- Support for CheckpointCommitment::CheckpointArtifactsDigest [#126]
+
+## Changed
+- Renamed `from_*_unwrap` to `from_static` for Address and Digest [`8e80c8eb`]
+
+[#165]: https://github.com/MystenLabs/sui-rust-sdk/pull/165
+[#150]: https://github.com/MystenLabs/sui-rust-sdk/pull/150
+[#145]: https://github.com/MystenLabs/sui-rust-sdk/pull/145
+[`8e80c8eb`]: https://github.com/mystenlabs/sui-rust-sdk/commit/8e80c8eb
+[#126]: https://github.com/MystenLabs/sui-rust-sdk/pull/126
+
 # [0.0.7] - 2025-08-29
 
 ## Added
@@ -111,6 +128,7 @@
 
 Initial release
 
+[0.0.8]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.0.8
 [0.0.7]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.0.7
 [0.0.6]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.0.6
 [0.0.5]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.0.5
