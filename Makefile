@@ -21,15 +21,8 @@ clippy: ## Run Clippy linter
 
 .PHONY: test
 test: ## Run unit tests
-	cargo nextest run --all-features -E '!package(sui-graphql-client) and !package(sui-graphql-client-build) and !package(sui-transaction-builder)'
+	cargo nextest run --all-features
 	cargo test --all-features --doc
-
-package_%.json: crates/sui-transaction-builder/tests/%/Move.toml crates/sui-transaction-builder/tests/%/sources/*.move ## Generate JSON files for tests
-	cd crates/sui-transaction-builder/tests/$(*F) && sui move build --ignore-chain --dump-bytecode-as-base64 > ../../$@
-
-.PHONY: test-with-localnet
-test-with-localnet: package_test_example_v1.json package_test_example_v2.json ## Run tests with localnet
-	cargo nextest run -p sui-graphql-client -p sui-transaction-builder
 
 .PHONY: wasm
 wasm: ## Build WASM modules

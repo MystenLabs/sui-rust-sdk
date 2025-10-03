@@ -1,9 +1,0 @@
-query CustomQuery($id: UInt53) {
-  epoch(id: $id) {
-    epochId
-    referenceGasPrice
-    totalGasFees
-    totalCheckpoints
-    totalTransactions
-  }
-}
