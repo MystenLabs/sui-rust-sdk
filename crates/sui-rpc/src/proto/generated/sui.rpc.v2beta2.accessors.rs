@@ -85,12 +85,12 @@ mod _accessor_impls {
             self.epoch.as_ref().map(|field| *field)
         }
         ///Sets `epoch` with the provided value.
-        pub fn set_epoch<T: Into<u64>>(&mut self, field: T) {
-            self.epoch = Some(field.into().into());
+        pub fn set_epoch(&mut self, field: u64) {
+            self.epoch = Some(field);
         }
         ///Sets `epoch` with the provided value.
-        pub fn with_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch(field.into());
+        pub fn with_epoch(mut self, field: u64) -> Self {
+            self.set_epoch(field);
             self
         }
     }
@@ -130,12 +130,12 @@ mod _accessor_impls {
             self.input.as_ref().map(|field| *field)
         }
         ///Sets `input` with the provided value.
-        pub fn set_input<T: Into<u32>>(&mut self, field: T) {
-            self.input = Some(field.into().into());
+        pub fn set_input(&mut self, field: u32) {
+            self.input = Some(field);
         }
         ///Sets `input` with the provided value.
-        pub fn with_input<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_input(field.into());
+        pub fn with_input(mut self, field: u32) -> Self {
+            self.set_input(field);
             self
         }
         ///If `result` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -152,12 +152,12 @@ mod _accessor_impls {
             self.result.as_ref().map(|field| *field)
         }
         ///Sets `result` with the provided value.
-        pub fn set_result<T: Into<u32>>(&mut self, field: T) {
-            self.result = Some(field.into().into());
+        pub fn set_result(&mut self, field: u32) {
+            self.result = Some(field);
         }
         ///Sets `result` with the provided value.
-        pub fn with_result<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_result(field.into());
+        pub fn with_result(mut self, field: u32) -> Self {
+            self.set_result(field);
             self
         }
         ///If `subresult` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -174,12 +174,12 @@ mod _accessor_impls {
             self.subresult.as_ref().map(|field| *field)
         }
         ///Sets `subresult` with the provided value.
-        pub fn set_subresult<T: Into<u32>>(&mut self, field: T) {
-            self.subresult = Some(field.into().into());
+        pub fn set_subresult(&mut self, field: u32) {
+            self.subresult = Some(field);
         }
         ///Sets `subresult` with the provided value.
-        pub fn with_subresult<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_subresult(field.into());
+        pub fn with_subresult(mut self, field: u32) -> Self {
+            self.set_subresult(field);
             self
         }
     }
@@ -209,12 +209,12 @@ mod _accessor_impls {
             self.min_epoch.as_ref().map(|field| *field)
         }
         ///Sets `min_epoch` with the provided value.
-        pub fn set_min_epoch<T: Into<u64>>(&mut self, field: T) {
-            self.min_epoch = Some(field.into().into());
+        pub fn set_min_epoch(&mut self, field: u64) {
+            self.min_epoch = Some(field);
         }
         ///Sets `min_epoch` with the provided value.
-        pub fn with_min_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_min_epoch(field.into());
+        pub fn with_min_epoch(mut self, field: u64) -> Self {
+            self.set_min_epoch(field);
             self
         }
         ///If `authenticator_object_initial_shared_version` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -235,18 +235,15 @@ mod _accessor_impls {
             self.authenticator_object_initial_shared_version.as_ref().map(|field| *field)
         }
         ///Sets `authenticator_object_initial_shared_version` with the provided value.
-        pub fn set_authenticator_object_initial_shared_version<T: Into<u64>>(
-            &mut self,
-            field: T,
-        ) {
-            self.authenticator_object_initial_shared_version = Some(field.into().into());
+        pub fn set_authenticator_object_initial_shared_version(&mut self, field: u64) {
+            self.authenticator_object_initial_shared_version = Some(field);
         }
         ///Sets `authenticator_object_initial_shared_version` with the provided value.
-        pub fn with_authenticator_object_initial_shared_version<T: Into<u64>>(
+        pub fn with_authenticator_object_initial_shared_version(
             mut self,
-            field: T,
+            field: u64,
         ) -> Self {
-            self.set_authenticator_object_initial_shared_version(field.into());
+            self.set_authenticator_object_initial_shared_version(field);
             self
         }
     }
@@ -278,12 +275,12 @@ mod _accessor_impls {
             self.epoch.as_ref().map(|field| *field)
         }
         ///Sets `epoch` with the provided value.
-        pub fn set_epoch<T: Into<u64>>(&mut self, field: T) {
-            self.epoch = Some(field.into().into());
+        pub fn set_epoch(&mut self, field: u64) {
+            self.epoch = Some(field);
         }
         ///Sets `epoch` with the provided value.
-        pub fn with_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch(field.into());
+        pub fn with_epoch(mut self, field: u64) -> Self {
+            self.set_epoch(field);
             self
         }
         ///If `round` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -300,12 +297,12 @@ mod _accessor_impls {
             self.round.as_ref().map(|field| *field)
         }
         ///Sets `round` with the provided value.
-        pub fn set_round<T: Into<u64>>(&mut self, field: T) {
-            self.round = Some(field.into().into());
+        pub fn set_round(&mut self, field: u64) {
+            self.round = Some(field);
         }
         ///Sets `round` with the provided value.
-        pub fn with_round<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_round(field.into());
+        pub fn with_round(mut self, field: u64) -> Self {
+            self.set_round(field);
             self
         }
         ///Returns the value of `new_active_jwks`, or the default value if `new_active_jwks` is unset.
@@ -344,18 +341,15 @@ mod _accessor_impls {
             self.authenticator_object_initial_shared_version.as_ref().map(|field| *field)
         }
         ///Sets `authenticator_object_initial_shared_version` with the provided value.
-        pub fn set_authenticator_object_initial_shared_version<T: Into<u64>>(
-            &mut self,
-            field: T,
-        ) {
-            self.authenticator_object_initial_shared_version = Some(field.into().into());
+        pub fn set_authenticator_object_initial_shared_version(&mut self, field: u64) {
+            self.authenticator_object_initial_shared_version = Some(field);
         }
         ///Sets `authenticator_object_initial_shared_version` with the provided value.
-        pub fn with_authenticator_object_initial_shared_version<T: Into<u64>>(
+        pub fn with_authenticator_object_initial_shared_version(
             mut self,
-            field: T,
+            field: u64,
         ) -> Self {
-            self.set_authenticator_object_initial_shared_version(field.into());
+            self.set_authenticator_object_initial_shared_version(field);
             self
         }
     }
@@ -407,12 +401,12 @@ mod _accessor_impls {
             self.balance.as_ref().map(|field| *field)
         }
         ///Sets `balance` with the provided value.
-        pub fn set_balance<T: Into<u64>>(&mut self, field: T) {
-            self.balance = Some(field.into().into());
+        pub fn set_balance(&mut self, field: u64) {
+            self.balance = Some(field);
         }
         ///Sets `balance` with the provided value.
-        pub fn with_balance<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_balance(field.into());
+        pub fn with_balance(mut self, field: u64) -> Self {
+            self.set_balance(field);
             self
         }
     }
@@ -800,12 +794,12 @@ mod _accessor_impls {
             self.epoch.as_ref().map(|field| *field)
         }
         ///Sets `epoch` with the provided value.
-        pub fn set_epoch<T: Into<u64>>(&mut self, field: T) {
-            self.epoch = Some(field.into().into());
+        pub fn set_epoch(&mut self, field: u64) {
+            self.epoch = Some(field);
         }
         ///Sets `epoch` with the provided value.
-        pub fn with_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch(field.into());
+        pub fn with_epoch(mut self, field: u64) -> Self {
+            self.set_epoch(field);
             self
         }
         ///If `protocol_version` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -822,12 +816,12 @@ mod _accessor_impls {
             self.protocol_version.as_ref().map(|field| *field)
         }
         ///Sets `protocol_version` with the provided value.
-        pub fn set_protocol_version<T: Into<u64>>(&mut self, field: T) {
-            self.protocol_version = Some(field.into().into());
+        pub fn set_protocol_version(&mut self, field: u64) {
+            self.protocol_version = Some(field);
         }
         ///Sets `protocol_version` with the provided value.
-        pub fn with_protocol_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_protocol_version(field.into());
+        pub fn with_protocol_version(mut self, field: u64) -> Self {
+            self.set_protocol_version(field);
             self
         }
         ///If `storage_charge` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -844,12 +838,12 @@ mod _accessor_impls {
             self.storage_charge.as_ref().map(|field| *field)
         }
         ///Sets `storage_charge` with the provided value.
-        pub fn set_storage_charge<T: Into<u64>>(&mut self, field: T) {
-            self.storage_charge = Some(field.into().into());
+        pub fn set_storage_charge(&mut self, field: u64) {
+            self.storage_charge = Some(field);
         }
         ///Sets `storage_charge` with the provided value.
-        pub fn with_storage_charge<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_storage_charge(field.into());
+        pub fn with_storage_charge(mut self, field: u64) -> Self {
+            self.set_storage_charge(field);
             self
         }
         ///If `computation_charge` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -866,12 +860,12 @@ mod _accessor_impls {
             self.computation_charge.as_ref().map(|field| *field)
         }
         ///Sets `computation_charge` with the provided value.
-        pub fn set_computation_charge<T: Into<u64>>(&mut self, field: T) {
-            self.computation_charge = Some(field.into().into());
+        pub fn set_computation_charge(&mut self, field: u64) {
+            self.computation_charge = Some(field);
         }
         ///Sets `computation_charge` with the provided value.
-        pub fn with_computation_charge<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_computation_charge(field.into());
+        pub fn with_computation_charge(mut self, field: u64) -> Self {
+            self.set_computation_charge(field);
             self
         }
         ///If `storage_rebate` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -888,12 +882,12 @@ mod _accessor_impls {
             self.storage_rebate.as_ref().map(|field| *field)
         }
         ///Sets `storage_rebate` with the provided value.
-        pub fn set_storage_rebate<T: Into<u64>>(&mut self, field: T) {
-            self.storage_rebate = Some(field.into().into());
+        pub fn set_storage_rebate(&mut self, field: u64) {
+            self.storage_rebate = Some(field);
         }
         ///Sets `storage_rebate` with the provided value.
-        pub fn with_storage_rebate<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_storage_rebate(field.into());
+        pub fn with_storage_rebate(mut self, field: u64) -> Self {
+            self.set_storage_rebate(field);
             self
         }
         ///If `non_refundable_storage_fee` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -910,15 +904,12 @@ mod _accessor_impls {
             self.non_refundable_storage_fee.as_ref().map(|field| *field)
         }
         ///Sets `non_refundable_storage_fee` with the provided value.
-        pub fn set_non_refundable_storage_fee<T: Into<u64>>(&mut self, field: T) {
-            self.non_refundable_storage_fee = Some(field.into().into());
+        pub fn set_non_refundable_storage_fee(&mut self, field: u64) {
+            self.non_refundable_storage_fee = Some(field);
         }
         ///Sets `non_refundable_storage_fee` with the provided value.
-        pub fn with_non_refundable_storage_fee<T: Into<u64>>(
-            mut self,
-            field: T,
-        ) -> Self {
-            self.set_non_refundable_storage_fee(field.into());
+        pub fn with_non_refundable_storage_fee(mut self, field: u64) -> Self {
+            self.set_non_refundable_storage_fee(field);
             self
         }
         ///If `epoch_start_timestamp` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -1035,12 +1026,12 @@ mod _accessor_impls {
             self.input_version.as_ref().map(|field| *field)
         }
         ///Sets `input_version` with the provided value.
-        pub fn set_input_version<T: Into<u64>>(&mut self, field: T) {
-            self.input_version = Some(field.into().into());
+        pub fn set_input_version(&mut self, field: u64) {
+            self.input_version = Some(field);
         }
         ///Sets `input_version` with the provided value.
-        pub fn with_input_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_input_version(field.into());
+        pub fn with_input_version(mut self, field: u64) -> Self {
+            self.set_input_version(field);
             self
         }
         ///If `input_digest` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -1116,12 +1107,12 @@ mod _accessor_impls {
             self.output_version.as_ref().map(|field| *field)
         }
         ///Sets `output_version` with the provided value.
-        pub fn set_output_version<T: Into<u64>>(&mut self, field: T) {
-            self.output_version = Some(field.into().into());
+        pub fn set_output_version(&mut self, field: u64) {
+            self.output_version = Some(field);
         }
         ///Sets `output_version` with the provided value.
-        pub fn with_output_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_output_version(field.into());
+        pub fn with_output_version(mut self, field: u64) -> Self {
+            self.set_output_version(field);
             self
         }
         ///If `output_digest` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -1236,12 +1227,12 @@ mod _accessor_impls {
             self.sequence_number.as_ref().map(|field| *field)
         }
         ///Sets `sequence_number` with the provided value.
-        pub fn set_sequence_number<T: Into<u64>>(&mut self, field: T) {
-            self.sequence_number = Some(field.into().into());
+        pub fn set_sequence_number(&mut self, field: u64) {
+            self.sequence_number = Some(field);
         }
         ///Sets `sequence_number` with the provided value.
-        pub fn with_sequence_number<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_sequence_number(field.into());
+        pub fn with_sequence_number(mut self, field: u64) -> Self {
+            self.set_sequence_number(field);
             self
         }
         ///If `digest` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -1509,12 +1500,12 @@ mod _accessor_impls {
             self.version.as_ref().map(|field| *field)
         }
         ///Sets `version` with the provided value.
-        pub fn set_version<T: Into<i32>>(&mut self, field: T) {
-            self.version = Some(field.into().into());
+        pub fn set_version(&mut self, field: i32) {
+            self.version = Some(field);
         }
         ///Sets `version` with the provided value.
-        pub fn with_version<T: Into<i32>>(mut self, field: T) -> Self {
-            self.set_version(field.into());
+        pub fn with_version(mut self, field: i32) -> Self {
+            self.set_version(field);
             self
         }
         ///Returns the value of `transactions`, or the default value if `transactions` is unset.
@@ -1631,12 +1622,12 @@ mod _accessor_impls {
             self.epoch.as_ref().map(|field| *field)
         }
         ///Sets `epoch` with the provided value.
-        pub fn set_epoch<T: Into<u64>>(&mut self, field: T) {
-            self.epoch = Some(field.into().into());
+        pub fn set_epoch(&mut self, field: u64) {
+            self.epoch = Some(field);
         }
         ///Sets `epoch` with the provided value.
-        pub fn with_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch(field.into());
+        pub fn with_epoch(mut self, field: u64) -> Self {
+            self.set_epoch(field);
             self
         }
         ///If `sequence_number` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -1653,12 +1644,12 @@ mod _accessor_impls {
             self.sequence_number.as_ref().map(|field| *field)
         }
         ///Sets `sequence_number` with the provided value.
-        pub fn set_sequence_number<T: Into<u64>>(&mut self, field: T) {
-            self.sequence_number = Some(field.into().into());
+        pub fn set_sequence_number(&mut self, field: u64) {
+            self.sequence_number = Some(field);
         }
         ///Sets `sequence_number` with the provided value.
-        pub fn with_sequence_number<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_sequence_number(field.into());
+        pub fn with_sequence_number(mut self, field: u64) -> Self {
+            self.set_sequence_number(field);
             self
         }
         ///If `total_network_transactions` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -1675,15 +1666,12 @@ mod _accessor_impls {
             self.total_network_transactions.as_ref().map(|field| *field)
         }
         ///Sets `total_network_transactions` with the provided value.
-        pub fn set_total_network_transactions<T: Into<u64>>(&mut self, field: T) {
-            self.total_network_transactions = Some(field.into().into());
+        pub fn set_total_network_transactions(&mut self, field: u64) {
+            self.total_network_transactions = Some(field);
         }
         ///Sets `total_network_transactions` with the provided value.
-        pub fn with_total_network_transactions<T: Into<u64>>(
-            mut self,
-            field: T,
-        ) -> Self {
-            self.set_total_network_transactions(field.into());
+        pub fn with_total_network_transactions(mut self, field: u64) -> Self {
+            self.set_total_network_transactions(field);
             self
         }
         ///If `content_digest` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -2208,12 +2196,12 @@ mod _accessor_impls {
             self.error_code.as_ref().map(|field| *field)
         }
         ///Sets `error_code` with the provided value.
-        pub fn set_error_code<T: Into<u64>>(&mut self, field: T) {
-            self.error_code = Some(field.into().into());
+        pub fn set_error_code(&mut self, field: u64) {
+            self.error_code = Some(field);
         }
         ///Sets `error_code` with the provided value.
-        pub fn with_error_code<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_error_code(field.into());
+        pub fn with_error_code(mut self, field: u64) -> Self {
+            self.set_error_code(field);
             self
         }
         ///If `line_number` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -2230,12 +2218,12 @@ mod _accessor_impls {
             self.line_number.as_ref().map(|field| *field)
         }
         ///Sets `line_number` with the provided value.
-        pub fn set_line_number<T: Into<u64>>(&mut self, field: T) {
-            self.line_number = Some(field.into().into());
+        pub fn set_line_number(&mut self, field: u64) {
+            self.line_number = Some(field);
         }
         ///Sets `line_number` with the provided value.
-        pub fn with_line_number<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_line_number(field.into());
+        pub fn with_line_number(mut self, field: u64) -> Self {
+            self.set_line_number(field);
             self
         }
         ///If `constant_name` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -2486,12 +2474,12 @@ mod _accessor_impls {
             self.decimals.as_ref().map(|field| *field)
         }
         ///Sets `decimals` with the provided value.
-        pub fn set_decimals<T: Into<u32>>(&mut self, field: T) {
-            self.decimals = Some(field.into().into());
+        pub fn set_decimals(&mut self, field: u32) {
+            self.decimals = Some(field);
         }
         ///Sets `decimals` with the provided value.
-        pub fn with_decimals<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_decimals(field.into());
+        pub fn with_decimals(mut self, field: u32) -> Self {
+            self.set_decimals(field);
             self
         }
         ///If `name` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -2662,12 +2650,12 @@ mod _accessor_impls {
             self.total_supply.as_ref().map(|field| *field)
         }
         ///Sets `total_supply` with the provided value.
-        pub fn set_total_supply<T: Into<u64>>(&mut self, field: T) {
-            self.total_supply = Some(field.into().into());
+        pub fn set_total_supply(&mut self, field: u64) {
+            self.total_supply = Some(field);
         }
         ///Sets `total_supply` with the provided value.
-        pub fn with_total_supply<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_total_supply(field.into());
+        pub fn with_total_supply(mut self, field: u64) -> Self {
+            self.set_total_supply(field);
             self
         }
         ///Sets `supply_state` with the provided value.
@@ -3072,12 +3060,12 @@ mod _accessor_impls {
             self.argument.as_ref().map(|field| *field)
         }
         ///Sets `argument` with the provided value.
-        pub fn set_argument<T: Into<u32>>(&mut self, field: T) {
-            self.argument = Some(field.into().into());
+        pub fn set_argument(&mut self, field: u32) {
+            self.argument = Some(field);
         }
         ///Sets `argument` with the provided value.
-        pub fn with_argument<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_argument(field.into());
+        pub fn with_argument(mut self, field: u32) -> Self {
+            self.set_argument(field);
             self
         }
         ///Sets `kind` with the provided value.
@@ -3319,12 +3307,12 @@ mod _accessor_impls {
             self.epoch.as_ref().map(|field| *field)
         }
         ///Sets `epoch` with the provided value.
-        pub fn set_epoch<T: Into<u64>>(&mut self, field: T) {
-            self.epoch = Some(field.into().into());
+        pub fn set_epoch(&mut self, field: u64) {
+            self.epoch = Some(field);
         }
         ///Sets `epoch` with the provided value.
-        pub fn with_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch(field.into());
+        pub fn with_epoch(mut self, field: u64) -> Self {
+            self.set_epoch(field);
             self
         }
         ///If `round` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -3341,12 +3329,12 @@ mod _accessor_impls {
             self.round.as_ref().map(|field| *field)
         }
         ///Sets `round` with the provided value.
-        pub fn set_round<T: Into<u64>>(&mut self, field: T) {
-            self.round = Some(field.into().into());
+        pub fn set_round(&mut self, field: u64) {
+            self.round = Some(field);
         }
         ///Sets `round` with the provided value.
-        pub fn with_round<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_round(field.into());
+        pub fn with_round(mut self, field: u64) -> Self {
+            self.set_round(field);
             self
         }
         ///If `commit_timestamp` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -3418,12 +3406,12 @@ mod _accessor_impls {
             self.sub_dag_index.as_ref().map(|field| *field)
         }
         ///Sets `sub_dag_index` with the provided value.
-        pub fn set_sub_dag_index<T: Into<u64>>(&mut self, field: T) {
-            self.sub_dag_index = Some(field.into().into());
+        pub fn set_sub_dag_index(&mut self, field: u64) {
+            self.sub_dag_index = Some(field);
         }
         ///Sets `sub_dag_index` with the provided value.
-        pub fn with_sub_dag_index<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_sub_dag_index(field.into());
+        pub fn with_sub_dag_index(mut self, field: u64) -> Self {
+            self.set_sub_dag_index(field);
             self
         }
         ///Returns the value of `consensus_determined_version_assignments`, or the default value if `consensus_determined_version_assignments` is unset.
@@ -3525,12 +3513,12 @@ mod _accessor_impls {
             self.version.as_ref().map(|field| *field)
         }
         ///Sets `version` with the provided value.
-        pub fn set_version<T: Into<i32>>(&mut self, field: T) {
-            self.version = Some(field.into().into());
+        pub fn set_version(&mut self, field: i32) {
+            self.version = Some(field);
         }
         ///Sets `version` with the provided value.
-        pub fn with_version<T: Into<i32>>(mut self, field: T) -> Self {
-            self.set_version(field.into());
+        pub fn with_version(mut self, field: i32) -> Self {
+            self.set_version(field);
             self
         }
         ///Returns the value of `canceled_transactions`, or the default value if `canceled_transactions` is unset.
@@ -3965,15 +3953,12 @@ mod _accessor_impls {
             self.next_epoch_protocol_version.as_ref().map(|field| *field)
         }
         ///Sets `next_epoch_protocol_version` with the provided value.
-        pub fn set_next_epoch_protocol_version<T: Into<u64>>(&mut self, field: T) {
-            self.next_epoch_protocol_version = Some(field.into().into());
+        pub fn set_next_epoch_protocol_version(&mut self, field: u64) {
+            self.next_epoch_protocol_version = Some(field);
         }
         ///Sets `next_epoch_protocol_version` with the provided value.
-        pub fn with_next_epoch_protocol_version<T: Into<u64>>(
-            mut self,
-            field: T,
-        ) -> Self {
-            self.set_next_epoch_protocol_version(field.into());
+        pub fn with_next_epoch_protocol_version(mut self, field: u64) -> Self {
+            self.set_next_epoch_protocol_version(field);
             self
         }
         ///Returns the value of `epoch_commitments`, or the default value if `epoch_commitments` is unset.
@@ -4377,17 +4362,15 @@ mod _accessor_impls {
         }
         ///Sets `bridge_committee_init` with the provided value.
         ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn set_bridge_committee_init<T: Into<u64>>(&mut self, field: T) {
+        pub fn set_bridge_committee_init(&mut self, field: u64) {
             self.kind = Some(
-                super::end_of_epoch_transaction_kind::Kind::BridgeCommitteeInit(
-                    field.into().into(),
-                ),
+                super::end_of_epoch_transaction_kind::Kind::BridgeCommitteeInit(field),
             );
         }
         ///Sets `bridge_committee_init` with the provided value.
         ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn with_bridge_committee_init<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_bridge_committee_init(field.into());
+        pub fn with_bridge_committee_init(mut self, field: u64) -> Self {
+            self.set_bridge_committee_init(field);
             self
         }
     }
@@ -4424,12 +4407,12 @@ mod _accessor_impls {
             self.epoch.as_ref().map(|field| *field)
         }
         ///Sets `epoch` with the provided value.
-        pub fn set_epoch<T: Into<u64>>(&mut self, field: T) {
-            self.epoch = Some(field.into().into());
+        pub fn set_epoch(&mut self, field: u64) {
+            self.epoch = Some(field);
         }
         ///Sets `epoch` with the provided value.
-        pub fn with_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch(field.into());
+        pub fn with_epoch(mut self, field: u64) -> Self {
+            self.set_epoch(field);
             self
         }
         ///Returns the value of `committee`, or the default value if `committee` is unset.
@@ -4510,12 +4493,12 @@ mod _accessor_impls {
             self.first_checkpoint.as_ref().map(|field| *field)
         }
         ///Sets `first_checkpoint` with the provided value.
-        pub fn set_first_checkpoint<T: Into<u64>>(&mut self, field: T) {
-            self.first_checkpoint = Some(field.into().into());
+        pub fn set_first_checkpoint(&mut self, field: u64) {
+            self.first_checkpoint = Some(field);
         }
         ///Sets `first_checkpoint` with the provided value.
-        pub fn with_first_checkpoint<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_first_checkpoint(field.into());
+        pub fn with_first_checkpoint(mut self, field: u64) -> Self {
+            self.set_first_checkpoint(field);
             self
         }
         ///If `last_checkpoint` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -4532,12 +4515,12 @@ mod _accessor_impls {
             self.last_checkpoint.as_ref().map(|field| *field)
         }
         ///Sets `last_checkpoint` with the provided value.
-        pub fn set_last_checkpoint<T: Into<u64>>(&mut self, field: T) {
-            self.last_checkpoint = Some(field.into().into());
+        pub fn set_last_checkpoint(&mut self, field: u64) {
+            self.last_checkpoint = Some(field);
         }
         ///Sets `last_checkpoint` with the provided value.
-        pub fn with_last_checkpoint<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_last_checkpoint(field.into());
+        pub fn with_last_checkpoint(mut self, field: u64) -> Self {
+            self.set_last_checkpoint(field);
             self
         }
         ///If `start` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -4601,12 +4584,12 @@ mod _accessor_impls {
             self.reference_gas_price.as_ref().map(|field| *field)
         }
         ///Sets `reference_gas_price` with the provided value.
-        pub fn set_reference_gas_price<T: Into<u64>>(&mut self, field: T) {
-            self.reference_gas_price = Some(field.into().into());
+        pub fn set_reference_gas_price(&mut self, field: u64) {
+            self.reference_gas_price = Some(field);
         }
         ///Sets `reference_gas_price` with the provided value.
-        pub fn with_reference_gas_price<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_reference_gas_price(field.into());
+        pub fn with_reference_gas_price(mut self, field: u64) -> Self {
+            self.set_reference_gas_price(field);
             self
         }
         ///Returns the value of `protocol_config`, or the default value if `protocol_config` is unset.
@@ -5139,12 +5122,12 @@ mod _accessor_impls {
             self.checkpoint.as_ref().map(|field| *field)
         }
         ///Sets `checkpoint` with the provided value.
-        pub fn set_checkpoint<T: Into<u64>>(&mut self, field: T) {
-            self.checkpoint = Some(field.into().into());
+        pub fn set_checkpoint(&mut self, field: u64) {
+            self.checkpoint = Some(field);
         }
         ///Sets `checkpoint` with the provided value.
-        pub fn with_checkpoint<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_checkpoint(field.into());
+        pub fn with_checkpoint(mut self, field: u64) -> Self {
+            self.set_checkpoint(field);
             self
         }
         ///If `timestamp` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -5277,12 +5260,12 @@ mod _accessor_impls {
             self.command.as_ref().map(|field| *field)
         }
         ///Sets `command` with the provided value.
-        pub fn set_command<T: Into<u64>>(&mut self, field: T) {
-            self.command = Some(field.into().into());
+        pub fn set_command(&mut self, field: u64) {
+            self.command = Some(field);
         }
         ///Sets `command` with the provided value.
-        pub fn with_command<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_command(field.into());
+        pub fn with_command(mut self, field: u64) -> Self {
+            self.set_command(field);
             self
         }
         ///Sets `kind` with the provided value.
@@ -5885,12 +5868,12 @@ mod _accessor_impls {
             self.success.as_ref().map(|field| *field)
         }
         ///Sets `success` with the provided value.
-        pub fn set_success<T: Into<bool>>(&mut self, field: T) {
-            self.success = Some(field.into().into());
+        pub fn set_success(&mut self, field: bool) {
+            self.success = Some(field);
         }
         ///Sets `success` with the provided value.
-        pub fn with_success<T: Into<bool>>(mut self, field: T) -> Self {
-            self.set_success(field.into());
+        pub fn with_success(mut self, field: bool) -> Self {
+            self.set_success(field);
             self
         }
         ///Returns the value of `error`, or the default value if `error` is unset.
@@ -6030,12 +6013,12 @@ mod _accessor_impls {
             self.version.as_ref().map(|field| *field)
         }
         ///Sets `version` with the provided value.
-        pub fn set_version<T: Into<i32>>(&mut self, field: T) {
-            self.version = Some(field.into().into());
+        pub fn set_version(&mut self, field: i32) {
+            self.version = Some(field);
         }
         ///Sets `version` with the provided value.
-        pub fn with_version<T: Into<i32>>(mut self, field: T) -> Self {
-            self.set_version(field.into());
+        pub fn with_version(mut self, field: i32) -> Self {
+            self.set_version(field);
             self
         }
         ///Returns the value of `observations`, or the default value if `observations` is unset.
@@ -6109,12 +6092,12 @@ mod _accessor_impls {
             self.position.as_ref().map(|field| *field)
         }
         ///Sets `position` with the provided value.
-        pub fn set_position<T: Into<u32>>(&mut self, field: T) {
-            self.position = Some(field.into().into());
+        pub fn set_position(&mut self, field: u32) {
+            self.position = Some(field);
         }
         ///Sets `position` with the provided value.
-        pub fn with_position<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_position(field.into());
+        pub fn with_position(mut self, field: u32) -> Self {
+            self.set_position(field);
             self
         }
         ///Returns the value of `r#type`, or the default value if `r#type` is unset.
@@ -6207,12 +6190,12 @@ mod _accessor_impls {
             self.is_entry.as_ref().map(|field| *field)
         }
         ///Sets `is_entry` with the provided value.
-        pub fn set_is_entry<T: Into<bool>>(&mut self, field: T) {
-            self.is_entry = Some(field.into().into());
+        pub fn set_is_entry(&mut self, field: bool) {
+            self.is_entry = Some(field);
         }
         ///Sets `is_entry` with the provided value.
-        pub fn with_is_entry<T: Into<bool>>(mut self, field: T) -> Self {
-            self.set_is_entry(field.into());
+        pub fn with_is_entry(mut self, field: bool) -> Self {
+            self.set_is_entry(field);
             self
         }
         ///Returns the value of `type_parameters`, or the default value if `type_parameters` is unset.
@@ -6298,12 +6281,12 @@ mod _accessor_impls {
             self.computation_cost.as_ref().map(|field| *field)
         }
         ///Sets `computation_cost` with the provided value.
-        pub fn set_computation_cost<T: Into<u64>>(&mut self, field: T) {
-            self.computation_cost = Some(field.into().into());
+        pub fn set_computation_cost(&mut self, field: u64) {
+            self.computation_cost = Some(field);
         }
         ///Sets `computation_cost` with the provided value.
-        pub fn with_computation_cost<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_computation_cost(field.into());
+        pub fn with_computation_cost(mut self, field: u64) -> Self {
+            self.set_computation_cost(field);
             self
         }
         ///If `storage_cost` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -6320,12 +6303,12 @@ mod _accessor_impls {
             self.storage_cost.as_ref().map(|field| *field)
         }
         ///Sets `storage_cost` with the provided value.
-        pub fn set_storage_cost<T: Into<u64>>(&mut self, field: T) {
-            self.storage_cost = Some(field.into().into());
+        pub fn set_storage_cost(&mut self, field: u64) {
+            self.storage_cost = Some(field);
         }
         ///Sets `storage_cost` with the provided value.
-        pub fn with_storage_cost<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_storage_cost(field.into());
+        pub fn with_storage_cost(mut self, field: u64) -> Self {
+            self.set_storage_cost(field);
             self
         }
         ///If `storage_rebate` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -6342,12 +6325,12 @@ mod _accessor_impls {
             self.storage_rebate.as_ref().map(|field| *field)
         }
         ///Sets `storage_rebate` with the provided value.
-        pub fn set_storage_rebate<T: Into<u64>>(&mut self, field: T) {
-            self.storage_rebate = Some(field.into().into());
+        pub fn set_storage_rebate(&mut self, field: u64) {
+            self.storage_rebate = Some(field);
         }
         ///Sets `storage_rebate` with the provided value.
-        pub fn with_storage_rebate<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_storage_rebate(field.into());
+        pub fn with_storage_rebate(mut self, field: u64) -> Self {
+            self.set_storage_rebate(field);
             self
         }
         ///If `non_refundable_storage_fee` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -6364,15 +6347,12 @@ mod _accessor_impls {
             self.non_refundable_storage_fee.as_ref().map(|field| *field)
         }
         ///Sets `non_refundable_storage_fee` with the provided value.
-        pub fn set_non_refundable_storage_fee<T: Into<u64>>(&mut self, field: T) {
-            self.non_refundable_storage_fee = Some(field.into().into());
+        pub fn set_non_refundable_storage_fee(&mut self, field: u64) {
+            self.non_refundable_storage_fee = Some(field);
         }
         ///Sets `non_refundable_storage_fee` with the provided value.
-        pub fn with_non_refundable_storage_fee<T: Into<u64>>(
-            mut self,
-            field: T,
-        ) -> Self {
-            self.set_non_refundable_storage_fee(field.into());
+        pub fn with_non_refundable_storage_fee(mut self, field: u64) -> Self {
+            self.set_non_refundable_storage_fee(field);
             self
         }
     }
@@ -6444,12 +6424,12 @@ mod _accessor_impls {
             self.price.as_ref().map(|field| *field)
         }
         ///Sets `price` with the provided value.
-        pub fn set_price<T: Into<u64>>(&mut self, field: T) {
-            self.price = Some(field.into().into());
+        pub fn set_price(&mut self, field: u64) {
+            self.price = Some(field);
         }
         ///Sets `price` with the provided value.
-        pub fn with_price<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_price(field.into());
+        pub fn with_price(mut self, field: u64) -> Self {
+            self.set_price(field);
             self
         }
         ///If `budget` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -6466,12 +6446,12 @@ mod _accessor_impls {
             self.budget.as_ref().map(|field| *field)
         }
         ///Sets `budget` with the provided value.
-        pub fn set_budget<T: Into<u64>>(&mut self, field: T) {
-            self.budget = Some(field.into().into());
+        pub fn set_budget(&mut self, field: u64) {
+            self.budget = Some(field);
         }
         ///Sets `budget` with the provided value.
-        pub fn with_budget<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_budget(field.into());
+        pub fn with_budget(mut self, field: u64) -> Self {
+            self.set_budget(field);
             self
         }
     }
@@ -6684,17 +6664,15 @@ mod _accessor_impls {
         }
         ///Sets `sequence_number` with the provided value.
         ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn set_sequence_number<T: Into<u64>>(&mut self, field: T) {
+        pub fn set_sequence_number(&mut self, field: u64) {
             self.checkpoint_id = Some(
-                super::get_checkpoint_request::CheckpointId::SequenceNumber(
-                    field.into().into(),
-                ),
+                super::get_checkpoint_request::CheckpointId::SequenceNumber(field),
             );
         }
         ///Sets `sequence_number` with the provided value.
         ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn with_sequence_number<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_sequence_number(field.into());
+        pub fn with_sequence_number(mut self, field: u64) -> Self {
+            self.set_sequence_number(field);
             self
         }
         ///Returns the value of `digest`, or the default value if `digest` is unset.
@@ -7105,12 +7083,12 @@ mod _accessor_impls {
             self.epoch.as_ref().map(|field| *field)
         }
         ///Sets `epoch` with the provided value.
-        pub fn set_epoch<T: Into<u64>>(&mut self, field: T) {
-            self.epoch = Some(field.into().into());
+        pub fn set_epoch(&mut self, field: u64) {
+            self.epoch = Some(field);
         }
         ///Sets `epoch` with the provided value.
-        pub fn with_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch(field.into());
+        pub fn with_epoch(mut self, field: u64) -> Self {
+            self.set_epoch(field);
             self
         }
         ///If `read_mask` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -7349,12 +7327,12 @@ mod _accessor_impls {
             self.version.as_ref().map(|field| *field)
         }
         ///Sets `version` with the provided value.
-        pub fn set_version<T: Into<u64>>(&mut self, field: T) {
-            self.version = Some(field.into().into());
+        pub fn set_version(&mut self, field: u64) {
+            self.version = Some(field);
         }
         ///Sets `version` with the provided value.
-        pub fn with_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_version(field.into());
+        pub fn with_version(mut self, field: u64) -> Self {
+            self.set_version(field);
             self
         }
         ///If `read_mask` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -7703,12 +7681,12 @@ mod _accessor_impls {
             self.epoch.as_ref().map(|field| *field)
         }
         ///Sets `epoch` with the provided value.
-        pub fn set_epoch<T: Into<u64>>(&mut self, field: T) {
-            self.epoch = Some(field.into().into());
+        pub fn set_epoch(&mut self, field: u64) {
+            self.epoch = Some(field);
         }
         ///Sets `epoch` with the provided value.
-        pub fn with_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch(field.into());
+        pub fn with_epoch(mut self, field: u64) -> Self {
+            self.set_epoch(field);
             self
         }
         ///If `checkpoint_height` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -7725,12 +7703,12 @@ mod _accessor_impls {
             self.checkpoint_height.as_ref().map(|field| *field)
         }
         ///Sets `checkpoint_height` with the provided value.
-        pub fn set_checkpoint_height<T: Into<u64>>(&mut self, field: T) {
-            self.checkpoint_height = Some(field.into().into());
+        pub fn set_checkpoint_height(&mut self, field: u64) {
+            self.checkpoint_height = Some(field);
         }
         ///Sets `checkpoint_height` with the provided value.
-        pub fn with_checkpoint_height<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_checkpoint_height(field.into());
+        pub fn with_checkpoint_height(mut self, field: u64) -> Self {
+            self.set_checkpoint_height(field);
             self
         }
         ///If `timestamp` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -7772,15 +7750,12 @@ mod _accessor_impls {
             self.lowest_available_checkpoint.as_ref().map(|field| *field)
         }
         ///Sets `lowest_available_checkpoint` with the provided value.
-        pub fn set_lowest_available_checkpoint<T: Into<u64>>(&mut self, field: T) {
-            self.lowest_available_checkpoint = Some(field.into().into());
+        pub fn set_lowest_available_checkpoint(&mut self, field: u64) {
+            self.lowest_available_checkpoint = Some(field);
         }
         ///Sets `lowest_available_checkpoint` with the provided value.
-        pub fn with_lowest_available_checkpoint<T: Into<u64>>(
-            mut self,
-            field: T,
-        ) -> Self {
-            self.set_lowest_available_checkpoint(field.into());
+        pub fn with_lowest_available_checkpoint(mut self, field: u64) -> Self {
+            self.set_lowest_available_checkpoint(field);
             self
         }
         ///If `lowest_available_checkpoint_objects` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -7799,18 +7774,12 @@ mod _accessor_impls {
             self.lowest_available_checkpoint_objects.as_ref().map(|field| *field)
         }
         ///Sets `lowest_available_checkpoint_objects` with the provided value.
-        pub fn set_lowest_available_checkpoint_objects<T: Into<u64>>(
-            &mut self,
-            field: T,
-        ) {
-            self.lowest_available_checkpoint_objects = Some(field.into().into());
+        pub fn set_lowest_available_checkpoint_objects(&mut self, field: u64) {
+            self.lowest_available_checkpoint_objects = Some(field);
         }
         ///Sets `lowest_available_checkpoint_objects` with the provided value.
-        pub fn with_lowest_available_checkpoint_objects<T: Into<u64>>(
-            mut self,
-            field: T,
-        ) -> Self {
-            self.set_lowest_available_checkpoint_objects(field.into());
+        pub fn with_lowest_available_checkpoint_objects(mut self, field: u64) -> Self {
+            self.set_lowest_available_checkpoint_objects(field);
             self
         }
         ///If `server` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -8111,12 +8080,12 @@ mod _accessor_impls {
             self.index.as_ref().map(|field| *field)
         }
         ///Sets `index` with the provided value.
-        pub fn set_index<T: Into<u32>>(&mut self, field: T) {
-            self.index = Some(field.into().into());
+        pub fn set_index(&mut self, field: u32) {
+            self.index = Some(field);
         }
         ///Sets `index` with the provided value.
-        pub fn with_index<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_index(field.into());
+        pub fn with_index(mut self, field: u32) -> Self {
+            self.set_index(field);
             self
         }
         ///If `subresult` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -8133,12 +8102,12 @@ mod _accessor_impls {
             self.subresult.as_ref().map(|field| *field)
         }
         ///Sets `subresult` with the provided value.
-        pub fn set_subresult<T: Into<u32>>(&mut self, field: T) {
-            self.subresult = Some(field.into().into());
+        pub fn set_subresult(&mut self, field: u32) {
+            self.subresult = Some(field);
         }
         ///Sets `subresult` with the provided value.
-        pub fn with_subresult<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_subresult(field.into());
+        pub fn with_subresult(mut self, field: u32) -> Self {
+            self.set_subresult(field);
             self
         }
     }
@@ -8213,12 +8182,12 @@ mod _accessor_impls {
             self.version.as_ref().map(|field| *field)
         }
         ///Sets `version` with the provided value.
-        pub fn set_version<T: Into<u64>>(&mut self, field: T) {
-            self.version = Some(field.into().into());
+        pub fn set_version(&mut self, field: u64) {
+            self.version = Some(field);
         }
         ///Sets `version` with the provided value.
-        pub fn with_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_version(field.into());
+        pub fn with_version(mut self, field: u64) -> Self {
+            self.set_version(field);
             self
         }
         ///If `digest` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -8257,12 +8226,12 @@ mod _accessor_impls {
             self.mutable.as_ref().map(|field| *field)
         }
         ///Sets `mutable` with the provided value.
-        pub fn set_mutable<T: Into<bool>>(&mut self, field: T) {
-            self.mutable = Some(field.into().into());
+        pub fn set_mutable(&mut self, field: bool) {
+            self.mutable = Some(field);
         }
         ///Sets `mutable` with the provided value.
-        pub fn with_mutable<T: Into<bool>>(mut self, field: T) -> Self {
-            self.set_mutable(field.into());
+        pub fn with_mutable(mut self, field: bool) -> Self {
+            self.set_mutable(field);
             self
         }
         ///If `literal` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -8516,12 +8485,12 @@ mod _accessor_impls {
             self.upgraded_version.as_ref().map(|field| *field)
         }
         ///Sets `upgraded_version` with the provided value.
-        pub fn set_upgraded_version<T: Into<u64>>(&mut self, field: T) {
-            self.upgraded_version = Some(field.into().into());
+        pub fn set_upgraded_version(&mut self, field: u64) {
+            self.upgraded_version = Some(field);
         }
         ///Sets `upgraded_version` with the provided value.
-        pub fn with_upgraded_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_upgraded_version(field.into());
+        pub fn with_upgraded_version(mut self, field: u64) -> Self {
+            self.set_upgraded_version(field);
             self
         }
     }
@@ -8574,12 +8543,12 @@ mod _accessor_impls {
             self.page_size.as_ref().map(|field| *field)
         }
         ///Sets `page_size` with the provided value.
-        pub fn set_page_size<T: Into<u32>>(&mut self, field: T) {
-            self.page_size = Some(field.into().into());
+        pub fn set_page_size(&mut self, field: u32) {
+            self.page_size = Some(field);
         }
         ///Sets `page_size` with the provided value.
-        pub fn with_page_size<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_page_size(field.into());
+        pub fn with_page_size(mut self, field: u32) -> Self {
+            self.set_page_size(field);
             self
         }
         ///If `page_token` is set, returns [`Some`] with the value; otherwise returns [`None`].
@@ -8696,12 +8665,12 @@ mod _accessor_impls {
             self.page_size.as_ref().map(|field| *field)
         }
         ///Sets `page_size` with the provided value.
-        pub fn set_page_size<T: Into<u32>>(&mut self, field: T) {
-            self.page_size = Some(field.into().into());
+        pub fn set_page_size(&mut self, field: u32) {
+            self.page_size = Some(field);
         }
         ///Sets `page_size` with the provided value.
-        pub fn with_page_size<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_page_size(field.into());
+        pub fn with_page_size(mut self, field: u32) -> Self {
+            self.set_page_size(field);
             self
         }
         ///If `page_token` is set, returns [`Some`] with the value; otherwise returns [`None`].
@@ -8844,12 +8813,12 @@ mod _accessor_impls {
             self.page_size.as_ref().map(|field| *field)
         }
         ///Sets `page_size` with the provided value.
-        pub fn set_page_size<T: Into<u32>>(&mut self, field: T) {
-            self.page_size = Some(field.into().into());
+        pub fn set_page_size(&mut self, field: u32) {
+            self.page_size = Some(field);
         }
         ///Sets `page_size` with the provided value.
-        pub fn with_page_size<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_page_size(field.into());
+        pub fn with_page_size(mut self, field: u32) -> Self {
+            self.set_page_size(field);
             self
         }
         ///If `page_token` is set, returns [`Some`] with the value; otherwise returns [`None`].
@@ -9012,12 +8981,12 @@ mod _accessor_impls {
             self.page_size.as_ref().map(|field| *field)
         }
         ///Sets `page_size` with the provided value.
-        pub fn set_page_size<T: Into<u32>>(&mut self, field: T) {
-            self.page_size = Some(field.into().into());
+        pub fn set_page_size(&mut self, field: u32) {
+            self.page_size = Some(field);
         }
         ///Sets `page_size` with the provided value.
-        pub fn with_page_size<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_page_size(field.into());
+        pub fn with_page_size(mut self, field: u32) -> Self {
+            self.set_page_size(field);
             self
         }
         ///If `page_token` is set, returns [`Some`] with the value; otherwise returns [`None`].
@@ -9384,12 +9353,12 @@ mod _accessor_impls {
             self.abort_code.as_ref().map(|field| *field)
         }
         ///Sets `abort_code` with the provided value.
-        pub fn set_abort_code<T: Into<u64>>(&mut self, field: T) {
-            self.abort_code = Some(field.into().into());
+        pub fn set_abort_code(&mut self, field: u64) {
+            self.abort_code = Some(field);
         }
         ///Sets `abort_code` with the provided value.
-        pub fn with_abort_code<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_abort_code(field.into());
+        pub fn with_abort_code(mut self, field: u64) -> Self {
+            self.set_abort_code(field);
             self
         }
         ///Returns the value of `location`, or the default value if `location` is unset.
@@ -9645,12 +9614,12 @@ mod _accessor_impls {
             self.function.as_ref().map(|field| *field)
         }
         ///Sets `function` with the provided value.
-        pub fn set_function<T: Into<u32>>(&mut self, field: T) {
-            self.function = Some(field.into().into());
+        pub fn set_function(&mut self, field: u32) {
+            self.function = Some(field);
         }
         ///Sets `function` with the provided value.
-        pub fn with_function<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_function(field.into());
+        pub fn with_function(mut self, field: u32) -> Self {
+            self.set_function(field);
             self
         }
         ///If `instruction` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -9667,12 +9636,12 @@ mod _accessor_impls {
             self.instruction.as_ref().map(|field| *field)
         }
         ///Sets `instruction` with the provided value.
-        pub fn set_instruction<T: Into<u32>>(&mut self, field: T) {
-            self.instruction = Some(field.into().into());
+        pub fn set_instruction(&mut self, field: u32) {
+            self.instruction = Some(field);
         }
         ///Sets `instruction` with the provided value.
-        pub fn with_instruction<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_instruction(field.into());
+        pub fn with_instruction(mut self, field: u32) -> Self {
+            self.set_instruction(field);
             self
         }
         ///If `function_name` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -9743,12 +9712,12 @@ mod _accessor_impls {
             self.size.as_ref().map(|field| *field)
         }
         ///Sets `size` with the provided value.
-        pub fn set_size<T: Into<u64>>(&mut self, field: T) {
-            self.size = Some(field.into().into());
+        pub fn set_size(&mut self, field: u64) {
+            self.size = Some(field);
         }
         ///Sets `size` with the provided value.
-        pub fn with_size<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_size(field.into());
+        pub fn with_size(mut self, field: u64) -> Self {
+            self.set_size(field);
             self
         }
     }
@@ -9801,12 +9770,12 @@ mod _accessor_impls {
             self.bitmap.as_ref().map(|field| *field)
         }
         ///Sets `bitmap` with the provided value.
-        pub fn set_bitmap<T: Into<u32>>(&mut self, field: T) {
-            self.bitmap = Some(field.into().into());
+        pub fn set_bitmap(&mut self, field: u32) {
+            self.bitmap = Some(field);
         }
         ///Sets `bitmap` with the provided value.
-        pub fn with_bitmap<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_bitmap(field.into());
+        pub fn with_bitmap(mut self, field: u32) -> Self {
+            self.set_bitmap(field);
             self
         }
         ///Returns the value of `legacy_bitmap`, or the default value if `legacy_bitmap` is unset.
@@ -9904,12 +9873,12 @@ mod _accessor_impls {
             self.threshold.as_ref().map(|field| *field)
         }
         ///Sets `threshold` with the provided value.
-        pub fn set_threshold<T: Into<u32>>(&mut self, field: T) {
-            self.threshold = Some(field.into().into());
+        pub fn set_threshold(&mut self, field: u32) {
+            self.threshold = Some(field);
         }
         ///Sets `threshold` with the provided value.
-        pub fn with_threshold<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_threshold(field.into());
+        pub fn with_threshold(mut self, field: u32) -> Self {
+            self.set_threshold(field);
             self
         }
     }
@@ -9978,12 +9947,12 @@ mod _accessor_impls {
             self.weight.as_ref().map(|field| *field)
         }
         ///Sets `weight` with the provided value.
-        pub fn set_weight<T: Into<u32>>(&mut self, field: T) {
-            self.weight = Some(field.into().into());
+        pub fn set_weight(&mut self, field: u32) {
+            self.weight = Some(field);
         }
         ///Sets `weight` with the provided value.
-        pub fn with_weight<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_weight(field.into());
+        pub fn with_weight(mut self, field: u32) -> Self {
+            self.set_weight(field);
             self
         }
     }
@@ -10405,12 +10374,12 @@ mod _accessor_impls {
             self.version.as_ref().map(|field| *field)
         }
         ///Sets `version` with the provided value.
-        pub fn set_version<T: Into<u64>>(&mut self, field: T) {
-            self.version = Some(field.into().into());
+        pub fn set_version(&mut self, field: u64) {
+            self.version = Some(field);
         }
         ///Sets `version` with the provided value.
-        pub fn with_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_version(field.into());
+        pub fn with_version(mut self, field: u64) -> Self {
+            self.set_version(field);
             self
         }
         ///If `digest` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -10500,12 +10469,12 @@ mod _accessor_impls {
             self.has_public_transfer.as_ref().map(|field| *field)
         }
         ///Sets `has_public_transfer` with the provided value.
-        pub fn set_has_public_transfer<T: Into<bool>>(&mut self, field: T) {
-            self.has_public_transfer = Some(field.into().into());
+        pub fn set_has_public_transfer(&mut self, field: bool) {
+            self.has_public_transfer = Some(field);
         }
         ///Sets `has_public_transfer` with the provided value.
-        pub fn with_has_public_transfer<T: Into<bool>>(mut self, field: T) -> Self {
-            self.set_has_public_transfer(field.into());
+        pub fn with_has_public_transfer(mut self, field: bool) -> Self {
+            self.set_has_public_transfer(field);
             self
         }
         ///Returns the value of `contents`, or the default value if `contents` is unset.
@@ -10602,12 +10571,12 @@ mod _accessor_impls {
             self.storage_rebate.as_ref().map(|field| *field)
         }
         ///Sets `storage_rebate` with the provided value.
-        pub fn set_storage_rebate<T: Into<u64>>(&mut self, field: T) {
-            self.storage_rebate = Some(field.into().into());
+        pub fn set_storage_rebate(&mut self, field: u64) {
+            self.storage_rebate = Some(field);
         }
         ///Sets `storage_rebate` with the provided value.
-        pub fn with_storage_rebate<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_storage_rebate(field.into());
+        pub fn with_storage_rebate(mut self, field: u64) -> Self {
+            self.set_storage_rebate(field);
             self
         }
         ///If `json` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -10646,12 +10615,12 @@ mod _accessor_impls {
             self.balance.as_ref().map(|field| *field)
         }
         ///Sets `balance` with the provided value.
-        pub fn set_balance<T: Into<u64>>(&mut self, field: T) {
-            self.balance = Some(field.into().into());
+        pub fn set_balance(&mut self, field: u64) {
+            self.balance = Some(field);
         }
         ///Sets `balance` with the provided value.
-        pub fn with_balance<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_balance(field.into());
+        pub fn with_balance(mut self, field: u64) -> Self {
+            self.set_balance(field);
             self
         }
     }
@@ -10704,12 +10673,12 @@ mod _accessor_impls {
             self.version.as_ref().map(|field| *field)
         }
         ///Sets `version` with the provided value.
-        pub fn set_version<T: Into<u64>>(&mut self, field: T) {
-            self.version = Some(field.into().into());
+        pub fn set_version(&mut self, field: u64) {
+            self.version = Some(field);
         }
         ///Sets `version` with the provided value.
-        pub fn with_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_version(field.into());
+        pub fn with_version(mut self, field: u64) -> Self {
+            self.set_version(field);
             self
         }
         ///If `digest` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -10869,12 +10838,12 @@ mod _accessor_impls {
             self.type_parameter.as_ref().map(|field| *field)
         }
         ///Sets `type_parameter` with the provided value.
-        pub fn set_type_parameter<T: Into<u32>>(&mut self, field: T) {
-            self.type_parameter = Some(field.into().into());
+        pub fn set_type_parameter(&mut self, field: u32) {
+            self.type_parameter = Some(field);
         }
         ///Sets `type_parameter` with the provided value.
-        pub fn with_type_parameter<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_type_parameter(field.into());
+        pub fn with_type_parameter(mut self, field: u32) -> Self {
+            self.set_type_parameter(field);
             self
         }
     }
@@ -10932,12 +10901,12 @@ mod _accessor_impls {
             self.version.as_ref().map(|field| *field)
         }
         ///Sets `version` with the provided value.
-        pub fn set_version<T: Into<u64>>(&mut self, field: T) {
-            self.version = Some(field.into().into());
+        pub fn set_version(&mut self, field: u64) {
+            self.version = Some(field);
         }
         ///Sets `version` with the provided value.
-        pub fn with_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_version(field.into());
+        pub fn with_version(mut self, field: u64) -> Self {
+            self.set_version(field);
             self
         }
     }
@@ -11015,12 +10984,12 @@ mod _accessor_impls {
             self.version.as_ref().map(|field| *field)
         }
         ///Sets `version` with the provided value.
-        pub fn set_version<T: Into<u64>>(&mut self, field: T) {
-            self.version = Some(field.into().into());
+        pub fn set_version(&mut self, field: u64) {
+            self.version = Some(field);
         }
         ///Sets `version` with the provided value.
-        pub fn with_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_version(field.into());
+        pub fn with_version(mut self, field: u64) -> Self {
+            self.set_version(field);
             self
         }
         ///Returns the value of `modules`, or the default value if `modules` is unset.
@@ -11159,12 +11128,12 @@ mod _accessor_impls {
             self.policy.as_ref().map(|field| *field)
         }
         ///Sets `policy` with the provided value.
-        pub fn set_policy<T: Into<u32>>(&mut self, field: T) {
-            self.policy = Some(field.into().into());
+        pub fn set_policy(&mut self, field: u32) {
+            self.policy = Some(field);
         }
         ///Sets `policy` with the provided value.
-        pub fn with_policy<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_policy(field.into());
+        pub fn with_policy(mut self, field: u32) -> Self {
+            self.set_policy(field);
             self
         }
         ///If `ticket_id` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -11238,12 +11207,12 @@ mod _accessor_impls {
             self.version.as_ref().map(|field| *field)
         }
         ///Sets `version` with the provided value.
-        pub fn set_version<T: Into<u64>>(&mut self, field: T) {
-            self.version = Some(field.into().into());
+        pub fn set_version(&mut self, field: u64) {
+            self.version = Some(field);
         }
         ///Sets `version` with the provided value.
-        pub fn with_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_version(field.into());
+        pub fn with_version(mut self, field: u64) -> Self {
+            self.set_version(field);
             self
         }
     }
@@ -11410,12 +11379,12 @@ mod _accessor_impls {
             self.protocol_version.as_ref().map(|field| *field)
         }
         ///Sets `protocol_version` with the provided value.
-        pub fn set_protocol_version<T: Into<u64>>(&mut self, field: T) {
-            self.protocol_version = Some(field.into().into());
+        pub fn set_protocol_version(&mut self, field: u64) {
+            self.protocol_version = Some(field);
         }
         ///Sets `protocol_version` with the provided value.
-        pub fn with_protocol_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_protocol_version(field.into());
+        pub fn with_protocol_version(mut self, field: u64) -> Self {
+            self.set_protocol_version(field);
             self
         }
         ///Returns the value of `feature_flags`, or the default value if `feature_flags` is unset.
@@ -11548,12 +11517,12 @@ mod _accessor_impls {
             self.epoch.as_ref().map(|field| *field)
         }
         ///Sets `epoch` with the provided value.
-        pub fn set_epoch<T: Into<u64>>(&mut self, field: T) {
-            self.epoch = Some(field.into().into());
+        pub fn set_epoch(&mut self, field: u64) {
+            self.epoch = Some(field);
         }
         ///Sets `epoch` with the provided value.
-        pub fn with_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch(field.into());
+        pub fn with_epoch(mut self, field: u64) -> Self {
+            self.set_epoch(field);
             self
         }
         ///If `randomness_round` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -11570,12 +11539,12 @@ mod _accessor_impls {
             self.randomness_round.as_ref().map(|field| *field)
         }
         ///Sets `randomness_round` with the provided value.
-        pub fn set_randomness_round<T: Into<u64>>(&mut self, field: T) {
-            self.randomness_round = Some(field.into().into());
+        pub fn set_randomness_round(&mut self, field: u64) {
+            self.randomness_round = Some(field);
         }
         ///Sets `randomness_round` with the provided value.
-        pub fn with_randomness_round<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_randomness_round(field.into());
+        pub fn with_randomness_round(mut self, field: u64) -> Self {
+            self.set_randomness_round(field);
             self
         }
         ///If `random_bytes` is set, returns [`Some`] with the value; otherwise returns [`None`].
@@ -11612,18 +11581,15 @@ mod _accessor_impls {
             self.randomness_object_initial_shared_version.as_ref().map(|field| *field)
         }
         ///Sets `randomness_object_initial_shared_version` with the provided value.
-        pub fn set_randomness_object_initial_shared_version<T: Into<u64>>(
-            &mut self,
-            field: T,
-        ) {
-            self.randomness_object_initial_shared_version = Some(field.into().into());
+        pub fn set_randomness_object_initial_shared_version(&mut self, field: u64) {
+            self.randomness_object_initial_shared_version = Some(field);
         }
         ///Sets `randomness_object_initial_shared_version` with the provided value.
-        pub fn with_randomness_object_initial_shared_version<T: Into<u64>>(
+        pub fn with_randomness_object_initial_shared_version(
             mut self,
-            field: T,
+            field: u64,
         ) -> Self {
-            self.set_randomness_object_initial_shared_version(field.into());
+            self.set_randomness_object_initial_shared_version(field);
             self
         }
     }
@@ -11723,12 +11689,12 @@ mod _accessor_impls {
             self.allow_global_pause.as_ref().map(|field| *field)
         }
         ///Sets `allow_global_pause` with the provided value.
-        pub fn set_allow_global_pause<T: Into<bool>>(&mut self, field: T) {
-            self.allow_global_pause = Some(field.into().into());
+        pub fn set_allow_global_pause(&mut self, field: bool) {
+            self.allow_global_pause = Some(field);
         }
         ///Sets `allow_global_pause` with the provided value.
-        pub fn with_allow_global_pause<T: Into<bool>>(mut self, field: T) -> Self {
-            self.set_allow_global_pause(field.into());
+        pub fn with_allow_global_pause(mut self, field: bool) -> Self {
+            self.set_allow_global_pause(field);
             self
         }
         ///If `variant` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -11745,12 +11711,12 @@ mod _accessor_impls {
             self.variant.as_ref().map(|field| *field)
         }
         ///Sets `variant` with the provided value.
-        pub fn set_variant<T: Into<u32>>(&mut self, field: T) {
-            self.variant = Some(field.into().into());
+        pub fn set_variant(&mut self, field: u32) {
+            self.variant = Some(field);
         }
         ///Sets `variant` with the provided value.
-        pub fn with_variant<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_variant(field.into());
+        pub fn with_variant(mut self, field: u32) -> Self {
+            self.set_variant(field);
             self
         }
         ///Sets `coin_regulated_state` with the provided value.
@@ -11975,12 +11941,12 @@ mod _accessor_impls {
             self.do_gas_selection.as_ref().map(|field| *field)
         }
         ///Sets `do_gas_selection` with the provided value.
-        pub fn set_do_gas_selection<T: Into<bool>>(&mut self, field: T) {
-            self.do_gas_selection = Some(field.into().into());
+        pub fn set_do_gas_selection(&mut self, field: bool) {
+            self.do_gas_selection = Some(field);
         }
         ///Sets `do_gas_selection` with the provided value.
-        pub fn with_do_gas_selection<T: Into<bool>>(mut self, field: T) -> Self {
-            self.set_do_gas_selection(field.into());
+        pub fn with_do_gas_selection(mut self, field: bool) -> Self {
+            self.set_do_gas_selection(field);
             self
         }
     }
@@ -12075,12 +12041,12 @@ mod _accessor_impls {
             self.size.as_ref().map(|field| *field)
         }
         ///Sets `size` with the provided value.
-        pub fn set_size<T: Into<u64>>(&mut self, field: T) {
-            self.size = Some(field.into().into());
+        pub fn set_size(&mut self, field: u64) {
+            self.size = Some(field);
         }
         ///Sets `size` with the provided value.
-        pub fn with_size<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_size(field.into());
+        pub fn with_size(mut self, field: u64) -> Self {
+            self.set_size(field);
             self
         }
         ///If `max_size` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -12097,12 +12063,12 @@ mod _accessor_impls {
             self.max_size.as_ref().map(|field| *field)
         }
         ///Sets `max_size` with the provided value.
-        pub fn set_max_size<T: Into<u64>>(&mut self, field: T) {
-            self.max_size = Some(field.into().into());
+        pub fn set_max_size(&mut self, field: u64) {
+            self.max_size = Some(field);
         }
         ///Sets `max_size` with the provided value.
-        pub fn with_max_size<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_max_size(field.into());
+        pub fn with_max_size(mut self, field: u64) -> Self {
+            self.set_max_size(field);
             self
         }
     }
@@ -12196,12 +12162,12 @@ mod _accessor_impls {
             self.balance.as_ref().map(|field| *field)
         }
         ///Sets `balance` with the provided value.
-        pub fn set_balance<T: Into<u64>>(&mut self, field: T) {
-            self.balance = Some(field.into().into());
+        pub fn set_balance(&mut self, field: u64) {
+            self.balance = Some(field);
         }
         ///Sets `balance` with the provided value.
-        pub fn with_balance<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_balance(field.into());
+        pub fn with_balance(mut self, field: u64) -> Self {
+            self.set_balance(field);
             self
         }
         ///If `distribution_counter` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -12218,12 +12184,12 @@ mod _accessor_impls {
             self.distribution_counter.as_ref().map(|field| *field)
         }
         ///Sets `distribution_counter` with the provided value.
-        pub fn set_distribution_counter<T: Into<u64>>(&mut self, field: T) {
-            self.distribution_counter = Some(field.into().into());
+        pub fn set_distribution_counter(&mut self, field: u64) {
+            self.distribution_counter = Some(field);
         }
         ///Sets `distribution_counter` with the provided value.
-        pub fn with_distribution_counter<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_distribution_counter(field.into());
+        pub fn with_distribution_counter(mut self, field: u64) -> Self {
+            self.set_distribution_counter(field);
             self
         }
         ///If `current_distribution_amount` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -12240,15 +12206,12 @@ mod _accessor_impls {
             self.current_distribution_amount.as_ref().map(|field| *field)
         }
         ///Sets `current_distribution_amount` with the provided value.
-        pub fn set_current_distribution_amount<T: Into<u64>>(&mut self, field: T) {
-            self.current_distribution_amount = Some(field.into().into());
+        pub fn set_current_distribution_amount(&mut self, field: u64) {
+            self.current_distribution_amount = Some(field);
         }
         ///Sets `current_distribution_amount` with the provided value.
-        pub fn with_current_distribution_amount<T: Into<u64>>(
-            mut self,
-            field: T,
-        ) -> Self {
-            self.set_current_distribution_amount(field.into());
+        pub fn with_current_distribution_amount(mut self, field: u64) -> Self {
+            self.set_current_distribution_amount(field);
             self
         }
         ///If `stake_subsidy_period_length` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -12265,15 +12228,12 @@ mod _accessor_impls {
             self.stake_subsidy_period_length.as_ref().map(|field| *field)
         }
         ///Sets `stake_subsidy_period_length` with the provided value.
-        pub fn set_stake_subsidy_period_length<T: Into<u64>>(&mut self, field: T) {
-            self.stake_subsidy_period_length = Some(field.into().into());
+        pub fn set_stake_subsidy_period_length(&mut self, field: u64) {
+            self.stake_subsidy_period_length = Some(field);
         }
         ///Sets `stake_subsidy_period_length` with the provided value.
-        pub fn with_stake_subsidy_period_length<T: Into<u64>>(
-            mut self,
-            field: T,
-        ) -> Self {
-            self.set_stake_subsidy_period_length(field.into());
+        pub fn with_stake_subsidy_period_length(mut self, field: u64) -> Self {
+            self.set_stake_subsidy_period_length(field);
             self
         }
         ///If `stake_subsidy_decrease_rate` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -12290,15 +12250,12 @@ mod _accessor_impls {
             self.stake_subsidy_decrease_rate.as_ref().map(|field| *field)
         }
         ///Sets `stake_subsidy_decrease_rate` with the provided value.
-        pub fn set_stake_subsidy_decrease_rate<T: Into<u32>>(&mut self, field: T) {
-            self.stake_subsidy_decrease_rate = Some(field.into().into());
+        pub fn set_stake_subsidy_decrease_rate(&mut self, field: u32) {
+            self.stake_subsidy_decrease_rate = Some(field);
         }
         ///Sets `stake_subsidy_decrease_rate` with the provided value.
-        pub fn with_stake_subsidy_decrease_rate<T: Into<u32>>(
-            mut self,
-            field: T,
-        ) -> Self {
-            self.set_stake_subsidy_decrease_rate(field.into());
+        pub fn with_stake_subsidy_decrease_rate(mut self, field: u32) -> Self {
+            self.set_stake_subsidy_decrease_rate(field);
             self
         }
         ///Returns the value of `extra_fields`, or the default value if `extra_fields` is unset.
@@ -12388,12 +12345,12 @@ mod _accessor_impls {
             self.activation_epoch.as_ref().map(|field| *field)
         }
         ///Sets `activation_epoch` with the provided value.
-        pub fn set_activation_epoch<T: Into<u64>>(&mut self, field: T) {
-            self.activation_epoch = Some(field.into().into());
+        pub fn set_activation_epoch(&mut self, field: u64) {
+            self.activation_epoch = Some(field);
         }
         ///Sets `activation_epoch` with the provided value.
-        pub fn with_activation_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_activation_epoch(field.into());
+        pub fn with_activation_epoch(mut self, field: u64) -> Self {
+            self.set_activation_epoch(field);
             self
         }
         ///If `deactivation_epoch` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -12410,12 +12367,12 @@ mod _accessor_impls {
             self.deactivation_epoch.as_ref().map(|field| *field)
         }
         ///Sets `deactivation_epoch` with the provided value.
-        pub fn set_deactivation_epoch<T: Into<u64>>(&mut self, field: T) {
-            self.deactivation_epoch = Some(field.into().into());
+        pub fn set_deactivation_epoch(&mut self, field: u64) {
+            self.deactivation_epoch = Some(field);
         }
         ///Sets `deactivation_epoch` with the provided value.
-        pub fn with_deactivation_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_deactivation_epoch(field.into());
+        pub fn with_deactivation_epoch(mut self, field: u64) -> Self {
+            self.set_deactivation_epoch(field);
             self
         }
         ///If `sui_balance` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -12432,12 +12389,12 @@ mod _accessor_impls {
             self.sui_balance.as_ref().map(|field| *field)
         }
         ///Sets `sui_balance` with the provided value.
-        pub fn set_sui_balance<T: Into<u64>>(&mut self, field: T) {
-            self.sui_balance = Some(field.into().into());
+        pub fn set_sui_balance(&mut self, field: u64) {
+            self.sui_balance = Some(field);
         }
         ///Sets `sui_balance` with the provided value.
-        pub fn with_sui_balance<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_sui_balance(field.into());
+        pub fn with_sui_balance(mut self, field: u64) -> Self {
+            self.set_sui_balance(field);
             self
         }
         ///If `rewards_pool` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -12454,12 +12411,12 @@ mod _accessor_impls {
             self.rewards_pool.as_ref().map(|field| *field)
         }
         ///Sets `rewards_pool` with the provided value.
-        pub fn set_rewards_pool<T: Into<u64>>(&mut self, field: T) {
-            self.rewards_pool = Some(field.into().into());
+        pub fn set_rewards_pool(&mut self, field: u64) {
+            self.rewards_pool = Some(field);
         }
         ///Sets `rewards_pool` with the provided value.
-        pub fn with_rewards_pool<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_rewards_pool(field.into());
+        pub fn with_rewards_pool(mut self, field: u64) -> Self {
+            self.set_rewards_pool(field);
             self
         }
         ///If `pool_token_balance` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -12476,12 +12433,12 @@ mod _accessor_impls {
             self.pool_token_balance.as_ref().map(|field| *field)
         }
         ///Sets `pool_token_balance` with the provided value.
-        pub fn set_pool_token_balance<T: Into<u64>>(&mut self, field: T) {
-            self.pool_token_balance = Some(field.into().into());
+        pub fn set_pool_token_balance(&mut self, field: u64) {
+            self.pool_token_balance = Some(field);
         }
         ///Sets `pool_token_balance` with the provided value.
-        pub fn with_pool_token_balance<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_pool_token_balance(field.into());
+        pub fn with_pool_token_balance(mut self, field: u64) -> Self {
+            self.set_pool_token_balance(field);
             self
         }
         ///Returns the value of `exchange_rates`, or the default value if `exchange_rates` is unset.
@@ -12530,12 +12487,12 @@ mod _accessor_impls {
             self.pending_stake.as_ref().map(|field| *field)
         }
         ///Sets `pending_stake` with the provided value.
-        pub fn set_pending_stake<T: Into<u64>>(&mut self, field: T) {
-            self.pending_stake = Some(field.into().into());
+        pub fn set_pending_stake(&mut self, field: u64) {
+            self.pending_stake = Some(field);
         }
         ///Sets `pending_stake` with the provided value.
-        pub fn with_pending_stake<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_pending_stake(field.into());
+        pub fn with_pending_stake(mut self, field: u64) -> Self {
+            self.set_pending_stake(field);
             self
         }
         ///If `pending_total_sui_withdraw` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -12552,15 +12509,12 @@ mod _accessor_impls {
             self.pending_total_sui_withdraw.as_ref().map(|field| *field)
         }
         ///Sets `pending_total_sui_withdraw` with the provided value.
-        pub fn set_pending_total_sui_withdraw<T: Into<u64>>(&mut self, field: T) {
-            self.pending_total_sui_withdraw = Some(field.into().into());
+        pub fn set_pending_total_sui_withdraw(&mut self, field: u64) {
+            self.pending_total_sui_withdraw = Some(field);
         }
         ///Sets `pending_total_sui_withdraw` with the provided value.
-        pub fn with_pending_total_sui_withdraw<T: Into<u64>>(
-            mut self,
-            field: T,
-        ) -> Self {
-            self.set_pending_total_sui_withdraw(field.into());
+        pub fn with_pending_total_sui_withdraw(mut self, field: u64) -> Self {
+            self.set_pending_total_sui_withdraw(field);
             self
         }
         ///If `pending_pool_token_withdraw` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -12577,15 +12531,12 @@ mod _accessor_impls {
             self.pending_pool_token_withdraw.as_ref().map(|field| *field)
         }
         ///Sets `pending_pool_token_withdraw` with the provided value.
-        pub fn set_pending_pool_token_withdraw<T: Into<u64>>(&mut self, field: T) {
-            self.pending_pool_token_withdraw = Some(field.into().into());
+        pub fn set_pending_pool_token_withdraw(&mut self, field: u64) {
+            self.pending_pool_token_withdraw = Some(field);
         }
         ///Sets `pending_pool_token_withdraw` with the provided value.
-        pub fn with_pending_pool_token_withdraw<T: Into<u64>>(
-            mut self,
-            field: T,
-        ) -> Self {
-            self.set_pending_pool_token_withdraw(field.into());
+        pub fn with_pending_pool_token_withdraw(mut self, field: u64) -> Self {
+            self.set_pending_pool_token_withdraw(field);
             self
         }
         ///Returns the value of `extra_fields`, or the default value if `extra_fields` is unset.
@@ -12644,15 +12595,12 @@ mod _accessor_impls {
             self.total_object_storage_rebates.as_ref().map(|field| *field)
         }
         ///Sets `total_object_storage_rebates` with the provided value.
-        pub fn set_total_object_storage_rebates<T: Into<u64>>(&mut self, field: T) {
-            self.total_object_storage_rebates = Some(field.into().into());
+        pub fn set_total_object_storage_rebates(&mut self, field: u64) {
+            self.total_object_storage_rebates = Some(field);
         }
         ///Sets `total_object_storage_rebates` with the provided value.
-        pub fn with_total_object_storage_rebates<T: Into<u64>>(
-            mut self,
-            field: T,
-        ) -> Self {
-            self.set_total_object_storage_rebates(field.into());
+        pub fn with_total_object_storage_rebates(mut self, field: u64) -> Self {
+            self.set_total_object_storage_rebates(field);
             self
         }
         ///If `non_refundable_balance` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -12669,12 +12617,12 @@ mod _accessor_impls {
             self.non_refundable_balance.as_ref().map(|field| *field)
         }
         ///Sets `non_refundable_balance` with the provided value.
-        pub fn set_non_refundable_balance<T: Into<u64>>(&mut self, field: T) {
-            self.non_refundable_balance = Some(field.into().into());
+        pub fn set_non_refundable_balance(&mut self, field: u64) {
+            self.non_refundable_balance = Some(field);
         }
         ///Sets `non_refundable_balance` with the provided value.
-        pub fn with_non_refundable_balance<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_non_refundable_balance(field.into());
+        pub fn with_non_refundable_balance(mut self, field: u64) -> Self {
+            self.set_non_refundable_balance(field);
             self
         }
     }
@@ -12739,12 +12687,12 @@ mod _accessor_impls {
             self.cursor.as_ref().map(|field| *field)
         }
         ///Sets `cursor` with the provided value.
-        pub fn set_cursor<T: Into<u64>>(&mut self, field: T) {
-            self.cursor = Some(field.into().into());
+        pub fn set_cursor(&mut self, field: u64) {
+            self.cursor = Some(field);
         }
         ///Sets `cursor` with the provided value.
-        pub fn with_cursor<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_cursor(field.into());
+        pub fn with_cursor(mut self, field: u64) -> Self {
+            self.set_cursor(field);
             self
         }
         ///Returns the value of `checkpoint`, or the default value if `checkpoint` is unset.
@@ -12804,12 +12752,12 @@ mod _accessor_impls {
             self.version.as_ref().map(|field| *field)
         }
         ///Sets `version` with the provided value.
-        pub fn set_version<T: Into<u64>>(&mut self, field: T) {
-            self.version = Some(field.into().into());
+        pub fn set_version(&mut self, field: u64) {
+            self.version = Some(field);
         }
         ///Sets `version` with the provided value.
-        pub fn with_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_version(field.into());
+        pub fn with_version(mut self, field: u64) -> Self {
+            self.set_version(field);
             self
         }
         ///Returns the value of `modules`, or the default value if `modules` is unset.
@@ -12882,12 +12830,12 @@ mod _accessor_impls {
             self.epoch_duration_ms.as_ref().map(|field| *field)
         }
         ///Sets `epoch_duration_ms` with the provided value.
-        pub fn set_epoch_duration_ms<T: Into<u64>>(&mut self, field: T) {
-            self.epoch_duration_ms = Some(field.into().into());
+        pub fn set_epoch_duration_ms(&mut self, field: u64) {
+            self.epoch_duration_ms = Some(field);
         }
         ///Sets `epoch_duration_ms` with the provided value.
-        pub fn with_epoch_duration_ms<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch_duration_ms(field.into());
+        pub fn with_epoch_duration_ms(mut self, field: u64) -> Self {
+            self.set_epoch_duration_ms(field);
             self
         }
         ///If `stake_subsidy_start_epoch` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -12904,12 +12852,12 @@ mod _accessor_impls {
             self.stake_subsidy_start_epoch.as_ref().map(|field| *field)
         }
         ///Sets `stake_subsidy_start_epoch` with the provided value.
-        pub fn set_stake_subsidy_start_epoch<T: Into<u64>>(&mut self, field: T) {
-            self.stake_subsidy_start_epoch = Some(field.into().into());
+        pub fn set_stake_subsidy_start_epoch(&mut self, field: u64) {
+            self.stake_subsidy_start_epoch = Some(field);
         }
         ///Sets `stake_subsidy_start_epoch` with the provided value.
-        pub fn with_stake_subsidy_start_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_stake_subsidy_start_epoch(field.into());
+        pub fn with_stake_subsidy_start_epoch(mut self, field: u64) -> Self {
+            self.set_stake_subsidy_start_epoch(field);
             self
         }
         ///If `min_validator_count` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -12926,12 +12874,12 @@ mod _accessor_impls {
             self.min_validator_count.as_ref().map(|field| *field)
         }
         ///Sets `min_validator_count` with the provided value.
-        pub fn set_min_validator_count<T: Into<u64>>(&mut self, field: T) {
-            self.min_validator_count = Some(field.into().into());
+        pub fn set_min_validator_count(&mut self, field: u64) {
+            self.min_validator_count = Some(field);
         }
         ///Sets `min_validator_count` with the provided value.
-        pub fn with_min_validator_count<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_min_validator_count(field.into());
+        pub fn with_min_validator_count(mut self, field: u64) -> Self {
+            self.set_min_validator_count(field);
             self
         }
         ///If `max_validator_count` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -12948,12 +12896,12 @@ mod _accessor_impls {
             self.max_validator_count.as_ref().map(|field| *field)
         }
         ///Sets `max_validator_count` with the provided value.
-        pub fn set_max_validator_count<T: Into<u64>>(&mut self, field: T) {
-            self.max_validator_count = Some(field.into().into());
+        pub fn set_max_validator_count(&mut self, field: u64) {
+            self.max_validator_count = Some(field);
         }
         ///Sets `max_validator_count` with the provided value.
-        pub fn with_max_validator_count<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_max_validator_count(field.into());
+        pub fn with_max_validator_count(mut self, field: u64) -> Self {
+            self.set_max_validator_count(field);
             self
         }
         ///If `min_validator_joining_stake` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -12970,15 +12918,12 @@ mod _accessor_impls {
             self.min_validator_joining_stake.as_ref().map(|field| *field)
         }
         ///Sets `min_validator_joining_stake` with the provided value.
-        pub fn set_min_validator_joining_stake<T: Into<u64>>(&mut self, field: T) {
-            self.min_validator_joining_stake = Some(field.into().into());
+        pub fn set_min_validator_joining_stake(&mut self, field: u64) {
+            self.min_validator_joining_stake = Some(field);
         }
         ///Sets `min_validator_joining_stake` with the provided value.
-        pub fn with_min_validator_joining_stake<T: Into<u64>>(
-            mut self,
-            field: T,
-        ) -> Self {
-            self.set_min_validator_joining_stake(field.into());
+        pub fn with_min_validator_joining_stake(mut self, field: u64) -> Self {
+            self.set_min_validator_joining_stake(field);
             self
         }
         ///If `validator_low_stake_threshold` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -12995,15 +12940,12 @@ mod _accessor_impls {
             self.validator_low_stake_threshold.as_ref().map(|field| *field)
         }
         ///Sets `validator_low_stake_threshold` with the provided value.
-        pub fn set_validator_low_stake_threshold<T: Into<u64>>(&mut self, field: T) {
-            self.validator_low_stake_threshold = Some(field.into().into());
+        pub fn set_validator_low_stake_threshold(&mut self, field: u64) {
+            self.validator_low_stake_threshold = Some(field);
         }
         ///Sets `validator_low_stake_threshold` with the provided value.
-        pub fn with_validator_low_stake_threshold<T: Into<u64>>(
-            mut self,
-            field: T,
-        ) -> Self {
-            self.set_validator_low_stake_threshold(field.into());
+        pub fn with_validator_low_stake_threshold(mut self, field: u64) -> Self {
+            self.set_validator_low_stake_threshold(field);
             self
         }
         ///If `validator_very_low_stake_threshold` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -13022,18 +12964,12 @@ mod _accessor_impls {
             self.validator_very_low_stake_threshold.as_ref().map(|field| *field)
         }
         ///Sets `validator_very_low_stake_threshold` with the provided value.
-        pub fn set_validator_very_low_stake_threshold<T: Into<u64>>(
-            &mut self,
-            field: T,
-        ) {
-            self.validator_very_low_stake_threshold = Some(field.into().into());
+        pub fn set_validator_very_low_stake_threshold(&mut self, field: u64) {
+            self.validator_very_low_stake_threshold = Some(field);
         }
         ///Sets `validator_very_low_stake_threshold` with the provided value.
-        pub fn with_validator_very_low_stake_threshold<T: Into<u64>>(
-            mut self,
-            field: T,
-        ) -> Self {
-            self.set_validator_very_low_stake_threshold(field.into());
+        pub fn with_validator_very_low_stake_threshold(mut self, field: u64) -> Self {
+            self.set_validator_very_low_stake_threshold(field);
             self
         }
         ///If `validator_low_stake_grace_period` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -13050,15 +12986,12 @@ mod _accessor_impls {
             self.validator_low_stake_grace_period.as_ref().map(|field| *field)
         }
         ///Sets `validator_low_stake_grace_period` with the provided value.
-        pub fn set_validator_low_stake_grace_period<T: Into<u64>>(&mut self, field: T) {
-            self.validator_low_stake_grace_period = Some(field.into().into());
+        pub fn set_validator_low_stake_grace_period(&mut self, field: u64) {
+            self.validator_low_stake_grace_period = Some(field);
         }
         ///Sets `validator_low_stake_grace_period` with the provided value.
-        pub fn with_validator_low_stake_grace_period<T: Into<u64>>(
-            mut self,
-            field: T,
-        ) -> Self {
-            self.set_validator_low_stake_grace_period(field.into());
+        pub fn with_validator_low_stake_grace_period(mut self, field: u64) -> Self {
+            self.set_validator_low_stake_grace_period(field);
             self
         }
         ///Returns the value of `extra_fields`, or the default value if `extra_fields` is unset.
@@ -13131,12 +13064,12 @@ mod _accessor_impls {
             self.version.as_ref().map(|field| *field)
         }
         ///Sets `version` with the provided value.
-        pub fn set_version<T: Into<u64>>(&mut self, field: T) {
-            self.version = Some(field.into().into());
+        pub fn set_version(&mut self, field: u64) {
+            self.version = Some(field);
         }
         ///Sets `version` with the provided value.
-        pub fn with_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_version(field.into());
+        pub fn with_version(mut self, field: u64) -> Self {
+            self.set_version(field);
             self
         }
         ///If `epoch` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -13153,12 +13086,12 @@ mod _accessor_impls {
             self.epoch.as_ref().map(|field| *field)
         }
         ///Sets `epoch` with the provided value.
-        pub fn set_epoch<T: Into<u64>>(&mut self, field: T) {
-            self.epoch = Some(field.into().into());
+        pub fn set_epoch(&mut self, field: u64) {
+            self.epoch = Some(field);
         }
         ///Sets `epoch` with the provided value.
-        pub fn with_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch(field.into());
+        pub fn with_epoch(mut self, field: u64) -> Self {
+            self.set_epoch(field);
             self
         }
         ///If `protocol_version` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -13175,12 +13108,12 @@ mod _accessor_impls {
             self.protocol_version.as_ref().map(|field| *field)
         }
         ///Sets `protocol_version` with the provided value.
-        pub fn set_protocol_version<T: Into<u64>>(&mut self, field: T) {
-            self.protocol_version = Some(field.into().into());
+        pub fn set_protocol_version(&mut self, field: u64) {
+            self.protocol_version = Some(field);
         }
         ///Sets `protocol_version` with the provided value.
-        pub fn with_protocol_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_protocol_version(field.into());
+        pub fn with_protocol_version(mut self, field: u64) -> Self {
+            self.set_protocol_version(field);
             self
         }
         ///Returns the value of `validators`, or the default value if `validators` is unset.
@@ -13293,12 +13226,12 @@ mod _accessor_impls {
             self.reference_gas_price.as_ref().map(|field| *field)
         }
         ///Sets `reference_gas_price` with the provided value.
-        pub fn set_reference_gas_price<T: Into<u64>>(&mut self, field: T) {
-            self.reference_gas_price = Some(field.into().into());
+        pub fn set_reference_gas_price(&mut self, field: u64) {
+            self.reference_gas_price = Some(field);
         }
         ///Sets `reference_gas_price` with the provided value.
-        pub fn with_reference_gas_price<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_reference_gas_price(field.into());
+        pub fn with_reference_gas_price(mut self, field: u64) -> Self {
+            self.set_reference_gas_price(field);
             self
         }
         ///Returns the value of `validator_report_records`, or the default value if `validator_report_records` is unset.
@@ -13373,12 +13306,12 @@ mod _accessor_impls {
             self.safe_mode.as_ref().map(|field| *field)
         }
         ///Sets `safe_mode` with the provided value.
-        pub fn set_safe_mode<T: Into<bool>>(&mut self, field: T) {
-            self.safe_mode = Some(field.into().into());
+        pub fn set_safe_mode(&mut self, field: bool) {
+            self.safe_mode = Some(field);
         }
         ///Sets `safe_mode` with the provided value.
-        pub fn with_safe_mode<T: Into<bool>>(mut self, field: T) -> Self {
-            self.set_safe_mode(field.into());
+        pub fn with_safe_mode(mut self, field: bool) -> Self {
+            self.set_safe_mode(field);
             self
         }
         ///If `safe_mode_storage_rewards` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -13395,12 +13328,12 @@ mod _accessor_impls {
             self.safe_mode_storage_rewards.as_ref().map(|field| *field)
         }
         ///Sets `safe_mode_storage_rewards` with the provided value.
-        pub fn set_safe_mode_storage_rewards<T: Into<u64>>(&mut self, field: T) {
-            self.safe_mode_storage_rewards = Some(field.into().into());
+        pub fn set_safe_mode_storage_rewards(&mut self, field: u64) {
+            self.safe_mode_storage_rewards = Some(field);
         }
         ///Sets `safe_mode_storage_rewards` with the provided value.
-        pub fn with_safe_mode_storage_rewards<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_safe_mode_storage_rewards(field.into());
+        pub fn with_safe_mode_storage_rewards(mut self, field: u64) -> Self {
+            self.set_safe_mode_storage_rewards(field);
             self
         }
         ///If `safe_mode_computation_rewards` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -13417,15 +13350,12 @@ mod _accessor_impls {
             self.safe_mode_computation_rewards.as_ref().map(|field| *field)
         }
         ///Sets `safe_mode_computation_rewards` with the provided value.
-        pub fn set_safe_mode_computation_rewards<T: Into<u64>>(&mut self, field: T) {
-            self.safe_mode_computation_rewards = Some(field.into().into());
+        pub fn set_safe_mode_computation_rewards(&mut self, field: u64) {
+            self.safe_mode_computation_rewards = Some(field);
         }
         ///Sets `safe_mode_computation_rewards` with the provided value.
-        pub fn with_safe_mode_computation_rewards<T: Into<u64>>(
-            mut self,
-            field: T,
-        ) -> Self {
-            self.set_safe_mode_computation_rewards(field.into());
+        pub fn with_safe_mode_computation_rewards(mut self, field: u64) -> Self {
+            self.set_safe_mode_computation_rewards(field);
             self
         }
         ///If `safe_mode_storage_rebates` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -13442,12 +13372,12 @@ mod _accessor_impls {
             self.safe_mode_storage_rebates.as_ref().map(|field| *field)
         }
         ///Sets `safe_mode_storage_rebates` with the provided value.
-        pub fn set_safe_mode_storage_rebates<T: Into<u64>>(&mut self, field: T) {
-            self.safe_mode_storage_rebates = Some(field.into().into());
+        pub fn set_safe_mode_storage_rebates(&mut self, field: u64) {
+            self.safe_mode_storage_rebates = Some(field);
         }
         ///Sets `safe_mode_storage_rebates` with the provided value.
-        pub fn with_safe_mode_storage_rebates<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_safe_mode_storage_rebates(field.into());
+        pub fn with_safe_mode_storage_rebates(mut self, field: u64) -> Self {
+            self.set_safe_mode_storage_rebates(field);
             self
         }
         ///If `safe_mode_non_refundable_storage_fee` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -13466,18 +13396,12 @@ mod _accessor_impls {
             self.safe_mode_non_refundable_storage_fee.as_ref().map(|field| *field)
         }
         ///Sets `safe_mode_non_refundable_storage_fee` with the provided value.
-        pub fn set_safe_mode_non_refundable_storage_fee<T: Into<u64>>(
-            &mut self,
-            field: T,
-        ) {
-            self.safe_mode_non_refundable_storage_fee = Some(field.into().into());
+        pub fn set_safe_mode_non_refundable_storage_fee(&mut self, field: u64) {
+            self.safe_mode_non_refundable_storage_fee = Some(field);
         }
         ///Sets `safe_mode_non_refundable_storage_fee` with the provided value.
-        pub fn with_safe_mode_non_refundable_storage_fee<T: Into<u64>>(
-            mut self,
-            field: T,
-        ) -> Self {
-            self.set_safe_mode_non_refundable_storage_fee(field.into());
+        pub fn with_safe_mode_non_refundable_storage_fee(mut self, field: u64) -> Self {
+            self.set_safe_mode_non_refundable_storage_fee(field);
             self
         }
         ///If `epoch_start_timestamp_ms` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -13494,12 +13418,12 @@ mod _accessor_impls {
             self.epoch_start_timestamp_ms.as_ref().map(|field| *field)
         }
         ///Sets `epoch_start_timestamp_ms` with the provided value.
-        pub fn set_epoch_start_timestamp_ms<T: Into<u64>>(&mut self, field: T) {
-            self.epoch_start_timestamp_ms = Some(field.into().into());
+        pub fn set_epoch_start_timestamp_ms(&mut self, field: u64) {
+            self.epoch_start_timestamp_ms = Some(field);
         }
         ///Sets `epoch_start_timestamp_ms` with the provided value.
-        pub fn with_epoch_start_timestamp_ms<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch_start_timestamp_ms(field.into());
+        pub fn with_epoch_start_timestamp_ms(mut self, field: u64) -> Self {
+            self.set_epoch_start_timestamp_ms(field);
             self
         }
         ///Returns the value of `extra_fields`, or the default value if `extra_fields` is unset.
@@ -13614,12 +13538,12 @@ mod _accessor_impls {
             self.version.as_ref().map(|field| *field)
         }
         ///Sets `version` with the provided value.
-        pub fn set_version<T: Into<i32>>(&mut self, field: T) {
-            self.version = Some(field.into().into());
+        pub fn set_version(&mut self, field: i32) {
+            self.version = Some(field);
         }
         ///Sets `version` with the provided value.
-        pub fn with_version<T: Into<i32>>(mut self, field: T) -> Self {
-            self.set_version(field.into());
+        pub fn with_version(mut self, field: i32) -> Self {
+            self.set_version(field);
             self
         }
         ///Returns the value of `kind`, or the default value if `kind` is unset.
@@ -13829,12 +13753,12 @@ mod _accessor_impls {
             self.version.as_ref().map(|field| *field)
         }
         ///Sets `version` with the provided value.
-        pub fn set_version<T: Into<i32>>(&mut self, field: T) {
-            self.version = Some(field.into().into());
+        pub fn set_version(&mut self, field: i32) {
+            self.version = Some(field);
         }
         ///Sets `version` with the provided value.
-        pub fn with_version<T: Into<i32>>(mut self, field: T) -> Self {
-            self.set_version(field.into());
+        pub fn with_version(mut self, field: i32) -> Self {
+            self.set_version(field);
             self
         }
         ///Returns the value of `status`, or the default value if `status` is unset.
@@ -13880,12 +13804,12 @@ mod _accessor_impls {
             self.epoch.as_ref().map(|field| *field)
         }
         ///Sets `epoch` with the provided value.
-        pub fn set_epoch<T: Into<u64>>(&mut self, field: T) {
-            self.epoch = Some(field.into().into());
+        pub fn set_epoch(&mut self, field: u64) {
+            self.epoch = Some(field);
         }
         ///Sets `epoch` with the provided value.
-        pub fn with_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch(field.into());
+        pub fn with_epoch(mut self, field: u64) -> Self {
+            self.set_epoch(field);
             self
         }
         ///Returns the value of `gas_used`, or the default value if `gas_used` is unset.
@@ -14028,12 +13952,12 @@ mod _accessor_impls {
             self.lamport_version.as_ref().map(|field| *field)
         }
         ///Sets `lamport_version` with the provided value.
-        pub fn set_lamport_version<T: Into<u64>>(&mut self, field: T) {
-            self.lamport_version = Some(field.into().into());
+        pub fn set_lamport_version(&mut self, field: u64) {
+            self.lamport_version = Some(field);
         }
         ///Sets `lamport_version` with the provided value.
-        pub fn with_lamport_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_lamport_version(field.into());
+        pub fn with_lamport_version(mut self, field: u64) -> Self {
+            self.set_lamport_version(field);
             self
         }
         ///Returns the value of `changed_objects`, or the default value if `changed_objects` is unset.
@@ -14216,12 +14140,12 @@ mod _accessor_impls {
             self.epoch.as_ref().map(|field| *field)
         }
         ///Sets `epoch` with the provided value.
-        pub fn set_epoch<T: Into<u64>>(&mut self, field: T) {
-            self.epoch = Some(field.into().into());
+        pub fn set_epoch(&mut self, field: u64) {
+            self.epoch = Some(field);
         }
         ///Sets `epoch` with the provided value.
-        pub fn with_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch(field.into());
+        pub fn with_epoch(mut self, field: u64) -> Self {
+            self.set_epoch(field);
             self
         }
     }
@@ -14341,15 +14265,15 @@ mod _accessor_impls {
         }
         ///Sets `checkpointed` with the provided value.
         ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn set_checkpointed<T: Into<u64>>(&mut self, field: T) {
+        pub fn set_checkpointed(&mut self, field: u64) {
             self.finality = Some(
-                super::transaction_finality::Finality::Checkpointed(field.into().into()),
+                super::transaction_finality::Finality::Checkpointed(field),
             );
         }
         ///Sets `checkpointed` with the provided value.
         ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn with_checkpointed<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_checkpointed(field.into());
+        pub fn with_checkpointed(mut self, field: u64) -> Self {
+            self.set_checkpointed(field);
             self
         }
     }
@@ -15189,12 +15113,12 @@ mod _accessor_impls {
             self.type_argument.as_ref().map(|field| *field)
         }
         ///Sets `type_argument` with the provided value.
-        pub fn set_type_argument<T: Into<u32>>(&mut self, field: T) {
-            self.type_argument = Some(field.into().into());
+        pub fn set_type_argument(&mut self, field: u32) {
+            self.type_argument = Some(field);
         }
         ///Sets `type_argument` with the provided value.
-        pub fn with_type_argument<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_type_argument(field.into());
+        pub fn with_type_argument(mut self, field: u32) -> Self {
+            self.set_type_argument(field);
             self
         }
         ///Sets `kind` with the provided value.
@@ -15312,12 +15236,12 @@ mod _accessor_impls {
             self.is_phantom.as_ref().map(|field| *field)
         }
         ///Sets `is_phantom` with the provided value.
-        pub fn set_is_phantom<T: Into<bool>>(&mut self, field: T) {
-            self.is_phantom = Some(field.into().into());
+        pub fn set_is_phantom(&mut self, field: bool) {
+            self.is_phantom = Some(field);
         }
         ///Sets `is_phantom` with the provided value.
-        pub fn with_is_phantom<T: Into<bool>>(mut self, field: T) -> Self {
-            self.set_is_phantom(field.into());
+        pub fn with_is_phantom(mut self, field: bool) -> Self {
+            self.set_is_phantom(field);
             self
         }
     }
@@ -15379,12 +15303,12 @@ mod _accessor_impls {
             self.version.as_ref().map(|field| *field)
         }
         ///Sets `version` with the provided value.
-        pub fn set_version<T: Into<u64>>(&mut self, field: T) {
-            self.version = Some(field.into().into());
+        pub fn set_version(&mut self, field: u64) {
+            self.version = Some(field);
         }
         ///Sets `version` with the provided value.
-        pub fn with_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_version(field.into());
+        pub fn with_version(mut self, field: u64) -> Self {
+            self.set_version(field);
             self
         }
         ///If `digest` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -16359,12 +16283,12 @@ mod _accessor_impls {
             self.voting_power.as_ref().map(|field| *field)
         }
         ///Sets `voting_power` with the provided value.
-        pub fn set_voting_power<T: Into<u64>>(&mut self, field: T) {
-            self.voting_power = Some(field.into().into());
+        pub fn set_voting_power(&mut self, field: u64) {
+            self.voting_power = Some(field);
         }
         ///Sets `voting_power` with the provided value.
-        pub fn with_voting_power<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_voting_power(field.into());
+        pub fn with_voting_power(mut self, field: u64) -> Self {
+            self.set_voting_power(field);
             self
         }
         ///If `operation_cap_id` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -16403,12 +16327,12 @@ mod _accessor_impls {
             self.gas_price.as_ref().map(|field| *field)
         }
         ///Sets `gas_price` with the provided value.
-        pub fn set_gas_price<T: Into<u64>>(&mut self, field: T) {
-            self.gas_price = Some(field.into().into());
+        pub fn set_gas_price(&mut self, field: u64) {
+            self.gas_price = Some(field);
         }
         ///Sets `gas_price` with the provided value.
-        pub fn with_gas_price<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_gas_price(field.into());
+        pub fn with_gas_price(mut self, field: u64) -> Self {
+            self.set_gas_price(field);
             self
         }
         ///Returns the value of `staking_pool`, or the default value if `staking_pool` is unset.
@@ -16457,12 +16381,12 @@ mod _accessor_impls {
             self.commission_rate.as_ref().map(|field| *field)
         }
         ///Sets `commission_rate` with the provided value.
-        pub fn set_commission_rate<T: Into<u64>>(&mut self, field: T) {
-            self.commission_rate = Some(field.into().into());
+        pub fn set_commission_rate(&mut self, field: u64) {
+            self.commission_rate = Some(field);
         }
         ///Sets `commission_rate` with the provided value.
-        pub fn with_commission_rate<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_commission_rate(field.into());
+        pub fn with_commission_rate(mut self, field: u64) -> Self {
+            self.set_commission_rate(field);
             self
         }
         ///If `next_epoch_stake` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -16479,12 +16403,12 @@ mod _accessor_impls {
             self.next_epoch_stake.as_ref().map(|field| *field)
         }
         ///Sets `next_epoch_stake` with the provided value.
-        pub fn set_next_epoch_stake<T: Into<u64>>(&mut self, field: T) {
-            self.next_epoch_stake = Some(field.into().into());
+        pub fn set_next_epoch_stake(&mut self, field: u64) {
+            self.next_epoch_stake = Some(field);
         }
         ///Sets `next_epoch_stake` with the provided value.
-        pub fn with_next_epoch_stake<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_next_epoch_stake(field.into());
+        pub fn with_next_epoch_stake(mut self, field: u64) -> Self {
+            self.set_next_epoch_stake(field);
             self
         }
         ///If `next_epoch_gas_price` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -16501,12 +16425,12 @@ mod _accessor_impls {
             self.next_epoch_gas_price.as_ref().map(|field| *field)
         }
         ///Sets `next_epoch_gas_price` with the provided value.
-        pub fn set_next_epoch_gas_price<T: Into<u64>>(&mut self, field: T) {
-            self.next_epoch_gas_price = Some(field.into().into());
+        pub fn set_next_epoch_gas_price(&mut self, field: u64) {
+            self.next_epoch_gas_price = Some(field);
         }
         ///Sets `next_epoch_gas_price` with the provided value.
-        pub fn with_next_epoch_gas_price<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_next_epoch_gas_price(field.into());
+        pub fn with_next_epoch_gas_price(mut self, field: u64) -> Self {
+            self.set_next_epoch_gas_price(field);
             self
         }
         ///If `next_epoch_commission_rate` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -16523,15 +16447,12 @@ mod _accessor_impls {
             self.next_epoch_commission_rate.as_ref().map(|field| *field)
         }
         ///Sets `next_epoch_commission_rate` with the provided value.
-        pub fn set_next_epoch_commission_rate<T: Into<u64>>(&mut self, field: T) {
-            self.next_epoch_commission_rate = Some(field.into().into());
+        pub fn set_next_epoch_commission_rate(&mut self, field: u64) {
+            self.next_epoch_commission_rate = Some(field);
         }
         ///Sets `next_epoch_commission_rate` with the provided value.
-        pub fn with_next_epoch_commission_rate<T: Into<u64>>(
-            mut self,
-            field: T,
-        ) -> Self {
-            self.set_next_epoch_commission_rate(field.into());
+        pub fn with_next_epoch_commission_rate(mut self, field: u64) -> Self {
+            self.set_next_epoch_commission_rate(field);
             self
         }
         ///Returns the value of `extra_fields`, or the default value if `extra_fields` is unset.
@@ -16591,12 +16512,12 @@ mod _accessor_impls {
             self.epoch.as_ref().map(|field| *field)
         }
         ///Sets `epoch` with the provided value.
-        pub fn set_epoch<T: Into<u64>>(&mut self, field: T) {
-            self.epoch = Some(field.into().into());
+        pub fn set_epoch(&mut self, field: u64) {
+            self.epoch = Some(field);
         }
         ///Sets `epoch` with the provided value.
-        pub fn with_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch(field.into());
+        pub fn with_epoch(mut self, field: u64) -> Self {
+            self.set_epoch(field);
             self
         }
         ///If `signature` is set, returns [`Some`] with the value; otherwise returns [`None`].
@@ -16660,12 +16581,12 @@ mod _accessor_impls {
             self.epoch.as_ref().map(|field| *field)
         }
         ///Sets `epoch` with the provided value.
-        pub fn set_epoch<T: Into<u64>>(&mut self, field: T) {
-            self.epoch = Some(field.into().into());
+        pub fn set_epoch(&mut self, field: u64) {
+            self.epoch = Some(field);
         }
         ///Sets `epoch` with the provided value.
-        pub fn with_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_epoch(field.into());
+        pub fn with_epoch(mut self, field: u64) -> Self {
+            self.set_epoch(field);
             self
         }
         ///Returns the value of `members`, or the default value if `members` is unset.
@@ -16732,12 +16653,12 @@ mod _accessor_impls {
             self.weight.as_ref().map(|field| *field)
         }
         ///Sets `weight` with the provided value.
-        pub fn set_weight<T: Into<u64>>(&mut self, field: T) {
-            self.weight = Some(field.into().into());
+        pub fn set_weight(&mut self, field: u64) {
+            self.weight = Some(field);
         }
         ///Sets `weight` with the provided value.
-        pub fn with_weight<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_weight(field.into());
+        pub fn with_weight(mut self, field: u64) -> Self {
+            self.set_weight(field);
             self
         }
     }
@@ -16881,12 +16802,12 @@ mod _accessor_impls {
             self.total_stake.as_ref().map(|field| *field)
         }
         ///Sets `total_stake` with the provided value.
-        pub fn set_total_stake<T: Into<u64>>(&mut self, field: T) {
-            self.total_stake = Some(field.into().into());
+        pub fn set_total_stake(&mut self, field: u64) {
+            self.total_stake = Some(field);
         }
         ///Sets `total_stake` with the provided value.
-        pub fn with_total_stake<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_total_stake(field.into());
+        pub fn with_total_stake(mut self, field: u64) -> Self {
+            self.set_total_stake(field);
             self
         }
         ///Returns the value of `active_validators`, or the default value if `active_validators` is unset.
@@ -17168,12 +17089,12 @@ mod _accessor_impls {
             self.position.as_ref().map(|field| *field)
         }
         ///Sets `position` with the provided value.
-        pub fn set_position<T: Into<u32>>(&mut self, field: T) {
-            self.position = Some(field.into().into());
+        pub fn set_position(&mut self, field: u32) {
+            self.position = Some(field);
         }
         ///Sets `position` with the provided value.
-        pub fn with_position<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_position(field.into());
+        pub fn with_position(mut self, field: u32) -> Self {
+            self.set_position(field);
             self
         }
         ///Returns the value of `fields`, or the default value if `fields` is unset.
@@ -17337,12 +17258,12 @@ mod _accessor_impls {
             self.is_valid.as_ref().map(|field| *field)
         }
         ///Sets `is_valid` with the provided value.
-        pub fn set_is_valid<T: Into<bool>>(&mut self, field: T) {
-            self.is_valid = Some(field.into().into());
+        pub fn set_is_valid(&mut self, field: bool) {
+            self.is_valid = Some(field);
         }
         ///Sets `is_valid` with the provided value.
-        pub fn with_is_valid<T: Into<bool>>(mut self, field: T) -> Self {
-            self.set_is_valid(field.into());
+        pub fn with_is_valid(mut self, field: bool) -> Self {
+            self.set_is_valid(field);
             self
         }
         ///If `reason` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -17417,12 +17338,12 @@ mod _accessor_impls {
             self.start_version.as_ref().map(|field| *field)
         }
         ///Sets `start_version` with the provided value.
-        pub fn set_start_version<T: Into<u64>>(&mut self, field: T) {
-            self.start_version = Some(field.into().into());
+        pub fn set_start_version(&mut self, field: u64) {
+            self.start_version = Some(field);
         }
         ///Sets `start_version` with the provided value.
-        pub fn with_start_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_start_version(field.into());
+        pub fn with_start_version(mut self, field: u64) -> Self {
+            self.set_start_version(field);
             self
         }
         ///If `version` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -17439,12 +17360,12 @@ mod _accessor_impls {
             self.version.as_ref().map(|field| *field)
         }
         ///Sets `version` with the provided value.
-        pub fn set_version<T: Into<u64>>(&mut self, field: T) {
-            self.version = Some(field.into().into());
+        pub fn set_version(&mut self, field: u64) {
+            self.version = Some(field);
         }
         ///Sets `version` with the provided value.
-        pub fn with_version<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_version(field.into());
+        pub fn with_version(mut self, field: u64) -> Self {
+            self.set_version(field);
             self
         }
     }
@@ -17504,12 +17425,12 @@ mod _accessor_impls {
             self.max_epoch.as_ref().map(|field| *field)
         }
         ///Sets `max_epoch` with the provided value.
-        pub fn set_max_epoch<T: Into<u64>>(&mut self, field: T) {
-            self.max_epoch = Some(field.into().into());
+        pub fn set_max_epoch(&mut self, field: u64) {
+            self.max_epoch = Some(field);
         }
         ///Sets `max_epoch` with the provided value.
-        pub fn with_max_epoch<T: Into<u64>>(mut self, field: T) -> Self {
-            self.set_max_epoch(field.into());
+        pub fn with_max_epoch(mut self, field: u64) -> Self {
+            self.set_max_epoch(field);
             self
         }
         ///Returns the value of `signature`, or the default value if `signature` is unset.
@@ -17593,12 +17514,12 @@ mod _accessor_impls {
             self.index_mod_4.as_ref().map(|field| *field)
         }
         ///Sets `index_mod_4` with the provided value.
-        pub fn set_index_mod_4<T: Into<u32>>(&mut self, field: T) {
-            self.index_mod_4 = Some(field.into().into());
+        pub fn set_index_mod_4(&mut self, field: u32) {
+            self.index_mod_4 = Some(field);
         }
         ///Sets `index_mod_4` with the provided value.
-        pub fn with_index_mod_4<T: Into<u32>>(mut self, field: T) -> Self {
-            self.set_index_mod_4(field.into());
+        pub fn with_index_mod_4(mut self, field: u32) -> Self {
+            self.set_index_mod_4(field);
             self
         }
     }

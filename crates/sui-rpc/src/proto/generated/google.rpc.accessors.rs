@@ -685,12 +685,12 @@ mod _accessor_impls {
             &mut self.code
         }
         ///Sets `code` with the provided value.
-        pub fn set_code<T: Into<i32>>(&mut self, field: T) {
-            self.code = field.into().into();
+        pub fn set_code(&mut self, field: i32) {
+            self.code = field;
         }
         ///Sets `code` with the provided value.
-        pub fn with_code<T: Into<i32>>(mut self, field: T) -> Self {
-            self.set_code(field.into());
+        pub fn with_code(mut self, field: i32) -> Self {
+            self.set_code(field);
             self
         }
         ///Returns a mutable reference to `message`.

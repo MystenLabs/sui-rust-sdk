@@ -212,6 +212,34 @@ fn generate_accessors_functions_for_field(
             "If any other oneof field in the same oneof is set, it will be cleared.".to_owned(),
         );
 
+        let setters = if use_into_for_setter(field) {
+            quote! {
+                #( #[doc = #set_name_comments] )*
+                pub fn #set_name<T: Into<#field_type_path>>(&mut self, field: T) {
+                    self.#oneof_field = Some(#oneof_type_path::#variant(field.into().into()));
+                }
+
+                #( #[doc = #set_name_comments] )*
+                pub fn #with_name<T: Into<#field_type_path>>(mut self, field: T) -> Self {
+                    self.#set_name(field.into());
+                    self
+                }
+            }
+        } else {
+            quote! {
+                #( #[doc = #set_name_comments] )*
+                pub fn #set_name(&mut self, field: #field_type_path) {
+                    self.#oneof_field = Some(#oneof_type_path::#variant(field));
+                }
+
+                #( #[doc = #set_name_comments] )*
+                pub fn #with_name(mut self, field: #field_type_path) -> Self {
+                    self.#set_name(field);
+                    self
+                }
+            }
+        };
+
         quote! {
             #( #[doc = #name_comments] )*
             pub fn #name(&self) -> #ref_return_type {
@@ -248,20 +276,11 @@ fn generate_accessors_functions_for_field(
                 self.#name_opt_mut().unwrap()
             }
 
-            //TODO need to change this to not have an Into bound for numbers
-            #( #[doc = #set_name_comments] )*
-            pub fn #set_name<T: Into<#field_type_path>>(&mut self, field: T) {
-                self.#oneof_field = Some(#oneof_type_path::#variant(field.into().into()));
-            }
-
-            #( #[doc = #set_name_comments] )*
-            pub fn #with_name<T: Into<#field_type_path>>(mut self, field: T) -> Self {
-                self.#set_name(field.into());
-                self
-            }
+            #setters
         }
     } else if field.is_optional() {
         let mut accessors = TokenStream::new();
+        let mut setters = TokenStream::new();
 
         // only include "bare getter" for message types
         if field.is_message() && !field.is_well_known_type() {
@@ -303,10 +322,41 @@ fn generate_accessors_functions_for_field(
                         .as_ref()
                         .map(|field| #field_as)
                 }
+            });
+        }
 
+        if use_into_for_setter(field) {
+            if !matches!(field.inner.r#type(), Type::Enum) {
+                setters.extend(quote! {
+                    #( #[doc = #set_name_comments] )*
+                    pub fn #set_name<T: Into<#field_type_path>>(&mut self, field: T) {
+                        self.#name = Some(field.into().into());
+                    }
+                });
+            }
+
+            setters.extend(quote! {
                 #( #[doc = #set_name_comments] )*
-                pub fn #set_name<T: Into<#field_type_path>>(&mut self, field: T) {
-                    self.#name = Some(field.into().into());
+                pub fn #with_name<T: Into<#field_type_path>>(mut self, field: T) -> Self {
+                    self.#set_name(field.into());
+                    self
+                }
+            });
+        } else {
+            if !matches!(field.inner.r#type(), Type::Enum) {
+                setters.extend(quote! {
+                    #( #[doc = #set_name_comments] )*
+                    pub fn #set_name(&mut self, field: #field_type_path) {
+                        self.#name = Some(field);
+                    }
+                });
+            }
+
+            setters.extend(quote! {
+                #( #[doc = #set_name_comments] )*
+                pub fn #with_name(mut self, field: #field_type_path) -> Self {
+                    self.#set_name(field);
+                    self
                 }
             });
         }
@@ -314,11 +364,7 @@ fn generate_accessors_functions_for_field(
         quote! {
             #accessors
 
-            #( #[doc = #set_name_comments] )*
-            pub fn #with_name<T: Into<#field_type_path>>(mut self, field: T) -> Self {
-                self.#set_name(field.into());
-                self
-            }
+            #setters
         }
     } else {
         // maybe required or implicit optional
@@ -333,20 +379,38 @@ fn generate_accessors_functions_for_field(
                 }
             });
         }
+        let setters = if use_into_for_setter(field) {
+            quote! {
+                #( #[doc = #set_name_comments] )*
+                pub fn #set_name<T: Into<#field_type_path>>(&mut self, field: T) {
+                    self.#name = field.into().into();
+                }
+
+                #( #[doc = #set_name_comments] )*
+                pub fn #with_name<T: Into<#field_type_path>>(mut self, field: T) -> Self {
+                    self.#set_name(field.into());
+                    self
+                }
+            }
+        } else {
+            quote! {
+                #( #[doc = #set_name_comments] )*
+                pub fn #set_name(&mut self, field: #field_type_path) {
+                    self.#name = field;
+                }
+
+                #( #[doc = #set_name_comments] )*
+                pub fn #with_name(mut self, field: #field_type_path) -> Self {
+                    self.#set_name(field);
+                    self
+                }
+            }
+        };
 
         quote! {
             #accessors
 
-            #( #[doc = #set_name_comments] )*
-            pub fn #set_name<T: Into<#field_type_path>>(&mut self, field: T) {
-                self.#name = field.into().into();
-            }
-
-            #( #[doc = #set_name_comments] )*
-            pub fn #with_name<T: Into<#field_type_path>>(mut self, field: T) -> Self {
-                self.#set_name(field.into());
-                self
-            }
+            #setters
         }
     }
 }
@@ -485,6 +549,22 @@ fn is_ref_return(field: &Field) -> bool {
         Type::Int32 | Type::Sfixed32 | Type::Sint32 | Type::Enum => false,
         Type::Int64 | Type::Sfixed64 | Type::Sint64 => false,
         Type::Bool => false,
+        Type::String => true,
+        Type::Bytes => true,
+        Type::Group | Type::Message => true,
+    }
+}
+
+fn use_into_for_setter(field: &Field) -> bool {
+    match field.inner.r#type() {
+        Type::Float => false,
+        Type::Double => false,
+        Type::Uint32 | Type::Fixed32 => false,
+        Type::Uint64 | Type::Fixed64 => false,
+        Type::Int32 | Type::Sfixed32 | Type::Sint32 => false,
+        Type::Int64 | Type::Sfixed64 | Type::Sint64 => false,
+        Type::Bool => false,
+        Type::Enum => true,
         Type::String => true,
         Type::Bytes => true,
         Type::Group | Type::Message => true,
