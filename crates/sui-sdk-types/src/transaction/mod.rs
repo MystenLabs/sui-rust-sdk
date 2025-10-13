@@ -278,6 +278,9 @@ pub enum EndOfEpochTransactionKind {
 
     /// Create and initialize the coin metadata registry object
     CoinRegistryCreate,
+
+    /// Create and initialize the display metadata registry object
+    DisplayRegistryCreate,
 }
 
 /// Set of Execution Time Observations from the committee.

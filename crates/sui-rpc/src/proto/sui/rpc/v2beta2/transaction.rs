@@ -1130,6 +1130,7 @@ impl From<sui_sdk_types::EndOfEpochTransactionKind> for EndOfEpochTransactionKin
             }
             K::AccumulatorRootCreate => Kind::AccumulatorRootCreate(()),
             K::CoinRegistryCreate => Kind::CoinRegistryCreate(()),
+            K::DisplayRegistryCreate => Kind::DisplayRegistryCreate(()),
             _ => return Self::default(),
         };
 
@@ -1171,6 +1172,7 @@ impl TryFrom<&EndOfEpochTransactionKind> for sui_sdk_types::EndOfEpochTransactio
             }
             Kind::AccumulatorRootCreate(()) => Self::AccumulatorRootCreate,
             Kind::CoinRegistryCreate(()) => Self::CoinRegistryCreate,
+            Kind::DisplayRegistryCreate(()) => Self::DisplayRegistryCreate,
         }
         .pipe(Ok)
     }

@@ -462,6 +462,9 @@ message EndOfEpochTransactionKind {
 
     // Create and initialize the Coin Registry object.
     COIN_REGISTRY_CREATE = 10;
+
+    // Create and initialize the Display Registry object.
+    DISPLAY_REGISTRY_CREATE = 11;
   }
 
   optional Kind kind = 1;
