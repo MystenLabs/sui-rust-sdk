@@ -225,7 +225,7 @@ impl ZkLoginClaim {
         /// Convert a bitarray (each bit is represented by a u8) to a byte array by taking each 8 bits as a
         /// byte in big-endian format.
         fn bitarray_to_bytearray(bits: &[u8]) -> Result<Vec<u8>, InvalidZkLoginAuthenticatorError> {
-            if !bits.len().is_multiple_of(8) {
+            if bits.len() % 8 != 0 {
                 return Err(InvalidZkLoginAuthenticatorError::new(
                     "bitarray_to_bytearray invalid input",
                 ));
