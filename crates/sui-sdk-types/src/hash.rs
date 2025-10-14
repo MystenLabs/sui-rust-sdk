@@ -26,7 +26,7 @@ impl Hasher {
         let mut buf = [0; Digest::LENGTH];
         let result = self.0.finalize();
 
-        buf.copy_from_slice(result.as_slice());
+        buf.copy_from_slice(result.as_ref());
 
         Digest::new(buf)
     }
