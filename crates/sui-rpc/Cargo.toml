@@ -31,9 +31,10 @@ sui-sdk-types = { version = "0.0.8", path = "../sui-sdk-types", default-features
 
 # dependencies for the protobuf and gRPC definitions
 bytes = "1.9"
-tonic = { version = "0.13", default-features = false, features = ["channel", "codegen", "prost", "tls-ring", "tls-webpki-roots", "zstd"] }
-prost = "0.13.4"
-prost-types = "0.13.3"
+tonic = { version = "0.14.2", default-features = false, features = ["channel", "codegen", "tls-ring", "tls-webpki-roots", "zstd"] }
+tonic-prost = "0.14.2"
+prost = "0.14.1"
+prost-types = "0.14.1"
 tap = "1"
 base64 = "0.22.1"
 serde_json = "1.0.140"
