@@ -55,10 +55,10 @@ fn main() {
     // Sort files by name to have deterministic codegen output
     fds.file.sort_by(|a, b| a.name.cmp(&b.name));
 
-    if let Err(error) = tonic_build::configure()
+    if let Err(error) = tonic_prost_build::configure()
         .build_client(true)
         .build_server(true)
-        .bytes(["."])
+        .bytes(".")
         .boxed(".sui.rpc.v2beta2.Input.literal")
         .boxed(".sui.rpc.v2beta2.Epoch.system_state")
         .boxed(".sui.rpc.v2.Input.literal")
@@ -66,7 +66,7 @@ fn main() {
         .boxed("json")
         .message_attribute(".sui.rpc", "#[non_exhaustive]")
         .enum_attribute(".sui.rpc", "#[non_exhaustive]")
-        .btree_map(["."])
+        .btree_map(".")
         .out_dir(&out_dir)
         .compile_fds(fds.clone())
     {
