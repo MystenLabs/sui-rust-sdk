@@ -325,14 +325,7 @@ mod test {
         let raw = "OjAAAAoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWAAAAFoAAABcAAAAXgAAAGAAAABiAAAAZAAAAGYAAABoAAAAagAAAAEAAQABAAEAAQABAAEAAQABAAEA";
         let bytes = base64ct::Base64::decode_vec(raw).unwrap();
 
-        let rb = roaring::RoaringBitmap::deserialize_from(&bytes[..]).unwrap();
-        assert_eq!(rb.len(), 10);
-        let bitmap_values: Vec<u32> = rb.iter().collect();
-        assert_eq!(bitmap_values, vec![1; 10]);
-
-        let bitmap = Bitmap::deserialize_from(&bytes[..]).unwrap();
-        assert_eq!(bitmap.len(), 1);
-        let bitmap_values: Vec<u32> = bitmap.iter().collect();
-        assert_eq!(bitmap_values, vec![1]);
+        roaring::RoaringBitmap::deserialize_from(&bytes[..]).unwrap_err();
+        Bitmap::deserialize_from(&bytes[..]).unwrap_err();
     }
 }

@@ -61,13 +61,13 @@ sui-sdk-types = { version = "0.0.8", path = "../sui-sdk-types", default-features
 rand_core = { version = "0.6.4", optional = true }
 
 # ed25519 support
-ed25519-dalek = { version = "2.1.1", optional = true }
+ed25519-dalek = { version = "2.2.0", optional = true }
 
 # secp256r1 support
 p256 = { version = "0.13.2", default-features = false, features = ["ecdsa", "std"], optional = true }
 
 # passkey verification support
-sha2 = { version = "0.10.8", optional = true }
+sha2 = { version = "0.10.9", optional = true }
 
 # secp256k1 support
 k256 = { version = "0.13.4", default-features = false, features = ["ecdsa"], optional = true }
@@ -78,12 +78,12 @@ ark-ff = { version = "0.4.2", features = ["asm"], optional = true }
 ark-groth16 = { version = "0.4.0", default-features = false, optional = true }
 ark-snark = { version = "0.4.0", optional = true }
 ark-std = { version = "0.4.0", optional = true }
-base64ct = { version = "1.6.0", features = ["alloc"], optional = true }
-bnum = { version = "0.12.0", optional = true }
-itertools = { version = "0.13.0", optional = true }
-serde = { version = "1.0.210", optional = true }
-serde_derive = { version = "1.0.210", optional = true }
-serde_json = { version = "1.0.128", optional = true }
+base64ct = { version = "1.8.0", features = ["alloc"], optional = true }
+bnum = { version = "0.13.0", optional = true }
+itertools = { version = "0.14.0", optional = true }
+serde = { version = "1.0.228", optional = true }
+serde_derive = { version = "1.0.228", optional = true }
+serde_json = { version = "1.0.145", optional = true }
 
 # pkcs8 der and pem support
 pkcs8 = { version = "0.10", optional = true, features = ["std"] }
@@ -94,11 +94,11 @@ blst = { version = "0.3.13", optional = true }
 
 [dev-dependencies]
 bcs = { version = "0.1.6" }
-serde_json = { version = "1.0.128" }
+serde_json = { version = "1.0.145" }
 
 # proptest support in tests
-proptest = { version = "1.6.0", default-features = false, features = ["std"] }
-test-strategy = "0.4.0"
+proptest = { version = "1.8.0", default-features = false, features = ["std"] }
+test-strategy = "0.4"
 sui-sdk-types = { version = "0.0.8", path = "../sui-sdk-types", default-features = false, features = ["proptest"] }
 
 [target.wasm32-unknown-unknown.dev-dependencies]

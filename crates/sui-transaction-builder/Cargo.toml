@@ -7,13 +7,13 @@ edition = "2021"
 description = "Transaction API for the Rust SDK for the Sui Blockchain"
 
 [dependencies]
-base64ct = { version = "1.6", features = ["std"] }
+base64ct = { version = "1.8", features = ["std"] }
 bcs = "0.1.6"
 serde = { version = "1.0", features = ["derive"] }
-serde_with = { version = "3.9", default-features = false, features = ["alloc"] }
+serde_with = { version = "3.15", default-features = false, features = ["alloc"] }
 sui-types = { package = "sui-sdk-types", version = "0.0.8", path = "../sui-sdk-types", features = ["serde", "hash"] }
 thiserror = "2.0"
-serde_json = { version = "1.0.128" }
+serde_json = { version = "1.0.145" }
 
 # [dev-dependencies]
 # anyhow = "1.0"

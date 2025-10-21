@@ -29,21 +29,21 @@ hash = ["dep:blake2"]
 proptest = ["dep:proptest", "dep:test-strategy", "serde"]
 
 [dependencies]
-base64ct = { version = "1.6.0", features = ["alloc"] }
-bnum = "0.12.0"
+base64ct = { version = "1.8.0", features = ["alloc"] }
+bnum = "0.13.0"
 bs58 = "0.5.1"
 bytes = { version = "1", default-features = false }
 bytestring = { version = "1", default-features = false }
-roaring = { version = "0.10.9", default-features = false }
+roaring = { version = "0.11.2", default-features = false }
 winnow = "0.7"
 
 # Serialization and Deserialization support
-serde = { version = "1.0.210", optional = true }
-serde_derive = { version = "1.0.210", optional = true }
-serde_with = { version = "3.9", default-features = false, features = ["alloc"], optional = true }
+serde = { version = "1.0.228", optional = true }
+serde_derive = { version = "1.0.228", optional = true }
+serde_with = { version = "3.15", default-features = false, features = ["alloc"], optional = true }
 bcs = { version = "0.1.6", optional = true }
-serde_json = { version = "1.0.128", optional = true }
-itertools = { version = "0.13.0", optional = true }
+serde_json = { version = "1.0.145", optional = true }
+itertools = { version = "0.14.0", optional = true }
 
 # RNG support
 rand_core = { version = "0.6.4", optional = true }
@@ -52,12 +52,12 @@ rand_core = { version = "0.6.4", optional = true }
 blake2 = { version = "0.10.6", optional = true }
 
 # proptest support
-proptest = { version = "1.6.0", default-features = false, features = ["std"], optional = true }
+proptest = { version = "1.8.0", default-features = false, features = ["std"], optional = true }
 test-strategy = { version = "0.4", optional = true }
 
 [dev-dependencies]
 bcs = "0.1.6"
-serde_json = "1.0.128"
+serde_json = "1.0.145"
 num-bigint = "0.4.6"
 paste = "1.0.15"
 
