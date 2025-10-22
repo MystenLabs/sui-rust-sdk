@@ -312,7 +312,7 @@ impl TryFrom<&CheckpointCommitment> for sui_sdk_types::CheckpointCommitment {
                 return Err(TryFromProtoError::invalid(
                     CheckpointCommitment::KIND_FIELD,
                     "unknown CheckpointCommitmentKind",
-                ))
+                ));
             }
             CheckpointCommitmentKind::EcmhLiveObjectSet => Self::EcmhLiveObjectSet {
                 digest: value.digest().parse().map_err(|e| {

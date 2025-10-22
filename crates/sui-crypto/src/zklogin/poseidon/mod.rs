@@ -7,8 +7,8 @@
 
 use ark_bn254::Fr;
 use ark_ff::fields::Field;
-use ark_std::str::FromStr;
 use ark_std::Zero;
+use ark_std::str::FromStr;
 use core::ops::AddAssign;
 use core::ops::MulAssign;
 

@@ -340,7 +340,7 @@ impl MultisigAggregator {
             Entry::Occupied(_) => {
                 return Err(SignatureError::from_source(
                     "duplicate signature from same committee member",
-                ))
+                ));
             }
         }
 

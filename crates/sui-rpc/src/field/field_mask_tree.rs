@@ -1,8 +1,8 @@
-use super::is_valid_path;
-use super::FieldMaskUtil;
 use super::FIELD_PATH_SEPARATOR;
 use super::FIELD_PATH_WILDCARD;
 use super::FIELD_SEPARATOR;
+use super::FieldMaskUtil;
+use super::is_valid_path;
 
 use prost_types::FieldMask;
 use std::collections::BTreeMap;

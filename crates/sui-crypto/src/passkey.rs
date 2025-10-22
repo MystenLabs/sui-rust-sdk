@@ -1,5 +1,5 @@
-use crate::secp256r1::Secp256r1VerifyingKey;
 use crate::SignatureError;
+use crate::secp256r1::Secp256r1VerifyingKey;
 use signature::Verifier;
 use sui_sdk_types::PasskeyAuthenticator;
 use sui_sdk_types::SimpleSignature;

@@ -554,7 +554,7 @@ impl TryFrom<&Owner> for sui_sdk_types::Owner {
                 return Err(TryFromProtoError::invalid(
                     Owner::KIND_FIELD,
                     "unknown OwnerKind",
-                ))
+                ));
             }
             OwnerKind::Address => Self::Address(
                 value

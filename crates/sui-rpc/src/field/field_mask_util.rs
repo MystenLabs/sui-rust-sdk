@@ -1,9 +1,9 @@
-use super::FieldMaskTree;
-use super::MessageField;
-use super::MessageFields;
 use super::FIELD_PATH_SEPARATOR;
 use super::FIELD_PATH_WILDCARD;
 use super::FIELD_SEPARATOR;
+use super::FieldMaskTree;
+use super::MessageField;
+use super::MessageFields;
 
 use prost_types::FieldMask;
 
@@ -127,9 +127,11 @@ mod tests {
 
     #[test]
     fn test_to_string() {
-        assert!(FieldMask::display(&FieldMask::default())
-            .to_string()
-            .is_empty());
+        assert!(
+            FieldMask::display(&FieldMask::default())
+                .to_string()
+                .is_empty()
+        );
 
         let mask = FieldMask::from_paths(["foo"]);
         assert_eq!(FieldMask::display(&mask).to_string(), "foo");

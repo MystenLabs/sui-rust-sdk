@@ -2,7 +2,6 @@ use prost_types::FieldMask;
 use sui_sdk_types::Address;
 
 use crate::field::FieldMaskUtil;
-use crate::proto::sui::rpc::v2beta2::simulate_transaction_request::TransactionChecks;
 use crate::proto::sui::rpc::v2beta2::Argument;
 use crate::proto::sui::rpc::v2beta2::GetObjectRequest;
 use crate::proto::sui::rpc::v2beta2::Input;
@@ -12,6 +11,7 @@ use crate::proto::sui::rpc::v2beta2::Object;
 use crate::proto::sui::rpc::v2beta2::ProgrammableTransaction;
 use crate::proto::sui::rpc::v2beta2::SimulateTransactionRequest;
 use crate::proto::sui::rpc::v2beta2::Transaction;
+use crate::proto::sui::rpc::v2beta2::simulate_transaction_request::TransactionChecks;
 
 use super::Client;
 use super::Result;

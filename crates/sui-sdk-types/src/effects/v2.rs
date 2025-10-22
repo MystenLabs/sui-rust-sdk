@@ -1,10 +1,10 @@
-use crate::execution_status::ExecutionStatus;
-use crate::object::Owner;
-use crate::object::Version;
 use crate::Address;
 use crate::Digest;
 use crate::EpochId;
 use crate::GasCostSummary;
+use crate::execution_status::ExecutionStatus;
+use crate::object::Owner;
+use crate::object::Version;
 
 /// Version 2 of TransactionEffects
 ///

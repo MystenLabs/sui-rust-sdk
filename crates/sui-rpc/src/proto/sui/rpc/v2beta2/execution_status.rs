@@ -574,7 +574,7 @@ impl TryFrom<&CommandArgumentError> for sui_sdk_types::CommandArgumentError {
                 return Err(TryFromProtoError::invalid(
                     CommandArgumentError::KIND_FIELD,
                     "unknown CommandArgumentErrorKind",
-                ))
+                ));
             }
             K::TypeMismatch => Self::TypeMismatch,
             K::InvalidBcsBytes => Self::InvalidBcsBytes,
@@ -653,7 +653,7 @@ impl TryFrom<type_argument_error::TypeArgumentErrorKind> for sui_sdk_types::Type
                 return Err(TryFromProtoError::invalid(
                     "kind",
                     "unknown TypeArgumentErrorKind",
-                ))
+                ));
             }
             K::TypeNotFound => Self::TypeNotFound,
             K::ConstraintNotSatisfied => Self::ConstraintNotSatisfied,
@@ -718,7 +718,7 @@ impl TryFrom<&PackageUpgradeError> for sui_sdk_types::PackageUpgradeError {
                 return Err(TryFromProtoError::invalid(
                     PackageUpgradeError::KIND_FIELD,
                     "unknown PackageUpgradeErrorKind",
-                ))
+                ));
             }
             K::UnableToFetchPackage => Self::UnableToFetchPackage {
                 package_id: value

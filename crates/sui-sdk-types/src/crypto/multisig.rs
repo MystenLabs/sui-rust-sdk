@@ -1,5 +1,3 @@
-use super::zklogin::ZkLoginAuthenticator;
-use super::zklogin::ZkLoginPublicIdentifier;
 use super::Ed25519PublicKey;
 use super::Ed25519Signature;
 use super::PasskeyAuthenticator;
@@ -9,6 +7,8 @@ use super::Secp256k1Signature;
 use super::Secp256r1PublicKey;
 use super::Secp256r1Signature;
 use super::SignatureScheme;
+use super::zklogin::ZkLoginAuthenticator;
+use super::zklogin::ZkLoginPublicIdentifier;
 
 pub type WeightUnit = u8;
 pub type ThresholdUnit = u16;
@@ -340,13 +340,13 @@ pub enum MultisigMemberSignature {
 #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
 mod serialization {
     use super::*;
-    use crate::crypto::Base64Array33;
-    use crate::crypto::Base64Array34;
     use crate::Ed25519PublicKey;
     use crate::PasskeyPublicKey;
     use crate::Secp256k1PublicKey;
     use crate::Secp256r1PublicKey;
     use crate::SignatureScheme;
+    use crate::crypto::Base64Array33;
+    use crate::crypto::Base64Array34;
     use base64ct::Base64;
     use base64ct::Encoding;
     use serde::Deserialize;

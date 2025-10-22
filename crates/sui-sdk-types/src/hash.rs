@@ -59,9 +59,9 @@ impl crate::Ed25519PublicKey {
     /// `hash( 0x00 || 32-byte ed25519 public key)`
     ///
     /// ```
-    /// use sui_sdk_types::hash::Hasher;
     /// use sui_sdk_types::Address;
     /// use sui_sdk_types::Ed25519PublicKey;
+    /// use sui_sdk_types::hash::Hasher;
     ///
     /// let public_key_bytes = [0; 32];
     /// let mut hasher = Hasher::new();
@@ -95,9 +95,9 @@ impl crate::Secp256k1PublicKey {
     /// `hash( 0x01 || 33-byte secp256k1 public key)`
     ///
     /// ```
-    /// use sui_sdk_types::hash::Hasher;
     /// use sui_sdk_types::Address;
     /// use sui_sdk_types::Secp256k1PublicKey;
+    /// use sui_sdk_types::hash::Hasher;
     ///
     /// let public_key_bytes = [0; 33];
     /// let mut hasher = Hasher::new();
@@ -131,9 +131,9 @@ impl crate::Secp256r1PublicKey {
     /// `hash( 0x02 || 33-byte secp256r1 public key)`
     ///
     /// ```
-    /// use sui_sdk_types::hash::Hasher;
     /// use sui_sdk_types::Address;
     /// use sui_sdk_types::Secp256r1PublicKey;
+    /// use sui_sdk_types::hash::Hasher;
     ///
     /// let public_key_bytes = [0; 33];
     /// let mut hasher = Hasher::new();
@@ -437,7 +437,6 @@ mod type_digest {
 #[cfg(feature = "serde")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
 mod signing_message {
-    use crate::hash::Hasher;
     use crate::Digest;
     use crate::Intent;
     use crate::IntentAppId;
@@ -446,6 +445,7 @@ mod signing_message {
     use crate::PersonalMessage;
     use crate::SigningDigest;
     use crate::Transaction;
+    use crate::hash::Hasher;
 
     impl Transaction {
         pub fn signing_digest(&self) -> SigningDigest {
