@@ -482,13 +482,13 @@ impl TryFrom<&SimpleSignature> for sui_sdk_types::SimpleSignature {
     type Error = TryFromProtoError;
 
     fn try_from(value: &SimpleSignature) -> Result<Self, Self::Error> {
+        use SignatureScheme;
         use sui_sdk_types::Ed25519PublicKey;
         use sui_sdk_types::Ed25519Signature;
         use sui_sdk_types::Secp256k1PublicKey;
         use sui_sdk_types::Secp256k1Signature;
         use sui_sdk_types::Secp256r1PublicKey;
         use sui_sdk_types::Secp256r1Signature;
-        use SignatureScheme;
 
         let scheme = value
             .scheme
@@ -533,7 +533,7 @@ impl TryFrom<&SimpleSignature> for sui_sdk_types::SimpleSignature {
                 return Err(TryFromProtoError::invalid(
                     SimpleSignature::SCHEME_FIELD,
                     "invalid or unknown signature scheme",
-                ))
+                ));
             }
         }
         .pipe(Ok)
@@ -663,7 +663,7 @@ impl TryFrom<&MultisigMemberPublicKey> for sui_sdk_types::MultisigMemberPublicKe
                 return Err(TryFromProtoError::invalid(
                     MultisigMemberPublicKey::SCHEME_FIELD,
                     "invalid MultisigMemberPublicKey scheme",
-                ))
+                ));
             }
         }
         .pipe(Ok)
@@ -815,7 +815,7 @@ impl TryFrom<&MultisigMemberSignature> for sui_sdk_types::MultisigMemberSignatur
                 return Err(TryFromProtoError::invalid(
                     MultisigMemberSignature::SCHEME_FIELD,
                     "invalid MultisigMemberSignature scheme",
-                ))
+                ));
             }
         }
         .pipe(Ok)
@@ -991,7 +991,7 @@ impl TryFrom<&UserSignature> for sui_sdk_types::UserSignature {
                 return Err(TryFromProtoError::invalid(
                     "signature",
                     "invalid or unknown signature scheme",
-                ))
+                ));
             }
         }
         .pipe(Ok)

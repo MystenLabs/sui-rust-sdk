@@ -312,10 +312,11 @@ const fn hex_address_bytes(bytes: &[u8]) -> Result<[u8; Address::LENGTH], HexDec
 
 /// Removes initial "0x" prefix if any.
 const fn remove_0x_prefix(hex: &[u8]) -> &[u8] {
-    if let Some((two, hex2)) = hex.split_first_chunk::<2>() {
-        if two[0] == b'0' && two[1] == b'x' {
-            return hex2;
-        }
+    if let Some((two, hex2)) = hex.split_first_chunk::<2>()
+        && two[0] == b'0'
+        && two[1] == b'x'
+    {
+        return hex2;
     }
     hex
 }

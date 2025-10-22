@@ -1,6 +1,6 @@
-use super::base64;
 use super::BytesDeserialize;
 use super::NumberDeserialize;
+use super::base64;
 use prost_types::Any;
 use prost_types::Duration;
 use prost_types::FieldMask;
@@ -328,7 +328,7 @@ impl serde::Serialize for FieldMaskSerializer<'_> {
                     'A'..='Z' => {
                         return Err(<S::Error as serde::ser::Error>::custom(
                             "field mask element may not have upper-case letters",
-                        ))
+                        ));
                     }
                     '_' => {
                         let Some(next_chr) =
@@ -428,7 +428,7 @@ impl<'de> serde::Deserialize<'de> for FieldMaskDeserializer {
                             _ => {
                                 return Err(
                                     "field mask element may not contain non ascii alphabetic letters or digits",
-                                )
+                                );
                             }
                         }
                     }

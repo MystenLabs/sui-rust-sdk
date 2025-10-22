@@ -3,7 +3,7 @@ name = "sui-transaction-builder"
 version = "0.0.8"
 authors = ["Stefan Stanciulescu <stefan@mystenlabs.com>", "Brandon Williams <brandon@mystenlabs.com>"]
 license = "Apache-2.0"
-edition = "2021"
+edition = "2024"
 description = "Transaction API for the Rust SDK for the Sui Blockchain"
 
 [dependencies]

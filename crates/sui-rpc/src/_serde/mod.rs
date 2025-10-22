@@ -6,12 +6,12 @@ pub use well_known_types::*;
 /// Re-export base64
 pub use base64;
 
+use base64::Engine;
 use base64::engine::DecodePaddingMode;
 use base64::engine::GeneralPurpose;
 use base64::engine::GeneralPurposeConfig;
-use base64::Engine;
-use serde::de::Visitor;
 use serde::Deserialize;
+use serde::de::Visitor;
 use std::borrow::Cow;
 use std::str::FromStr;
 
@@ -112,7 +112,7 @@ mod tests {
         for _ in 0..20 {
             let mut rng = thread_rng();
             let len = rng.gen_range(50..100);
-            let raw: Vec<_> = std::iter::from_fn(|| Some(rng.gen())).take(len).collect();
+            let raw: Vec<_> = std::iter::from_fn(|| Some(rng.r#gen())).take(len).collect();
 
             for config in [
                 base64::engine::general_purpose::STANDARD,

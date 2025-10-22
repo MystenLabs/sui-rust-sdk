@@ -3,7 +3,6 @@ use sui_sdk_types::Address;
 
 use crate::client::DelegatedStake;
 use crate::field::FieldMaskUtil;
-use crate::proto::sui::rpc::v2::simulate_transaction_request::TransactionChecks;
 use crate::proto::sui::rpc::v2::Argument;
 use crate::proto::sui::rpc::v2::GetObjectRequest;
 use crate::proto::sui::rpc::v2::Input;
@@ -13,6 +12,7 @@ use crate::proto::sui::rpc::v2::Object;
 use crate::proto::sui::rpc::v2::ProgrammableTransaction;
 use crate::proto::sui::rpc::v2::SimulateTransactionRequest;
 use crate::proto::sui::rpc::v2::Transaction;
+use crate::proto::sui::rpc::v2::simulate_transaction_request::TransactionChecks;
 
 use super::Client;
 use super::Result;

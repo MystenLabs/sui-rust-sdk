@@ -286,8 +286,8 @@ mod serialization {
                 where
                     S: Serializer,
                 {
-                    let mut seq = serializer.serialize_seq(Some(self.0 .0.len()))?;
-                    for txn in &self.0 .0 {
+                    let mut seq = serializer.serialize_seq(Some(self.0.0.len()))?;
+                    for txn in &self.0.0 {
                         let digests = Digests {
                             transaction: &txn.transaction,
                             effects: &txn.effects,
@@ -304,8 +304,8 @@ mod serialization {
                 where
                     S: Serializer,
                 {
-                    let mut seq = serializer.serialize_seq(Some(self.0 .0.len()))?;
-                    for txn in &self.0 .0 {
+                    let mut seq = serializer.serialize_seq(Some(self.0.0.len()))?;
+                    for txn in &self.0.0 {
                         seq.serialize_element(&txn.signatures)?;
                     }
                     seq.end()
@@ -388,7 +388,7 @@ mod serialization {
             const FIXTURES: &[&str] = &[
                 "CgAAAAAAAAAUAAAAAAAAABUAAAAAAAAAIJ6CIMG/6Un4MKNM8h+R9r8bQ6dNTk0WZxBMUQH1XFQBASCWUVucdQkje+4YbXVpvQZcg74nndL1NK7ccj1dDR04agAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACwAAAAAAAAAAAAAKAAAAAAAAAKOonlp6Vf8dJEjQYa/VyigZruaZwSwu3u/ZZVCsdrS1iaGPIAERZcNnfM75tOh10hI6MAAAAQAAAAAAAAAQAAAAAAA=",
                 "AgAAAAAAAAAFAAAAAAAAAAYAAAAAAAAAIINaPEm+WRQV2vGcPR9fe6fYhxl48GpqB+DqDYQqRHkuASBe+6BDLHSRCMiWqBkvVMqWXPWUsZnpc2gbOVdre3vnowAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwAAAAAAAAAAAQFgqGJldzxWMt2CZow1QiLmDf0RdLE6udu0bVdc1xaExX37NByF27rDH5C1DF+mkpLdA6YZnXMvuUw+zoWo71qe2DTdIDU4AcNaSUE3OoEHceuT+fBa6dMib3yDkkhmOZLyECcAAAAAAAAkAAAAAAAAAAAAAgAAAAAAAACvljn+1LWFSpu3PGx4BlIlVZq7blFK+fV7SOPEU0z9nz7lgkv8a12EA9R0tGm8hEYSOjAAAAEAAAAAAAAAEAAAAAAA",
-                "AAAAAAAAAAACAAAAAAAAAAgAAAAAAAAAIJBUX7gl7mh+M/NoHcFa3oR3I+5BFublxXc33/GPUZ79ASAyWbpVsiA3AaeLJkcLPhQy4QKHM66TkJNFPJLaVqfoJQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAjf/gOJgBAAABASDxpIv3q2qAdsaAF16ZXzTSU8tRSJ5ylwIRyOzYsdeZigACAAAAAAAAAAAAALkSpPtV6n0lfTq6upYfSk7ZWw8avL3vaG/tU6s2ELoUKK3ucADvyjsDGNVKkhhGkhI6MAAAAQAAAAAAAAAQAAAAAAA="
+                "AAAAAAAAAAACAAAAAAAAAAgAAAAAAAAAIJBUX7gl7mh+M/NoHcFa3oR3I+5BFublxXc33/GPUZ79ASAyWbpVsiA3AaeLJkcLPhQy4QKHM66TkJNFPJLaVqfoJQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAjf/gOJgBAAABASDxpIv3q2qAdsaAF16ZXzTSU8tRSJ5ylwIRyOzYsdeZigACAAAAAAAAAAAAALkSpPtV6n0lfTq6upYfSk7ZWw8avL3vaG/tU6s2ELoUKK3ucADvyjsDGNVKkhhGkhI6MAAAAQAAAAAAAAAQAAAAAAA=",
             ];
 
             for fixture in FIXTURES {
@@ -404,7 +404,7 @@ mod serialization {
 
         #[test]
         fn contents_fixture() {
-            let fixture ="AAEgp6oAB8Qadn8+FqtdqeDIp8ViQNOZpMKs44MN0N5y7zIgqn5dKR1+8poL0pLNwRo/2knMnodwMTEDhqYL03kdewQBAWEAgpORkfH6ewjfFQYZJhmjkYq0/B3Set4mLJX/G0wUPb/V4H41gJipYu4I6ToyixnEuPQWxHKLckhNn+0UmI+pAJ9GegzEh0q2HWABmFMpFoPw0229dCfzWNOhHW5bes4H";
+            let fixture = "AAEgp6oAB8Qadn8+FqtdqeDIp8ViQNOZpMKs44MN0N5y7zIgqn5dKR1+8poL0pLNwRo/2knMnodwMTEDhqYL03kdewQBAWEAgpORkfH6ewjfFQYZJhmjkYq0/B3Set4mLJX/G0wUPb/V4H41gJipYu4I6ToyixnEuPQWxHKLckhNn+0UmI+pAJ9GegzEh0q2HWABmFMpFoPw0229dCfzWNOhHW5bes4H";
 
             let bcs = Base64::decode_vec(fixture).unwrap();
 

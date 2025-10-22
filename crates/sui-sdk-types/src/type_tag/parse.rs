@@ -3,6 +3,9 @@ use super::Identifier;
 use super::StructTag;
 use super::TypeTag;
 
+use winnow::ModalParser;
+use winnow::ModalResult;
+use winnow::Parser;
 use winnow::ascii::space0;
 use winnow::combinator::alt;
 use winnow::combinator::delimited;
@@ -12,9 +15,6 @@ use winnow::combinator::separated;
 use winnow::stream::AsChar;
 use winnow::token::one_of;
 use winnow::token::take_while;
-use winnow::ModalParser;
-use winnow::ModalResult;
-use winnow::Parser;
 
 // static ALLOWED_IDENTIFIERS: &str = r"(?:[a-zA-Z][a-zA-Z0-9_]*)|(?:_[a-zA-Z0-9_]+)";
 static MAX_IDENTIFIER_LENGTH: usize = 128;
@@ -193,34 +193,34 @@ mod tests {
     #[test]
     fn test_parse_valid_struct_type() {
         let valid = vec![
-        "0x1::Foo::Foo",
-        "0x1::Foo_Type::Foo",
-        "0x1::Foo_::Foo",
-        "0x1::X_123::X32_",
-        "0x1::Foo::Foo_Type",
-        "0x1::Foo::Foo<0x1::ABC::ABC>",
-        "0x1::Foo::Foo<0x1::ABC::ABC_Type>",
-        "0x1::Foo::Foo<u8>",
-        "0x1::Foo::Foo<u16>",
-        "0x1::Foo::Foo<u32>",
-        "0x1::Foo::Foo<u64>",
-        "0x1::Foo::Foo<u128>",
-        "0x1::Foo::Foo<u256>",
-        "0x1::Foo::Foo<bool>",
-        "0x1::Foo::Foo<address>",
-        "0x1::Foo::Foo<signer>",
-        "0x1::Foo::Foo<vector<0x1::ABC::ABC>>",
-        "0x1::Foo::Foo<u8,bool>",
-        "0x1::Foo::Foo<u8,   bool>",
-        "0x1::Foo::Foo<u8  ,bool>",
-        "0x1::Foo::Foo<u8 , bool  ,    vector<u8>,address,signer>",
-        "0x1::Foo::Foo<vector<0x1::Foo::Struct<0x1::XYZ::XYZ>>>",
-        "0x1::Foo::Foo<0x1::Foo::Struct<vector<0x1::XYZ::XYZ>, 0x1::Foo::Foo<vector<0x1::Foo::Struct<0x1::XYZ::XYZ>>>>>",
-        "0x1::_bar::_BAR",
-        "0x1::__::__",
-        "0x1::_bar::_BAR<0x2::_____::______fooo______>",
-        "0x1::__::__<0x2::_____::______fooo______, 0xff::Bar____::_______foo>",
-        "0x5d32d749705c5f07c741f1818df3db466128bf01677611a959b03040ac5dc774::slippage::HopSwapEvent<0x2::sui::SUI, 0x3c86bba6a3d3ce958615ae51cc5604f58956b1583323f664cf5f048da0fcbb19::_spd::_SPD>",
+            "0x1::Foo::Foo",
+            "0x1::Foo_Type::Foo",
+            "0x1::Foo_::Foo",
+            "0x1::X_123::X32_",
+            "0x1::Foo::Foo_Type",
+            "0x1::Foo::Foo<0x1::ABC::ABC>",
+            "0x1::Foo::Foo<0x1::ABC::ABC_Type>",
+            "0x1::Foo::Foo<u8>",
+            "0x1::Foo::Foo<u16>",
+            "0x1::Foo::Foo<u32>",
+            "0x1::Foo::Foo<u64>",
+            "0x1::Foo::Foo<u128>",
+            "0x1::Foo::Foo<u256>",
+            "0x1::Foo::Foo<bool>",
+            "0x1::Foo::Foo<address>",
+            "0x1::Foo::Foo<signer>",
+            "0x1::Foo::Foo<vector<0x1::ABC::ABC>>",
+            "0x1::Foo::Foo<u8,bool>",
+            "0x1::Foo::Foo<u8,   bool>",
+            "0x1::Foo::Foo<u8  ,bool>",
+            "0x1::Foo::Foo<u8 , bool  ,    vector<u8>,address,signer>",
+            "0x1::Foo::Foo<vector<0x1::Foo::Struct<0x1::XYZ::XYZ>>>",
+            "0x1::Foo::Foo<0x1::Foo::Struct<vector<0x1::XYZ::XYZ>, 0x1::Foo::Foo<vector<0x1::Foo::Struct<0x1::XYZ::XYZ>>>>>",
+            "0x1::_bar::_BAR",
+            "0x1::__::__",
+            "0x1::_bar::_BAR<0x2::_____::______fooo______>",
+            "0x1::__::__<0x2::_____::______fooo______, 0xff::Bar____::_______foo>",
+            "0x5d32d749705c5f07c741f1818df3db466128bf01677611a959b03040ac5dc774::slippage::HopSwapEvent<0x2::sui::SUI, 0x3c86bba6a3d3ce958615ae51cc5604f58956b1583323f664cf5f048da0fcbb19::_spd::_SPD>",
         ];
         for s in valid {
             let mut input = s;

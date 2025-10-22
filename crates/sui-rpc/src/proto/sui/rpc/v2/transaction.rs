@@ -226,7 +226,7 @@ impl TryFrom<&TransactionExpiration> for sui_sdk_types::TransactionExpiration {
                 return Err(TryFromProtoError::invalid(
                     TransactionExpiration::KIND_FIELD,
                     "unknown TransactionExpirationKind",
-                ))
+                ));
             }
             TransactionExpirationKind::None => Self::None,
             TransactionExpirationKind::Epoch => Self::Epoch(value.epoch()),
@@ -304,7 +304,7 @@ impl TryFrom<&TransactionKind> for sui_sdk_types::TransactionKind {
                 return Err(TryFromProtoError::invalid(
                     "kind",
                     "unknown TransactionKind",
-                ))
+                ));
             }
             Kind::ProgrammableTransaction => {
                 Self::ProgrammableTransaction(value.programmable_transaction().try_into()?)
@@ -642,7 +642,7 @@ impl TryFrom<&ConsensusDeterminedVersionAssignments>
                 return Err(TryFromProtoError::invalid(
                     ConsensusDeterminedVersionAssignments::VERSION_FIELD,
                     "unknown ConsensusDeterminedVersionAssignments version",
-                ))
+                ));
             }
         }
         .pipe(Ok)
@@ -1180,7 +1180,7 @@ impl TryFrom<&EndOfEpochTransactionKind> for sui_sdk_types::EndOfEpochTransactio
                 return Err(TryFromProtoError::invalid(
                     EndOfEpochTransactionKind::KIND_FIELD,
                     "unknown EndOfEpochTransactionKind",
-                ))
+                ));
             }
             Kind::ChangeEpoch => Self::ChangeEpoch(value.change_epoch().try_into()?),
             Kind::AuthenticatorStateCreate => Self::AuthenticatorStateCreate,
@@ -1345,7 +1345,7 @@ impl TryFrom<&ExecutionTimeObservation>
                 return Err(TryFromProtoError::invalid(
                     ExecutionTimeObservation::KIND_FIELD,
                     "unknown ExecutionTimeObservationKind",
-                ))
+                ));
             }
             ExecutionTimeObservationKind::MoveEntryPoint => {
                 let move_call = value
@@ -1525,7 +1525,7 @@ impl TryFrom<&Input> for sui_sdk_types::Input {
                 return Err(TryFromProtoError::invalid(
                     Input::KIND_FIELD,
                     "unknown InputKind",
-                ))
+                ));
             }
 
             InputKind::Pure => Self::Pure {
@@ -1679,7 +1679,7 @@ impl TryFrom<&Argument> for sui_sdk_types::Argument {
                 return Err(TryFromProtoError::invalid(
                     Argument::KIND_FIELD,
                     "unknown ArgumentKind",
-                ))
+                ));
             }
             ArgumentKind::Gas => Self::Gas,
             ArgumentKind::Input => {

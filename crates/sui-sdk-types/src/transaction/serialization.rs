@@ -10,11 +10,11 @@ use crate::ObjectReference;
 
 mod transaction {
     use super::*;
+    use crate::Address;
     use crate::transaction::GasPayment;
     use crate::transaction::Transaction;
     use crate::transaction::TransactionExpiration;
     use crate::transaction::TransactionKind;
-    use crate::Address;
 
     #[derive(serde_derive::Serialize)]
     #[serde(rename = "Transaction")]
@@ -162,9 +162,9 @@ mod signed_transaction {
     use serde::ser::SerializeSeq;
 
     use super::*;
+    use crate::UserSignature;
     use crate::transaction::SignedTransaction;
     use crate::transaction::Transaction;
-    use crate::UserSignature;
 
     /// serde implementation that serializes a transaction prefixed with the signing intent. See
     /// [struct Intent] for more info.
@@ -200,7 +200,7 @@ mod signed_transaction {
                 _ => {
                     return Err(serde::de::Error::custom(format!(
                         "invalid intent message ({scope}, {version}, {app})"
-                    )))
+                    )));
                 }
             }
 

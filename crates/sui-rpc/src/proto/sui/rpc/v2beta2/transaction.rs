@@ -226,7 +226,7 @@ impl TryFrom<&TransactionExpiration> for sui_sdk_types::TransactionExpiration {
                 return Err(TryFromProtoError::invalid(
                     TransactionExpiration::KIND_FIELD,
                     "unknown TransactionExpirationKind",
-                ))
+                ));
             }
             TransactionExpirationKind::None => Self::None,
             TransactionExpirationKind::Epoch => Self::Epoch(value.epoch()),
@@ -628,7 +628,7 @@ impl TryFrom<&ConsensusDeterminedVersionAssignments>
                 return Err(TryFromProtoError::invalid(
                     ConsensusDeterminedVersionAssignments::VERSION_FIELD,
                     "unknown ConsensusDeterminedVersionAssignments version",
-                ))
+                ));
             }
         }
         .pipe(Ok)
@@ -1315,7 +1315,7 @@ impl TryFrom<&ExecutionTimeObservation>
                 return Err(TryFromProtoError::invalid(
                     ExecutionTimeObservation::KIND_FIELD,
                     "unknown ExecutionTimeObservationKind",
-                ))
+                ));
             }
             ExecutionTimeObservationKind::MoveEntryPoint => {
                 let move_call = value
@@ -1495,7 +1495,7 @@ impl TryFrom<&Input> for sui_sdk_types::Input {
                 return Err(TryFromProtoError::invalid(
                     Input::KIND_FIELD,
                     "unknown InputKind",
-                ))
+                ));
             }
 
             InputKind::Pure => Self::Pure {
@@ -1649,7 +1649,7 @@ impl TryFrom<&Argument> for sui_sdk_types::Argument {
                 return Err(TryFromProtoError::invalid(
                     Argument::KIND_FIELD,
                     "unknown ArgumentKind",
-                ))
+                ));
             }
             ArgumentKind::Gas => Self::Gas,
             ArgumentKind::Input => {

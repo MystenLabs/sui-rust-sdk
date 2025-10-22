@@ -543,7 +543,7 @@ impl TryFrom<&ChangedObject> for sui_sdk_types::ChangedObject {
                 return Err(TryFromProtoError::invalid(
                     ChangedObject::OUTPUT_STATE_FIELD,
                     "unknown OutputObjectState",
-                ))
+                ));
             }
             OutputObjectState::DoesNotExist => sui_sdk_types::ObjectOut::NotExist,
             OutputObjectState::ObjectWrite => sui_sdk_types::ObjectOut::ObjectWrite {
@@ -616,7 +616,7 @@ impl TryFrom<changed_object::IdOperation> for sui_sdk_types::IdOperation {
                 return Err(TryFromProtoError::invalid(
                     "id_operation",
                     "unknown IdOperation",
-                ))
+                ));
             }
             IdOperation::None => Self::None,
             IdOperation::Created => Self::Created,
@@ -692,7 +692,7 @@ impl TryFrom<&UnchangedConsensusObject> for sui_sdk_types::UnchangedConsensusObj
                 return Err(TryFromProtoError::invalid(
                     UnchangedConsensusObject::KIND_FIELD,
                     "unknown InputKind",
-                ))
+                ));
             }
 
             UnchangedConsensusObjectKind::ReadOnlyRoot => UnchangedConsensusKind::ReadOnlyRoot {
