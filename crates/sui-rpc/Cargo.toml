@@ -26,31 +26,31 @@ faucet = ["dep:reqwest"]
 
 [dependencies]
 bcs = "0.1.6"
-serde = { version = "1.0.210" }
+serde = { version = "1.0.228" }
 sui-sdk-types = { version = "0.0.8", path = "../sui-sdk-types", default-features = false, features = ["serde", "hash"] }
 
 # dependencies for the protobuf and gRPC definitions
-bytes = "1.9"
+bytes = "1.10"
 tonic = { version = "0.14.2", default-features = false, features = ["channel", "codegen", "tls-ring", "tls-webpki-roots", "zstd"] }
 tonic-prost = "0.14.2"
 prost = "0.14.1"
 prost-types = "0.14.1"
 tap = "1"
 base64 = "0.22.1"
-serde_json = "1.0.140"
+serde_json = "1.0.145"
 http = "1.3.1"
 futures = "0.3"
-tokio = { version = "1.0", features = ["time"] }
+tokio = { version = "1.48", features = ["time"] }
 
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"], optional = true }
 
 [dev-dependencies]
 rand = "0.8"
 paste = "1.0.15"
-proptest = { version = "1.6.0", default-features = false, features = ["std"] }
+proptest = { version = "1.8.0", default-features = false, features = ["std"] }
 test-strategy = { version = "0.4" }
 sui-sdk-types = { version = "0.0.8", path = "../sui-sdk-types", default-features = false, features = ["proptest", "serde", "hash"] }
-serde_json = { version = "1.0.128" }
+serde_json = { version = "1.0.145" }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(doc_cfg)'] }
