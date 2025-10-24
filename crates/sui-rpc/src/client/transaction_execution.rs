@@ -1,9 +1,4 @@
-use futures::TryStreamExt;
-use std::fmt;
-use std::time::Duration;
-use tonic::Response;
-
-use crate::client::v2::Client;
+use super::Client;
 use crate::field::FieldMaskUtil;
 use crate::proto::TryFromProtoError;
 use crate::proto::sui::rpc::v2::ExecuteTransactionRequest;
@@ -11,7 +6,11 @@ use crate::proto::sui::rpc::v2::ExecuteTransactionResponse;
 use crate::proto::sui::rpc::v2::ExecutionError;
 use crate::proto::sui::rpc::v2::GetEpochRequest;
 use crate::proto::sui::rpc::v2::SubscribeCheckpointsRequest;
+use futures::TryStreamExt;
 use prost_types::FieldMask;
+use std::fmt;
+use std::time::Duration;
+use tonic::Response;
 
 /// Error types that can occur when executing a transaction and waiting for checkpoint
 #[derive(Debug)]

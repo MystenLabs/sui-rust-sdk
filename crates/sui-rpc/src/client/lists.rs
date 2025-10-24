@@ -1,8 +1,5 @@
-use futures::stream;
-use futures::stream::Stream;
-
-use crate::client::v2::Client;
-use crate::client::v2::Result;
+use super::Client;
+use super::Result;
 use crate::proto::sui::rpc::v2::Balance;
 use crate::proto::sui::rpc::v2::DynamicField;
 use crate::proto::sui::rpc::v2::ListBalancesRequest;
@@ -11,6 +8,8 @@ use crate::proto::sui::rpc::v2::ListOwnedObjectsRequest;
 use crate::proto::sui::rpc::v2::ListPackageVersionsRequest;
 use crate::proto::sui::rpc::v2::Object;
 use crate::proto::sui::rpc::v2::PackageVersion;
+use futures::stream;
+use futures::stream::Stream;
 
 impl Client {
     /// Creates a stream of objects based on the provided request.
