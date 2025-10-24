@@ -59,8 +59,6 @@ fn main() {
         .build_client(true)
         .build_server(true)
         .bytes(".")
-        .boxed(".sui.rpc.v2beta2.Input.literal")
-        .boxed(".sui.rpc.v2beta2.Epoch.system_state")
         .boxed(".sui.rpc.v2.Input.literal")
         .boxed(".sui.rpc.v2.Epoch.system_state")
         .boxed("json")
