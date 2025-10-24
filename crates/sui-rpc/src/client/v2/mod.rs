@@ -10,7 +10,7 @@ mod transaction_execution;
 
 pub use transaction_execution::ExecuteAndWaitError;
 
-use crate::client::AuthInterceptor;
+use crate::client::HeadersInterceptor;
 use crate::proto::sui::rpc::v2::ledger_service_client::LedgerServiceClient;
 use crate::proto::sui::rpc::v2::move_package_service_client::MovePackageServiceClient;
 use crate::proto::sui::rpc::v2::signature_verification_service_client::SignatureVerificationServiceClient;
@@ -22,14 +22,14 @@ type Result<T, E = tonic::Status> = std::result::Result<T, E>;
 type BoxError = Box<dyn std::error::Error + Send + Sync + 'static>;
 type Channel<'a> = tonic::service::interceptor::InterceptedService<
     &'a mut tonic::transport::Channel,
-    &'a mut AuthInterceptor,
+    &'a HeadersInterceptor,
 >;
 
 #[derive(Clone)]
 pub struct Client {
     uri: http::Uri,
     channel: tonic::transport::Channel,
-    auth: AuthInterceptor,
+    headers: HeadersInterceptor,
     max_decoding_message_size: Option<usize>,
 }
 
@@ -74,13 +74,13 @@ impl Client {
         Ok(Self {
             uri,
             channel,
-            auth: Default::default(),
+            headers: Default::default(),
             max_decoding_message_size: None,
         })
     }
 
-    pub fn with_auth(mut self, auth: AuthInterceptor) -> Self {
-        self.auth = auth;
+    pub fn with_headers(mut self, headers: HeadersInterceptor) -> Self {
+        self.headers = headers;
         self
     }
 
@@ -94,7 +94,7 @@ impl Client {
     }
 
     pub fn ledger_client(&mut self) -> LedgerServiceClient<Channel<'_>> {
-        LedgerServiceClient::with_interceptor(&mut self.channel, &mut self.auth)
+        LedgerServiceClient::with_interceptor(&mut self.channel, &self.headers)
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
                 if let Some(limit) = self.max_decoding_message_size {
@@ -106,7 +106,7 @@ impl Client {
     }
 
     pub fn state_client(&mut self) -> StateServiceClient<Channel<'_>> {
-        StateServiceClient::with_interceptor(&mut self.channel, &mut self.auth)
+        StateServiceClient::with_interceptor(&mut self.channel, &self.headers)
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
                 if let Some(limit) = self.max_decoding_message_size {
@@ -118,7 +118,7 @@ impl Client {
     }
 
     pub fn execution_client(&mut self) -> TransactionExecutionServiceClient<Channel<'_>> {
-        TransactionExecutionServiceClient::with_interceptor(&mut self.channel, &mut self.auth)
+        TransactionExecutionServiceClient::with_interceptor(&mut self.channel, &self.headers)
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
                 if let Some(limit) = self.max_decoding_message_size {
@@ -130,7 +130,7 @@ impl Client {
     }
 
     pub fn package_client(&mut self) -> MovePackageServiceClient<Channel<'_>> {
-        MovePackageServiceClient::with_interceptor(&mut self.channel, &mut self.auth)
+        MovePackageServiceClient::with_interceptor(&mut self.channel, &self.headers)
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
                 if let Some(limit) = self.max_decoding_message_size {
@@ -144,7 +144,7 @@ impl Client {
     pub fn signature_verification_client(
         &mut self,
     ) -> SignatureVerificationServiceClient<Channel<'_>> {
-        SignatureVerificationServiceClient::with_interceptor(&mut self.channel, &mut self.auth)
+        SignatureVerificationServiceClient::with_interceptor(&mut self.channel, &self.headers)
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
                 if let Some(limit) = self.max_decoding_message_size {
@@ -156,7 +156,7 @@ impl Client {
     }
 
     pub fn subscription_client(&mut self) -> SubscriptionServiceClient<Channel<'_>> {
-        SubscriptionServiceClient::with_interceptor(&mut self.channel, &mut self.auth)
+        SubscriptionServiceClient::with_interceptor(&mut self.channel, &self.headers)
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
                 if let Some(limit) = self.max_decoding_message_size {

@@ -9,6 +9,8 @@ pub use response_ext::ResponseExt;
 
 mod auth;
 pub use auth::AuthInterceptor;
+mod interceptors;
+pub use interceptors::HeadersInterceptor;
 
 mod staking_rewards;
 pub use staking_rewards::DelegatedStake;
