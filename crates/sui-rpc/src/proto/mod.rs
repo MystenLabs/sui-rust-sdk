@@ -2,7 +2,7 @@
 #![allow(clippy::doc_overindented_list_items)]
 
 use google::rpc::bad_request::FieldViolation;
-use sui::rpc::v2beta2::ErrorReason;
+use sui::rpc::v2::ErrorReason;
 
 pub mod google;
 pub mod sui;
