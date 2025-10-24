@@ -2,16 +2,16 @@ use prost_types::FieldMask;
 use sui_sdk_types::Address;
 
 use crate::field::FieldMaskUtil;
-use crate::proto::sui::rpc::v2beta2::Argument;
-use crate::proto::sui::rpc::v2beta2::GetObjectRequest;
-use crate::proto::sui::rpc::v2beta2::Input;
-use crate::proto::sui::rpc::v2beta2::ListOwnedObjectsRequest;
-use crate::proto::sui::rpc::v2beta2::MoveCall;
-use crate::proto::sui::rpc::v2beta2::Object;
-use crate::proto::sui::rpc::v2beta2::ProgrammableTransaction;
-use crate::proto::sui::rpc::v2beta2::SimulateTransactionRequest;
-use crate::proto::sui::rpc::v2beta2::Transaction;
-use crate::proto::sui::rpc::v2beta2::simulate_transaction_request::TransactionChecks;
+use crate::proto::sui::rpc::v2::Argument;
+use crate::proto::sui::rpc::v2::GetObjectRequest;
+use crate::proto::sui::rpc::v2::Input;
+use crate::proto::sui::rpc::v2::ListOwnedObjectsRequest;
+use crate::proto::sui::rpc::v2::MoveCall;
+use crate::proto::sui::rpc::v2::Object;
+use crate::proto::sui::rpc::v2::ProgrammableTransaction;
+use crate::proto::sui::rpc::v2::SimulateTransactionRequest;
+use crate::proto::sui::rpc::v2::Transaction;
+use crate::proto::sui::rpc::v2::simulate_transaction_request::TransactionChecks;
 
 use super::Client;
 use super::Result;
@@ -47,11 +47,10 @@ impl Client {
     pub async fn get_delegated_stake(&mut self, staked_sui_id: &Address) -> Result<DelegatedStake> {
         let maybe_staked_sui = self
             .ledger_client()
-            .get_object(GetObjectRequest {
-                object_id: Some(staked_sui_id.to_string()),
-                version: None,
-                read_mask: Some(FieldMask::from_str("contents")),
-            })
+            .get_object(
+                GetObjectRequest::new(staked_sui_id)
+                    .with_read_mask(FieldMask::from_str("contents")),
+            )
             .await?
             .into_inner()
             .object
@@ -68,17 +67,15 @@ impl Client {
 
         let mut delegated_stakes = Vec::new();
 
-        let mut list_request = ListOwnedObjectsRequest {
-            owner: Some(address.to_string()),
-            page_size: Some(500),
-            page_token: None,
-            read_mask: Some(FieldMask::from_str("contents")),
-            object_type: Some(STAKED_SUI_TYPE.to_owned()),
-        };
+        let mut list_request = ListOwnedObjectsRequest::default()
+            .with_owner(address)
+            .with_page_size(500u32)
+            .with_read_mask(FieldMask::from_str("contents"))
+            .with_object_type(STAKED_SUI_TYPE);
 
         loop {
             let response = self
-                .live_data_client()
+                .state_client()
                 .list_owned_objects(list_request.clone())
                 .await?
                 .into_inner();
@@ -109,9 +106,7 @@ impl Client {
         let staked_suis = maybe_staked_sui
             .iter()
             .map(|o| {
-                o.contents
-                    .clone() // Avoid clone probably with better getters
-                    .unwrap_or_default()
+                o.contents()
                     .deserialize::<StakedSui>()
                     .map_err(Into::into)
                     .map_err(tonic::Status::from_error)
@@ -145,79 +140,59 @@ impl Client {
         &mut self,
         staked_sui_ids: &[Address],
     ) -> Result<Vec<(Address, u64)>> {
-        let mut ptb = ProgrammableTransaction {
-            inputs: vec![Input {
-                object_id: Some("0x5".into()),
-                ..Default::default()
-            }],
-            commands: vec![],
-        };
+        let mut ptb = ProgrammableTransaction::default()
+            .with_inputs(vec![Input::default().with_object_id("0x5")]);
         let system_object = Argument::new_input(0);
 
         for id in staked_sui_ids {
             let staked_sui = Argument::new_input(ptb.inputs.len() as u16);
 
-            ptb.inputs.push(Input {
-                object_id: Some(id.to_string()),
-                ..Default::default()
-            });
+            ptb.inputs.push(Input::default().with_object_id(id));
 
             ptb.commands.push(
-                MoveCall {
-                    package: Some("0x3".to_owned()),
-                    module: Some("sui_system".to_owned()),
-                    function: Some("calculate_rewards".to_owned()),
-                    type_arguments: vec![],
-                    arguments: vec![system_object, staked_sui],
-                }
-                .into(),
+                MoveCall::default()
+                    .with_package("0x3")
+                    .with_module("sui_system")
+                    .with_function("calculate_rewards")
+                    .with_arguments(vec![system_object, staked_sui])
+                    .into(),
             );
         }
 
-        let transaction = Transaction {
-            kind: Some(ptb.into()),
-            sender: Some("0x0".into()),
-            ..Default::default()
-        };
+        let transaction = Transaction::default().with_kind(ptb).with_sender("0x0");
 
         let resp = self
-            .live_data_client()
-            .simulate_transaction(SimulateTransactionRequest {
-                transaction: Some(transaction),
-                read_mask: Some(FieldMask::from_paths([
-                    "outputs.return_values.value",
-                    "transaction.effects.status",
-                ])),
-                checks: Some(TransactionChecks::Disabled as _),
-                ..Default::default()
-            })
+            .execution_client()
+            .simulate_transaction(
+                SimulateTransactionRequest::new(transaction)
+                    .with_read_mask(FieldMask::from_paths([
+                        "command_outputs.return_values.value",
+                        "transaction.effects.status",
+                    ]))
+                    .with_checks(TransactionChecks::Disabled),
+            )
             .await?
             .into_inner();
 
-        if !resp
-            .transaction
-            .as_ref()
-            .and_then(|t| t.effects.as_ref().and_then(|e| e.status.as_ref()))
-            .is_some_and(|s| s.success())
-        {
+        if !resp.transaction().effects().status().success() {
             return Err(tonic::Status::from_error(
                 "transaction execution failed".into(),
             ));
         }
 
-        if staked_sui_ids.len() != resp.outputs.len() {
+        if staked_sui_ids.len() != resp.command_outputs.len() {
             return Err(tonic::Status::from_error(
-                "missing transaction command outputs".into(),
+                "missing transaction command_outputs".into(),
             ));
         }
 
         let mut rewards = Vec::with_capacity(staked_sui_ids.len());
 
-        for (id, output) in staked_sui_ids.iter().zip(resp.outputs) {
+        for (id, output) in staked_sui_ids.iter().zip(resp.command_outputs) {
             let bcs_rewards = output
                 .return_values
                 .first()
-                .and_then(|o| o.value.as_ref())
+                .and_then(|o| o.value_opt())
                 .ok_or_else(|| tonic::Status::from_error("missing bcs".into()))?;
 
             let reward =
@@ -236,79 +211,60 @@ impl Client {
         &mut self,
         pool_ids: &[Address],
     ) -> Result<Vec<(Address, Address)>> {
-        let mut ptb = ProgrammableTransaction {
-            inputs: vec![Input {
-                object_id: Some("0x5".into()),
-                ..Default::default()
-            }],
-            commands: vec![],
-        };
+        let mut ptb = ProgrammableTransaction::default()
+            .with_inputs(vec![Input::default().with_object_id("0x5")]);
         let system_object = Argument::new_input(0);
 
         for id in pool_ids {
             let pool_id = Argument::new_input(ptb.inputs.len() as u16);
 
-            ptb.inputs.push(Input {
-                pure: Some(id.into_inner().to_vec().into()),
-                ..Default::default()
-            });
+            ptb.inputs
+                .push(Input::default().with_pure(id.into_inner().to_vec()));
 
             ptb.commands.push(
-                MoveCall {
-                    package: Some("0x3".to_owned()),
-                    module: Some("sui_system".to_owned()),
-                    function: Some("validator_address_by_pool_id".to_owned()),
-                    type_arguments: vec![],
-                    arguments: vec![system_object, pool_id],
-                }
-                .into(),
+                MoveCall::default()
+                    .with_package("0x3")
+                    .with_module("sui_system")
+                    .with_function("validator_address_by_pool_id")
+                    .with_arguments(vec![system_object, pool_id])
+                    .into(),
             );
         }
 
-        let transaction = Transaction {
-            kind: Some(ptb.into()),
-            sender: Some("0x0".into()),
-            ..Default::default()
-        };
+        let transaction = Transaction::default().with_kind(ptb).with_sender("0x0");
 
         let resp = self
-            .live_data_client()
-            .simulate_transaction(SimulateTransactionRequest {
-                transaction: Some(transaction),
-                read_mask: Some(FieldMask::from_paths([
-                    "outputs.return_values.value",
-                    "transaction.effects.status",
-                ])),
-                checks: Some(TransactionChecks::Disabled as _),
-                ..Default::default()
-            })
+            .execution_client()
+            .simulate_transaction(
+                SimulateTransactionRequest::new(transaction)
+                    .with_read_mask(FieldMask::from_paths([
+                        "command_outputs.return_values.value",
+                        "transaction.effects.status",
+                    ]))
+                    .with_checks(TransactionChecks::Disabled),
+            )
             .await?
             .into_inner();
 
-        if !resp
-            .transaction
-            .as_ref()
-            .and_then(|t| t.effects.as_ref().and_then(|e| e.status.as_ref()))
-            .is_some_and(|s| s.success())
-        {
+        if !resp.transaction().effects().status().success() {
             return Err(tonic::Status::from_error(
                 "transaction execution failed".into(),
             ));
         }
 
-        if pool_ids.len() != resp.outputs.len() {
+        if pool_ids.len() != resp.command_outputs.len() {
             return Err(tonic::Status::from_error(
-                "missing transaction command outputs".into(),
+                "missing transaction command_outputs".into(),
             ));
         }
 
         let mut addresses = Vec::with_capacity(pool_ids.len());
 
-        for (id, output) in pool_ids.iter().zip(resp.outputs) {
+        for (id, output) in pool_ids.iter().zip(resp.command_outputs) {
             let validator_address = output
                 .return_values
                 .first()
-                .and_then(|o| o.value.as_ref())
+                .and_then(|o| o.value_opt())
                 .ok_or_else(|| tonic::Status::from_error("missing bcs".into()))?;
 
             let address = if validator_address.name() == "address"

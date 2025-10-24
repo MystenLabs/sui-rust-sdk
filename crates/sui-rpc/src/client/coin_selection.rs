@@ -1,16 +1,14 @@
-use futures::StreamExt;
-use prost_types::FieldMask;
-use std::str::FromStr;
-
-use sui_sdk_types::Address;
-use sui_sdk_types::StructTag;
-use sui_sdk_types::TypeTag;
-
-use crate::client::v2::Client;
-use crate::client::v2::Result;
+use super::Client;
+use super::Result;
 use crate::field::FieldMaskUtil;
 use crate::proto::sui::rpc::v2::ListOwnedObjectsRequest;
 use crate::proto::sui::rpc::v2::Object;
+use futures::StreamExt;
+use prost_types::FieldMask;
+use std::str::FromStr;
+use sui_sdk_types::Address;
+use sui_sdk_types::StructTag;
+use sui_sdk_types::TypeTag;
 
 impl Client {
     /// Selects coins of a specific type owned by an address until the total value meets the required amount.
