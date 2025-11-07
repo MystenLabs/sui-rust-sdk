@@ -95,8 +95,10 @@
 // TODO finish documenting all public items
 // #![warn(missing_docs)]
 
-pub mod bcs;
 mod address;
+#[cfg(feature = "serde")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
+pub mod bcs;
 mod bitmap;
 mod checkpoint;
 mod crypto;
@@ -106,14 +108,13 @@ mod events;
 mod execution_status;
 pub mod framework;
 mod gas;
+#[cfg(feature = "hash")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "hash")))]
+pub mod hash;
 mod object;
 mod transaction;
 mod type_tag;
 mod u256;
-
-#[cfg(feature = "hash")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "hash")))]
-pub mod hash;
 
 pub use address::Address;
 pub use address::AddressParseError;

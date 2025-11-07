@@ -30,12 +30,12 @@ fn assert_roundtrip<T>(instance: &T)
 where
     T: serde::Serialize + for<'de> serde::Deserialize<'de> + PartialEq + std::fmt::Debug,
 {
-    use crate::bcs::ToBcs;
     use crate::bcs::FromBcs;
+    use crate::bcs::ToBcs;
 
     // println!("{instance:?}");
-    let bcs_bytes = instance.to_bcs_bytes().unwrap();
-    let deser_from_bcs_bytes = T::from_bcs_bytes(&bcs_bytes).unwrap();
+    let bcs_bytes = instance.to_bcs().unwrap();
+    let deser_from_bcs_bytes = T::from_bcs(&bcs_bytes).unwrap();
     assert_eq!(instance, &deser_from_bcs_bytes);
 
     let json = serde_json::to_string(instance).unwrap();
