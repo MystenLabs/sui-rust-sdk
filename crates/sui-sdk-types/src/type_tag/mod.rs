@@ -219,14 +219,44 @@ impl std::ops::Deref for Identifier {
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct StructTag {
-    pub address: Address,
-    pub module: Identifier,
-    pub name: Identifier,
+    address: Address,
+    module: Identifier,
+    name: Identifier,
     #[cfg_attr(feature = "proptest", strategy(proptest::strategy::Just(Vec::new())))]
-    pub type_params: Vec<TypeTag>,
+    type_params: Vec<TypeTag>,
 }
 
 impl StructTag {
+    pub fn new(
+        address: Address,
+        module: Identifier,
+        name: Identifier,
+        type_params: Vec<TypeTag>,
+    ) -> Self {
+        Self {
+            address,
+            module,
+            name,
+            type_params,
+        }
+    }
+
+    pub fn address(&self) -> &Address {
+        &self.address
+    }
+
+    pub fn module(&self) -> &Identifier {
+        &self.module
+    }
+
+    pub fn name(&self) -> &Identifier {
+        &self.name
+    }
+
+    pub fn type_params(&self) -> &[TypeTag] {
+        &self.type_params
+    }
+
     /// Returns the struct tag for the native SUI token (without the Coin wrapper).
     /// This represents `0x2::sui::SUI`.
     pub fn sui() -> Self {
