@@ -586,21 +586,17 @@ mod serialization {
 
     impl<'a> MoveStructTypeRef<'a> {
         fn from_struct_tag(s: &'a StructTag) -> Self {
-            let StructTag {
-                address,
-                module,
-                name,
-                type_params,
-            } = s;
+            let address = s.address();
+            let module = s.module();
+            let name = s.name();
+            let type_params = s.type_params();
 
             if let Some(coin_type) = s.is_coin() {
                 if let TypeTag::Struct(s_inner) = coin_type {
-                    let StructTag {
-                        address,
-                        module,
-                        name,
-                        type_params,
-                    } = s_inner.as_ref();
+                    let address = s_inner.address();
+                    let module = s_inner.module();
+                    let name = s_inner.name();
+                    let type_params = s_inner.type_params();
 
                     if address == &Address::TWO
                         && module == "sui"

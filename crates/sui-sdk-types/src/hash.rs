@@ -550,12 +550,12 @@ impl crate::Address {
         use crate::Identifier;
         use crate::StructTag;
 
-        let struct_tag = StructTag {
-            address: Address::from_static("0x2"),
-            module: Identifier::from_static("derived_object"),
-            name: Identifier::from_static("DerivedObjectKey"),
-            type_params: vec![key_type_tag.clone()],
-        };
+        let struct_tag = StructTag::new(
+            Address::from_static("0x2"),
+            Identifier::from_static("derived_object"),
+            Identifier::from_static("DerivedObjectKey"),
+            vec![key_type_tag.clone()],
+        );
 
         self.derive_dynamic_child_id(&struct_tag.into(), key_bytes)
     }
