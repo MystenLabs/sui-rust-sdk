@@ -1,3 +1,17 @@
+# [0.1.0] - 2025-11-07
+
+## Changed
+- Updated to rust 2024 edition [#171]
+- Updated to tonic/prost 0.14 [#168]
+- Removed `Into` requirement for setters of primitive types [`ec1547f1`]
+- Changed interceptor to allow for adding headers to all requests [`31ae830f`]
+- Removed v2beta2 protos and client
+
+[#171]: https://github.com/MystenLabs/sui-rust-sdk/pull/171
+[#168]: https://github.com/MystenLabs/sui-rust-sdk/pull/168
+[`ec1547f1`]: https://github.com/mystenlabs/sui-rust-sdk/commit/ec1547f1
+[`31ae830f`]: https://github.com/mystenlabs/sui-rust-sdk/commit/31ae830f
+
 # [0.0.8] - 2025-10-03
 
 ## Added
@@ -39,6 +53,7 @@
 
 Initial release
 
+[0.1.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.1.0
 [0.0.8]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.0.8
 [0.0.7]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.0.7
 [0.0.6]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.0.6

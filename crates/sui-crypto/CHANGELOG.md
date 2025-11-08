@@ -1,3 +1,10 @@
+# [0.1.0] - 2025-11-07
+
+## Changed
+- Updated to rust 2024 edition [#171]
+
+[#171]: https://github.com/MystenLabs/sui-rust-sdk/pull/171
+
 # [0.0.8] - 2025-10-03
 
 ## Changed
@@ -61,6 +68,7 @@
 
 Initial release
 
+[0.1.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-crypto-0.1.0
 [0.0.8]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-crypto-0.0.8
 [0.0.7]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-crypto-0.0.7
 [0.0.6]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-crypto-0.0.6

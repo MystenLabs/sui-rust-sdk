@@ -1,3 +1,18 @@
+# [0.1.0] - 2025-11-07
+
+## Added
+- Added `DisplayRegistryCreate` end of epoch transaction kind [`36187fdf`]
+- Added `FromBcs` and `ToBcs` convenience traits [`08e2ec32`]
+
+## Changed
+- Updated to rust 2024 edition [#171]
+- Made `StructTag` fields private [#175]
+
+[`08e2ec32`]: https://github.com/mystenlabs/sui-rust-sdk/commit/08e2ec32
+[`36187fdf`]: https://github.com/mystenlabs/sui-rust-sdk/commit/36187fdf
+[#171]: https://github.com/MystenLabs/sui-rust-sdk/pull/171
+[#175]: https://github.com/MystenLabs/sui-rust-sdk/pull/175
+
 # [0.0.8] - 2025-10-03
 
 ## Added
@@ -128,6 +143,7 @@
 
 Initial release
 
+[0.1.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.1.0
 [0.0.8]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.0.8
 [0.0.7]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.0.7
 [0.0.6]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.0.6

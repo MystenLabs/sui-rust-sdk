@@ -1,10 +1,6 @@
-# Sui Sdk
+# Sui Rust Sdk
 
-A rust Sdk for integrating with the [Sui blockchain](https://docs.sui.io/).
-
-> [!NOTE]
-> This is project is under development and many features may still be under
-> development or missing.
+A rust sdk for integrating with the [Sui blockchain](https://docs.sui.io/).
 
 ## Overview
 
