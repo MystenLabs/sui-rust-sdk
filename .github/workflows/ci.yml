@@ -111,3 +111,19 @@ jobs:
         run: RUSTFLAGS='-Dwarnings --cfg getrandom_backend="wasm_js"' make wasm
 
       - run: make is-dirty
+
+  semver-checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: rust version
+        run: |
+          rustc --version
+          cargo --version
+
+      - uses: taiki-e/install-action@cargo-semver-checks
+
+      - run: cargo semver-checks
