@@ -555,6 +555,16 @@ impl From<sui_sdk_types::CommandArgumentError> for CommandArgumentError {
                 CommandArgumentErrorKind::ConsensusObjectOperationNotAllowed
             }
             E::InvalidArgumentArity => CommandArgumentErrorKind::InvalidArgumentArity,
+            E::InvalidTransferObject => CommandArgumentErrorKind::InvalidTransferObject,
+            E::InvalidMakeMoveVecNonObjectArgument => {
+                CommandArgumentErrorKind::InvalidMakeMoveVecNonObjectArgument
+            }
+            E::ArgumentWithoutValue => CommandArgumentErrorKind::ArgumentWithoutValue,
+            E::CannotMoveBorrowedValue => CommandArgumentErrorKind::CannotMoveBorrowedValue,
+            E::CannotWriteToExtendedReference => {
+                CommandArgumentErrorKind::CannotWriteToExtendedReference
+            }
+            E::InvalidReferenceArgument => CommandArgumentErrorKind::InvalidReferenceArgument,
             _ => CommandArgumentErrorKind::Unknown,
         };
 
