@@ -4867,6 +4867,12 @@ impl serde::Serialize for command_argument_error::CommandArgumentErrorKind {
             Self::InvalidObjectByMutRef => "INVALID_OBJECT_BY_MUT_REF",
             Self::ConsensusObjectOperationNotAllowed => "CONSENSUS_OBJECT_OPERATION_NOT_ALLOWED",
             Self::InvalidArgumentArity => "INVALID_ARGUMENT_ARITY",
+            Self::InvalidTransferObject => "INVALID_TRANSFER_OBJECT",
+            Self::InvalidMakeMoveVecNonObjectArgument => "INVALID_MAKE_MOVE_VEC_NON_OBJECT_ARGUMENT",
+            Self::ArgumentWithoutValue => "ARGUMENT_WITHOUT_VALUE",
+            Self::CannotMoveBorrowedValue => "CANNOT_MOVE_BORROWED_VALUE",
+            Self::CannotWriteToExtendedReference => "CANNOT_WRITE_TO_EXTENDED_REFERENCE",
+            Self::InvalidReferenceArgument => "INVALID_REFERENCE_ARGUMENT",
         };
         serializer.serialize_str(variant)
     }
@@ -4892,6 +4898,12 @@ impl<'de> serde::Deserialize<'de> for command_argument_error::CommandArgumentErr
             "INVALID_OBJECT_BY_MUT_REF",
             "CONSENSUS_OBJECT_OPERATION_NOT_ALLOWED",
             "INVALID_ARGUMENT_ARITY",
+            "INVALID_TRANSFER_OBJECT",
+            "INVALID_MAKE_MOVE_VEC_NON_OBJECT_ARGUMENT",
+            "ARGUMENT_WITHOUT_VALUE",
+            "CANNOT_MOVE_BORROWED_VALUE",
+            "CANNOT_WRITE_TO_EXTENDED_REFERENCE",
+            "INVALID_REFERENCE_ARGUMENT",
         ];
 
         struct GeneratedVisitor;
@@ -4946,6 +4958,12 @@ impl<'de> serde::Deserialize<'de> for command_argument_error::CommandArgumentErr
                     "INVALID_OBJECT_BY_MUT_REF" => Ok(command_argument_error::CommandArgumentErrorKind::InvalidObjectByMutRef),
                     "CONSENSUS_OBJECT_OPERATION_NOT_ALLOWED" => Ok(command_argument_error::CommandArgumentErrorKind::ConsensusObjectOperationNotAllowed),
                     "INVALID_ARGUMENT_ARITY" => Ok(command_argument_error::CommandArgumentErrorKind::InvalidArgumentArity),
+                    "INVALID_TRANSFER_OBJECT" => Ok(command_argument_error::CommandArgumentErrorKind::InvalidTransferObject),
+                    "INVALID_MAKE_MOVE_VEC_NON_OBJECT_ARGUMENT" => Ok(command_argument_error::CommandArgumentErrorKind::InvalidMakeMoveVecNonObjectArgument),
+                    "ARGUMENT_WITHOUT_VALUE" => Ok(command_argument_error::CommandArgumentErrorKind::ArgumentWithoutValue),
+                    "CANNOT_MOVE_BORROWED_VALUE" => Ok(command_argument_error::CommandArgumentErrorKind::CannotMoveBorrowedValue),
+                    "CANNOT_WRITE_TO_EXTENDED_REFERENCE" => Ok(command_argument_error::CommandArgumentErrorKind::CannotWriteToExtendedReference),
+                    "INVALID_REFERENCE_ARGUMENT" => Ok(command_argument_error::CommandArgumentErrorKind::InvalidReferenceArgument),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }
