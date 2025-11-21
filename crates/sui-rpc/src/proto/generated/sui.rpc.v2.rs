@@ -1192,6 +1192,26 @@ pub mod command_argument_error {
         /// Invalid argument arity. Expected a single argument but found a result that expanded to
         /// multiple arguments.
         InvalidArgumentArity = 13,
+        /// Object passed to TransferObject does not have public transfer, i.e. the `store` ability
+        InvalidTransferObject = 14,
+        /// First argument to MakeMoveVec is not an object. If no type is specified for MakeMoveVec,
+        /// all arguments must be the same object type.
+        InvalidMakeMoveVecNonObjectArgument = 15,
+        /// Specified argument location does not have a value and cannot be used
+        ArgumentWithoutValue = 16,
+        /// Cannot move a borrowed value. The value's type does resulted in this argument usage being
+        /// inferred as a move. This is likely due to the type not having the `copy` ability; although
+        /// in rare cases, it could also be this is the last usage of a value without the `drop`
+        /// ability.
+        CannotMoveBorrowedValue = 17,
+        /// Cannot write to an argument location that is still borrowed, and where that borrow is an
+        /// extension of that reference. This is likely due to this argument being used in a Move call
+        /// that returns a reference, and that reference is used in a later command.
+        CannotWriteToExtendedReference = 18,
+        /// The argument specified cannot be used as a reference argument in the Move call. Either the
+        /// argument is a mutable reference and it conflicts with another argument to the call, or the
+        /// argument is mutable and another reference extends it and will be used in a later command.
+        InvalidReferenceArgument = 19,
     }
     impl CommandArgumentErrorKind {
         /// String value of the enum field names used in the ProtoBuf definition.
@@ -1218,6 +1238,16 @@ pub mod command_argument_error {
                     "CONSENSUS_OBJECT_OPERATION_NOT_ALLOWED"
                 }
                 Self::InvalidArgumentArity => "INVALID_ARGUMENT_ARITY",
+                Self::InvalidTransferObject => "INVALID_TRANSFER_OBJECT",
+                Self::InvalidMakeMoveVecNonObjectArgument => {
+                    "INVALID_MAKE_MOVE_VEC_NON_OBJECT_ARGUMENT"
+                }
+                Self::ArgumentWithoutValue => "ARGUMENT_WITHOUT_VALUE",
+                Self::CannotMoveBorrowedValue => "CANNOT_MOVE_BORROWED_VALUE",
+                Self::CannotWriteToExtendedReference => {
+                    "CANNOT_WRITE_TO_EXTENDED_REFERENCE"
+                }
+                Self::InvalidReferenceArgument => "INVALID_REFERENCE_ARGUMENT",
             }
         }
         /// Creates an enum from field names used in the ProtoBuf definition.
@@ -1243,6 +1273,16 @@ pub mod command_argument_error {
                     Some(Self::ConsensusObjectOperationNotAllowed)
                 }
                 "INVALID_ARGUMENT_ARITY" => Some(Self::InvalidArgumentArity),
+                "INVALID_TRANSFER_OBJECT" => Some(Self::InvalidTransferObject),
+                "INVALID_MAKE_MOVE_VEC_NON_OBJECT_ARGUMENT" => {
+                    Some(Self::InvalidMakeMoveVecNonObjectArgument)
+                }
+                "ARGUMENT_WITHOUT_VALUE" => Some(Self::ArgumentWithoutValue),
+                "CANNOT_MOVE_BORROWED_VALUE" => Some(Self::CannotMoveBorrowedValue),
+                "CANNOT_WRITE_TO_EXTENDED_REFERENCE" => {
+                    Some(Self::CannotWriteToExtendedReference)
+                }
+                "INVALID_REFERENCE_ARGUMENT" => Some(Self::InvalidReferenceArgument),
                 _ => None,
             }
         }

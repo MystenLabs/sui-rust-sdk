@@ -408,6 +408,32 @@ pub enum CommandArgumentError {
     /// Invalid argument arity. Expected a single argument but found a result that expanded to
     /// multiple arguments.
     InvalidArgumentArity,
+
+    /// Object passed to TransferObject does not have public transfer, i.e. the `store` ability
+    InvalidTransferObject,
+
+    /// First argument to MakeMoveVec is not an object. If no type is specified for MakeMoveVec,
+    /// all arguments must be the same object type.
+    InvalidMakeMoveVecNonObjectArgument,
+
+    /// Specified argument location does not have a value and cannot be used
+    ArgumentWithoutValue,
+
+    /// Cannot move a borrowed value. The value's type does resulted in this argument usage being
+    /// inferred as a move. This is likely due to the type not having the `copy` ability; although
+    /// in rare cases, it could also be this is the last usage of a value without the `drop`
+    /// ability.
+    CannotMoveBorrowedValue,
+
+    /// Cannot write to an argument location that is still borrowed, and where that borrow is an
+    /// extension of that reference. This is likely due to this argument being used in a Move call
+    /// that returns a reference, and that reference is used in a later command.
+    CannotWriteToExtendedReference,
+
+    /// The argument specified cannot be used as a reference argument in the Move call. Either the
+    /// argument is a mutable reference and it conflicts with another argument to the call, or the
+    /// argument is mutable and another reference extends it and will be used in a later command.
+    InvalidReferenceArgument,
 }
 
 /// An error with a upgrading a package
