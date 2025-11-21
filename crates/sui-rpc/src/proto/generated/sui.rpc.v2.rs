@@ -7569,6 +7569,8 @@ pub mod end_of_epoch_transaction_kind {
         CoinRegistryCreate = 10,
         /// Create and initialize the Display Registry object.
         DisplayRegistryCreate = 11,
+        /// Create and initialize the Address Alias State object.
+        AddressAliasStateCreate = 12,
     }
     impl Kind {
         /// String value of the enum field names used in the ProtoBuf definition.
@@ -7591,6 +7593,7 @@ pub mod end_of_epoch_transaction_kind {
                 Self::AccumulatorRootCreate => "ACCUMULATOR_ROOT_CREATE",
                 Self::CoinRegistryCreate => "COIN_REGISTRY_CREATE",
                 Self::DisplayRegistryCreate => "DISPLAY_REGISTRY_CREATE",
+                Self::AddressAliasStateCreate => "ADDRESS_ALIAS_STATE_CREATE",
             }
         }
         /// Creates an enum from field names used in the ProtoBuf definition.
@@ -7610,6 +7613,7 @@ pub mod end_of_epoch_transaction_kind {
                 "ACCUMULATOR_ROOT_CREATE" => Some(Self::AccumulatorRootCreate),
                 "COIN_REGISTRY_CREATE" => Some(Self::CoinRegistryCreate),
                 "DISPLAY_REGISTRY_CREATE" => Some(Self::DisplayRegistryCreate),
+                "ADDRESS_ALIAS_STATE_CREATE" => Some(Self::AddressAliasStateCreate),
                 _ => None,
             }
         }

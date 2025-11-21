@@ -6960,6 +6960,7 @@ impl serde::Serialize for end_of_epoch_transaction_kind::Kind {
             Self::AccumulatorRootCreate => "ACCUMULATOR_ROOT_CREATE",
             Self::CoinRegistryCreate => "COIN_REGISTRY_CREATE",
             Self::DisplayRegistryCreate => "DISPLAY_REGISTRY_CREATE",
+            Self::AddressAliasStateCreate => "ADDRESS_ALIAS_STATE_CREATE",
         };
         serializer.serialize_str(variant)
     }
@@ -6983,6 +6984,7 @@ impl<'de> serde::Deserialize<'de> for end_of_epoch_transaction_kind::Kind {
             "ACCUMULATOR_ROOT_CREATE",
             "COIN_REGISTRY_CREATE",
             "DISPLAY_REGISTRY_CREATE",
+            "ADDRESS_ALIAS_STATE_CREATE",
         ];
 
         struct GeneratedVisitor;
@@ -7035,6 +7037,7 @@ impl<'de> serde::Deserialize<'de> for end_of_epoch_transaction_kind::Kind {
                     "ACCUMULATOR_ROOT_CREATE" => Ok(end_of_epoch_transaction_kind::Kind::AccumulatorRootCreate),
                     "COIN_REGISTRY_CREATE" => Ok(end_of_epoch_transaction_kind::Kind::CoinRegistryCreate),
                     "DISPLAY_REGISTRY_CREATE" => Ok(end_of_epoch_transaction_kind::Kind::DisplayRegistryCreate),
+                    "ADDRESS_ALIAS_STATE_CREATE" => Ok(end_of_epoch_transaction_kind::Kind::AddressAliasStateCreate),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }

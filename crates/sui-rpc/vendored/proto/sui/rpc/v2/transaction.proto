@@ -498,6 +498,9 @@ message EndOfEpochTransactionKind {
 
     // Create and initialize the Display Registry object.
     DISPLAY_REGISTRY_CREATE = 11;
+
+    // Create and initialize the Address Alias State object.
+    ADDRESS_ALIAS_STATE_CREATE = 12;
   }
 
   optional Kind kind = 1;
