@@ -621,6 +621,12 @@ impl TryFrom<&CommandArgumentError> for sui_sdk_types::CommandArgumentError {
             K::InvalidObjectByMutRef => Self::InvalidObjectByMutRef,
             K::ConsensusObjectOperationNotAllowed => Self::ConsensusObjectOperationNotAllowed,
             K::InvalidArgumentArity => Self::InvalidArgumentArity,
+            K::InvalidTransferObject => Self::InvalidTransferObject,
+            K::InvalidMakeMoveVecNonObjectArgument => Self::InvalidMakeMoveVecNonObjectArgument,
+            K::ArgumentWithoutValue => Self::ArgumentWithoutValue,
+            K::CannotMoveBorrowedValue => Self::CannotMoveBorrowedValue,
+            K::CannotWriteToExtendedReference => Self::CannotWriteToExtendedReference,
+            K::InvalidReferenceArgument => Self::InvalidReferenceArgument,
         }
         .pipe(Ok)
     }
