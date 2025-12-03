@@ -4,6 +4,8 @@ mod v2;
 pub use v1::ModifiedAtVersion;
 pub use v1::ObjectReferenceWithOwner;
 pub use v1::TransactionEffectsV1;
+pub use v2::AccumulatorOperation;
+pub use v2::AccumulatorWrite;
 pub use v2::ChangedObject;
 pub use v2::IdOperation;
 pub use v2::ObjectIn;

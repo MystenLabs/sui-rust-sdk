@@ -942,6 +942,12 @@ mod _field_impls {
             number: 9i32,
             message_fields: Some(Owner::FIELDS),
         };
+        pub const ACCUMULATOR_WRITE_FIELD: &'static MessageField = &MessageField {
+            name: "accumulator_write",
+            json_name: "accumulatorWrite",
+            number: 12i32,
+            message_fields: Some(AccumulatorWrite::FIELDS),
+        };
         pub const ID_OPERATION_FIELD: &'static MessageField = &MessageField {
             name: "id_operation",
             json_name: "idOperation",
@@ -966,6 +972,7 @@ mod _field_impls {
             Self::OUTPUT_VERSION_FIELD,
             Self::OUTPUT_DIGEST_FIELD,
             Self::OUTPUT_OWNER_FIELD,
+            Self::ACCUMULATOR_WRITE_FIELD,
             Self::ID_OPERATION_FIELD,
             Self::OBJECT_TYPE_FIELD,
         ];
@@ -1026,12 +1033,87 @@ mod _field_impls {
             self.path.push(ChangedObject::OUTPUT_OWNER_FIELD.name);
             OwnerFieldPathBuilder::new_with_base(self.path)
         }
+        pub fn accumulator_write(mut self) -> AccumulatorWriteFieldPathBuilder {
+            self.path.push(ChangedObject::ACCUMULATOR_WRITE_FIELD.name);
+            AccumulatorWriteFieldPathBuilder::new_with_base(self.path)
+        }
         pub fn id_operation(mut self) -> String {
             self.path.push(ChangedObject::ID_OPERATION_FIELD.name);
             self.finish()
         }
         pub fn object_type(mut self) -> String {
             self.path.push(ChangedObject::OBJECT_TYPE_FIELD.name);
+            self.finish()
+        }
+    }
+    impl AccumulatorWrite {
+        pub const ADDRESS_FIELD: &'static MessageField = &MessageField {
+            name: "address",
+            json_name: "address",
+            number: 1i32,
+            message_fields: None,
+        };
+        pub const ACCUMULATOR_TYPE_FIELD: &'static MessageField = &MessageField {
+            name: "accumulator_type",
+            json_name: "accumulatorType",
+            number: 2i32,
+            message_fields: None,
+        };
+        pub const OPERATION_FIELD: &'static MessageField = &MessageField {
+            name: "operation",
+            json_name: "operation",
+            number: 3i32,
+            message_fields: None,
+        };
+        pub const VALUE_FIELD: &'static MessageField = &MessageField {
+            name: "value",
+            json_name: "value",
+            number: 5i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for AccumulatorWrite {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::ADDRESS_FIELD,
+            Self::ACCUMULATOR_TYPE_FIELD,
+            Self::OPERATION_FIELD,
+            Self::VALUE_FIELD,
+        ];
+    }
+    impl AccumulatorWrite {
+        pub fn path_builder() -> AccumulatorWriteFieldPathBuilder {
+            AccumulatorWriteFieldPathBuilder::new()
+        }
+    }
+    pub struct AccumulatorWriteFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl AccumulatorWriteFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn address(mut self) -> String {
+            self.path.push(AccumulatorWrite::ADDRESS_FIELD.name);
+            self.finish()
+        }
+        pub fn accumulator_type(mut self) -> String {
+            self.path.push(AccumulatorWrite::ACCUMULATOR_TYPE_FIELD.name);
+            self.finish()
+        }
+        pub fn operation(mut self) -> String {
+            self.path.push(AccumulatorWrite::OPERATION_FIELD.name);
+            self.finish()
+        }
+        pub fn value(mut self) -> String {
+            self.path.push(AccumulatorWrite::VALUE_FIELD.name);
             self.finish()
         }
     }
@@ -2447,6 +2529,18 @@ mod _field_impls {
             number: 6i32,
             message_fields: None,
         };
+        pub const MUTABILITY_FIELD: &'static MessageField = &MessageField {
+            name: "mutability",
+            json_name: "mutability",
+            number: 7i32,
+            message_fields: None,
+        };
+        pub const FUNDS_WITHDRAWAL_FIELD: &'static MessageField = &MessageField {
+            name: "funds_withdrawal",
+            json_name: "fundsWithdrawal",
+            number: 8i32,
+            message_fields: Some(FundsWithdrawal::FIELDS),
+        };
         pub const LITERAL_FIELD: &'static MessageField = &MessageField {
             name: "literal",
             json_name: "literal",
@@ -2462,6 +2556,8 @@ mod _field_impls {
             Self::VERSION_FIELD,
             Self::DIGEST_FIELD,
             Self::MUTABLE_FIELD,
+            Self::MUTABILITY_FIELD,
+            Self::FUNDS_WITHDRAWAL_FIELD,
             Self::LITERAL_FIELD,
         ];
     }
@@ -2509,8 +2605,76 @@ mod _field_impls {
             self.path.push(Input::MUTABLE_FIELD.name);
             self.finish()
         }
+        pub fn mutability(mut self) -> String {
+            self.path.push(Input::MUTABILITY_FIELD.name);
+            self.finish()
+        }
+        pub fn funds_withdrawal(mut self) -> FundsWithdrawalFieldPathBuilder {
+            self.path.push(Input::FUNDS_WITHDRAWAL_FIELD.name);
+            FundsWithdrawalFieldPathBuilder::new_with_base(self.path)
+        }
         pub fn literal(mut self) -> String {
             self.path.push(Input::LITERAL_FIELD.name);
+            self.finish()
+        }
+    }
+    impl FundsWithdrawal {
+        pub const AMOUNT_FIELD: &'static MessageField = &MessageField {
+            name: "amount",
+            json_name: "amount",
+            number: 1i32,
+            message_fields: None,
+        };
+        pub const COIN_TYPE_FIELD: &'static MessageField = &MessageField {
+            name: "coin_type",
+            json_name: "coinType",
+            number: 2i32,
+            message_fields: None,
+        };
+        pub const SOURCE_FIELD: &'static MessageField = &MessageField {
+            name: "source",
+            json_name: "source",
+            number: 3i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for FundsWithdrawal {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::AMOUNT_FIELD,
+            Self::COIN_TYPE_FIELD,
+            Self::SOURCE_FIELD,
+        ];
+    }
+    impl FundsWithdrawal {
+        pub fn path_builder() -> FundsWithdrawalFieldPathBuilder {
+            FundsWithdrawalFieldPathBuilder::new()
+        }
+    }
+    pub struct FundsWithdrawalFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl FundsWithdrawalFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn amount(mut self) -> String {
+            self.path.push(FundsWithdrawal::AMOUNT_FIELD.name);
+            self.finish()
+        }
+        pub fn coin_type(mut self) -> String {
+            self.path.push(FundsWithdrawal::COIN_TYPE_FIELD.name);
+            self.finish()
+        }
+        pub fn source(mut self) -> String {
+            self.path.push(FundsWithdrawal::SOURCE_FIELD.name);
             self.finish()
         }
     }
@@ -8984,11 +9148,32 @@ mod _field_impls {
             number: 2i32,
             message_fields: None,
         };
+        pub const MIN_EPOCH_FIELD: &'static MessageField = &MessageField {
+            name: "min_epoch",
+            json_name: "minEpoch",
+            number: 3i32,
+            message_fields: None,
+        };
+        pub const CHAIN_FIELD: &'static MessageField = &MessageField {
+            name: "chain",
+            json_name: "chain",
+            number: 6i32,
+            message_fields: None,
+        };
+        pub const NONCE_FIELD: &'static MessageField = &MessageField {
+            name: "nonce",
+            json_name: "nonce",
+            number: 7i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for TransactionExpiration {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::KIND_FIELD,
             Self::EPOCH_FIELD,
+            Self::MIN_EPOCH_FIELD,
+            Self::CHAIN_FIELD,
+            Self::NONCE_FIELD,
         ];
     }
     impl TransactionExpiration {
@@ -9017,6 +9202,18 @@ mod _field_impls {
         }
         pub fn epoch(mut self) -> String {
             self.path.push(TransactionExpiration::EPOCH_FIELD.name);
+            self.finish()
+        }
+        pub fn min_epoch(mut self) -> String {
+            self.path.push(TransactionExpiration::MIN_EPOCH_FIELD.name);
+            self.finish()
+        }
+        pub fn chain(mut self) -> String {
+            self.path.push(TransactionExpiration::CHAIN_FIELD.name);
+            self.finish()
+        }
+        pub fn nonce(mut self) -> String {
+            self.path.push(TransactionExpiration::NONCE_FIELD.name);
             self.finish()
         }
     }

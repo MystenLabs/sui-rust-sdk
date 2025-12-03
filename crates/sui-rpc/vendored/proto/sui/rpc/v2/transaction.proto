@@ -59,11 +59,46 @@ message TransactionExpiration {
     // Validators won't sign and execute transaction unless the expiration epoch
     // is greater than or equal to the current epoch.
     EPOCH = 2;
+
+    // This variant enables gas payments from address balances.
+    //
+    // When transactions use address balances for gas payment instead of explicit gas coins,
+    // we lose the natural transaction uniqueness and replay prevention that comes from
+    // mutation of gas coin objects.
+    //
+    // By bounding expiration and providing a nonce, validators must only retain
+    // executed digests for the maximum possible expiry range to differentiate
+    // retries from unique transactions with otherwise identical inputs.
+    VALID_DURING = 3;
   }
 
   optional TransactionExpirationKind kind = 1;
 
+  // Maximum epoch in which a transaction can be executed. The provided maximual epoch
+  // must be greater than or equal to the current epoch for a transaction to execute.
   optional uint64 epoch = 2;
+
+  // Minimal epoch in which a transaction can be executed. The provided minimal epoch
+  // must be less than or equal to the current epoch for a transaction to execute.
+  optional uint64 min_epoch = 3;
+
+  // Minimal timestamp (in seconds since the UNIX epoch) in which a transaction
+  // can be executed. The provided mimimal timestamp must be less than or
+  // equal to the current clock.
+  // optional uint64 min_timestamp_seconds = 4;
+  reserved 4;
+
+  // Maximum timestamp (in seconds since the UNIX epoch) in which a transaction
+  // can be executed. The provided maximual timestamp must be greater than or
+  // equal to the current clock.
+  // optional uint64 max_timestamp_seconds = 5;
+  reserved 5;
+
+  // ChainId of the network this transaction is intended for in order to prevent cross-chain replay
+  optional string chain = 6;
+
+  // User-provided uniqueness identifier to differentiate otherwise identical transactions
+  optional uint32 nonce = 7;
 }
 
 // Transaction type.
