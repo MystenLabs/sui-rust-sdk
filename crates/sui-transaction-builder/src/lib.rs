@@ -16,6 +16,7 @@ use sui_types::MergeCoins;
 use sui_types::MoveCall;
 use sui_types::ObjectReference;
 use sui_types::Publish;
+use sui_types::SharedInput;
 use sui_types::SplitCoins;
 use sui_types::Transaction;
 use sui_types::TransactionExpiration;
@@ -359,7 +360,7 @@ fn try_from_unresolved_input_arg(value: unresolved::Input) -> Result<Input, Erro
                 match value {
                     unresolved::Value::String(v) => {
                         let bytes = base64ct::Base64::decode_vec(&v).map_err(Error::Decoding)?;
-                        Ok(Input::Pure { value: bytes })
+                        Ok(Input::Pure(bytes))
                     }
                     _ => Err(Error::Input(
                         "expected a base64 string value for the Pure input argument".to_string(),
@@ -391,11 +392,11 @@ fn try_from_unresolved_input_arg(value: unresolved::Input) -> Result<Input, Erro
                     return Err(Error::SharedObjectMutability(object_id));
                 };
 
-                Ok(Input::Shared {
+                Ok(Input::Shared(SharedInput::new(
                     object_id,
                     initial_shared_version,
                     mutable,
-                })
+                )))
             }
             unresolved::InputKind::Receiving => {
                 let Some(object_id) = value.object_id else {

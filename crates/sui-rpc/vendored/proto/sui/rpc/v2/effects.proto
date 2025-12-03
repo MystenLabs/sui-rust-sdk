@@ -91,6 +91,7 @@ message ChangedObject {
     OUTPUT_OBJECT_STATE_DOES_NOT_EXIST = 1;
     OUTPUT_OBJECT_STATE_OBJECT_WRITE = 2;
     OUTPUT_OBJECT_STATE_PACKAGE_WRITE = 3;
+    OUTPUT_OBJECT_STATE_ACCUMULATOR_WRITE = 4;
   }
 
   optional OutputObjectState output_state = 6;
@@ -100,6 +101,8 @@ message ChangedObject {
   optional string output_digest = 8;
   // Owner of the object after this transaction executed.
   optional Owner output_owner = 9;
+  // The contents of the accumulator write when `output_state` is `OUTPUT_OBJECT_STATE_ACCUMULATOR_WRITE`
+  optional AccumulatorWrite accumulator_write = 12;
 
   enum IdOperation {
     ID_OPERATION_UNKNOWN = 0;
@@ -114,6 +117,28 @@ message ChangedObject {
   // Type information is not provided by the effects structure but is instead
   // provided by an indexing layer
   optional string object_type = 11;
+}
+
+message AccumulatorWrite {
+  optional string address = 1;
+  optional string accumulator_type = 2;
+
+  enum AccumulatorOperation {
+    ACCUMULATOR_OPERATION_UNKNOWN = 0;
+    MERGE = 1;
+    SPLIT = 2;
+  }
+
+  optional AccumulatorOperation operation = 3;
+
+  // enum AccumulatorValue {
+  //   ACCUMULATOR_VALUE_UNKNOWN = 0;
+  //   INTEGER = 1;
+  // }
+  // optional AccumulatorValue value_kind = 4;
+  reserved 4; // AccumulatorValueKind
+
+  optional uint64 value = 5;
 }
 
 // A consensus object that wasn't changed during execution.

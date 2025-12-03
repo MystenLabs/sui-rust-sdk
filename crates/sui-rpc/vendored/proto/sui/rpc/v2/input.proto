@@ -23,6 +23,9 @@ message Input {
 
     // A Move object that is attempted to be received in this transaction.
     RECEIVING = 4;
+
+    // Reservation to withdraw balance from a funds accumulator
+    FUNDS_WITHDRAWAL = 5;
   }
 
   optional InputKind kind = 1;
@@ -48,8 +51,41 @@ message Input {
   // object.
   optional bool mutable = 6;
 
+  enum Mutability {
+    MUTABILITY_UNKNOWN = 0;
+    IMMUTABLE = 1;
+    MUTABLE = 2;
+
+    // Non-exclusive write is used to allow multiple transactions to
+    // simultaneously add disjoint dynamic fields to an object.
+    // (Currently only used by settlement transactions).
+    NON_EXCLUSIVE_WRITE = 3;
+  }
+
+  // NOTE: For backwards compatibility purposes the addition of the new
+  // `NON_EXCLUSIVE_WRITE` mutability variant requires providing a new field.
+  // The old `mutable` field will continue to be populated and respected as an
+  // input for the time being.
+  optional Mutability mutability = 7;
+
+  // Fund Reservation information if `kind` is `FUNDS_WITHDRAWAL`.
+  optional FundsWithdrawal funds_withdrawal = 8;
+
   // A literal value
   //
   // INPUT ONLY
   optional google.protobuf.Value literal = 1000;
+}
+
+message FundsWithdrawal {
+  optional uint64 amount = 1;
+  optional string coin_type = 2;
+
+  enum Source {
+    SOURCE_UNKNOWN = 0;
+    SENDER = 1;
+    SPONSOR = 2;
+  }
+
+  optional Source source = 3;
 }

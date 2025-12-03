@@ -5,7 +5,6 @@ use serde::Serializer;
 use serde_with::DeserializeAs;
 use serde_with::SerializeAs;
 
-use crate::Address;
 use crate::ObjectReference;
 
 mod transaction {
@@ -85,7 +84,9 @@ mod transaction {
 }
 
 mod input_argument {
+    use crate::transaction::FundsWithdrawal;
     use crate::transaction::Input;
+    use crate::transaction::SharedInput;
 
     use super::*;
 
@@ -93,16 +94,13 @@ mod input_argument {
     enum CallArg {
         Pure(#[serde(with = "::serde_with::As::<::serde_with::Bytes>")] Vec<u8>),
         Object(ObjectArg),
+        FundsWithdrawal(FundsWithdrawal),
     }
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
     enum ObjectArg {
         ImmutableOrOwned(ObjectReference),
-        Shared {
-            object_id: Address,
-            initial_shared_version: u64,
-            mutable: bool,
-        },
+        Shared(SharedInput),
         Receiving(ObjectReference),
     }
 
@@ -112,20 +110,15 @@ mod input_argument {
             S: Serializer,
         {
             let binary = match self.clone() {
-                Input::Pure { value } => CallArg::Pure(value),
+                Input::Pure(value) => CallArg::Pure(value),
                 Input::ImmutableOrOwned(object_ref) => {
                     CallArg::Object(ObjectArg::ImmutableOrOwned(object_ref))
                 }
-                Input::Shared {
-                    object_id,
-                    initial_shared_version,
-                    mutable,
-                } => CallArg::Object(ObjectArg::Shared {
-                    object_id,
-                    initial_shared_version,
-                    mutable,
-                }),
+                Input::Shared(shared_input) => CallArg::Object(ObjectArg::Shared(shared_input)),
                 Input::Receiving(object_ref) => CallArg::Object(ObjectArg::Receiving(object_ref)),
+                Input::FundsWithdrawal(funds_withdrawal) => {
+                    CallArg::FundsWithdrawal(funds_withdrawal)
+                }
             };
             binary.serialize(serializer)
         }
@@ -137,20 +130,15 @@ mod input_argument {
             D: Deserializer<'de>,
         {
             CallArg::deserialize(deserializer).map(|binary| match binary {
-                CallArg::Pure(value) => Input::Pure { value },
+                CallArg::Pure(value) => Input::Pure(value),
                 CallArg::Object(ObjectArg::ImmutableOrOwned(object_ref)) => {
                     Input::ImmutableOrOwned(object_ref)
                 }
-                CallArg::Object(ObjectArg::Shared {
-                    object_id,
-                    initial_shared_version,
-                    mutable,
-                }) => Input::Shared {
-                    object_id,
-                    initial_shared_version,
-                    mutable,
-                },
+                CallArg::Object(ObjectArg::Shared(shared_input)) => Input::Shared(shared_input),
                 CallArg::Object(ObjectArg::Receiving(object_ref)) => Input::Receiving(object_ref),
+                CallArg::FundsWithdrawal(funds_withdrawal) => {
+                    Input::FundsWithdrawal(funds_withdrawal)
+                }
             })
         }
     }

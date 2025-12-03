@@ -85,7 +85,7 @@ impl Merge<&Transaction> for Transaction {
         }
 
         if mask.contains(Self::EXPIRATION_FIELD.name) {
-            self.expiration = *expiration;
+            self.expiration = expiration.clone();
         }
     }
 }
@@ -207,6 +207,20 @@ impl From<sui_sdk_types::TransactionExpiration> for TransactionExpiration {
                 message.epoch = Some(epoch);
                 TransactionExpirationKind::Epoch
             }
+            ValidDuring {
+                min_epoch,
+                max_epoch,
+                min_timestamp_seconds: _,
+                max_timestamp_seconds: _,
+                chain,
+                nonce,
+            } => {
+                message.epoch = max_epoch;
+                message.min_epoch = min_epoch;
+                message.set_chain(chain);
+                message.set_nonce(nonce);
+                TransactionExpirationKind::ValidDuring
+            }
             _ => TransactionExpirationKind::Unknown,
         };
 
@@ -230,6 +244,20 @@ impl TryFrom<&TransactionExpiration> for sui_sdk_types::TransactionExpiration {
             }
             TransactionExpirationKind::None => Self::None,
             TransactionExpirationKind::Epoch => Self::Epoch(value.epoch()),
+            TransactionExpirationKind::ValidDuring => Self::ValidDuring {
+                min_epoch: value.min_epoch_opt(),
+                max_epoch: value.epoch_opt(),
+                min_timestamp_seconds: None,
+                max_timestamp_seconds: None,
+                chain: value
+                    .chain_opt()
+                    .ok_or_else(|| TryFromProtoError::missing("chain"))?
+                    .parse()
+                    .map_err(|e| TryFromProtoError::invalid("chain", e))?,
+                nonce: value
+                    .nonce_opt()
+                    .ok_or_else(|| TryFromProtoError::missing("nonce"))?,
+            },
         }
         .pipe(Ok)
     }
@@ -1475,12 +1503,13 @@ impl TryFrom<&ProgrammableTransaction> for sui_sdk_types::ProgrammableTransactio
 impl From<sui_sdk_types::Input> for Input {
     fn from(value: sui_sdk_types::Input) -> Self {
         use input::InputKind;
+        use input::Mutability;
         use sui_sdk_types::Input::*;
 
         let mut message = Self::default();
 
         let kind = match value {
-            Pure { value } => {
+            Pure(value) => {
                 message.pure = Some(value.into());
                 InputKind::Pure
             }
@@ -1490,14 +1519,18 @@ impl From<sui_sdk_types::Input> for Input {
                 message.digest = Some(reference.digest().to_string());
                 InputKind::ImmutableOrOwned
             }
-            Shared {
-                object_id,
-                initial_shared_version,
-                mutable,
-            } => {
-                message.object_id = Some(object_id.to_string());
-                message.version = Some(initial_shared_version);
-                message.mutable = Some(mutable);
+            Shared(shared_input) => {
+                message.object_id = Some(shared_input.object_id().to_string());
+                message.version = Some(shared_input.version());
+                message.mutable = Some(shared_input.is_mutable());
+                message.set_mutability(if shared_input.is_non_exclusive_write() {
+                    Mutability::NonExclusiveWrite
+                } else if shared_input.is_mutable() {
+                    Mutability::Mutable
+                } else {
+                    Mutability::Immutable
+                });
+
                 InputKind::Shared
             }
             Receiving(reference) => {
@@ -1505,6 +1538,10 @@ impl From<sui_sdk_types::Input> for Input {
                 message.version = Some(reference.version());
                 message.digest = Some(reference.digest().to_string());
                 InputKind::Receiving
+            }
+            FundsWithdrawal(funds_withdrawal) => {
+                message.set_funds_withdrawal(funds_withdrawal);
+                InputKind::FundsWithdrawal
             }
             _ => InputKind::Unknown,
         };
@@ -1527,14 +1564,13 @@ impl TryFrom<&Input> for sui_sdk_types::Input {
                     "unknown InputKind",
                 ));
             }
-
-            InputKind::Pure => Self::Pure {
-                value: value
+            InputKind::Pure => Self::Pure(
+                value
                     .pure
                     .as_ref()
                     .ok_or_else(|| TryFromProtoError::missing("pure"))?
                     .to_vec(),
-            },
+            ),
             InputKind::ImmutableOrOwned => {
                 let object_id = value
                     .object_id
@@ -1564,14 +1600,27 @@ impl TryFrom<&Input> for sui_sdk_types::Input {
                 let initial_shared_version = value
                     .version
                     .ok_or_else(|| TryFromProtoError::missing("version"))?;
-                let mutable = value
-                    .mutable
-                    .ok_or_else(|| TryFromProtoError::missing("mutable"))?;
-                Self::Shared {
-                    object_id,
-                    initial_shared_version,
-                    mutable,
-                }
+
+                let shared_input = match value.mutability() {
+                    input::Mutability::Unknown => {
+                        let mutable = value
+                            .mutable
+                            .ok_or_else(|| TryFromProtoError::missing("mutable"))?;
+                        sui_sdk_types::SharedInput::new(object_id, initial_shared_version, mutable)
+                    }
+                    input::Mutability::Immutable => {
+                        sui_sdk_types::SharedInput::new(object_id, initial_shared_version, false)
+                    }
+                    input::Mutability::Mutable => {
+                        sui_sdk_types::SharedInput::new(object_id, initial_shared_version, true)
+                    }
+                    input::Mutability::NonExclusiveWrite => {
+                        sui_sdk_types::SharedInput::new(object_id, initial_shared_version, false)
+                            .with_non_exclusive_write()
+                    }
+                };
+
+                Self::Shared(shared_input)
             }
             InputKind::Receiving => {
                 let object_id = value
@@ -1592,8 +1641,63 @@ impl TryFrom<&Input> for sui_sdk_types::Input {
                 let reference = sui_sdk_types::ObjectReference::new(object_id, version, digest);
                 Self::Receiving(reference)
             }
+            InputKind::FundsWithdrawal => {
+                let funds_withdrawal = value
+                    .funds_withdrawal_opt()
+                    .ok_or_else(|| TryFromProtoError::missing("funds_withdrawal"))?
+                    .try_into()?;
+                Self::FundsWithdrawal(funds_withdrawal)
+            }
         }
         .pipe(Ok)
+    }
+}
+
+//
+// FundsWithdrawal
+//
+
+impl From<sui_sdk_types::FundsWithdrawal> for FundsWithdrawal {
+    fn from(value: sui_sdk_types::FundsWithdrawal) -> Self {
+        let mut message = Self::default();
+        message.set_coin_type(value.coin_type());
+        message.set_source(value.source().into());
+        message.amount = value.amount();
+        message
+    }
+}
+
+impl TryFrom<&FundsWithdrawal> for sui_sdk_types::FundsWithdrawal {
+    type Error = TryFromProtoError;
+
+    fn try_from(value: &FundsWithdrawal) -> Result<Self, Self::Error> {
+        use funds_withdrawal::Source;
+
+        let amount = value
+            .amount_opt()
+            .ok_or_else(|| TryFromProtoError::missing("amount"))?;
+        let coin_type = value
+            .coin_type_opt()
+            .ok_or_else(|| TryFromProtoError::missing("coin_type"))?
+            .parse()
+            .map_err(|e| TryFromProtoError::invalid("coin_type", e))?;
+        let source = match value.source() {
+            Source::Unknown => return Err(TryFromProtoError::invalid("source", "unknown source")),
+            Source::Sender => sui_sdk_types::WithdrawFrom::Sender,
+            Source::Sponsor => sui_sdk_types::WithdrawFrom::Sponsor,
+        };
+
+        Ok(Self::new(amount, coin_type, source))
+    }
+}
+
+impl From<sui_sdk_types::WithdrawFrom> for funds_withdrawal::Source {
+    fn from(value: sui_sdk_types::WithdrawFrom) -> Self {
+        match value {
+            sui_sdk_types::WithdrawFrom::Sender => Self::Sender,
+            sui_sdk_types::WithdrawFrom::Sponsor => Self::Sponsor,
+            _ => Self::Unknown,
+        }
     }
 }
 

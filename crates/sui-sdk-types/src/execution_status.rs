@@ -286,6 +286,12 @@ pub enum ExecutionError {
 
     /// A valid linkage was unable to be determined for the transaction or one of its commands.
     InvalidLinkage,
+
+    /// Insufficient balance for transaction withdrawal
+    InsufficientBalanceForWithdraw,
+
+    /// An input object with non-exclusive write mutability was modified
+    NonExclusiveWriteInputObjectModified { object: Address },
 }
 
 /// Location in move bytecode where an error occurred
