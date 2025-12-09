@@ -233,6 +233,7 @@ pub use transaction::ProgrammableTransaction;
 pub use transaction::Publish;
 pub use transaction::RandomnessStateUpdate;
 pub use transaction::SharedInput;
+pub use transaction::Mutability;
 pub use transaction::SignedTransaction;
 pub use transaction::SplitCoins;
 pub use transaction::SystemPackage;

@@ -926,7 +926,7 @@ pub struct SharedInput {
 }
 
 impl SharedInput {
-    pub fn new(object_id: Address, version: u64, mutable: bool) -> Self {
+    pub fn new<M: Into<Mutability>>(object_id: Address, version: u64, mutable: M) -> Self {
         Self {
             object_id,
             version,
@@ -942,37 +942,18 @@ impl SharedInput {
         self.version
     }
 
-    pub fn is_mutable(&self) -> bool {
-        match self.mutability {
-            Mutability::Immutable => false,
-            Mutability::Mutable => true,
-            Mutability::NonExclusiveWrite => false,
-        }
-    }
-
-    #[doc(hidden)]
-    pub fn with_non_exclusive_write(mut self) -> Self {
-        self.mutability = Mutability::NonExclusiveWrite;
-        self
-    }
-
-    #[doc(hidden)]
-    pub fn is_non_exclusive_write(&self) -> bool {
-        match self.mutability {
-            Mutability::Immutable => false,
-            Mutability::Mutable => false,
-            Mutability::NonExclusiveWrite => true,
-        }
+    pub fn mutability(&self) -> Mutability {
+        self.mutability
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
-enum Mutability {
+pub enum Mutability {
     // The "classic" mutable/immutable modes.
     Immutable,
     Mutable,
@@ -988,6 +969,16 @@ impl From<bool> for Mutability {
             Self::Mutable
         } else {
             Self::Immutable
+        }
+    }
+}
+
+impl Mutability {
+    pub fn is_mutable(self) -> bool {
+        match self {
+            Mutability::Immutable => false,
+            Mutability::Mutable => true,
+            Mutability::NonExclusiveWrite => false,
         }
     }
 }

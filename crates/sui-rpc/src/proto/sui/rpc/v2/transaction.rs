@@ -1503,7 +1503,6 @@ impl TryFrom<&ProgrammableTransaction> for sui_sdk_types::ProgrammableTransactio
 impl From<sui_sdk_types::Input> for Input {
     fn from(value: sui_sdk_types::Input) -> Self {
         use input::InputKind;
-        use input::Mutability;
         use sui_sdk_types::Input::*;
 
         let mut message = Self::default();
@@ -1522,14 +1521,8 @@ impl From<sui_sdk_types::Input> for Input {
             Shared(shared_input) => {
                 message.object_id = Some(shared_input.object_id().to_string());
                 message.version = Some(shared_input.version());
-                message.mutable = Some(shared_input.is_mutable());
-                message.set_mutability(if shared_input.is_non_exclusive_write() {
-                    Mutability::NonExclusiveWrite
-                } else if shared_input.is_mutable() {
-                    Mutability::Mutable
-                } else {
-                    Mutability::Immutable
-                });
+                message.mutable = Some(shared_input.mutability().is_mutable());
+                message.set_mutability(shared_input.mutability().into());
 
                 InputKind::Shared
             }
@@ -1608,16 +1601,21 @@ impl TryFrom<&Input> for sui_sdk_types::Input {
                             .ok_or_else(|| TryFromProtoError::missing("mutable"))?;
                         sui_sdk_types::SharedInput::new(object_id, initial_shared_version, mutable)
                     }
-                    input::Mutability::Immutable => {
-                        sui_sdk_types::SharedInput::new(object_id, initial_shared_version, false)
-                    }
-                    input::Mutability::Mutable => {
-                        sui_sdk_types::SharedInput::new(object_id, initial_shared_version, true)
-                    }
-                    input::Mutability::NonExclusiveWrite => {
-                        sui_sdk_types::SharedInput::new(object_id, initial_shared_version, false)
-                            .with_non_exclusive_write()
-                    }
+                    input::Mutability::Immutable => sui_sdk_types::SharedInput::new(
+                        object_id,
+                        initial_shared_version,
+                        sui_sdk_types::Mutability::Immutable,
+                    ),
+                    input::Mutability::Mutable => sui_sdk_types::SharedInput::new(
+                        object_id,
+                        initial_shared_version,
+                        sui_sdk_types::Mutability::Mutable,
+                    ),
+                    input::Mutability::NonExclusiveWrite => sui_sdk_types::SharedInput::new(
+                        object_id,
+                        initial_shared_version,
+                        sui_sdk_types::Mutability::NonExclusiveWrite,
+                    ),
                 };
 
                 Self::Shared(shared_input)
@@ -1650,6 +1648,16 @@ impl TryFrom<&Input> for sui_sdk_types::Input {
             }
         }
         .pipe(Ok)
+    }
+}
+
+impl From<sui_sdk_types::Mutability> for input::Mutability {
+    fn from(value: sui_sdk_types::Mutability) -> Self {
+        match value {
+            sui_sdk_types::Mutability::Immutable => Self::Immutable,
+            sui_sdk_types::Mutability::Mutable => Self::Mutable,
+            sui_sdk_types::Mutability::NonExclusiveWrite => Self::NonExclusiveWrite,
+        }
     }
 }
 
