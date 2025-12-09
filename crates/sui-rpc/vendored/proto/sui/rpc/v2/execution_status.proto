@@ -184,7 +184,7 @@ message ExecutionError {
 
     // An input object with non-exclusive write mutability was modified
     NON_EXCLUSIVE_WRITE_INPUT_OBJECT_MODIFIED = 42;
-}
+  }
 
   optional ExecutionErrorKind kind = 3;
 
