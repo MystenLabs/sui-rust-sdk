@@ -77,6 +77,30 @@ pub enum TransactionExpiration {
     /// Validators wont sign a transaction unless the expiration Epoch
     /// is greater than or equal to the current epoch
     Epoch(EpochId),
+
+    /// ValidDuring enables gas payments from address balances.
+    ///
+    /// When transactions use address balances for gas payment instead of explicit gas coins,
+    /// we lose the natural transaction uniqueness and replay prevention that comes from
+    /// mutation of gas coin objects.
+    ///
+    /// By bounding expiration and providing a nonce, validators must only retain
+    /// executed digests for the maximum possible expiry range to differentiate
+    /// retries from unique transactions with otherwise identical inputs.
+    ValidDuring {
+        /// Transaction invalid before this epoch. Must equal current epoch.
+        min_epoch: Option<EpochId>,
+        /// Transaction expires after this epoch. Must equal current epoch
+        max_epoch: Option<EpochId>,
+        /// Future support for sub-epoch timing (not yet implemented)
+        min_timestamp: Option<u64>,
+        /// Future support for sub-epoch timing (not yet implemented)
+        max_timestamp: Option<u64>,
+        /// Network identifier to prevent cross-chain replay
+        chain: Digest,
+        /// User-provided uniqueness identifier to differentiate otherwise identical transactions
+        nonce: u32,
+    },
 }
 
 /// Payment information for executing a transaction
@@ -869,23 +893,177 @@ pub enum Input {
     ///
     /// For normal operations this is required to be a move primitive type and not contain structs
     /// or objects.
-    Pure { value: Vec<u8> },
+    Pure(Vec<u8>),
 
     /// A move object that is either immutable or address owned
     ImmutableOrOwned(ObjectReference),
 
     /// A move object whose owner is "Shared"
-    Shared {
-        object_id: Address,
-        initial_shared_version: u64,
-
-        /// Controls whether the caller asks for a mutable reference to the shared object.
-        mutable: bool,
-    },
+    Shared(SharedInput),
 
     /// A move object that is attempted to be received in this transaction.
-    // TODO add discussion around what receiving is
     Receiving(ObjectReference),
+
+    /// Reservation to withdraw balance from a funds accumulator. This will be converted into a
+    /// `sui::funds_accumulator::Withdrawal` struct and passed into Move.
+    /// It is allowed to have multiple withdraw arguments even for the same funds type.
+    FundsWithdrawal(FundsWithdrawal),
+}
+
+/// A move object whose owner is "Shared"
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+pub struct SharedInput {
+    object_id: Address,
+    version: u64,
+    mutability: Mutability,
+}
+
+impl SharedInput {
+    pub fn new<M: Into<Mutability>>(object_id: Address, version: u64, mutable: M) -> Self {
+        Self {
+            object_id,
+            version,
+            mutability: mutable.into(),
+        }
+    }
+
+    pub fn object_id(&self) -> Address {
+        self.object_id
+    }
+
+    pub fn version(&self) -> u64 {
+        self.version
+    }
+
+    pub fn mutability(&self) -> Mutability {
+        self.mutability
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+pub enum Mutability {
+    // The "classic" mutable/immutable modes.
+    Immutable,
+    Mutable,
+    // Non-exclusive write is used to allow multiple transactions to
+    // simultaneously add disjoint dynamic fields to an object.
+    // (Currently only used by settlement transactions).
+    NonExclusiveWrite,
+}
+
+impl From<bool> for Mutability {
+    fn from(mutable: bool) -> Self {
+        if mutable {
+            Self::Mutable
+        } else {
+            Self::Immutable
+        }
+    }
+}
+
+impl Mutability {
+    pub fn is_mutable(self) -> bool {
+        match self {
+            Mutability::Immutable => false,
+            Mutability::Mutable => true,
+            Mutability::NonExclusiveWrite => false,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[non_exhaustive]
+enum Reservation {
+    // Reserve the entire balance.
+    // This is not yet supported.
+    #[allow(unused)]
+    #[cfg_attr(feature = "proptest", weight(0))]
+    EntireBalance,
+
+    // Reserve a specific amount of the balance.
+    Amount(u64),
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[non_exhaustive]
+enum WithdrawalType {
+    Balance(TypeTag),
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+pub struct FundsWithdrawal {
+    /// The reservation of the funds accumulator to withdraw.
+    reservation: Reservation,
+    /// The type argument of the funds accumulator to withdraw, e.g. `Balance<_>`.
+    type_: WithdrawalType,
+    /// The source of the funds to withdraw.
+    source: WithdrawFrom,
+}
+
+impl FundsWithdrawal {
+    pub fn new(amount: u64, coin_type: TypeTag, source: WithdrawFrom) -> Self {
+        Self {
+            reservation: Reservation::Amount(amount),
+            type_: WithdrawalType::Balance(coin_type),
+            source,
+        }
+    }
+
+    pub fn amount(&self) -> Option<u64> {
+        match self.reservation {
+            Reservation::EntireBalance => None,
+            Reservation::Amount(amount) => Some(amount),
+        }
+    }
+
+    pub fn coin_type(&self) -> &TypeTag {
+        match &self.type_ {
+            WithdrawalType::Balance(coin_type) => coin_type,
+        }
+    }
+
+    pub fn source(&self) -> WithdrawFrom {
+        self.source
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[non_exhaustive]
+pub enum WithdrawFrom {
+    /// Withdraw from the sender of the transaction.
+    Sender,
+    /// Withdraw from the sponsor of the transaction (gas owner).
+    Sponsor,
 }
 
 /// A single command in a programmable transaction.

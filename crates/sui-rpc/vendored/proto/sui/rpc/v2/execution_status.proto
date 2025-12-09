@@ -166,11 +166,24 @@ message ExecutionError {
     // Certificate is canceled because randomness could not be generated this epoch.
     EXECUTION_CANCELED_DUE_TO_RANDOMNESS_UNAVAILABLE = 37;
 
+    // Move vector element (passed to MakeMoveVec) with size {value_size} is larger \
+    // than the maximum size {max_scaled_size}. Note that this maximum is scaled based on the \
+    // type of the vector element.
     MOVE_VECTOR_ELEM_TOO_BIG = 38;
 
+    // Move value (possibly an upgrade ticket or a dev-inspect value) with size {value_size} \
+    // is larger than the maximum size  {max_scaled_size}. Note that this maximum is scaled based \
+    // on the type of the value.
     MOVE_RAW_VALUE_TOO_BIG = 39;
 
+    // A valid linkage was unable to be determined for the transaction or one of its commands.
     INVALID_LINKAGE = 40;
+
+    // Insufficient balance for transaction withdrawal
+    INSUFFICIENT_BALANCE_FOR_WITHDRAW = 41;
+
+    // An input object with non-exclusive write mutability was modified
+    NON_EXCLUSIVE_WRITE_INPUT_OBJECT_MODIFIED = 42;
   }
 
   optional ExecutionErrorKind kind = 3;

@@ -383,6 +383,9 @@ pub struct ChangedObject {
     /// Owner of the object after this transaction executed.
     #[prost(message, optional, tag = "9")]
     pub output_owner: ::core::option::Option<Owner>,
+    /// The contents of the accumulator write when `output_state` is `OUTPUT_OBJECT_STATE_ACCUMULATOR_WRITE`
+    #[prost(message, optional, tag = "12")]
+    pub accumulator_write: ::core::option::Option<AccumulatorWrite>,
     /// What happened to an `ObjectId` during execution.
     #[prost(enumeration = "changed_object::IdOperation", optional, tag = "10")]
     pub id_operation: ::core::option::Option<i32>,
@@ -451,6 +454,7 @@ pub mod changed_object {
         DoesNotExist = 1,
         ObjectWrite = 2,
         PackageWrite = 3,
+        AccumulatorWrite = 4,
     }
     impl OutputObjectState {
         /// String value of the enum field names used in the ProtoBuf definition.
@@ -463,6 +467,7 @@ pub mod changed_object {
                 Self::DoesNotExist => "OUTPUT_OBJECT_STATE_DOES_NOT_EXIST",
                 Self::ObjectWrite => "OUTPUT_OBJECT_STATE_OBJECT_WRITE",
                 Self::PackageWrite => "OUTPUT_OBJECT_STATE_PACKAGE_WRITE",
+                Self::AccumulatorWrite => "OUTPUT_OBJECT_STATE_ACCUMULATOR_WRITE",
             }
         }
         /// Creates an enum from field names used in the ProtoBuf definition.
@@ -472,6 +477,7 @@ pub mod changed_object {
                 "OUTPUT_OBJECT_STATE_DOES_NOT_EXIST" => Some(Self::DoesNotExist),
                 "OUTPUT_OBJECT_STATE_OBJECT_WRITE" => Some(Self::ObjectWrite),
                 "OUTPUT_OBJECT_STATE_PACKAGE_WRITE" => Some(Self::PackageWrite),
+                "OUTPUT_OBJECT_STATE_ACCUMULATOR_WRITE" => Some(Self::AccumulatorWrite),
                 _ => None,
             }
         }
@@ -515,6 +521,65 @@ pub mod changed_object {
                 "NONE" => Some(Self::None),
                 "CREATED" => Some(Self::Created),
                 "DELETED" => Some(Self::Deleted),
+                _ => None,
+            }
+        }
+    }
+}
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct AccumulatorWrite {
+    #[prost(string, optional, tag = "1")]
+    pub address: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(string, optional, tag = "2")]
+    pub accumulator_type: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(
+        enumeration = "accumulator_write::AccumulatorOperation",
+        optional,
+        tag = "3"
+    )]
+    pub operation: ::core::option::Option<i32>,
+    #[prost(uint64, optional, tag = "5")]
+    pub value: ::core::option::Option<u64>,
+}
+/// Nested message and enum types in `AccumulatorWrite`.
+pub mod accumulator_write {
+    #[non_exhaustive]
+    #[derive(
+        Clone,
+        Copy,
+        Debug,
+        PartialEq,
+        Eq,
+        Hash,
+        PartialOrd,
+        Ord,
+        ::prost::Enumeration
+    )]
+    #[repr(i32)]
+    pub enum AccumulatorOperation {
+        Unknown = 0,
+        Merge = 1,
+        Split = 2,
+    }
+    impl AccumulatorOperation {
+        /// String value of the enum field names used in the ProtoBuf definition.
+        ///
+        /// The values are not transformed in any way and thus are considered stable
+        /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+        pub fn as_str_name(&self) -> &'static str {
+            match self {
+                Self::Unknown => "ACCUMULATOR_OPERATION_UNKNOWN",
+                Self::Merge => "MERGE",
+                Self::Split => "SPLIT",
+            }
+        }
+        /// Creates an enum from field names used in the ProtoBuf definition.
+        pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+            match value {
+                "ACCUMULATOR_OPERATION_UNKNOWN" => Some(Self::Unknown),
+                "MERGE" => Some(Self::Merge),
+                "SPLIT" => Some(Self::Split),
                 _ => None,
             }
         }
@@ -867,9 +932,20 @@ pub mod execution_error {
         CoinTypeGlobalPause = 36,
         /// Certificate is canceled because randomness could not be generated this epoch.
         ExecutionCanceledDueToRandomnessUnavailable = 37,
+        /// Move vector element (passed to MakeMoveVec) with size {value_size} is larger
+        /// than the maximum size {max_scaled_size}. Note that this maximum is scaled based on the
+        /// type of the vector element.
         MoveVectorElemTooBig = 38,
+        /// Move value (possibly an upgrade ticket or a dev-inspect value) with size {value_size}
+        /// is larger than the maximum size  {max_scaled_size}. Note that this maximum is scaled based
+        /// on the type of the value.
         MoveRawValueTooBig = 39,
+        /// A valid linkage was unable to be determined for the transaction or one of its commands.
         InvalidLinkage = 40,
+        /// Insufficient balance for transaction withdrawal
+        InsufficientBalanceForWithdraw = 41,
+        /// An input object with non-exclusive write mutability was modified
+        NonExclusiveWriteInputObjectModified = 42,
     }
     impl ExecutionErrorKind {
         /// String value of the enum field names used in the ProtoBuf definition.
@@ -933,6 +1009,12 @@ pub mod execution_error {
                 Self::MoveVectorElemTooBig => "MOVE_VECTOR_ELEM_TOO_BIG",
                 Self::MoveRawValueTooBig => "MOVE_RAW_VALUE_TOO_BIG",
                 Self::InvalidLinkage => "INVALID_LINKAGE",
+                Self::InsufficientBalanceForWithdraw => {
+                    "INSUFFICIENT_BALANCE_FOR_WITHDRAW"
+                }
+                Self::NonExclusiveWriteInputObjectModified => {
+                    "NON_EXCLUSIVE_WRITE_INPUT_OBJECT_MODIFIED"
+                }
             }
         }
         /// Creates an enum from field names used in the ProtoBuf definition.
@@ -997,6 +1079,12 @@ pub mod execution_error {
                 "MOVE_VECTOR_ELEM_TOO_BIG" => Some(Self::MoveVectorElemTooBig),
                 "MOVE_RAW_VALUE_TOO_BIG" => Some(Self::MoveRawValueTooBig),
                 "INVALID_LINKAGE" => Some(Self::InvalidLinkage),
+                "INSUFFICIENT_BALANCE_FOR_WITHDRAW" => {
+                    Some(Self::InsufficientBalanceForWithdraw)
+                }
+                "NON_EXCLUSIVE_WRITE_INPUT_OBJECT_MODIFIED" => {
+                    Some(Self::NonExclusiveWriteInputObjectModified)
+                }
                 _ => None,
             }
         }
@@ -1476,6 +1564,15 @@ pub struct Input {
     /// object.
     #[prost(bool, optional, tag = "6")]
     pub mutable: ::core::option::Option<bool>,
+    /// NOTE: For backwards compatibility purposes the addition of the new
+    /// `NON_EXCLUSIVE_WRITE` mutability variant requires providing a new field.
+    /// The old `mutable` field will continue to be populated and respected as an
+    /// input for the time being.
+    #[prost(enumeration = "input::Mutability", optional, tag = "7")]
+    pub mutability: ::core::option::Option<i32>,
+    /// Fund Reservation information if `kind` is `FUNDS_WITHDRAWAL`.
+    #[prost(message, optional, tag = "8")]
+    pub funds_withdrawal: ::core::option::Option<FundsWithdrawal>,
     /// A literal value
     ///
     /// INPUT ONLY
@@ -1509,6 +1606,8 @@ pub mod input {
         Shared = 3,
         /// A Move object that is attempted to be received in this transaction.
         Receiving = 4,
+        /// Reservation to withdraw balance from a funds accumulator
+        FundsWithdrawal = 5,
     }
     impl InputKind {
         /// String value of the enum field names used in the ProtoBuf definition.
@@ -1522,6 +1621,7 @@ pub mod input {
                 Self::ImmutableOrOwned => "IMMUTABLE_OR_OWNED",
                 Self::Shared => "SHARED",
                 Self::Receiving => "RECEIVING",
+                Self::FundsWithdrawal => "FUNDS_WITHDRAWAL",
             }
         }
         /// Creates an enum from field names used in the ProtoBuf definition.
@@ -1532,6 +1632,106 @@ pub mod input {
                 "IMMUTABLE_OR_OWNED" => Some(Self::ImmutableOrOwned),
                 "SHARED" => Some(Self::Shared),
                 "RECEIVING" => Some(Self::Receiving),
+                "FUNDS_WITHDRAWAL" => Some(Self::FundsWithdrawal),
+                _ => None,
+            }
+        }
+    }
+    #[non_exhaustive]
+    #[derive(
+        Clone,
+        Copy,
+        Debug,
+        PartialEq,
+        Eq,
+        Hash,
+        PartialOrd,
+        Ord,
+        ::prost::Enumeration
+    )]
+    #[repr(i32)]
+    pub enum Mutability {
+        Unknown = 0,
+        Immutable = 1,
+        Mutable = 2,
+        /// Non-exclusive write is used to allow multiple transactions to
+        /// simultaneously add disjoint dynamic fields to an object.
+        /// (Currently only used by settlement transactions).
+        NonExclusiveWrite = 3,
+    }
+    impl Mutability {
+        /// String value of the enum field names used in the ProtoBuf definition.
+        ///
+        /// The values are not transformed in any way and thus are considered stable
+        /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+        pub fn as_str_name(&self) -> &'static str {
+            match self {
+                Self::Unknown => "MUTABILITY_UNKNOWN",
+                Self::Immutable => "IMMUTABLE",
+                Self::Mutable => "MUTABLE",
+                Self::NonExclusiveWrite => "NON_EXCLUSIVE_WRITE",
+            }
+        }
+        /// Creates an enum from field names used in the ProtoBuf definition.
+        pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+            match value {
+                "MUTABILITY_UNKNOWN" => Some(Self::Unknown),
+                "IMMUTABLE" => Some(Self::Immutable),
+                "MUTABLE" => Some(Self::Mutable),
+                "NON_EXCLUSIVE_WRITE" => Some(Self::NonExclusiveWrite),
+                _ => None,
+            }
+        }
+    }
+}
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct FundsWithdrawal {
+    #[prost(uint64, optional, tag = "1")]
+    pub amount: ::core::option::Option<u64>,
+    #[prost(string, optional, tag = "2")]
+    pub coin_type: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(enumeration = "funds_withdrawal::Source", optional, tag = "3")]
+    pub source: ::core::option::Option<i32>,
+}
+/// Nested message and enum types in `FundsWithdrawal`.
+pub mod funds_withdrawal {
+    #[non_exhaustive]
+    #[derive(
+        Clone,
+        Copy,
+        Debug,
+        PartialEq,
+        Eq,
+        Hash,
+        PartialOrd,
+        Ord,
+        ::prost::Enumeration
+    )]
+    #[repr(i32)]
+    pub enum Source {
+        Unknown = 0,
+        Sender = 1,
+        Sponsor = 2,
+    }
+    impl Source {
+        /// String value of the enum field names used in the ProtoBuf definition.
+        ///
+        /// The values are not transformed in any way and thus are considered stable
+        /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+        pub fn as_str_name(&self) -> &'static str {
+            match self {
+                Self::Unknown => "SOURCE_UNKNOWN",
+                Self::Sender => "SENDER",
+                Self::Sponsor => "SPONSOR",
+            }
+        }
+        /// Creates an enum from field names used in the ProtoBuf definition.
+        pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+            match value {
+                "SOURCE_UNKNOWN" => Some(Self::Unknown),
+                "SENDER" => Some(Self::Sender),
+                "SPONSOR" => Some(Self::Sponsor),
                 _ => None,
             }
         }
@@ -6747,7 +6947,7 @@ pub struct GasPayment {
 }
 /// A TTL for a transaction.
 #[non_exhaustive]
-#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct TransactionExpiration {
     #[prost(
         enumeration = "transaction_expiration::TransactionExpirationKind",
@@ -6755,8 +6955,30 @@ pub struct TransactionExpiration {
         tag = "1"
     )]
     pub kind: ::core::option::Option<i32>,
+    /// Maximum epoch in which a transaction can be executed. The provided maximal epoch
+    /// must be greater than or equal to the current epoch for a transaction to execute.
     #[prost(uint64, optional, tag = "2")]
     pub epoch: ::core::option::Option<u64>,
+    /// Minimal epoch in which a transaction can be executed. The provided minimal epoch
+    /// must be less than or equal to the current epoch for a transaction to execute.
+    #[prost(uint64, optional, tag = "3")]
+    pub min_epoch: ::core::option::Option<u64>,
+    /// Minimal UNIX timestamp in which a transaction can be executed. The
+    /// provided minimal timestamp must be less than or equal to the current
+    /// clock.
+    #[prost(message, optional, tag = "4")]
+    pub min_timestamp: ::core::option::Option<::prost_types::Timestamp>,
+    /// Maximum UNIX timestamp in which a transaction can be executed. The
+    /// provided maximal timestamp must be greater than or equal to the current
+    /// clock.
+    #[prost(message, optional, tag = "5")]
+    pub max_timestamp: ::core::option::Option<::prost_types::Timestamp>,
+    /// ChainId of the network this transaction is intended for in order to prevent cross-chain replay
+    #[prost(string, optional, tag = "6")]
+    pub chain: ::core::option::Option<::prost::alloc::string::String>,
+    /// User-provided uniqueness identifier to differentiate otherwise identical transactions
+    #[prost(uint32, optional, tag = "7")]
+    pub nonce: ::core::option::Option<u32>,
 }
 /// Nested message and enum types in `TransactionExpiration`.
 pub mod transaction_expiration {
@@ -6780,6 +7002,16 @@ pub mod transaction_expiration {
         /// Validators won't sign and execute transaction unless the expiration epoch
         /// is greater than or equal to the current epoch.
         Epoch = 2,
+        /// This variant enables gas payments from address balances.
+        ///
+        /// When transactions use address balances for gas payment instead of explicit gas coins,
+        /// we lose the natural transaction uniqueness and replay prevention that comes from
+        /// mutation of gas coin objects.
+        ///
+        /// By bounding expiration and providing a nonce, validators must only retain
+        /// executed digests for the maximum possible expiry range to differentiate
+        /// retries from unique transactions with otherwise identical inputs.
+        ValidDuring = 3,
     }
     impl TransactionExpirationKind {
         /// String value of the enum field names used in the ProtoBuf definition.
@@ -6791,6 +7023,7 @@ pub mod transaction_expiration {
                 Self::Unknown => "TRANSACTION_EXPIRATION_KIND_UNKNOWN",
                 Self::None => "NONE",
                 Self::Epoch => "EPOCH",
+                Self::ValidDuring => "VALID_DURING",
             }
         }
         /// Creates an enum from field names used in the ProtoBuf definition.
@@ -6799,6 +7032,7 @@ pub mod transaction_expiration {
                 "TRANSACTION_EXPIRATION_KIND_UNKNOWN" => Some(Self::Unknown),
                 "NONE" => Some(Self::None),
                 "EPOCH" => Some(Self::Epoch),
+                "VALID_DURING" => Some(Self::ValidDuring),
                 _ => None,
             }
         }

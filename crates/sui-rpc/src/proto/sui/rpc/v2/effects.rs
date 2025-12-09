@@ -203,6 +203,7 @@ impl Merge<&sui_sdk_types::TransactionEffectsV1> for TransactionEffects {
                     output_owner: Some(object.owner.into()),
                     id_operation: Some(changed_object::IdOperation::Created.into()),
                     object_type: None,
+                    accumulator_write: None,
                 };
 
                 changed_objects.push(change);
@@ -221,6 +222,7 @@ impl Merge<&sui_sdk_types::TransactionEffectsV1> for TransactionEffects {
                     output_owner: Some(object.owner.into()),
                     id_operation: Some(changed_object::IdOperation::None.into()),
                     object_type: None,
+                    accumulator_write: None,
                 };
 
                 changed_objects.push(change);
@@ -239,6 +241,7 @@ impl Merge<&sui_sdk_types::TransactionEffectsV1> for TransactionEffects {
                     output_owner: Some(object.owner.into()),
                     id_operation: Some(changed_object::IdOperation::None.into()),
                     object_type: None,
+                    accumulator_write: None,
                 };
 
                 changed_objects.push(change);
@@ -257,6 +260,7 @@ impl Merge<&sui_sdk_types::TransactionEffectsV1> for TransactionEffects {
                     output_owner: None,
                     id_operation: Some(changed_object::IdOperation::Deleted.into()),
                     object_type: None,
+                    accumulator_write: None,
                 };
 
                 changed_objects.push(change);
@@ -275,6 +279,7 @@ impl Merge<&sui_sdk_types::TransactionEffectsV1> for TransactionEffects {
                     output_owner: None,
                     id_operation: Some(changed_object::IdOperation::Deleted.into()),
                     object_type: None,
+                    accumulator_write: None,
                 };
 
                 changed_objects.push(change);
@@ -293,6 +298,7 @@ impl Merge<&sui_sdk_types::TransactionEffectsV1> for TransactionEffects {
                     output_owner: None,
                     id_operation: Some(changed_object::IdOperation::Deleted.into()),
                     object_type: None,
+                    accumulator_write: None,
                 };
 
                 changed_objects.push(change);
@@ -487,6 +493,10 @@ impl From<sui_sdk_types::ChangedObject> for ChangedObject {
                 message.output_digest = Some(digest.to_string());
                 OutputObjectState::PackageWrite
             }
+            sui_sdk_types::ObjectOut::AccumulatorWrite(accumulator_write) => {
+                message.set_accumulator_write(accumulator_write);
+                OutputObjectState::AccumulatorWrite
+            }
             _ => OutputObjectState::Unknown,
         };
         message.set_output_state(output_state);
@@ -575,6 +585,12 @@ impl TryFrom<&ChangedObject> for sui_sdk_types::ChangedObject {
                         TryFromProtoError::invalid(ChangedObject::OUTPUT_DIGEST_FIELD, e)
                     })?,
             },
+            OutputObjectState::AccumulatorWrite => sui_sdk_types::ObjectOut::AccumulatorWrite(
+                value
+                    .accumulator_write_opt()
+                    .ok_or_else(|| TryFromProtoError::missing("accumulator_write"))?
+                    .try_into()?,
+            ),
         };
 
         let id_operation = value.id_operation().try_into()?;
@@ -627,6 +643,66 @@ impl TryFrom<changed_object::IdOperation> for sui_sdk_types::IdOperation {
 }
 
 //
+// IdOperation
+//
+
+impl From<sui_sdk_types::AccumulatorWrite> for AccumulatorWrite {
+    fn from(value: sui_sdk_types::AccumulatorWrite) -> Self {
+        use accumulator_write::AccumulatorOperation;
+
+        let mut message = Self::default();
+
+        message.set_address(value.address());
+        message.set_accumulator_type(value.accumulator_type());
+
+        message.set_operation(match value.operation() {
+            sui_sdk_types::AccumulatorOperation::Merge => AccumulatorOperation::Merge,
+            sui_sdk_types::AccumulatorOperation::Split => AccumulatorOperation::Split,
+            _ => AccumulatorOperation::Unknown,
+        });
+
+        message.set_value(value.value());
+
+        message
+    }
+}
+
+impl TryFrom<&AccumulatorWrite> for sui_sdk_types::AccumulatorWrite {
+    type Error = TryFromProtoError;
+
+    fn try_from(value: &AccumulatorWrite) -> Result<Self, Self::Error> {
+        let address = value
+            .address_opt()
+            .ok_or_else(|| TryFromProtoError::missing("address"))?
+            .parse()
+            .map_err(|e| TryFromProtoError::invalid("address", e))?;
+        let accumulator_type = value
+            .accumulator_type_opt()
+            .ok_or_else(|| TryFromProtoError::missing("accumulator_type"))?
+            .parse()
+            .map_err(|e| TryFromProtoError::invalid("accumulator_type", e))?;
+
+        let operation = match value.operation() {
+            accumulator_write::AccumulatorOperation::Unknown => {
+                return Err(TryFromProtoError::invalid("operation", "unknown operation"));
+            }
+            accumulator_write::AccumulatorOperation::Merge => {
+                sui_sdk_types::AccumulatorOperation::Merge
+            }
+            accumulator_write::AccumulatorOperation::Split => {
+                sui_sdk_types::AccumulatorOperation::Split
+            }
+        };
+
+        let value = value
+            .value_opt()
+            .ok_or_else(|| TryFromProtoError::missing("value"))?;
+
+        Ok(Self::new(address, accumulator_type, operation, value))
+    }
+}
+
+//
 // UnchangedConsensusObject
 //
 
@@ -659,10 +735,6 @@ impl From<sui_sdk_types::UnchangedConsensusObject> for UnchangedConsensusObject 
                 UnchangedConsensusObjectKind::Canceled
             }
             PerEpochConfig => UnchangedConsensusObjectKind::PerEpochConfig,
-            PerEpochConfigWithSequenceNumber { version } => {
-                message.version = Some(version);
-                UnchangedConsensusObjectKind::PerEpochConfig
-            }
             _ => UnchangedConsensusObjectKind::Unknown,
         };
 
@@ -728,13 +800,7 @@ impl TryFrom<&UnchangedConsensusObject> for sui_sdk_types::UnchangedConsensusObj
                     .version
                     .ok_or_else(|| TryFromProtoError::missing("version"))?,
             },
-            UnchangedConsensusObjectKind::PerEpochConfig => {
-                if let Some(version) = value.version {
-                    UnchangedConsensusKind::PerEpochConfigWithSequenceNumber { version }
-                } else {
-                    UnchangedConsensusKind::PerEpochConfig
-                }
-            }
+            UnchangedConsensusObjectKind::PerEpochConfig => UnchangedConsensusKind::PerEpochConfig,
         };
 
         Ok(Self { object_id, kind })

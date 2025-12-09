@@ -2,6 +2,7 @@ use crate::Address;
 use crate::Digest;
 use crate::EpochId;
 use crate::GasCostSummary;
+use crate::TypeTag;
 use crate::execution_status::ExecutionStatus;
 use crate::object::Owner;
 use crate::object::Version;
@@ -170,11 +171,7 @@ pub enum UnchangedConsensusKind {
     Canceled { version: Version },
 
     /// Read of a per-epoch config object that should remain the same during an epoch.
-    /// NOTE: Will be deprecated in the near future in favor of `PerEpochConfigWithSequenceNumber`.
     PerEpochConfig,
-
-    /// Read of a per-epoch config and it's starting sequence number in the epoch.
-    PerEpochConfigWithSequenceNumber { version: Version },
 }
 
 /// State of an object prior to execution
@@ -244,6 +241,86 @@ pub enum ObjectOut {
     /// Packages writes need to be tracked separately with version because
     /// we don't use lamport version for package publish and upgrades.
     PackageWrite { version: Version, digest: Digest },
+
+    /// This isn't an object write, but a special write to an accumulator.
+    AccumulatorWrite(AccumulatorWrite),
+}
+
+#[derive(Eq, PartialEq, Clone, Debug)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+pub struct AccumulatorWrite {
+    /// Accumulator objects are named by an address (can be an account address or a UID)
+    /// and a type tag.
+    address: Address,
+    type_: TypeTag,
+
+    /// The operation to be applied to the accumulator.
+    operation: AccumulatorOperation,
+    /// The value to be merged into or split from the accumulator.
+    value: AccumulatorValue,
+}
+
+impl AccumulatorWrite {
+    pub fn new(
+        address: Address,
+        type_: TypeTag,
+        operation: AccumulatorOperation,
+        value: u64,
+    ) -> Self {
+        Self {
+            address,
+            type_,
+            operation,
+            value: AccumulatorValue::Integer(value),
+        }
+    }
+
+    pub fn address(&self) -> &Address {
+        &self.address
+    }
+
+    pub fn accumulator_type(&self) -> &TypeTag {
+        &self.type_
+    }
+
+    pub fn operation(&self) -> AccumulatorOperation {
+        self.operation
+    }
+
+    pub fn value(&self) -> u64 {
+        match self.value {
+            AccumulatorValue::Integer(value) => value,
+        }
+    }
+}
+
+#[derive(Eq, PartialEq, Clone, Copy, Debug)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[non_exhaustive]
+pub enum AccumulatorOperation {
+    /// Merge the value into the accumulator.
+    Merge,
+    /// Split the value from the accumulator.
+    Split,
+}
+
+#[derive(Eq, PartialEq, Clone, Debug)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[non_exhaustive]
+enum AccumulatorValue {
+    Integer(u64),
 }
 
 /// Defines what happened to an ObjectId during execution

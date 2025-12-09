@@ -78,6 +78,235 @@ impl<'de> serde::Deserialize<'de> for Ability {
         deserializer.deserialize_any(GeneratedVisitor)
     }
 }
+impl serde::Serialize for AccumulatorWrite {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if self.address.is_some() {
+            len += 1;
+        }
+        if self.accumulator_type.is_some() {
+            len += 1;
+        }
+        if self.operation.is_some() {
+            len += 1;
+        }
+        if self.value.is_some() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("sui.rpc.v2.AccumulatorWrite", len)?;
+        if let Some(v) = self.address.as_ref() {
+            struct_ser.serialize_field("address", v)?;
+        }
+        if let Some(v) = self.accumulator_type.as_ref() {
+            struct_ser.serialize_field("accumulatorType", v)?;
+        }
+        if let Some(v) = self.operation.as_ref() {
+            let v = accumulator_write::AccumulatorOperation::try_from(*v)
+                .map_err(|_| serde::ser::Error::custom(format!("Invalid variant {}", *v)))?;
+            struct_ser.serialize_field("operation", &v)?;
+        }
+        if let Some(v) = self.value.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("value", ToString::to_string(&v).as_str())?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for AccumulatorWrite {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "address",
+            "accumulator_type",
+            "accumulatorType",
+            "operation",
+            "value",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Address,
+            AccumulatorType,
+            Operation,
+            Value,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "address" => Ok(GeneratedField::Address),
+                            "accumulatorType" | "accumulator_type" => Ok(GeneratedField::AccumulatorType),
+                            "operation" => Ok(GeneratedField::Operation),
+                            "value" => Ok(GeneratedField::Value),
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = AccumulatorWrite;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2.AccumulatorWrite")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<AccumulatorWrite, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut address__ = None;
+                let mut accumulator_type__ = None;
+                let mut operation__ = None;
+                let mut value__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Address => {
+                            if address__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("address"));
+                            }
+                            address__ = map_.next_value()?;
+                        }
+                        GeneratedField::AccumulatorType => {
+                            if accumulator_type__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("accumulatorType"));
+                            }
+                            accumulator_type__ = map_.next_value()?;
+                        }
+                        GeneratedField::Operation => {
+                            if operation__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("operation"));
+                            }
+                            operation__ = map_.next_value::<::std::option::Option<accumulator_write::AccumulatorOperation>>()?.map(|x| x as i32);
+                        }
+                        GeneratedField::Value => {
+                            if value__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("value"));
+                            }
+                            value__ = 
+                                map_.next_value::<::std::option::Option<crate::_serde::NumberDeserialize<_>>>()?.map(|x| x.0)
+                            ;
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(AccumulatorWrite {
+                    address: address__,
+                    accumulator_type: accumulator_type__,
+                    operation: operation__,
+                    value: value__,
+                })
+            }
+        }
+        deserializer.deserialize_struct("sui.rpc.v2.AccumulatorWrite", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for accumulator_write::AccumulatorOperation {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let variant = match self {
+            Self::Unknown => "ACCUMULATOR_OPERATION_UNKNOWN",
+            Self::Merge => "MERGE",
+            Self::Split => "SPLIT",
+        };
+        serializer.serialize_str(variant)
+    }
+}
+impl<'de> serde::Deserialize<'de> for accumulator_write::AccumulatorOperation {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "ACCUMULATOR_OPERATION_UNKNOWN",
+            "MERGE",
+            "SPLIT",
+        ];
+
+        struct GeneratedVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = accumulator_write::AccumulatorOperation;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(formatter, "expected one of: {:?}", &FIELDS)
+            }
+
+            fn visit_i64<E>(self, v: i64) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                i32::try_from(v)
+                    .ok()
+                    .and_then(|x| x.try_into().ok())
+                    .ok_or_else(|| {
+                        serde::de::Error::invalid_value(serde::de::Unexpected::Signed(v), &self)
+                    })
+            }
+
+            fn visit_u64<E>(self, v: u64) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                i32::try_from(v)
+                    .ok()
+                    .and_then(|x| x.try_into().ok())
+                    .ok_or_else(|| {
+                        serde::de::Error::invalid_value(serde::de::Unexpected::Unsigned(v), &self)
+                    })
+            }
+
+            fn visit_str<E>(self, value: &str) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                match value {
+                    "ACCUMULATOR_OPERATION_UNKNOWN" => Ok(accumulator_write::AccumulatorOperation::Unknown),
+                    "MERGE" => Ok(accumulator_write::AccumulatorOperation::Merge),
+                    "SPLIT" => Ok(accumulator_write::AccumulatorOperation::Split),
+                    _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
+                }
+            }
+        }
+        deserializer.deserialize_any(GeneratedVisitor)
+    }
+}
 impl serde::Serialize for ActiveJwk {
     #[allow(deprecated)]
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
@@ -1922,6 +2151,9 @@ impl serde::Serialize for ChangedObject {
         if self.output_owner.is_some() {
             len += 1;
         }
+        if self.accumulator_write.is_some() {
+            len += 1;
+        }
         if self.id_operation.is_some() {
             len += 1;
         }
@@ -1964,6 +2196,9 @@ impl serde::Serialize for ChangedObject {
         if let Some(v) = self.output_owner.as_ref() {
             struct_ser.serialize_field("outputOwner", v)?;
         }
+        if let Some(v) = self.accumulator_write.as_ref() {
+            struct_ser.serialize_field("accumulatorWrite", v)?;
+        }
         if let Some(v) = self.id_operation.as_ref() {
             let v = changed_object::IdOperation::try_from(*v)
                 .map_err(|_| serde::ser::Error::custom(format!("Invalid variant {}", *v)))?;
@@ -2000,6 +2235,8 @@ impl<'de> serde::Deserialize<'de> for ChangedObject {
             "outputDigest",
             "output_owner",
             "outputOwner",
+            "accumulator_write",
+            "accumulatorWrite",
             "id_operation",
             "idOperation",
             "object_type",
@@ -2017,6 +2254,7 @@ impl<'de> serde::Deserialize<'de> for ChangedObject {
             OutputVersion,
             OutputDigest,
             OutputOwner,
+            AccumulatorWrite,
             IdOperation,
             ObjectType,
             __SkipField__,
@@ -2050,6 +2288,7 @@ impl<'de> serde::Deserialize<'de> for ChangedObject {
                             "outputVersion" | "output_version" => Ok(GeneratedField::OutputVersion),
                             "outputDigest" | "output_digest" => Ok(GeneratedField::OutputDigest),
                             "outputOwner" | "output_owner" => Ok(GeneratedField::OutputOwner),
+                            "accumulatorWrite" | "accumulator_write" => Ok(GeneratedField::AccumulatorWrite),
                             "idOperation" | "id_operation" => Ok(GeneratedField::IdOperation),
                             "objectType" | "object_type" => Ok(GeneratedField::ObjectType),
                             _ => Ok(GeneratedField::__SkipField__),
@@ -2082,6 +2321,7 @@ impl<'de> serde::Deserialize<'de> for ChangedObject {
                 let mut output_version__ = None;
                 let mut output_digest__ = None;
                 let mut output_owner__ = None;
+                let mut accumulator_write__ = None;
                 let mut id_operation__ = None;
                 let mut object_type__ = None;
                 while let Some(k) = map_.next_key()? {
@@ -2144,6 +2384,12 @@ impl<'de> serde::Deserialize<'de> for ChangedObject {
                             }
                             output_owner__ = map_.next_value()?;
                         }
+                        GeneratedField::AccumulatorWrite => {
+                            if accumulator_write__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("accumulatorWrite"));
+                            }
+                            accumulator_write__ = map_.next_value()?;
+                        }
                         GeneratedField::IdOperation => {
                             if id_operation__.is_some() {
                                 return Err(serde::de::Error::duplicate_field("idOperation"));
@@ -2171,6 +2417,7 @@ impl<'de> serde::Deserialize<'de> for ChangedObject {
                     output_version: output_version__,
                     output_digest: output_digest__,
                     output_owner: output_owner__,
+                    accumulator_write: accumulator_write__,
                     id_operation: id_operation__,
                     object_type: object_type__,
                 })
@@ -2341,6 +2588,7 @@ impl serde::Serialize for changed_object::OutputObjectState {
             Self::DoesNotExist => "OUTPUT_OBJECT_STATE_DOES_NOT_EXIST",
             Self::ObjectWrite => "OUTPUT_OBJECT_STATE_OBJECT_WRITE",
             Self::PackageWrite => "OUTPUT_OBJECT_STATE_PACKAGE_WRITE",
+            Self::AccumulatorWrite => "OUTPUT_OBJECT_STATE_ACCUMULATOR_WRITE",
         };
         serializer.serialize_str(variant)
     }
@@ -2356,6 +2604,7 @@ impl<'de> serde::Deserialize<'de> for changed_object::OutputObjectState {
             "OUTPUT_OBJECT_STATE_DOES_NOT_EXIST",
             "OUTPUT_OBJECT_STATE_OBJECT_WRITE",
             "OUTPUT_OBJECT_STATE_PACKAGE_WRITE",
+            "OUTPUT_OBJECT_STATE_ACCUMULATOR_WRITE",
         ];
 
         struct GeneratedVisitor;
@@ -2400,6 +2649,7 @@ impl<'de> serde::Deserialize<'de> for changed_object::OutputObjectState {
                     "OUTPUT_OBJECT_STATE_DOES_NOT_EXIST" => Ok(changed_object::OutputObjectState::DoesNotExist),
                     "OUTPUT_OBJECT_STATE_OBJECT_WRITE" => Ok(changed_object::OutputObjectState::ObjectWrite),
                     "OUTPUT_OBJECT_STATE_PACKAGE_WRITE" => Ok(changed_object::OutputObjectState::PackageWrite),
+                    "OUTPUT_OBJECT_STATE_ACCUMULATOR_WRITE" => Ok(changed_object::OutputObjectState::AccumulatorWrite),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }
@@ -8089,6 +8339,8 @@ impl serde::Serialize for execution_error::ExecutionErrorKind {
             Self::MoveVectorElemTooBig => "MOVE_VECTOR_ELEM_TOO_BIG",
             Self::MoveRawValueTooBig => "MOVE_RAW_VALUE_TOO_BIG",
             Self::InvalidLinkage => "INVALID_LINKAGE",
+            Self::InsufficientBalanceForWithdraw => "INSUFFICIENT_BALANCE_FOR_WITHDRAW",
+            Self::NonExclusiveWriteInputObjectModified => "NON_EXCLUSIVE_WRITE_INPUT_OBJECT_MODIFIED",
         };
         serializer.serialize_str(variant)
     }
@@ -8141,6 +8393,8 @@ impl<'de> serde::Deserialize<'de> for execution_error::ExecutionErrorKind {
             "MOVE_VECTOR_ELEM_TOO_BIG",
             "MOVE_RAW_VALUE_TOO_BIG",
             "INVALID_LINKAGE",
+            "INSUFFICIENT_BALANCE_FOR_WITHDRAW",
+            "NON_EXCLUSIVE_WRITE_INPUT_OBJECT_MODIFIED",
         ];
 
         struct GeneratedVisitor;
@@ -8222,6 +8476,8 @@ impl<'de> serde::Deserialize<'de> for execution_error::ExecutionErrorKind {
                     "MOVE_VECTOR_ELEM_TOO_BIG" => Ok(execution_error::ExecutionErrorKind::MoveVectorElemTooBig),
                     "MOVE_RAW_VALUE_TOO_BIG" => Ok(execution_error::ExecutionErrorKind::MoveRawValueTooBig),
                     "INVALID_LINKAGE" => Ok(execution_error::ExecutionErrorKind::InvalidLinkage),
+                    "INSUFFICIENT_BALANCE_FOR_WITHDRAW" => Ok(execution_error::ExecutionErrorKind::InsufficientBalanceForWithdraw),
+                    "NON_EXCLUSIVE_WRITE_INPUT_OBJECT_MODIFIED" => Ok(execution_error::ExecutionErrorKind::NonExclusiveWriteInputObjectModified),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }
@@ -9072,6 +9328,218 @@ impl<'de> serde::Deserialize<'de> for function_descriptor::Visibility {
                     "PRIVATE" => Ok(function_descriptor::Visibility::Private),
                     "PUBLIC" => Ok(function_descriptor::Visibility::Public),
                     "FRIEND" => Ok(function_descriptor::Visibility::Friend),
+                    _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
+                }
+            }
+        }
+        deserializer.deserialize_any(GeneratedVisitor)
+    }
+}
+impl serde::Serialize for FundsWithdrawal {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if self.amount.is_some() {
+            len += 1;
+        }
+        if self.coin_type.is_some() {
+            len += 1;
+        }
+        if self.source.is_some() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("sui.rpc.v2.FundsWithdrawal", len)?;
+        if let Some(v) = self.amount.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("amount", ToString::to_string(&v).as_str())?;
+        }
+        if let Some(v) = self.coin_type.as_ref() {
+            struct_ser.serialize_field("coinType", v)?;
+        }
+        if let Some(v) = self.source.as_ref() {
+            let v = funds_withdrawal::Source::try_from(*v)
+                .map_err(|_| serde::ser::Error::custom(format!("Invalid variant {}", *v)))?;
+            struct_ser.serialize_field("source", &v)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for FundsWithdrawal {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "amount",
+            "coin_type",
+            "coinType",
+            "source",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Amount,
+            CoinType,
+            Source,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "amount" => Ok(GeneratedField::Amount),
+                            "coinType" | "coin_type" => Ok(GeneratedField::CoinType),
+                            "source" => Ok(GeneratedField::Source),
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = FundsWithdrawal;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2.FundsWithdrawal")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<FundsWithdrawal, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut amount__ = None;
+                let mut coin_type__ = None;
+                let mut source__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Amount => {
+                            if amount__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("amount"));
+                            }
+                            amount__ = 
+                                map_.next_value::<::std::option::Option<crate::_serde::NumberDeserialize<_>>>()?.map(|x| x.0)
+                            ;
+                        }
+                        GeneratedField::CoinType => {
+                            if coin_type__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("coinType"));
+                            }
+                            coin_type__ = map_.next_value()?;
+                        }
+                        GeneratedField::Source => {
+                            if source__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("source"));
+                            }
+                            source__ = map_.next_value::<::std::option::Option<funds_withdrawal::Source>>()?.map(|x| x as i32);
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(FundsWithdrawal {
+                    amount: amount__,
+                    coin_type: coin_type__,
+                    source: source__,
+                })
+            }
+        }
+        deserializer.deserialize_struct("sui.rpc.v2.FundsWithdrawal", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for funds_withdrawal::Source {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let variant = match self {
+            Self::Unknown => "SOURCE_UNKNOWN",
+            Self::Sender => "SENDER",
+            Self::Sponsor => "SPONSOR",
+        };
+        serializer.serialize_str(variant)
+    }
+}
+impl<'de> serde::Deserialize<'de> for funds_withdrawal::Source {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "SOURCE_UNKNOWN",
+            "SENDER",
+            "SPONSOR",
+        ];
+
+        struct GeneratedVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = funds_withdrawal::Source;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(formatter, "expected one of: {:?}", &FIELDS)
+            }
+
+            fn visit_i64<E>(self, v: i64) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                i32::try_from(v)
+                    .ok()
+                    .and_then(|x| x.try_into().ok())
+                    .ok_or_else(|| {
+                        serde::de::Error::invalid_value(serde::de::Unexpected::Signed(v), &self)
+                    })
+            }
+
+            fn visit_u64<E>(self, v: u64) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                i32::try_from(v)
+                    .ok()
+                    .and_then(|x| x.try_into().ok())
+                    .ok_or_else(|| {
+                        serde::de::Error::invalid_value(serde::de::Unexpected::Unsigned(v), &self)
+                    })
+            }
+
+            fn visit_str<E>(self, value: &str) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                match value {
+                    "SOURCE_UNKNOWN" => Ok(funds_withdrawal::Source::Unknown),
+                    "SENDER" => Ok(funds_withdrawal::Source::Sender),
+                    "SPONSOR" => Ok(funds_withdrawal::Source::Sponsor),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }
@@ -12192,6 +12660,12 @@ impl serde::Serialize for Input {
         if self.mutable.is_some() {
             len += 1;
         }
+        if self.mutability.is_some() {
+            len += 1;
+        }
+        if self.funds_withdrawal.is_some() {
+            len += 1;
+        }
         if self.literal.is_some() {
             len += 1;
         }
@@ -12220,6 +12694,14 @@ impl serde::Serialize for Input {
         if let Some(v) = self.mutable.as_ref() {
             struct_ser.serialize_field("mutable", v)?;
         }
+        if let Some(v) = self.mutability.as_ref() {
+            let v = input::Mutability::try_from(*v)
+                .map_err(|_| serde::ser::Error::custom(format!("Invalid variant {}", *v)))?;
+            struct_ser.serialize_field("mutability", &v)?;
+        }
+        if let Some(v) = self.funds_withdrawal.as_ref() {
+            struct_ser.serialize_field("fundsWithdrawal", v)?;
+        }
         if let Some(v) = self.literal.as_ref() {
             struct_ser.serialize_field("literal", &crate::_serde::ValueSerializer(v))?;
         }
@@ -12240,6 +12722,9 @@ impl<'de> serde::Deserialize<'de> for Input {
             "version",
             "digest",
             "mutable",
+            "mutability",
+            "funds_withdrawal",
+            "fundsWithdrawal",
             "literal",
         ];
 
@@ -12251,6 +12736,8 @@ impl<'de> serde::Deserialize<'de> for Input {
             Version,
             Digest,
             Mutable,
+            Mutability,
+            FundsWithdrawal,
             Literal,
             __SkipField__,
         }
@@ -12280,6 +12767,8 @@ impl<'de> serde::Deserialize<'de> for Input {
                             "version" => Ok(GeneratedField::Version),
                             "digest" => Ok(GeneratedField::Digest),
                             "mutable" => Ok(GeneratedField::Mutable),
+                            "mutability" => Ok(GeneratedField::Mutability),
+                            "fundsWithdrawal" | "funds_withdrawal" => Ok(GeneratedField::FundsWithdrawal),
                             "literal" => Ok(GeneratedField::Literal),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
@@ -12308,6 +12797,8 @@ impl<'de> serde::Deserialize<'de> for Input {
                 let mut version__ = None;
                 let mut digest__ = None;
                 let mut mutable__ = None;
+                let mut mutability__ = None;
+                let mut funds_withdrawal__ = None;
                 let mut literal__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
@@ -12351,6 +12842,18 @@ impl<'de> serde::Deserialize<'de> for Input {
                             }
                             mutable__ = map_.next_value()?;
                         }
+                        GeneratedField::Mutability => {
+                            if mutability__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("mutability"));
+                            }
+                            mutability__ = map_.next_value::<::std::option::Option<input::Mutability>>()?.map(|x| x as i32);
+                        }
+                        GeneratedField::FundsWithdrawal => {
+                            if funds_withdrawal__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("fundsWithdrawal"));
+                            }
+                            funds_withdrawal__ = map_.next_value()?;
+                        }
                         GeneratedField::Literal => {
                             if literal__.is_some() {
                                 return Err(serde::de::Error::duplicate_field("literal"));
@@ -12369,6 +12872,8 @@ impl<'de> serde::Deserialize<'de> for Input {
                     version: version__,
                     digest: digest__,
                     mutable: mutable__,
+                    mutability: mutability__,
+                    funds_withdrawal: funds_withdrawal__,
                     literal: literal__,
                 })
             }
@@ -12388,6 +12893,7 @@ impl serde::Serialize for input::InputKind {
             Self::ImmutableOrOwned => "IMMUTABLE_OR_OWNED",
             Self::Shared => "SHARED",
             Self::Receiving => "RECEIVING",
+            Self::FundsWithdrawal => "FUNDS_WITHDRAWAL",
         };
         serializer.serialize_str(variant)
     }
@@ -12404,6 +12910,7 @@ impl<'de> serde::Deserialize<'de> for input::InputKind {
             "IMMUTABLE_OR_OWNED",
             "SHARED",
             "RECEIVING",
+            "FUNDS_WITHDRAWAL",
         ];
 
         struct GeneratedVisitor;
@@ -12449,6 +12956,84 @@ impl<'de> serde::Deserialize<'de> for input::InputKind {
                     "IMMUTABLE_OR_OWNED" => Ok(input::InputKind::ImmutableOrOwned),
                     "SHARED" => Ok(input::InputKind::Shared),
                     "RECEIVING" => Ok(input::InputKind::Receiving),
+                    "FUNDS_WITHDRAWAL" => Ok(input::InputKind::FundsWithdrawal),
+                    _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
+                }
+            }
+        }
+        deserializer.deserialize_any(GeneratedVisitor)
+    }
+}
+impl serde::Serialize for input::Mutability {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let variant = match self {
+            Self::Unknown => "MUTABILITY_UNKNOWN",
+            Self::Immutable => "IMMUTABLE",
+            Self::Mutable => "MUTABLE",
+            Self::NonExclusiveWrite => "NON_EXCLUSIVE_WRITE",
+        };
+        serializer.serialize_str(variant)
+    }
+}
+impl<'de> serde::Deserialize<'de> for input::Mutability {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "MUTABILITY_UNKNOWN",
+            "IMMUTABLE",
+            "MUTABLE",
+            "NON_EXCLUSIVE_WRITE",
+        ];
+
+        struct GeneratedVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = input::Mutability;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(formatter, "expected one of: {:?}", &FIELDS)
+            }
+
+            fn visit_i64<E>(self, v: i64) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                i32::try_from(v)
+                    .ok()
+                    .and_then(|x| x.try_into().ok())
+                    .ok_or_else(|| {
+                        serde::de::Error::invalid_value(serde::de::Unexpected::Signed(v), &self)
+                    })
+            }
+
+            fn visit_u64<E>(self, v: u64) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                i32::try_from(v)
+                    .ok()
+                    .and_then(|x| x.try_into().ok())
+                    .ok_or_else(|| {
+                        serde::de::Error::invalid_value(serde::de::Unexpected::Unsigned(v), &self)
+                    })
+            }
+
+            fn visit_str<E>(self, value: &str) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                match value {
+                    "MUTABILITY_UNKNOWN" => Ok(input::Mutability::Unknown),
+                    "IMMUTABLE" => Ok(input::Mutability::Immutable),
+                    "MUTABLE" => Ok(input::Mutability::Mutable),
+                    "NON_EXCLUSIVE_WRITE" => Ok(input::Mutability::NonExclusiveWrite),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }
@@ -22064,6 +22649,21 @@ impl serde::Serialize for TransactionExpiration {
         if self.epoch.is_some() {
             len += 1;
         }
+        if self.min_epoch.is_some() {
+            len += 1;
+        }
+        if self.min_timestamp.is_some() {
+            len += 1;
+        }
+        if self.max_timestamp.is_some() {
+            len += 1;
+        }
+        if self.chain.is_some() {
+            len += 1;
+        }
+        if self.nonce.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("sui.rpc.v2.TransactionExpiration", len)?;
         if let Some(v) = self.kind.as_ref() {
             let v = transaction_expiration::TransactionExpirationKind::try_from(*v)
@@ -22074,6 +22674,23 @@ impl serde::Serialize for TransactionExpiration {
             #[allow(clippy::needless_borrow)]
             #[allow(clippy::needless_borrows_for_generic_args)]
             struct_ser.serialize_field("epoch", ToString::to_string(&v).as_str())?;
+        }
+        if let Some(v) = self.min_epoch.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("minEpoch", ToString::to_string(&v).as_str())?;
+        }
+        if let Some(v) = self.min_timestamp.as_ref() {
+            struct_ser.serialize_field("minTimestamp", &crate::_serde::TimestampSerializer(v))?;
+        }
+        if let Some(v) = self.max_timestamp.as_ref() {
+            struct_ser.serialize_field("maxTimestamp", &crate::_serde::TimestampSerializer(v))?;
+        }
+        if let Some(v) = self.chain.as_ref() {
+            struct_ser.serialize_field("chain", v)?;
+        }
+        if let Some(v) = self.nonce.as_ref() {
+            struct_ser.serialize_field("nonce", v)?;
         }
         struct_ser.end()
     }
@@ -22087,12 +22704,25 @@ impl<'de> serde::Deserialize<'de> for TransactionExpiration {
         const FIELDS: &[&str] = &[
             "kind",
             "epoch",
+            "min_epoch",
+            "minEpoch",
+            "min_timestamp",
+            "minTimestamp",
+            "max_timestamp",
+            "maxTimestamp",
+            "chain",
+            "nonce",
         ];
 
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             Kind,
             Epoch,
+            MinEpoch,
+            MinTimestamp,
+            MaxTimestamp,
+            Chain,
+            Nonce,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -22117,6 +22747,11 @@ impl<'de> serde::Deserialize<'de> for TransactionExpiration {
                         match value {
                             "kind" => Ok(GeneratedField::Kind),
                             "epoch" => Ok(GeneratedField::Epoch),
+                            "minEpoch" | "min_epoch" => Ok(GeneratedField::MinEpoch),
+                            "minTimestamp" | "min_timestamp" => Ok(GeneratedField::MinTimestamp),
+                            "maxTimestamp" | "max_timestamp" => Ok(GeneratedField::MaxTimestamp),
+                            "chain" => Ok(GeneratedField::Chain),
+                            "nonce" => Ok(GeneratedField::Nonce),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -22140,6 +22775,11 @@ impl<'de> serde::Deserialize<'de> for TransactionExpiration {
             {
                 let mut kind__ = None;
                 let mut epoch__ = None;
+                let mut min_epoch__ = None;
+                let mut min_timestamp__ = None;
+                let mut max_timestamp__ = None;
+                let mut chain__ = None;
+                let mut nonce__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Kind => {
@@ -22156,6 +22796,40 @@ impl<'de> serde::Deserialize<'de> for TransactionExpiration {
                                 map_.next_value::<::std::option::Option<crate::_serde::NumberDeserialize<_>>>()?.map(|x| x.0)
                             ;
                         }
+                        GeneratedField::MinEpoch => {
+                            if min_epoch__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("minEpoch"));
+                            }
+                            min_epoch__ = 
+                                map_.next_value::<::std::option::Option<crate::_serde::NumberDeserialize<_>>>()?.map(|x| x.0)
+                            ;
+                        }
+                        GeneratedField::MinTimestamp => {
+                            if min_timestamp__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("minTimestamp"));
+                            }
+                            min_timestamp__ = map_.next_value::<::std::option::Option<crate::_serde::TimestampDeserializer>>()?.map(|x| x.0.into());
+                        }
+                        GeneratedField::MaxTimestamp => {
+                            if max_timestamp__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("maxTimestamp"));
+                            }
+                            max_timestamp__ = map_.next_value::<::std::option::Option<crate::_serde::TimestampDeserializer>>()?.map(|x| x.0.into());
+                        }
+                        GeneratedField::Chain => {
+                            if chain__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("chain"));
+                            }
+                            chain__ = map_.next_value()?;
+                        }
+                        GeneratedField::Nonce => {
+                            if nonce__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("nonce"));
+                            }
+                            nonce__ = 
+                                map_.next_value::<::std::option::Option<crate::_serde::NumberDeserialize<_>>>()?.map(|x| x.0)
+                            ;
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -22164,6 +22838,11 @@ impl<'de> serde::Deserialize<'de> for TransactionExpiration {
                 Ok(TransactionExpiration {
                     kind: kind__,
                     epoch: epoch__,
+                    min_epoch: min_epoch__,
+                    min_timestamp: min_timestamp__,
+                    max_timestamp: max_timestamp__,
+                    chain: chain__,
+                    nonce: nonce__,
                 })
             }
         }
@@ -22180,6 +22859,7 @@ impl serde::Serialize for transaction_expiration::TransactionExpirationKind {
             Self::Unknown => "TRANSACTION_EXPIRATION_KIND_UNKNOWN",
             Self::None => "NONE",
             Self::Epoch => "EPOCH",
+            Self::ValidDuring => "VALID_DURING",
         };
         serializer.serialize_str(variant)
     }
@@ -22194,6 +22874,7 @@ impl<'de> serde::Deserialize<'de> for transaction_expiration::TransactionExpirat
             "TRANSACTION_EXPIRATION_KIND_UNKNOWN",
             "NONE",
             "EPOCH",
+            "VALID_DURING",
         ];
 
         struct GeneratedVisitor;
@@ -22237,6 +22918,7 @@ impl<'de> serde::Deserialize<'de> for transaction_expiration::TransactionExpirat
                     "TRANSACTION_EXPIRATION_KIND_UNKNOWN" => Ok(transaction_expiration::TransactionExpirationKind::Unknown),
                     "NONE" => Ok(transaction_expiration::TransactionExpirationKind::None),
                     "EPOCH" => Ok(transaction_expiration::TransactionExpirationKind::Epoch),
+                    "VALID_DURING" => Ok(transaction_expiration::TransactionExpirationKind::ValidDuring),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }

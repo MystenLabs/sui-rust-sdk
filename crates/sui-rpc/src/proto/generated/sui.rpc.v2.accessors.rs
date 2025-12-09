@@ -1,5 +1,94 @@
 mod _accessor_impls {
     #![allow(clippy::useless_conversion)]
+    impl super::AccumulatorWrite {
+        pub const fn const_default() -> Self {
+            Self {
+                address: None,
+                accumulator_type: None,
+                operation: None,
+                value: None,
+            }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::AccumulatorWrite = super::AccumulatorWrite::const_default();
+            &DEFAULT
+        }
+        ///If `address` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn address_opt_mut(&mut self) -> Option<&mut String> {
+            self.address.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `address`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn address_mut(&mut self) -> &mut String {
+            self.address.get_or_insert_default()
+        }
+        ///If `address` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn address_opt(&self) -> Option<&str> {
+            self.address.as_ref().map(|field| field as _)
+        }
+        ///Sets `address` with the provided value.
+        pub fn set_address<T: Into<String>>(&mut self, field: T) {
+            self.address = Some(field.into().into());
+        }
+        ///Sets `address` with the provided value.
+        pub fn with_address<T: Into<String>>(mut self, field: T) -> Self {
+            self.set_address(field.into());
+            self
+        }
+        ///If `accumulator_type` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn accumulator_type_opt_mut(&mut self) -> Option<&mut String> {
+            self.accumulator_type.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `accumulator_type`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn accumulator_type_mut(&mut self) -> &mut String {
+            self.accumulator_type.get_or_insert_default()
+        }
+        ///If `accumulator_type` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn accumulator_type_opt(&self) -> Option<&str> {
+            self.accumulator_type.as_ref().map(|field| field as _)
+        }
+        ///Sets `accumulator_type` with the provided value.
+        pub fn set_accumulator_type<T: Into<String>>(&mut self, field: T) {
+            self.accumulator_type = Some(field.into().into());
+        }
+        ///Sets `accumulator_type` with the provided value.
+        pub fn with_accumulator_type<T: Into<String>>(mut self, field: T) -> Self {
+            self.set_accumulator_type(field.into());
+            self
+        }
+        ///Sets `operation` with the provided value.
+        pub fn with_operation<T: Into<super::accumulator_write::AccumulatorOperation>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_operation(field.into());
+            self
+        }
+        ///If `value` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn value_opt_mut(&mut self) -> Option<&mut u64> {
+            self.value.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `value`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn value_mut(&mut self) -> &mut u64 {
+            self.value.get_or_insert_default()
+        }
+        ///If `value` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn value_opt(&self) -> Option<u64> {
+            self.value.as_ref().map(|field| *field)
+        }
+        ///Sets `value` with the provided value.
+        pub fn set_value(&mut self, field: u64) {
+            self.value = Some(field);
+        }
+        ///Sets `value` with the provided value.
+        pub fn with_value(mut self, field: u64) -> Self {
+            self.set_value(field);
+            self
+        }
+    }
     impl super::ActiveJwk {
         pub const fn const_default() -> Self {
             Self {
@@ -973,6 +1062,7 @@ mod _accessor_impls {
                 output_version: None,
                 output_digest: None,
                 output_owner: None,
+                accumulator_write: None,
                 id_operation: None,
                 object_type: None,
             }
@@ -1164,6 +1254,43 @@ mod _accessor_impls {
         ///Sets `output_owner` with the provided value.
         pub fn with_output_owner<T: Into<super::Owner>>(mut self, field: T) -> Self {
             self.set_output_owner(field.into());
+            self
+        }
+        ///Returns the value of `accumulator_write`, or the default value if `accumulator_write` is unset.
+        pub fn accumulator_write(&self) -> &super::AccumulatorWrite {
+            self.accumulator_write
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::AccumulatorWrite::default_instance() as _)
+        }
+        ///If `accumulator_write` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn accumulator_write_opt_mut(
+            &mut self,
+        ) -> Option<&mut super::AccumulatorWrite> {
+            self.accumulator_write.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `accumulator_write`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn accumulator_write_mut(&mut self) -> &mut super::AccumulatorWrite {
+            self.accumulator_write.get_or_insert_default()
+        }
+        ///If `accumulator_write` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn accumulator_write_opt(&self) -> Option<&super::AccumulatorWrite> {
+            self.accumulator_write.as_ref().map(|field| field as _)
+        }
+        ///Sets `accumulator_write` with the provided value.
+        pub fn set_accumulator_write<T: Into<super::AccumulatorWrite>>(
+            &mut self,
+            field: T,
+        ) {
+            self.accumulator_write = Some(field.into().into());
+        }
+        ///Sets `accumulator_write` with the provided value.
+        pub fn with_accumulator_write<T: Into<super::AccumulatorWrite>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_accumulator_write(field.into());
             self
         }
         ///Sets `id_operation` with the provided value.
@@ -6298,6 +6425,72 @@ mod _accessor_impls {
             self
         }
     }
+    impl super::FundsWithdrawal {
+        pub const fn const_default() -> Self {
+            Self {
+                amount: None,
+                coin_type: None,
+                source: None,
+            }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::FundsWithdrawal = super::FundsWithdrawal::const_default();
+            &DEFAULT
+        }
+        ///If `amount` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn amount_opt_mut(&mut self) -> Option<&mut u64> {
+            self.amount.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `amount`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn amount_mut(&mut self) -> &mut u64 {
+            self.amount.get_or_insert_default()
+        }
+        ///If `amount` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn amount_opt(&self) -> Option<u64> {
+            self.amount.as_ref().map(|field| *field)
+        }
+        ///Sets `amount` with the provided value.
+        pub fn set_amount(&mut self, field: u64) {
+            self.amount = Some(field);
+        }
+        ///Sets `amount` with the provided value.
+        pub fn with_amount(mut self, field: u64) -> Self {
+            self.set_amount(field);
+            self
+        }
+        ///If `coin_type` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn coin_type_opt_mut(&mut self) -> Option<&mut String> {
+            self.coin_type.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `coin_type`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn coin_type_mut(&mut self) -> &mut String {
+            self.coin_type.get_or_insert_default()
+        }
+        ///If `coin_type` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn coin_type_opt(&self) -> Option<&str> {
+            self.coin_type.as_ref().map(|field| field as _)
+        }
+        ///Sets `coin_type` with the provided value.
+        pub fn set_coin_type<T: Into<String>>(&mut self, field: T) {
+            self.coin_type = Some(field.into().into());
+        }
+        ///Sets `coin_type` with the provided value.
+        pub fn with_coin_type<T: Into<String>>(mut self, field: T) -> Self {
+            self.set_coin_type(field.into());
+            self
+        }
+        ///Sets `source` with the provided value.
+        pub fn with_source<T: Into<super::funds_withdrawal::Source>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_source(field.into());
+            self
+        }
+    }
     impl super::GasCostSummary {
         pub const fn const_default() -> Self {
             Self {
@@ -8165,6 +8358,8 @@ mod _accessor_impls {
                 version: None,
                 digest: None,
                 mutable: None,
+                mutability: None,
+                funds_withdrawal: None,
                 literal: None,
             }
         }
@@ -8277,6 +8472,51 @@ mod _accessor_impls {
         ///Sets `mutable` with the provided value.
         pub fn with_mutable(mut self, field: bool) -> Self {
             self.set_mutable(field);
+            self
+        }
+        ///Sets `mutability` with the provided value.
+        pub fn with_mutability<T: Into<super::input::Mutability>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_mutability(field.into());
+            self
+        }
+        ///Returns the value of `funds_withdrawal`, or the default value if `funds_withdrawal` is unset.
+        pub fn funds_withdrawal(&self) -> &super::FundsWithdrawal {
+            self.funds_withdrawal
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::FundsWithdrawal::default_instance() as _)
+        }
+        ///If `funds_withdrawal` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn funds_withdrawal_opt_mut(
+            &mut self,
+        ) -> Option<&mut super::FundsWithdrawal> {
+            self.funds_withdrawal.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `funds_withdrawal`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn funds_withdrawal_mut(&mut self) -> &mut super::FundsWithdrawal {
+            self.funds_withdrawal.get_or_insert_default()
+        }
+        ///If `funds_withdrawal` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn funds_withdrawal_opt(&self) -> Option<&super::FundsWithdrawal> {
+            self.funds_withdrawal.as_ref().map(|field| field as _)
+        }
+        ///Sets `funds_withdrawal` with the provided value.
+        pub fn set_funds_withdrawal<T: Into<super::FundsWithdrawal>>(
+            &mut self,
+            field: T,
+        ) {
+            self.funds_withdrawal = Some(field.into().into());
+        }
+        ///Sets `funds_withdrawal` with the provided value.
+        pub fn with_funds_withdrawal<T: Into<super::FundsWithdrawal>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_funds_withdrawal(field.into());
             self
         }
         ///If `literal` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
@@ -14210,7 +14450,15 @@ mod _accessor_impls {
     }
     impl super::TransactionExpiration {
         pub const fn const_default() -> Self {
-            Self { kind: None, epoch: None }
+            Self {
+                kind: None,
+                epoch: None,
+                min_epoch: None,
+                min_timestamp: None,
+                max_timestamp: None,
+                chain: None,
+                nonce: None,
+            }
         }
         #[doc(hidden)]
         pub fn default_instance() -> &'static Self {
@@ -14244,6 +14492,132 @@ mod _accessor_impls {
         ///Sets `epoch` with the provided value.
         pub fn with_epoch(mut self, field: u64) -> Self {
             self.set_epoch(field);
+            self
+        }
+        ///If `min_epoch` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn min_epoch_opt_mut(&mut self) -> Option<&mut u64> {
+            self.min_epoch.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `min_epoch`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn min_epoch_mut(&mut self) -> &mut u64 {
+            self.min_epoch.get_or_insert_default()
+        }
+        ///If `min_epoch` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn min_epoch_opt(&self) -> Option<u64> {
+            self.min_epoch.as_ref().map(|field| *field)
+        }
+        ///Sets `min_epoch` with the provided value.
+        pub fn set_min_epoch(&mut self, field: u64) {
+            self.min_epoch = Some(field);
+        }
+        ///Sets `min_epoch` with the provided value.
+        pub fn with_min_epoch(mut self, field: u64) -> Self {
+            self.set_min_epoch(field);
+            self
+        }
+        ///If `min_timestamp` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn min_timestamp_opt_mut(
+            &mut self,
+        ) -> Option<&mut ::prost_types::Timestamp> {
+            self.min_timestamp.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `min_timestamp`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn min_timestamp_mut(&mut self) -> &mut ::prost_types::Timestamp {
+            self.min_timestamp.get_or_insert_default()
+        }
+        ///If `min_timestamp` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn min_timestamp_opt(&self) -> Option<&::prost_types::Timestamp> {
+            self.min_timestamp.as_ref().map(|field| field as _)
+        }
+        ///Sets `min_timestamp` with the provided value.
+        pub fn set_min_timestamp<T: Into<::prost_types::Timestamp>>(
+            &mut self,
+            field: T,
+        ) {
+            self.min_timestamp = Some(field.into().into());
+        }
+        ///Sets `min_timestamp` with the provided value.
+        pub fn with_min_timestamp<T: Into<::prost_types::Timestamp>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_min_timestamp(field.into());
+            self
+        }
+        ///If `max_timestamp` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn max_timestamp_opt_mut(
+            &mut self,
+        ) -> Option<&mut ::prost_types::Timestamp> {
+            self.max_timestamp.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `max_timestamp`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn max_timestamp_mut(&mut self) -> &mut ::prost_types::Timestamp {
+            self.max_timestamp.get_or_insert_default()
+        }
+        ///If `max_timestamp` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn max_timestamp_opt(&self) -> Option<&::prost_types::Timestamp> {
+            self.max_timestamp.as_ref().map(|field| field as _)
+        }
+        ///Sets `max_timestamp` with the provided value.
+        pub fn set_max_timestamp<T: Into<::prost_types::Timestamp>>(
+            &mut self,
+            field: T,
+        ) {
+            self.max_timestamp = Some(field.into().into());
+        }
+        ///Sets `max_timestamp` with the provided value.
+        pub fn with_max_timestamp<T: Into<::prost_types::Timestamp>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_max_timestamp(field.into());
+            self
+        }
+        ///If `chain` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn chain_opt_mut(&mut self) -> Option<&mut String> {
+            self.chain.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `chain`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn chain_mut(&mut self) -> &mut String {
+            self.chain.get_or_insert_default()
+        }
+        ///If `chain` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn chain_opt(&self) -> Option<&str> {
+            self.chain.as_ref().map(|field| field as _)
+        }
+        ///Sets `chain` with the provided value.
+        pub fn set_chain<T: Into<String>>(&mut self, field: T) {
+            self.chain = Some(field.into().into());
+        }
+        ///Sets `chain` with the provided value.
+        pub fn with_chain<T: Into<String>>(mut self, field: T) -> Self {
+            self.set_chain(field.into());
+            self
+        }
+        ///If `nonce` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn nonce_opt_mut(&mut self) -> Option<&mut u32> {
+            self.nonce.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `nonce`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn nonce_mut(&mut self) -> &mut u32 {
+            self.nonce.get_or_insert_default()
+        }
+        ///If `nonce` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn nonce_opt(&self) -> Option<u32> {
+            self.nonce.as_ref().map(|field| *field)
+        }
+        ///Sets `nonce` with the provided value.
+        pub fn set_nonce(&mut self, field: u32) {
+            self.nonce = Some(field);
+        }
+        ///Sets `nonce` with the provided value.
+        pub fn with_nonce(mut self, field: u32) -> Self {
+            self.set_nonce(field);
             self
         }
     }
