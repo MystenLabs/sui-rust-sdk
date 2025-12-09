@@ -210,8 +210,8 @@ impl From<sui_sdk_types::TransactionExpiration> for TransactionExpiration {
             ValidDuring {
                 min_epoch,
                 max_epoch,
-                min_timestamp_seconds: _,
-                max_timestamp_seconds: _,
+                min_timestamp,
+                max_timestamp,
                 chain,
                 nonce,
             } => {
@@ -219,6 +219,14 @@ impl From<sui_sdk_types::TransactionExpiration> for TransactionExpiration {
                 message.min_epoch = min_epoch;
                 message.set_chain(chain);
                 message.set_nonce(nonce);
+                message.min_timestamp = min_timestamp.map(|seconds| prost_types::Timestamp {
+                    seconds: seconds as _,
+                    nanos: 0,
+                });
+                message.max_timestamp = max_timestamp.map(|seconds| prost_types::Timestamp {
+                    seconds: seconds as _,
+                    nanos: 0,
+                });
                 TransactionExpirationKind::ValidDuring
             }
             _ => TransactionExpirationKind::Unknown,
@@ -247,8 +255,12 @@ impl TryFrom<&TransactionExpiration> for sui_sdk_types::TransactionExpiration {
             TransactionExpirationKind::ValidDuring => Self::ValidDuring {
                 min_epoch: value.min_epoch_opt(),
                 max_epoch: value.epoch_opt(),
-                min_timestamp_seconds: None,
-                max_timestamp_seconds: None,
+                min_timestamp: value
+                    .min_timestamp_opt()
+                    .map(|timestamp| timestamp.seconds as _),
+                max_timestamp: value
+                    .max_timestamp_opt()
+                    .map(|timestamp| timestamp.seconds as _),
                 chain: value
                     .chain_opt()
                     .ok_or_else(|| TryFromProtoError::missing("chain"))?

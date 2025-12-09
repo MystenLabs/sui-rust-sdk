@@ -14454,6 +14454,8 @@ mod _accessor_impls {
                 kind: None,
                 epoch: None,
                 min_epoch: None,
+                min_timestamp: None,
+                max_timestamp: None,
                 chain: None,
                 nonce: None,
             }
@@ -14512,6 +14514,66 @@ mod _accessor_impls {
         ///Sets `min_epoch` with the provided value.
         pub fn with_min_epoch(mut self, field: u64) -> Self {
             self.set_min_epoch(field);
+            self
+        }
+        ///If `min_timestamp` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn min_timestamp_opt_mut(
+            &mut self,
+        ) -> Option<&mut ::prost_types::Timestamp> {
+            self.min_timestamp.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `min_timestamp`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn min_timestamp_mut(&mut self) -> &mut ::prost_types::Timestamp {
+            self.min_timestamp.get_or_insert_default()
+        }
+        ///If `min_timestamp` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn min_timestamp_opt(&self) -> Option<&::prost_types::Timestamp> {
+            self.min_timestamp.as_ref().map(|field| field as _)
+        }
+        ///Sets `min_timestamp` with the provided value.
+        pub fn set_min_timestamp<T: Into<::prost_types::Timestamp>>(
+            &mut self,
+            field: T,
+        ) {
+            self.min_timestamp = Some(field.into().into());
+        }
+        ///Sets `min_timestamp` with the provided value.
+        pub fn with_min_timestamp<T: Into<::prost_types::Timestamp>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_min_timestamp(field.into());
+            self
+        }
+        ///If `max_timestamp` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn max_timestamp_opt_mut(
+            &mut self,
+        ) -> Option<&mut ::prost_types::Timestamp> {
+            self.max_timestamp.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `max_timestamp`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn max_timestamp_mut(&mut self) -> &mut ::prost_types::Timestamp {
+            self.max_timestamp.get_or_insert_default()
+        }
+        ///If `max_timestamp` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn max_timestamp_opt(&self) -> Option<&::prost_types::Timestamp> {
+            self.max_timestamp.as_ref().map(|field| field as _)
+        }
+        ///Sets `max_timestamp` with the provided value.
+        pub fn set_max_timestamp<T: Into<::prost_types::Timestamp>>(
+            &mut self,
+            field: T,
+        ) {
+            self.max_timestamp = Some(field.into().into());
+        }
+        ///Sets `max_timestamp` with the provided value.
+        pub fn with_max_timestamp<T: Into<::prost_types::Timestamp>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_max_timestamp(field.into());
             self
         }
         ///If `chain` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].

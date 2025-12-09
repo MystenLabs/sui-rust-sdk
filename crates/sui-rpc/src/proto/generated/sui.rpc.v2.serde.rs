@@ -22652,6 +22652,12 @@ impl serde::Serialize for TransactionExpiration {
         if self.min_epoch.is_some() {
             len += 1;
         }
+        if self.min_timestamp.is_some() {
+            len += 1;
+        }
+        if self.max_timestamp.is_some() {
+            len += 1;
+        }
         if self.chain.is_some() {
             len += 1;
         }
@@ -22674,6 +22680,12 @@ impl serde::Serialize for TransactionExpiration {
             #[allow(clippy::needless_borrows_for_generic_args)]
             struct_ser.serialize_field("minEpoch", ToString::to_string(&v).as_str())?;
         }
+        if let Some(v) = self.min_timestamp.as_ref() {
+            struct_ser.serialize_field("minTimestamp", &crate::_serde::TimestampSerializer(v))?;
+        }
+        if let Some(v) = self.max_timestamp.as_ref() {
+            struct_ser.serialize_field("maxTimestamp", &crate::_serde::TimestampSerializer(v))?;
+        }
         if let Some(v) = self.chain.as_ref() {
             struct_ser.serialize_field("chain", v)?;
         }
@@ -22694,6 +22706,10 @@ impl<'de> serde::Deserialize<'de> for TransactionExpiration {
             "epoch",
             "min_epoch",
             "minEpoch",
+            "min_timestamp",
+            "minTimestamp",
+            "max_timestamp",
+            "maxTimestamp",
             "chain",
             "nonce",
         ];
@@ -22703,6 +22719,8 @@ impl<'de> serde::Deserialize<'de> for TransactionExpiration {
             Kind,
             Epoch,
             MinEpoch,
+            MinTimestamp,
+            MaxTimestamp,
             Chain,
             Nonce,
             __SkipField__,
@@ -22730,6 +22748,8 @@ impl<'de> serde::Deserialize<'de> for TransactionExpiration {
                             "kind" => Ok(GeneratedField::Kind),
                             "epoch" => Ok(GeneratedField::Epoch),
                             "minEpoch" | "min_epoch" => Ok(GeneratedField::MinEpoch),
+                            "minTimestamp" | "min_timestamp" => Ok(GeneratedField::MinTimestamp),
+                            "maxTimestamp" | "max_timestamp" => Ok(GeneratedField::MaxTimestamp),
                             "chain" => Ok(GeneratedField::Chain),
                             "nonce" => Ok(GeneratedField::Nonce),
                             _ => Ok(GeneratedField::__SkipField__),
@@ -22756,6 +22776,8 @@ impl<'de> serde::Deserialize<'de> for TransactionExpiration {
                 let mut kind__ = None;
                 let mut epoch__ = None;
                 let mut min_epoch__ = None;
+                let mut min_timestamp__ = None;
+                let mut max_timestamp__ = None;
                 let mut chain__ = None;
                 let mut nonce__ = None;
                 while let Some(k) = map_.next_key()? {
@@ -22782,6 +22804,18 @@ impl<'de> serde::Deserialize<'de> for TransactionExpiration {
                                 map_.next_value::<::std::option::Option<crate::_serde::NumberDeserialize<_>>>()?.map(|x| x.0)
                             ;
                         }
+                        GeneratedField::MinTimestamp => {
+                            if min_timestamp__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("minTimestamp"));
+                            }
+                            min_timestamp__ = map_.next_value::<::std::option::Option<crate::_serde::TimestampDeserializer>>()?.map(|x| x.0.into());
+                        }
+                        GeneratedField::MaxTimestamp => {
+                            if max_timestamp__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("maxTimestamp"));
+                            }
+                            max_timestamp__ = map_.next_value::<::std::option::Option<crate::_serde::TimestampDeserializer>>()?.map(|x| x.0.into());
+                        }
                         GeneratedField::Chain => {
                             if chain__.is_some() {
                                 return Err(serde::de::Error::duplicate_field("chain"));
@@ -22805,6 +22839,8 @@ impl<'de> serde::Deserialize<'de> for TransactionExpiration {
                     kind: kind__,
                     epoch: epoch__,
                     min_epoch: min_epoch__,
+                    min_timestamp: min_timestamp__,
+                    max_timestamp: max_timestamp__,
                     chain: chain__,
                     nonce: nonce__,
                 })

@@ -6955,7 +6955,7 @@ pub struct TransactionExpiration {
         tag = "1"
     )]
     pub kind: ::core::option::Option<i32>,
-    /// Maximum epoch in which a transaction can be executed. The provided maximual epoch
+    /// Maximum epoch in which a transaction can be executed. The provided maximal epoch
     /// must be greater than or equal to the current epoch for a transaction to execute.
     #[prost(uint64, optional, tag = "2")]
     pub epoch: ::core::option::Option<u64>,
@@ -6963,6 +6963,16 @@ pub struct TransactionExpiration {
     /// must be less than or equal to the current epoch for a transaction to execute.
     #[prost(uint64, optional, tag = "3")]
     pub min_epoch: ::core::option::Option<u64>,
+    /// Minimal UNIX timestamp in which a transaction can be executed. The
+    /// provided minimal timestamp must be less than or equal to the current
+    /// clock.
+    #[prost(message, optional, tag = "4")]
+    pub min_timestamp: ::core::option::Option<::prost_types::Timestamp>,
+    /// Maximum UNIX timestamp in which a transaction can be executed. The
+    /// provided maximal timestamp must be greater than or equal to the current
+    /// clock.
+    #[prost(message, optional, tag = "5")]
+    pub max_timestamp: ::core::option::Option<::prost_types::Timestamp>,
     /// ChainId of the network this transaction is intended for in order to prevent cross-chain replay
     #[prost(string, optional, tag = "6")]
     pub chain: ::core::option::Option<::prost::alloc::string::String>,

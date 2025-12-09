@@ -74,7 +74,7 @@ message TransactionExpiration {
 
   optional TransactionExpirationKind kind = 1;
 
-  // Maximum epoch in which a transaction can be executed. The provided maximual epoch
+  // Maximum epoch in which a transaction can be executed. The provided maximal epoch
   // must be greater than or equal to the current epoch for a transaction to execute.
   optional uint64 epoch = 2;
 
@@ -82,17 +82,15 @@ message TransactionExpiration {
   // must be less than or equal to the current epoch for a transaction to execute.
   optional uint64 min_epoch = 3;
 
-  // Minimal timestamp (in seconds since the UNIX epoch) in which a transaction
-  // can be executed. The provided mimimal timestamp must be less than or
-  // equal to the current clock.
-  // optional uint64 min_timestamp_seconds = 4;
-  reserved 4;
+  // Minimal UNIX timestamp in which a transaction can be executed. The
+  // provided minimal timestamp must be less than or equal to the current
+  // clock.
+  optional google.protobuf.Timestamp min_timestamp = 4;
 
-  // Maximum timestamp (in seconds since the UNIX epoch) in which a transaction
-  // can be executed. The provided maximual timestamp must be greater than or
-  // equal to the current clock.
-  // optional uint64 max_timestamp_seconds = 5;
-  reserved 5;
+  // Maximum UNIX timestamp in which a transaction can be executed. The
+  // provided maximal timestamp must be greater than or equal to the current
+  // clock.
+  optional google.protobuf.Timestamp max_timestamp = 5;
 
   // ChainId of the network this transaction is intended for in order to prevent cross-chain replay
   optional string chain = 6;

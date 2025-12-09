@@ -93,11 +93,9 @@ pub enum TransactionExpiration {
         /// Transaction expires after this epoch. Must equal current epoch
         max_epoch: Option<EpochId>,
         /// Future support for sub-epoch timing (not yet implemented)
-        #[cfg_attr(feature = "proptest", filter(std::option::Option::is_none))]
-        min_timestamp_seconds: Option<u64>,
+        min_timestamp: Option<u64>,
         /// Future support for sub-epoch timing (not yet implemented)
-        #[cfg_attr(feature = "proptest", filter(std::option::Option::is_none))]
-        max_timestamp_seconds: Option<u64>,
+        max_timestamp: Option<u64>,
         /// Network identifier to prevent cross-chain replay
         chain: Digest,
         /// User-provided uniqueness identifier to differentiate otherwise identical transactions

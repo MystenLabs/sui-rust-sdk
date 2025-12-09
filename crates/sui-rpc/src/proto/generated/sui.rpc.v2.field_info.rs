@@ -9154,6 +9154,18 @@ mod _field_impls {
             number: 3i32,
             message_fields: None,
         };
+        pub const MIN_TIMESTAMP_FIELD: &'static MessageField = &MessageField {
+            name: "min_timestamp",
+            json_name: "minTimestamp",
+            number: 4i32,
+            message_fields: None,
+        };
+        pub const MAX_TIMESTAMP_FIELD: &'static MessageField = &MessageField {
+            name: "max_timestamp",
+            json_name: "maxTimestamp",
+            number: 5i32,
+            message_fields: None,
+        };
         pub const CHAIN_FIELD: &'static MessageField = &MessageField {
             name: "chain",
             json_name: "chain",
@@ -9172,6 +9184,8 @@ mod _field_impls {
             Self::KIND_FIELD,
             Self::EPOCH_FIELD,
             Self::MIN_EPOCH_FIELD,
+            Self::MIN_TIMESTAMP_FIELD,
+            Self::MAX_TIMESTAMP_FIELD,
             Self::CHAIN_FIELD,
             Self::NONCE_FIELD,
         ];
@@ -9206,6 +9220,14 @@ mod _field_impls {
         }
         pub fn min_epoch(mut self) -> String {
             self.path.push(TransactionExpiration::MIN_EPOCH_FIELD.name);
+            self.finish()
+        }
+        pub fn min_timestamp(mut self) -> String {
+            self.path.push(TransactionExpiration::MIN_TIMESTAMP_FIELD.name);
+            self.finish()
+        }
+        pub fn max_timestamp(mut self) -> String {
+            self.path.push(TransactionExpiration::MAX_TIMESTAMP_FIELD.name);
             self.finish()
         }
         pub fn chain(mut self) -> String {
