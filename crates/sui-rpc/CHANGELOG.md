@@ -1,3 +1,8 @@
+# [0.1.1] - 2025-12-11
+
+## Added
+- Added new move vm adapter error variants
+
 # [0.1.0] - 2025-11-07
 
 ## Changed
@@ -53,6 +58,7 @@
 
 Initial release
 
+[0.1.1]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.1.1
 [0.1.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.1.0
 [0.0.8]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.0.8
 [0.0.7]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.0.7
