@@ -305,6 +305,9 @@ pub enum EndOfEpochTransactionKind {
 
     /// Create and initialize the display metadata registry object
     DisplayRegistryCreate,
+
+    /// Create and initialize the address alias state object
+    AddressAliasStateCreate,
 }
 
 /// Set of Execution Time Observations from the committee.
