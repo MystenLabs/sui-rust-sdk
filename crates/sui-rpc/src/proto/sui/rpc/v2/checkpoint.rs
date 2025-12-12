@@ -380,12 +380,16 @@ impl TryFrom<&EndOfEpochData> for sui_sdk_types::EndOfEpochData {
 // CheckpointedTransactionInfo
 //
 
-impl From<sui_sdk_types::CheckpointTransactionInfo> for CheckpointedTransactionInfo {
-    fn from(value: sui_sdk_types::CheckpointTransactionInfo) -> Self {
+impl From<&sui_sdk_types::CheckpointTransactionInfo> for CheckpointedTransactionInfo {
+    fn from(value: &sui_sdk_types::CheckpointTransactionInfo) -> Self {
         Self {
-            transaction: Some(value.transaction.to_string()),
-            effects: Some(value.effects.to_string()),
-            signatures: value.signatures.into_iter().map(Into::into).collect(),
+            transaction: Some(value.transaction().to_string()),
+            effects: Some(value.effects().to_string()),
+            signatures: value.signatures().cloned().map(Into::into).collect(),
+            alias_config_versions: value
+                .signatures_with_alias_config_versions()
+                .map(|(_, version)| AliasConfigVersion { version })
+                .collect(),
         }
     }
 }
@@ -412,17 +416,27 @@ impl TryFrom<&CheckpointedTransactionInfo> for sui_sdk_types::CheckpointTransact
                 TryFromProtoError::invalid(CheckpointedTransactionInfo::EFFECTS_FIELD, e)
             })?;
 
-        let signatures = value
+        let signatures: Vec<sui_sdk_types::UserSignature> = value
             .signatures
             .iter()
             .map(TryInto::try_into)
             .collect::<Result<_, _>>()?;
 
-        Ok(Self {
-            transaction,
-            effects,
-            signatures,
-        })
+        let alias_config_versions: Vec<Option<u64>> = value
+            .alias_config_versions
+            .iter()
+            .map(|a| a.version)
+            .collect();
+
+        if signatures.len() == alias_config_versions.len() {
+            Ok(Self::new_with_alias_config_versions(
+                transaction,
+                effects,
+                signatures.into_iter().zip(alias_config_versions).collect(),
+            ))
+        } else {
+            Ok(Self::new(transaction, effects, signatures))
+        }
     }
 }
 
@@ -449,11 +463,11 @@ impl Merge<sui_sdk_types::CheckpointContents> for CheckpointContents {
         }
 
         if mask.contains(Self::VERSION_FIELD.name) {
-            self.version = Some(1);
+            self.version = Some(source.version() as _);
         }
 
         if mask.contains(Self::TRANSACTIONS_FIELD.name) {
-            self.transactions = source.into_v1().into_iter().map(Into::into).collect();
+            self.transactions = source.transactions().iter().map(Into::into).collect();
         }
     }
 }
@@ -490,22 +504,25 @@ impl TryFrom<&CheckpointContents> for sui_sdk_types::CheckpointContents {
 
     fn try_from(value: &CheckpointContents) -> Result<Self, Self::Error> {
         match value.version {
-            Some(1) => {}
-            v => {
-                return Err(TryFromProtoError::invalid(
-                    CheckpointContents::VERSION_FIELD,
-                    format!("unknown type version {v:?}"),
-                ));
-            }
+            Some(1) => Ok(Self::new_v1(
+                value
+                    .transactions
+                    .iter()
+                    .map(TryInto::try_into)
+                    .collect::<Result<_, _>>()?,
+            )),
+            Some(2) => Ok(Self::new_v2(
+                value
+                    .transactions
+                    .iter()
+                    .map(TryInto::try_into)
+                    .collect::<Result<_, _>>()?,
+            )),
+            v => Err(TryFromProtoError::invalid(
+                CheckpointContents::VERSION_FIELD,
+                format!("unknown type version {v:?}"),
+            )),
         }
-
-        Ok(Self::new(
-            value
-                .transactions
-                .iter()
-                .map(TryInto::try_into)
-                .collect::<Result<_, _>>()?,
-        ))
     }
 }
 

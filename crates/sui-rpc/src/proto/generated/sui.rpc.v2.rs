@@ -154,6 +154,18 @@ pub struct CheckpointedTransactionInfo {
     /// Set of user signatures that authorized the transaction.
     #[prost(message, repeated, tag = "3")]
     pub signatures: ::prost::alloc::vec::Vec<UserSignature>,
+    /// The AliasConfig object version, if any, that was used to verify the
+    /// UserSignature at the same position in `signatures`.
+    ///
+    /// This field is present when CheckpointContents.version is >= 2.
+    #[prost(message, repeated, tag = "4")]
+    pub alias_config_versions: ::prost::alloc::vec::Vec<AliasConfigVersion>,
+}
+#[non_exhaustive]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct AliasConfigVersion {
+    #[prost(uint64, optional, tag = "1")]
+    pub version: ::core::option::Option<u64>,
 }
 /// A header for a checkpoint on the Sui blockchain.
 ///

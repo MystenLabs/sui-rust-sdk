@@ -377,12 +377,19 @@ mod _field_impls {
             number: 3i32,
             message_fields: Some(UserSignature::FIELDS),
         };
+        pub const ALIAS_CONFIG_VERSIONS_FIELD: &'static MessageField = &MessageField {
+            name: "alias_config_versions",
+            json_name: "aliasConfigVersions",
+            number: 4i32,
+            message_fields: Some(AliasConfigVersion::FIELDS),
+        };
     }
     impl MessageFields for CheckpointedTransactionInfo {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::TRANSACTION_FIELD,
             Self::EFFECTS_FIELD,
             Self::SIGNATURES_FIELD,
+            Self::ALIAS_CONFIG_VERSIONS_FIELD,
         ];
     }
     impl CheckpointedTransactionInfo {
@@ -416,6 +423,47 @@ mod _field_impls {
         pub fn signatures(mut self) -> UserSignatureFieldPathBuilder {
             self.path.push(CheckpointedTransactionInfo::SIGNATURES_FIELD.name);
             UserSignatureFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn alias_config_versions(mut self) -> AliasConfigVersionFieldPathBuilder {
+            self.path
+                .push(CheckpointedTransactionInfo::ALIAS_CONFIG_VERSIONS_FIELD.name);
+            AliasConfigVersionFieldPathBuilder::new_with_base(self.path)
+        }
+    }
+    impl AliasConfigVersion {
+        pub const VERSION_FIELD: &'static MessageField = &MessageField {
+            name: "version",
+            json_name: "version",
+            number: 1i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for AliasConfigVersion {
+        const FIELDS: &'static [&'static MessageField] = &[Self::VERSION_FIELD];
+    }
+    impl AliasConfigVersion {
+        pub fn path_builder() -> AliasConfigVersionFieldPathBuilder {
+            AliasConfigVersionFieldPathBuilder::new()
+        }
+    }
+    pub struct AliasConfigVersionFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl AliasConfigVersionFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn version(mut self) -> String {
+            self.path.push(AliasConfigVersion::VERSION_FIELD.name);
+            self.finish()
         }
     }
     impl CheckpointSummary {
