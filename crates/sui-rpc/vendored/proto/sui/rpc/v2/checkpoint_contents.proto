@@ -31,4 +31,14 @@ message CheckpointedTransactionInfo {
   optional string effects = 2;
   // Set of user signatures that authorized the transaction.
   repeated UserSignature signatures = 3;
+
+  // The AliasConfig object version, if any, that was used to verify the
+  // UserSignature at the same position in `signatures`.
+  //
+  // This field is present when CheckpointContents.version is >= 2.
+  repeated AliasConfigVersion alias_config_versions = 4;
+}
+
+message AliasConfigVersion {
+  optional uint64 version = 1;
 }

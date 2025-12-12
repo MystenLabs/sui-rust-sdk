@@ -184,38 +184,109 @@ pub struct SignedCheckpointSummary {
 ///                                                               ; length as the vector of digests
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
-pub struct CheckpointContents(
-    #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
-    Vec<CheckpointTransactionInfo>,
-);
+pub struct CheckpointContents {
+    version: usize,
+    transactions: Vec<CheckpointTransactionInfo>,
+}
 
 impl CheckpointContents {
-    pub fn new(transactions: Vec<CheckpointTransactionInfo>) -> Self {
-        Self(transactions)
+    pub fn new_v1(mut transactions: Vec<CheckpointTransactionInfo>) -> Self {
+        transactions
+            .iter_mut()
+            .flat_map(|t| t.signatures.iter_mut())
+            .for_each(|(_, v)| *v = None);
+        Self {
+            version: 1,
+            transactions,
+        }
+    }
+
+    pub fn new_v2(transactions: Vec<CheckpointTransactionInfo>) -> Self {
+        Self {
+            version: 2,
+            transactions,
+        }
     }
 
     pub fn transactions(&self) -> &[CheckpointTransactionInfo] {
-        &self.0
+        &self.transactions
     }
 
-    pub fn into_v1(self) -> Vec<CheckpointTransactionInfo> {
-        self.0
+    pub fn version(&self) -> usize {
+        self.version
+    }
+}
+
+#[cfg(feature = "proptest")]
+impl proptest::arbitrary::Arbitrary for CheckpointContents {
+    type Parameters = ();
+    type Strategy = proptest::strategy::BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        use proptest::collection::vec;
+        use proptest::prelude::*;
+        use proptest::strategy::Strategy;
+
+        (
+            any::<bool>(),
+            vec(any::<CheckpointTransactionInfo>(), 0..=2),
+        )
+            .prop_map(|(version, txns)| match version {
+                false => Self::new_v1(txns),
+                true => Self::new_v2(txns),
+            })
+            .boxed()
     }
 }
 
 /// Transaction information committed to in a checkpoint
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde_derive::Serialize, serde_derive::Deserialize)
-)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct CheckpointTransactionInfo {
-    pub transaction: Digest,
-    pub effects: Digest,
+    transaction: Digest,
+    effects: Digest,
     #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(0..=2).lift()))]
-    pub signatures: Vec<UserSignature>,
+    signatures: Vec<(UserSignature, Option<u64>)>,
+}
+
+impl CheckpointTransactionInfo {
+    pub fn new(transaction: Digest, effects: Digest, signatures: Vec<UserSignature>) -> Self {
+        Self {
+            transaction,
+            effects,
+            signatures: signatures.into_iter().map(|s| (s, None)).collect(),
+        }
+    }
+
+    pub fn new_with_alias_config_versions(
+        transaction: Digest,
+        effects: Digest,
+        signatures: Vec<(UserSignature, Option<u64>)>,
+    ) -> Self {
+        Self {
+            transaction,
+            effects,
+            signatures,
+        }
+    }
+
+    pub fn transaction(&self) -> &Digest {
+        &self.transaction
+    }
+
+    pub fn effects(&self) -> &Digest {
+        &self.effects
+    }
+
+    pub fn signatures(&self) -> impl Iterator<Item = &UserSignature> {
+        self.signatures.iter().map(|(s, _)| s)
+    }
+
+    pub fn signatures_with_alias_config_versions(
+        &self,
+    ) -> impl Iterator<Item = (&UserSignature, Option<u64>)> {
+        self.signatures.iter().map(|(s, v)| (s, *v))
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -280,42 +351,87 @@ mod serialization {
                 effects: &'a Digest,
             }
 
-            struct DigestSeq<'a>(&'a CheckpointContents);
-            impl Serialize for DigestSeq<'_> {
-                fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-                where
-                    S: Serializer,
-                {
-                    let mut seq = serializer.serialize_seq(Some(self.0.0.len()))?;
-                    for txn in &self.0.0 {
-                        let digests = Digests {
-                            transaction: &txn.transaction,
-                            effects: &txn.effects,
-                        };
-                        seq.serialize_element(&digests)?;
+            match self.version() {
+                1 => {
+                    struct DigestSeq<'a>(&'a CheckpointContents);
+                    impl Serialize for DigestSeq<'_> {
+                        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+                        where
+                            S: Serializer,
+                        {
+                            let mut seq =
+                                serializer.serialize_seq(Some(self.0.transactions.len()))?;
+                            for txn in &self.0.transactions {
+                                let digests = Digests {
+                                    transaction: &txn.transaction,
+                                    effects: &txn.effects,
+                                };
+                                seq.serialize_element(&digests)?;
+                            }
+                            seq.end()
+                        }
                     }
-                    seq.end()
+
+                    struct SignatureSeq<'a>(&'a CheckpointContents);
+                    impl Serialize for SignatureSeq<'_> {
+                        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+                        where
+                            S: Serializer,
+                        {
+                            let mut seq =
+                                serializer.serialize_seq(Some(self.0.transactions.len()))?;
+                            for txn in &self.0.transactions {
+                                let sigs: Vec<&UserSignature> = txn.signatures().collect();
+                                seq.serialize_element(&sigs)?;
+                            }
+                            seq.end()
+                        }
+                    }
+
+                    let mut s =
+                        serializer.serialize_tuple_variant("CheckpointContents", 0, "V1", 2)?;
+                    s.serialize_field(&DigestSeq(self))?;
+                    s.serialize_field(&SignatureSeq(self))?;
+                    s.end()
+                }
+                2 => {
+                    #[derive(serde_derive::Serialize)]
+                    struct CheckpointTransactionInfoV2<'a> {
+                        digests: Digests<'a>,
+                        signatures: &'a [(UserSignature, Option<u64>)],
+                    }
+
+                    struct V2<'a>(&'a CheckpointContents);
+                    impl Serialize for V2<'_> {
+                        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+                        where
+                            S: Serializer,
+                        {
+                            let mut seq =
+                                serializer.serialize_seq(Some(self.0.transactions.len()))?;
+                            for txn in &self.0.transactions {
+                                let txn = CheckpointTransactionInfoV2 {
+                                    digests: Digests {
+                                        transaction: &txn.transaction,
+                                        effects: &txn.effects,
+                                    },
+                                    signatures: &txn.signatures,
+                                };
+                                seq.serialize_element(&txn)?;
+                            }
+                            seq.end()
+                        }
+                    }
+
+                    let mut s =
+                        serializer.serialize_tuple_variant("CheckpointContents", 1, "V2", 1)?;
+                    s.serialize_field(&V2(self))?;
+                    s.end()
+                }
+                _ => {
+                    unreachable!("invalid checkpoint contents version");
                 }
             }
-
-            struct SignatureSeq<'a>(&'a CheckpointContents);
-            impl Serialize for SignatureSeq<'_> {
-                fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-                where
-                    S: Serializer,
-                {
-                    let mut seq = serializer.serialize_seq(Some(self.0.0.len()))?;
-                    for txn in &self.0.0 {
-                        seq.serialize_element(&txn.signatures)?;
-                    }
-                    seq.end()
-                }
-            }
-
-            let mut s = serializer.serialize_tuple_variant("CheckpointContents", 0, "V1", 2)?;
-            s.serialize_field(&DigestSeq(self))?;
-            s.serialize_field(&SignatureSeq(self))?;
-            s.end()
         }
     }
 
@@ -332,8 +448,20 @@ mod serialization {
     }
 
     #[derive(serde_derive::Deserialize)]
+    struct BinaryContentsV2 {
+        transactions: Vec<CheckpointTransactionContents>,
+    }
+
+    #[derive(serde_derive::Deserialize)]
+    struct CheckpointTransactionContents {
+        digests: ExecutionDigests,
+        signatures: Vec<(UserSignature, Option<u64>)>,
+    }
+
+    #[derive(serde_derive::Deserialize)]
     enum BinaryContents {
         V1(BinaryContentsV1),
+        V2(BinaryContentsV2),
     }
 
     impl<'de> Deserialize<'de> for CheckpointContents {
@@ -341,36 +469,48 @@ mod serialization {
         where
             D: Deserializer<'de>,
         {
-            let BinaryContents::V1(BinaryContentsV1 {
-                digests,
-                signatures,
-            }) = Deserialize::deserialize(deserializer)?;
+            match Deserialize::deserialize(deserializer)? {
+                BinaryContents::V1(BinaryContentsV1 {
+                    digests,
+                    signatures,
+                }) => {
+                    if digests.len() != signatures.len() {
+                        return Err(serde::de::Error::custom(
+                            "must have same number of signatures as transactions",
+                        ));
+                    }
 
-            if digests.len() != signatures.len() {
-                return Err(serde::de::Error::custom(
-                    "must have same number of signatures as transactions",
-                ));
+                    Ok(Self::new_v1(
+                        digests
+                            .into_iter()
+                            .zip(signatures)
+                            .map(
+                                |(
+                                    ExecutionDigests {
+                                        transaction,
+                                        effects,
+                                    },
+                                    signatures,
+                                )| {
+                                    CheckpointTransactionInfo::new(transaction, effects, signatures)
+                                },
+                            )
+                            .collect(),
+                    ))
+                }
+                BinaryContents::V2(v2) => Ok(Self::new_v2(
+                    v2.transactions
+                        .into_iter()
+                        .map(|info| {
+                            CheckpointTransactionInfo::new_with_alias_config_versions(
+                                info.digests.transaction,
+                                info.digests.effects,
+                                info.signatures,
+                            )
+                        })
+                        .collect(),
+                )),
             }
-
-            Ok(Self(
-                digests
-                    .into_iter()
-                    .zip(signatures)
-                    .map(
-                        |(
-                            ExecutionDigests {
-                                transaction,
-                                effects,
-                            },
-                            signatures,
-                        )| CheckpointTransactionInfo {
-                            transaction,
-                            effects,
-                            signatures,
-                        },
-                    )
-                    .collect(),
-            ))
         }
     }
 
