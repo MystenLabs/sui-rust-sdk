@@ -1244,7 +1244,7 @@ impl TryFrom<&EndOfEpochTransactionKind> for sui_sdk_types::EndOfEpochTransactio
             Kind::AccumulatorRootCreate => Self::AccumulatorRootCreate,
             Kind::CoinRegistryCreate => Self::CoinRegistryCreate,
             Kind::DisplayRegistryCreate => Self::DisplayRegistryCreate,
-            Kind::AliasStateCreate => Self::AliasStateCreate,
+            Kind::AddressAliasStateCreate => Self::AddressAliasStateCreate,
         }
         .pipe(Ok)
     }
