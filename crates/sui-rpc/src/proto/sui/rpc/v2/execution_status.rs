@@ -236,7 +236,7 @@ impl From<sui_sdk_types::ExecutionError> for ExecutionError {
                 ExecutionErrorKind::MoveRawValueTooBig
             }
             E::InvalidLinkage => ExecutionErrorKind::InvalidLinkage,
-            E::InsufficientBalanceForWithdraw => ExecutionErrorKind::InsufficientBalanceForWithdraw,
+            E::InsufficientFundsForWithdraw => ExecutionErrorKind::InsufficientFundsForWithdraw,
             E::NonExclusiveWriteInputObjectModified { object } => {
                 message.set_object_id(object);
                 ExecutionErrorKind::NonExclusiveWriteInputObjectModified
@@ -508,7 +508,7 @@ impl TryFrom<&ExecutionError> for sui_sdk_types::ExecutionError {
                 }
             }
             K::InvalidLinkage => Self::InvalidLinkage,
-            K::InsufficientBalanceForWithdraw => Self::InsufficientBalanceForWithdraw,
+            K::InsufficientFundsForWithdraw => Self::InsufficientFundsForWithdraw,
             K::NonExclusiveWriteInputObjectModified => Self::NonExclusiveWriteInputObjectModified {
                 object: value.object_id().parse().map_err(|e| TryFromProtoError::invalid("object_id", e))?
             },

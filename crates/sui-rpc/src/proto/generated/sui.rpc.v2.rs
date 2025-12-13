@@ -954,8 +954,8 @@ pub mod execution_error {
         MoveRawValueTooBig = 39,
         /// A valid linkage was unable to be determined for the transaction or one of its commands.
         InvalidLinkage = 40,
-        /// Insufficient balance for transaction withdrawal
-        InsufficientBalanceForWithdraw = 41,
+        /// Insufficient funds for transaction withdrawal
+        InsufficientFundsForWithdraw = 41,
         /// An input object with non-exclusive write mutability was modified
         NonExclusiveWriteInputObjectModified = 42,
     }
@@ -1021,9 +1021,7 @@ pub mod execution_error {
                 Self::MoveVectorElemTooBig => "MOVE_VECTOR_ELEM_TOO_BIG",
                 Self::MoveRawValueTooBig => "MOVE_RAW_VALUE_TOO_BIG",
                 Self::InvalidLinkage => "INVALID_LINKAGE",
-                Self::InsufficientBalanceForWithdraw => {
-                    "INSUFFICIENT_BALANCE_FOR_WITHDRAW"
-                }
+                Self::InsufficientFundsForWithdraw => "INSUFFICIENT_FUNDS_FOR_WITHDRAW",
                 Self::NonExclusiveWriteInputObjectModified => {
                     "NON_EXCLUSIVE_WRITE_INPUT_OBJECT_MODIFIED"
                 }
@@ -1091,8 +1089,8 @@ pub mod execution_error {
                 "MOVE_VECTOR_ELEM_TOO_BIG" => Some(Self::MoveVectorElemTooBig),
                 "MOVE_RAW_VALUE_TOO_BIG" => Some(Self::MoveRawValueTooBig),
                 "INVALID_LINKAGE" => Some(Self::InvalidLinkage),
-                "INSUFFICIENT_BALANCE_FOR_WITHDRAW" => {
-                    Some(Self::InsufficientBalanceForWithdraw)
+                "INSUFFICIENT_FUNDS_FOR_WITHDRAW" => {
+                    Some(Self::InsufficientFundsForWithdraw)
                 }
                 "NON_EXCLUSIVE_WRITE_INPUT_OBJECT_MODIFIED" => {
                     Some(Self::NonExclusiveWriteInputObjectModified)
