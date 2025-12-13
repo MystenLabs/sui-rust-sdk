@@ -8342,7 +8342,7 @@ impl serde::Serialize for execution_error::ExecutionErrorKind {
             Self::MoveVectorElemTooBig => "MOVE_VECTOR_ELEM_TOO_BIG",
             Self::MoveRawValueTooBig => "MOVE_RAW_VALUE_TOO_BIG",
             Self::InvalidLinkage => "INVALID_LINKAGE",
-            Self::InsufficientBalanceForWithdraw => "INSUFFICIENT_BALANCE_FOR_WITHDRAW",
+            Self::InsufficientFundsForWithdraw => "INSUFFICIENT_FUNDS_FOR_WITHDRAW",
             Self::NonExclusiveWriteInputObjectModified => "NON_EXCLUSIVE_WRITE_INPUT_OBJECT_MODIFIED",
         };
         serializer.serialize_str(variant)
@@ -8396,7 +8396,7 @@ impl<'de> serde::Deserialize<'de> for execution_error::ExecutionErrorKind {
             "MOVE_VECTOR_ELEM_TOO_BIG",
             "MOVE_RAW_VALUE_TOO_BIG",
             "INVALID_LINKAGE",
-            "INSUFFICIENT_BALANCE_FOR_WITHDRAW",
+            "INSUFFICIENT_FUNDS_FOR_WITHDRAW",
             "NON_EXCLUSIVE_WRITE_INPUT_OBJECT_MODIFIED",
         ];
 
@@ -8479,7 +8479,7 @@ impl<'de> serde::Deserialize<'de> for execution_error::ExecutionErrorKind {
                     "MOVE_VECTOR_ELEM_TOO_BIG" => Ok(execution_error::ExecutionErrorKind::MoveVectorElemTooBig),
                     "MOVE_RAW_VALUE_TOO_BIG" => Ok(execution_error::ExecutionErrorKind::MoveRawValueTooBig),
                     "INVALID_LINKAGE" => Ok(execution_error::ExecutionErrorKind::InvalidLinkage),
-                    "INSUFFICIENT_BALANCE_FOR_WITHDRAW" => Ok(execution_error::ExecutionErrorKind::InsufficientBalanceForWithdraw),
+                    "INSUFFICIENT_FUNDS_FOR_WITHDRAW" => Ok(execution_error::ExecutionErrorKind::InsufficientFundsForWithdraw),
                     "NON_EXCLUSIVE_WRITE_INPUT_OBJECT_MODIFIED" => Ok(execution_error::ExecutionErrorKind::NonExclusiveWriteInputObjectModified),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }

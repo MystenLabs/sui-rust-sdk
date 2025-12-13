@@ -287,8 +287,8 @@ pub enum ExecutionError {
     /// A valid linkage was unable to be determined for the transaction or one of its commands.
     InvalidLinkage,
 
-    /// Insufficient balance for transaction withdrawal
-    InsufficientBalanceForWithdraw,
+    /// Insufficient funds for transaction withdrawal
+    InsufficientFundsForWithdraw,
 
     /// An input object with non-exclusive write mutability was modified
     NonExclusiveWriteInputObjectModified { object: Address },
