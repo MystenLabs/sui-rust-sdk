@@ -377,11 +377,11 @@ mod _field_impls {
             number: 3i32,
             message_fields: Some(UserSignature::FIELDS),
         };
-        pub const ALIAS_CONFIG_VERSIONS_FIELD: &'static MessageField = &MessageField {
-            name: "alias_config_versions",
-            json_name: "aliasConfigVersions",
+        pub const ADDRESS_ALIASES_VERSIONS_FIELD: &'static MessageField = &MessageField {
+            name: "address_aliases_versions",
+            json_name: "addressAliasesVersions",
             number: 4i32,
-            message_fields: Some(AliasConfigVersion::FIELDS),
+            message_fields: Some(AddressAliasesVersion::FIELDS),
         };
     }
     impl MessageFields for CheckpointedTransactionInfo {
@@ -389,7 +389,7 @@ mod _field_impls {
             Self::TRANSACTION_FIELD,
             Self::EFFECTS_FIELD,
             Self::SIGNATURES_FIELD,
-            Self::ALIAS_CONFIG_VERSIONS_FIELD,
+            Self::ADDRESS_ALIASES_VERSIONS_FIELD,
         ];
     }
     impl CheckpointedTransactionInfo {
@@ -424,13 +424,15 @@ mod _field_impls {
             self.path.push(CheckpointedTransactionInfo::SIGNATURES_FIELD.name);
             UserSignatureFieldPathBuilder::new_with_base(self.path)
         }
-        pub fn alias_config_versions(mut self) -> AliasConfigVersionFieldPathBuilder {
+        pub fn address_aliases_versions(
+            mut self,
+        ) -> AddressAliasesVersionFieldPathBuilder {
             self.path
-                .push(CheckpointedTransactionInfo::ALIAS_CONFIG_VERSIONS_FIELD.name);
-            AliasConfigVersionFieldPathBuilder::new_with_base(self.path)
+                .push(CheckpointedTransactionInfo::ADDRESS_ALIASES_VERSIONS_FIELD.name);
+            AddressAliasesVersionFieldPathBuilder::new_with_base(self.path)
         }
     }
-    impl AliasConfigVersion {
+    impl AddressAliasesVersion {
         pub const VERSION_FIELD: &'static MessageField = &MessageField {
             name: "version",
             json_name: "version",
@@ -438,18 +440,18 @@ mod _field_impls {
             message_fields: None,
         };
     }
-    impl MessageFields for AliasConfigVersion {
+    impl MessageFields for AddressAliasesVersion {
         const FIELDS: &'static [&'static MessageField] = &[Self::VERSION_FIELD];
     }
-    impl AliasConfigVersion {
-        pub fn path_builder() -> AliasConfigVersionFieldPathBuilder {
-            AliasConfigVersionFieldPathBuilder::new()
+    impl AddressAliasesVersion {
+        pub fn path_builder() -> AddressAliasesVersionFieldPathBuilder {
+            AddressAliasesVersionFieldPathBuilder::new()
         }
     }
-    pub struct AliasConfigVersionFieldPathBuilder {
+    pub struct AddressAliasesVersionFieldPathBuilder {
         path: Vec<&'static str>,
     }
-    impl AliasConfigVersionFieldPathBuilder {
+    impl AddressAliasesVersionFieldPathBuilder {
         #[allow(clippy::new_without_default)]
         pub fn new() -> Self {
             Self { path: Default::default() }
@@ -462,7 +464,7 @@ mod _field_impls {
             self.path.join(".")
         }
         pub fn version(mut self) -> String {
-            self.path.push(AliasConfigVersion::VERSION_FIELD.name);
+            self.path.push(AddressAliasesVersion::VERSION_FIELD.name);
             self.finish()
         }
     }

@@ -442,7 +442,7 @@ impl<'de> serde::Deserialize<'de> for ActiveJwk {
         deserializer.deserialize_struct("sui.rpc.v2.ActiveJwk", FIELDS, GeneratedVisitor)
     }
 }
-impl serde::Serialize for AliasConfigVersion {
+impl serde::Serialize for AddressAliasesVersion {
     #[allow(deprecated)]
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
     where
@@ -453,7 +453,7 @@ impl serde::Serialize for AliasConfigVersion {
         if self.version.is_some() {
             len += 1;
         }
-        let mut struct_ser = serializer.serialize_struct("sui.rpc.v2.AliasConfigVersion", len)?;
+        let mut struct_ser = serializer.serialize_struct("sui.rpc.v2.AddressAliasesVersion", len)?;
         if let Some(v) = self.version.as_ref() {
             #[allow(clippy::needless_borrow)]
             #[allow(clippy::needless_borrows_for_generic_args)]
@@ -462,7 +462,7 @@ impl serde::Serialize for AliasConfigVersion {
         struct_ser.end()
     }
 }
-impl<'de> serde::Deserialize<'de> for AliasConfigVersion {
+impl<'de> serde::Deserialize<'de> for AddressAliasesVersion {
     #[allow(deprecated)]
     fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
     where
@@ -509,13 +509,13 @@ impl<'de> serde::Deserialize<'de> for AliasConfigVersion {
         #[allow(clippy::useless_conversion)]
         #[allow(clippy::unit_arg)]
         impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-            type Value = AliasConfigVersion;
+            type Value = AddressAliasesVersion;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                formatter.write_str("struct sui.rpc.v2.AliasConfigVersion")
+                formatter.write_str("struct sui.rpc.v2.AddressAliasesVersion")
             }
 
-            fn visit_map<V>(self, mut map_: V) -> std::result::Result<AliasConfigVersion, V::Error>
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<AddressAliasesVersion, V::Error>
                 where
                     V: serde::de::MapAccess<'de>,
             {
@@ -535,12 +535,12 @@ impl<'de> serde::Deserialize<'de> for AliasConfigVersion {
                         }
                     }
                 }
-                Ok(AliasConfigVersion {
+                Ok(AddressAliasesVersion {
                     version: version__,
                 })
             }
         }
-        deserializer.deserialize_struct("sui.rpc.v2.AliasConfigVersion", FIELDS, GeneratedVisitor)
+        deserializer.deserialize_struct("sui.rpc.v2.AddressAliasesVersion", FIELDS, GeneratedVisitor)
     }
 }
 impl serde::Serialize for Argument {
@@ -3626,7 +3626,7 @@ impl serde::Serialize for CheckpointedTransactionInfo {
         if !self.signatures.is_empty() {
             len += 1;
         }
-        if !self.alias_config_versions.is_empty() {
+        if !self.address_aliases_versions.is_empty() {
             len += 1;
         }
         let mut struct_ser = serializer.serialize_struct("sui.rpc.v2.CheckpointedTransactionInfo", len)?;
@@ -3639,8 +3639,8 @@ impl serde::Serialize for CheckpointedTransactionInfo {
         if !self.signatures.is_empty() {
             struct_ser.serialize_field("signatures", &self.signatures)?;
         }
-        if !self.alias_config_versions.is_empty() {
-            struct_ser.serialize_field("aliasConfigVersions", &self.alias_config_versions)?;
+        if !self.address_aliases_versions.is_empty() {
+            struct_ser.serialize_field("addressAliasesVersions", &self.address_aliases_versions)?;
         }
         struct_ser.end()
     }
@@ -3655,8 +3655,8 @@ impl<'de> serde::Deserialize<'de> for CheckpointedTransactionInfo {
             "transaction",
             "effects",
             "signatures",
-            "alias_config_versions",
-            "aliasConfigVersions",
+            "address_aliases_versions",
+            "addressAliasesVersions",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -3664,7 +3664,7 @@ impl<'de> serde::Deserialize<'de> for CheckpointedTransactionInfo {
             Transaction,
             Effects,
             Signatures,
-            AliasConfigVersions,
+            AddressAliasesVersions,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -3690,7 +3690,7 @@ impl<'de> serde::Deserialize<'de> for CheckpointedTransactionInfo {
                             "transaction" => Ok(GeneratedField::Transaction),
                             "effects" => Ok(GeneratedField::Effects),
                             "signatures" => Ok(GeneratedField::Signatures),
-                            "aliasConfigVersions" | "alias_config_versions" => Ok(GeneratedField::AliasConfigVersions),
+                            "addressAliasesVersions" | "address_aliases_versions" => Ok(GeneratedField::AddressAliasesVersions),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -3715,7 +3715,7 @@ impl<'de> serde::Deserialize<'de> for CheckpointedTransactionInfo {
                 let mut transaction__ = None;
                 let mut effects__ = None;
                 let mut signatures__ = None;
-                let mut alias_config_versions__ = None;
+                let mut address_aliases_versions__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Transaction => {
@@ -3736,11 +3736,11 @@ impl<'de> serde::Deserialize<'de> for CheckpointedTransactionInfo {
                             }
                             signatures__ = Some(map_.next_value()?);
                         }
-                        GeneratedField::AliasConfigVersions => {
-                            if alias_config_versions__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("aliasConfigVersions"));
+                        GeneratedField::AddressAliasesVersions => {
+                            if address_aliases_versions__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("addressAliasesVersions"));
                             }
-                            alias_config_versions__ = Some(map_.next_value()?);
+                            address_aliases_versions__ = Some(map_.next_value()?);
                         }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
@@ -3751,7 +3751,7 @@ impl<'de> serde::Deserialize<'de> for CheckpointedTransactionInfo {
                     transaction: transaction__,
                     effects: effects__,
                     signatures: signatures__.unwrap_or_default(),
-                    alias_config_versions: alias_config_versions__.unwrap_or_default(),
+                    address_aliases_versions: address_aliases_versions__.unwrap_or_default(),
                 })
             }
         }

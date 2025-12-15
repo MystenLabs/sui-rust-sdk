@@ -386,9 +386,9 @@ impl From<&sui_sdk_types::CheckpointTransactionInfo> for CheckpointedTransaction
             transaction: Some(value.transaction().to_string()),
             effects: Some(value.effects().to_string()),
             signatures: value.signatures().cloned().map(Into::into).collect(),
-            alias_config_versions: value
-                .signatures_with_alias_config_versions()
-                .map(|(_, version)| AliasConfigVersion { version })
+            address_aliases_versions: value
+                .signatures_with_address_aliases_versions()
+                .map(|(_, version)| AddressAliasesVersion { version })
                 .collect(),
         }
     }
@@ -422,17 +422,20 @@ impl TryFrom<&CheckpointedTransactionInfo> for sui_sdk_types::CheckpointTransact
             .map(TryInto::try_into)
             .collect::<Result<_, _>>()?;
 
-        let alias_config_versions: Vec<Option<u64>> = value
-            .alias_config_versions
+        let address_aliases_versions: Vec<Option<u64>> = value
+            .address_aliases_versions
             .iter()
             .map(|a| a.version)
             .collect();
 
-        if signatures.len() == alias_config_versions.len() {
-            Ok(Self::new_with_alias_config_versions(
+        if signatures.len() == address_aliases_versions.len() {
+            Ok(Self::new_with_address_aliases_versions(
                 transaction,
                 effects,
-                signatures.into_iter().zip(alias_config_versions).collect(),
+                signatures
+                    .into_iter()
+                    .zip(address_aliases_versions)
+                    .collect(),
             ))
         } else {
             Ok(Self::new(transaction, effects, signatures))

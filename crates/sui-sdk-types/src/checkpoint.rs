@@ -258,7 +258,7 @@ impl CheckpointTransactionInfo {
         }
     }
 
-    pub fn new_with_alias_config_versions(
+    pub fn new_with_address_aliases_versions(
         transaction: Digest,
         effects: Digest,
         signatures: Vec<(UserSignature, Option<u64>)>,
@@ -282,7 +282,7 @@ impl CheckpointTransactionInfo {
         self.signatures.iter().map(|(s, _)| s)
     }
 
-    pub fn signatures_with_alias_config_versions(
+    pub fn signatures_with_address_aliases_versions(
         &self,
     ) -> impl Iterator<Item = (&UserSignature, Option<u64>)> {
         self.signatures.iter().map(|(s, v)| (s, *v))
@@ -502,7 +502,7 @@ mod serialization {
                     v2.transactions
                         .into_iter()
                         .map(|info| {
-                            CheckpointTransactionInfo::new_with_alias_config_versions(
+                            CheckpointTransactionInfo::new_with_address_aliases_versions(
                                 info.digests.transaction,
                                 info.digests.effects,
                                 info.signatures,
