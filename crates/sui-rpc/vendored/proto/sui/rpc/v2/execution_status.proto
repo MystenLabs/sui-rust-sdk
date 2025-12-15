@@ -179,8 +179,8 @@ message ExecutionError {
     // A valid linkage was unable to be determined for the transaction or one of its commands.
     INVALID_LINKAGE = 40;
 
-    // Insufficient balance for transaction withdrawal
-    INSUFFICIENT_BALANCE_FOR_WITHDRAW = 41;
+    // Insufficient funds for transaction withdrawal
+    INSUFFICIENT_FUNDS_FOR_WITHDRAW = 41;
 
     // An input object with non-exclusive write mutability was modified
     NON_EXCLUSIVE_WRITE_INPUT_OBJECT_MODIFIED = 42;
