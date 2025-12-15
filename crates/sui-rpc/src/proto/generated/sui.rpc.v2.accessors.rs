@@ -183,6 +183,38 @@ mod _accessor_impls {
             self
         }
     }
+    impl super::AddressAliasesVersion {
+        pub const fn const_default() -> Self {
+            Self { version: None }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::AddressAliasesVersion = super::AddressAliasesVersion::const_default();
+            &DEFAULT
+        }
+        ///If `version` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn version_opt_mut(&mut self) -> Option<&mut u64> {
+            self.version.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `version`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn version_mut(&mut self) -> &mut u64 {
+            self.version.get_or_insert_default()
+        }
+        ///If `version` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn version_opt(&self) -> Option<u64> {
+            self.version.as_ref().map(|field| *field)
+        }
+        ///Sets `version` with the provided value.
+        pub fn set_version(&mut self, field: u64) {
+            self.version = Some(field);
+        }
+        ///Sets `version` with the provided value.
+        pub fn with_version(mut self, field: u64) -> Self {
+            self.set_version(field);
+            self
+        }
+    }
     impl super::Argument {
         pub const fn const_default() -> Self {
             Self {
@@ -2025,6 +2057,7 @@ mod _accessor_impls {
                 transaction: None,
                 effects: None,
                 signatures: Vec::new(),
+                address_aliases_versions: Vec::new(),
             }
         }
         #[doc(hidden)]
@@ -2092,6 +2125,32 @@ mod _accessor_impls {
         ///Sets `signatures` with the provided value.
         pub fn with_signatures(mut self, field: Vec<super::UserSignature>) -> Self {
             self.set_signatures(field);
+            self
+        }
+        ///Returns the value of `address_aliases_versions`, or the default value if `address_aliases_versions` is unset.
+        pub fn address_aliases_versions(&self) -> &[super::AddressAliasesVersion] {
+            &self.address_aliases_versions
+        }
+        ///Returns a mutable reference to `address_aliases_versions`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn address_aliases_versions_mut(
+            &mut self,
+        ) -> &mut Vec<super::AddressAliasesVersion> {
+            &mut self.address_aliases_versions
+        }
+        ///Sets `address_aliases_versions` with the provided value.
+        pub fn set_address_aliases_versions(
+            &mut self,
+            field: Vec<super::AddressAliasesVersion>,
+        ) {
+            self.address_aliases_versions = field;
+        }
+        ///Sets `address_aliases_versions` with the provided value.
+        pub fn with_address_aliases_versions(
+            mut self,
+            field: Vec<super::AddressAliasesVersion>,
+        ) -> Self {
+            self.set_address_aliases_versions(field);
             self
         }
     }

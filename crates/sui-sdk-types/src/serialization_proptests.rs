@@ -51,7 +51,6 @@ serialization_test!(CheckpointSequenceNumber);
 serialization_test!(CheckpointSummary);
 serialization_test!(CheckpointTimestamp);
 serialization_test!(CheckpointTransaction);
-serialization_test!(CheckpointTransactionInfo);
 serialization_test!(EndOfEpochData);
 serialization_test!(SignedCheckpointSummary);
 serialization_test!(Bls12381PublicKey);

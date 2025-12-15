@@ -377,12 +377,19 @@ mod _field_impls {
             number: 3i32,
             message_fields: Some(UserSignature::FIELDS),
         };
+        pub const ADDRESS_ALIASES_VERSIONS_FIELD: &'static MessageField = &MessageField {
+            name: "address_aliases_versions",
+            json_name: "addressAliasesVersions",
+            number: 4i32,
+            message_fields: Some(AddressAliasesVersion::FIELDS),
+        };
     }
     impl MessageFields for CheckpointedTransactionInfo {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::TRANSACTION_FIELD,
             Self::EFFECTS_FIELD,
             Self::SIGNATURES_FIELD,
+            Self::ADDRESS_ALIASES_VERSIONS_FIELD,
         ];
     }
     impl CheckpointedTransactionInfo {
@@ -416,6 +423,49 @@ mod _field_impls {
         pub fn signatures(mut self) -> UserSignatureFieldPathBuilder {
             self.path.push(CheckpointedTransactionInfo::SIGNATURES_FIELD.name);
             UserSignatureFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn address_aliases_versions(
+            mut self,
+        ) -> AddressAliasesVersionFieldPathBuilder {
+            self.path
+                .push(CheckpointedTransactionInfo::ADDRESS_ALIASES_VERSIONS_FIELD.name);
+            AddressAliasesVersionFieldPathBuilder::new_with_base(self.path)
+        }
+    }
+    impl AddressAliasesVersion {
+        pub const VERSION_FIELD: &'static MessageField = &MessageField {
+            name: "version",
+            json_name: "version",
+            number: 1i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for AddressAliasesVersion {
+        const FIELDS: &'static [&'static MessageField] = &[Self::VERSION_FIELD];
+    }
+    impl AddressAliasesVersion {
+        pub fn path_builder() -> AddressAliasesVersionFieldPathBuilder {
+            AddressAliasesVersionFieldPathBuilder::new()
+        }
+    }
+    pub struct AddressAliasesVersionFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl AddressAliasesVersionFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn version(mut self) -> String {
+            self.path.push(AddressAliasesVersion::VERSION_FIELD.name);
+            self.finish()
         }
     }
     impl CheckpointSummary {
