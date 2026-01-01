@@ -1,19 +1,22 @@
 [package]
 name = "sui-transaction-builder"
 version = "0.1.0"
-authors = ["Stefan Stanciulescu <stefan@mystenlabs.com>", "Brandon Williams <brandon@mystenlabs.com>"]
+authors = ["Brandon Williams <brandon@mystenlabs.com>"]
 license = "Apache-2.0"
 edition = "2024"
 description = "Transaction API for the Rust SDK for the Sui Blockchain"
 
 [dependencies]
-base64ct = { version = "1.8", features = ["std"] }
 bcs = "0.1.6"
 serde = { version = "1.0", features = ["derive"] }
 serde_with = { version = "3.15", default-features = false, features = ["alloc"] }
 sui-types = { package = "sui-sdk-types", version = "0.1.0", path = "../sui-sdk-types", features = ["serde", "hash"] }
 thiserror = "2.0"
-serde_json = { version = "1.0.145" }
+# async-trait = "0.1.89"
+# tokio = { version = "1.47", default-features = false, features = ["sync"] }
+
+sui-rpc = { version = "0.1", path = "../sui-rpc" } #, optional = true }
+indexmap = "2.12.1"
 
 # [dev-dependencies]
 # anyhow = "1.0"
