@@ -1,3 +1,10 @@
+use std::any::TypeId;
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+
+use crate::error::Error;
+use crate::intent::Intent;
+use crate::intent::IntentResolver;
 use indexmap::IndexMap;
 use sui_types::Address;
 use sui_types::Digest;
@@ -6,13 +13,12 @@ use sui_types::Transaction;
 use sui_types::TransactionExpiration;
 use sui_types::TypeTag;
 
-use crate::error::Error;
-
 // pub type BoxError = Box<dyn std::error::Error + Send + Sync + 'static>;
 
 /// A builder for creating transactions. Use `resolve` to finalize the transaction data.
+#[derive(Default)]
 pub struct TransactionBuilder {
-    arguments: IndexMap<ArgKind, Arg>,
+    pub(crate) arguments: IndexMap<ArgKind, Arg>,
 
     /// The gas objects that will be used to pay for the transaction. The most common way is to
     /// use [`unresolved::Input::owned`] function to create a gas object and use the [`add_gas`]
@@ -28,44 +34,78 @@ pub struct TransactionBuilder {
     sponsor: Option<Address>,
     /// The expiration of the transaction. The default value of this type is no expiration.
     expiration: Option<TransactionExpiration>,
+
+    // Resolvers
+    pub(crate) resolvers: BTreeMap<TypeId, Box<dyn IntentResolver>>,
+
+    resolved_arguments: BTreeMap<usize, ResolvedArgument>,
+    inputs: HashMap<InputArgKind, (usize, InputArg)>,
+    commands: BTreeMap<usize, Command>,
+    intents: BTreeMap<usize, Box<dyn std::any::Any + Send + Sync>>,
+}
+
+enum ResolvedArgument {
+    Unresolved,
+    ReplaceWith(Argument),
+    Resolved(sui_types::Argument),
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
-enum ArgKind {
+pub(crate) enum InputArgKind {
+    Gas,
+    ObjectInput(Address),
+    PureInput(Vec<u8>),
+    UniquePureInput(usize),
+}
+
+pub(crate) enum InputArg {
+    Gas,
+    Pure(Vec<u8>),
+    Object(ObjectInput),
+}
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub(crate) enum ArgKind {
     Gas,
     ObjectInput(Address),
     PureInput(Vec<u8>),
     UniquePureInput(usize),
     CommandResult(usize),
+    Intent(usize),
 }
 
-enum Arg {
+pub(crate) enum Arg {
     Gas,
     Pure(Vec<u8>),
     Object(ObjectInput),
     Command(Command),
+    UnresolvedIntent(Box<dyn std::any::Any + Send + Sync>),
+    ReplaceWith(Argument),
 }
 
 impl TransactionBuilder {
     /// Create a new transaction builder and initialize its elements to default.
-    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
-        Self {
-            gas_budget: Default::default(),
-            gas_price: Default::default(),
-            sender: Default::default(),
-            sponsor: Default::default(),
-            expiration: Default::default(),
-            arguments: Default::default(),
-            gas: Default::default(),
-        }
+        Self::default()
     }
 
     // Transaction Inputs
 
     pub fn gas(&mut self) -> Argument {
-        let (index, _) = self.arguments.insert_full(ArgKind::Gas, Arg::Gas);
-        Argument::new(index)
+        if let Some((index, arg)) = self.inputs.get(&InputArgKind::Gas) {
+            assert!(matches!(arg, InputArg::Gas));
+            Argument::new(*index)
+        } else {
+            let id = self.resolved_arguments.len();
+            self.resolved_arguments
+                .insert(id, ResolvedArgument::Unresolved);
+            self.inputs.insert(InputArgKind::Gas, (id, InputArg::Gas));
+            Argument::new(id)
+        }
+
+        //         self.inputs.entry(InputArgKind::Gas)
+        //         let (index, _) = self.arguments.insert_full(ArgKind::Gas, Arg::Gas);
+        //         Argument::new(index)
     }
 
     pub fn pure_bytes(&mut self, bytes: Vec<u8>) -> Argument {
@@ -280,6 +320,17 @@ impl TransactionBuilder {
         self.command(cmd)
     }
 
+    // Intents
+
+    // Register a transaction intent which may be resolved later to either an input or a sequence
+    // of commands.
+    #[allow(private_bounds)]
+    pub fn intent<I: Intent>(&mut self, intent: I) -> Argument {
+        intent.register(self)
+    }
+
+    // Building and resolving
+
     /// Assuming everything is resolved, convert this transaction into the
     /// resolved form. Returns a [`Transaction`] if successful, or an `Error` if not.
     pub fn try_build(&self) -> Result<Transaction, Error> {
@@ -328,6 +379,9 @@ impl TransactionBuilder {
                 Arg::Command(command) => {
                     resolved_commands.push(command.try_resolve(&resolved_arguments)?);
                     sui_types::Argument::Result(resolved_commands.len() as u16 - 1)
+                }
+                Arg::UnresolvedIntent(_) | Arg::ReplaceWith(_) => {
+                    return Err(Error::Input("unable to resolve intents offline".to_owned()));
                 }
             };
 
@@ -418,6 +472,8 @@ impl TransactionBuilder {
                     resolved_commands.push(command.try_resolve(&resolved_arguments)?);
                     sui_types::Argument::Result(resolved_commands.len() as u16 - 1)
                 }
+                Arg::UnresolvedIntent(_any) => todo!(),
+                Arg::ReplaceWith(_argument) => todo!(),
             };
 
             resolved_arguments.push(a);
@@ -462,6 +518,27 @@ impl TransactionBuilder {
             .bcs()
             .deserialize()
             .map_err(|e| Error::Input(e.to_string()))
+    }
+
+    pub(crate) fn register_resolver<R: IntentResolver>(&mut self, resolver: R) {
+        self.resolvers
+            .insert(resolver.type_id(), Box::new(resolver));
+    }
+
+    pub(crate) fn unresolved<T: std::any::Any + Send + Sync>(&mut self, unresolved: T) -> Argument {
+        let idx = self.arguments.len();
+        let (index, maybe_old_value) = self.arguments.insert_full(
+            ArgKind::Intent(idx),
+            Arg::UnresolvedIntent(Box::new(unresolved)),
+        );
+        assert_eq!(idx, index);
+        assert!(maybe_old_value.is_none());
+
+        Argument::new(index)
+    }
+
+    pub(crate) fn sender(&self) -> Option<Address> {
+        self.sender
     }
 }
 
@@ -516,7 +593,7 @@ impl Argument {
     }
 }
 
-enum Command {
+pub(crate) enum Command {
     /// A call to either an entry or a public Move function
     MoveCall(MoveCall),
 
@@ -628,7 +705,7 @@ impl Command {
     }
 }
 
-struct TransferObjects {
+pub(crate) struct TransferObjects {
     /// Set of objects to transfer
     pub objects: Vec<Argument>,
 
@@ -636,7 +713,7 @@ struct TransferObjects {
     pub address: Argument,
 }
 
-struct SplitCoins {
+pub(crate) struct SplitCoins {
     /// The coin to split
     pub coin: Argument,
 
@@ -644,7 +721,7 @@ struct SplitCoins {
     pub amounts: Vec<Argument>,
 }
 
-struct MergeCoins {
+pub(crate) struct MergeCoins {
     /// Coin to merge coins into
     pub coin: Argument,
 
@@ -654,7 +731,7 @@ struct MergeCoins {
     pub coins_to_merge: Vec<Argument>,
 }
 
-struct Publish {
+pub(crate) struct Publish {
     /// The serialized move modules
     pub modules: Vec<Vec<u8>>,
 
@@ -662,7 +739,7 @@ struct Publish {
     pub dependencies: Vec<Address>,
 }
 
-struct MakeMoveVector {
+pub(crate) struct MakeMoveVector {
     /// Type of the individual elements
     ///
     /// This is required to be set when the type can't be inferred, for example when the set of
@@ -673,7 +750,7 @@ struct MakeMoveVector {
     pub elements: Vec<Argument>,
 }
 
-struct Upgrade {
+pub(crate) struct Upgrade {
     /// The serialized move modules
     pub modules: Vec<Vec<u8>>,
 
@@ -687,21 +764,21 @@ struct Upgrade {
     pub ticket: Argument,
 }
 
-struct MoveCall {
+pub(crate) struct MoveCall {
     /// The package containing the module and function.
-    package: Address,
+    pub package: Address,
 
     /// The specific module in the package containing the function.
-    module: Identifier,
+    pub module: Identifier,
 
     /// The function to be called.
-    function: Identifier,
+    pub function: Identifier,
 
     /// The type arguments to the function.
-    type_arguments: Vec<TypeTag>,
+    pub type_arguments: Vec<TypeTag>,
 
     /// The arguments to the function.
-    arguments: Vec<Argument>,
+    pub arguments: Vec<Argument>,
     // Return value count??
 }
 
@@ -979,6 +1056,36 @@ impl ObjectInput {
             input.set_digest(digest);
         }
         Ok(input)
+    }
+
+    pub(crate) fn try_from_object_proto(
+        object: &sui_rpc::proto::sui::rpc::v2::Object,
+    ) -> Result<Self, Error> {
+        use sui_rpc::proto::sui::rpc::v2::owner::OwnerKind;
+
+        let input = Self::new(
+            object
+                .object_id()
+                .parse()
+                .map_err(|_e| Error::MissingObjectId)?,
+        );
+
+        Ok(match object.owner().kind() {
+            OwnerKind::Address | OwnerKind::Immutable => {
+                input.as_owned().with_version(object.version()).with_digest(
+                    object
+                        .digest()
+                        .parse()
+                        .map_err(|_| Error::Input("can't parse digest".to_owned()))?,
+                )
+            }
+            OwnerKind::Object => return Err(Error::Input("invalid object type".to_owned())),
+            OwnerKind::Shared | OwnerKind::ConsensusAddress => input
+                .as_shared()
+                .with_version(object.owner().version())
+                .with_mutable(true),
+            OwnerKind::Unknown | _ => input,
+        })
     }
 }
 

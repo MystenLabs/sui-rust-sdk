@@ -3,6 +3,7 @@
 
 mod builder;
 mod error;
+mod intent;
 
 pub use builder::Argument;
 pub use builder::Function;
