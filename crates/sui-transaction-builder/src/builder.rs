@@ -1,5 +1,6 @@
 use std::any::TypeId;
 use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::collections::HashMap;
 
 use crate::error::Error;
@@ -38,13 +39,14 @@ pub struct TransactionBuilder {
     // Resolvers
     pub(crate) resolvers: BTreeMap<TypeId, Box<dyn IntentResolver>>,
 
-    resolved_arguments: BTreeMap<usize, ResolvedArgument>,
+    pub(crate) resolved_arguments: BTreeMap<usize, ResolvedArgument>,
     inputs: HashMap<InputArgKind, (usize, InputArg)>,
     commands: BTreeMap<usize, Command>,
-    intents: BTreeMap<usize, Box<dyn std::any::Any + Send + Sync>>,
+    pub(crate) intents: BTreeMap<usize, Box<dyn std::any::Any + Send + Sync>>,
 }
 
-enum ResolvedArgument {
+#[derive(Clone, Copy)]
+pub(crate) enum ResolvedArgument {
     Unresolved,
     ReplaceWith(Argument),
     Resolved(sui_types::Argument),
@@ -102,17 +104,22 @@ impl TransactionBuilder {
             self.inputs.insert(InputArgKind::Gas, (id, InputArg::Gas));
             Argument::new(id)
         }
-
-        //         self.inputs.entry(InputArgKind::Gas)
-        //         let (index, _) = self.arguments.insert_full(ArgKind::Gas, Arg::Gas);
-        //         Argument::new(index)
     }
 
     pub fn pure_bytes(&mut self, bytes: Vec<u8>) -> Argument {
-        let (index, _) = self
-            .arguments
-            .insert_full(ArgKind::PureInput(bytes.clone()), Arg::Pure(bytes));
-        Argument::new(index)
+        match self.inputs.entry(InputArgKind::PureInput(bytes.clone())) {
+            std::collections::hash_map::Entry::Occupied(o) => {
+                assert!(matches!(o.get().1, InputArg::Pure(_)));
+                Argument::new(o.get().0)
+            }
+            std::collections::hash_map::Entry::Vacant(v) => {
+                let id = self.resolved_arguments.len();
+                self.resolved_arguments
+                    .insert(id, ResolvedArgument::Unresolved);
+                v.insert((id, InputArg::Pure(bytes)));
+                Argument::new(id)
+            }
+        }
     }
 
     pub fn pure<T: serde::Serialize>(&mut self, value: &T) -> Argument {
@@ -121,11 +128,14 @@ impl TransactionBuilder {
     }
 
     pub fn pure_bytes_unique(&mut self, bytes: Vec<u8>) -> Argument {
-        let (index, _) = self.arguments.insert_full(
-            ArgKind::UniquePureInput(self.arguments.len()),
-            Arg::Pure(bytes),
+        let id = self.resolved_arguments.len();
+        self.resolved_arguments
+            .insert(id, ResolvedArgument::Unresolved);
+        self.inputs.insert(
+            InputArgKind::UniquePureInput(id),
+            (id, InputArg::Pure(bytes)),
         );
-        Argument::new(index)
+        Argument::new(id)
     }
 
     pub fn pure_unique<T: serde::Serialize>(&mut self, value: &T) -> Argument {
@@ -134,13 +144,13 @@ impl TransactionBuilder {
     }
 
     pub fn object(&mut self, object: ObjectInput) -> Argument {
-        let id = object.object_id;
-
-        let entry = self.arguments.entry(ArgKind::ObjectInput(id));
-        let index = entry.index();
-        match entry {
-            indexmap::map::Entry::Occupied(mut o) => {
-                let Arg::Object(object2) = o.get_mut() else {
+        match self
+            .inputs
+            .entry(InputArgKind::ObjectInput(object.object_id))
+        {
+            std::collections::hash_map::Entry::Occupied(mut o) => {
+                let id = o.get().0;
+                let InputArg::Object(object2) = &mut o.get_mut().1 else {
                     panic!("BUG: invariant violation");
                 };
 
@@ -166,13 +176,17 @@ impl TransactionBuilder {
                 if let (Some(digest), None) = (object.digest, object2.digest) {
                     object2.digest = Some(digest);
                 }
+
+                Argument::new(id)
             }
-            indexmap::map::Entry::Vacant(v) => {
-                v.insert(Arg::Object(object));
+            std::collections::hash_map::Entry::Vacant(v) => {
+                let id = self.resolved_arguments.len();
+                self.resolved_arguments
+                    .insert(id, ResolvedArgument::Unresolved);
+                v.insert((id, InputArg::Object(object)));
+                Argument::new(id)
             }
         }
-
-        Argument::new(index)
     }
 
     // Metadata
@@ -214,14 +228,11 @@ impl TransactionBuilder {
     // Commands
 
     fn command(&mut self, command: Command) -> Argument {
-        let idx = self.arguments.len();
-        let (index, maybe_old_value) = self
-            .arguments
-            .insert_full(ArgKind::CommandResult(idx), Arg::Command(command));
-        assert_eq!(idx, index);
-        assert!(maybe_old_value.is_none());
-
-        Argument::new(index)
+        let id = self.resolved_arguments.len();
+        self.resolved_arguments
+            .insert(id, ResolvedArgument::Unresolved);
+        self.commands.insert(id, command);
+        Argument::new(id)
     }
 
     /// Call a Move function with the given arguments.
@@ -333,7 +344,7 @@ impl TransactionBuilder {
 
     /// Assuming everything is resolved, convert this transaction into the
     /// resolved form. Returns a [`Transaction`] if successful, or an `Error` if not.
-    pub fn try_build(&self) -> Result<Transaction, Error> {
+    pub fn try_build(mut self) -> Result<Transaction, Error> {
         let Some(sender) = self.sender else {
             return Err(Error::MissingSender);
         };
@@ -359,33 +370,47 @@ impl TransactionBuilder {
             budget,
         };
 
-        let mut resolved_arguments = Vec::new();
+        // Error out if there are any unresolved intents
+        if !self.intents.is_empty() {
+            return Err(Error::Input("unable to resolve intents offline".to_owned()));
+        }
+
+        //
+        // Inputs
+        //
+
         let mut resolved_inputs = Vec::new();
-        let mut resolved_commands = Vec::new();
-
-        for (id, arg) in self.arguments.values().enumerate() {
-            assert!(id == resolved_arguments.len());
-
-            let a = match arg {
-                Arg::Gas => sui_types::Argument::Gas,
-                Arg::Pure(value) => {
-                    resolved_inputs.push(sui_types::Input::Pure(value.clone()));
+        for (_kind, (id, input)) in self.inputs {
+            let arg = match input {
+                InputArg::Gas => sui_types::Argument::Gas,
+                InputArg::Pure(value) => {
+                    resolved_inputs.push(sui_types::Input::Pure(value));
                     sui_types::Argument::Input(resolved_inputs.len() as u16 - 1)
                 }
-                Arg::Object(object_input) => {
+                InputArg::Object(object_input) => {
                     resolved_inputs.push(object_input.try_into_input()?);
                     sui_types::Argument::Input(resolved_inputs.len() as u16 - 1)
                 }
-                Arg::Command(command) => {
-                    resolved_commands.push(command.try_resolve(&resolved_arguments)?);
-                    sui_types::Argument::Result(resolved_commands.len() as u16 - 1)
-                }
-                Arg::UnresolvedIntent(_) | Arg::ReplaceWith(_) => {
-                    return Err(Error::Input("unable to resolve intents offline".to_owned()));
-                }
             };
 
-            resolved_arguments.push(a);
+            *self.resolved_arguments.get_mut(&id).unwrap() = ResolvedArgument::Resolved(arg);
+        }
+
+        //
+        // Commands
+        //
+
+        let mut resolved_commands = Vec::new();
+
+        for (id, command) in self.commands {
+            resolved_commands.push(
+                command
+                    .try_resolve2(&self.resolved_arguments)
+                    .map_err(|e| e.unwrap_err())?,
+            );
+            let arg = sui_types::Argument::Result(resolved_commands.len() as u16 - 1);
+
+            *self.resolved_arguments.get_mut(&id).unwrap() = ResolvedArgument::Resolved(arg);
         }
 
         Ok(Transaction {
@@ -401,7 +426,7 @@ impl TransactionBuilder {
         })
     }
 
-    pub async fn build(&self, client: &mut sui_rpc::Client) -> Result<Transaction, Error> {
+    pub async fn build(mut self, client: &mut sui_rpc::Client) -> Result<Transaction, Error> {
         use sui_rpc::field::FieldMask;
         use sui_rpc::field::FieldMaskUtil;
         use sui_rpc::proto::sui::rpc::v2::Input;
@@ -447,36 +472,83 @@ impl TransactionBuilder {
             );
         }
 
-        let mut resolved_arguments = Vec::new();
+        //
+        // Intents
+        //
+
+        // For now we'll be dumb and just run through the registered resolvers one by one and if we
+        // still have intents left we'll bail
+
+        let resolvers = std::mem::take(&mut self.resolvers);
+        for resolver in resolvers.values() {
+            resolver
+                .resolve(&mut self, client)
+                .await
+                .map_err(|e| Error::Input(e.to_string()))?;
+        }
+        // Error out if there are any remaining unresolved intents
+        if !self.intents.is_empty() {
+            return Err(Error::Input("unable to resolve all intents".to_owned()));
+        }
+
+        //
+        // Inputs
+        //
+
         let mut resolved_inputs = Vec::new();
-        let mut resolved_commands = Vec::new();
-
-        for (id, arg) in self.arguments.values().enumerate() {
-            assert!(id == resolved_arguments.len());
-
-            let a = match arg {
-                Arg::Gas => sui_types::Argument::Gas,
-                Arg::Pure(value) => {
-                    resolved_inputs.push(
-                        Input::default()
-                            .with_kind(InputKind::Pure)
-                            .with_pure(value.clone()),
-                    );
+        for (_kind, (id, input)) in self.inputs {
+            let arg = match input {
+                InputArg::Gas => sui_types::Argument::Gas,
+                InputArg::Pure(value) => {
+                    resolved_inputs
+                        .push(Input::default().with_kind(InputKind::Pure).with_pure(value));
                     sui_types::Argument::Input(resolved_inputs.len() as u16 - 1)
                 }
-                Arg::Object(object_input) => {
+                InputArg::Object(object_input) => {
                     resolved_inputs.push(object_input.to_input_proto());
                     sui_types::Argument::Input(resolved_inputs.len() as u16 - 1)
                 }
-                Arg::Command(command) => {
-                    resolved_commands.push(command.try_resolve(&resolved_arguments)?);
-                    sui_types::Argument::Result(resolved_commands.len() as u16 - 1)
-                }
-                Arg::UnresolvedIntent(_any) => todo!(),
-                Arg::ReplaceWith(_argument) => todo!(),
             };
 
-            resolved_arguments.push(a);
+            *self.resolved_arguments.get_mut(&id).unwrap() = ResolvedArgument::Resolved(arg);
+        }
+
+        //
+        // Commands
+        //
+
+        let mut resolved_commands = Vec::new();
+
+        let mut stack = Vec::new();
+        let mut to_resolve = self.commands.pop_first();
+        while let Some((id, command)) = to_resolve.take() {
+            let resolved = match command.try_resolve2(&self.resolved_arguments) {
+                Ok(resolved) => resolved,
+                Err(Ok(next)) => {
+                    // Push the current command on the stack
+                    stack.push((id, command));
+                    // set the next one to be processed
+                    to_resolve = Some(
+                        self.commands
+                            .remove_entry(&next)
+                            .expect("command must be there if it wasn't resolved yet"),
+                    );
+                    continue;
+                }
+                Err(Err(e)) => return Err(e),
+            };
+
+            resolved_commands.push(resolved);
+            let arg = sui_types::Argument::Result(resolved_commands.len() as u16 - 1);
+            *self.resolved_arguments.get_mut(&id).unwrap() = ResolvedArgument::Resolved(arg);
+
+            // Pick the next command to resolve, either walked back down the stack or getting the
+            // next in order
+            if let Some(from_stack) = stack.pop() {
+                to_resolve = Some(from_stack);
+            } else {
+                to_resolve = self.commands.pop_first();
+            }
         }
 
         t.kind_mut()
@@ -526,15 +598,11 @@ impl TransactionBuilder {
     }
 
     pub(crate) fn unresolved<T: std::any::Any + Send + Sync>(&mut self, unresolved: T) -> Argument {
-        let idx = self.arguments.len();
-        let (index, maybe_old_value) = self.arguments.insert_full(
-            ArgKind::Intent(idx),
-            Arg::UnresolvedIntent(Box::new(unresolved)),
-        );
-        assert_eq!(idx, index);
-        assert!(maybe_old_value.is_none());
-
-        Argument::new(index)
+        let id = self.resolved_arguments.len();
+        self.resolved_arguments
+            .insert(id, ResolvedArgument::Unresolved);
+        self.intents.insert(id, Box::new(unresolved));
+        Argument::new(id)
     }
 
     pub(crate) fn sender(&self) -> Option<Address> {
@@ -589,6 +657,56 @@ impl Argument {
         arguments
             .iter()
             .map(|a| a.try_resolve(resolved_arguments))
+            .collect::<Result<_, _>>()
+    }
+
+    fn try_resolve2(
+        self,
+        resolved_arguments: &BTreeMap<usize, ResolvedArgument>,
+    ) -> Result<sui_types::Argument, Result<usize, Error>> {
+        let mut sub_index = self.sub_index;
+        let arg = {
+            let mut visited = BTreeSet::new();
+            let mut next_id = self.id;
+
+            loop {
+                if visited.contains(&next_id) {
+                    panic!("BUG: cyclic dependency");
+                }
+
+                match resolved_arguments.get(&next_id).unwrap() {
+                    ResolvedArgument::Unresolved => return Err(Ok(next_id)),
+                    ResolvedArgument::ReplaceWith(argument) => {
+                        next_id = argument.id;
+                        sub_index = argument.sub_index;
+                    }
+                    ResolvedArgument::Resolved(argument) => break argument,
+                }
+
+                visited.insert(next_id);
+            }
+        };
+
+        if let Some(sub_index) = sub_index {
+            if let Some(arg) = arg.nested(sub_index as u16) {
+                return Ok(arg);
+            } else {
+                return Err(Err(Error::Input(
+                    "unable to create nested argument".to_owned(),
+                )));
+            }
+        }
+
+        Ok(*arg)
+    }
+
+    fn try_resolve_many2(
+        arguments: &[Self],
+        resolved_arguments: &BTreeMap<usize, ResolvedArgument>,
+    ) -> Result<Vec<sui_types::Argument>, Result<usize, Error>> {
+        arguments
+            .iter()
+            .map(|a| a.try_resolve2(resolved_arguments))
             .collect::<Result<_, _>>()
     }
 }
@@ -699,6 +817,79 @@ impl Command {
                 dependencies: dependencies.to_owned(),
                 package: *package,
                 ticket: ticket.try_resolve(resolved_arguments)?,
+            }),
+        };
+        Ok(cmd)
+    }
+
+    fn try_resolve2(
+        &self,
+        resolved_arguments: &BTreeMap<usize, ResolvedArgument>,
+    ) -> Result<sui_types::Command, Result<usize, Error>> {
+        use sui_types::Command as C;
+
+        let cmd = match self {
+            Command::MoveCall(MoveCall {
+                package,
+                module,
+                function,
+                type_arguments,
+                arguments,
+            }) => C::MoveCall(sui_types::MoveCall {
+                package: *package,
+                module: module.to_owned(),
+                function: function.to_owned(),
+                type_arguments: type_arguments.to_owned(),
+                arguments: Argument::try_resolve_many2(arguments, resolved_arguments)?,
+            }),
+
+            Command::TransferObjects(TransferObjects { objects, address }) => {
+                C::TransferObjects(sui_types::TransferObjects {
+                    objects: Argument::try_resolve_many2(objects, resolved_arguments)?,
+                    address: address.try_resolve2(resolved_arguments)?,
+                })
+            }
+
+            Command::SplitCoins(SplitCoins { coin, amounts }) => {
+                C::SplitCoins(sui_types::SplitCoins {
+                    coin: coin.try_resolve2(resolved_arguments)?,
+                    amounts: Argument::try_resolve_many2(amounts, resolved_arguments)?,
+                })
+            }
+
+            Command::MergeCoins(MergeCoins {
+                coin,
+                coins_to_merge,
+            }) => C::MergeCoins(sui_types::MergeCoins {
+                coin: coin.try_resolve2(resolved_arguments)?,
+                coins_to_merge: Argument::try_resolve_many2(coins_to_merge, resolved_arguments)?,
+            }),
+
+            Command::Publish(Publish {
+                modules,
+                dependencies,
+            }) => C::Publish(sui_types::Publish {
+                modules: modules.to_owned(),
+                dependencies: dependencies.to_owned(),
+            }),
+
+            Command::MakeMoveVector(MakeMoveVector { type_, elements }) => {
+                C::MakeMoveVector(sui_types::MakeMoveVector {
+                    type_: type_.to_owned(),
+                    elements: Argument::try_resolve_many2(elements, resolved_arguments)?,
+                })
+            }
+
+            Command::Upgrade(Upgrade {
+                modules,
+                dependencies,
+                package,
+                ticket,
+            }) => C::Upgrade(sui_types::Upgrade {
+                modules: modules.to_owned(),
+                dependencies: dependencies.to_owned(),
+                package: *package,
+                ticket: ticket.try_resolve2(resolved_arguments)?,
             }),
         };
         Ok(cmd)
@@ -1124,6 +1315,20 @@ mod tests {
     #[test]
     fn simple_try_build() {
         let mut tx = TransactionBuilder::new();
+        let _coin = tx.object(ObjectInput::owned(
+            Address::from_static(
+                "0x19406ea4d9609cd9422b85e6bf2486908f790b778c757aff805241f3f609f9b4",
+            ),
+            2,
+            Digest::from_static("7opR9rFUYivSTqoJHvFb9p6p54THyHTatMG6id4JKZR9"),
+        ));
+        let _gas = tx.gas();
+
+        let _recipient = tx.pure(&Address::from_static("0xabc"));
+
+        assert!(tx.try_build().is_err());
+
+        let mut tx = TransactionBuilder::new();
         let coin = tx.object(ObjectInput::owned(
             Address::from_static(
                 "0x19406ea4d9609cd9422b85e6bf2486908f790b778c757aff805241f3f609f9b4",
@@ -1134,9 +1339,6 @@ mod tests {
         let gas = tx.gas();
 
         let recipient = tx.pure(&Address::from_static("0xabc"));
-
-        assert!(tx.try_build().is_err());
-
         tx.transfer_objects(vec![coin, gas], recipient);
         tx.set_gas_budget(500000000);
         tx.set_gas_price(1000);

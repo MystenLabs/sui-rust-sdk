@@ -19,7 +19,7 @@ use sui_types::StructTag;
 
 use crate::{
     Argument, ObjectInput, TransactionBuilder,
-    builder::{Arg, ArgKind},
+    builder::{Arg, ArgKind, ResolvedArgument},
 };
 
 pub type BoxError = Box<dyn std::error::Error + Send + Sync + 'static>;
@@ -75,21 +75,15 @@ impl IntentResolver for CoinWithBalanceResolver {
     ) -> Result<(), BoxError> {
         // Collect all the requests
         let mut requests: BTreeMap<StructTag, Vec<(usize, u64)>> = BTreeMap::new();
-        for (index, intent) in builder.arguments.iter().filter_map(|(k, v)| {
-            if let ArgKind::Intent(index) = k
-                && let Arg::UnresolvedIntent(intent) = v
-            {
-                Some((index, intent))
-            } else {
-                None
-            }
+
+        for (id, intent) in builder.intents.extract_if(.., |_id, intent| {
+            intent.downcast_ref::<CoinWithBalance>().is_some()
         }) {
-            if let Some(request) = intent.downcast_ref::<CoinWithBalance>() {
-                requests
-                    .entry(request.coin_type.clone())
-                    .or_default()
-                    .push((*index, request.balance));
-            }
+            let request = intent.downcast_ref::<CoinWithBalance>().unwrap();
+            requests
+                .entry(request.coin_type.clone())
+                .or_default()
+                .push((id, request.balance));
         }
 
         for (coin_type, requests) in requests {
@@ -146,12 +140,8 @@ impl CoinWithBalanceResolver {
             .into_iter()
             .zip(requests.iter().map(|(index, _)| *index))
         {
-            let (index, _k, v) = builder
-                .arguments
-                .get_full_mut(&ArgKind::Intent(request_index))
-                .expect("intent must exist");
-            assert_eq!(index, request_index);
-            *v = Arg::ReplaceWith(coin);
+            *builder.resolved_arguments.get_mut(&request_index).unwrap() =
+                ResolvedArgument::ReplaceWith(coin);
         }
 
         Ok(())
