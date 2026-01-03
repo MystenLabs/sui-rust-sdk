@@ -1,7 +1,6 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use base64ct::Error as Base64Error;
 use sui_types::Address;
 
 #[derive(thiserror::Error, Debug, Clone)]
@@ -11,8 +10,6 @@ pub enum Error {
     Input(String),
     #[error("Gas object should be an immutable or owned object")]
     WrongGasObject,
-    #[error("Decoding error: {0}")]
-    Decoding(#[from] Base64Error),
     #[error("Missing object id")]
     MissingObjectId,
     #[error("Missing version for object {0}")]
@@ -29,12 +26,6 @@ pub enum Error {
     MissingGasPrice,
     #[error("Missing object kind for object {0}")]
     MissingObjectKind(Address),
-    #[error("Missing initial shared version for object {0}")]
-    MissingInitialSharedVersion(Address),
-    #[error("Missing pure value")]
-    MissingPureValue,
     #[error("Unknown shared object mutability for object {0}")]
     SharedObjectMutability(Address),
-    #[error("Unsupported literal")]
-    UnsupportedLiteral,
 }
