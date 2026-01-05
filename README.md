@@ -29,6 +29,10 @@ In an effort to be modular, functionality is split between a number of crates.
     [![sui-rpc on crates.io](https://img.shields.io/crates/v/sui-rpc)](https://crates.io/crates/sui-rpc)
     [![Documentation (latest release)](https://img.shields.io/badge/docs-latest-brightgreen)](https://docs.rs/sui-rpc)
     [![Documentation (master)](https://img.shields.io/badge/docs-master-59f)](https://mystenlabs.github.io/sui-rust-sdk/sui_rpc/)
+* [`sui-transaction-builder`](crates/sui-transaction-builder)
+    [![sui-transaction-builder on crates.io](https://img.shields.io/crates/v/sui-transaction-builder)](https://crates.io/crates/sui-transaction-builder)
+    [![Documentation (latest release)](https://img.shields.io/badge/docs-latest-brightgreen)](https://docs.rs/sui-transaction-builder)
+    [![Documentation (master)](https://img.shields.io/badge/docs-master-59f)](https://mystenlabs.github.io/sui-rust-sdk/sui_transaction_builder/)
 
 ## License
 
