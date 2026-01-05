@@ -1,0 +1,10 @@
+[package]
+name = "test_publish"
+edition = "2024.beta"
+# license = ""           # e.g., "MIT", "GPL", "Apache 2.0"
+# authors = ["..."]      # e.g., ["Joe Smith (joesmith@noemail.com)", "John Snow (johnsnow@noemail.com)"]
+
+[dependencies]
+
+[addresses]
+test_publish = "0x0"
