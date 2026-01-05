@@ -5,12 +5,12 @@ use std::any::TypeId;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
-use sui_types::Address;
-use sui_types::Digest;
-use sui_types::Identifier;
-use sui_types::Transaction;
-use sui_types::TransactionExpiration;
-use sui_types::TypeTag;
+use sui_sdk_types::Address;
+use sui_sdk_types::Digest;
+use sui_sdk_types::Identifier;
+use sui_sdk_types::Transaction;
+use sui_sdk_types::TransactionExpiration;
+use sui_sdk_types::TypeTag;
 
 /// A builder for creating transactions. Use `resolve` to finalize the transaction data.
 #[derive(Default)]
@@ -43,7 +43,7 @@ pub struct TransactionBuilder {
 pub(crate) enum ResolvedArgument {
     Unresolved,
     ReplaceWith(Argument),
-    Resolved(sui_types::Argument),
+    Resolved(sui_sdk_types::Argument),
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
@@ -329,7 +329,7 @@ impl TransactionBuilder {
         };
 
         // Gas payment
-        let gas_payment = sui_types::GasPayment {
+        let gas_payment = sui_sdk_types::GasPayment {
             objects: self
                 .gas
                 .iter()
@@ -352,14 +352,14 @@ impl TransactionBuilder {
         let mut resolved_inputs = Vec::new();
         for (_kind, (id, input)) in self.inputs {
             let arg = match input {
-                InputArg::Gas => sui_types::Argument::Gas,
+                InputArg::Gas => sui_sdk_types::Argument::Gas,
                 InputArg::Pure(value) => {
-                    resolved_inputs.push(sui_types::Input::Pure(value));
-                    sui_types::Argument::Input(resolved_inputs.len() as u16 - 1)
+                    resolved_inputs.push(sui_sdk_types::Input::Pure(value));
+                    sui_sdk_types::Argument::Input(resolved_inputs.len() as u16 - 1)
                 }
                 InputArg::Object(object_input) => {
                     resolved_inputs.push(object_input.try_into_input()?);
-                    sui_types::Argument::Input(resolved_inputs.len() as u16 - 1)
+                    sui_sdk_types::Argument::Input(resolved_inputs.len() as u16 - 1)
                 }
             };
 
@@ -378,14 +378,14 @@ impl TransactionBuilder {
                     .try_resolve(&self.arguments)
                     .map_err(|e| e.unwrap_err())?,
             );
-            let arg = sui_types::Argument::Result(resolved_commands.len() as u16 - 1);
+            let arg = sui_sdk_types::Argument::Result(resolved_commands.len() as u16 - 1);
 
             *self.arguments.get_mut(&id).unwrap() = ResolvedArgument::Resolved(arg);
         }
 
         Ok(Transaction {
-            kind: sui_types::TransactionKind::ProgrammableTransaction(
-                sui_types::ProgrammableTransaction {
+            kind: sui_sdk_types::TransactionKind::ProgrammableTransaction(
+                sui_sdk_types::ProgrammableTransaction {
                     inputs: resolved_inputs,
                     commands: resolved_commands,
                 },
@@ -448,15 +448,15 @@ impl TransactionBuilder {
         let mut resolved_inputs = Vec::new();
         for (_kind, (id, input)) in self.inputs {
             let arg = match input {
-                InputArg::Gas => sui_types::Argument::Gas,
+                InputArg::Gas => sui_sdk_types::Argument::Gas,
                 InputArg::Pure(value) => {
                     resolved_inputs
                         .push(Input::default().with_kind(InputKind::Pure).with_pure(value));
-                    sui_types::Argument::Input(resolved_inputs.len() as u16 - 1)
+                    sui_sdk_types::Argument::Input(resolved_inputs.len() as u16 - 1)
                 }
                 InputArg::Object(object_input) => {
                     resolved_inputs.push(object_input.to_input_proto());
-                    sui_types::Argument::Input(resolved_inputs.len() as u16 - 1)
+                    sui_sdk_types::Argument::Input(resolved_inputs.len() as u16 - 1)
                 }
             };
 
@@ -489,7 +489,7 @@ impl TransactionBuilder {
             };
 
             resolved_commands.push(resolved);
-            let arg = sui_types::Argument::Result(resolved_commands.len() as u16 - 1);
+            let arg = sui_sdk_types::Argument::Result(resolved_commands.len() as u16 - 1);
             *self.arguments.get_mut(&id).unwrap() = ResolvedArgument::Resolved(arg);
 
             // Pick the next command to resolve, either walked back down the stack or getting the
@@ -605,7 +605,7 @@ impl Argument {
     fn try_resolve(
         self,
         resolved_arguments: &BTreeMap<usize, ResolvedArgument>,
-    ) -> Result<sui_types::Argument, Result<usize, Error>> {
+    ) -> Result<sui_sdk_types::Argument, Result<usize, Error>> {
         let mut sub_index = self.sub_index;
         let arg = {
             let mut visited = BTreeSet::new();
@@ -644,7 +644,7 @@ impl Argument {
     fn try_resolve_many(
         arguments: &[Self],
         resolved_arguments: &BTreeMap<usize, ResolvedArgument>,
-    ) -> Result<Vec<sui_types::Argument>, Result<usize, Error>> {
+    ) -> Result<Vec<sui_sdk_types::Argument>, Result<usize, Error>> {
         arguments
             .iter()
             .map(|a| a.try_resolve(resolved_arguments))
@@ -709,8 +709,8 @@ impl Command {
     fn try_resolve(
         &self,
         resolved_arguments: &BTreeMap<usize, ResolvedArgument>,
-    ) -> Result<sui_types::Command, Result<usize, Error>> {
-        use sui_types::Command as C;
+    ) -> Result<sui_sdk_types::Command, Result<usize, Error>> {
+        use sui_sdk_types::Command as C;
 
         // try to resolve all dependencies first
         Argument::try_resolve_many(&self.dependencies, resolved_arguments)?;
@@ -722,7 +722,7 @@ impl Command {
                 function,
                 type_arguments,
                 arguments,
-            }) => C::MoveCall(sui_types::MoveCall {
+            }) => C::MoveCall(sui_sdk_types::MoveCall {
                 package: *package,
                 module: module.to_owned(),
                 function: function.to_owned(),
@@ -731,14 +731,14 @@ impl Command {
             }),
 
             CommandKind::TransferObjects(TransferObjects { objects, address }) => {
-                C::TransferObjects(sui_types::TransferObjects {
+                C::TransferObjects(sui_sdk_types::TransferObjects {
                     objects: Argument::try_resolve_many(objects, resolved_arguments)?,
                     address: address.try_resolve(resolved_arguments)?,
                 })
             }
 
             CommandKind::SplitCoins(SplitCoins { coin, amounts }) => {
-                C::SplitCoins(sui_types::SplitCoins {
+                C::SplitCoins(sui_sdk_types::SplitCoins {
                     coin: coin.try_resolve(resolved_arguments)?,
                     amounts: Argument::try_resolve_many(amounts, resolved_arguments)?,
                 })
@@ -747,7 +747,7 @@ impl Command {
             CommandKind::MergeCoins(MergeCoins {
                 coin,
                 coins_to_merge,
-            }) => C::MergeCoins(sui_types::MergeCoins {
+            }) => C::MergeCoins(sui_sdk_types::MergeCoins {
                 coin: coin.try_resolve(resolved_arguments)?,
                 coins_to_merge: Argument::try_resolve_many(coins_to_merge, resolved_arguments)?,
             }),
@@ -755,13 +755,13 @@ impl Command {
             CommandKind::Publish(Publish {
                 modules,
                 dependencies,
-            }) => C::Publish(sui_types::Publish {
+            }) => C::Publish(sui_sdk_types::Publish {
                 modules: modules.to_owned(),
                 dependencies: dependencies.to_owned(),
             }),
 
             CommandKind::MakeMoveVector(MakeMoveVector { type_, elements }) => {
-                C::MakeMoveVector(sui_types::MakeMoveVector {
+                C::MakeMoveVector(sui_sdk_types::MakeMoveVector {
                     type_: type_.to_owned(),
                     elements: Argument::try_resolve_many(elements, resolved_arguments)?,
                 })
@@ -772,7 +772,7 @@ impl Command {
                 dependencies,
                 package,
                 ticket,
-            }) => C::Upgrade(sui_types::Upgrade {
+            }) => C::Upgrade(sui_sdk_types::Upgrade {
                 modules: modules.to_owned(),
                 dependencies: dependencies.to_owned(),
                 package: *package,
@@ -988,18 +988,18 @@ impl ObjectInput {
     }
 }
 
-impl From<&sui_types::Object> for ObjectInput {
-    fn from(object: &sui_types::Object) -> Self {
+impl From<&sui_sdk_types::Object> for ObjectInput {
+    fn from(object: &sui_sdk_types::Object) -> Self {
         let input = Self::new(object.object_id())
             .with_version(object.version())
             .with_digest(object.digest());
 
         match object.owner() {
-            sui_types::Owner::Address(_) => input.as_owned(),
-            sui_types::Owner::Object(_) => input,
-            sui_types::Owner::Shared(version) => input.with_version(*version).as_shared(),
-            sui_types::Owner::Immutable => input.as_immutable(),
-            sui_types::Owner::ConsensusAddress { start_version, .. } => {
+            sui_sdk_types::Owner::Address(_) => input.as_owned(),
+            sui_sdk_types::Owner::Object(_) => input,
+            sui_sdk_types::Owner::Shared(version) => input.with_version(*version).as_shared(),
+            sui_sdk_types::Owner::Immutable => input.as_immutable(),
+            sui_sdk_types::Owner::ConsensusAddress { start_version, .. } => {
                 input.with_version(*start_version).as_shared()
             }
             _ => input,
@@ -1017,12 +1017,12 @@ impl From<&sui_types::Object> for ObjectInput {
 
 // private conversions
 impl ObjectInput {
-    fn try_into_object_reference(&self) -> Result<sui_types::ObjectReference, Error> {
+    fn try_into_object_reference(&self) -> Result<sui_sdk_types::ObjectReference, Error> {
         if matches!(self.kind, Some(ObjectKind::ImmutableOrOwned) | None)
             && let Some(version) = self.version
             && let Some(digest) = self.digest
         {
-            Ok(sui_types::ObjectReference::new(
+            Ok(sui_sdk_types::ObjectReference::new(
                 self.object_id,
                 version,
                 digest,
@@ -1032,7 +1032,7 @@ impl ObjectInput {
         }
     }
 
-    fn try_into_input(&self) -> Result<sui_types::Input, Error> {
+    fn try_into_input(&self) -> Result<sui_sdk_types::Input, Error> {
         let input = match self {
             // ImmutableOrOwned
             Self {
@@ -1048,7 +1048,7 @@ impl ObjectInput {
                 version: Some(version),
                 digest: Some(digest),
                 mutable: None,
-            } => sui_types::Input::ImmutableOrOwned(sui_types::ObjectReference::new(
+            } => sui_sdk_types::Input::ImmutableOrOwned(sui_sdk_types::ObjectReference::new(
                 *object_id, *version, *digest,
             )),
 
@@ -1059,7 +1059,7 @@ impl ObjectInput {
                 version: Some(version),
                 digest: Some(digest),
                 ..
-            } => sui_types::Input::Receiving(sui_types::ObjectReference::new(
+            } => sui_sdk_types::Input::Receiving(sui_sdk_types::ObjectReference::new(
                 *object_id, *version, *digest,
             )),
 
@@ -1077,7 +1077,7 @@ impl ObjectInput {
                 version: Some(version),
                 digest: None,
                 mutable: Some(mutable),
-            } => sui_types::Input::Shared(sui_types::SharedInput::new(
+            } => sui_sdk_types::Input::Shared(sui_sdk_types::SharedInput::new(
                 *object_id, *version, *mutable,
             )),
 

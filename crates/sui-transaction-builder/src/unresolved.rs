@@ -1,8 +1,8 @@
-use sui_types::Address;
-use sui_types::Command;
-use sui_types::Digest;
-use sui_types::TransactionExpiration;
-use sui_types::Version;
+use sui_sdk_types::Address;
+use sui_sdk_types::Command;
+use sui_sdk_types::Digest;
+use sui_sdk_types::TransactionExpiration;
+use sui_sdk_types::Version;
 
 // A potentially unresolved user transaction. Note that one can construct a fully resolved
 // transaction using this type by providing all the required data.
@@ -296,9 +296,9 @@ impl From<Value> for serde_json::Value {
     }
 }
 
-impl From<&sui_types::Object> for Input {
-    fn from(object: &sui_types::Object) -> Self {
-        use sui_types::Owner;
+impl From<&sui_sdk_types::Object> for Input {
+    fn from(object: &sui_sdk_types::Object) -> Self {
+        use sui_sdk_types::Owner;
 
         let input = Input::by_id(object.object_id())
             .with_digest(object.digest())

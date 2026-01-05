@@ -9,9 +9,9 @@ use crate::intent::IntentResolver;
 use crate::intent::MAX_ARGUMENTS;
 use crate::intent::MAX_GAS_OBJECTS;
 use std::collections::BTreeMap;
-use sui_types::Address;
-use sui_types::Identifier;
-use sui_types::StructTag;
+use sui_sdk_types::Address;
+use sui_sdk_types::Identifier;
+use sui_sdk_types::StructTag;
 
 pub struct CoinWithBalance {
     coin_type: StructTag,

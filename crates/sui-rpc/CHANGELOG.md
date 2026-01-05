@@ -1,3 +1,14 @@
+# [0.2.0] - 2026-01-05
+
+## Added
+- Added support for address balances [#179]
+- Added support for address aliases [#177]
+- Added support for CheckpointContents V2 [#180]
+
+[#177]: https://github.com/MystenLabs/sui-rust-sdk/pull/177
+[#179]: https://github.com/MystenLabs/sui-rust-sdk/pull/179
+[#180]: https://github.com/MystenLabs/sui-rust-sdk/pull/180
+
 # [0.1.1] - 2025-12-11
 
 ## Added
@@ -58,6 +69,7 @@
 
 Initial release
 
+[0.2.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.2.0
 [0.1.1]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.1.1
 [0.1.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.1.0
 [0.0.8]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.0.8

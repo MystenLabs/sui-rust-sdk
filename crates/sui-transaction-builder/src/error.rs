@@ -1,7 +1,7 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use sui_types::Address;
+use sui_sdk_types::Address;
 
 #[derive(thiserror::Error, Debug, Clone)]
 #[non_exhaustive]

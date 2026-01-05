@@ -1,3 +1,20 @@
+# [0.2.0] - 2026-01-05
+
+## Breaking
+- `Input::Shared` changed to support new `Mutability` enum instead of it being a boolean [#179]
+- Reworked the CheckpointContents and CheckpointTransactionInfo types to support contents v2 [#180]
+
+## Added
+- Added support for address balances [#179]
+- Added support for address aliases [#177]
+- Added support for CheckpointContents V2 [#180]
+- Added support for deserializing UserSignatures from base64 in human-readable formats [#182]
+
+[#177]: https://github.com/MystenLabs/sui-rust-sdk/pull/177
+[#179]: https://github.com/MystenLabs/sui-rust-sdk/pull/179
+[#180]: https://github.com/MystenLabs/sui-rust-sdk/pull/180
+[#182]: https://github.com/MystenLabs/sui-rust-sdk/pull/182
+
 # [0.1.1] - 2025-12-11
 
 ## Added
@@ -148,6 +165,7 @@
 
 Initial release
 
+[0.2.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.2.0
 [0.1.1]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.1.1
 [0.1.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.1.0
 [0.0.8]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.0.8

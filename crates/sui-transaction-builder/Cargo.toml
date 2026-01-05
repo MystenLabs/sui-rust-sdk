@@ -1,6 +1,6 @@
 [package]
 name = "sui-transaction-builder"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Brandon Williams <brandon@mystenlabs.com>"]
 license = "Apache-2.0"
 edition = "2024"
@@ -10,18 +10,8 @@ description = "Transaction API for the Rust SDK for the Sui Blockchain"
 bcs = "0.1.6"
 serde = { version = "1.0", features = ["derive"] }
 serde_with = { version = "3.15", default-features = false, features = ["alloc"] }
-sui-types = { package = "sui-sdk-types", version = "0.1.0", path = "../sui-sdk-types", features = ["serde", "hash"] }
+sui-sdk-types = { version = "0.2.0", path = "../sui-sdk-types", features = ["serde", "hash"] }
 thiserror = "2.0"
 async-trait = "0.1.89"
-# tokio = { version = "1.47", default-features = false, features = ["sync"] }
 
-sui-rpc = { version = "0.1", path = "../sui-rpc" } #, optional = true }
-
-# [dev-dependencies]
-# anyhow = "1.0"
-# rand = "0.8"
-# serde_json = "1.0"
-# sui-crypto = { package = "sui-crypto", path = "../sui-crypto" , features = ["ed25519"] }
-# sui-graphql-client = { package = "sui-graphql-client", path = "../sui-graphql-client" }
-# sui-types = { package = "sui-sdk-types", path = "../sui-sdk-types", features = ["rand"] }
-# tokio = { version = "1.0", features = ["full"] }
+sui-rpc = { version = "0.2.0", path = "../sui-rpc" }
