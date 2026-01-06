@@ -181,8 +181,16 @@ message Balance {
   // The type of the coin (e.g., 0x2::sui::SUI).
   optional string coin_type = 1;
 
-  // Shows the total balance of the coin in its smallest unit.
+  // The total balance of `coin_type` in its smallest unit.
+  // This is the sum of all spendable amounts of `coin_type` (`address_balance`
+  // and `coin_balance`).
   optional uint64 balance = 3;
+
+  // The balance of `Balance<T>` in this address's Address Balance.
+  optional uint64 address_balance = 4;
+
+  // The balance of all `Coin<T>` objects owned by this address.
+  optional uint64 coin_balance = 5;
 }
 
 // Request message for `NodeService.ListDynamicFields`

@@ -1076,6 +1076,12 @@ impl serde::Serialize for Balance {
         if self.balance.is_some() {
             len += 1;
         }
+        if self.address_balance.is_some() {
+            len += 1;
+        }
+        if self.coin_balance.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("sui.rpc.v2.Balance", len)?;
         if let Some(v) = self.coin_type.as_ref() {
             struct_ser.serialize_field("coinType", v)?;
@@ -1084,6 +1090,16 @@ impl serde::Serialize for Balance {
             #[allow(clippy::needless_borrow)]
             #[allow(clippy::needless_borrows_for_generic_args)]
             struct_ser.serialize_field("balance", ToString::to_string(&v).as_str())?;
+        }
+        if let Some(v) = self.address_balance.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("addressBalance", ToString::to_string(&v).as_str())?;
+        }
+        if let Some(v) = self.coin_balance.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("coinBalance", ToString::to_string(&v).as_str())?;
         }
         struct_ser.end()
     }
@@ -1098,12 +1114,18 @@ impl<'de> serde::Deserialize<'de> for Balance {
             "coin_type",
             "coinType",
             "balance",
+            "address_balance",
+            "addressBalance",
+            "coin_balance",
+            "coinBalance",
         ];
 
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             CoinType,
             Balance,
+            AddressBalance,
+            CoinBalance,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -1128,6 +1150,8 @@ impl<'de> serde::Deserialize<'de> for Balance {
                         match value {
                             "coinType" | "coin_type" => Ok(GeneratedField::CoinType),
                             "balance" => Ok(GeneratedField::Balance),
+                            "addressBalance" | "address_balance" => Ok(GeneratedField::AddressBalance),
+                            "coinBalance" | "coin_balance" => Ok(GeneratedField::CoinBalance),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -1151,6 +1175,8 @@ impl<'de> serde::Deserialize<'de> for Balance {
             {
                 let mut coin_type__ = None;
                 let mut balance__ = None;
+                let mut address_balance__ = None;
+                let mut coin_balance__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::CoinType => {
@@ -1167,6 +1193,22 @@ impl<'de> serde::Deserialize<'de> for Balance {
                                 map_.next_value::<::std::option::Option<crate::_serde::NumberDeserialize<_>>>()?.map(|x| x.0)
                             ;
                         }
+                        GeneratedField::AddressBalance => {
+                            if address_balance__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("addressBalance"));
+                            }
+                            address_balance__ = 
+                                map_.next_value::<::std::option::Option<crate::_serde::NumberDeserialize<_>>>()?.map(|x| x.0)
+                            ;
+                        }
+                        GeneratedField::CoinBalance => {
+                            if coin_balance__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("coinBalance"));
+                            }
+                            coin_balance__ = 
+                                map_.next_value::<::std::option::Option<crate::_serde::NumberDeserialize<_>>>()?.map(|x| x.0)
+                            ;
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -1175,6 +1217,8 @@ impl<'de> serde::Deserialize<'de> for Balance {
                 Ok(Balance {
                     coin_type: coin_type__,
                     balance: balance__,
+                    address_balance: address_balance__,
+                    coin_balance: coin_balance__,
                 })
             }
         }
