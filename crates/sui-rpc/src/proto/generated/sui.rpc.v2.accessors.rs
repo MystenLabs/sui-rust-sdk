@@ -479,6 +479,8 @@ mod _accessor_impls {
             Self {
                 coin_type: None,
                 balance: None,
+                address_balance: None,
+                coin_balance: None,
             }
         }
         #[doc(hidden)]
@@ -528,6 +530,50 @@ mod _accessor_impls {
         ///Sets `balance` with the provided value.
         pub fn with_balance(mut self, field: u64) -> Self {
             self.set_balance(field);
+            self
+        }
+        ///If `address_balance` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn address_balance_opt_mut(&mut self) -> Option<&mut u64> {
+            self.address_balance.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `address_balance`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn address_balance_mut(&mut self) -> &mut u64 {
+            self.address_balance.get_or_insert_default()
+        }
+        ///If `address_balance` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn address_balance_opt(&self) -> Option<u64> {
+            self.address_balance.as_ref().map(|field| *field)
+        }
+        ///Sets `address_balance` with the provided value.
+        pub fn set_address_balance(&mut self, field: u64) {
+            self.address_balance = Some(field);
+        }
+        ///Sets `address_balance` with the provided value.
+        pub fn with_address_balance(mut self, field: u64) -> Self {
+            self.set_address_balance(field);
+            self
+        }
+        ///If `coin_balance` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn coin_balance_opt_mut(&mut self) -> Option<&mut u64> {
+            self.coin_balance.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `coin_balance`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn coin_balance_mut(&mut self) -> &mut u64 {
+            self.coin_balance.get_or_insert_default()
+        }
+        ///If `coin_balance` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn coin_balance_opt(&self) -> Option<u64> {
+            self.coin_balance.as_ref().map(|field| *field)
+        }
+        ///Sets `coin_balance` with the provided value.
+        pub fn set_coin_balance(&mut self, field: u64) {
+            self.coin_balance = Some(field);
+        }
+        ///Sets `coin_balance` with the provided value.
+        pub fn with_coin_balance(mut self, field: u64) -> Self {
+            self.set_coin_balance(field);
             self
         }
     }

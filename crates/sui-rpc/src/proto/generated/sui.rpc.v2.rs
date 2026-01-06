@@ -5420,9 +5420,17 @@ pub struct Balance {
     /// The type of the coin (e.g., 0x2::sui::SUI).
     #[prost(string, optional, tag = "1")]
     pub coin_type: ::core::option::Option<::prost::alloc::string::String>,
-    /// Shows the total balance of the coin in its smallest unit.
+    /// The total balance of `coin_type` in its smallest unit.
+    /// This is the sum of all spendable amounts of `coin_type` (`address_balance`
+    /// and `coin_balance`).
     #[prost(uint64, optional, tag = "3")]
     pub balance: ::core::option::Option<u64>,
+    /// The balance of `Balance<T>` in this address's Address Balance.
+    #[prost(uint64, optional, tag = "4")]
+    pub address_balance: ::core::option::Option<u64>,
+    /// The balance of all `Coin<T>` objects owned by this address.
+    #[prost(uint64, optional, tag = "5")]
+    pub coin_balance: ::core::option::Option<u64>,
 }
 /// Request message for `NodeService.ListDynamicFields`
 #[non_exhaustive]

@@ -7297,11 +7297,25 @@ mod _field_impls {
             number: 3i32,
             message_fields: None,
         };
+        pub const ADDRESS_BALANCE_FIELD: &'static MessageField = &MessageField {
+            name: "address_balance",
+            json_name: "addressBalance",
+            number: 4i32,
+            message_fields: None,
+        };
+        pub const COIN_BALANCE_FIELD: &'static MessageField = &MessageField {
+            name: "coin_balance",
+            json_name: "coinBalance",
+            number: 5i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for Balance {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::COIN_TYPE_FIELD,
             Self::BALANCE_FIELD,
+            Self::ADDRESS_BALANCE_FIELD,
+            Self::COIN_BALANCE_FIELD,
         ];
     }
     impl Balance {
@@ -7330,6 +7344,14 @@ mod _field_impls {
         }
         pub fn balance(mut self) -> String {
             self.path.push(Balance::BALANCE_FIELD.name);
+            self.finish()
+        }
+        pub fn address_balance(mut self) -> String {
+            self.path.push(Balance::ADDRESS_BALANCE_FIELD.name);
+            self.finish()
+        }
+        pub fn coin_balance(mut self) -> String {
+            self.path.push(Balance::COIN_BALANCE_FIELD.name);
             self.finish()
         }
     }
