@@ -311,6 +311,7 @@ impl StructTag {
         }
     }
 
+    #[cfg(feature = "serde")]
     pub(crate) fn balance_accumulator_field(coin_type: TypeTag) -> Self {
         let u128_type = Self {
             address: Address::TWO,
@@ -341,6 +342,7 @@ impl StructTag {
         }
     }
 
+    #[cfg(feature = "serde")]
     pub(crate) fn is_balance_accumulator_field(&self) -> Option<&TypeTag> {
         let (key_type, u128_type) = if self.address() == &Address::TWO
             && self.module() == "dynamic_field"
@@ -381,6 +383,7 @@ impl StructTag {
         }
     }
 
+    #[cfg(feature = "serde")]
     pub(crate) fn is_gas(&self) -> bool {
         self.address() == &Address::TWO
             && self.module() == "sui"

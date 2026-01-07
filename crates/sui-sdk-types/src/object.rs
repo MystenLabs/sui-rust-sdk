@@ -693,10 +693,9 @@ mod serialization {
 
     #[cfg(test)]
     mod test {
-        use crate::{
-            bcs::{FromBcs, ToBcs},
-            object::Object,
-        };
+        use crate::bcs::FromBcs;
+        use crate::bcs::ToBcs;
+        use crate::object::Object;
 
         #[cfg(target_arch = "wasm32")]
         use wasm_bindgen_test::wasm_bindgen_test as test;
