@@ -349,8 +349,11 @@ impl TransactionBuilder {
         // Inputs
         //
 
+        let mut unresolved_inputs = self.inputs.into_values().collect::<Vec<_>>();
+        unresolved_inputs.sort_by_key(|(id, _input)| *id);
+
         let mut resolved_inputs = Vec::new();
-        for (_kind, (id, input)) in self.inputs {
+        for (id, input) in unresolved_inputs {
             let arg = match input {
                 InputArg::Gas => sui_sdk_types::Argument::Gas,
                 InputArg::Pure(value) => {
@@ -445,8 +448,11 @@ impl TransactionBuilder {
         // Inputs
         //
 
+        let mut unresolved_inputs = self.inputs.into_values().collect::<Vec<_>>();
+        unresolved_inputs.sort_by_key(|(id, _input)| *id);
+
         let mut resolved_inputs = Vec::new();
-        for (_kind, (id, input)) in self.inputs {
+        for (id, input) in unresolved_inputs {
             let arg = match input {
                 InputArg::Gas => sui_sdk_types::Argument::Gas,
                 InputArg::Pure(value) => {
@@ -1268,5 +1274,67 @@ mod tests {
         ));
 
         assert!(tx.try_build().is_ok());
+    }
+
+    #[test]
+    fn test_deterministic_building() {
+        let build_tx = || {
+            let mut tx = TransactionBuilder::new();
+            let coin = tx.object(ObjectInput::owned(
+                Address::from_static(
+                    "0x19406ea4d9609cd9422b85e6bf2486908f790b778c757aff805241f3f609f9b4",
+                ),
+                2,
+                Digest::from_static("7opR9rFUYivSTqoJHvFb9p6p54THyHTatMG6id4JKZR9"),
+            ));
+            let _ = tx.object(ObjectInput::owned(
+                Address::from_static("0x12345"),
+                2,
+                Digest::from_static("7opR9rFUYivSTqoJHvFb9p6p54THyHTatMG6id4JKZR9"),
+            ));
+            let _ = tx.object(ObjectInput::owned(
+                Address::from_static("0x12345"),
+                2,
+                Digest::from_static("7opR9rFUYivSTqoJHvFb9p6p54THyHTatMG6id4JKZR9"),
+            ));
+            let gas = tx.gas();
+            let _ = tx.pure(&Address::from_static("0xabc"));
+            let _ = tx.pure(&Address::from_static("0xabc"));
+            let _ = tx.pure(&Address::from_static("0xabc"));
+            let _ = tx.pure(&Address::from_static("0xdef"));
+            let _ = tx.pure(&1u64);
+            let _ = tx.pure(&1u64);
+            let _ = tx.pure(&1u64);
+            let _ = tx.pure(&Some(2u8));
+            let _ = tx.pure_unique(&Address::from_static("0xabc"));
+            let _ = tx.pure_unique(&Address::from_static("0xabc"));
+            let _ = tx.pure_unique(&1u64);
+
+            let recipient = tx.pure(&Address::from_static("0x123"));
+            tx.transfer_objects(vec![coin, gas], recipient);
+            tx.set_gas_budget(500000000);
+            tx.set_gas_price(1000);
+            tx.add_gas_objects([ObjectInput::owned(
+                Address::from_static(
+                    "0xd8792bce2743e002673752902c0e7348dfffd78638cb5367b0b85857bceb9821",
+                ),
+                2,
+                Digest::from_static("2ZigdvsZn5BMeszscPQZq9z8ebnS2FpmAuRbAi9ednCk"),
+            )]);
+            tx.set_sender(Address::from_static(
+                "0xc574ea804d9c1a27c886312e96c0e2c9cfd71923ebaeb3000d04b5e65fca2793",
+            ));
+
+            tx.try_build().unwrap()
+        };
+
+        let digest = build_tx().digest();
+
+        assert!(
+            (0..100)
+                .map(|_| build_tx())
+                .map(|tx| tx.digest())
+                .all(|d| d == digest)
+        )
     }
 }
