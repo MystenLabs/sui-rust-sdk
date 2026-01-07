@@ -552,6 +552,13 @@ mod serialization {
         StakedSui,
         /// A non-SUI coin type (i.e., `0x2::coin::Coin<T> where T != 0x2::sui::SUI`)
         Coin(TypeTag),
+        /// A SUI balance accumulator field
+        /// (i.e., `0x2::dynamic_field::Field<0x2::accumulator::Key<0x2::balance::Balance<0x2::sui::SUI>>, 0x2::accumulator::U128>`)
+        SuiBalanceAccumulatorField,
+        /// A non-SUI balance accumulator field
+        /// (i.e., `0x2::dynamic_field::Field<0x2::accumulator::Key<0x2::balance::Balance<T>>, 0x2::accumulator::U128>`
+        /// where T != 0x2::sui::SUI)
+        BalanceAccumulatorField(TypeTag),
         // NOTE: if adding a new type here, and there are existing on-chain objects of that
         // type with Other(_), that is ok, but you must hand-roll PartialEq/Eq/Ord/maybe Hash
         // to make sure the new type and Other(_) are interpreted consistently.
@@ -568,6 +575,13 @@ mod serialization {
         StakedSui,
         /// A non-SUI coin type (i.e., `0x2::coin::Coin<T> where T != 0x2::sui::SUI`)
         Coin(&'a TypeTag),
+        /// A SUI balance accumulator field
+        /// (i.e., `0x2::dynamic_field::Field<0x2::accumulator::Key<0x2::balance::Balance<0x2::sui::SUI>>, 0x2::accumulator::U128>`)
+        SuiBalanceAccumulatorField,
+        /// A non-SUI balance accumulator field
+        /// (i.e., `0x2::dynamic_field::Field<0x2::accumulator::Key<0x2::balance::Balance<T>>, 0x2::accumulator::U128>`
+        /// where T != 0x2::sui::SUI)
+        BalanceAccumulatorField(&'a TypeTag),
         // NOTE: if adding a new type here, and there are existing on-chain objects of that
         // type with Other(_), that is ok, but you must hand-roll PartialEq/Eq/Ord/maybe Hash
         // to make sure the new type and Other(_) are interpreted consistently.
@@ -580,6 +594,12 @@ mod serialization {
                 MoveStructType::GasCoin => StructTag::gas_coin(),
                 MoveStructType::StakedSui => StructTag::staked_sui(),
                 MoveStructType::Coin(type_tag) => StructTag::coin(type_tag),
+                MoveStructType::SuiBalanceAccumulatorField => {
+                    StructTag::balance_accumulator_field(StructTag::sui().into())
+                }
+                MoveStructType::BalanceAccumulatorField(type_tag) => {
+                    StructTag::balance_accumulator_field(type_tag)
+                }
             }
         }
     }
@@ -592,28 +612,27 @@ mod serialization {
             let type_params = s.type_params();
 
             if let Some(coin_type) = s.is_coin() {
-                if let TypeTag::Struct(s_inner) = coin_type {
-                    let address = s_inner.address();
-                    let module = s_inner.module();
-                    let name = s_inner.name();
-                    let type_params = s_inner.type_params();
-
-                    if address == &Address::TWO
-                        && module == "sui"
-                        && name == "SUI"
-                        && type_params.is_empty()
-                    {
-                        return Self::GasCoin;
-                    }
+                if let TypeTag::Struct(s_inner) = coin_type
+                    && s_inner.is_gas()
+                {
+                    Self::GasCoin
+                } else {
+                    Self::Coin(coin_type)
                 }
-
-                Self::Coin(coin_type)
             } else if address == &Address::THREE
                 && module == "staking_pool"
                 && name == "StakedSui"
                 && type_params.is_empty()
             {
                 Self::StakedSui
+            } else if let Some(coin_type) = s.is_balance_accumulator_field() {
+                if let TypeTag::Struct(s_inner) = coin_type
+                    && s_inner.is_gas()
+                {
+                    Self::SuiBalanceAccumulatorField
+                } else {
+                    Self::BalanceAccumulatorField(coin_type)
+                }
             } else {
                 Self::Other(s)
             }
@@ -674,7 +693,10 @@ mod serialization {
 
     #[cfg(test)]
     mod test {
-        use crate::object::Object;
+        use crate::{
+            bcs::{FromBcs, ToBcs},
+            object::Object,
+        };
 
         #[cfg(target_arch = "wasm32")]
         use wasm_bindgen_test::wasm_bindgen_test as test;
@@ -789,6 +811,24 @@ mod serialization {
                 println!("{json}");
                 assert_eq!(object, serde_json::from_str(&json).unwrap());
             }
+        }
+
+        // Test to ensure we properly serialize and deserialize the new MoveStructType variants for
+        // address balances
+        #[test]
+        fn address_balance_objects() {
+            let non_sui_address_balance_type = "AAUHIRSU0QWQjjOQW/wFv4O24+PddAa8JQ45YwhB+i7EfzgGY29pbl9hBkNPSU5fQQAAEAAAAAAAAABQCSgWThHEQ1NqPKQQsXVKd/yFD0FSDYUtrvXx1xt+jIk0Bsyk3bbd4hLE1MDxwok6jzp0k3365HVXhJgmi+4vjcQJAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACswgmPj1SN1ZkPLtiVtVs0XD3QCgS/YYUFBh9Q6p4b+zoJAAAAAAAAAAAA==";
+
+            let non_sui = Object::from_bcs_base64(non_sui_address_balance_type).unwrap();
+            assert_eq!(
+                non_sui.to_bcs_base64().unwrap(),
+                non_sui_address_balance_type
+            );
+
+            let sui_address_balance_type = "AAQAAgAAAAAAAABQlJ321C1hKFc15SQmGZUdTDrwVh7xQ46GoV2zEnFK88b/JOPl1wGyhHd/R1itnNXhAzGoyXuDHuOL3V34auvxf+gDAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACswgjRbaObiwu6bn07xewfd3V9iFJfbhcaWy7K6YgNsZdKkAAAAAAAAAAA==";
+
+            let sui = Object::from_bcs_base64(sui_address_balance_type).unwrap();
+            assert_eq!(sui.to_bcs_base64().unwrap(), sui_address_balance_type);
         }
     }
 }
