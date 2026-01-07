@@ -1,3 +1,10 @@
+# [0.2.1] - 2026-01-07
+
+## Added
+- [#185] add `address_balance` and `coin_balance` fields to Balance message
+
+[#185]: https://github.com/MystenLabs/sui-rust-sdk/pull/185
+
 # [0.2.0] - 2026-01-05
 
 ## Added
@@ -69,6 +76,7 @@
 
 Initial release
 
+[0.2.1]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.2.1
 [0.2.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.2.0
 [0.1.1]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.1.1
 [0.1.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.1.0

@@ -1,3 +1,11 @@
+# [0.2.1] - 2026-01-07
+
+## Fixed
+- [#186] fix ser/de of the efficient StructTag serialization used in Object
+  serialization for the new address balance accumulator types.
+
+[#186]: https://github.com/MystenLabs/sui-rust-sdk/pull/186
+
 # [0.2.0] - 2026-01-05
 
 ## Breaking
@@ -165,6 +173,7 @@
 
 Initial release
 
+[0.2.1]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.2.1
 [0.2.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.2.0
 [0.1.1]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.1.1
 [0.1.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.1.0
