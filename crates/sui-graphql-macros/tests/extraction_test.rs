@@ -1,68 +1,161 @@
 use sui_graphql_macros::QueryResponse;
 
+// === Simple Field Extraction ===
+
 #[test]
 fn test_simple_path() {
     #[derive(QueryResponse)]
-    struct ObjectData {
-        #[field(path = "object.address")]
-        address: String,
-        #[field(path = "object.digest")]
-        digest: String,
+    struct ChainInfo {
+        #[field(path = "chainIdentifier")]
+        chain_id: String,
     }
 
     let json = serde_json::json!({
-        "object": {
-            "address": "0x123",
-            "digest": "abc123"
-        }
+        "chainIdentifier": "4c78adac"
     });
-    let data = ObjectData::from_value(json).unwrap();
-    assert_eq!(data.address, "0x123");
-    assert_eq!(data.digest, "abc123");
+    let data = ChainInfo::from_value(json).unwrap();
+    assert_eq!(data.chain_id, "4c78adac");
 }
 
 #[test]
 fn test_nested_path() {
     #[derive(QueryResponse)]
-    struct NestedData {
-        #[field(path = "data.response.value")]
-        value: u64,
+    struct EpochData {
+        #[field(path = "epoch.epochId")]
+        epoch_id: u64,
     }
 
     let json = serde_json::json!({
-        "data": {
-            "response": {
-                "value": 42
-            }
+        "epoch": {
+            "epochId": 42
         }
     });
-    let data = NestedData::from_value(json).unwrap();
-    assert_eq!(data.value, 42);
+    let data = EpochData::from_value(json).unwrap();
+    assert_eq!(data.epoch_id, 42);
 }
 
 #[test]
 fn test_multiple_fields() {
     #[derive(QueryResponse)]
-    struct MultiField {
-        #[field(path = "user.name")]
-        name: String,
-        #[field(path = "user.age")]
-        age: u64,
-        #[field(path = "user.active")]
-        active: bool,
+    struct CheckpointData {
+        #[field(path = "checkpoint.sequenceNumber")]
+        sequence_number: u64,
+        #[field(path = "checkpoint.digest")]
+        digest: String,
     }
 
     let json = serde_json::json!({
-        "user": {
-            "name": "alice",
-            "age": 30,
-            "active": true
+        "checkpoint": {
+            "sequenceNumber": 100,
+            "digest": "abc123"
         }
     });
-    let data = MultiField::from_value(json).unwrap();
-    assert_eq!(data.name, "alice");
-    assert_eq!(data.age, 30);
-    assert_eq!(data.active, true);
+    let data = CheckpointData::from_value(json).unwrap();
+    assert_eq!(data.sequence_number, 100);
+    assert_eq!(data.digest, "abc123");
+}
+
+// === Array Extraction ===
+
+#[test]
+fn test_single_array_iteration() {
+    #[derive(QueryResponse)]
+    struct CheckpointDigests {
+        #[field(path = "checkpoints.nodes[].digest")]
+        digests: Vec<String>,
+    }
+
+    let json = serde_json::json!({
+        "checkpoints": {
+            "nodes": [
+                { "digest": "abc123" },
+                { "digest": "def456" },
+                { "digest": "ghi789" }
+            ]
+        }
+    });
+    let data = CheckpointDigests::from_value(json).unwrap();
+    assert_eq!(data.digests, vec!["abc123", "def456", "ghi789"]);
+}
+
+#[test]
+fn test_nested_array_iteration() {
+    #[derive(QueryResponse)]
+    struct EpochCheckpointDigests {
+        #[field(path = "epochs.nodes[].checkpoints.nodes[].digest")]
+        checkpoint_digests: Vec<Vec<String>>,
+    }
+
+    let json = serde_json::json!({
+        "epochs": {
+            "nodes": [
+                {
+                    "checkpoints": {
+                        "nodes": [
+                            { "digest": "a1" },
+                            { "digest": "a2" }
+                        ]
+                    }
+                },
+                {
+                    "checkpoints": {
+                        "nodes": [
+                            { "digest": "b1" }
+                        ]
+                    }
+                },
+                {
+                    "checkpoints": {
+                        "nodes": []
+                    }
+                }
+            ]
+        }
+    });
+    let data = EpochCheckpointDigests::from_value(json).unwrap();
+    assert_eq!(
+        data.checkpoint_digests,
+        vec![vec!["a1", "a2"], vec!["b1"], vec![]]
+    );
+}
+
+#[test]
+fn test_array_with_prefix_path() {
+    #[derive(QueryResponse)]
+    struct NestedCheckpoints {
+        #[field(path = "epoch.checkpoints.nodes[].sequenceNumber")]
+        sequence_numbers: Vec<u64>,
+    }
+
+    let json = serde_json::json!({
+        "epoch": {
+            "checkpoints": {
+                "nodes": [
+                    { "sequenceNumber": 100 },
+                    { "sequenceNumber": 200 }
+                ]
+            }
+        }
+    });
+    let data = NestedCheckpoints::from_value(json).unwrap();
+    assert_eq!(data.sequence_numbers, vec![100, 200]);
+}
+
+#[test]
+fn test_empty_array() {
+    #[derive(QueryResponse)]
+    struct CheckpointDigests {
+        #[field(path = "checkpoints.nodes[].digest")]
+        digests: Vec<String>,
+    }
+
+    let json = serde_json::json!({
+        "checkpoints": {
+            "nodes": []
+        }
+    });
+    let data = CheckpointDigests::from_value(json).unwrap();
+    assert_eq!(data.digests, Vec::<String>::new());
 }
 
 #[test]
