@@ -992,12 +992,6 @@ impl Mutability {
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 #[non_exhaustive]
 enum Reservation {
-    // Reserve the entire balance.
-    // This is not yet supported.
-    #[allow(unused)]
-    #[cfg_attr(feature = "proptest", weight(0))]
-    EntireBalance,
-
     // Reserve a specific amount of the balance.
     Amount(u64),
 }
@@ -1039,7 +1033,6 @@ impl FundsWithdrawal {
 
     pub fn amount(&self) -> Option<u64> {
         match self.reservation {
-            Reservation::EntireBalance => None,
             Reservation::Amount(amount) => Some(amount),
         }
     }
