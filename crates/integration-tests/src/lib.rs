@@ -57,7 +57,7 @@ async fn wait_for_ready(client: &mut Client) -> Result<()> {
             .ledger_client()
             .get_service_info(sui_rpc::proto::sui::rpc::v2::GetServiceInfoRequest::default())
             .await
-            && resp.into_inner().checkpoint_height() > 0
+            && resp.into_inner().checkpoint_height() > 5
         {
             return Ok(());
         }
@@ -364,7 +364,7 @@ impl SuiNetworkHandle {
             .arg("-p")
             .arg(package)
             .arg("build")
-            .arg("--ignore-chain") // TODO remove once 1.62 is released
+            .args(["-e", "testnet"])
             .arg("--dump-bytecode-as-base64");
         let output = cmd.output()?;
 
