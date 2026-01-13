@@ -125,4 +125,12 @@ impl Schema {
     pub fn get_field(&self, type_name: &str, field_name: &str) -> Option<&FieldInfo> {
         self.types.get(type_name)?.fields.get(field_name)
     }
+
+    /// Get all field names for a type.
+    pub fn field_names(&self, type_name: &str) -> Vec<&str> {
+        self.types
+            .get(type_name)
+            .map(|t| t.fields.keys().map(|s| s.as_str()).collect())
+            .unwrap_or_default()
+    }
 }

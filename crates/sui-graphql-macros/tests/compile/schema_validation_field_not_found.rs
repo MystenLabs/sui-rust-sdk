@@ -2,7 +2,7 @@ use sui_graphql_macros::Response;
 
 #[derive(Response)]
 struct InvalidField {
-    #[field(path = "object.nonExistentField")]
+    #[field(path = "object.nonExistent")]
     address: String,
 }
 
