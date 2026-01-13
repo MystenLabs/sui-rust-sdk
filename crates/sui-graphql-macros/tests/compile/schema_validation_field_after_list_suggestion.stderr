@@ -1,0 +1,5 @@
+error: Field 'digst' not found on type 'Checkpoint' in path 'checkpoints.nodes[].digst'. Did you mean 'digest'?
+ --> tests/compile/schema_validation_field_after_list_suggestion.rs:7:5
+  |
+7 |     digests: Vec<String>,
+  |     ^^^^^^^
