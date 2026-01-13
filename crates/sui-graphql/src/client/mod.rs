@@ -1,5 +1,7 @@
 //! GraphQL client for Sui blockchain.
 
+mod objects;
+
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::error::{Error, GraphQLError};
