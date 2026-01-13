@@ -7,11 +7,15 @@
 
 mod client;
 mod error;
+pub mod pagination;
 mod response;
+pub mod scalars;
 
 pub use client::Client;
 pub use error::Error;
 pub use error::GraphQLError;
 pub use error::Location;
 pub use error::PathFragment;
+pub use pagination::Page;
+pub use pagination::PageInfo;
 pub use response::Response;
