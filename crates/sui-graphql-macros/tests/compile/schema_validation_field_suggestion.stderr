@@ -1,0 +1,5 @@
+error: Field 'chainIdentifer' not found on type 'Query' in path 'chainIdentifer'. Did you mean 'chainIdentifier'?
+ --> tests/compile/schema_validation_field_suggestion.rs:7:5
+  |
+7 |     chain_id: String,
+  |     ^^^^^^^^
