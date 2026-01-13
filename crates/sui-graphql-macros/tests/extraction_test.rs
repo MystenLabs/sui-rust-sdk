@@ -64,3 +64,53 @@ fn test_multiple_fields() {
     assert_eq!(data.age, 30);
     assert_eq!(data.active, true);
 }
+
+#[test]
+fn test_null_intermediate_with_option() {
+    #[derive(QueryResponse)]
+    struct Response {
+        #[field(path = "object.address")]
+        address: Option<String>,
+    }
+
+    // When intermediate "object" is null, Option<T> should get None
+    let json = serde_json::json!({
+        "object": null
+    });
+    let data = Response::from_value(json).unwrap();
+    assert_eq!(data.address, None);
+}
+
+#[test]
+fn test_null_intermediate_with_required_field() {
+    #[derive(QueryResponse)]
+    struct Response {
+        #[field(path = "object.address")]
+        address: String,
+    }
+
+    // When intermediate "object" is null and field is required, should error
+    let json = serde_json::json!({
+        "object": null
+    });
+    let result = Response::from_value(json);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_null_final_value_with_option() {
+    #[derive(QueryResponse)]
+    struct Response {
+        #[field(path = "object.address")]
+        address: Option<String>,
+    }
+
+    // When final value is null, Option<T> should get None
+    let json = serde_json::json!({
+        "object": {
+            "address": null
+        }
+    });
+    let data = Response::from_value(json).unwrap();
+    assert_eq!(data.address, None);
+}
