@@ -6,6 +6,7 @@ all:: ci ## Default target, runs the CI process
 check-features: ## Check feature flags for crates
 	$(MAKE) -C crates/sui-sdk-types check-features
 	$(MAKE) -C crates/sui-crypto check-features
+	$(MAKE) -C crates/sui-transaction-builder check-features
 
 .PHONY: check-fmt
 check-fmt: ## Check code formatting

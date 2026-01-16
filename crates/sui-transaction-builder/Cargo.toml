@@ -6,12 +6,32 @@ license = "Apache-2.0"
 edition = "2024"
 description = "Transaction API for the Rust SDK for the Sui Blockchain"
 
+[package.metadata.docs.rs]
+# To build locally:
+# RUSTDOCFLAGS="--cfg=doc_cfg -Zunstable-options --generate-link-to-definition" RUSTC_BOOTSTRAP=1 cargo doc --all-features --no-deps --open
+all-features = true
+rustdoc-args = [
+    # Enable doc_cfg showing the required features.
+    "--cfg=doc_cfg",
+
+    # Generate links to definition in rustdoc source code pages
+    # https://github.com/rust-lang/rust/pull/84176
+    "-Zunstable-options", "--generate-link-to-definition"
+]
+
+[features]
+default = ["intents"]
+intents = ["dep:sui-rpc", "dep:async-trait"]
+
 [dependencies]
 bcs = "0.1.6"
 serde = { version = "1.0", features = ["derive"] }
-serde_with = { version = "3.15", default-features = false, features = ["alloc"] }
 sui-sdk-types = { version = "0.2.1", path = "../sui-sdk-types", features = ["serde", "hash"] }
 thiserror = "2.0"
-async-trait = "0.1.89"
 
-sui-rpc = { version = "0.2.1", path = "../sui-rpc" }
+# Required for supporting intents and transaction resolution
+sui-rpc = { version = "0.2.1", path = "../sui-rpc", optional = true }
+async-trait = { version = "0.1.89", optional = true }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(doc_cfg)'] }
