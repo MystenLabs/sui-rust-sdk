@@ -11,6 +11,14 @@ pub enum Error {
     /// HTTP or network error.
     #[error("Request error: {0}")]
     Request(#[from] reqwest::Error),
+
+    /// Base64 decoding error.
+    #[error("Base64 decode error: {0}")]
+    Base64(#[from] base64ct::Error),
+
+    /// BCS deserialization error.
+    #[error("BCS decode error: {0}")]
+    Bcs(#[from] bcs::Error),
 }
 
 // =============================================================================

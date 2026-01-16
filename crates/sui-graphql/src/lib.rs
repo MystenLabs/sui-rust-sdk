@@ -41,8 +41,11 @@
 
 mod client;
 mod error;
+pub mod pagination;
 mod response;
+pub mod scalars;
 
 pub use client::Client;
 pub use error::{Error, GraphQLError, Location, PathFragment};
+pub use pagination::{Page, PageInfo};
 pub use response::Response;
