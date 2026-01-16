@@ -10753,6 +10753,12 @@ mod _field_impls {
             number: 6i32,
             message_fields: None,
         };
+        pub const STORAGE_COST_FIELD: &'static MessageField = &MessageField {
+            name: "storage_cost",
+            json_name: "storageCost",
+            number: 7i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for EndOfEpochTransactionKind {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -10762,6 +10768,7 @@ mod _field_impls {
             Self::EXECUTION_TIME_OBSERVATIONS_FIELD,
             Self::BRIDGE_CHAIN_ID_FIELD,
             Self::BRIDGE_OBJECT_VERSION_FIELD,
+            Self::STORAGE_COST_FIELD,
         ];
     }
     impl EndOfEpochTransactionKind {
@@ -10812,6 +10819,10 @@ mod _field_impls {
         }
         pub fn bridge_object_version(mut self) -> String {
             self.path.push(EndOfEpochTransactionKind::BRIDGE_OBJECT_VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn storage_cost(mut self) -> String {
+            self.path.push(EndOfEpochTransactionKind::STORAGE_COST_FIELD.name);
             self.finish()
         }
     }

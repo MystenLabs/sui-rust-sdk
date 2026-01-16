@@ -501,6 +501,9 @@ message EndOfEpochTransactionKind {
 
     // Create and initialize the Address Alias State object.
     ADDRESS_ALIAS_STATE_CREATE = 12;
+
+    // Write the end-of-epoch-computed storage cost for accumulator objects.
+    WriteAccumulatorStorageCost = 13;
   }
 
   optional Kind kind = 1;
@@ -520,6 +523,9 @@ message EndOfEpochTransactionKind {
 
     // Start version of the Bridge object
     uint64 bridge_object_version = 6;
+
+    // Contains the end-of-epoch-computed storage cost for accumulator objects.
+    uint64 storage_cost = 7;
   }
 }
 

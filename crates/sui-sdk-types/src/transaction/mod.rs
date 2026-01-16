@@ -309,6 +309,9 @@ pub enum EndOfEpochTransactionKind {
 
     /// Create and initialize the address alias state object
     AddressAliasStateCreate,
+
+    /// Contains the end-of-epoch-computed storage cost for accumulator objects.
+    WriteAccumulatorStorageCost { storage_cost: u64 },
 }
 
 /// Set of Execution Time Observations from the committee.

@@ -1208,6 +1208,9 @@ impl From<sui_sdk_types::EndOfEpochTransactionKind> for EndOfEpochTransactionKin
             K::CoinRegistryCreate => message.with_kind(Kind::CoinRegistryCreate),
             K::DisplayRegistryCreate => message.with_kind(Kind::DisplayRegistryCreate),
             K::AddressAliasStateCreate => message.with_kind(Kind::AddressAliasStateCreate),
+            K::WriteAccumulatorStorageCost { storage_cost } => message
+                .with_kind(Kind::WriteAccumulatorStorageCost)
+                .with_storage_cost(storage_cost),
             _ => message,
         }
     }
@@ -1248,6 +1251,11 @@ impl TryFrom<&EndOfEpochTransactionKind> for sui_sdk_types::EndOfEpochTransactio
             Kind::CoinRegistryCreate => Self::CoinRegistryCreate,
             Kind::DisplayRegistryCreate => Self::DisplayRegistryCreate,
             Kind::AddressAliasStateCreate => Self::AddressAliasStateCreate,
+            Kind::WriteAccumulatorStorageCost => Self::WriteAccumulatorStorageCost {
+                storage_cost: value.storage_cost_opt().ok_or_else(|| {
+                    TryFromProtoError::missing(EndOfEpochTransactionKind::STORAGE_COST_FIELD)
+                })?,
+            },
         }
         .pipe(Ok)
     }

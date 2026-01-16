@@ -7551,7 +7551,7 @@ pub struct EndOfEpochTransaction {
 pub struct EndOfEpochTransactionKind {
     #[prost(enumeration = "end_of_epoch_transaction_kind::Kind", optional, tag = "1")]
     pub kind: ::core::option::Option<i32>,
-    #[prost(oneof = "end_of_epoch_transaction_kind::Data", tags = "2, 3, 4, 5, 6")]
+    #[prost(oneof = "end_of_epoch_transaction_kind::Data", tags = "2, 3, 4, 5, 6, 7")]
     pub data: ::core::option::Option<end_of_epoch_transaction_kind::Data>,
 }
 /// Nested message and enum types in `EndOfEpochTransactionKind`.
@@ -7595,6 +7595,8 @@ pub mod end_of_epoch_transaction_kind {
         DisplayRegistryCreate = 11,
         /// Create and initialize the Address Alias State object.
         AddressAliasStateCreate = 12,
+        /// Write the end-of-epoch-computed storage cost for accumulator objects.
+        WriteAccumulatorStorageCost = 13,
     }
     impl Kind {
         /// String value of the enum field names used in the ProtoBuf definition.
@@ -7618,6 +7620,7 @@ pub mod end_of_epoch_transaction_kind {
                 Self::CoinRegistryCreate => "COIN_REGISTRY_CREATE",
                 Self::DisplayRegistryCreate => "DISPLAY_REGISTRY_CREATE",
                 Self::AddressAliasStateCreate => "ADDRESS_ALIAS_STATE_CREATE",
+                Self::WriteAccumulatorStorageCost => "WriteAccumulatorStorageCost",
             }
         }
         /// Creates an enum from field names used in the ProtoBuf definition.
@@ -7638,6 +7641,7 @@ pub mod end_of_epoch_transaction_kind {
                 "COIN_REGISTRY_CREATE" => Some(Self::CoinRegistryCreate),
                 "DISPLAY_REGISTRY_CREATE" => Some(Self::DisplayRegistryCreate),
                 "ADDRESS_ALIAS_STATE_CREATE" => Some(Self::AddressAliasStateCreate),
+                "WriteAccumulatorStorageCost" => Some(Self::WriteAccumulatorStorageCost),
                 _ => None,
             }
         }
@@ -7660,6 +7664,9 @@ pub mod end_of_epoch_transaction_kind {
         /// Start version of the Bridge object
         #[prost(uint64, tag = "6")]
         BridgeObjectVersion(u64),
+        /// Contains the end-of-epoch-computed storage cost for accumulator objects.
+        #[prost(uint64, tag = "7")]
+        StorageCost(u64),
     }
 }
 /// Expire old JWKs.
