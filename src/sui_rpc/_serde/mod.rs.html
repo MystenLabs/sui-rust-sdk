@@ -1,0 +1,149 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/sui-rpc/src/_serde/mod.rs`."><title>mod.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-ca0dd0c4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="sui_rpc" data-themes="" data-resource-suffix="" data-rustdoc-version="1.92.0 (ded5c06cf 2025-12-08)" data-channel="1.92.0" data-search-js="search-d69d8955.js" data-stringdex-js="stringdex-c3e638e9.js" data-settings-js="settings-c38705f0.js" ><script src="../../../static.files/storage-e2aeef58.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-ce535bd0.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">sui_rpc/_serde/</div>mod.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="attr">#![allow(dead_code)]
+<a href=#2 id=2 data-nosnippet>2</a>
+<a href=#3 id=3 data-nosnippet>3</a></span><span class="kw">mod </span><a href="#97"><a href="well_known_types.rs.html#1-936">well_known_types</a>;
+<a href=#4 id=4 data-nosnippet>4</a></a><span class="kw">pub use </span><a href="#97"><a href="#3">well_known_types</a>::</a><span class="kw-2">*</span>;
+<a href=#5 id=5 data-nosnippet>5</a>
+<a href=#6 id=6 data-nosnippet>6</a><span class="doccomment">/// Re-export base64
+<a href=#7 id=7 data-nosnippet>7</a></span><span class="kw">pub use </span><a href="#97">base64;
+<a href=#8 id=8 data-nosnippet>8</a>
+<a href=#9 id=9 data-nosnippet>9</a></a><span class="kw">use </span><a href="#97">base64::Engine;
+<a href=#10 id=10 data-nosnippet>10</a></a><span class="kw">use </span><a href="#97">base64::engine::DecodePaddingMode;
+<a href=#11 id=11 data-nosnippet>11</a></a><span class="kw">use </span><a href="#97">base64::engine::GeneralPurpose;
+<a href=#12 id=12 data-nosnippet>12</a></a><span class="kw">use </span><a href="#97">base64::engine::GeneralPurposeConfig;
+<a href=#13 id=13 data-nosnippet>13</a></a><span class="kw">use </span><a href="#97"><a href="https://docs.rs/serde_derive/1.0.228/serde_derive/derive.Deserialize.html">serde::Deserialize</a>;
+<a href=#14 id=14 data-nosnippet>14</a></a><span class="kw">use </span><a href="#97"><a href="https://docs.rs/serde_core/1.0.228/serde_core/de/trait.Visitor.html">serde::de::Visitor</a>;
+<a href=#15 id=15 data-nosnippet>15</a></a><span class="kw">use </span><a href="#97"><a href="https://doc.rust-lang.org/1.92.0/alloc/borrow/enum.Cow.html">std::borrow::Cow</a>;
+<a href=#16 id=16 data-nosnippet>16</a></a><span class="kw">use </span><a href="#97"><a href="https://doc.rust-lang.org/1.92.0/core/str/traits/trait.FromStr.html">std::str::FromStr</a>;
+<a href=#17 id=17 data-nosnippet>17</a>
+<a href=#18 id=18 data-nosnippet>18</a></a><span class="doccomment">/// Used to parse a number from either a string or its raw representation
+<a href=#19 id=19 data-nosnippet>19</a></span><span class="attr">#[derive(<a href="https://doc.rust-lang.org/1.92.0/core/fmt/macros/macro.Debug.html">Debug</a>, <a href="https://doc.rust-lang.org/1.92.0/core/marker/macro.Copy.html">Copy</a>, <a href="https://doc.rust-lang.org/1.92.0/core/clone/macro.Clone.html">Clone</a>, <a href="https://doc.rust-lang.org/1.92.0/core/cmp/macro.PartialOrd.html">PartialOrd</a>, <a href="https://doc.rust-lang.org/1.92.0/core/cmp/macro.PartialEq.html">PartialEq</a>, <a href="https://doc.rust-lang.org/1.92.0/core/hash/macros/macro.Hash.html">Hash</a>, <a href="https://doc.rust-lang.org/1.92.0/core/cmp/macro.Ord.html">Ord</a>, <a href="https://doc.rust-lang.org/1.92.0/core/cmp/macro.Eq.html">Eq</a>)]
+<a href=#20 id=20 data-nosnippet>20</a></span><span class="kw">pub struct </span><a href="#97">NumberDeserialize&lt;T&gt;(</a><span class="kw">pub </span><a href="#97">T);
+<a href=#21 id=21 data-nosnippet>21</a>
+<a href=#22 id=22 data-nosnippet>22</a></a><span class="attr">#[derive(<a href="https://docs.rs/serde_derive/1.0.228/serde_derive/derive.Deserialize.html">Deserialize</a>)]
+<a href=#23 id=23 data-nosnippet>23</a>#[serde(untagged)]
+<a href=#24 id=24 data-nosnippet>24</a></span><span class="kw">enum </span><a href="#97">Content&lt;</a><span class="lifetime">'a</span><a href="#97">, T&gt; {
+<a href=#25 id=25 data-nosnippet>25</a>    </a><span class="attr">#[serde(borrow)]
+<a href=#26 id=26 data-nosnippet>26</a>    </span><a href="#97">Str(<a href="https://doc.rust-lang.org/1.92.0/alloc/borrow/enum.Cow.html">Cow</a>&lt;</a><span class="lifetime">'a</span><a href="#97">, <a href="https://doc.rust-lang.org/1.92.0/std/primitive.str.html">str</a>&gt;),
+<a href=#27 id=27 data-nosnippet>27</a>    Number(T),
+<a href=#28 id=28 data-nosnippet>28</a>}
+<a href=#29 id=29 data-nosnippet>29</a>
+<a href=#30 id=30 data-nosnippet>30</a></a><span class="kw">impl</span>&lt;<span class="lifetime">'de</span><a href="#97">, T&gt; <a href="https://docs.rs/serde_core/1.0.228/serde_core/de/trait.Deserialize.html">serde::Deserialize</a>&lt;</a><span class="lifetime">'de</span>&gt; <span class="kw">for </span><a href="#97"><a href="#20">NumberDeserialize</a>&lt;T&gt;
+<a href=#31 id=31 data-nosnippet>31</a></a><span class="kw">where
+<a href=#32 id=32 data-nosnippet>32</a>    </span><a href="#97">T: <a href="https://doc.rust-lang.org/1.92.0/core/str/traits/trait.FromStr.html">FromStr</a> + <a href="https://docs.rs/serde_core/1.0.228/serde_core/de/trait.Deserialize.html">serde::Deserialize</a>&lt;</a><span class="lifetime">'de</span><a href="#97">&gt;,
+<a href=#33 id=33 data-nosnippet>33</a>    &lt;T </a><span class="kw">as </span><a href="#97">FromStr&gt;::<a href="https://doc.rust-lang.org/1.92.0/core/str/traits/trait.FromStr.html#associatedtype.Err">Err</a>: <a href="https://doc.rust-lang.org/1.92.0/core/error/trait.Error.html">std::error::Error</a>,
+<a href=#34 id=34 data-nosnippet>34</a>{
+<a href=#35 id=35 data-nosnippet>35</a>    </a><span class="kw">fn </span><a href="#97">deserialize&lt;D&gt;(deserializer: D) -&gt; </a><a class="prelude-ty" href="https://doc.rust-lang.org/1.92.0/core/result/enum.Result.html">Result</a>&lt;<span class="self">Self</span><a href="#97">, D::Error&gt;
+<a href=#36 id=36 data-nosnippet>36</a>    </a><span class="kw">where
+<a href=#37 id=37 data-nosnippet>37</a>        </span><a href="#97">D: <a href="https://docs.rs/serde_core/1.0.228/serde_core/de/trait.Deserializer.html">serde::Deserializer</a>&lt;</a><span class="lifetime">'de</span>&gt;,
+<a href=#38 id=38 data-nosnippet>38</a>    {
+<a href=#39 id=39 data-nosnippet>39</a>        <span class="kw">let </span><a href="#97">content = <a href="#24-28">Content</a>::<a href="https://docs.rs/serde_core/1.0.228/serde_core/de/trait.Deserialize.html#tymethod.deserialize">deserialize</a>(<a href="#35">deserializer</a>)</a><span class="question-mark">?</span>;
+<a href=#40 id=40 data-nosnippet>40</a>        <a class="prelude-val" href="https://doc.rust-lang.org/1.92.0/core/result/enum.Result.html#variant.Ok">Ok</a>(<span class="self">Self</span>(<span class="kw">match </span><a href="#97"><a href="#39">content</a> {
+<a href=#41 id=41 data-nosnippet>41</a>            Content::<a href="#26">Str</a>(v) =&gt; <a href="#41">v</a>.<a href="https://doc.rust-lang.org/1.92.0/core/foreigntype.str.html#method.parse">parse</a>().<a href="https://doc.rust-lang.org/1.92.0/core/result/enum.Result.html#method.map_err">map_err</a>(serde::de::Error::<a href="https://docs.rs/serde_core/1.0.228/serde_core/de/trait.Error.html#tymethod.custom">custom</a>)</a><span class="question-mark">?</span><a href="#97">,
+<a href=#42 id=42 data-nosnippet>42</a>            Content::<a href="#27">Number</a>(v) =&gt; <a href="#42">v</a>,
+<a href=#43 id=43 data-nosnippet>43</a>        }))
+<a href=#44 id=44 data-nosnippet>44</a>    }
+<a href=#45 id=45 data-nosnippet>45</a>}
+<a href=#46 id=46 data-nosnippet>46</a>
+<a href=#47 id=47 data-nosnippet>47</a></a><span class="kw">struct </span><a href="#97">Base64Visitor;
+<a href=#48 id=48 data-nosnippet>48</a>
+<a href=#49 id=49 data-nosnippet>49</a></a><span class="kw">impl</span>&lt;<span class="lifetime">'de</span><a href="#97">&gt; <a href="https://docs.rs/serde_core/1.0.228/serde_core/de/trait.Visitor.html">Visitor</a>&lt;</a><span class="lifetime">'de</span>&gt; <span class="kw">for </span><a href="#97"><a href="#47">Base64Visitor</a> {
+<a href=#50 id=50 data-nosnippet>50</a>    </a><span class="kw">type </span><a href="#97">Value = <a href="https://doc.rust-lang.org/1.92.0/alloc/vec/struct.Vec.html">Vec</a>&lt;<a href="https://doc.rust-lang.org/1.92.0/std/primitive.u8.html">u8</a>&gt;;
+<a href=#51 id=51 data-nosnippet>51</a>
+<a href=#52 id=52 data-nosnippet>52</a>    </a><span class="kw">fn </span><a href="#97">expecting(</a><span class="kw-2">&amp;</span><span class="self">self</span><a href="#97">, formatter: </a><span class="kw-2">&amp;mut </span><a href="#97">std::fmt::<a href="https://doc.rust-lang.org/1.92.0/core/fmt/struct.Formatter.html">Formatter</a>&lt;</a><span class="lifetime">'_</span><a href="#97">&gt;) -&gt; std::fmt::<a href="https://doc.rust-lang.org/1.92.0/core/fmt/type.Result.html">Result</a> {
+<a href=#53 id=53 data-nosnippet>53</a>        <a href="#52">formatter</a>.<a href="https://doc.rust-lang.org/1.92.0/core/fmt/struct.Formatter.html#method.write_str">write_str</a>(</a><span class="string">"a base64 string"</span>)
+<a href=#54 id=54 data-nosnippet>54</a>    }
+<a href=#55 id=55 data-nosnippet>55</a>
+<a href=#56 id=56 data-nosnippet>56</a>    <span class="kw">fn </span><a href="#97">visit_str&lt;E&gt;(</a><span class="self">self</span><a href="#97">, s: </a><span class="kw-2">&amp;</span><a href="#97"><a href="https://doc.rust-lang.org/1.92.0/std/primitive.str.html">str</a>) -&gt; </a><a class="prelude-ty" href="https://doc.rust-lang.org/1.92.0/core/result/enum.Result.html">Result</a><a href="#97">&lt;<span class="self">Self</span>::Value, E&gt;
+<a href=#57 id=57 data-nosnippet>57</a>    </a><span class="kw">where
+<a href=#58 id=58 data-nosnippet>58</a>        </span><a href="#97">E: <a href="https://docs.rs/serde_core/1.0.228/serde_core/de/trait.Error.html">serde::de::Error</a>,
+<a href=#59 id=59 data-nosnippet>59</a>    {
+<a href=#60 id=60 data-nosnippet>60</a>        </a><span class="kw">const </span><a href="#97">INDIFFERENT_PAD: GeneralPurposeConfig =
+<a href=#61 id=61 data-nosnippet>61</a>            GeneralPurposeConfig::new().with_decode_padding_mode(DecodePaddingMode::Indifferent);
+<a href=#62 id=62 data-nosnippet>62</a>        </a><span class="kw">const </span><a href="#97">STANDARD_INDIFFERENT_PAD: GeneralPurpose =
+<a href=#63 id=63 data-nosnippet>63</a>            GeneralPurpose::new(</a><span class="kw-2">&amp;</span><a href="#97">base64::alphabet::STANDARD, <a href="#60-61">INDIFFERENT_PAD</a>);
+<a href=#64 id=64 data-nosnippet>64</a>        </a><span class="kw">const </span><a href="#97">URL_SAFE_INDIFFERENT_PAD: GeneralPurpose =
+<a href=#65 id=65 data-nosnippet>65</a>            GeneralPurpose::new(</a><span class="kw-2">&amp;</span><a href="#97">base64::alphabet::URL_SAFE, <a href="#60-61">INDIFFERENT_PAD</a>);
+<a href=#66 id=66 data-nosnippet>66</a>
+<a href=#67 id=67 data-nosnippet>67</a>        </a><span class="kw">let </span><a href="#97">decoded = <a href="#62-63">STANDARD_INDIFFERENT_PAD</a>
+<a href=#68 id=68 data-nosnippet>68</a>            .decode(<a href="#56">s</a>)
+<a href=#69 id=69 data-nosnippet>69</a>            .<a href="https://doc.rust-lang.org/1.92.0/core/result/enum.Result.html#method.or_else">or_else</a>(|e| </a><span class="kw">match </span><a href="#97"><a href="#69">e</a> {
+<a href=#70 id=70 data-nosnippet>70</a>                </a><span class="comment">// Either standard or URL-safe base64 encoding are accepted
+<a href=#71 id=71 data-nosnippet>71</a>                //
+<a href=#72 id=72 data-nosnippet>72</a>                // The difference being URL-safe uses `-` and `_` instead of `+` and `/`
+<a href=#73 id=73 data-nosnippet>73</a>                //
+<a href=#74 id=74 data-nosnippet>74</a>                // Therefore if we error out on those characters, try again with
+<a href=#75 id=75 data-nosnippet>75</a>                // the URL-safe character set
+<a href=#76 id=76 data-nosnippet>76</a>                </span><a href="#97">base64::DecodeError::InvalidByte(</a><span class="kw">_</span><a href="#97">, c) </a><span class="kw">if </span><a href="#97"><a href="#76">c</a> == </a><span class="string">b'-' </span><a href="#97">|| <a href="#76">c</a> == </a><span class="string">b'_' </span><a href="#97">=&gt; {
+<a href=#77 id=77 data-nosnippet>77</a>                    <a href="#64-65">URL_SAFE_INDIFFERENT_PAD</a>.decode(<a href="#56">s</a>)
+<a href=#78 id=78 data-nosnippet>78</a>                }
+<a href=#79 id=79 data-nosnippet>79</a>                </a><span class="kw">_ </span>=&gt; <a class="prelude-val" href="https://doc.rust-lang.org/1.92.0/core/result/enum.Result.html#variant.Err">Err</a><a href="#97">(<a href="#69">e</a>),
+<a href=#80 id=80 data-nosnippet>80</a>            })
+<a href=#81 id=81 data-nosnippet>81</a>            .<a href="https://doc.rust-lang.org/1.92.0/core/result/enum.Result.html#method.map_err">map_err</a>(serde::de::Error::<a href="https://docs.rs/serde_core/1.0.228/serde_core/de/trait.Error.html#tymethod.custom">custom</a>)</a><span class="question-mark">?</span>;
+<a href=#82 id=82 data-nosnippet>82</a>        <a class="prelude-val" href="https://doc.rust-lang.org/1.92.0/core/result/enum.Result.html#variant.Ok">Ok</a><a href="#97">(<a href="#67">decoded</a>)
+<a href=#83 id=83 data-nosnippet>83</a>    }
+<a href=#84 id=84 data-nosnippet>84</a>}
+<a href=#85 id=85 data-nosnippet>85</a>
+<a href=#86 id=86 data-nosnippet>86</a></a><span class="attr">#[derive(<a href="https://doc.rust-lang.org/1.92.0/core/fmt/macros/macro.Debug.html">Debug</a>, <a href="https://doc.rust-lang.org/1.92.0/core/marker/macro.Copy.html">Copy</a>, <a href="https://doc.rust-lang.org/1.92.0/core/clone/macro.Clone.html">Clone</a>, <a href="https://doc.rust-lang.org/1.92.0/core/cmp/macro.PartialOrd.html">PartialOrd</a>, <a href="https://doc.rust-lang.org/1.92.0/core/cmp/macro.PartialEq.html">PartialEq</a>, <a href="https://doc.rust-lang.org/1.92.0/core/hash/macros/macro.Hash.html">Hash</a>, <a href="https://doc.rust-lang.org/1.92.0/core/cmp/macro.Ord.html">Ord</a>, <a href="https://doc.rust-lang.org/1.92.0/core/cmp/macro.Eq.html">Eq</a>)]
+<a href=#87 id=87 data-nosnippet>87</a></span><span class="kw">pub struct </span><a href="#97">BytesDeserialize&lt;T&gt;(</a><span class="kw">pub </span><a href="#97">T);
+<a href=#88 id=88 data-nosnippet>88</a>
+<a href=#89 id=89 data-nosnippet>89</a></a><span class="kw">impl</span>&lt;<span class="lifetime">'de</span><a href="#97">, T&gt; <a href="https://docs.rs/serde_core/1.0.228/serde_core/de/trait.Deserialize.html">Deserialize</a>&lt;</a><span class="lifetime">'de</span>&gt; <span class="kw">for </span><a href="#97"><a href="#87">BytesDeserialize</a>&lt;T&gt;
+<a href=#90 id=90 data-nosnippet>90</a></a><span class="kw">where
+<a href=#91 id=91 data-nosnippet>91</a>    </span><a href="#97">T: <a href="https://doc.rust-lang.org/1.92.0/core/convert/trait.From.html">From</a>&lt;<a href="https://doc.rust-lang.org/1.92.0/alloc/vec/struct.Vec.html">Vec</a>&lt;<a href="https://doc.rust-lang.org/1.92.0/std/primitive.u8.html">u8</a>&gt;&gt;,
+<a href=#92 id=92 data-nosnippet>92</a>{
+<a href=#93 id=93 data-nosnippet>93</a>    </a><span class="kw">fn </span><a href="#97">deserialize&lt;D&gt;(deserializer: D) -&gt; </a><a class="prelude-ty" href="https://doc.rust-lang.org/1.92.0/core/result/enum.Result.html">Result</a>&lt;<span class="self">Self</span><a href="#97">, D::Error&gt;
+<a href=#94 id=94 data-nosnippet>94</a>    </a><span class="kw">where
+<a href=#95 id=95 data-nosnippet>95</a>        </span><a href="#97">D: <a href="https://docs.rs/serde_core/1.0.228/serde_core/de/trait.Deserializer.html">serde::Deserializer</a>&lt;</a><span class="lifetime">'de</span>&gt;,
+<a href=#96 id=96 data-nosnippet>96</a>    {
+<a href=#97 id=97 data-nosnippet>97</a>        <a class="prelude-val" href="https://doc.rust-lang.org/1.92.0/core/result/enum.Result.html#variant.Ok">Ok</a>(<span class="self">Self</span><a href="#97">(<a href="#93">deserializer</a>.<a href="https://docs.rs/serde_core/1.0.228/serde_core/de/trait.Deserializer.html#tymethod.deserialize_str">deserialize_str</a>(<a href="#47">Base64Visitor</a>)</a><span class="question-mark">?</span><a href="#97">.<a href="https://doc.rust-lang.org/1.92.0/core/convert/trait.Into.html#tymethod.into">into</a>()))
+<a href=#98 id=98 data-nosnippet>98</a>    }
+<a href=#99 id=99 data-nosnippet>99</a>}
+<a href=#100 id=100 data-nosnippet>100</a>
+<a href=#101 id=101 data-nosnippet>101</a></a><span class="attr">#[cfg(test)]
+<a href=#102 id=102 data-nosnippet>102</a></span><span class="kw">mod </span><a href="#97">tests {
+<a href=#103 id=103 data-nosnippet>103</a>    </a><span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#104 id=104 data-nosnippet>104</a>    <span class="kw">use </span><a href="#97">base64::Engine;
+<a href=#105 id=105 data-nosnippet>105</a>    </a><span class="kw">use </span><a href="#97">bytes::Bytes;
+<a href=#106 id=106 data-nosnippet>106</a>    </a><span class="kw">use </span><a href="#97">rand::prelude::</a><span class="kw-2">*</span>;
+<a href=#107 id=107 data-nosnippet>107</a>    <span class="kw">use </span><a href="#97">serde::de::value::BorrowedStrDeserializer;
+<a href=#108 id=108 data-nosnippet>108</a>    </a><span class="kw">use </span><a href="#97">serde::de::value::Error;
+<a href=#109 id=109 data-nosnippet>109</a>
+<a href=#110 id=110 data-nosnippet>110</a>    </a><span class="attr">#[test]
+<a href=#111 id=111 data-nosnippet>111</a>    </span><span class="kw">fn </span><a href="#97">test_bytes() {
+<a href=#112 id=112 data-nosnippet>112</a>        </a><span class="kw">for _ in </span><span class="number">0</span>..<span class="number">20 </span>{
+<a href=#113 id=113 data-nosnippet>113</a>            <span class="kw">let </span><span class="kw-2">mut </span><a href="#97">rng = thread_rng();
+<a href=#114 id=114 data-nosnippet>114</a>            </a><span class="kw">let </span><a href="#97">len = rng.gen_range(</a><span class="number">50</span>..<span class="number">100</span>);
+<a href=#115 id=115 data-nosnippet>115</a>            <span class="kw">let </span><a href="#97">raw: Vec&lt;</a><span class="kw">_</span><a href="#97">&gt; = std::iter::from_fn(|| </a><span class="prelude-val">Some</span><a href="#97">(rng.r#gen())).take(len).collect();
+<a href=#116 id=116 data-nosnippet>116</a>
+<a href=#117 id=117 data-nosnippet>117</a>            </a><span class="kw">for </span><a href="#97">config </a><span class="kw">in </span><a href="#97">[
+<a href=#118 id=118 data-nosnippet>118</a>                base64::engine::general_purpose::STANDARD,
+<a href=#119 id=119 data-nosnippet>119</a>                base64::engine::general_purpose::STANDARD_NO_PAD,
+<a href=#120 id=120 data-nosnippet>120</a>                base64::engine::general_purpose::URL_SAFE,
+<a href=#121 id=121 data-nosnippet>121</a>                base64::engine::general_purpose::URL_SAFE_NO_PAD,
+<a href=#122 id=122 data-nosnippet>122</a>            ] {
+<a href=#123 id=123 data-nosnippet>123</a>                </a><span class="kw">let </span><a href="#97">encoded = config.encode(</a><span class="kw-2">&amp;</span><a href="#97">raw);
+<a href=#124 id=124 data-nosnippet>124</a>
+<a href=#125 id=125 data-nosnippet>125</a>                </a><span class="kw">let </span><a href="#97">deserializer = BorrowedStrDeserializer::&lt;</a><span class="lifetime">'_</span><a href="#97">, Error&gt;::new(</a><span class="kw-2">&amp;</span><a href="#97">encoded);
+<a href=#126 id=126 data-nosnippet>126</a>                </a><span class="kw">let </span><a href="#97">a: Bytes = BytesDeserialize::deserialize(deserializer).unwrap().</a><span class="number">0</span>;
+<a href=#127 id=127 data-nosnippet>127</a>                <span class="kw">let </span><a href="#97">b: Vec&lt;u8&gt; = BytesDeserialize::deserialize(deserializer).unwrap().</a><span class="number">0</span>;
+<a href=#128 id=128 data-nosnippet>128</a>
+<a href=#129 id=129 data-nosnippet>129</a>                <span class="macro">assert_eq!</span><a href="#97">(raw.as_slice(), </a><span class="kw-2">&amp;</span><a href="#97">a);
+<a href=#130 id=130 data-nosnippet>130</a>                </a><span class="macro">assert_eq!</span><a href="#97">(raw.as_slice(), </a><span class="kw-2">&amp;</span><a href="#97">b);
+<a href=#131 id=131 data-nosnippet>131</a>            }
+<a href=#132 id=132 data-nosnippet>132</a>        }
+<a href=#133 id=133 data-nosnippet>133</a>    }
+<a href=#134 id=134 data-nosnippet>134</a>
+<a href=#135 id=135 data-nosnippet>135</a>    </a><span class="attr">#[test]
+<a href=#136 id=136 data-nosnippet>136</a>    </span><span class="kw">fn </span><a href="#97">value() {
+<a href=#137 id=137 data-nosnippet>137</a>        </a><span class="kw">let </span><a href="#97">v = </a><span class="macro">serde_json::json!</span>({
+<a href=#138 id=138 data-nosnippet>138</a>            <span class="string">"foo"</span>: <span class="number">4</span>,
+<a href=#139 id=139 data-nosnippet>139</a>            <span class="string">"bar"</span>: <span class="string">"abc"</span>,
+<a href=#140 id=140 data-nosnippet>140</a>            <span class="string">"baz"</span>: [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>],
+<a href=#141 id=141 data-nosnippet>141</a>            <span class="string">"foobar"</span><a href="#97">: null,
+<a href=#142 id=142 data-nosnippet>142</a>        });
+<a href=#143 id=143 data-nosnippet>143</a>        </a><span class="kw">let </span><a href="#97">proto: ValueDeserializer = serde_json::from_value(v).unwrap();
+<a href=#144 id=144 data-nosnippet>144</a>        </a><span class="macro">println!</span>(
+<a href=#145 id=145 data-nosnippet>145</a>            <span class="string">"{}"</span><a href="#97">,
+<a href=#146 id=146 data-nosnippet>146</a>            serde_json::to_string_pretty(</a><span class="kw-2">&amp;</span><a href="#97">ValueSerializer(</a><span class="kw-2">&amp;</span><a href="#97">proto.</a><span class="number">0</span><a href="#97">)).unwrap()
+<a href=#147 id=147 data-nosnippet>147</a>        );
+<a href=#148 id=148 data-nosnippet>148</a>    }
+<a href=#149 id=149 data-nosnippet>149</a>}</a></code></pre></div></section></main></body></html>
