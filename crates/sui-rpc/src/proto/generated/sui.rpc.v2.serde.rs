@@ -7139,7 +7139,7 @@ impl serde::Serialize for end_of_epoch_transaction_kind::Kind {
             Self::CoinRegistryCreate => "COIN_REGISTRY_CREATE",
             Self::DisplayRegistryCreate => "DISPLAY_REGISTRY_CREATE",
             Self::AddressAliasStateCreate => "ADDRESS_ALIAS_STATE_CREATE",
-            Self::WriteAccumulatorStorageCost => "WriteAccumulatorStorageCost",
+            Self::WriteAccumulatorStorageCost => "WRITE_ACCUMULATOR_STORAGE_COST",
         };
         serializer.serialize_str(variant)
     }
@@ -7164,7 +7164,7 @@ impl<'de> serde::Deserialize<'de> for end_of_epoch_transaction_kind::Kind {
             "COIN_REGISTRY_CREATE",
             "DISPLAY_REGISTRY_CREATE",
             "ADDRESS_ALIAS_STATE_CREATE",
-            "WriteAccumulatorStorageCost",
+            "WRITE_ACCUMULATOR_STORAGE_COST",
         ];
 
         struct GeneratedVisitor;
@@ -7218,7 +7218,7 @@ impl<'de> serde::Deserialize<'de> for end_of_epoch_transaction_kind::Kind {
                     "COIN_REGISTRY_CREATE" => Ok(end_of_epoch_transaction_kind::Kind::CoinRegistryCreate),
                     "DISPLAY_REGISTRY_CREATE" => Ok(end_of_epoch_transaction_kind::Kind::DisplayRegistryCreate),
                     "ADDRESS_ALIAS_STATE_CREATE" => Ok(end_of_epoch_transaction_kind::Kind::AddressAliasStateCreate),
-                    "WriteAccumulatorStorageCost" => Ok(end_of_epoch_transaction_kind::Kind::WriteAccumulatorStorageCost),
+                    "WRITE_ACCUMULATOR_STORAGE_COST" => Ok(end_of_epoch_transaction_kind::Kind::WriteAccumulatorStorageCost),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }

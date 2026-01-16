@@ -7620,7 +7620,7 @@ pub mod end_of_epoch_transaction_kind {
                 Self::CoinRegistryCreate => "COIN_REGISTRY_CREATE",
                 Self::DisplayRegistryCreate => "DISPLAY_REGISTRY_CREATE",
                 Self::AddressAliasStateCreate => "ADDRESS_ALIAS_STATE_CREATE",
-                Self::WriteAccumulatorStorageCost => "WriteAccumulatorStorageCost",
+                Self::WriteAccumulatorStorageCost => "WRITE_ACCUMULATOR_STORAGE_COST",
             }
         }
         /// Creates an enum from field names used in the ProtoBuf definition.
@@ -7641,7 +7641,9 @@ pub mod end_of_epoch_transaction_kind {
                 "COIN_REGISTRY_CREATE" => Some(Self::CoinRegistryCreate),
                 "DISPLAY_REGISTRY_CREATE" => Some(Self::DisplayRegistryCreate),
                 "ADDRESS_ALIAS_STATE_CREATE" => Some(Self::AddressAliasStateCreate),
-                "WriteAccumulatorStorageCost" => Some(Self::WriteAccumulatorStorageCost),
+                "WRITE_ACCUMULATOR_STORAGE_COST" => {
+                    Some(Self::WriteAccumulatorStorageCost)
+                }
                 _ => None,
             }
         }

@@ -503,7 +503,7 @@ message EndOfEpochTransactionKind {
     ADDRESS_ALIAS_STATE_CREATE = 12;
 
     // Write the end-of-epoch-computed storage cost for accumulator objects.
-    WriteAccumulatorStorageCost = 13;
+    WRITE_ACCUMULATOR_STORAGE_COST = 13;
   }
 
   optional Kind kind = 1;
