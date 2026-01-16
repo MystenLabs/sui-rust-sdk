@@ -11,6 +11,10 @@ pub enum Error {
     /// HTTP or network error.
     #[error("Request error: {0}")]
     Request(#[from] reqwest::Error),
+
+    /// Invalid URL.
+    #[error("Invalid URL: {0}")]
+    InvalidUrl(#[from] url::ParseError),
 }
 
 // =============================================================================
