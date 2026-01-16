@@ -7109,6 +7109,8 @@ pub mod transaction_kind {
         ConsensusCommitPrologueV3 = 9,
         /// V4 consensus commit update.
         ConsensusCommitPrologueV4 = 10,
+        /// A system transaction comprised of a list of native commands and Move calls.
+        ProgrammableSystemTransaction = 11,
     }
     impl Kind {
         /// String value of the enum field names used in the ProtoBuf definition.
@@ -7128,6 +7130,7 @@ pub mod transaction_kind {
                 Self::ConsensusCommitPrologueV2 => "CONSENSUS_COMMIT_PROLOGUE_V2",
                 Self::ConsensusCommitPrologueV3 => "CONSENSUS_COMMIT_PROLOGUE_V3",
                 Self::ConsensusCommitPrologueV4 => "CONSENSUS_COMMIT_PROLOGUE_V4",
+                Self::ProgrammableSystemTransaction => "PROGRAMMABLE_SYSTEM_TRANSACTION",
             }
         }
         /// Creates an enum from field names used in the ProtoBuf definition.
@@ -7144,6 +7147,9 @@ pub mod transaction_kind {
                 "CONSENSUS_COMMIT_PROLOGUE_V2" => Some(Self::ConsensusCommitPrologueV2),
                 "CONSENSUS_COMMIT_PROLOGUE_V3" => Some(Self::ConsensusCommitPrologueV3),
                 "CONSENSUS_COMMIT_PROLOGUE_V4" => Some(Self::ConsensusCommitPrologueV4),
+                "PROGRAMMABLE_SYSTEM_TRANSACTION" => {
+                    Some(Self::ProgrammableSystemTransaction)
+                }
                 _ => None,
             }
         }

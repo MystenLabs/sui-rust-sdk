@@ -144,7 +144,7 @@ message TransactionKind {
     CONSENSUS_COMMIT_PROLOGUE_V4 = 10;
 
     // A system transaction comprised of a list of native commands and Move calls.
-    // PROGRAMMABLE_SYSTEM_TRANSACTION = 11;
+    PROGRAMMABLE_SYSTEM_TRANSACTION = 11;
   }
 
   optional Kind kind = 1;

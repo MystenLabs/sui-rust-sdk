@@ -236,8 +236,9 @@ pub enum TransactionKind {
 
     /// V4 consensus commit update
     ConsensusCommitPrologueV4(ConsensusCommitPrologueV4),
-    // /// A system transaction comprised of a list of native commands and move calls
-    // ProgrammableSystemTransaction(ProgrammableTransaction),
+
+    /// A system transaction comprised of a list of native commands and move calls
+    ProgrammableSystemTransaction(ProgrammableTransaction),
 }
 
 /// Operation run at the end of an epoch

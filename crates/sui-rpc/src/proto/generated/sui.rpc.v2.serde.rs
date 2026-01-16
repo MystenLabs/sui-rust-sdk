@@ -23315,6 +23315,7 @@ impl serde::Serialize for transaction_kind::Kind {
             Self::ConsensusCommitPrologueV2 => "CONSENSUS_COMMIT_PROLOGUE_V2",
             Self::ConsensusCommitPrologueV3 => "CONSENSUS_COMMIT_PROLOGUE_V3",
             Self::ConsensusCommitPrologueV4 => "CONSENSUS_COMMIT_PROLOGUE_V4",
+            Self::ProgrammableSystemTransaction => "PROGRAMMABLE_SYSTEM_TRANSACTION",
         };
         serializer.serialize_str(variant)
     }
@@ -23337,6 +23338,7 @@ impl<'de> serde::Deserialize<'de> for transaction_kind::Kind {
             "CONSENSUS_COMMIT_PROLOGUE_V2",
             "CONSENSUS_COMMIT_PROLOGUE_V3",
             "CONSENSUS_COMMIT_PROLOGUE_V4",
+            "PROGRAMMABLE_SYSTEM_TRANSACTION",
         ];
 
         struct GeneratedVisitor;
@@ -23388,6 +23390,7 @@ impl<'de> serde::Deserialize<'de> for transaction_kind::Kind {
                     "CONSENSUS_COMMIT_PROLOGUE_V2" => Ok(transaction_kind::Kind::ConsensusCommitPrologueV2),
                     "CONSENSUS_COMMIT_PROLOGUE_V3" => Ok(transaction_kind::Kind::ConsensusCommitPrologueV3),
                     "CONSENSUS_COMMIT_PROLOGUE_V4" => Ok(transaction_kind::Kind::ConsensusCommitPrologueV4),
+                    "PROGRAMMABLE_SYSTEM_TRANSACTION" => Ok(transaction_kind::Kind::ProgrammableSystemTransaction),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }
