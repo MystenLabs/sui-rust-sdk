@@ -12,6 +12,10 @@ use crate::schema::Schema;
 /// - Validates that `objects` is a list type
 /// - Validates fields after `[]` against the list element type
 ///
+/// For aliased paths like `"epoch.checkpoints@firstCheckpoints.nodes[]"`:
+/// - Strips the alias (after `@`) and validates using the real field name
+/// - The alias is only used for JSON extraction, not schema validation
+///
 /// Returns the GraphQL type name of the final field.
 pub fn validate_path(
     schema: &Schema,
@@ -27,13 +31,26 @@ pub fn validate_path(
     let mut current_type = "Query".to_string();
 
     for (i, segment) in segments.iter().enumerate() {
-        // Handle array iteration: "field[]"
-        if let Some(field_name) = segment.strip_suffix("[]") {
-            // Look up the field
-            let field = schema.get_field(&current_type, field_name).ok_or_else(|| {
-                field_not_found_error(schema, &current_type, field_name, path, span)
-            })?;
+        // Handle array iteration: "field[]" or "field@alias[]"
+        let (segment, is_array) = if let Some(stripped) = segment.strip_suffix("[]") {
+            (stripped, true)
+        } else {
+            (*segment, false)
+        };
 
+        // Strip alias if present: "field@alias" -> "field"
+        let field_name = if let Some(at_pos) = segment.find('@') {
+            &segment[..at_pos]
+        } else {
+            segment
+        };
+
+        // Look up the field
+        let field = schema.get_field(&current_type, field_name).ok_or_else(|| {
+            field_not_found_error(schema, &current_type, field_name, path, span)
+        })?;
+
+        if is_array {
             // Verify it's a list type
             if !field.is_list {
                 return Err(syn::Error::new_spanned(
@@ -44,22 +61,14 @@ pub fn validate_path(
                     ),
                 ));
             }
-
-            // Continue with the element type
-            current_type = field.type_name.clone();
-        } else {
-            // Regular field access
-            let field = schema.get_field(&current_type, segment).ok_or_else(|| {
-                field_not_found_error(schema, &current_type, segment, path, span)
-            })?;
-
-            // If this is the last segment, return the type
-            if i == segments.len() - 1 {
-                return Ok(field.type_name.clone());
-            }
-
-            current_type = field.type_name.clone();
         }
+
+        // If this is the last segment, return the type
+        if i == segments.len() - 1 {
+            return Ok(field.type_name.clone());
+        }
+
+        current_type = field.type_name.clone();
     }
 
     // Should not reach here since we return in the loop for the last segment
