@@ -1,5 +1,6 @@
 //! GraphQL client for Sui blockchain.
 
+pub(crate) mod chain;
 pub(crate) mod coins;
 pub(crate) mod objects;
 
