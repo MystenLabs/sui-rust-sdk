@@ -298,9 +298,9 @@ impl From<sui_sdk_types::TransactionKind> for TransactionKind {
             K::ProgrammableTransaction(ptb) => message
                 .with_programmable_transaction(ptb)
                 .with_kind(Kind::ProgrammableTransaction),
-            // K::ProgrammableSystemTransaction(ptb) => message
-            //     .with_programmable_transaction(ptb)
-            //     .with_kind(Kind::ProgrammableSystemTransaction),
+            K::ProgrammableSystemTransaction(ptb) => message
+                .with_programmable_transaction(ptb)
+                .with_kind(Kind::ProgrammableSystemTransaction),
             K::ChangeEpoch(change_epoch) => message
                 .with_change_epoch(change_epoch)
                 .with_kind(Kind::ChangeEpoch),
@@ -376,6 +376,9 @@ impl TryFrom<&TransactionKind> for sui_sdk_types::TransactionKind {
             }
             Kind::ConsensusCommitPrologueV4 => {
                 Self::ConsensusCommitPrologueV4(value.consensus_commit_prologue().try_into()?)
+            }
+            Kind::ProgrammableSystemTransaction => {
+                Self::ProgrammableSystemTransaction(value.programmable_transaction().try_into()?)
             }
         }
         .pipe(Ok)
