@@ -1,7 +1,4 @@
 use crate::error::Error;
-use crate::intent::Intent;
-use crate::intent::IntentResolver;
-use std::any::TypeId;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
@@ -31,7 +28,8 @@ pub struct TransactionBuilder {
     expiration: Option<TransactionExpiration>,
 
     // Resolvers
-    pub(crate) resolvers: BTreeMap<TypeId, Box<dyn IntentResolver>>,
+    #[cfg(feature = "intents")]
+    pub(crate) resolvers: BTreeMap<std::any::TypeId, Box<dyn crate::intent::IntentResolver>>,
 
     pub(crate) arguments: BTreeMap<usize, ResolvedArgument>,
     inputs: HashMap<InputArgKind, (usize, InputArg)>,
@@ -42,6 +40,7 @@ pub struct TransactionBuilder {
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum ResolvedArgument {
     Unresolved,
+    #[allow(unused)]
     ReplaceWith(Argument),
     Resolved(sui_sdk_types::Argument),
 }
@@ -305,8 +304,10 @@ impl TransactionBuilder {
 
     // Register a transaction intent which may be resolved later to either an input or a sequence
     // of commands.
+    #[cfg(feature = "intents")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "intents")))]
     #[allow(private_bounds)]
-    pub fn intent<I: Intent>(&mut self, intent: I) -> Argument {
+    pub fn intent<I: crate::intent::Intent>(&mut self, intent: I) -> Argument {
         intent.register(self)
     }
 
@@ -399,6 +400,8 @@ impl TransactionBuilder {
         })
     }
 
+    #[cfg(feature = "intents")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "intents")))]
     pub async fn build(mut self, client: &mut sui_rpc::Client) -> Result<Transaction, Error> {
         use sui_rpc::field::FieldMask;
         use sui_rpc::field::FieldMaskUtil;
@@ -568,11 +571,13 @@ impl TransactionBuilder {
             .map_err(|e| Error::Input(e.to_string()))
     }
 
-    pub(crate) fn register_resolver<R: IntentResolver>(&mut self, resolver: R) {
+    #[cfg(feature = "intents")]
+    pub(crate) fn register_resolver<R: crate::intent::IntentResolver>(&mut self, resolver: R) {
         self.resolvers
             .insert(resolver.type_id(), Box::new(resolver));
     }
 
+    #[cfg(feature = "intents")]
     pub(crate) fn unresolved<T: std::any::Any + Send + Sync>(&mut self, unresolved: T) -> Argument {
         let id = self.arguments.len();
         self.arguments.insert(id, ResolvedArgument::Unresolved);
@@ -580,6 +585,7 @@ impl TransactionBuilder {
         Argument::new(id)
     }
 
+    #[cfg(feature = "intents")]
     pub(crate) fn sender(&self) -> Option<Address> {
         self.sender
     }
@@ -1097,6 +1103,7 @@ impl ObjectInput {
         Ok(input)
     }
 
+    #[cfg(feature = "intents")]
     fn to_input_proto(&self) -> sui_rpc::proto::sui::rpc::v2::Input {
         use sui_rpc::proto::sui::rpc::v2::input::InputKind;
 
@@ -1124,6 +1131,7 @@ impl ObjectInput {
         input
     }
 
+    #[cfg(feature = "intents")]
     fn try_into_object_reference_proto(
         &self,
     ) -> Result<sui_rpc::proto::sui::rpc::v2::ObjectReference, Error> {
@@ -1142,6 +1150,7 @@ impl ObjectInput {
         Ok(input)
     }
 
+    #[cfg(feature = "intents")]
     pub(crate) fn try_from_object_proto(
         object: &sui_rpc::proto::sui::rpc::v2::Object,
     ) -> Result<Self, Error> {
