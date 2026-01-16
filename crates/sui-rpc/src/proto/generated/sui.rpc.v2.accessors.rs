@@ -4693,6 +4693,65 @@ mod _accessor_impls {
             self.set_bridge_object_version(field);
             self
         }
+        ///Returns the value of `storage_cost`, or the default value if `storage_cost` is unset.
+        pub fn storage_cost(&self) -> u64 {
+            if let Some(
+                super::end_of_epoch_transaction_kind::Data::StorageCost(field),
+            ) = &self.data
+            {
+                *field
+            } else {
+                0u64
+            }
+        }
+        ///If `storage_cost` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn storage_cost_opt(&self) -> Option<u64> {
+            if let Some(
+                super::end_of_epoch_transaction_kind::Data::StorageCost(field),
+            ) = &self.data
+            {
+                Some(*field)
+            } else {
+                None
+            }
+        }
+        ///If `storage_cost` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn storage_cost_opt_mut(&mut self) -> Option<&mut u64> {
+            if let Some(
+                super::end_of_epoch_transaction_kind::Data::StorageCost(field),
+            ) = &mut self.data
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///Returns a mutable reference to `storage_cost`.
+        ///If the field is unset, it is first initialized with the default value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn storage_cost_mut(&mut self) -> &mut u64 {
+            if self.storage_cost_opt_mut().is_none() {
+                self.data = Some(
+                    super::end_of_epoch_transaction_kind::Data::StorageCost(
+                        u64::default(),
+                    ),
+                );
+            }
+            self.storage_cost_opt_mut().unwrap()
+        }
+        ///Sets `storage_cost` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn set_storage_cost(&mut self, field: u64) {
+            self.data = Some(
+                super::end_of_epoch_transaction_kind::Data::StorageCost(field),
+            );
+        }
+        ///Sets `storage_cost` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn with_storage_cost(mut self, field: u64) -> Self {
+            self.set_storage_cost(field);
+            self
+        }
     }
     impl super::Epoch {
         pub const fn const_default() -> Self {

@@ -6965,6 +6965,11 @@ impl serde::Serialize for EndOfEpochTransactionKind {
                     #[allow(clippy::needless_borrows_for_generic_args)]
                     struct_ser.serialize_field("bridgeObjectVersion", ToString::to_string(&v).as_str())?;
                 }
+                end_of_epoch_transaction_kind::Data::StorageCost(v) => {
+                    #[allow(clippy::needless_borrow)]
+                    #[allow(clippy::needless_borrows_for_generic_args)]
+                    struct_ser.serialize_field("storageCost", ToString::to_string(&v).as_str())?;
+                }
             }
         }
         struct_ser.end()
@@ -6988,6 +6993,8 @@ impl<'de> serde::Deserialize<'de> for EndOfEpochTransactionKind {
             "bridgeChainId",
             "bridge_object_version",
             "bridgeObjectVersion",
+            "storage_cost",
+            "storageCost",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -6998,6 +7005,7 @@ impl<'de> serde::Deserialize<'de> for EndOfEpochTransactionKind {
             ExecutionTimeObservations,
             BridgeChainId,
             BridgeObjectVersion,
+            StorageCost,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -7026,6 +7034,7 @@ impl<'de> serde::Deserialize<'de> for EndOfEpochTransactionKind {
                             "executionTimeObservations" | "execution_time_observations" => Ok(GeneratedField::ExecutionTimeObservations),
                             "bridgeChainId" | "bridge_chain_id" => Ok(GeneratedField::BridgeChainId),
                             "bridgeObjectVersion" | "bridge_object_version" => Ok(GeneratedField::BridgeObjectVersion),
+                            "storageCost" | "storage_cost" => Ok(GeneratedField::StorageCost),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -7090,6 +7099,12 @@ impl<'de> serde::Deserialize<'de> for EndOfEpochTransactionKind {
                             }
                             data__ = map_.next_value::<::std::option::Option<crate::_serde::NumberDeserialize<_>>>()?.map(|x| end_of_epoch_transaction_kind::Data::BridgeObjectVersion(x.0));
                         }
+                        GeneratedField::StorageCost => {
+                            if data__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("storageCost"));
+                            }
+                            data__ = map_.next_value::<::std::option::Option<crate::_serde::NumberDeserialize<_>>>()?.map(|x| end_of_epoch_transaction_kind::Data::StorageCost(x.0));
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -7124,6 +7139,7 @@ impl serde::Serialize for end_of_epoch_transaction_kind::Kind {
             Self::CoinRegistryCreate => "COIN_REGISTRY_CREATE",
             Self::DisplayRegistryCreate => "DISPLAY_REGISTRY_CREATE",
             Self::AddressAliasStateCreate => "ADDRESS_ALIAS_STATE_CREATE",
+            Self::WriteAccumulatorStorageCost => "WriteAccumulatorStorageCost",
         };
         serializer.serialize_str(variant)
     }
@@ -7148,6 +7164,7 @@ impl<'de> serde::Deserialize<'de> for end_of_epoch_transaction_kind::Kind {
             "COIN_REGISTRY_CREATE",
             "DISPLAY_REGISTRY_CREATE",
             "ADDRESS_ALIAS_STATE_CREATE",
+            "WriteAccumulatorStorageCost",
         ];
 
         struct GeneratedVisitor;
@@ -7201,6 +7218,7 @@ impl<'de> serde::Deserialize<'de> for end_of_epoch_transaction_kind::Kind {
                     "COIN_REGISTRY_CREATE" => Ok(end_of_epoch_transaction_kind::Kind::CoinRegistryCreate),
                     "DISPLAY_REGISTRY_CREATE" => Ok(end_of_epoch_transaction_kind::Kind::DisplayRegistryCreate),
                     "ADDRESS_ALIAS_STATE_CREATE" => Ok(end_of_epoch_transaction_kind::Kind::AddressAliasStateCreate),
+                    "WriteAccumulatorStorageCost" => Ok(end_of_epoch_transaction_kind::Kind::WriteAccumulatorStorageCost),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }
