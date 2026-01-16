@@ -1,0 +1,7 @@
+error: Missing field `path` at address
+ --> tests/compile/missing_field_attr.rs:3:10
+  |
+3 | #[derive(QueryResponse)]
+  |          ^^^^^^^^^^^^^
+  |
+  = note: this error originates in the derive macro `QueryResponse` (in Nightly builds, run with -Z macro-backtrace for more info)

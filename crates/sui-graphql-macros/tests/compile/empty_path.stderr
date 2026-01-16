@@ -1,0 +1,5 @@
+error: Field path cannot be empty
+ --> tests/compile/empty_path.rs:6:5
+  |
+6 |     address: String,
+  |     ^^^^^^^
