@@ -1,9 +1,12 @@
 //! GraphQL client for Sui blockchain.
 
 use reqwest::Url;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
+use serde::de::DeserializeOwned;
 
-use crate::error::{Error, GraphQLError};
+use crate::error::Error;
+use crate::error::GraphQLError;
 use crate::response::Response;
 
 /// GraphQL client for Sui blockchain.
@@ -38,8 +41,8 @@ impl Client {
     /// # Example
     ///
     /// ```no_run
-    /// use sui_graphql::Client;
     /// use serde::Deserialize;
+    /// use sui_graphql::Client;
     ///
     /// #[derive(Deserialize)]
     /// struct MyResponse {
@@ -50,20 +53,19 @@ impl Client {
     /// #[tokio::main]
     /// async fn main() -> Result<(), sui_graphql::Error> {
     ///     let client = Client::new("https://graphql.testnet.sui.io/graphql")?;
-    ///     let response = client.query::<MyResponse>(
-    ///         "query { chainIdentifier }",
-    ///         serde_json::json!({}),
-    ///     ).await?;
+    ///     let response = client
+    ///         .query::<MyResponse>("query { chainIdentifier }", serde_json::json!({}))
+    ///         .await?;
     ///
     ///     // Check for partial errors
     ///     if response.has_errors() {
     ///         for err in response.errors() {
-    ///             eprintln!("GraphQL error: {}", err.message);
+    ///             eprintln!("GraphQL error: {}", err.message());
     ///         }
     ///     }
     ///
     ///     // Access the data
-    ///     if let Some(data) = response.data {
+    ///     if let Some(data) = response.data() {
     ///         println!("Chain: {}", data.chain_identifier);
     ///     }
     ///

@@ -7,6 +7,7 @@ use thiserror::Error;
 
 /// Error type for GraphQL client operations.
 #[derive(Debug, Error)]
+#[non_exhaustive]
 pub enum Error {
     /// HTTP or network error.
     #[error("Request error: {0}")]
@@ -25,17 +26,10 @@ pub enum Error {
 /// A single GraphQL error.
 #[derive(Debug, Deserialize)]
 pub struct GraphQLError {
-    /// A description of the error.
-    pub message: String,
-
-    /// Locations in the query where the error occurred.
-    pub locations: Option<Vec<Location>>,
-
-    /// Path to the field that caused the error (e.g., `["user", "name"]`).
-    pub path: Option<Vec<PathFragment>>,
-
-    /// Additional error metadata (e.g., error code).
-    pub extensions: Option<HashMap<String, serde_json::Value>>,
+    message: String,
+    locations: Option<Vec<Location>>,
+    path: Option<Vec<PathFragment>>,
+    extensions: Option<HashMap<String, serde_json::Value>>,
 }
 
 impl fmt::Display for GraphQLError {
@@ -45,6 +39,26 @@ impl fmt::Display for GraphQLError {
 }
 
 impl GraphQLError {
+    /// A description of the error.
+    pub fn message(&self) -> &str {
+        &self.message
+    }
+
+    /// Locations in the query where the error occurred.
+    pub fn locations(&self) -> Option<&[Location]> {
+        self.locations.as_deref()
+    }
+
+    /// Path to the field that caused the error (e.g., `["user", "name"]`).
+    pub fn path(&self) -> Option<&[PathFragment]> {
+        self.path.as_deref()
+    }
+
+    /// Additional error metadata (e.g., error code).
+    pub fn extensions(&self) -> Option<&HashMap<String, serde_json::Value>> {
+        self.extensions.as_ref()
+    }
+
     /// Attempt to extract an error code from the extensions, if present.
     pub fn code(&self) -> Option<&str> {
         self.extensions.as_ref()?.get("code")?.as_str()
@@ -88,40 +102,25 @@ mod tests {
 
     #[test]
     fn test_graphql_error_display() {
-        let err = GraphQLError {
-            message: "Field not found".to_string(),
-            locations: None,
-            path: None,
-            extensions: None,
-        };
+        let err: GraphQLError =
+            serde_json::from_value(serde_json::json!({"message": "Field not found"})).unwrap();
         assert_eq!(err.to_string(), "Field not found");
     }
 
     #[test]
     fn test_graphql_error_code() {
-        let mut extensions = HashMap::new();
-        extensions.insert(
-            "code".to_string(),
-            serde_json::json!("GRAPHQL_VALIDATION_FAILED"),
-        );
-
-        let err = GraphQLError {
-            message: "Unknown field \"foo\" on type \"Query\".".to_string(),
-            locations: None,
-            path: None,
-            extensions: Some(extensions),
-        };
+        let err: GraphQLError = serde_json::from_value(serde_json::json!({
+            "message": "Unknown field \"foo\" on type \"Query\".",
+            "extensions": {"code": "GRAPHQL_VALIDATION_FAILED"}
+        }))
+        .unwrap();
         assert_eq!(err.code(), Some("GRAPHQL_VALIDATION_FAILED"));
     }
 
     #[test]
     fn test_graphql_error_no_code() {
-        let err = GraphQLError {
-            message: "Error".to_string(),
-            locations: None,
-            path: None,
-            extensions: None,
-        };
+        let err: GraphQLError =
+            serde_json::from_value(serde_json::json!({"message": "Error"})).unwrap();
         assert_eq!(err.code(), None);
     }
 

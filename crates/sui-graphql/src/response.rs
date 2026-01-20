@@ -10,17 +10,24 @@ use crate::error::GraphQLError;
 /// - Failure: `data` is None, `errors` is non-empty
 #[derive(Debug)]
 pub struct Response<T> {
-    /// The deserialized data from the response.
-    pub data: Option<T>,
-
-    /// Any errors returned by the server.
-    pub errors: Vec<GraphQLError>,
+    data: Option<T>,
+    errors: Vec<GraphQLError>,
 }
 
 impl<T> Response<T> {
     /// Create a new response with data and errors.
     pub(crate) fn new(data: Option<T>, errors: Vec<GraphQLError>) -> Self {
         Self { data, errors }
+    }
+
+    /// The deserialized data from the response, if present.
+    pub fn data(&self) -> Option<&T> {
+        self.data.as_ref()
+    }
+
+    /// Consumes the response and returns the data, if present.
+    pub fn into_data(self) -> Option<T> {
+        self.data
     }
 
     /// Returns true if the response has any errors.
@@ -37,15 +44,13 @@ impl<T> Response<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::PathFragment;
 
-    fn make_error(path: Vec<PathFragment>) -> GraphQLError {
-        GraphQLError {
-            message: "test error".to_string(),
-            locations: None,
-            path: Some(path),
-            extensions: None,
-        }
+    fn make_error() -> GraphQLError {
+        serde_json::from_value(serde_json::json!({
+            "message": "test error",
+            "path": ["field"]
+        }))
+        .unwrap()
     }
 
     #[test]
@@ -57,10 +62,8 @@ mod tests {
 
     #[test]
     fn test_response_with_errors() {
-        let response: Response<String> = Response::new(
-            Some("data".to_string()),
-            vec![make_error(vec![PathFragment::Key("field".to_string())])],
-        );
+        let response: Response<String> =
+            Response::new(Some("data".to_string()), vec![make_error()]);
         assert!(response.has_errors());
         assert_eq!(response.errors().len(), 1);
     }

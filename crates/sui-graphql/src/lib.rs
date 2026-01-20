@@ -10,5 +10,8 @@ mod error;
 mod response;
 
 pub use client::Client;
-pub use error::{Error, GraphQLError, Location, PathFragment};
+pub use error::Error;
+pub use error::GraphQLError;
+pub use error::Location;
+pub use error::PathFragment;
 pub use response::Response;
