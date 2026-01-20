@@ -1,3 +1,12 @@
+# [0.2.2] - 2026-01-20
+
+## Added
+- [#202] add support for TransactionKind::ProgrammableSystemTransaction
+- [#204] add support for EndOfEpochTransactionKind::WriteAccumulatorStorageCost
+
+[#202]: https://github.com/MystenLabs/sui-rust-sdk/pull/202
+[#204]: https://github.com/MystenLabs/sui-rust-sdk/pull/204
+
 # [0.2.1] - 2026-01-07
 
 ## Added
@@ -76,6 +85,7 @@
 
 Initial release
 
+[0.2.2]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.2.2
 [0.2.1]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.2.1
 [0.2.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.2.0
 [0.1.1]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.1.1

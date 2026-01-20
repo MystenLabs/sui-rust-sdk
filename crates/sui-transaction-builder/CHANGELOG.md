@@ -1,3 +1,13 @@
+# [0.2.2] - 2026-01-20
+
+## Changed
+- [`da176c95`] add `intents` feature to allow for enabling intents and
+  transaction resolution, which is dependent on communicating with a fullnode,
+  optional for those users who only want to use this crate for ofline
+  transaction construction.
+
+[`da176c95`]: https://github.com/mystenlabs/sui-rust-sdk/commit/da176c95
+
 # [0.2.1] - 2026-01-07
 
 ## Fixed

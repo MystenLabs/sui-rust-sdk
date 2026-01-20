@@ -1,3 +1,17 @@
+# [0.2.2] - 2026-01-20
+
+## Added
+- [#202] add support for TransactionKind::ProgrammableSystemTransaction
+- [#204] add support for EndOfEpochTransactionKind::WriteAccumulatorStorageCost
+
+## Fixed
+- [#190] fix bcs serialized format of Reservation for FundsWithdrawal
+  transaction input.
+
+[#190]: https://github.com/MystenLabs/sui-rust-sdk/pull/190
+[#202]: https://github.com/MystenLabs/sui-rust-sdk/pull/202
+[#204]: https://github.com/MystenLabs/sui-rust-sdk/pull/204
+
 # [0.2.1] - 2026-01-07
 
 ## Fixed
@@ -173,6 +187,7 @@
 
 Initial release
 
+[0.2.2]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.2.2
 [0.2.1]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.2.1
 [0.2.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.2.0
 [0.1.1]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.1.1

@@ -1,6 +1,6 @@
 [package]
 name = "sui-transaction-builder"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Brandon Williams <brandon@mystenlabs.com>"]
 license = "Apache-2.0"
 edition = "2024"
@@ -26,11 +26,11 @@ intents = ["dep:sui-rpc", "dep:async-trait"]
 [dependencies]
 bcs = "0.1.6"
 serde = { version = "1.0", features = ["derive"] }
-sui-sdk-types = { version = "0.2.1", path = "../sui-sdk-types", features = ["serde", "hash"] }
+sui-sdk-types = { version = "0.2.2", path = "../sui-sdk-types", features = ["serde", "hash"] }
 thiserror = "2.0"
 
 # Required for supporting intents and transaction resolution
-sui-rpc = { version = "0.2.1", path = "../sui-rpc", optional = true }
+sui-rpc = { version = "0.2.2", path = "../sui-rpc", optional = true }
 async-trait = { version = "0.1.89", optional = true }
 
 [lints.rust]
