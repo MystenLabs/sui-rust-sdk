@@ -24,6 +24,7 @@ reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"
 url = "2"
 sui-sdk-types = { version = "0.2.2", path = "../sui-sdk-types", features = ["serde"] }
 sui-graphql-macros = { version = "0.0.1", path = "../sui-graphql-macros" }
+sui-rpc = { version = "0.2.2", path = "../sui-rpc" }
 base64ct = { version = "1.8.0", features = ["alloc"] }
 bcs = "0.1.6"
 chrono = { version = "0.4", default-features = false, features = ["std"] }
@@ -32,6 +33,10 @@ futures = "0.3"
 [dev-dependencies]
 tokio = { version = "1.40", features = ["full"] }
 wiremock = "0.6"
+sui-crypto = { version = "0.2.0", path = "../sui-crypto", features = ["ed25519"] }
+rand = "0.8"
+hex = "0.4"
+bech32 = "0.11"
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(doc_cfg)'] }

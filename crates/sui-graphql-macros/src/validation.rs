@@ -2,10 +2,12 @@
 
 use crate::schema::Schema;
 
-/// Validate a field path against the schema, starting from the Query type.
+/// Validate a field path against the schema, starting from the given root type.
+///
+/// The `root_type` is typically "Query" or "Mutation".
 ///
 /// A path like `"object.address"` validates that:
-/// - Query type has a field named `object`
+/// - Root type has a field named `object`
 /// - The type returned by `object` has a field named `address`
 ///
 /// For array paths like `"objects[].address"`:
@@ -17,14 +19,19 @@ use crate::schema::Schema;
 /// - The alias is only used for JSON extraction, not schema validation
 ///
 /// Returns the GraphQL type name of the final field.
-pub fn validate_path(schema: &Schema, path: &str, span: &syn::Ident) -> Result<String, syn::Error> {
+pub fn validate_path(
+    schema: &Schema,
+    root_type: &str,
+    path: &str,
+    span: &syn::Ident,
+) -> Result<String, syn::Error> {
     if path.is_empty() {
         return Err(syn::Error::new_spanned(span, "Field path cannot be empty"));
     }
 
     let segments: Vec<&str> = path.split('.').collect();
 
-    let mut current_type = "Query".to_string();
+    let mut current_type = root_type.to_string();
 
     for (i, segment) in segments.iter().enumerate() {
         // Handle array iteration: "field[]" or "field@alias[]"

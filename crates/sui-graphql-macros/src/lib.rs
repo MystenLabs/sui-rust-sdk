@@ -39,6 +39,11 @@ use syn::parse_macro_input;
 /// Use `#[field(path = "...")]` to specify the JSON path to extract each field.
 /// Paths are dot-separated (e.g., `"object.address"` extracts `json["object"]["address"]`).
 ///
+/// # Root Type
+///
+/// By default, field paths are validated against the `Query` type. For mutations,
+/// add `#[response(mutation)]` to validate against the `Mutation` type instead.
+///
 /// # Generated Code
 ///
 /// The macro generates:
@@ -48,6 +53,7 @@ use syn::parse_macro_input;
 /// # Example
 ///
 /// ```ignore
+/// // Query response (default)
 /// #[derive(Response)]
 /// struct ChainInfo {
 ///     #[field(path = "chainIdentifier")]
@@ -56,8 +62,16 @@ use syn::parse_macro_input;
 ///     #[field(path = "epoch.epochId")]
 ///     epoch_id: Option<u64>,
 /// }
+///
+/// // Mutation response
+/// #[derive(Response)]
+/// #[response(mutation)]
+/// struct ExecuteResult {
+///     #[field(path = "executeTransaction.effects.effectsBcs")]
+///     effects_bcs: Option<String>,
+/// }
 /// ```
-#[proc_macro_derive(Response, attributes(field))]
+#[proc_macro_derive(Response, attributes(field, response))]
 pub fn derive_query_response(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
@@ -72,11 +86,13 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
     // Darling generates parsing code automatically, including error messages for invalid input.
 
     #[derive(Debug, FromDeriveInput)]
-    #[darling(supports(struct_named))] // Only supports structs with named fields
+    #[darling(supports(struct_named), attributes(response))] // Only supports structs with named fields
     struct ResponseInput {
         ident: syn::Ident,                           // Struct name
         generics: syn::Generics,                     // Generic parameters
         data: darling::ast::Data<(), ResponseField>, // Struct fields
+        #[darling(default)]
+        mutation: bool,   // #[response(mutation)] sets this to true
     }
 
     #[derive(Debug, FromField)]
@@ -89,6 +105,9 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
     }
 
     let parsed = ResponseInput::from_derive_input(&input)?;
+
+    // Determine root type: Mutation if #[response(mutation)], otherwise Query
+    let root_type = if parsed.mutation { "Mutation" } else { "Query" };
 
     // Load the GraphQL schema for validation
     let schema = schema::Schema::load()?;
@@ -114,7 +133,7 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
 
         // Validate the path against the GraphQL schema (unless skip_validation is set)
         if !field.skip_validation {
-            validation::validate_path(schema, path, field_ident)?;
+            validation::validate_path(schema, root_type, path, field_ident)?;
         }
 
         let extraction = generate_field_extraction(path, field_ident);
