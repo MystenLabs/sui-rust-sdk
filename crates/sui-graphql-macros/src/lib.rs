@@ -154,38 +154,127 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
     Ok(output)
 }
 
+/// A segment in a field path.
+///
+/// Paths like `"data.nodes[].name"` are parsed into segments:
+/// - `PathSegment { field: "data", is_array: false }`
+/// - `PathSegment { field: "nodes", is_array: true }`
+/// - `PathSegment { field: "name", is_array: false }`
+struct PathSegment<'a> {
+    /// The field name to access
+    field: &'a str,
+    /// Whether this is an array field (ends with `[]`)
+    is_array: bool,
+}
+
+/// Parse a path string into segments.
+///
+/// Each dot-separated part becomes a `PathSegment`. If it ends with `[]`, it's an array field.
+fn parse_path(path: &str) -> Vec<PathSegment<'_>> {
+    path.split('.')
+        .map(|segment| {
+            let (field, is_array) = if let Some(stripped) = segment.strip_suffix("[]") {
+                (stripped, true)
+            } else {
+                (segment, false)
+            };
+            PathSegment { field, is_array }
+        })
+        .collect()
+}
+
 /// Generate code to extract a single field from JSON using its path.
 ///
-/// For a field like:
-/// ```ignore
-/// #[field(path = "object.address")]
-/// address: String,
-/// ```
-///
-/// This generates:
-/// ```ignore
-/// let address = {
-///     let mut current = &value;
-///     current = current.get("object")
-///         .ok_or_else(|| format!("missing field '{}' in path '{}'", "object", "object.address"))?;
-///     current = current.get("address")
-///         .ok_or_else(|| format!("missing field '{}' in path '{}'", "address", "object.address"))?;
-///     serde_json::from_value(current.clone())
-///         .map_err(|e| format!("failed to deserialize '{}': {}", "object.address", e))?
-/// };
-/// ```
+/// Supports multiple path formats:
+/// - Simple: `"object.address"` - navigates to nested field
+/// - Array: `"nodes[].name"` - iterates over array, extracts field from each element
+/// - Nested arrays: `"nodes[].edges[].id"` - nested iteration, returns `Vec<Vec<T>>`
 fn generate_field_extraction(path: &str, field_ident: &syn::Ident) -> TokenStream2 {
-    let segments: Vec<&str> = path.split('.').filter(|s| !s.is_empty()).collect();
-
+    let segments = parse_path(path);
+    let inner = generate_from_segments(path, &segments);
+    // The inner expression returns Result<T, String>, so we use ? to unwrap
     quote! {
         let #field_ident = {
-            let mut current = &value;
-            #(
-                current = current.get(#segments)
-                    .ok_or_else(|| format!("missing field '{}' in path '{}'", #segments, #path))?;
-            )*
-            serde_json::from_value(current.clone())
-                .map_err(|e| format!("failed to deserialize '{}': {}", #path, e))?
+            let current = &value;
+            #inner?
         };
+    }
+}
+
+/// Recursively generate extraction code by traversing path segments.
+///
+/// Returns code that evaluates to `Result<T, String>` (caller adds `?` to unwrap).
+///
+/// ## Example: Simple path `"object.address"`
+///
+/// ```ignore
+/// let current = current.get("object").ok_or_else(|| ...)?;
+/// if current.is_null() { return serde_json::from_value(null)... }
+/// let current = current.get("address").ok_or_else(|| ...)?;
+/// serde_json::from_value(current.clone()).map_err(|e| ...)
+/// ```
+///
+/// ## Example: Array path `"nodes[].name"` (returns `Option<Vec<T>>`)
+///
+/// ```ignore
+/// {
+///     let field_value = current.get("nodes").ok_or_else(|| ...)?;
+///     if field_value.is_null() {
+///         Ok(None)
+///     } else {
+///         let array = field_value.as_array().ok_or_else(|| ...)?;
+///         let vec: Vec<_> = array.iter().map(|current| { ... }).collect::<Result<_, _>>()?;
+///         Ok(Some(vec))
+///     }
+/// }
+/// ```
+///
+/// TODO: Add support for `?` syntax in paths (e.g., "object?.field") to handle nullable
+/// fields efficiently without requiring Option wrappers at every level.
+fn generate_from_segments(full_path: &str, segments: &[PathSegment<'_>]) -> TokenStream2 {
+    // Base case: no more segments, deserialize the current value
+    if segments.is_empty() {
+        return quote! {
+            serde_json::from_value(current.clone())
+                .map_err(|e| format!("failed to deserialize '{}': {}", #full_path, e))
+        };
+    }
+
+    let segment = &segments[0];
+    let name = segment.field;
+    let rest = generate_from_segments(full_path, &segments[1..]);
+
+    if segment.is_array {
+        quote! {
+            {
+                let field_value = current.get(#name)
+                    .ok_or_else(|| format!("missing field '{}' in path '{}'", #name, #full_path))?;
+                if field_value.is_null() {
+                    Ok(None)
+                } else {
+                    let array = field_value.as_array()
+                        .ok_or_else(|| format!("expected array at '{}' in path '{}'", #name, #full_path))?;
+                    array.iter()
+                        .map(|current| { #rest })
+                        .collect::<Result<Vec<_>, String>>()
+                        .map(Some)
+                }
+            }
+        }
+    } else {
+        quote! {
+            {
+                let current = current.get(#name)
+                    .ok_or_else(|| format!("missing field '{}' in path '{}'", #name, #full_path))?;
+                // If null, skip remaining navigation and let serde handle it
+                // (returns Ok(None) for Option<T>, error for non-Option)
+                if current.is_null() {
+                    serde_json::from_value(current.clone())
+                        .map_err(|e| format!("failed to deserialize '{}': {}", #full_path, e))
+                } else {
+                    #rest
+                }
+            }
+        }
     }
 }
