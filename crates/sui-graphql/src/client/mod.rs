@@ -3,6 +3,7 @@
 pub(crate) mod chain;
 pub(crate) mod checkpoints;
 pub(crate) mod coins;
+pub(crate) mod dynamic_fields;
 mod objects;
 pub(crate) mod transactions;
 
