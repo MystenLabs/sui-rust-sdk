@@ -1,4 +1,4 @@
-error: Field 'nonExistent' not found on type 'Checkpoint' in path 'checkpoints.nodes[].nonExistent'
+error: Field 'nonExistent' not found on type 'Checkpoint' in path 'checkpoints.nodes[].nonExistent'. Available fields: artifactsDigest, contentBcs, contentDigest, digest, epoch, networkTotalTransactions, previousCheckpointDigest, query, rollingGasSummary, sequenceNumber, summaryBcs, timestamp, transactions, validatorSignatures
  --> tests/compile/schema_validation_field_after_list_not_found.rs:7:5
   |
 7 |     values: Vec<String>,
