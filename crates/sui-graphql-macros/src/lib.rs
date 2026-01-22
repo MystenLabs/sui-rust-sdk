@@ -1,7 +1,8 @@
-//! Procedural macros for sui-graphql with compile-time validation.
+//! Procedural macros for sui-graphql with compile-time schema validation.
 //!
-//! This crate provides the `Response` derive macro that generates
-//! deserialization code for extracting nested fields from GraphQL JSON responses.
+//! This crate provides the `Response` derive macro that:
+//! - Validates field paths against the Sui GraphQL schema at compile time
+//! - Generates deserialization code for extracting nested fields from JSON responses
 //!
 //! # Example
 //!
@@ -16,16 +17,14 @@
 //!     version: u64,
 //! }
 //!
-//! // The macro generates code to extract nested fields from JSON:
-//! // {
-//! //   "object": {
-//! //     "address": "0x123...",
-//! //     "version": 42
-//! //   }
-//! // }
+//! // The macro validates paths against the schema and generates extraction code.
+//! // Invalid paths like "object.nonexistent" will cause a compile error.
 //! ```
 
 extern crate proc_macro;
+
+mod schema;
+mod validation;
 
 use darling::FromDeriveInput;
 use darling::FromField;
@@ -85,9 +84,14 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
     struct ResponseField {
         ident: Option<syn::Ident>, // Field name
         path: String,              // The path = "..." value
+        #[darling(default)]
+        skip_validation: bool, // Skip schema validation if true
     }
 
     let parsed = ResponseInput::from_derive_input(&input)?;
+
+    // Load the GraphQL schema for validation
+    let schema = schema::Schema::load()?;
 
     let fields = parsed
         .data
@@ -108,11 +112,9 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
 
         let path = &field.path;
 
-        if path.is_empty() {
-            return Err(syn::Error::new_spanned(
-                field_ident,
-                "Field path cannot be empty",
-            ));
+        // Validate the path against the GraphQL schema (unless skip_validation is set)
+        if !field.skip_validation {
+            validation::validate_path(schema, path, field_ident)?;
         }
 
         let extraction = generate_field_extraction(path, field_ident);

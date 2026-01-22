@@ -15,6 +15,7 @@ proc-macro2 = "1.0"
 quote = "1.0"
 syn = { version = "2.0", features = ["full", "parsing", "extra-traits"] }
 darling = "0.20"
+graphql-parser = "0.4"
 
 [dev-dependencies]
 serde = { version = "1.0", features = ["derive"] }
