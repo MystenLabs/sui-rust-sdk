@@ -5,3 +5,6 @@ pub use sui_sdk_types::Address;
 
 /// Useful for digest fields (Base58 string). Not a scalar in Sui GraphQL schema.
 pub use sui_sdk_types::Digest;
+
+/// `BigInt` scalar in Sui GraphQL schema. Arbitrary precision signed integer as string.
+pub type BigInt = String;

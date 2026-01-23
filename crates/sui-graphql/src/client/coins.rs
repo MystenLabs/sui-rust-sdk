@@ -15,8 +15,8 @@ use crate::scalars::BigInt;
 /// Balance information for a coin type.
 #[derive(Debug, Clone)]
 pub struct Balance {
-    /// The coin type (e.g., "0x2::sui::SUI").
-    pub coin_type: String,
+    /// The coin type (e.g., `0x2::sui::SUI`).
+    pub coin_type: StructTag,
     /// The total balance as a string (can be very large).
     pub total_balance: BigInt,
 }
@@ -27,21 +27,30 @@ impl Client {
     /// # Example
     ///
     /// ```no_run
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// use sui_graphql::Client;
     /// use sui_sdk_types::Address;
     /// use sui_sdk_types::StructTag;
     ///
-    /// let client = Client::new("https://sui-mainnet.mystenlabs.com/graphql")?;
-    /// let owner: Address = "0x123...".parse()?;
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     let client = Client::new("https://sui-mainnet.mystenlabs.com/graphql")?;
+    ///     let owner: Address = "0x123...".parse()?;
     ///
-    /// // Get SUI balance
-    /// let balance = client.get_balance(owner, &StructTag::sui()).await?;
-    /// if let Some(bal) = balance {
-    ///     println!("SUI balance: {}", bal.total_balance);
+    ///     // Get SUI balance using the helper
+    ///     let sui_balance = client.get_balance(owner, &StructTag::sui()).await?;
+    ///     if let Some(bal) = sui_balance {
+    ///         println!("SUI balance: {}", bal.total_balance);
+    ///     }
+    ///
+    ///     // Get balance for other coin types by parsing the type string
+    ///     let usdc_type: StructTag = "0xdba...::usdc::USDC".parse()?;
+    ///     let usdc_balance = client.get_balance(owner, &usdc_type).await?;
+    ///     if let Some(bal) = usdc_balance {
+    ///         println!("USDC balance: {}", bal.total_balance);
+    ///     }
+    ///
+    ///     Ok(())
     /// }
-    /// # Ok(())
-    /// # }
     /// ```
     pub async fn get_balance(
         &self,
@@ -82,7 +91,7 @@ impl Client {
 
         match (data.coin_type, data.total_balance) {
             (Some(coin_type), Some(total_balance)) => Ok(Some(Balance {
-                coin_type,
+                coin_type: coin_type.parse()?,
                 total_balance,
             })),
             _ => Ok(None),
@@ -94,22 +103,23 @@ impl Client {
     /// # Example
     ///
     /// ```no_run
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// use futures::StreamExt;
     /// use std::pin::pin;
     /// use sui_graphql::Client;
     /// use sui_sdk_types::Address;
     ///
-    /// let client = Client::new("https://sui-mainnet.mystenlabs.com/graphql")?;
-    /// let owner: Address = "0x123...".parse()?;
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     let client = Client::new("https://sui-mainnet.mystenlabs.com/graphql")?;
+    ///     let owner: Address = "0x123...".parse()?;
     ///
-    /// let mut stream = pin!(client.list_balances(owner));
-    /// while let Some(result) = stream.next().await {
-    ///     let balance = result?;
-    ///     println!("{}: {}", balance.coin_type, balance.total_balance);
+    ///     let mut stream = pin!(client.list_balances(owner));
+    ///     while let Some(result) = stream.next().await {
+    ///         let balance = result?;
+    ///         println!("{}: {}", balance.coin_type, balance.total_balance);
+    ///     }
+    ///     Ok(())
     /// }
-    /// # Ok(())
-    /// # }
     /// ```
     pub fn list_balances(&self, owner: Address) -> impl Stream<Item = Result<Balance, Error>> + '_ {
         let client = self.clone();
@@ -184,13 +194,16 @@ impl Client {
             .into_iter()
             .zip(total_balances)
             .filter_map(|(ct, tb)| match (ct, tb) {
-                (Some(coin_type), Some(total_balance)) => Some(Balance {
-                    coin_type,
-                    total_balance,
-                }),
+                (Some(coin_type), Some(total_balance)) => Some((coin_type, total_balance)),
                 _ => None,
             })
-            .collect();
+            .map(|(coin_type, total_balance)| {
+                Ok(Balance {
+                    coin_type: coin_type.parse()?,
+                    total_balance,
+                })
+            })
+            .collect::<Result<Vec<_>, Error>>()?;
 
         Ok(Page {
             items: balances,
@@ -244,7 +257,7 @@ mod tests {
         assert!(balance.is_some());
 
         let balance = balance.unwrap();
-        assert_eq!(balance.coin_type, "0x2::sui::SUI");
+        assert_eq!(balance.coin_type, StructTag::sui());
         assert_eq!(balance.total_balance, "1000000000");
     }
 
@@ -345,11 +358,12 @@ mod tests {
         assert!(balances[1].is_ok());
 
         let bal1 = balances[0].as_ref().unwrap();
-        assert_eq!(bal1.coin_type, "0x2::sui::SUI");
+        assert_eq!(bal1.coin_type, StructTag::sui());
         assert_eq!(bal1.total_balance, "1000000000");
 
         let bal2 = balances[1].as_ref().unwrap();
-        assert_eq!(bal2.coin_type, "0xabc::token::USDC");
+        let usdc: StructTag = "0xabc::token::USDC".parse().unwrap();
+        assert_eq!(bal2.coin_type, usdc);
         assert_eq!(bal2.total_balance, "500000");
     }
 
@@ -425,11 +439,12 @@ mod tests {
         assert_eq!(call_count.load(Ordering::SeqCst), 2);
 
         let bal1 = balances[0].as_ref().unwrap();
-        assert_eq!(bal1.coin_type, "0x2::sui::SUI");
+        assert_eq!(bal1.coin_type, StructTag::sui());
         assert_eq!(bal1.total_balance, "1000000000");
 
         let bal2 = balances[1].as_ref().unwrap();
-        assert_eq!(bal2.coin_type, "0xabc::token::USDC");
+        let usdc: StructTag = "0xabc::token::USDC".parse().unwrap();
+        assert_eq!(bal2.coin_type, usdc);
         assert_eq!(bal2.total_balance, "500000");
     }
 }

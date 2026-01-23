@@ -1,6 +1,6 @@
 //! GraphQL client for Sui blockchain.
 
-pub mod coins;
+pub(crate) mod coins;
 mod objects;
 
 use reqwest::Url;
