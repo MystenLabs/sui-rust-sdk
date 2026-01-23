@@ -65,9 +65,9 @@ impl Client {
         #[derive(Response)]
         struct Response {
             #[field(path = "transaction.transactionBcs")]
-            transaction_bcs: Option<Bcs<Transaction>>,
+            transaction: Option<Bcs<Transaction>>,
             #[field(path = "transaction.effects.effectsBcs")]
-            effects_bcs: Option<Bcs<TransactionEffects>>,
+            effects: Option<Bcs<TransactionEffects>>,
             #[field(path = "transaction.effects.balanceChangesJson")]
             balance_changes: Option<Vec<BalanceChange>>,
             #[field(path = "transaction.effects.checkpoint.sequenceNumber")]
@@ -100,7 +100,7 @@ impl Client {
             return Ok(None);
         };
 
-        let (Some(transaction), Some(effects)) = (data.transaction_bcs, data.effects_bcs) else {
+        let (Some(transaction), Some(effects)) = (data.transaction, data.effects) else {
             return Ok(None);
         };
 
