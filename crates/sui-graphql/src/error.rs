@@ -32,6 +32,18 @@ pub enum Error {
     /// Integer parsing error.
     #[error("Integer parse error: {0}")]
     IntParse(#[from] std::num::ParseIntError),
+
+    /// Digest parsing error.
+    #[error("Digest parse error: {0}")]
+    DigestParse(#[from] sui_sdk_types::DigestParseError),
+
+    /// Missing expected data in response.
+    #[error("Missing expected data: {0}")]
+    MissingData(&'static str),
+
+    /// DateTime parsing error.
+    #[error("DateTime parse error: {0}")]
+    DateTimeParse(#[from] chrono::ParseError),
 }
 
 // =============================================================================
