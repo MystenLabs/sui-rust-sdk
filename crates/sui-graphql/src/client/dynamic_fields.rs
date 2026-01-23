@@ -2,6 +2,7 @@
 
 use futures::Stream;
 use sui_graphql_macros::Response;
+use sui_sdk_types::TypeTag;
 
 use super::Client;
 use crate::error::Error;
@@ -24,8 +25,8 @@ pub enum DynamicFieldType {
 pub struct DynamicFieldEntry {
     /// The field name as JSON.
     pub name: serde_json::Value,
-    /// The field name's Move type (e.g., "u64", "0x2::kiosk::Listing").
-    pub name_type: String,
+    /// The field name's Move type (e.g., `u64`, `0x2::kiosk::Listing`).
+    pub name_type: TypeTag,
     /// The field value as JSON.
     pub value: serde_json::Value,
     /// Whether this is a Field or ObjectField.
@@ -157,14 +158,14 @@ impl Client {
                     value
                 };
 
-                DynamicFieldEntry {
+                Ok(DynamicFieldEntry {
                     name,
-                    name_type,
+                    name_type: name_type.parse()?,
                     value: extracted_value,
                     field_type,
-                }
+                })
             })
-            .collect();
+            .collect::<Result<Vec<_>, Error>>()?;
 
         Ok(Page {
             items,
@@ -265,14 +266,17 @@ mod tests {
 
         // First field - MoveValue
         let field1 = stream.next().await.unwrap().unwrap();
-        assert_eq!(field1.name_type, "u64");
+        assert_eq!(field1.name_type, TypeTag::U64);
         assert_eq!(field1.name, serde_json::json!("123"));
         assert_eq!(field1.field_type, DynamicFieldType::Field);
         assert_eq!(field1.value, serde_json::json!({ "balance": "1000" }));
 
         // Second field - MoveObject
         let field2 = stream.next().await.unwrap().unwrap();
-        assert_eq!(field2.name_type, "0x2::kiosk::Listing");
+        assert_eq!(
+            field2.name_type,
+            "0x2::kiosk::Listing".parse::<TypeTag>().unwrap()
+        );
         assert_eq!(field2.field_type, DynamicFieldType::Object);
         assert_eq!(field2.value, serde_json::json!({ "price": "500" }));
 
