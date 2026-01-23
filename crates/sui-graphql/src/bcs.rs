@@ -1,27 +1,27 @@
 //! BCS decoding utilities.
 
+use std::borrow::Cow;
+
 use base64ct::Base64;
 use base64ct::Encoding;
+use serde::Deserialize;
 use serde::de::DeserializeOwned;
-
-use crate::error::Error;
 
 /// A wrapper for BCS-decoded values.
 ///
-/// Provides a convenient way to decode Base64-encoded BCS data.
-pub struct Bcs<T>(T);
+/// Deserializes from a Base64-encoded BCS string.
+pub struct Bcs<T>(pub T);
 
-impl<T: DeserializeOwned> Bcs<T> {
-    /// Decode a Base64-encoded BCS string into `T`.
-    pub fn decode(base64_data: &str) -> Result<Self, Error> {
-        let bytes = Base64::decode_vec(base64_data)?;
-        let value = bcs::from_bytes(&bytes)?;
+impl<'de, T: DeserializeOwned> Deserialize<'de> for Bcs<T> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let b64 = <Cow<'_, str>>::deserialize(deserializer)?;
+        let bytes =
+            Base64::decode_vec(&b64).map_err(|e| serde::de::Error::custom(format!("{e}")))?;
+        let value =
+            bcs::from_bytes(&bytes).map_err(|e| serde::de::Error::custom(format!("{e}")))?;
         Ok(Bcs(value))
-    }
-}
-
-impl<T> Bcs<T> {
-    pub fn into_inner(self) -> T {
-        self.0
     }
 }

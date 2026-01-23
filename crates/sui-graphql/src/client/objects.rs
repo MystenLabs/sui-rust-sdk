@@ -42,7 +42,7 @@ impl Client {
         #[derive(Response)]
         struct Response {
             #[field(path = "object.objectBcs")]
-            object_bcs: Option<String>,
+            object: Option<Bcs<Object>>,
         }
 
         const QUERY: &str = r#"
@@ -57,13 +57,7 @@ impl Client {
 
         let response = self.query::<Response>(QUERY, variables).await?;
 
-        let Some(bcs_data) = response.into_data().and_then(|d| d.object_bcs) else {
-            return Ok(None);
-        };
-
-        let object = Bcs::<Object>::decode(&bcs_data)?.into_inner();
-
-        Ok(Some(object))
+        Ok(response.into_data().and_then(|d| d.object).map(|b| b.0))
     }
 
     /// Stream all objects owned by an address.
@@ -109,7 +103,7 @@ impl Client {
             #[field(path = "objects.pageInfo")]
             page_info: Option<PageInfo>,
             #[field(path = "objects.nodes[].objectBcs")]
-            bcs_list: Option<Vec<Option<String>>>,
+            objects: Option<Vec<Bcs<Object>>>,
         }
 
         const QUERY: &str = r#"
@@ -142,14 +136,12 @@ impl Client {
                 end_cursor: None,
             });
 
-        let bcs_list = data.and_then(|d| d.bcs_list).unwrap_or_default();
-
-        // Decode BCS for each object
-        let mut objects = Vec::with_capacity(bcs_list.len());
-        for bcs_data in bcs_list.into_iter().flatten() {
-            let object = Bcs::<Object>::decode(&bcs_data)?.into_inner();
-            objects.push(object);
-        }
+        let objects = data
+            .and_then(|d| d.objects)
+            .unwrap_or_default()
+            .into_iter()
+            .map(|b| b.0)
+            .collect();
 
         Ok(Page {
             items: objects,
