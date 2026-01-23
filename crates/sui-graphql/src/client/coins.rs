@@ -10,15 +10,14 @@ use crate::error::Error;
 use crate::pagination::Page;
 use crate::pagination::PageInfo;
 use crate::pagination::paginate;
-use crate::scalars::BigInt;
 
 /// Balance information for a coin type.
 #[derive(Debug, Clone)]
 pub struct Balance {
     /// The coin type (e.g., `0x2::sui::SUI`).
     pub coin_type: StructTag,
-    /// The total balance as a string (can be very large).
-    pub total_balance: BigInt,
+    /// The total balance in base units.
+    pub total_balance: u64,
 }
 
 impl Client {
@@ -92,7 +91,7 @@ impl Client {
         match (data.coin_type, data.total_balance) {
             (Some(coin_type), Some(total_balance)) => Ok(Some(Balance {
                 coin_type: coin_type.parse()?,
-                total_balance,
+                total_balance: total_balance.parse()?,
             })),
             _ => Ok(None),
         }
@@ -200,7 +199,7 @@ impl Client {
             .map(|(coin_type, total_balance)| {
                 Ok(Balance {
                     coin_type: coin_type.parse()?,
-                    total_balance,
+                    total_balance: total_balance.parse()?,
                 })
             })
             .collect::<Result<Vec<_>, Error>>()?;
@@ -258,7 +257,7 @@ mod tests {
 
         let balance = balance.unwrap();
         assert_eq!(balance.coin_type, StructTag::sui());
-        assert_eq!(balance.total_balance, "1000000000");
+        assert_eq!(balance.total_balance, 1000000000);
     }
 
     #[tokio::test]
@@ -283,6 +282,34 @@ mod tests {
         let result = client.get_balance(owner, &StructTag::sui()).await;
         assert!(result.is_ok());
         assert!(result.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn test_get_balance_invalid_number() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("POST"))
+            .and(path("/"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "data": {
+                    "address": {
+                        "balance": {
+                            "coinType": {
+                                "repr": "0x2::sui::SUI"
+                            },
+                            "totalBalance": "not_a_number"
+                        }
+                    }
+                }
+            })))
+            .mount(&mock_server)
+            .await;
+
+        let client = Client::new(&mock_server.uri()).unwrap();
+        let owner: Address = "0x1".parse().unwrap();
+
+        let result = client.get_balance(owner, &StructTag::sui()).await;
+        assert!(matches!(result, Err(Error::IntParse(_))));
     }
 
     #[tokio::test]
@@ -359,12 +386,12 @@ mod tests {
 
         let bal1 = balances[0].as_ref().unwrap();
         assert_eq!(bal1.coin_type, StructTag::sui());
-        assert_eq!(bal1.total_balance, "1000000000");
+        assert_eq!(bal1.total_balance, 1000000000);
 
         let bal2 = balances[1].as_ref().unwrap();
         let usdc: StructTag = "0xabc::token::USDC".parse().unwrap();
         assert_eq!(bal2.coin_type, usdc);
-        assert_eq!(bal2.total_balance, "500000");
+        assert_eq!(bal2.total_balance, 500000);
     }
 
     #[tokio::test]
@@ -440,11 +467,11 @@ mod tests {
 
         let bal1 = balances[0].as_ref().unwrap();
         assert_eq!(bal1.coin_type, StructTag::sui());
-        assert_eq!(bal1.total_balance, "1000000000");
+        assert_eq!(bal1.total_balance, 1000000000);
 
         let bal2 = balances[1].as_ref().unwrap();
         let usdc: StructTag = "0xabc::token::USDC".parse().unwrap();
         assert_eq!(bal2.coin_type, usdc);
-        assert_eq!(bal2.total_balance, "500000");
+        assert_eq!(bal2.total_balance, 500000);
     }
 }
