@@ -1,13 +1,12 @@
 //! Object-related convenience methods.
 
-use base64ct::Base64;
-use base64ct::Encoding;
 use futures::Stream;
 use sui_graphql_macros::Response;
 use sui_sdk_types::Address;
 use sui_sdk_types::Object;
 
 use super::Client;
+use crate::bcs::Bcs;
 use crate::error::Error;
 use crate::pagination::Page;
 use crate::pagination::PageInfo;
@@ -62,8 +61,7 @@ impl Client {
             return Ok(None);
         };
 
-        let bytes = Base64::decode_vec(&bcs_data)?;
-        let object: Object = bcs::from_bytes(&bytes)?;
+        let object = Bcs::<Object>::decode(&bcs_data)?.into_inner();
 
         Ok(Some(object))
     }
@@ -149,8 +147,7 @@ impl Client {
         // Decode BCS for each object
         let mut objects = Vec::with_capacity(bcs_list.len());
         for bcs_data in bcs_list.into_iter().flatten() {
-            let bytes = Base64::decode_vec(&bcs_data)?;
-            let object: Object = bcs::from_bytes(&bytes)?;
+            let object = Bcs::<Object>::decode(&bcs_data)?.into_inner();
             objects.push(object);
         }
 

@@ -5,12 +5,14 @@
 //!
 //! See [`Client`] for usage examples.
 
+mod bcs;
 mod client;
 mod error;
 mod pagination;
 mod response;
 pub mod scalars;
 
+pub use bcs::Bcs;
 pub use client::Client;
 pub use error::Error;
 pub use error::GraphQLError;
