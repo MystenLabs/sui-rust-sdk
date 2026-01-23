@@ -41,24 +41,13 @@ pub struct PageInfo {
 ///
 /// # Example
 ///
-/// ```no_run
-/// # use sui_graphql::pagination::{paginate, Page};
-/// # struct Client;
-/// # impl Clone for Client { fn clone(&self) -> Self { Client } }
-/// # impl Client {
-/// #     async fn fetch_page(&self, _cursor: Option<&str>) -> Result<Page<String>, sui_graphql::Error> {
-/// #         Ok(Page { items: vec![], has_next_page: false, end_cursor: None })
-/// #     }
-/// # }
-/// # fn example(client: Client) {
-/// let client = client.clone();
+/// ```ignore
 /// let stream = paginate(move |cursor| {
 ///     let client = client.clone();
 ///     async move {
 ///         client.fetch_page(cursor.as_deref()).await
 ///     }
 /// });
-/// # }
 /// ```
 pub fn paginate<T, F, Fut>(fetch_page: F) -> impl Stream<Item = Result<T, Error>>
 where

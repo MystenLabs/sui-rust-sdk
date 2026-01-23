@@ -7,7 +7,7 @@
 
 mod client;
 mod error;
-pub mod pagination;
+mod pagination;
 mod response;
 pub mod scalars;
 
