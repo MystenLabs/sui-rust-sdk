@@ -1,13 +1,14 @@
 //! Transaction-related convenience methods.
 
-use base64ct::Base64;
-use base64ct::Encoding;
 use sui_graphql_macros::Response;
+use sui_sdk_types::Event;
 use sui_sdk_types::Transaction;
 use sui_sdk_types::TransactionEffects;
 
 use super::Client;
+use crate::bcs::Bcs;
 use crate::error::Error;
+use crate::scalars::DateTime;
 
 /// A transaction response containing the transaction data and its effects.
 ///
@@ -19,6 +20,12 @@ pub struct TransactionResponse {
     pub transaction: Transaction,
     /// The execution effects (status, gas used, object changes, etc.)
     pub effects: TransactionEffects,
+    /// Events emitted by this transaction.
+    pub events: Vec<Event>,
+    /// The checkpoint sequence number this transaction was finalized in.
+    pub checkpoint: u64,
+    /// Timestamp when this transaction was finalized.
+    pub timestamp: DateTime,
 }
 
 impl Client {
@@ -56,9 +63,15 @@ impl Client {
         #[derive(Response)]
         struct Response {
             #[field(path = "transaction.transactionBcs")]
-            transaction_bcs: Option<String>,
+            transaction_bcs: Option<Bcs<Transaction>>,
             #[field(path = "transaction.effects.effectsBcs")]
-            effects_bcs: Option<String>,
+            effects_bcs: Option<Bcs<TransactionEffects>>,
+            #[field(path = "transaction.effects.events.nodes[].eventBcs")]
+            event_bcs_list: Option<Vec<Option<Bcs<Event>>>>,
+            #[field(path = "transaction.effects.checkpoint.sequenceNumber")]
+            checkpoint: Option<u64>,
+            #[field(path = "transaction.effects.timestamp")]
+            timestamp: Option<String>,
         }
 
         const QUERY: &str = r#"
@@ -67,6 +80,15 @@ impl Client {
                     transactionBcs
                     effects {
                         effectsBcs
+                        events {
+                            nodes {
+                                eventBcs
+                            }
+                        }
+                        checkpoint {
+                            sequenceNumber
+                        }
+                        timestamp
                     }
                 }
             }
@@ -80,19 +102,35 @@ impl Client {
             return Ok(None);
         };
 
-        let (Some(tx_bcs), Some(effects_bcs)) = (data.transaction_bcs, data.effects_bcs) else {
+        let (Some(transaction), Some(effects)) = (data.transaction_bcs, data.effects_bcs) else {
             return Ok(None);
         };
 
-        let tx_bytes = Base64::decode_vec(&tx_bcs)?;
-        let transaction: Transaction = bcs::from_bytes(&tx_bytes)?;
+        let transaction = transaction.0;
+        let effects = effects.0;
 
-        let effects_bytes = Base64::decode_vec(&effects_bcs)?;
-        let effects: TransactionEffects = bcs::from_bytes(&effects_bytes)?;
+        // Extract events from BCS wrappers
+        let events = data
+            .event_bcs_list
+            .unwrap_or_default()
+            .into_iter()
+            .flatten()
+            .map(|bcs| bcs.0)
+            .collect();
+
+        let checkpoint = data.checkpoint.ok_or(Error::MissingData("checkpoint"))?;
+
+        let timestamp = data
+            .timestamp
+            .ok_or(Error::MissingData("timestamp"))?
+            .parse::<DateTime>()?;
 
         Ok(Some(TransactionResponse {
             transaction,
             effects,
+            events,
+            checkpoint,
+            timestamp,
         }))
     }
 }
