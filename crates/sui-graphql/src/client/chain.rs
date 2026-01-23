@@ -4,12 +4,16 @@ use sui_graphql_macros::Response;
 
 use super::Client;
 use crate::error::Error;
+use crate::scalars::BigInt;
+use crate::scalars::DateTime;
+use crate::scalars::Digest;
 
 /// Information about an epoch.
 ///
 /// This struct is consistent with the TypeScript SDK's `EpochInfo` and
 /// the gRPC `Epoch` type from sui-rpc.
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub struct Epoch {
     /// The epoch's id as a sequence number starting at 0.
     pub epoch: u64,
@@ -17,10 +21,10 @@ pub struct Epoch {
     pub first_checkpoint: Option<u64>,
     /// The last checkpoint in this epoch (None if epoch is ongoing).
     pub last_checkpoint: Option<u64>,
-    /// Timestamp when this epoch started (ISO 8601 format).
-    pub epoch_start_timestamp: Option<String>,
-    /// Timestamp when this epoch ended (ISO 8601 format, None if ongoing).
-    pub epoch_end_timestamp: Option<String>,
+    /// Timestamp when this epoch started.
+    pub epoch_start_timestamp: Option<DateTime>,
+    /// Timestamp when this epoch ended (None if ongoing).
+    pub epoch_end_timestamp: Option<DateTime>,
     /// The total number of transactions in this epoch.
     pub epoch_total_transactions: Option<u64>,
     /// Reference gas price in MIST for this epoch.
@@ -45,7 +49,7 @@ impl Client {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn chain_identifier(&self) -> Result<Option<String>, Error> {
+    pub async fn chain_identifier(&self) -> Result<Option<Digest>, Error> {
         #[derive(Response)]
         struct Response {
             #[field(path = "chainIdentifier")]
@@ -56,7 +60,12 @@ impl Client {
 
         let response = self.query::<Response>(QUERY, serde_json::json!({})).await?;
 
-        Ok(response.into_data().and_then(|d| d.chain_identifier))
+        response
+            .into_data()
+            .and_then(|d| d.chain_identifier)
+            .map(|s| s.parse())
+            .transpose()
+            .map_err(Into::into)
     }
 
     /// Get the current protocol version.
@@ -68,13 +77,12 @@ impl Client {
     /// use sui_graphql::Client;
     ///
     /// let client = Client::new("https://graphql.mainnet.sui.io/graphql")?;
-    /// if let Some(version) = client.protocol_version().await? {
-    ///     println!("Protocol version: {}", version);
-    /// }
+    /// let version = client.protocol_version().await?;
+    /// println!("Protocol version: {}", version);
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn protocol_version(&self) -> Result<Option<u64>, Error> {
+    pub async fn protocol_version(&self) -> Result<u64, Error> {
         #[derive(Response)]
         struct Response {
             #[field(path = "protocolConfigs.protocolVersion")]
@@ -85,7 +93,10 @@ impl Client {
 
         let response = self.query::<Response>(QUERY, serde_json::json!({})).await?;
 
-        Ok(response.into_data().and_then(|d| d.protocol_version))
+        response
+            .into_data()
+            .and_then(|d| d.protocol_version)
+            .ok_or(Error::MissingData("protocol version"))
     }
 
     /// Get epoch information by ID, or the current epoch if no ID is provided.
@@ -116,7 +127,7 @@ impl Client {
             #[field(path = "epoch.protocolConfigs.protocolVersion")]
             protocol_version: Option<u64>,
             #[field(path = "epoch.referenceGasPrice")]
-            reference_gas_price: Option<String>,
+            reference_gas_price: Option<BigInt>,
             #[field(path = "epoch.startTimestamp")]
             start_timestamp: Option<String>,
             #[field(path = "epoch.endTimestamp")]
@@ -170,11 +181,17 @@ impl Client {
             return Ok(None);
         };
 
-        let epoch_start_timestamp = data.start_timestamp;
-        let epoch_end_timestamp = data.end_timestamp;
+        // Parse timestamps from ISO-8601 strings to DateTime
+        let epoch_start_timestamp = data
+            .start_timestamp
+            .map(|s| s.parse::<DateTime>())
+            .transpose()?;
+        let epoch_end_timestamp = data
+            .end_timestamp
+            .map(|s| s.parse::<DateTime>())
+            .transpose()?;
 
-        // Parse reference gas price from string to u64
-        let reference_gas_price = data.reference_gas_price.and_then(|s| s.parse::<u64>().ok());
+        let reference_gas_price = data.reference_gas_price.map(|b| b.0);
 
         // Extract first/last checkpoint from the nested queries
         let first_checkpoint = data.first_checkpoint_seq.and_then(|v| v.first().copied());
@@ -206,11 +223,14 @@ mod tests {
     async fn test_chain_identifier() {
         let mock_server = MockServer::start().await;
 
+        // Use a valid Base58 encoded 32-byte digest
+        let expected_digest = Digest::ZERO;
+
         Mock::given(method("POST"))
             .and(path("/"))
             .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
                 "data": {
-                    "chainIdentifier": "35834a8a"
+                    "chainIdentifier": expected_digest.to_string()
                 }
             })))
             .mount(&mock_server)
@@ -220,7 +240,7 @@ mod tests {
         let result = client.chain_identifier().await;
 
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), Some("35834a8a".to_string()));
+        assert_eq!(result.unwrap(), Some(expected_digest));
     }
 
     #[tokio::test]
@@ -243,7 +263,28 @@ mod tests {
         let result = client.protocol_version().await;
 
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), Some(70));
+        assert_eq!(result.unwrap(), 70);
+    }
+
+    #[tokio::test]
+    async fn test_protocol_version_missing() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("POST"))
+            .and(path("/"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "data": {
+                    "protocolConfigs": null
+                }
+            })))
+            .mount(&mock_server)
+            .await;
+
+        let client = Client::new(&mock_server.uri()).unwrap();
+        let result = client.protocol_version().await;
+
+        assert!(result.is_err());
+        assert!(matches!(result, Err(Error::MissingData(_))));
     }
 
     #[tokio::test]
@@ -375,14 +416,14 @@ mod tests {
         assert!(result.is_ok());
         let epoch = result.unwrap().unwrap();
 
-        // Verify timestamps are returned as strings
+        // Verify timestamps are parsed as DateTime
         assert_eq!(
             epoch.epoch_start_timestamp,
-            Some("2024-01-15T00:00:00Z".to_string())
+            Some("2024-01-15T00:00:00Z".parse::<DateTime>().unwrap())
         );
         assert_eq!(
             epoch.epoch_end_timestamp,
-            Some("2024-01-16T00:00:00.123Z".to_string())
+            Some("2024-01-16T00:00:00.123Z".parse::<DateTime>().unwrap())
         );
     }
 }

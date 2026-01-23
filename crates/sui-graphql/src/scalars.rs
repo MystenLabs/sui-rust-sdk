@@ -26,3 +26,7 @@ impl<'de> Deserialize<'de> for BigInt {
         Ok(BigInt(value))
     }
 }
+
+/// `DateTime` scalar in Sui GraphQL schema.
+/// ISO-8601 Date and Time in UTC.
+pub type DateTime = chrono::DateTime<chrono::Utc>;
