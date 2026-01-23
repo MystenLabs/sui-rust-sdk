@@ -18,10 +18,8 @@ impl<'de, T: DeserializeOwned> Deserialize<'de> for Bcs<T> {
         D: serde::Deserializer<'de>,
     {
         let b64 = <Cow<'_, str>>::deserialize(deserializer)?;
-        let bytes =
-            Base64::decode_vec(&b64).map_err(|e| serde::de::Error::custom(format!("{e}")))?;
-        let value =
-            bcs::from_bytes(&bytes).map_err(|e| serde::de::Error::custom(format!("{e}")))?;
+        let bytes = Base64::decode_vec(&b64).map_err(serde::de::Error::custom)?;
+        let value = bcs::from_bytes(&bytes).map_err(serde::de::Error::custom)?;
         Ok(Bcs(value))
     }
 }

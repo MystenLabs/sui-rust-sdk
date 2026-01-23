@@ -10,6 +10,7 @@ use crate::error::Error;
 use crate::pagination::Page;
 use crate::pagination::PageInfo;
 use crate::pagination::paginate;
+use crate::scalars::BigInt;
 
 /// Balance information for a coin type.
 #[derive(Debug, Clone)]
@@ -59,9 +60,9 @@ impl Client {
         #[derive(Response)]
         struct Response {
             #[field(path = "address.balance.coinType.repr")]
-            coin_type: Option<String>,
+            coin_type: Option<StructTag>,
             #[field(path = "address.balance.totalBalance")]
-            total_balance: Option<String>,
+            total_balance: Option<BigInt>,
         }
 
         const QUERY: &str = r#"
@@ -90,8 +91,8 @@ impl Client {
 
         match (data.coin_type, data.total_balance) {
             (Some(coin_type), Some(total_balance)) => Ok(Some(Balance {
-                coin_type: coin_type.parse()?,
-                total_balance: total_balance.parse()?,
+                coin_type,
+                total_balance: total_balance.0,
             })),
             _ => Ok(None),
         }
@@ -139,9 +140,9 @@ impl Client {
             #[field(path = "address.balances.pageInfo")]
             page_info: Option<PageInfo>,
             #[field(path = "address.balances.nodes[].coinType.repr")]
-            coin_types: Option<Vec<Option<String>>>,
+            coin_types: Option<Vec<Option<StructTag>>>,
             #[field(path = "address.balances.nodes[].totalBalance")]
-            total_balances: Option<Vec<Option<String>>>,
+            total_balances: Option<Vec<Option<BigInt>>>,
         }
 
         const QUERY: &str = r#"
@@ -196,13 +197,11 @@ impl Client {
                 (Some(coin_type), Some(total_balance)) => Some((coin_type, total_balance)),
                 _ => None,
             })
-            .map(|(coin_type, total_balance)| {
-                Ok(Balance {
-                    coin_type: coin_type.parse()?,
-                    total_balance: total_balance.parse()?,
-                })
+            .map(|(coin_type, total_balance)| Balance {
+                coin_type,
+                total_balance: total_balance.0,
             })
-            .collect::<Result<Vec<_>, Error>>()?;
+            .collect();
 
         Ok(Page {
             items: balances,
@@ -309,7 +308,7 @@ mod tests {
         let owner: Address = "0x1".parse().unwrap();
 
         let result = client.get_balance(owner, &StructTag::sui()).await;
-        assert!(matches!(result, Err(Error::IntParse(_))));
+        assert!(matches!(result, Err(Error::Request(e)) if e.is_decode()));
     }
 
     #[tokio::test]
