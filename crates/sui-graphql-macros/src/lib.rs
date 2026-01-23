@@ -158,29 +158,57 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
 
 /// A segment in a field path.
 ///
-/// Paths like `"data.nodes[].name"` are parsed into segments:
-/// - `PathSegment { field: "data", is_array: false }`
-/// - `PathSegment { field: "nodes", is_array: true }`
-/// - `PathSegment { field: "name", is_array: false }`
+/// Segments can include an alias using `@` syntax for GraphQL aliases:
+/// - The field name (before `@`) is used for schema validation
+/// - The alias (after `@`) is used for JSON extraction
+///
+/// Examples:
+/// - `"data.nodes[].name"` parses to:
+///   - `{ field: "data", alias: None, is_array: false }`
+///   - `{ field: "nodes", alias: None, is_array: true }`
+///   - `{ field: "name", alias: None, is_array: false }`
+///
+/// - `"epoch.checkpoints@firstCheckpoints.nodes[].sequenceNumber"` parses to:
+///   - `{ field: "epoch", alias: None, is_array: false }`
+///   - `{ field: "checkpoints", alias: Some("firstCheckpoints"), is_array: false }`
+///   - `{ field: "nodes", alias: None, is_array: true }`
+///   - `{ field: "sequenceNumber", alias: None, is_array: false }`
 struct PathSegment<'a> {
-    /// The field name to access
+    /// The field name (used for schema validation)
     field: &'a str,
+    /// Optional alias (used for JSON extraction instead of field name)
+    alias: Option<&'a str>,
     /// Whether this is an array field (ends with `[]`)
     is_array: bool,
 }
 
 /// Parse a path string into segments.
 ///
-/// Each dot-separated part becomes a `PathSegment`. If it ends with `[]`, it's an array field.
+/// Each dot-separated part is parsed for:
+/// - Array suffix `[]` (e.g., `nodes[]`)
+/// - Alias syntax `@` (e.g., `checkpoints@firstCheckpoints`)
 fn parse_path(path: &str) -> Vec<PathSegment<'_>> {
     path.split('.')
         .map(|segment| {
-            let (field, is_array) = if let Some(stripped) = segment.strip_suffix("[]") {
+            // Check for array suffix first
+            let (segment, is_array) = if let Some(stripped) = segment.strip_suffix("[]") {
                 (stripped, true)
             } else {
                 (segment, false)
             };
-            PathSegment { field, is_array }
+
+            // Check for alias syntax: field@alias
+            let (field, alias) = if let Some(at_pos) = segment.find('@') {
+                (&segment[..at_pos], Some(&segment[at_pos + 1..]))
+            } else {
+                (segment, None)
+            };
+
+            PathSegment {
+                field,
+                alias,
+                is_array,
+            }
         })
         .collect()
 }
@@ -205,6 +233,7 @@ fn generate_field_extraction(path: &str, field_ident: &syn::Ident) -> TokenStrea
 
 /// Recursively generate extraction code by traversing path segments.
 ///
+/// For JSON extraction, uses the alias if present, otherwise uses the field name.
 /// Returns code that evaluates to `Result<T, String>` (caller adds `?` to unwrap).
 ///
 /// ## Example: Simple path `"object.address"`
@@ -242,20 +271,23 @@ fn generate_from_segments(full_path: &str, segments: &[PathSegment<'_>]) -> Toke
         };
     }
 
-    let segment = &segments[0];
-    let name = segment.field;
     let rest = generate_from_segments(full_path, &segments[1..]);
+    let segment = &segments[0];
+
+    // Use alias for JSON extraction if present, otherwise use field name
+    let json_key = segment.alias.unwrap_or(segment.field);
 
     if segment.is_array {
+        // Array field: check for null, then iterate and collect into Option<Vec>
         quote! {
             {
-                let field_value = current.get(#name)
-                    .ok_or_else(|| format!("missing field '{}' in path '{}'", #name, #full_path))?;
+                let field_value = current.get(#json_key)
+                    .ok_or_else(|| format!("missing field '{}' in path '{}'", #json_key, #full_path))?;
                 if field_value.is_null() {
                     Ok(None)
                 } else {
                     let array = field_value.as_array()
-                        .ok_or_else(|| format!("expected array at '{}' in path '{}'", #name, #full_path))?;
+                        .ok_or_else(|| format!("expected array at '{}' in path '{}'", #json_key, #full_path))?;
                     array.iter()
                         .map(|current| { #rest })
                         .collect::<Result<Vec<_>, String>>()
@@ -265,17 +297,15 @@ fn generate_from_segments(full_path: &str, segments: &[PathSegment<'_>]) -> Toke
         }
     } else {
         quote! {
-            {
-                let current = current.get(#name)
-                    .ok_or_else(|| format!("missing field '{}' in path '{}'", #name, #full_path))?;
-                // If null, skip remaining navigation and let serde handle it
-                // (returns Ok(None) for Option<T>, error for non-Option)
-                if current.is_null() {
-                    serde_json::from_value(current.clone())
-                        .map_err(|e| format!("failed to deserialize '{}': {}", #full_path, e))
-                } else {
-                    #rest
-                }
+            let current = current.get(#json_key)
+                .ok_or_else(|| format!("missing field '{}' in path '{}'", #json_key, #full_path))?;
+            // If null, skip remaining navigation and let serde handle it
+            // (returns Ok(None) for Option<T>, error for non-Option)
+            if current.is_null() {
+                serde_json::from_value(current.clone())
+                    .map_err(|e| format!("failed to deserialize '{}': {}", #full_path, e))
+            } else {
+                #rest
             }
         }
     }
