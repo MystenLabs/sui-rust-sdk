@@ -1,5 +1,7 @@
 //! GraphQL client for Sui blockchain.
 
+mod objects;
+
 use reqwest::Url;
 use serde::Deserialize;
 use serde::Serialize;
