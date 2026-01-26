@@ -18,7 +18,7 @@ pub(crate) trait Intent: std::any::Any + Send + Sync {
 }
 
 #[async_trait::async_trait]
-pub(crate) trait IntentResolver: std::any::Any + std::fmt::Debug + Send {
+pub(crate) trait IntentResolver: std::any::Any + std::fmt::Debug + Send + Sync {
     // Perform any required resolutions
     async fn resolve(
         &self,
