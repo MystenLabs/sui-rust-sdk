@@ -24,6 +24,14 @@ pub enum Error {
     /// BCS deserialization error.
     #[error("BCS decode error: {0}")]
     Bcs(#[from] bcs::Error),
+
+    /// Type parsing error.
+    #[error("Type parse error: {0}")]
+    TypeParse(#[from] sui_sdk_types::TypeParseError),
+
+    /// Integer parsing error.
+    #[error("Integer parse error: {0}")]
+    IntParse(#[from] std::num::ParseIntError),
 }
 
 // =============================================================================
