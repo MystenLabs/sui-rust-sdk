@@ -1,0 +1,5 @@
+error: Field 'epoch' not found on type 'Mutation' in path 'epoch.epochId'. Available fields: executeTransaction
+ --> tests/compile/mutation_invalid_query_field.rs:8:5
+  |
+8 |     epoch_id: u64,
+  |     ^^^^^^^^
