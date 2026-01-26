@@ -63,11 +63,11 @@ impl Client {
         #[derive(Response)]
         struct Response {
             #[field(path = "transaction.transactionBcs")]
-            transaction_bcs: Option<String>,
+            transaction_bcs: Option<Bcs<Transaction>>,
             #[field(path = "transaction.effects.effectsBcs")]
-            effects_bcs: Option<String>,
+            effects_bcs: Option<Bcs<TransactionEffects>>,
             #[field(path = "transaction.effects.events.nodes[].eventBcs")]
-            event_bcs_list: Option<Vec<Option<String>>>,
+            event_bcs_list: Option<Vec<Option<Bcs<Event>>>>,
             #[field(path = "transaction.effects.checkpoint.sequenceNumber")]
             checkpoint: Option<u64>,
             #[field(path = "transaction.effects.timestamp")]
@@ -102,21 +102,21 @@ impl Client {
             return Ok(None);
         };
 
-        let (Some(tx_bcs), Some(effects_bcs)) = (data.transaction_bcs, data.effects_bcs) else {
+        let (Some(transaction), Some(effects)) = (data.transaction_bcs, data.effects_bcs) else {
             return Ok(None);
         };
 
-        let transaction = Bcs::<Transaction>::decode(&tx_bcs)?.into_inner();
-        let effects = Bcs::<TransactionEffects>::decode(&effects_bcs)?.into_inner();
+        let transaction = transaction.0;
+        let effects = effects.0;
 
-        // Parse events from BCS
+        // Extract events from BCS wrappers
         let events = data
             .event_bcs_list
             .unwrap_or_default()
             .into_iter()
             .flatten()
-            .map(|bcs_str| Ok(Bcs::<Event>::decode(&bcs_str)?.into_inner()))
-            .collect::<Result<Vec<_>, Error>>()?;
+            .map(|bcs| bcs.0)
+            .collect();
 
         let checkpoint = data.checkpoint.ok_or(Error::MissingData("checkpoint"))?;
 

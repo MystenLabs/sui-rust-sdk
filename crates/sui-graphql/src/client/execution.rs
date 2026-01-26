@@ -43,7 +43,7 @@ impl Client {
         #[response(mutation)]
         struct Response {
             #[field(path = "executeTransaction.effects.effectsBcs")]
-            effects_bcs: Option<String>,
+            effects_bcs: Option<Bcs<TransactionEffects>>,
             #[field(path = "executeTransaction.errors")]
             errors: Option<Vec<String>>,
         }
@@ -92,11 +92,7 @@ impl Client {
             });
         };
 
-        let effects = if let Some(effects_bcs) = data.effects_bcs {
-            Some(Bcs::<TransactionEffects>::decode(&effects_bcs)?.into_inner())
-        } else {
-            None
-        };
+        let effects = data.effects_bcs.map(|bcs| bcs.0);
 
         Ok(ExecutionResult {
             effects,
