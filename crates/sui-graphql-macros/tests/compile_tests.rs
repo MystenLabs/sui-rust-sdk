@@ -27,4 +27,7 @@ fn compile_tests() {
     t.compile_fail("tests/compile/schema_validation_field_after_list_suggestion.rs");
     t.compile_fail("tests/compile/schema_validation_array_on_non_list.rs");
     t.compile_fail("tests/compile/schema_validation_field_after_list_not_found.rs");
+
+    // Path/type structure mismatch tests
+    t.compile_fail("tests/compile/path_type_mismatch.rs");
 }
