@@ -5,6 +5,7 @@ use crate::proto::sui::rpc::v2::ExecuteTransactionRequest;
 use crate::proto::sui::rpc::v2::ExecuteTransactionResponse;
 use crate::proto::sui::rpc::v2::ExecutionError;
 use crate::proto::sui::rpc::v2::GetEpochRequest;
+use crate::proto::sui::rpc::v2::GetTransactionRequest;
 use crate::proto::sui::rpc::v2::SubscribeCheckpointsRequest;
 use futures::TryStreamExt;
 use prost_types::FieldMask;
@@ -90,10 +91,9 @@ impl Client {
         // further reduce bandwidth.
         let mut checkpoint_stream = match self
             .subscription_client()
-            .subscribe_checkpoints(
-                SubscribeCheckpointsRequest::default()
-                    .with_read_mask(FieldMask::from_str("transactions.digest,sequence_number")),
-            )
+            .subscribe_checkpoints(SubscribeCheckpointsRequest::default().with_read_mask(
+                FieldMask::from_str("transactions.digest,sequence_number,summary.timestamp"),
+            ))
             .await
         {
             Ok(stream) => stream.into_inner(),
@@ -112,10 +112,38 @@ impl Client {
             Err(e) => return Err(ExecuteAndWaitError::ProtoConversionError(e)),
         };
 
-        let response = match self.execution_client().execute_transaction(request).await {
+        let mut response = match self.execution_client().execute_transaction(request).await {
             Ok(resp) => resp,
             Err(e) => return Err(ExecuteAndWaitError::RpcError(e)),
         };
+
+        // First query the fullnode directly to see if it already has the txn. This is to handle
+        // the case where an already executed transaction is sent multiple times
+        match self
+            .ledger_client()
+            .get_transaction(
+                GetTransactionRequest::default()
+                    .with_digest(&executed_txn_digest)
+                    .with_read_mask(FieldMask::from_str("digest,checkpoint,timestamp")),
+            )
+            .await
+        {
+            Ok(resp) => {
+                if resp.get_ref().transaction().checkpoint_opt().is_some() {
+                    let checkpoint = resp.get_ref().transaction().checkpoint();
+                    let timestamp = resp.get_ref().transaction().timestamp;
+                    response
+                        .get_mut()
+                        .transaction_mut()
+                        .set_checkpoint(checkpoint);
+                    response.get_mut().transaction_mut().timestamp = timestamp;
+                    return Ok(response);
+                }
+            }
+            Err(e) => {
+                return Err(ExecuteAndWaitError::CheckpointStreamError { response, error: e });
+            }
+        }
 
         // Wait for the transaction to appear in a checkpoint, at which point indexes will have been
         // updated.
@@ -128,7 +156,7 @@ impl Client {
                     let digest = tx.digest();
 
                     if digest == executed_txn_digest {
-                        return Ok(());
+                        return Ok((checkpoint.sequence_number(), checkpoint.summary().timestamp));
                     }
                 }
             }
@@ -140,7 +168,14 @@ impl Client {
         tokio::select! {
             result = checkpoint_future => {
                 match result {
-                    Ok(()) => Ok(response),
+                    Ok((checkpoint, timestamp)) => {
+                        response
+                            .get_mut()
+                            .transaction_mut()
+                            .set_checkpoint(checkpoint);
+                        response.get_mut().transaction_mut().timestamp = timestamp;
+                        Ok(response)
+                    }
                     Err(e) => Err(ExecuteAndWaitError::CheckpointStreamError { response, error: e })
                 }
             },
