@@ -119,7 +119,7 @@ impl Client {
 
         // First query the fullnode directly to see if it already has the txn. This is to handle
         // the case where an already executed transaction is sent multiple times
-        match self
+        if let Ok(resp) = self
             .ledger_client()
             .get_transaction(
                 GetTransactionRequest::default()
@@ -127,22 +127,16 @@ impl Client {
                     .with_read_mask(FieldMask::from_str("digest,checkpoint,timestamp")),
             )
             .await
+            && resp.get_ref().transaction().checkpoint_opt().is_some()
         {
-            Ok(resp) => {
-                if resp.get_ref().transaction().checkpoint_opt().is_some() {
-                    let checkpoint = resp.get_ref().transaction().checkpoint();
-                    let timestamp = resp.get_ref().transaction().timestamp;
-                    response
-                        .get_mut()
-                        .transaction_mut()
-                        .set_checkpoint(checkpoint);
-                    response.get_mut().transaction_mut().timestamp = timestamp;
-                    return Ok(response);
-                }
-            }
-            Err(e) => {
-                return Err(ExecuteAndWaitError::CheckpointStreamError { response, error: e });
-            }
+            let checkpoint = resp.get_ref().transaction().checkpoint();
+            let timestamp = resp.get_ref().transaction().timestamp;
+            response
+                .get_mut()
+                .transaction_mut()
+                .set_checkpoint(checkpoint);
+            response.get_mut().transaction_mut().timestamp = timestamp;
+            return Ok(response);
         }
 
         // Wait for the transaction to appear in a checkpoint, at which point indexes will have been
