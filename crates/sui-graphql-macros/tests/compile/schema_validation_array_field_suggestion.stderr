@@ -1,5 +1,5 @@
-error: Field 'checkpointss' not found on type 'Query' in path 'checkpointss[].digest'. Did you mean 'checkpoints'?
- --> tests/compile/schema_validation_array_field_suggestion.rs:7:5
+error: Field 'checkpointss' not found on type 'Query'. Did you mean 'checkpoints'?
+ --> tests/compile/schema_validation_array_field_suggestion.rs:7:20
   |
-7 |     digests: Vec<String>,
-  |     ^^^^^^^
+7 |     #[field(path = "checkpointss[].digest")]
+  |                    ^^^^^^^^^^^^^^^^^^^^^^^

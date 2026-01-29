@@ -5,6 +5,7 @@ use sui_graphql_macros::Response;
 #[test]
 fn test_simple_path() {
     #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
     struct ChainInfo {
         #[field(path = "chainIdentifier")]
         chain_id: String,
@@ -20,6 +21,7 @@ fn test_simple_path() {
 #[test]
 fn test_nested_path() {
     #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
     struct EpochData {
         #[field(path = "epoch.epochId")]
         epoch_id: u64,
@@ -37,6 +39,7 @@ fn test_nested_path() {
 #[test]
 fn test_multiple_fields() {
     #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
     struct CheckpointData {
         #[field(path = "checkpoint.sequenceNumber")]
         sequence_number: u64,
@@ -61,6 +64,7 @@ fn test_multiple_fields() {
 #[test]
 fn test_single_array_iteration() {
     #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
     struct CheckpointDigests {
         #[field(path = "checkpoints.nodes[].digest")]
         digests: Option<Vec<String>>,
@@ -89,6 +93,7 @@ fn test_single_array_iteration() {
 #[test]
 fn test_nested_array_iteration() {
     #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
     struct EpochCheckpointDigests {
         #[field(path = "epochs.nodes[].checkpoints.nodes[].digest")]
         checkpoint_digests: Option<Vec<Option<Vec<String>>>>,
@@ -134,6 +139,7 @@ fn test_nested_array_iteration() {
 #[test]
 fn test_array_with_prefix_path() {
     #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
     struct NestedCheckpoints {
         #[field(path = "epoch.checkpoints.nodes[].sequenceNumber")]
         sequence_numbers: Option<Vec<u64>>,
@@ -156,6 +162,7 @@ fn test_array_with_prefix_path() {
 #[test]
 fn test_empty_array() {
     #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
     struct CheckpointDigests {
         #[field(path = "checkpoints.nodes[].digest")]
         digests: Option<Vec<String>>,
@@ -173,6 +180,7 @@ fn test_empty_array() {
 #[test]
 fn test_null_array_returns_none() {
     #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
     struct CheckpointDigests {
         #[field(path = "checkpoints.nodes[].digest")]
         digests: Option<Vec<String>>,
@@ -190,6 +198,7 @@ fn test_null_array_returns_none() {
 #[test]
 fn test_null_parent_of_array() {
     #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
     struct CheckpointDigests {
         #[field(path = "checkpoints.nodes[].digest")]
         digests: Option<Vec<String>>,
@@ -208,6 +217,7 @@ fn test_null_parent_of_array() {
 #[test]
 fn test_null_intermediate_with_option() {
     #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
     struct ObjectResponse {
         #[field(path = "object.address")]
         address: Option<String>,
@@ -225,6 +235,7 @@ fn test_null_intermediate_with_option() {
 fn test_null_intermediate_with_required_field() {
     #[allow(dead_code)] // Field never read because parsing fails
     #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
     struct ObjectResponse {
         #[field(path = "object.address")]
         address: String,
@@ -241,6 +252,7 @@ fn test_null_intermediate_with_required_field() {
 #[test]
 fn test_null_final_value_with_option() {
     #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
     struct ObjectResponse {
         #[field(path = "object.address")]
         address: Option<String>,

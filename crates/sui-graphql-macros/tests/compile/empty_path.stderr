@@ -1,5 +1,5 @@
 error: Field path cannot be empty
- --> tests/compile/empty_path.rs:6:5
+ --> tests/compile/empty_path.rs:6:20
   |
-6 |     address: String,
-  |     ^^^^^^^
+6 |     #[field(path = "")]
+  |                    ^^

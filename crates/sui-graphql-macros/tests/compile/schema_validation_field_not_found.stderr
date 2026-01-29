@@ -1,5 +1,5 @@
-error: Field 'nonExistent' not found on type 'Object' in path 'object.nonExistent'. Available fields: address, asMoveObject, asMovePackage, balance, balances, defaultSuinsName, digest, dynamicField, dynamicFields, dynamicObjectField, multiGetBalances, multiGetDynamicFields, multiGetDynamicObjectFields, objectAt, objectBcs, objectVersionsAfter, objectVersionsBefore, objects, owner, previousTransaction, receivedTransactions, storageRebate, version
- --> tests/compile/schema_validation_field_not_found.rs:6:5
+error: Field 'nonExistent' not found on type 'Object'. Available fields: address, version
+ --> tests/compile/schema_validation_field_not_found.rs:6:20
   |
-6 |     address: String,
-  |     ^^^^^^^
+6 |     #[field(path = "object.nonExistent")]
+  |                    ^^^^^^^^^^^^^^^^^^^^

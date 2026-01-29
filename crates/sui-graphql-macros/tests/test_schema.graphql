@@ -1,0 +1,38 @@
+# Minimal test schema for sui-graphql-macros tests.
+# This schema is intentionally small to make tests fast and self-contained.
+
+type Query {
+    chainIdentifier: String
+    object(id: SuiAddress!): Object
+    epoch: Epoch
+    checkpoint: Checkpoint
+    checkpoints: CheckpointConnection
+    epochs: EpochConnection
+}
+
+type Object {
+    address: SuiAddress
+    version: Int
+}
+
+type Checkpoint {
+    sequenceNumber: Int
+    digest: String
+}
+
+type CheckpointConnection {
+    nodes: [Checkpoint]
+}
+
+type Epoch {
+    epochId: Int
+    checkpoints: CheckpointConnection
+}
+
+type EpochConnection {
+    nodes: [Epoch]
+}
+
+scalar SuiAddress
+scalar Int
+scalar String
