@@ -28,7 +28,7 @@ impl Client {
     /// use sui_graphql::Client;
     /// use sui_sdk_types::Address;
     ///
-    /// let client = Client::new("https://sui-mainnet.mystenlabs.com/graphql")?;
+    /// let client = Client::new(Client::MAINNET)?;
     /// let object_id: Address = "0x5".parse()?;
     ///
     /// match client.get_object(object_id).await? {
@@ -54,6 +54,102 @@ impl Client {
         "#;
 
         let variables = serde_json::json!({ "id": object_id });
+
+        let response = self.query::<Response>(QUERY, variables).await?;
+
+        Ok(response.into_data().and_then(|d| d.object).map(|b| b.0))
+    }
+
+    /// Fetch an object at a specific version.
+    pub async fn get_object_at_version(
+        &self,
+        object_id: Address,
+        version: u64,
+    ) -> Result<Option<Object>, Error> {
+        #[derive(Response)]
+        struct Response {
+            #[field(path = "object.objectBcs")]
+            object: Option<Bcs<Object>>,
+        }
+
+        const QUERY: &str = r#"
+            query($id: SuiAddress!, $version: UInt53) {
+                object(address: $id, version: $version) {
+                    objectBcs
+                }
+            }
+        "#;
+
+        let variables = serde_json::json!({
+            "id": object_id,
+            "version": version,
+        });
+
+        let response = self.query::<Response>(QUERY, variables).await?;
+
+        Ok(response.into_data().and_then(|d| d.object).map(|b| b.0))
+    }
+
+    /// Fetch an object at a specific checkpoint.
+    ///
+    /// Returns the object's state as of the given checkpoint.
+    pub async fn get_object_at_checkpoint(
+        &self,
+        object_id: Address,
+        checkpoint: u64,
+    ) -> Result<Option<Object>, Error> {
+        #[derive(Response)]
+        struct Response {
+            #[field(path = "object.objectBcs")]
+            object: Option<Bcs<Object>>,
+        }
+
+        const QUERY: &str = r#"
+            query($id: SuiAddress!, $atCheckpoint: UInt53) {
+                object(address: $id, atCheckpoint: $atCheckpoint) {
+                    objectBcs
+                }
+            }
+        "#;
+
+        let variables = serde_json::json!({
+            "id": object_id,
+            "atCheckpoint": checkpoint,
+        });
+
+        let response = self.query::<Response>(QUERY, variables).await?;
+
+        Ok(response.into_data().and_then(|d| d.object).map(|b| b.0))
+    }
+
+    /// Fetch an object with a root version bound.
+    ///
+    /// This is useful for fetching child or wrapped objects bounded by their
+    /// root object's version. The object will be fetched at the latest version
+    /// at or before the given root version.
+    pub async fn get_object_with_root_version(
+        &self,
+        object_id: Address,
+        root_version: u64,
+    ) -> Result<Option<Object>, Error> {
+        #[derive(Response)]
+        struct Response {
+            #[field(path = "object.objectBcs")]
+            object: Option<Bcs<Object>>,
+        }
+
+        const QUERY: &str = r#"
+            query($id: SuiAddress!, $rootVersion: UInt53) {
+                object(address: $id, rootVersion: $rootVersion) {
+                    objectBcs
+                }
+            }
+        "#;
+
+        let variables = serde_json::json!({
+            "id": object_id,
+            "rootVersion": root_version,
+        });
 
         let response = self.query::<Response>(QUERY, variables).await?;
 
@@ -131,10 +227,7 @@ impl Client {
         let page_info = data
             .as_ref()
             .and_then(|d| d.page_info.clone())
-            .unwrap_or(PageInfo {
-                has_next_page: false,
-                end_cursor: None,
-            });
+            .unwrap_or_default();
 
         let objects = data
             .and_then(|d| d.objects)
@@ -147,6 +240,7 @@ impl Client {
             items: objects,
             has_next_page: page_info.has_next_page,
             end_cursor: page_info.end_cursor,
+            ..Default::default()
         })
     }
 }

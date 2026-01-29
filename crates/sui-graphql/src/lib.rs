@@ -21,4 +21,6 @@ pub use error::Location;
 pub use error::PathFragment;
 pub use pagination::Page;
 pub use pagination::PageInfo;
+pub use pagination::paginate;
+pub use pagination::paginate_backward;
 pub use response::Response;

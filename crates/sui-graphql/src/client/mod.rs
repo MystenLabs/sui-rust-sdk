@@ -1,7 +1,7 @@
 //! GraphQL client for Sui blockchain.
 
 pub(crate) mod coins;
-mod objects;
+pub(crate) mod objects;
 
 use reqwest::Url;
 use serde::Deserialize;
@@ -20,6 +20,15 @@ pub struct Client {
 }
 
 impl Client {
+    /// URL for the Sui Foundation provided GraphQL service for mainnet.
+    pub const MAINNET: &str = "https://graphql.mainnet.sui.io/graphql";
+
+    /// URL for the Sui Foundation provided GraphQL service for testnet.
+    pub const TESTNET: &str = "https://graphql.testnet.sui.io/graphql";
+
+    /// URL for the Sui Foundation provided GraphQL service for devnet.
+    pub const DEVNET: &str = "https://graphql.devnet.sui.io/graphql";
+
     /// Create a new GraphQL client with the given endpoint.
     ///
     /// # Example
@@ -27,7 +36,7 @@ impl Client {
     /// ```no_run
     /// use sui_graphql::Client;
     ///
-    /// let client = Client::new("https://graphql.testnet.sui.io/graphql").unwrap();
+    /// let client = Client::new(Client::MAINNET).unwrap();
     /// ```
     pub fn new(endpoint: &str) -> Result<Self, Error> {
         let endpoint = Url::parse(endpoint)?;
@@ -55,7 +64,7 @@ impl Client {
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), sui_graphql::Error> {
-    ///     let client = Client::new("https://graphql.testnet.sui.io/graphql")?;
+    ///     let client = Client::new(Client::MAINNET)?;
     ///     let response = client
     ///         .query::<MyResponse>("query { chainIdentifier }", serde_json::json!({}))
     ///         .await?;

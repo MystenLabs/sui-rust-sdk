@@ -1,5 +1,7 @@
 //! Field path validation against the GraphQL schema and Rust types.
 
+use std::fmt::Write;
+
 use crate::schema::Schema;
 use darling::util::SpannedValue;
 
@@ -146,7 +148,7 @@ fn validate_path_against_schema(
         if let Some(field_name) = segment.strip_suffix("[]") {
             // Look up the field
             let field = schema
-                .get_field(current_type, field_name)
+                .field(current_type, field_name)
                 .ok_or_else(|| field_not_found_error(schema, current_type, field_name, span))?;
 
             // Verify it's a list type
@@ -165,7 +167,7 @@ fn validate_path_against_schema(
         } else {
             // Regular field access
             let field = schema
-                .get_field(current_type, segment)
+                .field(current_type, segment)
                 .ok_or_else(|| field_not_found_error(schema, current_type, segment, span))?;
 
             current_type = &field.type_name;
@@ -188,13 +190,12 @@ fn field_not_found_error(
     let mut msg = format!("Field '{field_name}' not found on type '{type_name}'");
 
     if let Some(suggested) = suggestion {
-        msg.push_str(&format!(". Did you mean '{suggested}'?"));
+        write!(msg, ". Did you mean '{suggested}'?").unwrap();
     } else if !available.is_empty() {
         // Sort for deterministic error messages (HashMap iteration order is random)
         let mut fields: Vec<_> = available;
         fields.sort();
-        let fields_str = fields.join(", ");
-        msg.push_str(&format!(". Available fields: {fields_str}"));
+        write!(msg, ". Available fields: {}", fields.join(", ")).unwrap();
     }
 
     syn::Error::new(span, msg)
@@ -205,9 +206,9 @@ fn find_similar<'a>(candidates: &[&'a str], target: &str) -> Option<&'a str> {
     candidates
         .iter()
         .filter_map(|&candidate| {
-            let distance = levenshtein_distance(candidate, target);
-            // Only suggest if distance is reasonable (less than half the target length + 1)
-            if distance <= target.len() / 2 + 1 {
+            let distance = edit_distance::edit_distance(candidate, target);
+            // Suggest if within 3 edits
+            if distance <= 3 {
                 Some((candidate, distance))
             } else {
                 None
@@ -217,58 +218,9 @@ fn find_similar<'a>(candidates: &[&'a str], target: &str) -> Option<&'a str> {
         .map(|(c, _)| c)
 }
 
-/// Simple Levenshtein distance implementation.
-fn levenshtein_distance(a: &str, b: &str) -> usize {
-    let a_chars: Vec<char> = a.chars().collect();
-    let b_chars: Vec<char> = b.chars().collect();
-
-    let m = a_chars.len();
-    let n = b_chars.len();
-
-    if m == 0 {
-        return n;
-    }
-    if n == 0 {
-        return m;
-    }
-
-    let mut dp = vec![vec![0; n + 1]; m + 1];
-
-    #[allow(clippy::needless_range_loop)]
-    for i in 0..=m {
-        dp[i][0] = i;
-    }
-    #[allow(clippy::needless_range_loop)]
-    for j in 0..=n {
-        dp[0][j] = j;
-    }
-
-    for i in 1..=m {
-        for j in 1..=n {
-            let cost = if a_chars[i - 1] == b_chars[j - 1] {
-                0
-            } else {
-                1
-            };
-            dp[i][j] = (dp[i - 1][j] + 1)
-                .min(dp[i][j - 1] + 1)
-                .min(dp[i - 1][j - 1] + cost);
-        }
-    }
-
-    dp[m][n]
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_levenshtein() {
-        assert_eq!(levenshtein_distance("address", "addrss"), 1);
-        assert_eq!(levenshtein_distance("address", "address"), 0);
-        assert_eq!(levenshtein_distance("version", "vesion"), 1);
-    }
 
     #[test]
     fn test_find_similar() {

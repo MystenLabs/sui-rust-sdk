@@ -2,31 +2,58 @@
 
 use std::future::Future;
 
-use futures::stream::Stream;
-use futures::stream::{self};
+use futures::Stream;
+use futures::TryStreamExt;
+use futures::stream;
 use serde::Deserialize;
 
 use crate::error::Error;
 
 /// A page of results from a paginated GraphQL query.
+///
+/// Supports both forward pagination (`has_next_page`, `end_cursor`) and
+/// backward pagination (`has_previous_page`, `start_cursor`).
 #[derive(Debug, Clone)]
 pub struct Page<T> {
     /// The items in this page.
     pub items: Vec<T>,
-    /// Whether there are more pages after this one.
+    /// Whether there are more pages after this one (forward pagination).
     pub has_next_page: bool,
-    /// Cursor to use for fetching the next page.
+    /// Cursor pointing to the last item in this page (forward pagination).
     pub end_cursor: Option<String>,
+    /// Whether there are more pages before this one (backward pagination).
+    pub has_previous_page: bool,
+    /// Cursor pointing to the first item in this page (backward pagination).
+    pub start_cursor: Option<String>,
+}
+
+impl<T> Default for Page<T> {
+    fn default() -> Self {
+        Self {
+            items: Vec::new(),
+            has_next_page: false,
+            end_cursor: None,
+            has_previous_page: false,
+            start_cursor: None,
+        }
+    }
 }
 
 /// GraphQL PageInfo from Connection responses.
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
+///
+/// Supports both forward pagination (`has_next_page`, `end_cursor`) and
+/// backward pagination (`has_previous_page`, `start_cursor`).
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
 pub struct PageInfo {
-    /// Whether there are more pages after this one.
+    /// Whether there are more pages after this one (forward pagination).
     pub has_next_page: bool,
-    /// Cursor pointing to the last item in this page.
+    /// Cursor pointing to the last item in this page (forward pagination).
     pub end_cursor: Option<String>,
+    /// Whether there are more pages before this one (backward pagination).
+    pub has_previous_page: bool,
+    /// Cursor pointing to the first item in this page (backward pagination).
+    pub start_cursor: Option<String>,
 }
 
 /// Creates a paginated stream from a fetch function.
@@ -55,46 +82,99 @@ where
     F: Fn(Option<String>) -> Fut + Clone + 'static,
     Fut: Future<Output = Result<Page<T>, Error>>,
 {
+    // Step 1: unfold produces a stream of pages (each page is a stream of items)
     stream::unfold(
-        (
-            Vec::new().into_iter(), // current batch iterator
-            true,                   // has_next_page
-            None,                   // cursor
-            fetch_page,             // fetch function (captures its own state)
-        ),
-        |(mut iter, has_next, cursor, fetch)| async move {
-            // First, try to yield from current batch
-            if let Some(item) = iter.next() {
-                return Some((Ok(item), (iter, has_next, cursor, fetch)));
-            }
-
-            // Batch exhausted - check if there are more pages
+        (None, true, fetch_page), // cursor, has_next_page, fetch function
+        |(cursor, has_next, fetch)| async move {
             if !has_next {
                 return None;
             }
 
-            // Fetch next page
             match fetch(cursor).await {
                 Ok(page) => {
-                    let mut iter = page.items.into_iter();
-                    // Get first item from new batch
-                    match iter.next() {
-                        Some(item) => {
-                            Some((Ok(item), (iter, page.has_next_page, page.end_cursor, fetch)))
-                        }
-                        None => {
-                            // Empty page - end stream
-                            None
-                        }
-                    }
+                    let items = stream::iter(page.items.into_iter().map(Ok));
+                    Some((Ok(items), (page.end_cursor, page.has_next_page, fetch)))
                 }
                 Err(e) => {
-                    // Return error and terminate stream
-                    Some((Err(e), (Vec::new().into_iter(), false, None, fetch)))
+                    // Yield error and stop pagination
+                    Some((Err(e), (None, false, fetch)))
                 }
             }
         },
     )
+    // Step 2: try_flatten converts stream of pages into stream of items
+    .try_flatten()
+}
+
+/// Creates a backward paginated stream from a fetch function.
+///
+/// Similar to [`paginate`], but iterates backward through pages using
+/// `has_previous_page` and `start_cursor` instead of `has_next_page` and `end_cursor`.
+///
+/// Note: Items within each page are yielded in the order returned by the server.
+/// The backward pagination only affects which pages are fetched, not item order within pages.
+///
+/// # Requirements
+///
+/// The fetch function must return a [`Page`] with `has_previous_page` and `start_cursor`
+/// populated. The GraphQL query should:
+///
+/// 1. Use `last` and `before` parameters (instead of `first` and `after` for forward pagination)
+/// 2. Query `hasPreviousPage` and `startCursor` in `pageInfo`
+///
+/// # Page Size
+///
+/// The `last` parameter specifies how many items to fetch per page. If `last` exceeds the
+/// server's maximum page size, the request will fail. Query `serviceConfig` to discover
+/// the page size limits:
+///
+/// ```graphql
+/// query {
+///   serviceConfig {
+///     defaultPageSize(type: "Query", field: "objects")
+///     maxPageSize(type: "Query", field: "objects")
+///   }
+/// }
+/// ```
+///
+/// # Example
+///
+/// ```ignore
+/// let stream = paginate_backward(move |cursor| {
+///     let client = client.clone();
+///     async move {
+///         // Query with `last` and `before` parameters
+///         // and fetch `hasPreviousPage` and `startCursor` in pageInfo
+///         client.fetch_page_backward(cursor.as_deref()).await
+///     }
+/// });
+/// ```
+pub fn paginate_backward<T, F, Fut>(fetch_page: F) -> impl Stream<Item = Result<T, Error>>
+where
+    T: 'static,
+    F: Fn(Option<String>) -> Fut + Clone + 'static,
+    Fut: Future<Output = Result<Page<T>, Error>>,
+{
+    stream::unfold(
+        (None, true, fetch_page),
+        |(cursor, has_prev, fetch)| async move {
+            if !has_prev {
+                return None;
+            }
+
+            match fetch(cursor).await {
+                Ok(page) => {
+                    let items = stream::iter(page.items.into_iter().map(Ok));
+                    Some((
+                        Ok(items),
+                        (page.start_cursor, page.has_previous_page, fetch),
+                    ))
+                }
+                Err(e) => Some((Err(e), (None, false, fetch))),
+            }
+        },
+    )
+    .try_flatten()
 }
 
 #[cfg(test)]
@@ -126,8 +206,7 @@ mod tests {
         let stream = paginate(|_cursor| async {
             Ok(Page {
                 items: vec![1, 2, 3],
-                has_next_page: false,
-                end_cursor: None,
+                ..Default::default()
             })
         });
 
@@ -155,6 +234,7 @@ mod tests {
                                 items: vec![1, 2],
                                 has_next_page: true,
                                 end_cursor: Some("cursor1".to_string()),
+                                ..Default::default()
                             })
                         }
                         1 => {
@@ -163,14 +243,14 @@ mod tests {
                                 items: vec![3, 4],
                                 has_next_page: true,
                                 end_cursor: Some("cursor2".to_string()),
+                                ..Default::default()
                             })
                         }
                         2 => {
                             assert_eq!(cursor, Some("cursor2".to_string()));
                             Ok(Page {
                                 items: vec![5],
-                                has_next_page: false,
-                                end_cursor: None,
+                                ..Default::default()
                             })
                         }
                         _ => panic!("unexpected page request"),
@@ -186,13 +266,78 @@ mod tests {
 
     #[tokio::test]
     async fn test_paginate_empty_page() {
-        let stream = paginate(|_cursor| async {
-            Ok(Page::<i32> {
-                items: vec![],
-                has_next_page: false,
-                end_cursor: None,
+        let stream = paginate(|_cursor| async { Ok(Page::<i32>::default()) });
+
+        let results: Vec<_> = stream.collect().await;
+        assert!(results.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_paginate_backward_single_page() {
+        let stream = paginate_backward(|_cursor| async {
+            Ok(Page {
+                items: vec![1, 2, 3],
+                ..Default::default()
             })
         });
+
+        let results: Vec<_> = stream.collect().await;
+        assert_eq!(results.len(), 3);
+        assert_eq!(results[0].as_ref().unwrap(), &1);
+        assert_eq!(results[1].as_ref().unwrap(), &2);
+        assert_eq!(results[2].as_ref().unwrap(), &3);
+    }
+
+    #[tokio::test]
+    async fn test_paginate_backward_multiple_pages() {
+        let page_count = Arc::new(AtomicUsize::new(0));
+
+        let stream = paginate_backward({
+            let page_count = page_count.clone();
+            move |cursor| {
+                let page_count = page_count.clone();
+                async move {
+                    let page_num = page_count.fetch_add(1, Ordering::SeqCst);
+                    match page_num {
+                        0 => {
+                            assert!(cursor.is_none());
+                            Ok(Page {
+                                items: vec![5, 4],
+                                has_previous_page: true,
+                                start_cursor: Some("cursor1".to_string()),
+                                ..Default::default()
+                            })
+                        }
+                        1 => {
+                            assert_eq!(cursor, Some("cursor1".to_string()));
+                            Ok(Page {
+                                items: vec![3, 2],
+                                has_previous_page: true,
+                                start_cursor: Some("cursor2".to_string()),
+                                ..Default::default()
+                            })
+                        }
+                        2 => {
+                            assert_eq!(cursor, Some("cursor2".to_string()));
+                            Ok(Page {
+                                items: vec![1],
+                                ..Default::default()
+                            })
+                        }
+                        _ => panic!("unexpected page request"),
+                    }
+                }
+            }
+        });
+
+        let results: Vec<i32> = stream.map(|r| r.unwrap()).collect().await;
+        assert_eq!(results, vec![5, 4, 3, 2, 1]);
+        assert_eq!(page_count.load(Ordering::SeqCst), 3);
+    }
+
+    #[tokio::test]
+    async fn test_paginate_backward_empty_page() {
+        let stream = paginate_backward(|_cursor| async { Ok(Page::<i32>::default()) });
 
         let results: Vec<_> = stream.collect().await;
         assert!(results.is_empty());
