@@ -56,12 +56,6 @@ impl From<sui_sdk_types::DigestParseError> for Error {
     }
 }
 
-impl From<chrono::ParseError> for Error {
-    fn from(err: chrono::ParseError) -> Self {
-        Self::Deserialization(format!("datetime parse: {err}"))
-    }
-}
-
 // =============================================================================
 // GraphQL Response Types (per GraphQL spec)
 // https://spec.graphql.org/October2021/#sec-Errors
