@@ -1,7 +1,6 @@
 //! Transaction-related convenience methods.
 
 use sui_graphql_macros::Response;
-use sui_sdk_types::Event;
 use sui_sdk_types::Transaction;
 use sui_sdk_types::TransactionEffects;
 
@@ -9,6 +8,9 @@ use super::Client;
 use crate::bcs::Bcs;
 use crate::error::Error;
 use crate::scalars::DateTime;
+
+/// A balance change from a transaction (re-exported from sui-rpc).
+pub use sui_rpc::proto::sui::rpc::v2::BalanceChange;
 
 /// A transaction response containing the transaction data and its effects.
 ///
@@ -20,8 +22,8 @@ pub struct TransactionResponse {
     pub transaction: Transaction,
     /// The execution effects (status, gas used, object changes, etc.)
     pub effects: TransactionEffects,
-    /// Events emitted by this transaction.
-    pub events: Vec<Event>,
+    /// Balance changes from this transaction.
+    pub balance_changes: Vec<BalanceChange>,
     /// The checkpoint sequence number this transaction was finalized in.
     pub checkpoint: u64,
     /// Timestamp when this transaction was finalized.
@@ -43,7 +45,7 @@ impl Client {
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// use sui_graphql::Client;
     ///
-    /// let client = Client::new("https://sui-mainnet.mystenlabs.com/graphql")?;
+    /// let client = Client::new("https://graphql.mainnet.sui.io/graphql")?;
     /// let digest = "ABC123..."; // transaction digest
     ///
     /// match client.get_transaction(digest).await? {
@@ -66,12 +68,12 @@ impl Client {
             transaction_bcs: Option<Bcs<Transaction>>,
             #[field(path = "transaction.effects.effectsBcs")]
             effects_bcs: Option<Bcs<TransactionEffects>>,
-            #[field(path = "transaction.effects.events.nodes[].eventBcs")]
-            event_bcs_list: Option<Vec<Option<Bcs<Event>>>>,
+            #[field(path = "transaction.effects.balanceChangesJson")]
+            balance_changes: Option<Vec<BalanceChange>>,
             #[field(path = "transaction.effects.checkpoint.sequenceNumber")]
             checkpoint: Option<u64>,
             #[field(path = "transaction.effects.timestamp")]
-            timestamp: Option<String>,
+            timestamp: Option<DateTime>,
         }
 
         const QUERY: &str = r#"
@@ -80,11 +82,7 @@ impl Client {
                     transactionBcs
                     effects {
                         effectsBcs
-                        events {
-                            nodes {
-                                eventBcs
-                            }
-                        }
+                        balanceChangesJson
                         checkpoint {
                             sequenceNumber
                         }
@@ -108,27 +106,14 @@ impl Client {
 
         let transaction = transaction.0;
         let effects = effects.0;
-
-        // Extract events from BCS wrappers
-        let events = data
-            .event_bcs_list
-            .unwrap_or_default()
-            .into_iter()
-            .flatten()
-            .map(|bcs| bcs.0)
-            .collect();
-
+        let balance_changes = data.balance_changes.unwrap_or_default();
         let checkpoint = data.checkpoint.ok_or(Error::MissingData("checkpoint"))?;
-
-        let timestamp = data
-            .timestamp
-            .ok_or(Error::MissingData("timestamp"))?
-            .parse::<DateTime>()?;
+        let timestamp = data.timestamp.ok_or(Error::MissingData("timestamp"))?;
 
         Ok(Some(TransactionResponse {
             transaction,
             effects,
-            events,
+            balance_changes,
             checkpoint,
             timestamp,
         }))
