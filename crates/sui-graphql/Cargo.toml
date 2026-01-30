@@ -24,6 +24,7 @@ reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"
 url = "2"
 sui-sdk-types = { version = "0.2.2", path = "../sui-sdk-types", features = ["serde"] }
 sui-graphql-macros = { version = "0.0.1", path = "../sui-graphql-macros" }
+sui-rpc = { version = "0.2.2", path = "../sui-rpc" }
 base64ct = { version = "1.8.0", features = ["alloc"] }
 bcs = "0.1.6"
 chrono = { version = "0.4", default-features = false, features = ["std", "serde"] }
