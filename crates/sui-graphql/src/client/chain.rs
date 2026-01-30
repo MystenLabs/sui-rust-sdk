@@ -129,16 +129,17 @@ impl Client {
             #[field(path = "epoch.referenceGasPrice")]
             reference_gas_price: Option<BigInt>,
             #[field(path = "epoch.startTimestamp")]
-            start_timestamp: Option<String>,
+            start_timestamp: Option<DateTime>,
             #[field(path = "epoch.endTimestamp")]
-            end_timestamp: Option<String>,
+            end_timestamp: Option<DateTime>,
             #[field(path = "epoch.totalTransactions")]
             total_transactions: Option<u64>,
-            // Use alias syntax: checkpoints@firstCheckpoint means validate against "checkpoints"
-            // but extract from "firstCheckpoint" in JSON (the aliased name in the query)
-            #[field(path = "epoch.checkpoints@firstCheckpoint.nodes[].sequenceNumber")]
+            // Use alias syntax matching GraphQL: "alias:field" where alias comes first
+            // e.g., "firstCheckpoint:checkpoints" validates against "checkpoints" schema
+            // but extracts from "firstCheckpoint" in JSON (the aliased name in the query)
+            #[field(path = "epoch.firstCheckpoint:checkpoints.nodes[].sequenceNumber")]
             first_checkpoint_seq: Option<Vec<u64>>,
-            #[field(path = "epoch.checkpoints@lastCheckpoint.nodes[].sequenceNumber")]
+            #[field(path = "epoch.lastCheckpoint:checkpoints.nodes[].sequenceNumber")]
             last_checkpoint_seq: Option<Vec<u64>>,
         }
 
@@ -181,16 +182,6 @@ impl Client {
             return Ok(None);
         };
 
-        // Parse timestamps from ISO-8601 strings to DateTime
-        let epoch_start_timestamp = data
-            .start_timestamp
-            .map(|s| s.parse::<DateTime>())
-            .transpose()?;
-        let epoch_end_timestamp = data
-            .end_timestamp
-            .map(|s| s.parse::<DateTime>())
-            .transpose()?;
-
         let reference_gas_price = data.reference_gas_price.map(|b| b.0);
 
         // Extract first/last checkpoint from the nested queries
@@ -201,8 +192,8 @@ impl Client {
             epoch,
             first_checkpoint,
             last_checkpoint,
-            epoch_start_timestamp,
-            epoch_end_timestamp,
+            epoch_start_timestamp: data.start_timestamp,
+            epoch_end_timestamp: data.end_timestamp,
             epoch_total_transactions: data.total_transactions,
             reference_gas_price,
             protocol_version: data.protocol_version,

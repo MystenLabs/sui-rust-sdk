@@ -193,10 +193,7 @@ mod tests {
         assert_eq!(path.segments[0].field, "epoch");
         assert!(path.segments[0].alias.is_none());
         assert_eq!(path.segments[1].field, "checkpoints");
-        assert_eq!(
-            path.segments[1].alias,
-            Some("firstCheckpoint".to_string())
-        );
+        assert_eq!(path.segments[1].alias, Some("firstCheckpoint".to_string()));
         assert!(!path.segments[1].is_array);
         assert_eq!(path.segments[2].field, "nodes");
         assert!(path.segments[2].is_array);

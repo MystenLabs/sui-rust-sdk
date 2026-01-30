@@ -13,8 +13,8 @@ use crate::schema::Schema;
 /// - Validates that `objects` is a list type
 /// - Validates fields after `[]` against the list element type
 ///
-/// For aliased paths like `"epoch.checkpoints@firstCheckpoints.nodes[]"`:
-/// - Strips the alias (after `@`) and validates using the real field name
+/// For aliased paths like `"epoch.firstCheckpoint:checkpoints.nodes[]"`:
+/// - Strips the alias (before `:`) and validates using the real field name (after `:`)
 /// - The alias is only used for JSON extraction, not schema validation
 ///
 /// Returns the GraphQL type name of the final field.
