@@ -28,3 +28,4 @@ pub use error::PathFragment;
 pub use pagination::Page;
 pub use pagination::PageInfo;
 pub use response::Response;
+pub use sui_rpc::proto::sui::rpc::v2::BalanceChange;

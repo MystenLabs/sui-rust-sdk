@@ -1,6 +1,7 @@
 //! Transaction-related convenience methods.
 
 use sui_graphql_macros::Response;
+use sui_rpc::proto::sui::rpc::v2::BalanceChange;
 use sui_sdk_types::Transaction;
 use sui_sdk_types::TransactionEffects;
 
@@ -8,9 +9,6 @@ use super::Client;
 use crate::bcs::Bcs;
 use crate::error::Error;
 use crate::scalars::DateTime;
-
-/// A balance change from a transaction (re-exported from sui-rpc).
-pub use sui_rpc::proto::sui::rpc::v2::BalanceChange;
 
 /// A transaction response containing the transaction data and its effects.
 ///
