@@ -3,10 +3,10 @@
 use crate::path::ParsedPath;
 use crate::schema::Schema;
 
-/// Validate a parsed field path against the schema, starting from the Query type.
+/// Validate a parsed field path against the schema, starting from the specified root type.
 ///
 /// A path like `"object.address"` validates that:
-/// - Query type has a field named `object`
+/// - The root type has a field named `object`
 /// - The type returned by `object` has a field named `address`
 ///
 /// For array paths like `"objects[].address"`:
@@ -20,10 +20,11 @@ use crate::schema::Schema;
 /// Returns the GraphQL type name of the final field.
 pub fn validate_path_against_schema(
     schema: &Schema,
+    root_type: &str,
     path: &ParsedPath,
     span: proc_macro2::Span,
 ) -> Result<String, syn::Error> {
-    let mut current_type: &str = "Query";
+    let mut current_type: &str = root_type;
 
     for segment in &path.segments {
         // Look up the field
@@ -74,7 +75,7 @@ fn field_not_found_error(
 }
 
 /// Find a similar string using Levenshtein distance.
-fn find_similar<'a>(candidates: &[&'a str], target: &str) -> Option<&'a str> {
+pub fn find_similar<'a>(candidates: &[&'a str], target: &str) -> Option<&'a str> {
     candidates
         .iter()
         .filter_map(|&candidate| {
