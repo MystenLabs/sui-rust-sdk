@@ -1,8 +1,9 @@
 //! Field path validation against the GraphQL schema.
 
+use crate::path::ParsedPath;
 use crate::schema::Schema;
 
-/// Validate a field path against the schema, starting from the Query type.
+/// Validate a parsed field path against the schema, starting from the Query type.
 ///
 /// A path like `"object.address"` validates that:
 /// - Query type has a field named `object`
@@ -15,42 +16,29 @@ use crate::schema::Schema;
 /// Returns the GraphQL type name of the final field.
 pub fn validate_path_against_schema(
     schema: &Schema,
-    path: &str,
+    path: &ParsedPath,
     span: proc_macro2::Span,
 ) -> Result<String, syn::Error> {
-    let segments: Vec<&str> = path.split('.').collect();
-
     let mut current_type: &str = "Query";
 
-    for segment in &segments {
-        // Handle array iteration: "field[]"
-        if let Some(field_name) = segment.strip_suffix("[]") {
-            // Look up the field
-            let field = schema
-                .get_field(current_type, field_name)
-                .ok_or_else(|| field_not_found_error(schema, current_type, field_name, span))?;
+    for segment in &path.segments {
+        // Look up the field
+        let field = schema
+            .get_field(current_type, &segment.field)
+            .ok_or_else(|| field_not_found_error(schema, current_type, &segment.field, span))?;
 
-            // Verify it's a list type
-            if !field.is_list {
-                return Err(syn::Error::new(
-                    span,
-                    format!(
-                        "Cannot use '[]' on non-list field '{}' (type '{}')",
-                        field_name, field.type_name
-                    ),
-                ));
-            }
-
-            // Continue with the element type
-            current_type = &field.type_name;
-        } else {
-            // Regular field access
-            let field = schema
-                .get_field(current_type, segment)
-                .ok_or_else(|| field_not_found_error(schema, current_type, segment, span))?;
-
-            current_type = &field.type_name;
+        // If marked as array, verify it's actually a list type
+        if segment.is_array && !field.is_list {
+            return Err(syn::Error::new(
+                span,
+                format!(
+                    "Cannot use '[]' on non-list field '{}' (type '{}')",
+                    segment.field, field.type_name
+                ),
+            ));
         }
+
+        current_type = &field.type_name;
     }
 
     Ok(current_type.to_string())
