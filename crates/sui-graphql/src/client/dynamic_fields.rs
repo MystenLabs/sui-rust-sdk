@@ -233,15 +233,22 @@ impl Client {
         parent: Address,
         cursor: Option<&str>,
     ) -> Result<Page<DynamicFieldEntry>, Error> {
-        // TODO(DVX-1981): Simplify with nested response types once the macro supports custom root types
+        /// Extracts data from a single DynamicField node using `root_type = "DynamicField"`.
+        #[derive(Response)]
+        #[response(root_type = "DynamicField")]
+        struct DynamicFieldData {
+            #[field(path = "name.type.repr")]
+            name_type: TypeTag,
+            #[field(path = "name.json")]
+            name: serde_json::Value,
+            #[field(path = "value")]
+            value: serde_json::Value,
+        }
+
         #[derive(Response)]
         struct Response {
-            #[field(path = "object.dynamicFields.nodes[].name.type.repr")]
-            name_types: Option<Vec<TypeTag>>,
-            #[field(path = "object.dynamicFields.nodes[].name.json")]
-            names: Option<Vec<serde_json::Value>>,
-            #[field(path = "object.dynamicFields.nodes[].value")]
-            values: Option<Vec<serde_json::Value>>,
+            #[field(path = "object.dynamicFields.nodes[]")]
+            nodes: Option<Vec<DynamicFieldData>>,
             #[field(path = "object.dynamicFields.pageInfo")]
             page_info: Option<PageInfo>,
         }
@@ -293,20 +300,17 @@ impl Client {
             end_cursor: None,
         });
 
-        let name_types = data.name_types.unwrap_or_default();
-        let names = data.names.unwrap_or_default();
-        let values = data.values.unwrap_or_default();
-
-        let items: Vec<DynamicFieldEntry> = name_types
+        let items: Vec<DynamicFieldEntry> = data
+            .nodes
+            .unwrap_or_default()
             .into_iter()
-            .zip(names)
-            .zip(values)
-            .map(|((name_type, name), value)| {
-                let (extracted_value, value_type, field_type) = parse_dynamic_field_value(value)?;
+            .map(|field_data| {
+                let (extracted_value, value_type, field_type) =
+                    parse_dynamic_field_value(field_data.value)?;
 
                 Ok(DynamicFieldEntry {
-                    name,
-                    name_type,
+                    name: field_data.name,
+                    name_type: field_data.name_type,
                     value: extracted_value,
                     value_type,
                     field_type,
