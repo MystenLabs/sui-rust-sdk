@@ -3,3 +3,11 @@ error: Unexpected meta-item format `literal`
   |
 7 |     #[field("object.address")]
   |             ^^^^^^^^^^^^^^^^
+
+error: Missing field `path` at address
+ --> tests/compile/missing_field_path_attr.rs:3:10
+  |
+3 | #[derive(Response)]
+  |          ^^^^^^^^
+  |
+  = note: this error originates in the derive macro `Response` (in Nightly builds, run with -Z macro-backtrace for more info)

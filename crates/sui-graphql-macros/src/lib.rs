@@ -83,11 +83,10 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
     }
 
     #[derive(Debug, FromField)]
-    #[darling(attributes(field))] // Parse #[field(...)] attributes
+    #[darling(attributes(field))]
     struct ResponseField {
-        ident: Option<syn::Ident>, // Field name
-        #[darling(default)]
-        path: Option<SpannedValue<String>>, // The path = "..." value with span for error messages
+        ident: Option<syn::Ident>,
+        path: SpannedValue<String>, // Required - darling will error if missing
         #[darling(default)]
         skip_schema_validation: bool,
     }
@@ -116,7 +115,7 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
             })?;
             schema::Schema::from_sdl(&sdl)?
         }
-        None => schema::Schema::load()?.clone(),
+        None => schema::Schema::load()?,
     };
 
     let fields = parsed
@@ -136,18 +135,16 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
             .as_ref()
             .ok_or_else(|| syn::Error::new_spanned(&input, "Unnamed fields not supported"))?;
 
-        // Validate field: checks path is provided, not empty, and valid against schema
-        validation::validate_field(
-            &schema,
-            field.path.as_ref(),
-            field_ident,
-            field.skip_schema_validation,
-        )?;
+        // Validate path against GraphQL schema
+        let path = &field.path;
+        if path.is_empty() {
+            return Err(syn::Error::new(path.span(), "Field path cannot be empty"));
+        }
+        if !field.skip_schema_validation {
+            validation::validate_path_against_schema(&schema, path.as_str(), path.span())?;
+        }
 
-        // Safe to unwrap as validate_field ensures path is Some
-        let path = field.path.as_ref().unwrap().as_str();
-
-        let extraction = generate_field_extraction(path, field_ident);
+        let extraction = generate_field_extraction(path.as_str(), field_ident);
         field_extractions.push(extraction);
         field_names.push(field_ident);
     }

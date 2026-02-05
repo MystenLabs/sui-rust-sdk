@@ -1,39 +1,6 @@
 //! Field path validation against the GraphQL schema.
 
 use crate::schema::Schema;
-use darling::util::SpannedValue;
-
-/// Validate a struct field's path attribute.
-///
-/// This performs validation in order:
-/// 1. Checks that the `path` attribute is provided
-/// 2. Checks that the path is not empty
-/// 3. Validates the path against the GraphQL schema (unless skipped)
-///
-/// Errors point to the path attribute when available, otherwise to the field identifier.
-pub fn validate_field(
-    schema: &Schema,
-    path: Option<&SpannedValue<String>>,
-    field_ident: &syn::Ident,
-    skip_schema_validation: bool,
-) -> Result<(), syn::Error> {
-    // Check that path attribute is provided (point to field since there's no path to point to)
-    let path = path.ok_or_else(|| {
-        syn::Error::new_spanned(field_ident, "missing #[field(path = \"...\")] attribute")
-    })?;
-
-    // Check that path is not empty (point to the path attribute)
-    if path.is_empty() {
-        return Err(syn::Error::new(path.span(), "Field path cannot be empty"));
-    }
-
-    // Validate against GraphQL schema (point to the path attribute)
-    if !skip_schema_validation {
-        validate_path_against_schema(schema, path.as_str(), path.span())?;
-    }
-
-    Ok(())
-}
 
 /// Validate a field path against the schema, starting from the Query type.
 ///
@@ -46,7 +13,7 @@ pub fn validate_field(
 /// - Validates fields after `[]` against the list element type
 ///
 /// Returns the GraphQL type name of the final field.
-fn validate_path_against_schema(
+pub fn validate_path_against_schema(
     schema: &Schema,
     path: &str,
     span: proc_macro2::Span,
