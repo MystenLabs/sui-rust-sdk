@@ -95,27 +95,31 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
 
     // Load the GraphQL schema for validation.
     // If a custom schema path is provided, load it; otherwise use the embedded Sui schema.
-    let schema = match &parsed.schema {
-        Some(path) => {
-            // Resolve path relative to the crate's directory.
-            // SUI_GRAPHQL_SCHEMA_DIR is used by trybuild tests (which run from a temp directory).
-            let base_dir = std::env::var("SUI_GRAPHQL_SCHEMA_DIR")
-                .or_else(|_| std::env::var("CARGO_MANIFEST_DIR"))
-                .unwrap();
-            let full_path = std::path::Path::new(&base_dir).join(path);
-            let sdl = std::fs::read_to_string(&full_path).map_err(|e| {
-                syn::Error::new(
-                    proc_macro2::Span::call_site(),
-                    format!(
-                        "Failed to read schema from '{}': {}",
-                        full_path.display(),
-                        e
-                    ),
-                )
-            })?;
-            schema::Schema::from_sdl(&sdl)?
-        }
-        None => schema::Schema::load()?,
+    let loaded_schema = if let Some(path) = &parsed.schema {
+        // Resolve path relative to the crate's directory.
+        // SUI_GRAPHQL_SCHEMA_DIR is used by trybuild tests (which run from a temp directory).
+        let base_dir = std::env::var("SUI_GRAPHQL_SCHEMA_DIR")
+            .or_else(|_| std::env::var("CARGO_MANIFEST_DIR"))
+            .unwrap();
+        let full_path = std::path::Path::new(&base_dir).join(path);
+        let sdl = std::fs::read_to_string(&full_path).map_err(|e| {
+            syn::Error::new(
+                proc_macro2::Span::call_site(),
+                format!(
+                    "Failed to read schema from '{}': {}",
+                    full_path.display(),
+                    e
+                ),
+            )
+        })?;
+        Some(schema::Schema::from_sdl(&sdl)?)
+    } else {
+        None
+    };
+    let schema = if let Some(schema) = &loaded_schema {
+        schema
+    } else {
+        schema::Schema::load()?
     };
 
     let fields = parsed

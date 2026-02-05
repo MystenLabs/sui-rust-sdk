@@ -4,18 +4,14 @@ use graphql_parser::schema as gql;
 use graphql_parser::schema::Definition;
 use graphql_parser::schema::TypeDefinition;
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::sync::LazyLock;
 
 /// The embedded Sui GraphQL schema.
 const SCHEMA_SDL: &str = include_str!("../schema/sui.graphql");
 
 /// Parsed and indexed schema, cached for reuse across macro invocations.
-static SCHEMA: LazyLock<Result<Arc<Schema>, String>> = LazyLock::new(|| {
-    Schema::parse(SCHEMA_SDL)
-        .map(Arc::new)
-        .map_err(|e| format!("Failed to parse schema: {e}"))
-});
+static SCHEMA: LazyLock<Result<Schema, String>> =
+    LazyLock::new(|| Schema::parse(SCHEMA_SDL).map_err(|e| format!("Failed to parse schema: {e}")));
 
 /// A parsed GraphQL schema with type lookup.
 #[derive(Debug)]
@@ -24,14 +20,14 @@ pub struct Schema {
 }
 
 /// Information about a GraphQL type.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct TypeInfo {
     pub name: String,
     pub fields: HashMap<String, FieldInfo>,
 }
 
 /// Information about a field on a type.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct FieldInfo {
     pub name: String,
     pub type_name: String,
@@ -42,18 +38,17 @@ impl Schema {
     /// Load the embedded Sui GraphQL schema.
     ///
     /// Returns an `Arc<Schema>` for cheap sharing without deep copying.
-    pub fn load() -> Result<Arc<Schema>, syn::Error> {
+    pub fn load() -> Result<&'static Schema, syn::Error> {
         SCHEMA
             .as_ref()
-            .map(Arc::clone)
             .map_err(|e| syn::Error::new(proc_macro2::Span::call_site(), e.clone()))
     }
 
     /// Load a custom schema from SDL content.
     ///
     /// Used when `#[response(schema = "...")]` specifies a custom schema.
-    pub fn from_sdl(sdl: &str) -> Result<Arc<Self>, syn::Error> {
-        Self::parse(sdl).map(Arc::new).map_err(|e| {
+    pub fn from_sdl(sdl: &str) -> Result<Self, syn::Error> {
+        Self::parse(sdl).map_err(|e| {
             syn::Error::new(
                 proc_macro2::Span::call_site(),
                 format!("Failed to parse custom schema: {e}"),
