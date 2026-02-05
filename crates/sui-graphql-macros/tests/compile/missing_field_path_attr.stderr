@@ -1,7 +1,7 @@
 error: Unexpected meta-item format `literal`
- --> tests/compile/missing_field_path_attr.rs:6:13
+ --> tests/compile/missing_field_path_attr.rs:7:13
   |
-6 |     #[field("object.address")]
+7 |     #[field("object.address")]
   |             ^^^^^^^^^^^^^^^^
 
 error: Missing field `path` at address

@@ -1,8 +1,8 @@
 //! GraphQL schema parsing and type lookup.
 
+use graphql_parser::schema as gql;
 use graphql_parser::schema::Definition;
 use graphql_parser::schema::TypeDefinition;
-use graphql_parser::schema::{self as gql};
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
@@ -20,14 +20,14 @@ pub struct Schema {
 }
 
 /// Information about a GraphQL type.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct TypeInfo {
     pub name: String,
     pub fields: HashMap<String, FieldInfo>,
 }
 
 /// Information about a field on a type.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct FieldInfo {
     pub name: String,
     pub type_name: String,
@@ -35,11 +35,25 @@ pub struct FieldInfo {
 }
 
 impl Schema {
-    /// Load the embedded schema.
+    /// Load the embedded Sui GraphQL schema.
+    ///
+    /// Returns an `Arc<Schema>` for cheap sharing without deep copying.
     pub fn load() -> Result<&'static Schema, syn::Error> {
         SCHEMA
             .as_ref()
             .map_err(|e| syn::Error::new(proc_macro2::Span::call_site(), e.clone()))
+    }
+
+    /// Load a custom schema from SDL content.
+    ///
+    /// Used when `#[response(schema = "...")]` specifies a custom schema.
+    pub fn from_sdl(sdl: &str) -> Result<Self, syn::Error> {
+        Self::parse(sdl).map_err(|e| {
+            syn::Error::new(
+                proc_macro2::Span::call_site(),
+                format!("Failed to parse custom schema: {e}"),
+            )
+        })
     }
 
     /// Parse a GraphQL SDL schema.

@@ -1,5 +1,12 @@
 #[test]
 fn compile_tests() {
+    // Set the schema directory for trybuild tests (trybuild copies files to a temp directory,
+    // so we need to tell the proc macro where to find schema files relative to)
+    // SAFETY: This test runs single-threaded and no other code reads this env var concurrently.
+    unsafe {
+        std::env::set_var("SUI_GRAPHQL_SCHEMA_DIR", env!("CARGO_MANIFEST_DIR"));
+    }
+
     let t = trybuild::TestCases::new();
 
     // Tests that should pass

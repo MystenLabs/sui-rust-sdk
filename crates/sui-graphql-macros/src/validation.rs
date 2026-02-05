@@ -13,53 +13,47 @@ use crate::schema::Schema;
 /// - Validates fields after `[]` against the list element type
 ///
 /// Returns the GraphQL type name of the final field.
-pub fn validate_path(schema: &Schema, path: &str, span: &syn::Ident) -> Result<String, syn::Error> {
-    if path.is_empty() {
-        return Err(syn::Error::new_spanned(span, "Field path cannot be empty"));
-    }
-
+pub fn validate_path_against_schema(
+    schema: &Schema,
+    path: &str,
+    span: proc_macro2::Span,
+) -> Result<String, syn::Error> {
     let segments: Vec<&str> = path.split('.').collect();
 
-    let mut current_type = "Query".to_string();
+    let mut current_type: &str = "Query";
 
-    for (i, segment) in segments.iter().enumerate() {
+    for segment in &segments {
         // Handle array iteration: "field[]"
         if let Some(field_name) = segment.strip_suffix("[]") {
             // Look up the field
-            let field = schema.get_field(&current_type, field_name).ok_or_else(|| {
-                field_not_found_error(schema, &current_type, field_name, path, span)
-            })?;
+            let field = schema
+                .get_field(current_type, field_name)
+                .ok_or_else(|| field_not_found_error(schema, current_type, field_name, span))?;
 
             // Verify it's a list type
             if !field.is_list {
-                return Err(syn::Error::new_spanned(
+                return Err(syn::Error::new(
                     span,
                     format!(
-                        "Cannot use '[]' on non-list field '{}' (type '{}') in path '{}'",
-                        field_name, field.type_name, path
+                        "Cannot use '[]' on non-list field '{}' (type '{}')",
+                        field_name, field.type_name
                     ),
                 ));
             }
 
             // Continue with the element type
-            current_type = field.type_name.clone();
+            current_type = &field.type_name;
         } else {
             // Regular field access
             let field = schema
-                .get_field(&current_type, segment)
-                .ok_or_else(|| field_not_found_error(schema, &current_type, segment, path, span))?;
+                .get_field(current_type, segment)
+                .ok_or_else(|| field_not_found_error(schema, current_type, segment, span))?;
 
-            // If this is the last segment, return the type
-            if i == segments.len() - 1 {
-                return Ok(field.type_name.clone());
-            }
-
-            current_type = field.type_name.clone();
+            current_type = &field.type_name;
         }
     }
 
-    // Should not reach here since we return in the loop for the last segment
-    Ok(current_type)
+    Ok(current_type.to_string())
 }
 
 /// Generate an error for a field not found, with "Did you mean?" suggestion.
@@ -67,13 +61,12 @@ fn field_not_found_error(
     schema: &Schema,
     type_name: &str,
     field_name: &str,
-    path: &str,
-    span: &syn::Ident,
+    span: proc_macro2::Span,
 ) -> syn::Error {
     let available = schema.field_names(type_name);
     let suggestion = find_similar(&available, field_name);
 
-    let mut msg = format!("Field '{field_name}' not found on type '{type_name}' in path '{path}'");
+    let mut msg = format!("Field '{field_name}' not found on type '{type_name}'");
 
     if let Some(suggested) = suggestion {
         msg.push_str(&format!(". Did you mean '{suggested}'?"));
@@ -85,7 +78,7 @@ fn field_not_found_error(
         msg.push_str(&format!(". Available fields: {fields_str}"));
     }
 
-    syn::Error::new_spanned(span, msg)
+    syn::Error::new(span, msg)
 }
 
 /// Find a similar string using Levenshtein distance.

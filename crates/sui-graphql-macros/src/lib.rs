@@ -28,6 +28,7 @@ mod validation;
 
 use darling::FromDeriveInput;
 use darling::FromField;
+use darling::util::SpannedValue;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
@@ -57,7 +58,7 @@ use syn::parse_macro_input;
 ///     epoch_id: Option<u64>,
 /// }
 /// ```
-#[proc_macro_derive(Response, attributes(field))]
+#[proc_macro_derive(Response, attributes(response, field))]
 pub fn derive_query_response(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
@@ -72,26 +73,54 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
     // Darling generates parsing code automatically, including error messages for invalid input.
 
     #[derive(Debug, FromDeriveInput)]
-    #[darling(supports(struct_named))] // Only supports structs with named fields
+    #[darling(attributes(response), supports(struct_named))]
     struct ResponseInput {
         ident: syn::Ident,                           // Struct name
         generics: syn::Generics,                     // Generic parameters
         data: darling::ast::Data<(), ResponseField>, // Struct fields
+        #[darling(default)]
+        schema: Option<String>, // Custom schema path: #[response(schema = "path/to/schema.graphql")]
     }
 
     #[derive(Debug, FromField)]
-    #[darling(attributes(field))] // Parse #[field(...)] attributes
+    #[darling(attributes(field))]
     struct ResponseField {
-        ident: Option<syn::Ident>, // Field name
-        path: String,              // The path = "..." value
+        ident: Option<syn::Ident>,
+        path: SpannedValue<String>, // Required - darling will error if missing
         #[darling(default)]
-        skip_validation: bool, // Skip schema validation if true
+        skip_schema_validation: bool,
     }
 
     let parsed = ResponseInput::from_derive_input(&input)?;
 
-    // Load the GraphQL schema for validation
-    let schema = schema::Schema::load()?;
+    // Load the GraphQL schema for validation.
+    // If a custom schema path is provided, load it; otherwise use the embedded Sui schema.
+    let loaded_schema = if let Some(path) = &parsed.schema {
+        // Resolve path relative to the crate's directory.
+        // SUI_GRAPHQL_SCHEMA_DIR is used by trybuild tests (which run from a temp directory).
+        let base_dir = std::env::var("SUI_GRAPHQL_SCHEMA_DIR")
+            .or_else(|_| std::env::var("CARGO_MANIFEST_DIR"))
+            .unwrap();
+        let full_path = std::path::Path::new(&base_dir).join(path);
+        let sdl = std::fs::read_to_string(&full_path).map_err(|e| {
+            syn::Error::new(
+                proc_macro2::Span::call_site(),
+                format!(
+                    "Failed to read schema from '{}': {}",
+                    full_path.display(),
+                    e
+                ),
+            )
+        })?;
+        Some(schema::Schema::from_sdl(&sdl)?)
+    } else {
+        None
+    };
+    let schema = if let Some(schema) = &loaded_schema {
+        schema
+    } else {
+        schema::Schema::load()?
+    };
 
     let fields = parsed
         .data
@@ -110,14 +139,16 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
             .as_ref()
             .ok_or_else(|| syn::Error::new_spanned(&input, "Unnamed fields not supported"))?;
 
+        // Validate path against GraphQL schema
         let path = &field.path;
-
-        // Validate the path against the GraphQL schema (unless skip_validation is set)
-        if !field.skip_validation {
-            validation::validate_path(schema, path, field_ident)?;
+        if path.is_empty() {
+            return Err(syn::Error::new(path.span(), "Field path cannot be empty"));
+        }
+        if !field.skip_schema_validation {
+            validation::validate_path_against_schema(&schema, path.as_str(), path.span())?;
         }
 
-        let extraction = generate_field_extraction(path, field_ident);
+        let extraction = generate_field_extraction(path.as_str(), field_ident);
         field_extractions.push(extraction);
         field_names.push(field_ident);
     }
@@ -235,18 +266,23 @@ fn generate_field_extraction(path: &str, field_ident: &syn::Ident) -> TokenStrea
 /// fields efficiently without requiring Option wrappers at every level.
 fn generate_from_segments(full_path: &str, segments: &[PathSegment<'_>]) -> TokenStream2 {
     // Base case: no more segments, deserialize the current value
-    if segments.is_empty() {
+    let Some((
+        PathSegment {
+            field: name,
+            is_array,
+        },
+        rest,
+    )) = segments.split_first()
+    else {
         return quote! {
             serde_json::from_value(current.clone())
                 .map_err(|e| format!("failed to deserialize '{}': {}", #full_path, e))
         };
-    }
+    };
 
-    let segment = &segments[0];
-    let name = segment.field;
-    let rest = generate_from_segments(full_path, &segments[1..]);
+    let rest = generate_from_segments(full_path, rest);
 
-    if segment.is_array {
+    if *is_array {
         quote! {
             {
                 let field_value = current.get(#name)
