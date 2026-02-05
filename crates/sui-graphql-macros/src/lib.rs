@@ -145,7 +145,7 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
             return Err(syn::Error::new(path.span(), "Field path cannot be empty"));
         }
         if !field.skip_schema_validation {
-            validation::validate_path_against_schema(&schema, path.as_str(), path.span())?;
+            validation::validate_path_against_schema(schema, path.as_str(), path.span())?;
         }
 
         let extraction = generate_field_extraction(path.as_str(), field_ident);
