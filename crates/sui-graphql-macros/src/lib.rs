@@ -41,6 +41,11 @@ use syn::parse_macro_input;
 /// Use `#[field(path = "...")]` to specify the JSON path to extract each field.
 /// Paths are dot-separated (e.g., `"object.address"` extracts `json["object"]["address"]`).
 ///
+/// # Root Type
+///
+/// By default, field paths are validated against the `Query` type. Use
+/// `#[response(root_type = "...")]` to validate against a different type instead.
+///
 /// # Generated Code
 ///
 /// The macro generates:
@@ -50,6 +55,7 @@ use syn::parse_macro_input;
 /// # Example
 ///
 /// ```ignore
+/// // Query response (default)
 /// #[derive(Response)]
 /// struct ChainInfo {
 ///     #[field(path = "chainIdentifier")]
@@ -57,6 +63,14 @@ use syn::parse_macro_input;
 ///
 ///     #[field(path = "epoch.epochId")]
 ///     epoch_id: Option<u64>,
+/// }
+///
+/// // Mutation response
+/// #[derive(Response)]
+/// #[response(root_type = "Mutation")]
+/// struct ExecuteResult {
+///     #[field(path = "executeTransaction.effects.effectsBcs")]
+///     effects_bcs: Option<String>,
 /// }
 /// ```
 #[proc_macro_derive(Response, attributes(response, field))]
@@ -81,6 +95,8 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
         data: darling::ast::Data<(), ResponseField>, // Struct fields
         #[darling(default)]
         schema: Option<String>, // Custom schema path: #[response(schema = "path/to/schema.graphql")]
+        #[darling(default)]
+        root_type: Option<SpannedValue<String>>, // #[response(root_type = "...")] for non-Query roots
     }
 
     #[derive(Debug, FromField)]
@@ -123,6 +139,32 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
         schema::Schema::load()?
     };
 
+    // Determine root type: use specified root_type or default to "Query"
+    let root_type = parsed
+        .root_type
+        .as_ref()
+        .map(|s| s.as_str())
+        .unwrap_or("Query");
+
+    // Validate that the root type exists in the schema
+    if !schema.has_type(root_type) {
+        use std::fmt::Write;
+
+        let type_names = schema.type_names();
+        let suggestion = validation::find_similar(&type_names, root_type);
+
+        let mut msg = format!("Type '{}' not found in GraphQL schema", root_type);
+        if let Some(suggested) = suggestion {
+            write!(msg, ". Did you mean '{}'?", suggested).unwrap();
+        }
+
+        // We only enter this block if root_type was explicitly specified (and invalid),
+        // since "Query" (the default) always exists in a valid schema.
+        let span = parsed.root_type.as_ref().unwrap().span();
+
+        return Err(syn::Error::new(span, msg));
+    }
+
     let fields = parsed
         .data
         .as_ref()
@@ -147,7 +189,12 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
 
         // Validate path against GraphQL schema
         if !field.skip_schema_validation {
-            validation::validate_path_against_schema(schema, &parsed_path, spanned_path.span())?;
+            validation::validate_path_against_schema(
+                schema,
+                root_type,
+                &parsed_path,
+                spanned_path.span(),
+            )?;
         }
 
         // Generate extraction code using the same parsed path
