@@ -15,6 +15,7 @@ pub mod scalars;
 pub use bcs::Bcs;
 pub use client::Client;
 pub use client::chain::Epoch;
+pub use client::checkpoints::CheckpointResponse;
 pub use client::coins::Balance;
 pub use client::transactions::TransactionResponse;
 pub use error::Error;
