@@ -23,6 +23,7 @@
 
 extern crate proc_macro;
 
+mod path;
 mod schema;
 mod validation;
 
@@ -139,16 +140,18 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
             .as_ref()
             .ok_or_else(|| syn::Error::new_spanned(&input, "Unnamed fields not supported"))?;
 
+        // Parse path once - used for both validation and code generation
+        let spanned_path = &field.path;
+        let parsed_path = path::ParsedPath::parse(spanned_path.as_str())
+            .map_err(|e| syn::Error::new(spanned_path.span(), e.to_string()))?;
+
         // Validate path against GraphQL schema
-        let path = &field.path;
-        if path.is_empty() {
-            return Err(syn::Error::new(path.span(), "Field path cannot be empty"));
-        }
         if !field.skip_schema_validation {
-            validation::validate_path_against_schema(schema, path.as_str(), path.span())?;
+            validation::validate_path_against_schema(schema, &parsed_path, spanned_path.span())?;
         }
 
-        let extraction = generate_field_extraction(path.as_str(), field_ident);
+        // Generate extraction code using the same parsed path
+        let extraction = generate_field_extraction(&parsed_path, field_ident);
         field_extractions.push(extraction);
         field_names.push(field_ident);
     }
@@ -187,44 +190,15 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
     Ok(output)
 }
 
-/// A segment in a field path.
-///
-/// Paths like `"data.nodes[].name"` are parsed into segments:
-/// - `PathSegment { field: "data", is_array: false }`
-/// - `PathSegment { field: "nodes", is_array: true }`
-/// - `PathSegment { field: "name", is_array: false }`
-struct PathSegment<'a> {
-    /// The field name to access
-    field: &'a str,
-    /// Whether this is an array field (ends with `[]`)
-    is_array: bool,
-}
-
-/// Parse a path string into segments.
-///
-/// Each dot-separated part becomes a `PathSegment`. If it ends with `[]`, it's an array field.
-fn parse_path(path: &str) -> Vec<PathSegment<'_>> {
-    path.split('.')
-        .map(|segment| {
-            let (field, is_array) = if let Some(stripped) = segment.strip_suffix("[]") {
-                (stripped, true)
-            } else {
-                (segment, false)
-            };
-            PathSegment { field, is_array }
-        })
-        .collect()
-}
-
 /// Generate code to extract a single field from JSON using its path.
 ///
 /// Supports multiple path formats:
 /// - Simple: `"object.address"` - navigates to nested field
 /// - Array: `"nodes[].name"` - iterates over array, extracts field from each element
 /// - Nested arrays: `"nodes[].edges[].id"` - nested iteration, returns `Vec<Vec<T>>`
-fn generate_field_extraction(path: &str, field_ident: &syn::Ident) -> TokenStream2 {
-    let segments = parse_path(path);
-    let inner = generate_from_segments(path, &segments);
+fn generate_field_extraction(path: &path::ParsedPath, field_ident: &syn::Ident) -> TokenStream2 {
+    let full_path = &path.raw;
+    let inner = generate_from_segments(full_path, &path.segments);
     // The inner expression returns Result<T, String>, so we use ? to unwrap
     quote! {
         let #field_ident = {
@@ -264,25 +238,19 @@ fn generate_field_extraction(path: &str, field_ident: &syn::Ident) -> TokenStrea
 ///
 /// TODO: Add support for `?` syntax in paths (e.g., "object?.field") to handle nullable
 /// fields efficiently without requiring Option wrappers at every level.
-fn generate_from_segments(full_path: &str, segments: &[PathSegment<'_>]) -> TokenStream2 {
+fn generate_from_segments(full_path: &str, segments: &[path::PathSegment]) -> TokenStream2 {
     // Base case: no more segments, deserialize the current value
-    let Some((
-        PathSegment {
-            field: name,
-            is_array,
-        },
-        rest,
-    )) = segments.split_first()
-    else {
+    let Some((segment, rest)) = segments.split_first() else {
         return quote! {
             serde_json::from_value(current.clone())
                 .map_err(|e| format!("failed to deserialize '{}': {}", #full_path, e))
         };
     };
 
+    let name = &segment.field;
     let rest = generate_from_segments(full_path, rest);
 
-    if *is_array {
+    if segment.is_array {
         quote! {
             {
                 let field_value = current.get(#name)
