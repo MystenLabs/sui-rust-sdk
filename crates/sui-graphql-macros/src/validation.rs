@@ -24,8 +24,8 @@ pub fn validate_path_against_schema(
     for segment in &path.segments {
         // Look up the field
         let field = schema
-            .get_field(current_type, &segment.field)
-            .ok_or_else(|| field_not_found_error(schema, current_type, &segment.field, span))?;
+            .get_field(current_type, segment.field)
+            .ok_or_else(|| field_not_found_error(schema, current_type, segment.field, span))?;
 
         // If marked as array, verify it's actually a list type
         if segment.is_array && !field.is_list {

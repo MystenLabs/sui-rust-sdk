@@ -17,27 +17,27 @@
 /// }
 /// ```
 #[derive(Debug, Clone)]
-pub struct ParsedPath {
+pub struct ParsedPath<'a> {
     /// The original path string (for error messages)
-    pub raw: String,
+    pub raw: &'a str,
     /// Parsed segments of the path
-    pub segments: Vec<PathSegment>,
+    pub segments: Vec<PathSegment<'a>>,
 }
 
 /// A single segment in a field path.
 #[derive(Debug, Clone)]
-pub struct PathSegment {
+pub struct PathSegment<'a> {
     /// The field name (used for both schema validation and JSON extraction)
-    pub field: String,
+    pub field: &'a str,
     /// Whether this is an array field (ends with `[]` in the path)
     pub is_array: bool,
 }
 
-impl ParsedPath {
+impl<'a> ParsedPath<'a> {
     /// Parse a path string into a structured representation.
     ///
     /// Returns `Err` if the path is empty or has invalid syntax.
-    pub fn parse(path: &str) -> Result<Self, PathParseError> {
+    pub fn parse(path: &'a str) -> Result<Self, PathParseError<'a>> {
         if path.is_empty() {
             return Err(PathParseError::Empty);
         }
@@ -52,20 +52,15 @@ impl ParsedPath {
                 };
 
                 if field.is_empty() {
-                    return Err(PathParseError::EmptySegment {
-                        path: path.to_string(),
-                    });
+                    return Err(PathParseError::EmptySegment { path });
                 }
 
-                Ok(PathSegment {
-                    field: field.to_string(),
-                    is_array,
-                })
+                Ok(PathSegment { field, is_array })
             })
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(ParsedPath {
-            raw: path.to_string(),
+            raw: path,
             segments,
         })
     }
@@ -73,14 +68,14 @@ impl ParsedPath {
 
 /// Errors that can occur when parsing a path.
 #[derive(Debug, Clone)]
-pub enum PathParseError {
+pub enum PathParseError<'a> {
     /// The path string is empty
     Empty,
     /// A segment in the path is empty (e.g., "foo..bar" or ".foo")
-    EmptySegment { path: String },
+    EmptySegment { path: &'a str },
 }
 
-impl std::fmt::Display for PathParseError {
+impl<'a> std::fmt::Display for PathParseError<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             PathParseError::Empty => write!(f, "Field path cannot be empty"),
