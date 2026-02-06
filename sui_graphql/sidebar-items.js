@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Error","PathFragment"],"mod":["scalars"],"struct":["Balance","Bcs","Client","GraphQLError","Location","Page","PageInfo","Response"]};
