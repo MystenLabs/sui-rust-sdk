@@ -14,6 +14,7 @@ pub mod scalars;
 
 pub use bcs::Bcs;
 pub use client::Client;
+pub use client::chain::Epoch;
 pub use client::coins::Balance;
 pub use error::Error;
 pub use error::GraphQLError;

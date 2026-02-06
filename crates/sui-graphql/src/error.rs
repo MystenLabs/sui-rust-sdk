@@ -17,21 +17,43 @@ pub enum Error {
     #[error("Invalid URL: {0}")]
     InvalidUrl(#[from] url::ParseError),
 
-    /// Base64 decoding error.
-    #[error("Base64 decode error: {0}")]
-    Base64(#[from] base64ct::Error),
+    /// Failed to deserialize or decode response data.
+    #[error("Deserialization error: {0}")]
+    Deserialization(String),
 
-    /// BCS deserialization error.
-    #[error("BCS decode error: {0}")]
-    Bcs(#[from] bcs::Error),
+    /// Missing expected data in response.
+    #[error("Missing expected data: {0}")]
+    MissingData(&'static str),
+}
 
-    /// Type parsing error.
-    #[error("Type parse error: {0}")]
-    TypeParse(#[from] sui_sdk_types::TypeParseError),
+impl From<base64ct::Error> for Error {
+    fn from(err: base64ct::Error) -> Self {
+        Self::Deserialization(format!("base64 decode: {err}"))
+    }
+}
 
-    /// Integer parsing error.
-    #[error("Integer parse error: {0}")]
-    IntParse(#[from] std::num::ParseIntError),
+impl From<bcs::Error> for Error {
+    fn from(err: bcs::Error) -> Self {
+        Self::Deserialization(format!("bcs decode: {err}"))
+    }
+}
+
+impl From<sui_sdk_types::TypeParseError> for Error {
+    fn from(err: sui_sdk_types::TypeParseError) -> Self {
+        Self::Deserialization(format!("type parse: {err}"))
+    }
+}
+
+impl From<std::num::ParseIntError> for Error {
+    fn from(err: std::num::ParseIntError) -> Self {
+        Self::Deserialization(format!("integer parse: {err}"))
+    }
+}
+
+impl From<sui_sdk_types::DigestParseError> for Error {
+    fn from(err: sui_sdk_types::DigestParseError) -> Self {
+        Self::Deserialization(format!("digest parse: {err}"))
+    }
 }
 
 // =============================================================================
