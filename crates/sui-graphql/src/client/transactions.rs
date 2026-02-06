@@ -1,6 +1,7 @@
 //! Transaction-related convenience methods.
 
 use sui_graphql_macros::Response;
+use sui_rpc::proto::sui::rpc::v2::BalanceChange;
 use sui_sdk_types::Transaction;
 use sui_sdk_types::TransactionEffects;
 
@@ -8,9 +9,6 @@ use super::Client;
 use crate::bcs::Bcs;
 use crate::error::Error;
 use crate::scalars::DateTime;
-
-/// A balance change from a transaction (re-exported from sui-rpc).
-pub use sui_rpc::proto::sui::rpc::v2::BalanceChange;
 
 /// A transaction response containing the transaction data and its effects.
 ///
@@ -65,9 +63,9 @@ impl Client {
         #[derive(Response)]
         struct Response {
             #[field(path = "transaction.transactionBcs")]
-            transaction_bcs: Option<Bcs<Transaction>>,
+            transaction: Option<Bcs<Transaction>>,
             #[field(path = "transaction.effects.effectsBcs")]
-            effects_bcs: Option<Bcs<TransactionEffects>>,
+            effects: Option<Bcs<TransactionEffects>>,
             #[field(path = "transaction.effects.balanceChangesJson")]
             balance_changes: Option<Vec<BalanceChange>>,
             #[field(path = "transaction.effects.checkpoint.sequenceNumber")]
@@ -100,7 +98,7 @@ impl Client {
             return Ok(None);
         };
 
-        let (Some(transaction), Some(effects)) = (data.transaction_bcs, data.effects_bcs) else {
+        let (Some(transaction), Some(effects)) = (data.transaction, data.effects) else {
             return Ok(None);
         };
 
