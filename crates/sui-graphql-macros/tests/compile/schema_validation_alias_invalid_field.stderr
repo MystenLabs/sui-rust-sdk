@@ -1,5 +1,5 @@
-error: Field 'nonExistentField' not found on type 'Epoch' in path 'epoch.nonExistentField@myAlias.nodes[].sequenceNumber'. Available fields: checkpoints, coinDenyList, endTimestamp, epochId, fundInflow, fundOutflow, fundSize, liveObjectSetDigest, netInflow, protocolConfigs, referenceGasPrice, safeMode, startTimestamp, storageFund, systemPackages, systemParameters, systemStakeSubsidy, systemStateVersion, totalCheckpoints, totalGasFees, totalStakeRewards, totalStakeSubsidies, totalTransactions, transactions, validatorSet
- --> tests/compile/schema_validation_alias_invalid_field.rs:8:5
+error: Field 'nonExistentField' not found on type 'Epoch'. Available fields: checkpoints, epochId
+ --> tests/compile/schema_validation_alias_invalid_field.rs:8:20
   |
-8 |     data: Option<Vec<u64>>,
-  |     ^^^^
+8 |     #[field(path = "epoch.myAlias:nonExistentField.nodes[].sequenceNumber")]
+  |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

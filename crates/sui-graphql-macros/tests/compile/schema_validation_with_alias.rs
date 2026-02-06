@@ -1,13 +1,14 @@
 use sui_graphql_macros::Response;
 
-/// Test that alias syntax `field@alias` works correctly.
-/// The field name (before @) is validated against the schema,
-/// while the alias (after @) is used for JSON extraction.
+/// Test that alias syntax `alias:field` works correctly (matching GraphQL's syntax).
+/// The alias (before :) is used for JSON extraction,
+/// while the field name (after :) is validated against the schema.
 #[derive(Response)]
+#[response(schema = "tests/test_schema.graphql")]
 struct EpochCheckpoints {
-    // "checkpoints" is the real field name validated against schema
     // "firstCheckpoint" is the alias used for JSON extraction
-    #[field(path = "epoch.checkpoints@firstCheckpoint.nodes[].sequenceNumber")]
+    // "checkpoints" is the real field name validated against schema
+    #[field(path = "epoch.firstCheckpoint:checkpoints.nodes[].sequenceNumber")]
     first_checkpoint_seq: Option<Vec<u64>>,
 }
 
