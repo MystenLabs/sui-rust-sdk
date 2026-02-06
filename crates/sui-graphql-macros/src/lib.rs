@@ -87,6 +87,7 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
     #[darling(attributes(field))]
     struct ResponseField {
         ident: Option<syn::Ident>,
+        ty: syn::Type,
         path: SpannedValue<String>, // Required - darling will error if missing
         #[darling(default)]
         skip_schema_validation: bool,
@@ -145,13 +146,17 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
         let parsed_path = path::ParsedPath::parse(spanned_path.as_str())
             .map_err(|e| syn::Error::new(spanned_path.span(), e.to_string()))?;
 
+        // Validate that path structure matches type structure ([] count matches Vec count)
+        validation::validate_path_type_match(&parsed_path, &field.ty, field_ident)?;
+
         // Validate path against GraphQL schema
         if !field.skip_schema_validation {
             validation::validate_path_against_schema(schema, &parsed_path, spanned_path.span())?;
         }
 
         // Generate extraction code using the same parsed path
-        let extraction = generate_field_extraction(&parsed_path, field_ident);
+        let type_structure = validation::analyze_type(&field.ty);
+        let extraction = generate_field_extraction(&parsed_path, &type_structure, field_ident);
         field_extractions.push(extraction);
         field_names.push(field_ident);
     }
@@ -196,9 +201,13 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
 /// - Simple: `"object.address"` - navigates to nested field
 /// - Array: `"nodes[].name"` - iterates over array, extracts field from each element
 /// - Nested arrays: `"nodes[].edges[].id"` - nested iteration, returns `Vec<Vec<T>>`
-fn generate_field_extraction(path: &path::ParsedPath, field_ident: &syn::Ident) -> TokenStream2 {
+fn generate_field_extraction(
+    path: &path::ParsedPath,
+    type_structure: &validation::TypeStructure,
+    field_ident: &syn::Ident,
+) -> TokenStream2 {
     let full_path = &path.raw;
-    let inner = generate_from_segments(full_path, &path.segments);
+    let inner = generate_from_segments(full_path, &path.segments, type_structure);
     // The inner expression returns Result<T, String>, so we use ? to unwrap
     quote! {
         let #field_ident = {
@@ -211,6 +220,10 @@ fn generate_field_extraction(path: &path::ParsedPath, field_ident: &syn::Ident) 
 /// Recursively generate extraction code by traversing path segments.
 ///
 /// Returns code that evaluates to `Result<T, String>` (caller adds `?` to unwrap).
+///
+/// The `type_structure` determines how null values are handled at array boundaries:
+/// - `Optional(Vector(...))`: null array -> Ok(None), wrap result in Some
+/// - `Vector(...)`: null array -> Err, return vec directly
 ///
 /// ## Example: Simple path `"object.address"`
 ///
@@ -238,7 +251,11 @@ fn generate_field_extraction(path: &path::ParsedPath, field_ident: &syn::Ident) 
 ///
 /// TODO: Add support for `?` syntax in paths (e.g., "object?.field") to handle nullable
 /// fields efficiently without requiring Option wrappers at every level.
-fn generate_from_segments(full_path: &str, segments: &[path::PathSegment]) -> TokenStream2 {
+fn generate_from_segments(
+    full_path: &str,
+    segments: &[path::PathSegment],
+    type_structure: &validation::TypeStructure,
+) -> TokenStream2 {
     // Base case: no more segments, deserialize the current value
     let Some((segment, rest)) = segments.split_first() else {
         return quote! {
@@ -247,27 +264,51 @@ fn generate_from_segments(full_path: &str, segments: &[path::PathSegment]) -> To
         };
     };
 
-    let name = &segment.field;
-    let rest = generate_from_segments(full_path, rest);
+    let name = segment.field;
 
     if segment.is_array {
+        let (is_optional, element_type) = match type_structure {
+            validation::TypeStructure::Optional(inner) => match inner.as_ref() {
+                validation::TypeStructure::Vector(v) => (true, v.as_ref()),
+                _ => unreachable!("validated: Option with [] must be Option<Vec<...>>"),
+            },
+            validation::TypeStructure::Vector(inner) => (false, inner.as_ref()),
+            _ => unreachable!("validated: [] segment requires Vec or Option<Vec> type"),
+        };
+
+        let rest = generate_from_segments(full_path, rest, element_type);
+
+        let on_null = if is_optional {
+            quote! { Ok(None) }
+        } else {
+            quote! { Err(format!("null value at '{}' in path '{}', expected array", #name, #full_path)) }
+        };
+
+        let wrap_result = if is_optional {
+            quote! { .map(Some) }
+        } else {
+            quote! {}
+        };
+
         quote! {
             {
                 let field_value = current.get(#name)
                     .ok_or_else(|| format!("missing field '{}' in path '{}'", #name, #full_path))?;
                 if field_value.is_null() {
-                    Ok(None)
+                    #on_null
                 } else {
                     let array = field_value.as_array()
                         .ok_or_else(|| format!("expected array at '{}' in path '{}'", #name, #full_path))?;
                     array.iter()
                         .map(|current| { #rest })
                         .collect::<Result<Vec<_>, String>>()
-                        .map(Some)
+                        #wrap_result
                 }
             }
         }
     } else {
+        let rest = generate_from_segments(full_path, rest, type_structure);
+
         quote! {
             {
                 let current = current.get(#name)
