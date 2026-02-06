@@ -1,7 +1,85 @@
-//! Field path validation against the GraphQL schema.
+//! Field path validation against the GraphQL schema and Rust types.
 
 use crate::path::ParsedPath;
 use crate::schema::Schema;
+
+/// Represents the nesting structure of `Option` and `Vec` in a field type.
+#[derive(Debug, Clone, PartialEq)]
+pub enum TypeStructure {
+    /// A type that is neither `Option` nor `Vec` (e.g., `String`, `u64`)
+    Plain,
+    /// `Option<T>` wrapping an inner structure
+    Optional(Box<TypeStructure>),
+    /// `Vec<T>` wrapping an inner structure
+    Vector(Box<TypeStructure>),
+}
+
+/// Analyze a `syn::Type` into a `TypeStructure`.
+pub fn analyze_type(ty: &syn::Type) -> TypeStructure {
+    if let syn::Type::Path(type_path) = ty
+        && let Some(segment) = type_path.path.segments.last()
+    {
+        let ident_str = segment.ident.to_string();
+
+        if ident_str == "Option" {
+            let inner =
+                extract_first_generic_arg(segment).expect("Option must have a type argument");
+            return TypeStructure::Optional(Box::new(analyze_type(inner)));
+        }
+
+        if ident_str == "Vec" {
+            let inner = extract_first_generic_arg(segment).expect("Vec must have a type argument");
+            return TypeStructure::Vector(Box::new(analyze_type(inner)));
+        }
+    }
+    TypeStructure::Plain
+}
+
+/// Extract the first generic type argument from a path segment.
+fn extract_first_generic_arg(segment: &syn::PathSegment) -> Option<&syn::Type> {
+    if let syn::PathArguments::AngleBracketed(args) = &segment.arguments {
+        for arg in &args.args {
+            if let syn::GenericArgument::Type(inner) = arg {
+                return Some(inner);
+            }
+        }
+    }
+    None
+}
+
+/// Count the number of `Vec` wrappers in a type structure.
+fn count_vec_depth(ts: &TypeStructure) -> usize {
+    match ts {
+        TypeStructure::Plain => 0,
+        TypeStructure::Optional(inner) => count_vec_depth(inner),
+        TypeStructure::Vector(inner) => 1 + count_vec_depth(inner),
+    }
+}
+
+/// Validate that the path structure matches the type structure.
+///
+/// Ensures the number of `[]` in the path matches the number of `Vec` wrappers in the type.
+pub fn validate_path_type_match(
+    path: &ParsedPath,
+    ty: &syn::Type,
+    field_ident: &syn::Ident,
+) -> Result<(), syn::Error> {
+    let array_count = path.segments.iter().filter(|s| s.is_array).count();
+    let type_structure = analyze_type(ty);
+    let vec_count = count_vec_depth(&type_structure);
+
+    if array_count != vec_count {
+        return Err(syn::Error::new_spanned(
+            field_ident,
+            format!(
+                "path '{}' has {} array segment(s) but type has {} Vec wrapper(s)",
+                path.raw, array_count, vec_count
+            ),
+        ));
+    }
+
+    Ok(())
+}
 
 /// Validate a parsed field path against the schema, starting from the Query type.
 ///
