@@ -43,9 +43,8 @@ impl Client {
     /// use sui_graphql::Client;
     ///
     /// let client = Client::new("https://graphql.mainnet.sui.io/graphql")?;
-    /// if let Some(chain_id) = client.chain_identifier().await? {
-    ///     println!("Connected to chain: {}", chain_id);
-    /// }
+    /// let chain_id = client.chain_identifier().await?;
+    /// println!("Connected to chain: {}", chain_id);
     /// # Ok(())
     /// # }
     /// ```
@@ -230,7 +229,7 @@ mod tests {
         let result = client.chain_identifier().await;
 
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), Some(expected_digest));
+        assert_eq!(result.unwrap(), expected_digest);
     }
 
     #[tokio::test]
