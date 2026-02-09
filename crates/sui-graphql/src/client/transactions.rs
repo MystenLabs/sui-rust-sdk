@@ -62,6 +62,8 @@ impl Client {
         &self,
         digest: &str,
     ) -> Result<Option<TransactionResponse>, Error> {
+        type BalanceChanges = Vec<BalanceChange>;
+
         #[derive(Response)]
         struct Response {
             #[field(path = "transaction.transactionBcs")]
@@ -69,7 +71,7 @@ impl Client {
             #[field(path = "transaction.effects.effectsBcs")]
             effects_bcs: Option<Bcs<TransactionEffects>>,
             #[field(path = "transaction.effects.balanceChangesJson")]
-            balance_changes: Option<Vec<BalanceChange>>,
+            balance_changes: Option<BalanceChanges>,
             #[field(path = "transaction.effects.checkpoint.sequenceNumber")]
             checkpoint: Option<u64>,
             #[field(path = "transaction.effects.timestamp")]

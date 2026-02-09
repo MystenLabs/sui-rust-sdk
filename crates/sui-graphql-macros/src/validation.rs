@@ -56,10 +56,11 @@ fn unwrap_type<'a>(ty: &'a syn::Type, type_name: &str) -> Option<&'a syn::Type> 
         return None;
     };
 
-    if seg.ident == type_name && args.args.len() == 1 {
-        if let syn::GenericArgument::Type(inner) = &args.args[0] {
-            return Some(inner);
-        }
+    if seg.ident == type_name
+        && args.args.len() == 1
+        && let syn::GenericArgument::Type(inner) = &args.args[0]
+    {
+        return Some(inner);
     }
     None
 }

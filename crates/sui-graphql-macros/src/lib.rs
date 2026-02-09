@@ -227,38 +227,42 @@ fn generate_field_extraction(
 /// For JSON extraction, uses the alias if present, otherwise uses the field name.
 /// Returns code that evaluates to `Result<T, String>` (caller adds `?` to unwrap).
 ///
-/// ## Design: Separation of Optional and Array handling
+/// ## Example: `"data.nodes[].edges[].id"` with `Option<Vec<Vec<String>>>`
 ///
-/// Optional handling and array handling are separate concerns:
-/// 1. First, check if the outer type is Optional and unwrap it
-/// 2. Then, handle arrays by unwrapping Vector
+/// Each `[]` in the path corresponds to one `Vec<_>` wrapper in the type.
 ///
-/// For Optional types, null at ANY point in the path returns `Ok(None)`.
-/// This is handled by wrapping the core logic in a closure for early return.
-///
-/// ## Example: Simple path `"object.address"` with `Option<String>`
+/// For `Option<_>` types, null at the outer level returns `Ok(None)`. This is achieved
+/// by wrapping the extraction in a closure to capture early returns. However, once
+/// inside an array iteration, the element type (`Vec<String>`) is not Optional, so
+/// null values there return errors instead.
 ///
 /// ```ignore
 /// (|| {
-///     let current = current.get("object").ok_or_else(|| ...)?;
+///     // "data" (non-list) - null returns None (outer Optional)
+///     let current = current.get("data").ok_or_else(|| "missing 'data'")?;
 ///     if current.is_null() { return Ok(None); }
-///     let current = current.get("address").ok_or_else(|| ...)?;
-///     if current.is_null() { return Ok(None); }
-///     serde_json::from_value(current.clone()).map_err(...).map(Some)
-/// })()
-/// ```
 ///
-/// ## Example: Array path `"nodes[].name"` with `Option<Vec<String>>`
-///
-/// ```ignore
-/// (|| {
-///     let field_value = current.get("nodes").ok_or_else(|| ...)?;
+///     // "nodes[]" (list) - null returns None (outer Optional)
+///     let field_value = current.get("nodes").ok_or_else(|| "missing 'nodes'")?;
 ///     if field_value.is_null() { return Ok(None); }
-///     let array = field_value.as_array().ok_or_else(|| ...)?;
-///     array.iter()
-///         .map(|current| { /* element extraction */ })
-///         .collect::<Result<Vec<_>, String>>()
-///         .map(Some)
+///     let array = field_value.as_array().ok_or_else(|| "expected array")?;
+///     array.iter().map(|current| {
+///         // Element type: Vec<String> (not Optional, so null = error)
+///
+///         // "edges[]" (list) - null returns Err
+///         let field_value = current.get("edges").ok_or_else(|| "missing 'edges'")?;
+///         if field_value.is_null() { return Err("null at 'edges'"); }
+///         let array = field_value.as_array().ok_or_else(|| "expected array")?;
+///         array.iter().map(|current| {
+///             // Element type: String (not Optional, so null = error)
+///
+///             // "id" (scalar) - null returns Err
+///             let current = current.get("id").ok_or_else(|| "missing 'id'")?;
+///             if current.is_null() { return Err("null at 'id'"); }
+///             serde_json::from_value(current.clone())
+///         }).collect::<Result<Vec<_>, _>>()
+///     }).collect::<Result<Vec<_>, _>>()
+///     .map(Some)  // Wrap in Some for Option
 /// })()
 /// ```
 fn generate_from_segments(
