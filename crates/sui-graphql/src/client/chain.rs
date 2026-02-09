@@ -49,11 +49,11 @@ impl Client {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn chain_identifier(&self) -> Result<Option<Digest>, Error> {
+    pub async fn chain_identifier(&self) -> Result<Digest, Error> {
         #[derive(Response)]
         struct Response {
             #[field(path = "chainIdentifier")]
-            chain_identifier: Option<String>,
+            chain_identifier: Option<Digest>,
         }
 
         const QUERY: &str = "query { chainIdentifier }";
@@ -63,9 +63,7 @@ impl Client {
         response
             .into_data()
             .and_then(|d| d.chain_identifier)
-            .map(|s| s.parse())
-            .transpose()
-            .map_err(Into::into)
+            .ok_or(Error::MissingData("chain identifier"))
     }
 
     /// Get the current protocol version.
@@ -139,6 +137,7 @@ impl Client {
             // but extracts from "firstCheckpoint" in JSON (the aliased name in the query)
             #[field(path = "epoch.firstCheckpoint:checkpoints.nodes[].sequenceNumber")]
             first_checkpoint_seq: Option<Vec<u64>>,
+            // TODO use nodes[0] once we have support for it
             #[field(path = "epoch.lastCheckpoint:checkpoints.nodes[].sequenceNumber")]
             last_checkpoint_seq: Option<Vec<u64>>,
         }
