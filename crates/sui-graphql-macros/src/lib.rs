@@ -196,6 +196,7 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
 /// - Simple: `"object.address"` - navigates to nested field
 /// - Array: `"nodes[].name"` - iterates over array, extracts field from each element
 /// - Nested arrays: `"nodes[].edges[].id"` - nested iteration, returns `Vec<Vec<T>>`
+/// - Aliased: `"alias:field"` - uses alias for JSON extraction, field for validation
 fn generate_field_extraction(path: &path::ParsedPath, field_ident: &syn::Ident) -> TokenStream2 {
     let full_path = &path.raw;
     let inner = generate_from_segments(full_path, &path.segments);
@@ -210,6 +211,7 @@ fn generate_field_extraction(path: &path::ParsedPath, field_ident: &syn::Ident) 
 
 /// Recursively generate extraction code by traversing path segments.
 ///
+/// For JSON extraction, uses the alias if present, otherwise uses the field name.
 /// Returns code that evaluates to `Result<T, String>` (caller adds `?` to unwrap).
 ///
 /// ## Example: Simple path `"object.address"`
@@ -247,19 +249,22 @@ fn generate_from_segments(full_path: &str, segments: &[path::PathSegment]) -> To
         };
     };
 
-    let name = &segment.field;
     let rest = generate_from_segments(full_path, rest);
 
+    // Use alias for JSON extraction if present, otherwise use field name
+    let json_key = segment.json_key();
+
     if segment.is_array {
+        // Array field: check for null, then iterate and collect into Option<Vec>
         quote! {
             {
-                let field_value = current.get(#name)
-                    .ok_or_else(|| format!("missing field '{}' in path '{}'", #name, #full_path))?;
+                let field_value = current.get(#json_key)
+                    .ok_or_else(|| format!("missing field '{}' in path '{}'", #json_key, #full_path))?;
                 if field_value.is_null() {
                     Ok(None)
                 } else {
                     let array = field_value.as_array()
-                        .ok_or_else(|| format!("expected array at '{}' in path '{}'", #name, #full_path))?;
+                        .ok_or_else(|| format!("expected array at '{}' in path '{}'", #json_key, #full_path))?;
                     array.iter()
                         .map(|current| { #rest })
                         .collect::<Result<Vec<_>, String>>()
@@ -270,8 +275,8 @@ fn generate_from_segments(full_path: &str, segments: &[path::PathSegment]) -> To
     } else {
         quote! {
             {
-                let current = current.get(#name)
-                    .ok_or_else(|| format!("missing field '{}' in path '{}'", #name, #full_path))?;
+                let current = current.get(#json_key)
+                    .ok_or_else(|| format!("missing field '{}' in path '{}'", #json_key, #full_path))?;
                 // If null, skip remaining navigation and let serde handle it
                 // (returns Ok(None) for Option<T>, error for non-Option)
                 if current.is_null() {

@@ -1,0 +1,5 @@
+error: Field 'nonExistentField' not found on type 'Epoch'. Available fields: checkpoints, epochId
+ --> tests/compile/schema_validation_alias_invalid_field.rs:8:20
+  |
+8 |     #[field(path = "epoch.myAlias:nonExistentField.nodes[].sequenceNumber")]
+  |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
