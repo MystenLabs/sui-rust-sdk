@@ -3,6 +3,7 @@
 pub(crate) mod chain;
 pub(crate) mod coins;
 pub(crate) mod objects;
+pub(crate) mod transactions;
 
 use reqwest::Url;
 use serde::Deserialize;
