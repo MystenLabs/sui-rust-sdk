@@ -143,16 +143,20 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
 
         // Parse path once - used for both validation and code generation
         let spanned_path = &field.path;
-        let parsed_path = path::ParsedPath::parse(spanned_path.as_str())
+        let mut parsed_path = path::ParsedPath::parse(spanned_path.as_str())
             .map_err(|e| syn::Error::new(spanned_path.span(), e.to_string()))?;
-
-        // Validate that path structure matches type structure ([] count matches Vec count)
-        validation::validate_path_type_match(&parsed_path, &field.ty, field_ident)?;
 
         // Validate path against GraphQL schema
         if !field.skip_schema_validation {
-            validation::validate_path_against_schema(schema, &parsed_path, spanned_path.span())?;
+            validation::validate_path_against_schema(
+                schema,
+                &mut parsed_path,
+                spanned_path.span(),
+            )?;
         }
+
+        // Validate type matches path (handles trailing array inference when schema validation is skipped)
+        validation::validate_type_matches_path(&mut parsed_path, &field.ty)?;
 
         // Generate extraction code using the same parsed path
         let type_structure = validation::analyze_type(&field.ty);
@@ -315,7 +319,10 @@ fn generate_from_segments_core(
         }
     };
 
-    if segment.is_array {
+    if segment
+        .is_list
+        .expect("is_list must be set after validation")
+    {
         // For list segments, unwrap Vector to get element type
         let element_type = match type_structure {
             validation::TypeStructure::Vector(inner) => inner.as_ref(),

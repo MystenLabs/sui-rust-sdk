@@ -1,0 +1,5 @@
+error: field 'tags' is a list but type has no Vec wrapper for it
+ --> tests/compile/type_validation_trailing_array_mismatch.rs:9:15
+  |
+9 |     all_tags: Vec<String>, // Should be Vec<Vec<String>>
+  |               ^^^^^^^^^^^

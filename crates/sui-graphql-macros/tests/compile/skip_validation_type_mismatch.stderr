@@ -1,0 +1,5 @@
+error: type has 3 Vec wrapper(s) but path 'items[].name' has 1 list field(s)
+  --> tests/compile/skip_validation_type_mismatch.rs:10:12
+   |
+10 |     names: Vec<Vec<Vec<String>>>, // Path can have at most 2 list fields (items[] + trailing)
+   |            ^^^^^^^^^^^^^^^^^^^^^

@@ -12,6 +12,7 @@ fn compile_tests() {
     // Tests that should pass
     t.pass("tests/compile/basic_extraction.rs");
     t.pass("tests/compile/skip_validation.rs");
+    t.pass("tests/compile/skip_validation_trailing_array.rs");
     t.pass("tests/compile/schema_validation_with_alias.rs");
 
     // Tests that should fail with expected errors
@@ -30,6 +31,8 @@ fn compile_tests() {
     t.compile_fail("tests/compile/schema_validation_field_after_list_not_found.rs");
     t.compile_fail("tests/compile/schema_validation_alias_invalid_field.rs");
 
-    // Path/type structure mismatch tests
-    t.compile_fail("tests/compile/path_type_mismatch.rs");
+    // Type validation tests
+    t.compile_fail("tests/compile/type_validation_vec_count_mismatch.rs");
+    t.compile_fail("tests/compile/type_validation_trailing_array_mismatch.rs");
+    t.compile_fail("tests/compile/skip_validation_type_mismatch.rs");
 }

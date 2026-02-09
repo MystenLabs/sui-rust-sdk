@@ -1,4 +1,10 @@
 //! Field path validation against the GraphQL schema and Rust types.
+//!
+//! Validates paths and determines iteration by matching:
+//! - Schema: which fields are lists
+//! - Type: how many Vec wrappers
+//!
+//! Iteration happens automatically when schema says list AND type has Vec.
 
 use crate::path::ParsedPath;
 use crate::schema::Schema;
@@ -15,40 +21,65 @@ pub enum TypeStructure {
 }
 
 /// Analyze a `syn::Type` into a `TypeStructure`.
+///
+/// Note: Type detection uses simple name matching (e.g., `ident == "Option"`),
+/// the same approach used by serde_derive. This works for standard library types
+/// but won't distinguish custom types with the same name.
+/// See: https://github.com/serde-rs/serde/blob/master/serde_derive/src/internals/attr.rs
 pub fn analyze_type(ty: &syn::Type) -> TypeStructure {
-    if let syn::Type::Path(type_path) = ty
-        && let Some(segment) = type_path.path.segments.last()
-    {
-        let ident_str = segment.ident.to_string();
-
-        if ident_str == "Option" {
-            let inner =
-                extract_first_generic_arg(segment).expect("Option must have a type argument");
-            return TypeStructure::Optional(Box::new(analyze_type(inner)));
-        }
-
-        if ident_str == "Vec" {
-            let inner = extract_first_generic_arg(segment).expect("Vec must have a type argument");
-            return TypeStructure::Vector(Box::new(analyze_type(inner)));
-        }
+    if let Some(inner) = unwrap_option(ty) {
+        return TypeStructure::Optional(Box::new(analyze_type(inner)));
+    }
+    if let Some(inner) = unwrap_vec(ty) {
+        return TypeStructure::Vector(Box::new(analyze_type(inner)));
     }
     TypeStructure::Plain
 }
 
-/// Extract the first generic type argument from a path segment.
-fn extract_first_generic_arg(segment: &syn::PathSegment) -> Option<&syn::Type> {
-    if let syn::PathArguments::AngleBracketed(args) = &segment.arguments {
-        for arg in &args.args {
-            if let syn::GenericArgument::Type(inner) = arg {
-                return Some(inner);
-            }
+/// Returns the inner type if `ty` is `Option<T>`, otherwise `None`.
+fn unwrap_option(ty: &syn::Type) -> Option<&syn::Type> {
+    unwrap_type(ty, "Option")
+}
+
+/// Returns the inner type if `ty` is `Vec<T>`, otherwise `None`.
+fn unwrap_vec(ty: &syn::Type) -> Option<&syn::Type> {
+    unwrap_type(ty, "Vec")
+}
+
+/// Returns the inner type if `ty` matches `TypeName<T>`, otherwise `None`.
+fn unwrap_type<'a>(ty: &'a syn::Type, type_name: &str) -> Option<&'a syn::Type> {
+    let syn::Type::Path(type_path) = ungroup(ty) else {
+        return None;
+    };
+    let seg = type_path.path.segments.last()?;
+    let syn::PathArguments::AngleBracketed(args) = &seg.arguments else {
+        return None;
+    };
+
+    if seg.ident == type_name && args.args.len() == 1 {
+        if let syn::GenericArgument::Type(inner) = &args.args[0] {
+            return Some(inner);
         }
     }
     None
 }
 
+/// Unwrap `syn::Type::Group` nodes which may appear in macro-generated code.
+///
+/// When a macro captures a type with `$t:ty` and substitutes it, the type may be
+/// wrapped in an invisible `Group` node. For example, `Option<String>` might appear
+/// as `Group(Path("Option<String>"))` instead of just `Path("Option<String>")`.
+///
+/// Credit: serde_derive (https://github.com/serde-rs/serde)
+fn ungroup(ty: &syn::Type) -> &syn::Type {
+    match ty {
+        syn::Type::Group(group) => ungroup(&group.elem),
+        _ => ty,
+    }
+}
+
 /// Count the number of `Vec` wrappers in a type structure.
-fn count_vec_depth(ts: &TypeStructure) -> usize {
+pub fn count_vec_depth(ts: &TypeStructure) -> usize {
     match ts {
         TypeStructure::Plain => 0,
         TypeStructure::Optional(inner) => count_vec_depth(inner),
@@ -56,57 +87,25 @@ fn count_vec_depth(ts: &TypeStructure) -> usize {
     }
 }
 
-/// Validate that the path structure matches the type structure.
+/// Validate path against schema, setting `is_list` on each segment.
 ///
-/// Ensures the number of `[]` in the path matches the number of `Vec` wrappers in the type.
-pub fn validate_path_type_match(
-    path: &ParsedPath,
-    ty: &syn::Type,
-    field_ident: &syn::Ident,
-) -> Result<(), syn::Error> {
-    let array_count = path.segments.iter().filter(|s| s.is_array).count();
-    let type_structure = analyze_type(ty);
-    let vec_count = count_vec_depth(&type_structure);
-
-    if array_count != vec_count {
-        return Err(syn::Error::new_spanned(
-            field_ident,
-            format!(
-                "path '{}' has {} array segment(s) but type has {} Vec wrapper(s)",
-                path.raw, array_count, vec_count
-            ),
-        ));
-    }
-
-    Ok(())
-}
-
-/// Validate a parsed field path against the schema, starting from the Query type.
-///
-/// A path like `"object.address"` validates that:
-/// - Query type has a field named `object`
-/// - The type returned by `object` has a field named `address`
-///
-/// For array paths like `"objects[].address"`:
-/// - Validates that `objects` is a list type
-/// - Validates fields after `[]` against the list element type
-///
-/// Returns the GraphQL type name of the final field.
-pub fn validate_path_against_schema(
+/// Checks that all fields in the path exist in the schema.
+/// Validates that explicit `[]` markers match the schema.
+/// Sets `is_list` on each segment based on the schema.
+pub fn validate_path_against_schema<'a>(
     schema: &Schema,
-    path: &ParsedPath,
+    path: &mut ParsedPath<'a>,
     span: proc_macro2::Span,
-) -> Result<String, syn::Error> {
-    let mut current_type: &str = "Query";
+) -> Result<(), syn::Error> {
+    let mut current_type = "Query";
 
-    for segment in &path.segments {
-        // Look up the field
+    for segment in &mut path.segments {
         let field = schema
             .get_field(current_type, segment.field)
             .ok_or_else(|| field_not_found_error(schema, current_type, segment.field, span))?;
 
-        // If marked as array, verify it's actually a list type
-        if segment.is_array && !field.is_list {
+        // Validate explicit [] matches schema
+        if segment.is_list == Some(true) && !field.is_list {
             return Err(syn::Error::new(
                 span,
                 format!(
@@ -116,10 +115,67 @@ pub fn validate_path_against_schema(
             ));
         }
 
+        segment.is_list = Some(field.is_list);
         current_type = &field.type_name;
     }
 
-    Ok(current_type.to_string())
+    Ok(())
+}
+
+/// Validate that type's Vec count matches the list fields in path.
+///
+/// Handles trailing array inference: if the last segment has `is_list = None`
+/// (schema validation was skipped), infer it as a list if Vec count is one more
+/// than list count.
+///
+/// After this function, all segments will have `is_list` set (no `None` values).
+///
+/// # Errors
+///
+/// - If Vec count > list count: too many Vec wrappers
+/// - If Vec count < list count: points to the specific list field missing a Vec
+pub fn validate_type_matches_path(
+    path: &mut ParsedPath<'_>,
+    ty: &syn::Type,
+) -> Result<(), syn::Error> {
+    let type_structure = analyze_type(ty);
+    let vec_count = count_vec_depth(&type_structure);
+    let list_count = path.list_fields().len();
+
+    // Handle last segment if it's None (schema validation was skipped)
+    // Infer as trailing array if Vec count is exactly one more than list count
+    if let Some(last) = path.segments.last_mut()
+        && last.is_list.is_none()
+    {
+        last.is_list = Some(vec_count == list_count + 1);
+    }
+
+    // Recount after inference
+    let list_count = path.list_fields().len();
+
+    if vec_count < list_count {
+        let list_fields = path.list_fields();
+        let mismatched_field = list_fields[vec_count];
+        return Err(syn::Error::new_spanned(
+            ty,
+            format!(
+                "field '{}' is a list but type has no Vec wrapper for it",
+                mismatched_field
+            ),
+        ));
+    }
+
+    if vec_count > list_count {
+        return Err(syn::Error::new_spanned(
+            ty,
+            format!(
+                "type has {} Vec wrapper(s) but path '{}' has {} list field(s)",
+                vec_count, path.raw, list_count
+            ),
+        ));
+    }
+
+    Ok(())
 }
 
 /// Generate an error for a field not found, with "Did you mean?" suggestion.

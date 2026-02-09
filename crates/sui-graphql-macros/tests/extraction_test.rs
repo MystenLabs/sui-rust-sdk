@@ -160,6 +160,42 @@ fn test_array_with_prefix_path() {
 }
 
 #[test]
+fn test_array_with_prefix_path_null_at_prefix() {
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct NestedCheckpoints {
+        #[field(path = "epoch.checkpoints.nodes[].sequenceNumber")]
+        sequence_numbers: Option<Vec<u64>>,
+    }
+
+    // Null at first prefix field (epoch) - should return None
+    let json = serde_json::json!({
+        "epoch": null
+    });
+    let data = NestedCheckpoints::from_value(json).unwrap();
+    assert_eq!(data.sequence_numbers, None);
+}
+
+#[test]
+fn test_array_with_prefix_path_null_at_intermediate() {
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct NestedCheckpoints {
+        #[field(path = "epoch.checkpoints.nodes[].sequenceNumber")]
+        sequence_numbers: Option<Vec<u64>>,
+    }
+
+    // Null at intermediate prefix field (checkpoints) - should return None
+    let json = serde_json::json!({
+        "epoch": {
+            "checkpoints": null
+        }
+    });
+    let data = NestedCheckpoints::from_value(json).unwrap();
+    assert_eq!(data.sequence_numbers, None);
+}
+
+#[test]
 fn test_empty_array() {
     #[derive(Response)]
     #[response(schema = "tests/test_schema.graphql")]
@@ -676,4 +712,138 @@ fn test_null_final_value_with_option() {
     });
     let data = ObjectResponse::from_value(json).unwrap();
     assert_eq!(data.address, None);
+}
+
+// === Trailing Array Extraction ===
+// When the last field in a path is an array, it can be extracted without []
+// The schema determines it's a list, so the type needs the appropriate Vec wrapper
+
+#[test]
+fn test_trailing_array_of_scalars() {
+    // items[].tags where tags: [String] - no [] on tags, but it's a list in schema
+    // Type needs Vec<Vec<String>> - outer Vec for items[], inner Vec for tags
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "items[].tags")]
+        all_tags: Option<Vec<Option<Vec<String>>>>,
+    }
+
+    let json = serde_json::json!({
+        "items": [
+            { "tags": ["rust", "async"] },
+            { "tags": ["graphql"] },
+            { "tags": ["macros", "derive", "proc-macro"] }
+        ]
+    });
+    let data = Data::from_value(json).unwrap();
+    assert_eq!(
+        data.all_tags,
+        Some(vec![
+            Some(vec!["rust".to_string(), "async".to_string()]),
+            Some(vec!["graphql".to_string()]),
+            Some(vec![
+                "macros".to_string(),
+                "derive".to_string(),
+                "proc-macro".to_string()
+            ])
+        ])
+    );
+}
+
+#[test]
+fn test_trailing_array_with_null_inner() {
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "items[].tags")]
+        all_tags: Option<Vec<Option<Vec<String>>>>,
+    }
+
+    let json = serde_json::json!({
+        "items": [
+            { "tags": ["rust"] },
+            { "tags": null },
+            { "tags": ["graphql"] }
+        ]
+    });
+    let data = Data::from_value(json).unwrap();
+    assert_eq!(
+        data.all_tags,
+        Some(vec![
+            Some(vec!["rust".to_string()]),
+            None,
+            Some(vec!["graphql".to_string()])
+        ])
+    );
+}
+
+#[test]
+fn test_trailing_array_required() {
+    // Required trailing array - no Option wrappers
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "items[].tags")]
+        all_tags: Vec<Vec<String>>,
+    }
+
+    let json = serde_json::json!({
+        "items": [
+            { "tags": ["rust", "async"] },
+            { "tags": ["graphql"] }
+        ]
+    });
+    let data = Data::from_value(json).unwrap();
+    assert_eq!(
+        data.all_tags,
+        vec![
+            vec!["rust".to_string(), "async".to_string()],
+            vec!["graphql".to_string()]
+        ]
+    );
+}
+
+#[test]
+fn test_trailing_array_required_null_inner_returns_error() {
+    #[allow(dead_code)]
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "items[].tags")]
+        all_tags: Vec<Vec<String>>,
+    }
+
+    // One of the tags is null but type is required
+    let json = serde_json::json!({
+        "items": [
+            { "tags": ["rust"] },
+            { "tags": null },
+            { "tags": ["graphql"] }
+        ]
+    });
+    let result = Data::from_value(json);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_trailing_array_empty() {
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "items[].tags")]
+        all_tags: Option<Vec<Option<Vec<String>>>>,
+    }
+
+    let json = serde_json::json!({
+        "items": [
+            { "tags": [] },
+            { "tags": ["only-one"] }
+        ]
+    });
+    let data = Data::from_value(json).unwrap();
+    assert_eq!(
+        data.all_tags,
+        Some(vec![Some(vec![]), Some(vec!["only-one".to_string()])])
+    );
 }
