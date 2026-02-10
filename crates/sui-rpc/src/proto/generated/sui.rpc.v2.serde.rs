@@ -16794,6 +16794,9 @@ impl serde::Serialize for Object {
         if self.balance.is_some() {
             len += 1;
         }
+        if self.display.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("sui.rpc.v2.Object", len)?;
         if let Some(v) = self.bcs.as_ref() {
             struct_ser.serialize_field("bcs", v)?;
@@ -16840,6 +16843,9 @@ impl serde::Serialize for Object {
             #[allow(clippy::needless_borrows_for_generic_args)]
             struct_ser.serialize_field("balance", ToString::to_string(&v).as_str())?;
         }
+        if let Some(v) = self.display.as_ref() {
+            struct_ser.serialize_field("display", &crate::_serde::ValueSerializer(v))?;
+        }
         struct_ser.end()
     }
 }
@@ -16868,6 +16874,7 @@ impl<'de> serde::Deserialize<'de> for Object {
             "storageRebate",
             "json",
             "balance",
+            "display",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -16885,6 +16892,7 @@ impl<'de> serde::Deserialize<'de> for Object {
             StorageRebate,
             Json,
             Balance,
+            Display,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -16920,6 +16928,7 @@ impl<'de> serde::Deserialize<'de> for Object {
                             "storageRebate" | "storage_rebate" => Ok(GeneratedField::StorageRebate),
                             "json" => Ok(GeneratedField::Json),
                             "balance" => Ok(GeneratedField::Balance),
+                            "display" => Ok(GeneratedField::Display),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -16954,6 +16963,7 @@ impl<'de> serde::Deserialize<'de> for Object {
                 let mut storage_rebate__ = None;
                 let mut json__ = None;
                 let mut balance__ = None;
+                let mut display__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Bcs => {
@@ -17040,6 +17050,12 @@ impl<'de> serde::Deserialize<'de> for Object {
                                 map_.next_value::<::std::option::Option<crate::_serde::NumberDeserialize<_>>>()?.map(|x| x.0)
                             ;
                         }
+                        GeneratedField::Display => {
+                            if display__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("display"));
+                            }
+                            display__ = map_.next_value::<::std::option::Option<crate::_serde::ValueDeserializer>>()?.map(|x| x.0.into());
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -17059,6 +17075,7 @@ impl<'de> serde::Deserialize<'de> for Object {
                     storage_rebate: storage_rebate__,
                     json: json__,
                     balance: balance__,
+                    display: display__,
                 })
             }
         }
@@ -20128,12 +20145,20 @@ impl serde::Serialize for SimulateTransactionResponse {
         if !self.command_outputs.is_empty() {
             len += 1;
         }
+        if self.suggested_gas_price.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("sui.rpc.v2.SimulateTransactionResponse", len)?;
         if let Some(v) = self.transaction.as_ref() {
             struct_ser.serialize_field("transaction", v)?;
         }
         if !self.command_outputs.is_empty() {
             struct_ser.serialize_field("commandOutputs", &self.command_outputs)?;
+        }
+        if let Some(v) = self.suggested_gas_price.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("suggestedGasPrice", ToString::to_string(&v).as_str())?;
         }
         struct_ser.end()
     }
@@ -20148,12 +20173,15 @@ impl<'de> serde::Deserialize<'de> for SimulateTransactionResponse {
             "transaction",
             "command_outputs",
             "commandOutputs",
+            "suggested_gas_price",
+            "suggestedGasPrice",
         ];
 
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             Transaction,
             CommandOutputs,
+            SuggestedGasPrice,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -20178,6 +20206,7 @@ impl<'de> serde::Deserialize<'de> for SimulateTransactionResponse {
                         match value {
                             "transaction" => Ok(GeneratedField::Transaction),
                             "commandOutputs" | "command_outputs" => Ok(GeneratedField::CommandOutputs),
+                            "suggestedGasPrice" | "suggested_gas_price" => Ok(GeneratedField::SuggestedGasPrice),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -20201,6 +20230,7 @@ impl<'de> serde::Deserialize<'de> for SimulateTransactionResponse {
             {
                 let mut transaction__ = None;
                 let mut command_outputs__ = None;
+                let mut suggested_gas_price__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Transaction => {
@@ -20215,6 +20245,14 @@ impl<'de> serde::Deserialize<'de> for SimulateTransactionResponse {
                             }
                             command_outputs__ = Some(map_.next_value()?);
                         }
+                        GeneratedField::SuggestedGasPrice => {
+                            if suggested_gas_price__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("suggestedGasPrice"));
+                            }
+                            suggested_gas_price__ = 
+                                map_.next_value::<::std::option::Option<crate::_serde::NumberDeserialize<_>>>()?.map(|x| x.0)
+                            ;
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -20223,6 +20261,7 @@ impl<'de> serde::Deserialize<'de> for SimulateTransactionResponse {
                 Ok(SimulateTransactionResponse {
                     transaction: transaction__,
                     command_outputs: command_outputs__.unwrap_or_default(),
+                    suggested_gas_price: suggested_gas_price__,
                 })
             }
         }

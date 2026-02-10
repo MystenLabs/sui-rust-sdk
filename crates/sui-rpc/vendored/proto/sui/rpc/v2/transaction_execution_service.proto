@@ -61,6 +61,11 @@ message SimulateTransactionRequest {
 message SimulateTransactionResponse {
   optional ExecutedTransaction transaction = 1;
   repeated CommandResult command_outputs = 2;
+
+  // A suggested gas price to use, that is above RGP, in order to provide a
+  // better chance of the transaction being included in the presence of
+  // congested objects.
+  optional uint64 suggested_gas_price = 3;
 }
 
 // An intermediate result/output from the execution of a single command
