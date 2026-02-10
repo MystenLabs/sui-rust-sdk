@@ -1,6 +1,7 @@
 //! Dynamic field related convenience methods.
 
 use futures::Stream;
+use serde::Deserialize;
 use serde::Serialize;
 use sui_graphql_macros::Response;
 use sui_sdk_types::Address;
@@ -9,6 +10,7 @@ use sui_sdk_types::TypeTag;
 use super::Client;
 use crate::bcs::Bcs;
 use crate::error::Error;
+use crate::move_value::MoveValue;
 use crate::pagination::Page;
 use crate::pagination::PageInfo;
 use crate::pagination::paginate;
@@ -22,80 +24,57 @@ pub enum DynamicFieldType {
     Object,
 }
 
-impl DynamicFieldType {
-    /// Returns the GraphQL field name for this dynamic field type.
-    fn graphql_field_name(&self) -> &'static str {
-        match self {
-            DynamicFieldType::Field => "dynamicField",
-            DynamicFieldType::Object => "dynamicObjectField",
-        }
+/// A dynamic field value that handles the MoveValue/MoveObject union.
+///
+/// This type detects which case and extracts the MoveValue accordingly.
+#[derive(Debug, Clone)]
+pub struct DynamicFieldValue {
+    /// Whether this is a Field or ObjectField.
+    pub field_type: DynamicFieldType,
+    /// The extracted Move value.
+    pub value: MoveValue,
+}
+
+impl<'de> Deserialize<'de> for DynamicFieldValue {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let raw = serde_json::Value::deserialize(deserializer)?;
+
+        // Detect MoveObject by checking for "contents" field
+        let is_object = raw.get("contents").is_some();
+        let field_type = if is_object {
+            DynamicFieldType::Object
+        } else {
+            DynamicFieldType::Field
+        };
+
+        // Extract MoveValue from correct location
+        let move_value_json = if is_object {
+            raw.get("contents").cloned().unwrap_or_default()
+        } else {
+            raw
+        };
+
+        // Use MoveValue's from_value to deserialize
+        let value = MoveValue::from_value(move_value_json).map_err(serde::de::Error::custom)?;
+
+        Ok(DynamicFieldValue { field_type, value })
     }
 }
 
 /// A dynamic field entry with its name and value.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Response)]
+#[response(root_type = "DynamicField")]
 #[non_exhaustive]
-pub struct DynamicFieldEntry {
-    /// The field name as JSON.
-    pub name: serde_json::Value,
-    /// The field name's Move type (e.g., `u64`, `0x2::kiosk::Listing`).
-    pub name_type: TypeTag,
-    /// The field value as JSON.
-    pub value: serde_json::Value,
-    /// The field value's Move type (e.g., `0x2::coin::Coin<0x2::sui::SUI>`).
-    pub value_type: TypeTag,
-    /// Whether this is a Field or ObjectField.
-    pub field_type: DynamicFieldType,
-}
-
-/// Parse the value union type (MoveValue | MoveObject) from a dynamic field response.
-///
-/// Returns `(extracted_value, value_type, field_type)`.
-fn parse_dynamic_field_value(
-    value: serde_json::Value,
-) -> Result<(serde_json::Value, TypeTag, DynamicFieldType), Error> {
-    let Some(obj) = value.as_object() else {
-        return Err(Error::MissingData("dynamic field value"));
-    };
-
-    let is_move_object = obj.get("__typename").and_then(|t| t.as_str()) == Some("MoveObject");
-
-    let field_type = if is_move_object {
-        DynamicFieldType::Object
-    } else {
-        DynamicFieldType::Field
-    };
-
-    // TODO(DVX-1980): The macro doesn't currently support extracting fields from within GraphQL
-    // fragments (`... on Type`). Once supported, we can replace this manual JSON parsing
-    // with declarative field paths like `value.type.repr` that work across union types.
-    let (extracted_value, value_type_str) = if is_move_object {
-        // MoveObject: value is in contents.json, type is in contents.type.repr
-        let contents = obj.get("contents");
-        let json = contents
-            .and_then(|c| c.get("json"))
-            .cloned()
-            .unwrap_or(serde_json::Value::Null);
-        let type_repr = contents
-            .and_then(|c| c.get("type"))
-            .and_then(|t| t.get("repr"))
-            .and_then(|r| r.as_str());
-        (json, type_repr)
-    } else {
-        // MoveValue: value is in json, type is in type.repr
-        let json = obj.get("json").cloned().unwrap_or(serde_json::Value::Null);
-        let type_repr = obj
-            .get("type")
-            .and_then(|t| t.get("repr"))
-            .and_then(|r| r.as_str());
-        (json, type_repr)
-    };
-
-    let value_type: TypeTag = value_type_str
-        .ok_or(Error::MissingData("dynamic field value type"))?
-        .parse()?;
-
-    Ok((extracted_value, value_type, field_type))
+pub struct DynamicField {
+    /// The field name (includes type_tag and optional json/bcs).
+    #[field(path = "name")]
+    pub name: MoveValue,
+    /// The field value (includes field_type and the underlying MoveValue).
+    #[field(path = "value")]
+    pub value: DynamicFieldValue,
 }
 
 impl Client {
@@ -106,7 +85,7 @@ impl Client {
     pub fn get_dynamic_fields(
         &self,
         parent: Address,
-    ) -> impl Stream<Item = Result<DynamicFieldEntry, Error>> + '_ {
+    ) -> impl Stream<Item = Result<DynamicField, Error>> + '_ {
         let client = self.clone();
         paginate(move |cursor| {
             let client = client.clone();
@@ -126,9 +105,44 @@ impl Client {
         parent: Address,
         name_type: TypeTag,
         name: Bcs<N>,
-    ) -> Result<Option<DynamicFieldEntry>, Error> {
-        self.fetch_single_dynamic_field(parent, name_type, name, DynamicFieldType::Field)
-            .await
+    ) -> Result<Option<DynamicField>, Error> {
+        #[derive(Response)]
+        struct DynamicFieldResponse {
+            #[field(path = "object.dynamicField")]
+            field: Option<DynamicField>,
+        }
+
+        const QUERY: &str = r#"
+            fragment MoveValueFields on MoveValue {
+                type { repr }
+                json
+                bcs
+            }
+            query($parent: SuiAddress!, $name: DynamicFieldName!) {
+                object(address: $parent) {
+                    dynamicField(name: $name) {
+                        name { ...MoveValueFields }
+                        value {
+                            ... on MoveValue { ...MoveValueFields }
+                            ... on MoveObject {
+                                contents { ...MoveValueFields }
+                            }
+                        }
+                    }
+                }
+            }
+        "#;
+
+        let variables = serde_json::json!({
+            "parent": parent,
+            "name": {
+                "type": name_type.to_string(),
+                "bcs": name,
+            },
+        });
+
+        let response = self.query::<DynamicFieldResponse>(QUERY, variables).await?;
+        Ok(response.into_data().and_then(|d| d.field))
     }
 
     /// Get a single dynamic object field by name.
@@ -139,42 +153,33 @@ impl Client {
         parent: Address,
         name_type: TypeTag,
         name: Bcs<N>,
-    ) -> Result<Option<DynamicFieldEntry>, Error> {
-        self.fetch_single_dynamic_field(parent, name_type, name, DynamicFieldType::Object)
-            .await
-    }
+    ) -> Result<Option<DynamicField>, Error> {
+        #[derive(Response)]
+        struct DynamicObjectFieldResponse {
+            #[field(path = "object.dynamicObjectField")]
+            field: Option<DynamicField>,
+        }
 
-    /// Fetch a single dynamic field or dynamic object field by name.
-    async fn fetch_single_dynamic_field<N: Serialize>(
-        &self,
-        parent: Address,
-        name_type: TypeTag,
-        name: Bcs<N>,
-        field_type: DynamicFieldType,
-    ) -> Result<Option<DynamicFieldEntry>, Error> {
-        let field_name = field_type.graphql_field_name();
-        let query = format!(
-            r#"
-            fragment MoveValueFields on MoveValue {{
-                type {{ repr }}
+        const QUERY: &str = r#"
+            fragment MoveValueFields on MoveValue {
+                type { repr }
                 json
-            }}
-            query($parent: SuiAddress!, $name: DynamicFieldName!) {{
-                object(address: $parent) {{
-                    {field_name}(name: $name) {{
-                        name {{ ...MoveValueFields }}
-                        value {{
-                            __typename
-                            ... on MoveValue {{ ...MoveValueFields }}
-                            ... on MoveObject {{
-                                contents {{ ...MoveValueFields }}
-                            }}
-                        }}
-                    }}
-                }}
-            }}
-        "#
-        );
+                bcs
+            }
+            query($parent: SuiAddress!, $name: DynamicFieldName!) {
+                object(address: $parent) {
+                    dynamicObjectField(name: $name) {
+                        name { ...MoveValueFields }
+                        value {
+                            ... on MoveValue { ...MoveValueFields }
+                            ... on MoveObject {
+                                contents { ...MoveValueFields }
+                            }
+                        }
+                    }
+                }
+            }
+        "#;
 
         let variables = serde_json::json!({
             "parent": parent,
@@ -184,47 +189,10 @@ impl Client {
             },
         });
 
-        let response = self.query::<serde_json::Value>(&query, variables).await?;
-
-        let Some(data) = response.into_data() else {
-            return Ok(None);
-        };
-
-        // Extract: data.object.<field_name>.{name, value}
-        let field = data.get("object").and_then(|o| o.get(field_name));
-
-        let Some(field) = field else {
-            return Ok(None);
-        };
-
-        let name_obj = field.get("name");
-        let value = field.get("value").cloned();
-
-        let (Some(name_obj), Some(value)) = (name_obj, value) else {
-            return Ok(None);
-        };
-
-        let name_type: TypeTag = name_obj
-            .get("type")
-            .and_then(|t| t.get("repr"))
-            .and_then(|r| r.as_str())
-            .ok_or(Error::MissingData("dynamic field name type"))?
-            .parse()?;
-
-        let name = name_obj
-            .get("json")
-            .cloned()
-            .ok_or(Error::MissingData("dynamic field name"))?;
-
-        let (extracted_value, value_type, field_type) = parse_dynamic_field_value(value)?;
-
-        Ok(Some(DynamicFieldEntry {
-            name,
-            name_type,
-            value: extracted_value,
-            value_type,
-            field_type,
-        }))
+        let response = self
+            .query::<DynamicObjectFieldResponse>(QUERY, variables)
+            .await?;
+        Ok(response.into_data().and_then(|d| d.field))
     }
 
     /// Fetch a single page of dynamic fields.
@@ -232,23 +200,11 @@ impl Client {
         &self,
         parent: Address,
         cursor: Option<&str>,
-    ) -> Result<Page<DynamicFieldEntry>, Error> {
-        /// Extracts data from a single DynamicField node using `root_type = "DynamicField"`.
-        #[derive(Response)]
-        #[response(root_type = "DynamicField")]
-        struct DynamicFieldData {
-            #[field(path = "name.type.repr")]
-            name_type: TypeTag,
-            #[field(path = "name.json")]
-            name: serde_json::Value,
-            #[field(path = "value")]
-            value: serde_json::Value,
-        }
-
+    ) -> Result<Page<DynamicField>, Error> {
         #[derive(Response)]
         struct Response {
             #[field(path = "object.dynamicFields.nodes[]")]
-            nodes: Option<Vec<DynamicFieldData>>,
+            nodes: Option<Vec<DynamicField>>,
             #[field(path = "object.dynamicFields.pageInfo")]
             page_info: Option<PageInfo>,
         }
@@ -257,6 +213,7 @@ impl Client {
             fragment MoveValueFields on MoveValue {
                 type { repr }
                 json
+                bcs
             }
             query($parent: SuiAddress!, $cursor: String) {
                 object(address: $parent) {
@@ -264,7 +221,6 @@ impl Client {
                         nodes {
                             name { ...MoveValueFields }
                             value {
-                                __typename
                                 ... on MoveValue { ...MoveValueFields }
                                 ... on MoveObject {
                                     contents { ...MoveValueFields }
@@ -300,23 +256,7 @@ impl Client {
             end_cursor: None,
         });
 
-        let items: Vec<DynamicFieldEntry> = data
-            .nodes
-            .unwrap_or_default()
-            .into_iter()
-            .map(|field_data| {
-                let (extracted_value, value_type, field_type) =
-                    parse_dynamic_field_value(field_data.value)?;
-
-                Ok(DynamicFieldEntry {
-                    name: field_data.name,
-                    name_type: field_data.name_type,
-                    value: extracted_value,
-                    value_type,
-                    field_type,
-                })
-            })
-            .collect::<Result<Vec<_>, Error>>()?;
+        let items = data.nodes.unwrap_or_default();
 
         Ok(Page {
             items,
@@ -331,6 +271,7 @@ mod tests {
     use super::*;
     use futures::StreamExt;
     use std::pin::pin;
+    use sui_sdk_types::TypeTag;
     use wiremock::Mock;
     use wiremock::MockServer;
     use wiremock::ResponseTemplate;
@@ -381,24 +322,26 @@ mod tests {
                                 {
                                     "name": {
                                         "type": { "repr": "u64" },
-                                        "json": "123"
+                                        "json": "123",
+                                        "bcs": null
                                     },
                                     "value": {
-                                        "__typename": "MoveValue",
                                         "type": { "repr": "0x2::coin::Coin<0x2::sui::SUI>" },
-                                        "json": { "balance": "1000" }
+                                        "json": { "balance": "1000" },
+                                        "bcs": null
                                     }
                                 },
                                 {
                                     "name": {
                                         "type": { "repr": "0x2::kiosk::Listing" },
-                                        "json": { "id": "0xabc" }
+                                        "json": { "id": "0xabc" },
+                                        "bcs": null
                                     },
                                     "value": {
-                                        "__typename": "MoveObject",
                                         "contents": {
                                             "type": { "repr": "0x2::kiosk::Item" },
-                                            "json": { "price": "500" }
+                                            "json": { "price": "500" },
+                                            "bcs": null
                                         }
                                     }
                                 }
@@ -419,27 +362,36 @@ mod tests {
         let parent: Address = "0x123".parse().unwrap();
         let mut stream = pin!(client.get_dynamic_fields(parent));
 
-        // First field - MoveValue
+        // First field - MoveValue (no "contents" field)
         let field1 = stream.next().await.unwrap().unwrap();
-        assert_eq!(field1.name_type, TypeTag::U64);
-        assert_eq!(field1.name, serde_json::json!("123"));
-        assert_eq!(field1.field_type, DynamicFieldType::Field);
-        assert_eq!(field1.value, serde_json::json!({ "balance": "1000" }));
+        assert_eq!(field1.name.type_tag, TypeTag::U64);
         assert_eq!(
-            field1.value_type,
+            &field1.name.json.as_ref().unwrap().0,
+            &serde_json::json!("123")
+        );
+        assert_eq!(field1.value.field_type, DynamicFieldType::Field);
+        assert_eq!(
+            &field1.value.value.json.as_ref().unwrap().0,
+            &serde_json::json!({ "balance": "1000" })
+        );
+        assert_eq!(
+            field1.value.value.type_tag,
             "0x2::coin::Coin<0x2::sui::SUI>".parse::<TypeTag>().unwrap()
         );
 
-        // Second field - MoveObject
+        // Second field - MoveObject (has "contents" field)
         let field2 = stream.next().await.unwrap().unwrap();
         assert_eq!(
-            field2.name_type,
+            field2.name.type_tag,
             "0x2::kiosk::Listing".parse::<TypeTag>().unwrap()
         );
-        assert_eq!(field2.field_type, DynamicFieldType::Object);
-        assert_eq!(field2.value, serde_json::json!({ "price": "500" }));
+        assert_eq!(field2.value.field_type, DynamicFieldType::Object);
         assert_eq!(
-            field2.value_type,
+            &field2.value.value.json.as_ref().unwrap().0,
+            &serde_json::json!({ "price": "500" })
+        );
+        assert_eq!(
+            field2.value.value.type_tag,
             "0x2::kiosk::Item".parse::<TypeTag>().unwrap()
         );
 
