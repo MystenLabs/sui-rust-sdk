@@ -59,6 +59,9 @@ message Object {
 
   // Current balance if this object is a `0x2::coin::Coin<T>`
   optional uint64 balance = 101;
+
+  // JSON rendering of the object based on its configured `Display` template.
+  optional google.protobuf.Value display = 102;
 }
 
 // Set of Objects

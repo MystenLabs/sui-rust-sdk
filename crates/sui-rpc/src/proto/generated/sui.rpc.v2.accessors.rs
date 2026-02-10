@@ -10749,6 +10749,7 @@ mod _accessor_impls {
                 storage_rebate: None,
                 json: None,
                 balance: None,
+                display: None,
             }
         }
         #[doc(hidden)]
@@ -11068,6 +11069,28 @@ mod _accessor_impls {
         ///Sets `balance` with the provided value.
         pub fn with_balance(mut self, field: u64) -> Self {
             self.set_balance(field);
+            self
+        }
+        ///If `display` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn display_opt_mut(&mut self) -> Option<&mut ::prost_types::Value> {
+            self.display.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `display`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn display_mut(&mut self) -> &mut ::prost_types::Value {
+            self.display.get_or_insert_default()
+        }
+        ///If `display` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn display_opt(&self) -> Option<&::prost_types::Value> {
+            self.display.as_ref().map(|field| field as _)
+        }
+        ///Sets `display` with the provided value.
+        pub fn set_display<T: Into<::prost_types::Value>>(&mut self, field: T) {
+            self.display = Some(field.into().into());
+        }
+        ///Sets `display` with the provided value.
+        pub fn with_display<T: Into<::prost_types::Value>>(mut self, field: T) -> Self {
+            self.set_display(field.into());
             self
         }
     }
@@ -12430,6 +12453,7 @@ mod _accessor_impls {
             Self {
                 transaction: None,
                 command_outputs: Vec::new(),
+                suggested_gas_price: None,
             }
         }
         #[doc(hidden)]
@@ -12490,6 +12514,28 @@ mod _accessor_impls {
         ///Sets `command_outputs` with the provided value.
         pub fn with_command_outputs(mut self, field: Vec<super::CommandResult>) -> Self {
             self.set_command_outputs(field);
+            self
+        }
+        ///If `suggested_gas_price` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn suggested_gas_price_opt_mut(&mut self) -> Option<&mut u64> {
+            self.suggested_gas_price.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `suggested_gas_price`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn suggested_gas_price_mut(&mut self) -> &mut u64 {
+            self.suggested_gas_price.get_or_insert_default()
+        }
+        ///If `suggested_gas_price` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn suggested_gas_price_opt(&self) -> Option<u64> {
+            self.suggested_gas_price.as_ref().map(|field| *field)
+        }
+        ///Sets `suggested_gas_price` with the provided value.
+        pub fn set_suggested_gas_price(&mut self, field: u64) {
+            self.suggested_gas_price = Some(field);
+        }
+        ///Sets `suggested_gas_price` with the provided value.
+        pub fn with_suggested_gas_price(mut self, field: u64) -> Self {
+            self.set_suggested_gas_price(field);
             self
         }
     }

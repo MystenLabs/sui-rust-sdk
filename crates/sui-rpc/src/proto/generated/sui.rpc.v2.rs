@@ -4312,6 +4312,9 @@ pub struct Object {
     /// Current balance if this object is a `0x2::coin::Coin<T>`
     #[prost(uint64, optional, tag = "101")]
     pub balance: ::core::option::Option<u64>,
+    /// JSON rendering of the object based on its configured `Display` template.
+    #[prost(message, optional, tag = "102")]
+    pub display: ::core::option::Option<::prost_types::Value>,
 }
 /// Set of Objects
 #[non_exhaustive]
@@ -7867,6 +7870,11 @@ pub struct SimulateTransactionResponse {
     pub transaction: ::core::option::Option<ExecutedTransaction>,
     #[prost(message, repeated, tag = "2")]
     pub command_outputs: ::prost::alloc::vec::Vec<CommandResult>,
+    /// A suggested gas price to use, that is above RGP, in order to provide a
+    /// better chance of the transaction being included in the presence of
+    /// congested objects.
+    #[prost(uint64, optional, tag = "3")]
+    pub suggested_gas_price: ::core::option::Option<u64>,
 }
 /// An intermediate result/output from the execution of a single command
 #[non_exhaustive]

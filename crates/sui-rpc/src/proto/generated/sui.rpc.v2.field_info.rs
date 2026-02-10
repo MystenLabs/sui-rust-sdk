@@ -5153,6 +5153,12 @@ mod _field_impls {
             number: 101i32,
             message_fields: None,
         };
+        pub const DISPLAY_FIELD: &'static MessageField = &MessageField {
+            name: "display",
+            json_name: "display",
+            number: 102i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for Object {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -5169,6 +5175,7 @@ mod _field_impls {
             Self::STORAGE_REBATE_FIELD,
             Self::JSON_FIELD,
             Self::BALANCE_FIELD,
+            Self::DISPLAY_FIELD,
         ];
     }
     impl Object {
@@ -5241,6 +5248,10 @@ mod _field_impls {
         }
         pub fn balance(mut self) -> String {
             self.path.push(Object::BALANCE_FIELD.name);
+            self.finish()
+        }
+        pub fn display(mut self) -> String {
+            self.path.push(Object::DISPLAY_FIELD.name);
             self.finish()
         }
     }
@@ -11219,11 +11230,18 @@ mod _field_impls {
             number: 2i32,
             message_fields: Some(CommandResult::FIELDS),
         };
+        pub const SUGGESTED_GAS_PRICE_FIELD: &'static MessageField = &MessageField {
+            name: "suggested_gas_price",
+            json_name: "suggestedGasPrice",
+            number: 3i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for SimulateTransactionResponse {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::TRANSACTION_FIELD,
             Self::COMMAND_OUTPUTS_FIELD,
+            Self::SUGGESTED_GAS_PRICE_FIELD,
         ];
     }
     impl SimulateTransactionResponse {
@@ -11253,6 +11271,10 @@ mod _field_impls {
         pub fn command_outputs(mut self) -> CommandResultFieldPathBuilder {
             self.path.push(SimulateTransactionResponse::COMMAND_OUTPUTS_FIELD.name);
             CommandResultFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn suggested_gas_price(mut self) -> String {
+            self.path.push(SimulateTransactionResponse::SUGGESTED_GAS_PRICE_FIELD.name);
+            self.finish()
         }
     }
     impl CommandResult {
