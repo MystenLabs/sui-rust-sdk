@@ -384,8 +384,8 @@ fn generate_from_segments_core(
         let rest_code = generate_from_segments(full_path, rest, element_type);
 
         quote! {
-            let field_value = current.get(#json_key)
-                .ok_or_else(|| format!("missing field '{}' in path '{}'", #json_key, #full_path))?;
+            // Treat missing fields as null (allows Option<T> to deserialize as None)
+            let field_value = current.get(#json_key).unwrap_or(&serde_json::Value::Null);
             if field_value.is_null() {
                 #on_null
             }
@@ -401,8 +401,8 @@ fn generate_from_segments_core(
             generate_from_segments_core(full_path, rest, type_structure, null_returns_none);
 
         quote! {
-            let current = current.get(#json_key)
-                .ok_or_else(|| format!("missing field '{}' in path '{}'", #json_key, #full_path))?;
+            // Treat missing fields as null (allows Option<T> to deserialize as None)
+            let current = current.get(#json_key).unwrap_or(&serde_json::Value::Null);
             if current.is_null() {
                 #on_null
             }

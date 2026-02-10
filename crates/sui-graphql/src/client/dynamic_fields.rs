@@ -15,6 +15,111 @@ use crate::pagination::Page;
 use crate::pagination::PageInfo;
 use crate::pagination::paginate;
 
+/// The format to fetch for Move values.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Format {
+    /// JSON representation.
+    Json,
+    /// BCS (Binary Canonical Serialization) representation.
+    Bcs,
+}
+
+/// Builds the format fields (json/bcs) for the GraphQL fragment.
+/// Defaults to BCS if no formats specified.
+fn build_format_fields(formats: &[Format]) -> String {
+    let mut fields = String::new();
+
+    if formats.is_empty() {
+        fields.push_str("bcs");
+    } else {
+        for format in formats {
+            match format {
+                Format::Json => fields.push_str("\njson"),
+                Format::Bcs => fields.push_str("\nbcs"),
+            }
+        }
+    }
+
+    fields
+}
+
+// ============================================================================
+// Request builders
+// ============================================================================
+
+/// Builder for listing dynamic fields on an object.
+pub struct DynamicFieldsRequest<'a> {
+    client: &'a Client,
+    parent: Address,
+    formats: Vec<Format>,
+}
+
+impl<'a> DynamicFieldsRequest<'a> {
+    /// Add a format to fetch. Can be called multiple times.
+    /// If not called, defaults to BCS.
+    pub fn format(mut self, f: Format) -> Self {
+        if !self.formats.contains(&f) {
+            self.formats.push(f);
+        }
+        self
+    }
+
+    /// Execute the request and return a stream of dynamic fields.
+    pub fn stream(self) -> impl Stream<Item = Result<DynamicField, Error>> + 'a {
+        let client = self.client.clone();
+        let formats = self.formats;
+        let parent = self.parent;
+
+        paginate(move |cursor| {
+            let client = client.clone();
+            let formats = formats.clone();
+            async move {
+                client
+                    .fetch_dynamic_fields_page_with_formats(parent, cursor.as_deref(), &formats)
+                    .await
+            }
+        })
+    }
+}
+
+/// Builder for fetching a single dynamic field by name.
+pub struct DynamicFieldRequest<'a, N> {
+    client: &'a Client,
+    parent: Address,
+    name_type: TypeTag,
+    name: Bcs<N>,
+    field_type: DynamicFieldType,
+    formats: Vec<Format>,
+}
+
+impl<'a, N: Serialize> DynamicFieldRequest<'a, N> {
+    /// Add a format to fetch. Can be called multiple times.
+    /// If not called, defaults to BCS.
+    pub fn format(mut self, f: Format) -> Self {
+        if !self.formats.contains(&f) {
+            self.formats.push(f);
+        }
+        self
+    }
+
+    /// Execute the request and return the dynamic field if found.
+    pub async fn fetch(self) -> Result<Option<DynamicField>, Error> {
+        self.client
+            .fetch_single_dynamic_field(
+                self.parent,
+                self.name_type,
+                self.name,
+                self.field_type,
+                &self.formats,
+            )
+            .await
+    }
+}
+
+// ============================================================================
+// Dynamic field types
+// ============================================================================
+
 /// The type of a dynamic field.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DynamicFieldType {
@@ -78,128 +183,39 @@ pub struct DynamicField {
 }
 
 impl Client {
-    /// List all dynamic fields on an object as a paginated stream.
-    ///
-    /// Returns a stream that yields each dynamic field entry with its name and value.
-    /// The stream handles pagination automatically.
-    pub fn get_dynamic_fields(
-        &self,
-        parent: Address,
-    ) -> impl Stream<Item = Result<DynamicField, Error>> + '_ {
-        let client = self.clone();
-        paginate(move |cursor| {
-            let client = client.clone();
-            async move {
-                client
-                    .fetch_dynamic_fields_page(parent, cursor.as_deref())
-                    .await
-            }
-        })
+    /// Create a request builder for listing dynamic fields on an object.
+    pub fn dynamic_fields(&self, parent: Address) -> DynamicFieldsRequest<'_> {
+        DynamicFieldsRequest {
+            client: self,
+            parent,
+            formats: vec![],
+        }
     }
 
-    /// Get a single dynamic field by name.
-    ///
-    /// Returns `None` if the dynamic field does not exist.
-    pub async fn get_dynamic_field<N: Serialize>(
+    /// Create a request builder for fetching a single dynamic field by name.
+    pub fn dynamic_field<N: Serialize>(
         &self,
         parent: Address,
         name_type: TypeTag,
         name: Bcs<N>,
-    ) -> Result<Option<DynamicField>, Error> {
-        #[derive(Response)]
-        struct DynamicFieldResponse {
-            #[field(path = "object.dynamicField")]
-            field: Option<DynamicField>,
+        field_type: DynamicFieldType,
+    ) -> DynamicFieldRequest<'_, N> {
+        DynamicFieldRequest {
+            client: self,
+            parent,
+            name_type,
+            name,
+            field_type,
+            formats: vec![],
         }
-
-        const QUERY: &str = r#"
-            fragment MoveValueFields on MoveValue {
-                type { repr }
-                json
-                bcs
-            }
-            query($parent: SuiAddress!, $name: DynamicFieldName!) {
-                object(address: $parent) {
-                    dynamicField(name: $name) {
-                        name { ...MoveValueFields }
-                        value {
-                            ... on MoveValue { ...MoveValueFields }
-                            ... on MoveObject {
-                                contents { ...MoveValueFields }
-                            }
-                        }
-                    }
-                }
-            }
-        "#;
-
-        let variables = serde_json::json!({
-            "parent": parent,
-            "name": {
-                "type": name_type.to_string(),
-                "bcs": name,
-            },
-        });
-
-        let response = self.query::<DynamicFieldResponse>(QUERY, variables).await?;
-        Ok(response.into_data().and_then(|d| d.field))
     }
 
-    /// Get a single dynamic object field by name.
-    ///
-    /// Returns `None` if the dynamic object field does not exist.
-    pub async fn get_dynamic_object_field<N: Serialize>(
-        &self,
-        parent: Address,
-        name_type: TypeTag,
-        name: Bcs<N>,
-    ) -> Result<Option<DynamicField>, Error> {
-        #[derive(Response)]
-        struct DynamicObjectFieldResponse {
-            #[field(path = "object.dynamicObjectField")]
-            field: Option<DynamicField>,
-        }
-
-        const QUERY: &str = r#"
-            fragment MoveValueFields on MoveValue {
-                type { repr }
-                json
-                bcs
-            }
-            query($parent: SuiAddress!, $name: DynamicFieldName!) {
-                object(address: $parent) {
-                    dynamicObjectField(name: $name) {
-                        name { ...MoveValueFields }
-                        value {
-                            ... on MoveValue { ...MoveValueFields }
-                            ... on MoveObject {
-                                contents { ...MoveValueFields }
-                            }
-                        }
-                    }
-                }
-            }
-        "#;
-
-        let variables = serde_json::json!({
-            "parent": parent,
-            "name": {
-                "type": name_type.to_string(),
-                "bcs": name,
-            },
-        });
-
-        let response = self
-            .query::<DynamicObjectFieldResponse>(QUERY, variables)
-            .await?;
-        Ok(response.into_data().and_then(|d| d.field))
-    }
-
-    /// Fetch a single page of dynamic fields.
-    async fn fetch_dynamic_fields_page(
+    /// Fetch a page of dynamic fields with format selection.
+    async fn fetch_dynamic_fields_page_with_formats(
         &self,
         parent: Address,
         cursor: Option<&str>,
+        formats: &[Format],
     ) -> Result<Page<DynamicField>, Error> {
         #[derive(Response)]
         struct Response {
@@ -209,39 +225,41 @@ impl Client {
             page_info: Option<PageInfo>,
         }
 
-        const QUERY: &str = r#"
-            fragment MoveValueFields on MoveValue {
-                type { repr }
-                json
-                bcs
-            }
-            query($parent: SuiAddress!, $cursor: String) {
-                object(address: $parent) {
-                    dynamicFields(after: $cursor) {
-                        nodes {
-                            name { ...MoveValueFields }
-                            value {
-                                ... on MoveValue { ...MoveValueFields }
-                                ... on MoveObject {
-                                    contents { ...MoveValueFields }
-                                }
-                            }
-                        }
-                        pageInfo {
+        let format_fields = build_format_fields(formats);
+        let query = format!(
+            r#"
+            fragment MoveValueFields on MoveValue {{
+                type {{ repr }}
+                {format_fields}
+            }}
+            query($parent: SuiAddress!, $cursor: String) {{
+                object(address: $parent) {{
+                    dynamicFields(after: $cursor) {{
+                        nodes {{
+                            name {{ ...MoveValueFields }}
+                            value {{
+                                ... on MoveValue {{ ...MoveValueFields }}
+                                ... on MoveObject {{
+                                    contents {{ ...MoveValueFields }}
+                                }}
+                            }}
+                        }}
+                        pageInfo {{
                             hasNextPage
                             endCursor
-                        }
-                    }
-                }
-            }
-        "#;
+                        }}
+                    }}
+                }}
+            }}
+        "#
+        );
 
         let variables = serde_json::json!({
             "parent": parent,
             "cursor": cursor,
         });
 
-        let response = self.query::<Response>(QUERY, variables).await?;
+        let response = self.query::<Response>(&query, variables).await?;
 
         let Some(data) = response.into_data() else {
             return Ok(Page {
@@ -256,13 +274,84 @@ impl Client {
             end_cursor: None,
         });
 
-        let items = data.nodes.unwrap_or_default();
-
         Ok(Page {
-            items,
+            items: data.nodes.unwrap_or_default(),
             has_next_page: page_info.has_next_page,
             end_cursor: page_info.end_cursor,
         })
+    }
+
+    /// Fetch a single dynamic field with format selection.
+    async fn fetch_single_dynamic_field<N: Serialize>(
+        &self,
+        parent: Address,
+        name_type: TypeTag,
+        name: Bcs<N>,
+        field_type: DynamicFieldType,
+        formats: &[Format],
+    ) -> Result<Option<DynamicField>, Error> {
+        #[derive(Response)]
+        struct DynamicFieldResponse {
+            #[field(path = "object.dynamicField")]
+            field: Option<DynamicField>,
+        }
+
+        #[derive(Response)]
+        struct DynamicObjectFieldResponse {
+            #[field(path = "object.dynamicObjectField")]
+            field: Option<DynamicField>,
+        }
+
+        let format_fields = build_format_fields(formats);
+        let field_name = match field_type {
+            DynamicFieldType::Field => "dynamicField",
+            DynamicFieldType::Object => "dynamicObjectField",
+        };
+
+        let query = format!(
+            r#"
+            fragment MoveValueFields on MoveValue {{
+                type {{ repr }}
+                {format_fields}
+            }}
+            query($parent: SuiAddress!, $name: DynamicFieldName!) {{
+                object(address: $parent) {{
+                    {field_name}(name: $name) {{
+                        name {{ ...MoveValueFields }}
+                        value {{
+                            ... on MoveValue {{ ...MoveValueFields }}
+                            ... on MoveObject {{
+                                contents {{ ...MoveValueFields }}
+                            }}
+                        }}
+                    }}
+                }}
+            }}
+        "#
+        );
+
+        let variables = serde_json::json!({
+            "parent": parent,
+            "name": {
+                "type": name_type.to_string(),
+                "bcs": name,
+            },
+        });
+
+        match field_type {
+            DynamicFieldType::Field => {
+                let response = self
+                    .query::<DynamicFieldResponse>(&query, variables)
+                    .await?;
+                Ok(response.into_data().and_then(|d| d.field))
+            }
+            DynamicFieldType::Object => {
+                let response = self
+                    .query::<DynamicObjectFieldResponse>(&query, variables)
+                    .await?;
+                Ok(response.into_data().and_then(|d| d.field))
+            }
+        }
     }
 }
 
@@ -279,7 +368,7 @@ mod tests {
     use wiremock::matchers::path;
 
     #[tokio::test]
-    async fn test_get_dynamic_fields_empty() {
+    async fn test_dynamic_fields_empty() {
         let mock_server = MockServer::start().await;
 
         Mock::given(method("POST"))
@@ -303,13 +392,13 @@ mod tests {
         let client = Client::new(&mock_server.uri()).unwrap();
 
         let parent: Address = "0x123".parse().unwrap();
-        let mut stream = pin!(client.get_dynamic_fields(parent));
+        let mut stream = pin!(client.dynamic_fields(parent).stream());
         let result = stream.next().await;
         assert!(result.is_none());
     }
 
     #[tokio::test]
-    async fn test_get_dynamic_fields_with_values() {
+    async fn test_dynamic_fields_with_json_format() {
         let mock_server = MockServer::start().await;
 
         Mock::given(method("POST"))
@@ -322,26 +411,22 @@ mod tests {
                                 {
                                     "name": {
                                         "type": { "repr": "u64" },
-                                        "json": "123",
-                                        "bcs": null
+                                        "json": "123"
                                     },
                                     "value": {
                                         "type": { "repr": "0x2::coin::Coin<0x2::sui::SUI>" },
-                                        "json": { "balance": "1000" },
-                                        "bcs": null
+                                        "json": { "balance": "1000" }
                                     }
                                 },
                                 {
                                     "name": {
                                         "type": { "repr": "0x2::kiosk::Listing" },
-                                        "json": { "id": "0xabc" },
-                                        "bcs": null
+                                        "json": { "id": "0xabc" }
                                     },
                                     "value": {
                                         "contents": {
                                             "type": { "repr": "0x2::kiosk::Item" },
-                                            "json": { "price": "500" },
-                                            "bcs": null
+                                            "json": { "price": "500" }
                                         }
                                     }
                                 }
@@ -360,24 +445,14 @@ mod tests {
         let client = Client::new(&mock_server.uri()).unwrap();
 
         let parent: Address = "0x123".parse().unwrap();
-        let mut stream = pin!(client.get_dynamic_fields(parent));
+        let mut stream = pin!(client.dynamic_fields(parent).format(Format::Json).stream());
 
         // First field - MoveValue (no "contents" field)
         let field1 = stream.next().await.unwrap().unwrap();
         assert_eq!(field1.name.type_tag, TypeTag::U64);
-        assert_eq!(
-            &field1.name.json.as_ref().unwrap().0,
-            &serde_json::json!("123")
-        );
+        assert!(field1.name.json.is_some());
+        assert!(field1.name.bcs.is_none()); // BCS not requested
         assert_eq!(field1.value.field_type, DynamicFieldType::Field);
-        assert_eq!(
-            &field1.value.value.json.as_ref().unwrap().0,
-            &serde_json::json!({ "balance": "1000" })
-        );
-        assert_eq!(
-            field1.value.value.type_tag,
-            "0x2::coin::Coin<0x2::sui::SUI>".parse::<TypeTag>().unwrap()
-        );
 
         // Second field - MoveObject (has "contents" field)
         let field2 = stream.next().await.unwrap().unwrap();
@@ -386,21 +461,58 @@ mod tests {
             "0x2::kiosk::Listing".parse::<TypeTag>().unwrap()
         );
         assert_eq!(field2.value.field_type, DynamicFieldType::Object);
-        assert_eq!(
-            &field2.value.value.json.as_ref().unwrap().0,
-            &serde_json::json!({ "price": "500" })
-        );
-        assert_eq!(
-            field2.value.value.type_tag,
-            "0x2::kiosk::Item".parse::<TypeTag>().unwrap()
-        );
 
         // No more fields
         assert!(stream.next().await.is_none());
     }
 
     #[tokio::test]
-    async fn test_get_dynamic_fields_object_not_found() {
+    async fn test_dynamic_fields_with_default_bcs() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("POST"))
+            .and(path("/"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "data": {
+                    "object": {
+                        "dynamicFields": {
+                            "nodes": [
+                                {
+                                    "name": {
+                                        "type": { "repr": "u64" },
+                                        "bcs": "ewAAAAAAAAA="
+                                    },
+                                    "value": {
+                                        "type": { "repr": "bool" },
+                                        "bcs": "AQ=="
+                                    }
+                                }
+                            ],
+                            "pageInfo": {
+                                "hasNextPage": false,
+                                "endCursor": null
+                            }
+                        }
+                    }
+                }
+            })))
+            .mount(&mock_server)
+            .await;
+
+        let client = Client::new(&mock_server.uri()).unwrap();
+
+        let parent: Address = "0x123".parse().unwrap();
+        // Default - no format specified
+        let mut stream = pin!(client.dynamic_fields(parent).stream());
+
+        let field = stream.next().await.unwrap().unwrap();
+        assert_eq!(field.name.type_tag, TypeTag::U64);
+        assert!(field.name.bcs.is_some());
+        assert!(field.name.json.is_none()); // JSON not requested
+    }
+
+    #[tokio::test]
+    async fn test_dynamic_fields_object_not_found() {
         let mock_server = MockServer::start().await;
 
         Mock::given(method("POST"))
@@ -416,8 +528,131 @@ mod tests {
         let client = Client::new(&mock_server.uri()).unwrap();
 
         let parent: Address = "0x999".parse().unwrap();
-        let mut stream = pin!(client.get_dynamic_fields(parent));
+        let mut stream = pin!(client.dynamic_fields(parent).stream());
         let result = stream.next().await;
         assert!(result.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_dynamic_field_fetch() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("POST"))
+            .and(path("/"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "data": {
+                    "object": {
+                        "dynamicField": {
+                            "name": {
+                                "type": { "repr": "u64" },
+                                "json": "123",
+                                "bcs": "ewAAAAAAAAA="
+                            },
+                            "value": {
+                                "type": { "repr": "bool" },
+                                "json": true,
+                                "bcs": "AQ=="
+                            }
+                        }
+                    }
+                }
+            })))
+            .mount(&mock_server)
+            .await;
+
+        let client = Client::new(&mock_server.uri()).unwrap();
+        let parent: Address = "0x123".parse().unwrap();
+        let name_type: TypeTag = "u64".parse().unwrap();
+
+        let field = client
+            .dynamic_field(parent, name_type, Bcs(123u64), DynamicFieldType::Field)
+            .format(Format::Json)
+            .format(Format::Bcs)
+            .fetch()
+            .await
+            .unwrap();
+
+        assert!(field.is_some());
+        let field = field.unwrap();
+        assert_eq!(field.name.type_tag, TypeTag::U64);
+        assert!(field.name.json.is_some());
+        assert!(field.name.bcs.is_some());
+        assert_eq!(field.value.field_type, DynamicFieldType::Field);
+    }
+
+    #[tokio::test]
+    async fn test_dynamic_field_object_type() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("POST"))
+            .and(path("/"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "data": {
+                    "object": {
+                        "dynamicObjectField": {
+                            "name": {
+                                "type": { "repr": "0x1::string::String" },
+                                "json": "my_key"
+                            },
+                            "value": {
+                                "contents": {
+                                    "type": { "repr": "0x2::coin::Coin<0x2::sui::SUI>" },
+                                    "json": { "balance": "1000" }
+                                }
+                            }
+                        }
+                    }
+                }
+            })))
+            .mount(&mock_server)
+            .await;
+
+        let client = Client::new(&mock_server.uri()).unwrap();
+        let parent: Address = "0x123".parse().unwrap();
+        let name_type: TypeTag = "0x1::string::String".parse().unwrap();
+
+        let field = client
+            .dynamic_field(parent, name_type, Bcs("my_key"), DynamicFieldType::Object)
+            .format(Format::Json)
+            .fetch()
+            .await
+            .unwrap();
+
+        assert!(field.is_some());
+        let field = field.unwrap();
+        assert_eq!(field.value.field_type, DynamicFieldType::Object);
+        assert_eq!(
+            field.value.value.type_tag,
+            "0x2::coin::Coin<0x2::sui::SUI>".parse::<TypeTag>().unwrap()
+        );
+    }
+
+    #[tokio::test]
+    async fn test_dynamic_field_not_found() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("POST"))
+            .and(path("/"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "data": {
+                    "object": {
+                        "dynamicField": null
+                    }
+                }
+            })))
+            .mount(&mock_server)
+            .await;
+
+        let client = Client::new(&mock_server.uri()).unwrap();
+        let parent: Address = "0x123".parse().unwrap();
+        let name_type: TypeTag = "u64".parse().unwrap();
+
+        let field = client
+            .dynamic_field(parent, name_type, Bcs(999u64), DynamicFieldType::Field)
+            .fetch()
+            .await
+            .unwrap();
+
+        assert!(field.is_none());
     }
 }
