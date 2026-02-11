@@ -85,108 +85,98 @@ impl Client {
         request: impl tonic::IntoRequest<ExecuteTransactionRequest>,
         timeout: Duration,
     ) -> Result<Response<ExecuteTransactionResponse>, ExecuteAndWaitError> {
-        let request = request.into_request();
-
-        // Calculate digest from the input transaction to avoid relying on response read mask
-        let transaction_digest = {
-            let transaction = match request.get_ref().transaction_opt() {
-                Some(tx) => tx,
-                None => return Err(ExecuteAndWaitError::MissingTransaction),
-            };
-
-            match sui_sdk_types::Transaction::try_from(transaction) {
-                Ok(tx) => tx.digest().to_string(),
-                Err(e) => return Err(ExecuteAndWaitError::ProtoConversionError(e)),
-            }
-        };
-
-        let mut this = self.clone();
-        let checkpoint_info_future = async {
-            // Subscribe to checkpoint stream before execution to avoid missing the transaction.
-            // Uses minimal read mask for efficiency since we only need digest confirmation.
-            // Once server-side filtering is available, we should filter by transaction digest to
-            // further reduce bandwidth.
-            let mut checkpoint_stream = match this
-                .subscription_client()
-                .subscribe_checkpoints(SubscribeCheckpointsRequest::default().with_read_mask(
-                    FieldMask::from_str("transactions.digest,sequence_number,summary.timestamp"),
-                ))
-                .await
-            {
-                Ok(stream) => stream.into_inner(),
-                Err(e) => return Ok(Err(e)),
-            };
-
-            // First query the fullnode directly to see if it already has the txn. This is to handle
-            // the case where an already executed transaction is sent multiple times
-            if let Ok(resp) = this
-                .ledger_client()
-                .get_transaction(
-                    GetTransactionRequest::default()
-                        .with_digest(&transaction_digest)
-                        .with_read_mask(FieldMask::from_str("digest,checkpoint,timestamp")),
-                )
-                .await
-                && resp.get_ref().transaction().checkpoint_opt().is_some()
-            {
-                let checkpoint = resp.get_ref().transaction().checkpoint();
-                let timestamp = resp.get_ref().transaction().timestamp;
-                return Ok(Ok((checkpoint, timestamp)));
-            }
-
-            // Wait for the transaction to appear in a checkpoint, at which point indexes will have been
-            // updated.
-            let checkpoint_future = async {
-                while let Some(response) = checkpoint_stream.try_next().await? {
-                    let checkpoint = response.checkpoint();
-
-                    for tx in checkpoint.transactions() {
-                        let digest = tx.digest();
-
-                        if digest == transaction_digest {
-                            return Ok((
-                                checkpoint.sequence_number(),
-                                checkpoint.summary().timestamp,
-                            ));
-                        }
-                    }
-                }
-                Err(tonic::Status::aborted(
-                    "checkpoint stream ended unexpectedly",
-                ))
-            };
-
-            tokio::time::timeout(timeout, checkpoint_future).await
-        };
-
-        let execution_future = async { self.execution_client().execute_transaction(request).await };
-
-        let (response, checkpoint_info) =
-            futures::future::join(execution_future, checkpoint_info_future).await;
-
-        let mut response = match response {
-            Ok(response) => response,
+        // Subscribe to checkpoint stream before execution to avoid missing the transaction.
+        // Uses minimal read mask for efficiency since we only nee digest confirmation.
+        // Once server-side filtering is available, we should filter by transaction digest to
+        // further reduce bandwidth.
+        let mut checkpoint_stream = match self
+            .subscription_client()
+            .subscribe_checkpoints(SubscribeCheckpointsRequest::default().with_read_mask(
+                FieldMask::from_str("transactions.digest,sequence_number,summary.timestamp"),
+            ))
+            .await
+        {
+            Ok(stream) => stream.into_inner(),
             Err(e) => return Err(ExecuteAndWaitError::RpcError(e)),
         };
 
-        match checkpoint_info {
-            Ok(Ok((checkpoint, timestamp))) => {
-                response
-                    .get_mut()
-                    .transaction_mut()
-                    .set_checkpoint(checkpoint);
-                response.get_mut().transaction_mut().timestamp = timestamp;
-            }
-            Ok(Err(status)) => {
-                return Err(ExecuteAndWaitError::CheckpointStreamError {
-                    response,
-                    error: status,
-                });
-            }
-            Err(_timeout) => return Err(ExecuteAndWaitError::CheckpointTimeout(response)),
+        // Calculate digest from the input transaction to avoid relying on response read mask
+        let request = request.into_request();
+        let transaction = match request.get_ref().transaction_opt() {
+            Some(tx) => tx,
+            None => return Err(ExecuteAndWaitError::MissingTransaction),
+        };
+
+        let executed_txn_digest = match sui_sdk_types::Transaction::try_from(transaction) {
+            Ok(tx) => tx.digest().to_string(),
+            Err(e) => return Err(ExecuteAndWaitError::ProtoConversionError(e)),
+        };
+
+        let mut response = match self.execution_client().execute_transaction(request).await {
+            Ok(resp) => resp,
+            Err(e) => return Err(ExecuteAndWaitError::RpcError(e)),
+        };
+
+        // First query the fullnode directly to see if it already has the txn. This is to handle
+        // the case where an already executed transaction is sent multiple times
+        if let Ok(resp) = self
+            .ledger_client()
+            .get_transaction(
+                GetTransactionRequest::default()
+                    .with_digest(&executed_txn_digest)
+                    .with_read_mask(FieldMask::from_str("digest,checkpoint,timestamp")),
+            )
+            .await
+            && resp.get_ref().transaction().checkpoint_opt().is_some()
+        {
+            let checkpoint = resp.get_ref().transaction().checkpoint();
+            let timestamp = resp.get_ref().transaction().timestamp;
+            response
+                .get_mut()
+                .transaction_mut()
+                .set_checkpoint(checkpoint);
+            response.get_mut().transaction_mut().timestamp = timestamp;
+            return Ok(response);
         }
 
-        Ok(response)
+        // Wait for the transaction to appear in a checkpoint, at which point indexes will have been
+        // updated.
+        let timeout_future = tokio::time::sleep(timeout);
+        let checkpoint_future = async {
+            while let Some(response) = checkpoint_stream.try_next().await? {
+                let checkpoint = response.checkpoint();
+
+                for tx in checkpoint.transactions() {
+                    let digest = tx.digest();
+
+                    if digest == executed_txn_digest {
+                        return Ok((checkpoint.sequence_number(), checkpoint.summary().timestamp));
+                    }
+                }
+            }
+            Err(tonic::Status::aborted(
+                "checkpoint stream ended unexpectedly",
+            ))
+        };
+
+        tokio::select! {
+            result = checkpoint_future => {
+                match result {
+                    Ok((checkpoint, timestamp)) => {
+                        response
+                            .get_mut()
+                            .transaction_mut()
+                            .set_checkpoint(checkpoint);
+                        response.get_mut().transaction_mut().timestamp = timestamp;
+                        Ok(response)
+                    }
+                    Err(e) => Err(ExecuteAndWaitError::CheckpointStreamError { response, error: e })
+                }
+            },
+            _ = timeout_future => {
+                Err(ExecuteAndWaitError::CheckpointTimeout ( response))
+            }
+        }
     }
 
     /// Retrieves the current reference gas price from the latest epoch information.
