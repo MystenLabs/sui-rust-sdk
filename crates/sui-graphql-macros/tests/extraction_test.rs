@@ -847,3 +847,139 @@ fn test_trailing_array_empty() {
         Some(vec![Some(vec![]), Some(vec!["only-one".to_string()])])
     );
 }
+
+// === Nested Arrays with Multiple Intermediate Fields ===
+// Path: groups[].info.details.leaders[].name
+// Between groups[] and leaders[], there are TWO intermediate object fields (info, details).
+// Tests verify null handling at each intermediate position, not just immediately after the array.
+
+#[test]
+fn test_nested_arrays_multiple_intermediate_fields_null_at_non_immediate() {
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "groups[].info.details.leaders[].name")]
+        names: Option<Vec<Option<Vec<String>>>>,
+    }
+
+    // null at "details" - second intermediate field (NOT immediately after groups[])
+    let json = serde_json::json!({
+        "groups": [
+            { "info": { "details": { "leaders": [{ "name": "alice" }] } } },
+            { "info": { "details": null } },
+            { "info": { "details": { "leaders": [{ "name": "bob" }] } } }
+        ]
+    });
+    let data = Data::from_value(json).unwrap();
+    assert_eq!(
+        data.names,
+        Some(vec![
+            Some(vec!["alice".to_string()]),
+            None,
+            Some(vec!["bob".to_string()])
+        ])
+    );
+}
+
+#[test]
+fn test_nested_arrays_multiple_intermediate_fields_null_at_inner_array() {
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "groups[].info.details.leaders[].name")]
+        names: Option<Vec<Option<Vec<String>>>>,
+    }
+
+    // null at "leaders" - the inner array itself
+    let json = serde_json::json!({
+        "groups": [
+            { "info": { "details": { "leaders": [{ "name": "alice" }] } } },
+            { "info": { "details": { "leaders": null } } },
+            { "info": { "details": { "leaders": [{ "name": "charlie" }] } } }
+        ]
+    });
+    let data = Data::from_value(json).unwrap();
+    assert_eq!(
+        data.names,
+        Some(vec![
+            Some(vec!["alice".to_string()]),
+            None,
+            Some(vec!["charlie".to_string()])
+        ])
+    );
+}
+
+#[test]
+fn test_nested_arrays_multiple_intermediate_fields_required_null_returns_error() {
+    #[allow(dead_code)]
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "groups[].info.details.leaders[].name")]
+        names: Vec<Vec<String>>,
+    }
+
+    // null at "details" with required type → error
+    let json = serde_json::json!({
+        "groups": [
+            { "info": { "details": { "leaders": [{ "name": "alice" }] } } },
+            { "info": { "details": null } }
+        ]
+    });
+    let result = Data::from_value(json);
+    assert!(result.is_err());
+}
+
+// === Inferred Trailing Array: null vs missing (with skip_schema_validation) ===
+// When skip_schema_validation is true, the last segment's is_list is inferred from Vec count.
+// These tests verify runtime behavior for the inferred trailing array case.
+
+#[test]
+fn test_skip_validation_inferred_trailing_array_null() {
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        // tags is inferred as list: vec_count(2) == list_count(1) + 1
+        #[field(path = "items[].tags", skip_schema_validation = true)]
+        all_tags: Vec<Option<Vec<String>>>,
+    }
+
+    // Trailing array field present but null → None per element
+    let json = serde_json::json!({
+        "items": [
+            { "tags": ["rust", "async"] },
+            { "tags": null },
+            { "tags": ["graphql"] }
+        ]
+    });
+    let data = Data::from_value(json).unwrap();
+    assert_eq!(
+        data.all_tags,
+        vec![
+            Some(vec!["rust".to_string(), "async".to_string()]),
+            None,
+            Some(vec!["graphql".to_string()])
+        ]
+    );
+}
+
+#[test]
+fn test_skip_validation_inferred_trailing_array_missing() {
+    #[allow(dead_code)]
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "items[].tags", skip_schema_validation = true)]
+        all_tags: Vec<Option<Vec<String>>>,
+    }
+
+    // Trailing array field missing entirely → error (missing ≠ null)
+    let json = serde_json::json!({
+        "items": [
+            { "tags": ["rust"] },
+            { }
+        ]
+    });
+    let result = Data::from_value(json);
+    assert!(result.is_err());
+}

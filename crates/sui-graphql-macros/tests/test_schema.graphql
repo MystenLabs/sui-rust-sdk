@@ -43,6 +43,15 @@ type Item {
 
 type Group {
     members: [Item]
+    info: GroupInfo
+}
+
+type GroupInfo {
+    details: GroupDetails
+}
+
+type GroupDetails {
+    leaders: [Item]
 }
 
 scalar SuiAddress

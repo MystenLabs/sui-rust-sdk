@@ -28,12 +28,12 @@ pub enum TypeStructure {
 /// See: https://github.com/serde-rs/serde/blob/master/serde_derive/src/internals/attr.rs
 pub fn analyze_type(ty: &syn::Type) -> TypeStructure {
     if let Some(inner) = unwrap_option(ty) {
-        return TypeStructure::Optional(Box::new(analyze_type(inner)));
+        TypeStructure::Optional(Box::new(analyze_type(inner)))
+    } else if let Some(inner) = unwrap_vec(ty) {
+        TypeStructure::Vector(Box::new(analyze_type(inner)))
+    } else {
+        TypeStructure::Plain
     }
-    if let Some(inner) = unwrap_vec(ty) {
-        return TypeStructure::Vector(Box::new(analyze_type(inner)));
-    }
-    TypeStructure::Plain
 }
 
 /// Returns the inner type if `ty` is `Option<T>`, otherwise `None`.
@@ -72,11 +72,11 @@ fn unwrap_type<'a>(ty: &'a syn::Type, type_name: &str) -> Option<&'a syn::Type> 
 /// as `Group(Path("Option<String>"))` instead of just `Path("Option<String>")`.
 ///
 /// Credit: serde_derive (https://github.com/serde-rs/serde)
-fn ungroup(ty: &syn::Type) -> &syn::Type {
-    match ty {
-        syn::Type::Group(group) => ungroup(&group.elem),
-        _ => ty,
+fn ungroup(mut ty: &syn::Type) -> &syn::Type {
+    while let syn::Type::Group(group) = ty {
+        ty = &group.elem;
     }
+    ty
 }
 
 /// Count the number of `Vec` wrappers in a type structure.
@@ -88,11 +88,11 @@ pub fn count_vec_depth(ts: &TypeStructure) -> usize {
     }
 }
 
-/// Validate path against schema, setting `is_list` on each segment.
+/// Validate path against schema, resolving `is_list` on the last segment.
 ///
 /// Checks that all fields in the path exist in the schema.
-/// Validates that explicit `[]` markers match the schema.
-/// Sets `is_list` on each segment based on the schema.
+/// Validates that `[]` markers match the schema's list types.
+/// Resolves the last segment's `is_list` (which is `None` from the parser) from the schema.
 pub fn validate_path_against_schema<'a>(
     schema: &Schema,
     path: &mut ParsedPath<'a>,
@@ -105,18 +105,34 @@ pub fn validate_path_against_schema<'a>(
             .get_field(current_type, segment.field)
             .ok_or_else(|| field_not_found_error(schema, current_type, segment.field, span))?;
 
-        // Validate explicit [] matches schema
-        if segment.is_list == Some(true) && !field.is_list {
-            return Err(syn::Error::new(
-                span,
-                format!(
-                    "Cannot use '[]' on non-list field '{}' (type '{}')",
-                    segment.field, field.type_name
-                ),
-            ));
+        match segment.is_list {
+            Some(true) if !field.is_list => {
+                return Err(syn::Error::new(
+                    span,
+                    format!(
+                        "Cannot use '[]' on non-list field '{}' (type '{}')",
+                        segment.field, field.type_name
+                    ),
+                ));
+            }
+            Some(false) if field.is_list => {
+                return Err(syn::Error::new(
+                    span,
+                    format!(
+                        "Field '{}' is a list type, use '{}[]' to iterate over it",
+                        segment.field, segment.field
+                    ),
+                ));
+            }
+            None => {
+                // Last segment without explicit []: the parser doesn't know if
+                // this field is a list, so resolve it from the schema. This
+                // handles trailing arrays (e.g., `items[].tags` where `tags: [String]`).
+                segment.is_list = Some(field.is_list);
+            }
+            _ => {}
         }
 
-        segment.is_list = Some(field.is_list);
         current_type = &field.type_name;
     }
 
