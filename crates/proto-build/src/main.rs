@@ -62,6 +62,7 @@ fn main() {
         .boxed(".sui.rpc.v2.Input.literal")
         .boxed(".sui.rpc.v2.Epoch.system_state")
         .boxed("json")
+        .boxed(".sui.rpc.v2.Object.display")
         .message_attribute(".sui.rpc", "#[non_exhaustive]")
         .enum_attribute(".sui.rpc", "#[non_exhaustive]")
         .btree_map(".")

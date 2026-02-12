@@ -4313,8 +4313,10 @@ pub struct Object {
     #[prost(uint64, optional, tag = "101")]
     pub balance: ::core::option::Option<u64>,
     /// JSON rendering of the object based on its configured `Display` template.
-    #[prost(message, optional, tag = "102")]
-    pub display: ::core::option::Option<::prost_types::Value>,
+    #[prost(message, optional, boxed, tag = "102")]
+    pub display: ::core::option::Option<
+        ::prost::alloc::boxed::Box<::prost_types::Value>,
+    >,
 }
 /// Set of Objects
 #[non_exhaustive]
