@@ -5157,7 +5157,7 @@ mod _field_impls {
             name: "display",
             json_name: "display",
             number: 102i32,
-            message_fields: None,
+            message_fields: Some(Display::FIELDS),
         };
     }
     impl MessageFields for Object {
@@ -5250,9 +5250,9 @@ mod _field_impls {
             self.path.push(Object::BALANCE_FIELD.name);
             self.finish()
         }
-        pub fn display(mut self) -> String {
+        pub fn display(mut self) -> DisplayFieldPathBuilder {
             self.path.push(Object::DISPLAY_FIELD.name);
-            self.finish()
+            DisplayFieldPathBuilder::new_with_base(self.path)
         }
     }
     impl ObjectSet {
@@ -5289,6 +5289,55 @@ mod _field_impls {
         pub fn objects(mut self) -> ObjectFieldPathBuilder {
             self.path.push(ObjectSet::OBJECTS_FIELD.name);
             ObjectFieldPathBuilder::new_with_base(self.path)
+        }
+    }
+    impl Display {
+        pub const OUTPUT_FIELD: &'static MessageField = &MessageField {
+            name: "output",
+            json_name: "output",
+            number: 1i32,
+            message_fields: None,
+        };
+        pub const ERRORS_FIELD: &'static MessageField = &MessageField {
+            name: "errors",
+            json_name: "errors",
+            number: 2i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for Display {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::OUTPUT_FIELD,
+            Self::ERRORS_FIELD,
+        ];
+    }
+    impl Display {
+        pub fn path_builder() -> DisplayFieldPathBuilder {
+            DisplayFieldPathBuilder::new()
+        }
+    }
+    pub struct DisplayFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl DisplayFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn output(mut self) -> String {
+            self.path.push(Display::OUTPUT_FIELD.name);
+            self.finish()
+        }
+        pub fn errors(mut self) -> String {
+            self.path.push(Display::ERRORS_FIELD.name);
+            self.finish()
         }
     }
     impl ObjectReference {

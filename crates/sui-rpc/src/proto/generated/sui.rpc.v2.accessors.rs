@@ -3980,6 +3980,60 @@ mod _accessor_impls {
             self
         }
     }
+    impl super::Display {
+        pub const fn const_default() -> Self {
+            Self { output: None, errors: None }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::Display = super::Display::const_default();
+            &DEFAULT
+        }
+        ///If `output` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn output_opt_mut(&mut self) -> Option<&mut ::prost_types::Value> {
+            self.output.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `output`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn output_mut(&mut self) -> &mut ::prost_types::Value {
+            self.output.get_or_insert_default()
+        }
+        ///If `output` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn output_opt(&self) -> Option<&::prost_types::Value> {
+            self.output.as_ref().map(|field| field as _)
+        }
+        ///Sets `output` with the provided value.
+        pub fn set_output<T: Into<::prost_types::Value>>(&mut self, field: T) {
+            self.output = Some(field.into().into());
+        }
+        ///Sets `output` with the provided value.
+        pub fn with_output<T: Into<::prost_types::Value>>(mut self, field: T) -> Self {
+            self.set_output(field.into());
+            self
+        }
+        ///If `errors` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn errors_opt_mut(&mut self) -> Option<&mut ::prost_types::Value> {
+            self.errors.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `errors`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn errors_mut(&mut self) -> &mut ::prost_types::Value {
+            self.errors.get_or_insert_default()
+        }
+        ///If `errors` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn errors_opt(&self) -> Option<&::prost_types::Value> {
+            self.errors.as_ref().map(|field| field as _)
+        }
+        ///Sets `errors` with the provided value.
+        pub fn set_errors<T: Into<::prost_types::Value>>(&mut self, field: T) {
+            self.errors = Some(field.into().into());
+        }
+        ///Sets `errors` with the provided value.
+        pub fn with_errors<T: Into<::prost_types::Value>>(mut self, field: T) -> Self {
+            self.set_errors(field.into());
+            self
+        }
+    }
     impl super::DynamicField {
         pub const fn const_default() -> Self {
             Self {
@@ -11071,25 +11125,32 @@ mod _accessor_impls {
             self.set_balance(field);
             self
         }
+        ///Returns the value of `display`, or the default value if `display` is unset.
+        pub fn display(&self) -> &super::Display {
+            self.display
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::Display::default_instance() as _)
+        }
         ///If `display` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn display_opt_mut(&mut self) -> Option<&mut ::prost_types::Value> {
+        pub fn display_opt_mut(&mut self) -> Option<&mut super::Display> {
             self.display.as_mut().map(|field| field as _)
         }
         ///Returns a mutable reference to `display`.
         ///If the field is unset, it is first initialized with the default value.
-        pub fn display_mut(&mut self) -> &mut ::prost_types::Value {
+        pub fn display_mut(&mut self) -> &mut super::Display {
             self.display.get_or_insert_default()
         }
         ///If `display` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn display_opt(&self) -> Option<&::prost_types::Value> {
+        pub fn display_opt(&self) -> Option<&super::Display> {
             self.display.as_ref().map(|field| field as _)
         }
         ///Sets `display` with the provided value.
-        pub fn set_display<T: Into<::prost_types::Value>>(&mut self, field: T) {
+        pub fn set_display<T: Into<super::Display>>(&mut self, field: T) {
             self.display = Some(field.into().into());
         }
         ///Sets `display` with the provided value.
-        pub fn with_display<T: Into<::prost_types::Value>>(mut self, field: T) -> Self {
+        pub fn with_display<T: Into<super::Display>>(mut self, field: T) -> Self {
             self.set_display(field.into());
             self
         }

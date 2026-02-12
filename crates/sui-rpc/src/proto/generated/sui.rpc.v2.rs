@@ -4312,11 +4312,10 @@ pub struct Object {
     /// Current balance if this object is a `0x2::coin::Coin<T>`
     #[prost(uint64, optional, tag = "101")]
     pub balance: ::core::option::Option<u64>,
-    /// JSON rendering of the object based on its configured `Display` template.
+    /// JSON rendering of the object based on an on-chain template.
+    /// This will not be set if the value's type does not have an associated `Display` template.
     #[prost(message, optional, boxed, tag = "102")]
-    pub display: ::core::option::Option<
-        ::prost::alloc::boxed::Box<::prost_types::Value>,
-    >,
+    pub display: ::core::option::Option<::prost::alloc::boxed::Box<Display>>,
 }
 /// Set of Objects
 #[non_exhaustive]
@@ -4325,6 +4324,21 @@ pub struct ObjectSet {
     /// Objects are sorted by the key `(object_id, version)`.
     #[prost(message, repeated, tag = "1")]
     pub objects: ::prost::alloc::vec::Vec<Object>,
+}
+/// A rendered JSON blob based on an on-chain template.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Display {
+    /// Output for all successfully substituted display fields. Unsuccessful
+    /// fields will be `null`, and will be accompanied by a field in `errors`,
+    /// explaining the error.
+    #[prost(message, optional, tag = "1")]
+    pub output: ::core::option::Option<::prost_types::Value>,
+    /// If any fields failed to render, this will contain a mapping from failed
+    /// field names to error messages. If all fields succeed, this will either be
+    /// `null` or not set.
+    #[prost(message, optional, tag = "2")]
+    pub errors: ::core::option::Option<::prost_types::Value>,
 }
 /// Reference to an object.
 #[non_exhaustive]

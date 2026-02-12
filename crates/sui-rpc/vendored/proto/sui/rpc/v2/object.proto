@@ -60,12 +60,27 @@ message Object {
   // Current balance if this object is a `0x2::coin::Coin<T>`
   optional uint64 balance = 101;
 
-  // JSON rendering of the object based on its configured `Display` template.
-  optional google.protobuf.Value display = 102;
+  // JSON rendering of the object based on an on-chain template.
+  // This will not be set if the value's type does not have an associated `Display` template.
+  optional Display display = 102;
 }
 
 // Set of Objects
 message ObjectSet {
   // Objects are sorted by the key `(object_id, version)`.
   repeated Object objects = 1;
+}
+
+
+// A rendered JSON blob based on an on-chain template.
+message Display {
+  // Output for all successfully substituted display fields. Unsuccessful
+  // fields will be `null`, and will be accompanied by a field in `errors`,
+  // explaining the error.
+  optional google.protobuf.Value output = 1;
+
+  // If any fields failed to render, this will contain a mapping from failed
+  // field names to error messages. If all fields succeed, this will either be
+  // `null` or not set.
+  optional google.protobuf.Value errors = 2;
 }
