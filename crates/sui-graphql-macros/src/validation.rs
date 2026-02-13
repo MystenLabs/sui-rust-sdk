@@ -88,49 +88,40 @@ pub fn count_vec_depth(ts: &TypeStructure) -> usize {
     }
 }
 
-/// Validate path against schema, resolving `is_list` on the last segment.
+/// Validate a parsed field path against the schema.
 ///
-/// Checks that all fields in the path exist in the schema.
-/// Validates that `[]` markers match the schema's list types.
-/// Resolves the last segment's `is_list` (which is `None` from the parser) from the schema.
-pub fn validate_path_against_schema<'a>(
+/// Checks that all fields in the path exist in the schema and that `[]` markers
+/// match the schema's list types. List fields must always use `[]` explicitly.
+pub fn validate_path_against_schema(
     schema: &Schema,
-    path: &mut ParsedPath<'a>,
+    path: &ParsedPath,
     span: proc_macro2::Span,
 ) -> Result<(), syn::Error> {
     let mut current_type = "Query";
 
-    for segment in &mut path.segments {
+    for segment in &path.segments {
         let field = schema
             .get_field(current_type, segment.field)
             .ok_or_else(|| field_not_found_error(schema, current_type, segment.field, span))?;
 
-        match segment.is_list {
-            Some(true) if !field.is_list => {
-                return Err(syn::Error::new(
-                    span,
-                    format!(
-                        "Cannot use '[]' on non-list field '{}' (type '{}')",
-                        segment.field, field.type_name
-                    ),
-                ));
-            }
-            Some(false) if field.is_list => {
-                return Err(syn::Error::new(
-                    span,
-                    format!(
-                        "Field '{}' is a list type, use '{}[]' to iterate over it",
-                        segment.field, segment.field
-                    ),
-                ));
-            }
-            None => {
-                // Last segment without explicit []: the parser doesn't know if
-                // this field is a list, so resolve it from the schema. This
-                // handles trailing arrays (e.g., `items[].tags` where `tags: [String]`).
-                segment.is_list = Some(field.is_list);
-            }
-            _ => {}
+        if segment.is_list && !field.is_list {
+            return Err(syn::Error::new(
+                span,
+                format!(
+                    "Cannot use '[]' on non-list field '{}' (type '{}')",
+                    segment.field, field.type_name
+                ),
+            ));
+        }
+
+        if !segment.is_list && field.is_list {
+            return Err(syn::Error::new(
+                span,
+                format!(
+                    "Field '{}' is a list type, use '{}[]' to iterate over it",
+                    segment.field, segment.field
+                ),
+            ));
         }
 
         current_type = &field.type_name;
@@ -139,35 +130,15 @@ pub fn validate_path_against_schema<'a>(
     Ok(())
 }
 
-/// Validate that type's Vec count matches the list fields in path.
-///
-/// Handles trailing array inference: if the last segment has `is_list = None`
-/// (schema validation was skipped), infer it as a list if Vec count is one more
-/// than list count.
-///
-/// After this function, all segments will have `is_list` set (no `None` values).
+/// Validate that the type's Vec count matches the number of list fields in the path.
 ///
 /// # Errors
 ///
 /// - If Vec count > list count: too many Vec wrappers
 /// - If Vec count < list count: points to the specific list field missing a Vec
-pub fn validate_type_matches_path(
-    path: &mut ParsedPath<'_>,
-    ty: &syn::Type,
-) -> Result<(), syn::Error> {
+pub fn validate_type_matches_path(path: &ParsedPath<'_>, ty: &syn::Type) -> Result<(), syn::Error> {
     let type_structure = analyze_type(ty);
     let vec_count = count_vec_depth(&type_structure);
-    let list_count = path.list_fields().len();
-
-    // Handle last segment if it's None (schema validation was skipped)
-    // Infer as trailing array if Vec count is exactly one more than list count
-    if let Some(last) = path.segments.last_mut()
-        && last.is_list.is_none()
-    {
-        last.is_list = Some(vec_count == list_count + 1);
-    }
-
-    // Recount after inference
     let list_count = path.list_fields().len();
 
     if vec_count < list_count {

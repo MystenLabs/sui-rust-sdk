@@ -12,7 +12,6 @@ fn compile_tests() {
     // Tests that should pass
     t.pass("tests/compile/basic_extraction.rs");
     t.pass("tests/compile/skip_validation.rs");
-    t.pass("tests/compile/skip_validation_trailing_array.rs");
     t.pass("tests/compile/schema_validation_with_alias.rs");
 
     // Tests that should fail with expected errors
