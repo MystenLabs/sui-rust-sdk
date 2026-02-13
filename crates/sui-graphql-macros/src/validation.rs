@@ -1,34 +1,123 @@
-//! Field path validation against the GraphQL schema.
+//! Field path validation against the GraphQL schema and Rust types.
+//!
+//! Validates paths and determines iteration by matching:
+//! - Schema: which fields are lists
+//! - Type: how many Vec wrappers
+//!
+//! Iteration happens automatically when schema says list AND type has Vec.
 
 use crate::path::ParsedPath;
 use crate::schema::Schema;
 
-/// Validate a parsed field path against the schema, starting from the Query type.
+/// Represents the nesting structure of `Option` and `Vec` in a field type.
+#[derive(Debug, Clone, PartialEq)]
+pub enum TypeStructure {
+    /// A type that is neither `Option` nor `Vec` (e.g., `String`, `u64`)
+    Plain,
+    /// `Option<T>` wrapping an inner structure
+    Optional(Box<TypeStructure>),
+    /// `Vec<T>` wrapping an inner structure
+    Vector(Box<TypeStructure>),
+}
+
+/// Analyze a `syn::Type` into a `TypeStructure`.
 ///
-/// A path like `"object.address"` validates that:
-/// - Query type has a field named `object`
-/// - The type returned by `object` has a field named `address`
+/// Note: Type detection uses simple name matching (e.g., `ident == "Option"`),
+/// the same approach used by serde_derive. This works for standard library types
+/// but won't distinguish custom types with the same name.
+/// See: https://github.com/serde-rs/serde/blob/master/serde_derive/src/internals/attr.rs
+pub fn analyze_type(ty: &syn::Type) -> TypeStructure {
+    if let Some(inner) = unwrap_option(ty) {
+        TypeStructure::Optional(Box::new(analyze_type(inner)))
+    } else if let Some(inner) = unwrap_vec(ty) {
+        TypeStructure::Vector(Box::new(analyze_type(inner)))
+    } else {
+        TypeStructure::Plain
+    }
+}
+
+/// Returns the inner type if `ty` is `Option<T>`, otherwise `None`.
+fn unwrap_option(ty: &syn::Type) -> Option<&syn::Type> {
+    unwrap_type(ty, "Option")
+}
+
+/// Returns the inner type if `ty` is `Vec<T>`, otherwise `None`.
+fn unwrap_vec(ty: &syn::Type) -> Option<&syn::Type> {
+    unwrap_type(ty, "Vec")
+}
+
+/// Returns the inner type if `ty` matches `TypeName<T>`, otherwise `None`.
+fn unwrap_type<'a>(ty: &'a syn::Type, type_name: &str) -> Option<&'a syn::Type> {
+    let syn::Type::Path(type_path) = ungroup(ty) else {
+        return None;
+    };
+    let seg = type_path.path.segments.last()?;
+    let syn::PathArguments::AngleBracketed(args) = &seg.arguments else {
+        return None;
+    };
+
+    if seg.ident == type_name
+        && args.args.len() == 1
+        && let syn::GenericArgument::Type(inner) = &args.args[0]
+    {
+        return Some(inner);
+    }
+    None
+}
+
+/// Unwrap `syn::Type::Group` nodes which may appear in macro-generated code.
 ///
-/// For array paths like `"objects[].address"`:
-/// - Validates that `objects` is a list type
-/// - Validates fields after `[]` against the list element type
+/// When a macro captures a type with `$t:ty` and substitutes it, the type may be
+/// wrapped in an invisible `Group` node. For example, `Option<String>` might appear
+/// as `Group(Path("Option<String>"))` instead of just `Path("Option<String>")`.
 ///
-/// Returns the GraphQL type name of the final field.
-pub fn validate_path_against_schema(
-    schema: &Schema,
+/// Credit: serde_derive (https://github.com/serde-rs/serde)
+fn ungroup(mut ty: &syn::Type) -> &syn::Type {
+    while let syn::Type::Group(group) = ty {
+        ty = &group.elem;
+    }
+    ty
+}
+
+/// Count the number of `Vec` wrappers in a type structure.
+pub fn count_vec_depth(ts: &TypeStructure) -> usize {
+    match ts {
+        TypeStructure::Plain => 0,
+        TypeStructure::Optional(inner) => count_vec_depth(inner),
+        TypeStructure::Vector(inner) => 1 + count_vec_depth(inner),
+    }
+}
+
+/// Scalars whose values can be objects or arrays in JSON.
+///
+/// These scalars represent structured data (not simple strings or numbers), so the macro
+/// cannot validate Vec count — the Rust type is the user's responsibility.
+const OBJECT_LIKE_SCALARS: &[&str] = &[
+    "JSON",
+    "MoveTypeLayout",
+    "MoveTypeSignature",
+    "OpenMoveTypeSignature",
+];
+
+/// Validate a parsed field path against the schema.
+///
+/// Checks that all fields in the path exist in the schema and that `[]` markers
+/// match the schema's list types. List fields must always use `[]` explicitly.
+///
+/// Returns the terminal type name (the type of the last field in the path).
+pub fn validate_path_against_schema<'a>(
+    schema: &'a Schema,
     path: &ParsedPath,
     span: proc_macro2::Span,
-) -> Result<String, syn::Error> {
-    let mut current_type: &str = "Query";
+) -> Result<&'a str, syn::Error> {
+    let mut current_type = "Query";
 
     for segment in &path.segments {
-        // Look up the field
         let field = schema
             .get_field(current_type, segment.field)
             .ok_or_else(|| field_not_found_error(schema, current_type, segment.field, span))?;
 
-        // If marked as array, verify it's actually a list type
-        if segment.is_array && !field.is_list {
+        if segment.is_list && !field.is_list {
             return Err(syn::Error::new(
                 span,
                 format!(
@@ -38,10 +127,68 @@ pub fn validate_path_against_schema(
             ));
         }
 
+        if !segment.is_list && field.is_list {
+            return Err(syn::Error::new(
+                span,
+                format!(
+                    "Field '{}' is a list type, use '{}[]' to iterate over it",
+                    segment.field, segment.field
+                ),
+            ));
+        }
+
         current_type = &field.type_name;
     }
 
-    Ok(current_type.to_string())
+    Ok(current_type)
+}
+
+/// Returns true if the type name is a scalar that can represent objects or arrays.
+pub fn is_object_like_scalar(type_name: &str) -> bool {
+    OBJECT_LIKE_SCALARS.contains(&type_name)
+}
+
+/// Validate that the type's Vec count matches the number of list fields in the path.
+///
+/// When `skip_vec_excess_check` is true, extra Vec wrappers beyond the list count are
+/// allowed. This is used for object-like scalars (e.g., JSON) whose values can be arrays.
+///
+/// # Errors
+///
+/// - If Vec count < list count: points to the specific list field missing a Vec
+/// - If Vec count > list count (and `skip_vec_excess_check` is false): too many Vec wrappers
+pub fn validate_type_matches_path(
+    path: &ParsedPath<'_>,
+    ty: &syn::Type,
+    skip_vec_excess_check: bool,
+) -> Result<(), syn::Error> {
+    let type_structure = analyze_type(ty);
+    let vec_count = count_vec_depth(&type_structure);
+    let list_count = path.list_fields().len();
+
+    if vec_count < list_count {
+        let list_fields = path.list_fields();
+        let mismatched_field = list_fields[vec_count];
+        return Err(syn::Error::new_spanned(
+            ty,
+            format!(
+                "field '{}' is a list but type has no Vec wrapper for it",
+                mismatched_field
+            ),
+        ));
+    }
+
+    if !skip_vec_excess_check && vec_count > list_count {
+        return Err(syn::Error::new_spanned(
+            ty,
+            format!(
+                "type has {} Vec wrapper(s) but path '{}' has {} list field(s)",
+                vec_count, path.raw, list_count
+            ),
+        ));
+    }
+
+    Ok(())
 }
 
 /// Generate an error for a field not found, with "Did you mean?" suggestion.

@@ -87,6 +87,7 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
     #[darling(attributes(field))]
     struct ResponseField {
         ident: Option<syn::Ident>,
+        ty: syn::Type,
         path: SpannedValue<String>, // Required - darling will error if missing
         #[darling(default)]
         skip_schema_validation: bool,
@@ -146,12 +147,26 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
             .map_err(|e| syn::Error::new(spanned_path.span(), e.to_string()))?;
 
         // Validate path against GraphQL schema
-        if !field.skip_schema_validation {
-            validation::validate_path_against_schema(schema, &parsed_path, spanned_path.span())?;
-        }
+        let terminal_type = if !field.skip_schema_validation {
+            Some(validation::validate_path_against_schema(
+                schema,
+                &parsed_path,
+                spanned_path.span(),
+            )?)
+        } else {
+            None
+        };
+
+        // Skip Vec excess check when schema validation is skipped (user takes full
+        // responsibility) or when the terminal type is an object-like scalar (e.g., JSON)
+        // whose value can be an array.
+        let skip_vec_excess_check = field.skip_schema_validation
+            || terminal_type.is_some_and(validation::is_object_like_scalar);
+        validation::validate_type_matches_path(&parsed_path, &field.ty, skip_vec_excess_check)?;
 
         // Generate extraction code using the same parsed path
-        let extraction = generate_field_extraction(&parsed_path, field_ident);
+        let type_structure = validation::analyze_type(&field.ty);
+        let extraction = generate_field_extraction(&parsed_path, &type_structure, field_ident);
         field_extractions.push(extraction);
         field_names.push(field_ident);
     }
@@ -197,9 +212,13 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
 /// - Array: `"nodes[].name"` - iterates over array, extracts field from each element
 /// - Nested arrays: `"nodes[].edges[].id"` - nested iteration, returns `Vec<Vec<T>>`
 /// - Aliased: `"alias:field"` - uses alias for JSON extraction, field for validation
-fn generate_field_extraction(path: &path::ParsedPath, field_ident: &syn::Ident) -> TokenStream2 {
+fn generate_field_extraction(
+    path: &path::ParsedPath,
+    type_structure: &validation::TypeStructure,
+    field_ident: &syn::Ident,
+) -> TokenStream2 {
     let full_path = &path.raw;
-    let inner = generate_from_segments(full_path, &path.segments);
+    let inner = generate_from_segments(full_path, &path.segments, type_structure);
     // The inner expression returns Result<T, String>, so we use ? to unwrap
     quote! {
         let #field_ident = {
@@ -214,33 +233,81 @@ fn generate_field_extraction(path: &path::ParsedPath, field_ident: &syn::Ident) 
 /// For JSON extraction, uses the alias if present, otherwise uses the field name.
 /// Returns code that evaluates to `Result<T, String>` (caller adds `?` to unwrap).
 ///
-/// ## Example: Simple path `"object.address"`
+/// ## Example: `"data.nodes[].edges[].id"` with `Option<Vec<Vec<String>>>`
+///
+/// Each `[]` in the path corresponds to one `Vec<_>` wrapper in the type.
+///
+/// For `Option<_>` types, null at the outer level returns `Ok(None)`. This is achieved
+/// by wrapping the extraction in a closure to capture early returns. However, once
+/// inside an array iteration, the element type (`Vec<String>`) is not Optional, so
+/// null values there return errors instead.
 ///
 /// ```ignore
-/// let current = current.get("object").ok_or_else(|| ...)?;
-/// if current.is_null() { return serde_json::from_value(null)... }
-/// let current = current.get("address").ok_or_else(|| ...)?;
-/// serde_json::from_value(current.clone()).map_err(|e| ...)
+/// (|| {
+///     // "data" (non-list) - null returns None (outer Optional)
+///     let current = current.get("data").ok_or_else(|| "missing 'data'")?;
+///     if current.is_null() { return Ok(None); }
+///
+///     // "nodes[]" (list) - null returns None (outer Optional)
+///     let field_value = current.get("nodes").ok_or_else(|| "missing 'nodes'")?;
+///     if field_value.is_null() { return Ok(None); }
+///     let array = field_value.as_array().ok_or_else(|| "expected array")?;
+///     array.iter().map(|current| {
+///         // Element type: Vec<String> (not Optional, so null = error)
+///
+///         // "edges[]" (list) - null returns Err
+///         let field_value = current.get("edges").ok_or_else(|| "missing 'edges'")?;
+///         if field_value.is_null() { return Err("null at 'edges'"); }
+///         let array = field_value.as_array().ok_or_else(|| "expected array")?;
+///         array.iter().map(|current| {
+///             // Element type: String (not Optional, so null = error)
+///
+///             // "id" (scalar) - null returns Err
+///             let current = current.get("id").ok_or_else(|| "missing 'id'")?;
+///             if current.is_null() { return Err("null at 'id'"); }
+///             serde_json::from_value(current.clone())
+///         }).collect::<Result<Vec<_>, _>>()
+///     }).collect::<Result<Vec<_>, _>>()
+///     .map(Some)  // Wrap in Some for Option
+/// })()
 /// ```
+fn generate_from_segments(
+    full_path: &str,
+    segments: &[path::PathSegment],
+    type_structure: &validation::TypeStructure,
+) -> TokenStream2 {
+    // Step 1: Check if outer type is Optional and unwrap it
+    let (is_optional, inner_type) = match type_structure {
+        validation::TypeStructure::Optional(inner) => (true, inner.as_ref()),
+        other => (false, other),
+    };
+
+    // Step 2: Generate core extraction code
+    let core = generate_from_segments_core(full_path, segments, inner_type, is_optional);
+
+    // Step 3: Wrap Optional types in a closure to capture `return Ok(None)` from null handling.
+    // Without closure, the return would escape to `from_value`. With closure, field gets `None`.
+    if is_optional {
+        quote! {
+            (|| {
+                #core.map(Some)
+            })()
+        }
+    } else {
+        core
+    }
+}
+
+/// Core extraction logic that handles both list and non-list segments.
 ///
-/// ## Example: Array path `"nodes[].name"` (returns `Option<Vec<T>>`)
-///
-/// ```ignore
-/// {
-///     let field_value = current.get("nodes").ok_or_else(|| ...)?;
-///     if field_value.is_null() {
-///         Ok(None)
-///     } else {
-///         let array = field_value.as_array().ok_or_else(|| ...)?;
-///         let vec: Vec<_> = array.iter().map(|current| { ... }).collect::<Result<_, _>>()?;
-///         Ok(Some(vec))
-///     }
-/// }
-/// ```
-///
-/// TODO: Add support for `?` syntax in paths (e.g., "object?.field") to handle nullable
-/// fields efficiently without requiring Option wrappers at every level.
-fn generate_from_segments(full_path: &str, segments: &[path::PathSegment]) -> TokenStream2 {
+/// `null_returns_none`: If true, null values cause early return with `Ok(None)`.
+/// This is set when the outermost type is Optional.
+fn generate_from_segments_core(
+    full_path: &str,
+    segments: &[path::PathSegment],
+    type_structure: &validation::TypeStructure,
+    null_returns_none: bool,
+) -> TokenStream2 {
     // Base case: no more segments, deserialize the current value
     let Some((segment, rest)) = segments.split_first() else {
         return quote! {
@@ -249,43 +316,54 @@ fn generate_from_segments(full_path: &str, segments: &[path::PathSegment]) -> To
         };
     };
 
-    let rest = generate_from_segments(full_path, rest);
-
+    let name = segment.field;
     // Use alias for JSON extraction if present, otherwise use field name
     let json_key = segment.json_key();
 
-    if segment.is_array {
-        // Array field: check for null, then iterate and collect into Option<Vec>
-        quote! {
-            {
-                let field_value = current.get(#json_key)
-                    .ok_or_else(|| format!("missing field '{}' in path '{}'", #json_key, #full_path))?;
-                if field_value.is_null() {
-                    Ok(None)
-                } else {
-                    let array = field_value.as_array()
-                        .ok_or_else(|| format!("expected array at '{}' in path '{}'", #json_key, #full_path))?;
-                    array.iter()
-                        .map(|current| { #rest })
-                        .collect::<Result<Vec<_>, String>>()
-                        .map(Some)
-                }
-            }
-        }
+    // Generate null handling based on whether outer type is Optional
+    let on_null = if null_returns_none {
+        quote! { return Ok(None) }
     } else {
         quote! {
-            {
-                let current = current.get(#json_key)
-                    .ok_or_else(|| format!("missing field '{}' in path '{}'", #json_key, #full_path))?;
-                // If null, skip remaining navigation and let serde handle it
-                // (returns Ok(None) for Option<T>, error for non-Option)
-                if current.is_null() {
-                    serde_json::from_value(current.clone())
-                        .map_err(|e| format!("failed to deserialize '{}': {}", #full_path, e))
-                } else {
-                    #rest
-                }
+            return Err(format!("null value at '{}' in path '{}'", #name, #full_path))
+        }
+    };
+
+    if segment.is_list {
+        // For list segments, unwrap Vector to get element type
+        let element_type = match type_structure {
+            validation::TypeStructure::Vector(inner) => inner.as_ref(),
+            _ => unreachable!("validated: list segment requires Vec type"),
+        };
+
+        // Each array element is processed independently with its own type structure.
+        // Use generate_from_segments (not _core) to handle element-level Optional.
+        let rest_code = generate_from_segments(full_path, rest, element_type);
+
+        quote! {
+            let field_value = current.get(#json_key)
+                .ok_or_else(|| format!("missing field '{}' in path '{}'", #json_key, #full_path))?;
+            if field_value.is_null() {
+                #on_null
             }
+            let array = field_value.as_array()
+                .ok_or_else(|| format!("expected array at '{}' in path '{}'", #json_key, #full_path))?;
+            array.iter()
+                .map(|current| { #rest_code })
+                .collect::<Result<Vec<_>, String>>()
+        }
+    } else {
+        // For non-list segments, pass type unchanged to handle nested structures
+        let rest_code =
+            generate_from_segments_core(full_path, rest, type_structure, null_returns_none);
+
+        quote! {
+            let current = current.get(#json_key)
+                .ok_or_else(|| format!("missing field '{}' in path '{}'", #json_key, #full_path))?;
+            if current.is_null() {
+                #on_null
+            }
+            #rest_code
         }
     }
 }

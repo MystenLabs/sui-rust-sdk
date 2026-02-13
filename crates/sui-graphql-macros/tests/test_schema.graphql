@@ -8,6 +8,8 @@ type Query {
     checkpoint: Checkpoint
     checkpoints: CheckpointConnection
     epochs: EpochConnection
+    items: [Item]
+    groups: [Group]
 }
 
 type Object {
@@ -31,6 +33,25 @@ type Epoch {
 
 type EpochConnection {
     nodes: [Epoch]
+}
+
+type Item {
+    name: String
+    nickname: String
+    tags: [String]
+}
+
+type Group {
+    members: [Item]
+    info: GroupInfo
+}
+
+type GroupInfo {
+    details: GroupDetails
+}
+
+type GroupDetails {
+    leaders: [Item]
 }
 
 scalar SuiAddress

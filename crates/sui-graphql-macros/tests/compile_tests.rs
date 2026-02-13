@@ -27,6 +27,12 @@ fn compile_tests() {
     t.compile_fail("tests/compile/schema_validation_array_field_suggestion.rs");
     t.compile_fail("tests/compile/schema_validation_field_after_list_suggestion.rs");
     t.compile_fail("tests/compile/schema_validation_array_on_non_list.rs");
+    t.compile_fail("tests/compile/schema_validation_missing_array_marker.rs");
     t.compile_fail("tests/compile/schema_validation_field_after_list_not_found.rs");
     t.compile_fail("tests/compile/schema_validation_alias_invalid_field.rs");
+
+    // Type validation tests
+    t.compile_fail("tests/compile/type_validation_vec_count_mismatch.rs");
+    t.compile_fail("tests/compile/type_validation_trailing_array_mismatch.rs");
+    t.pass("tests/compile/skip_validation_type_mismatch.rs");
 }

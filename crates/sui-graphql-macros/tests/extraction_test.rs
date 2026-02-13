@@ -160,6 +160,42 @@ fn test_array_with_prefix_path() {
 }
 
 #[test]
+fn test_array_with_prefix_path_null_at_prefix() {
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct NestedCheckpoints {
+        #[field(path = "epoch.checkpoints.nodes[].sequenceNumber")]
+        sequence_numbers: Option<Vec<u64>>,
+    }
+
+    // Null at first prefix field (epoch) - should return None
+    let json = serde_json::json!({
+        "epoch": null
+    });
+    let data = NestedCheckpoints::from_value(json).unwrap();
+    assert_eq!(data.sequence_numbers, None);
+}
+
+#[test]
+fn test_array_with_prefix_path_null_at_intermediate() {
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct NestedCheckpoints {
+        #[field(path = "epoch.checkpoints.nodes[].sequenceNumber")]
+        sequence_numbers: Option<Vec<u64>>,
+    }
+
+    // Null at intermediate prefix field (checkpoints) - should return None
+    let json = serde_json::json!({
+        "epoch": {
+            "checkpoints": null
+        }
+    });
+    let data = NestedCheckpoints::from_value(json).unwrap();
+    assert_eq!(data.sequence_numbers, None);
+}
+
+#[test]
 fn test_empty_array() {
     #[derive(Response)]
     #[response(schema = "tests/test_schema.graphql")]
@@ -210,6 +246,416 @@ fn test_null_parent_of_array() {
     });
     let data = CheckpointDigests::from_value(json).unwrap();
     assert_eq!(data.digests, None);
+}
+
+// === Type-Driven Array Handling ===
+// The Rust type determines how null values are handled:
+// - Vec<T>: array is required, null array → error
+// - Option<Vec<T>>: array is optional, null array → None
+// - Vec<Option<T>>: array required, null elements → None per element
+// - Option<Vec<Option<T>>>: array optional, null elements → None per element
+
+#[test]
+fn test_required_array_with_valid_data() {
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "items[].name")]
+        names: Vec<String>,
+    }
+
+    let json = serde_json::json!({
+        "items": [
+            { "name": "alice" },
+            { "name": "bob" }
+        ]
+    });
+    let data = Data::from_value(json).unwrap();
+    assert_eq!(data.names, vec!["alice", "bob"]);
+}
+
+#[test]
+fn test_required_array_with_empty_array() {
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "items[].name")]
+        names: Vec<String>,
+    }
+
+    let json = serde_json::json!({
+        "items": []
+    });
+    let data = Data::from_value(json).unwrap();
+    assert_eq!(data.names, Vec::<String>::new());
+}
+
+#[test]
+fn test_required_array_with_null_array_returns_error() {
+    #[allow(dead_code)]
+    #[derive(Debug, Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "items[].name")]
+        names: Vec<String>,
+    }
+
+    let json = serde_json::json!({
+        "items": null
+    });
+    let result = Data::from_value(json);
+    assert!(result.is_err());
+    assert!(result.unwrap_err().contains("null value"));
+}
+
+#[test]
+fn test_optional_array_with_valid_data() {
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "items[].name")]
+        names: Option<Vec<String>>,
+    }
+
+    let json = serde_json::json!({
+        "items": [
+            { "name": "alice" },
+            { "name": "bob" }
+        ]
+    });
+    let data = Data::from_value(json).unwrap();
+    assert_eq!(
+        data.names,
+        Some(vec!["alice".to_string(), "bob".to_string()])
+    );
+}
+
+#[test]
+fn test_optional_array_with_null_array_returns_none() {
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "items[].name")]
+        names: Option<Vec<String>>,
+    }
+
+    let json = serde_json::json!({
+        "items": null
+    });
+    let data = Data::from_value(json).unwrap();
+    assert_eq!(data.names, None);
+}
+
+#[test]
+fn test_optional_array_with_empty_array() {
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "items[].name")]
+        names: Option<Vec<String>>,
+    }
+
+    let json = serde_json::json!({
+        "items": []
+    });
+    let data = Data::from_value(json).unwrap();
+    assert_eq!(data.names, Some(vec![]));
+}
+
+#[test]
+fn test_required_array_with_optional_elements() {
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "items[].nickname")]
+        nicknames: Vec<Option<String>>,
+    }
+
+    let json = serde_json::json!({
+        "items": [
+            { "nickname": "ally" },
+            { "nickname": null },
+            { "nickname": "bobby" }
+        ]
+    });
+    let data = Data::from_value(json).unwrap();
+    assert_eq!(
+        data.nicknames,
+        vec![Some("ally".to_string()), None, Some("bobby".to_string())]
+    );
+}
+
+#[test]
+fn test_required_array_with_optional_elements_null_array_returns_error() {
+    #[allow(dead_code)]
+    #[derive(Debug, Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "items[].nickname")]
+        nicknames: Vec<Option<String>>,
+    }
+
+    let json = serde_json::json!({
+        "items": null
+    });
+    let result = Data::from_value(json);
+    assert!(result.is_err());
+    assert!(result.unwrap_err().contains("null value"));
+}
+
+#[test]
+fn test_optional_array_with_optional_elements() {
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "items[].nickname")]
+        nicknames: Option<Vec<Option<String>>>,
+    }
+
+    let json = serde_json::json!({
+        "items": [
+            { "nickname": "ally" },
+            { "nickname": null },
+            { "nickname": "bobby" }
+        ]
+    });
+    let data = Data::from_value(json).unwrap();
+    assert_eq!(
+        data.nicknames,
+        Some(vec![
+            Some("ally".to_string()),
+            None,
+            Some("bobby".to_string())
+        ])
+    );
+}
+
+#[test]
+fn test_optional_array_with_optional_elements_null_array() {
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "items[].nickname")]
+        nicknames: Option<Vec<Option<String>>>,
+    }
+
+    let json = serde_json::json!({
+        "items": null
+    });
+    let data = Data::from_value(json).unwrap();
+    assert_eq!(data.nicknames, None);
+}
+
+// === Nested Array Type-Driven Handling ===
+
+#[test]
+fn test_nested_required_arrays() {
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "groups[].members[].name")]
+        names: Vec<Vec<String>>,
+    }
+
+    let json = serde_json::json!({
+        "groups": [
+            { "members": [{ "name": "alice" }, { "name": "bob" }] },
+            { "members": [{ "name": "charlie" }] }
+        ]
+    });
+    let data = Data::from_value(json).unwrap();
+    assert_eq!(
+        data.names,
+        vec![
+            vec!["alice".to_string(), "bob".to_string()],
+            vec!["charlie".to_string()]
+        ]
+    );
+}
+
+#[test]
+fn test_nested_required_arrays_null_outer_returns_error() {
+    #[allow(dead_code)]
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "groups[].members[].name")]
+        names: Vec<Vec<String>>,
+    }
+
+    let json = serde_json::json!({
+        "groups": null
+    });
+    let result = Data::from_value(json);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_nested_required_arrays_null_inner_returns_error() {
+    #[allow(dead_code)]
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "groups[].members[].name")]
+        names: Vec<Vec<String>>,
+    }
+
+    let json = serde_json::json!({
+        "groups": [
+            { "members": [{ "name": "alice" }] },
+            { "members": null }
+        ]
+    });
+    let result = Data::from_value(json);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_nested_optional_outer_required_inner() {
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "groups[].members[].name")]
+        names: Option<Vec<Vec<String>>>,
+    }
+
+    let json = serde_json::json!({
+        "groups": [
+            { "members": [{ "name": "alice" }] },
+            { "members": [{ "name": "bob" }, { "name": "charlie" }] }
+        ]
+    });
+    let data = Data::from_value(json).unwrap();
+    assert_eq!(
+        data.names,
+        Some(vec![
+            vec!["alice".to_string()],
+            vec!["bob".to_string(), "charlie".to_string()]
+        ])
+    );
+}
+
+#[test]
+fn test_nested_optional_outer_required_inner_null_outer() {
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "groups[].members[].name")]
+        names: Option<Vec<Vec<String>>>,
+    }
+
+    let json = serde_json::json!({
+        "groups": null
+    });
+    let data = Data::from_value(json).unwrap();
+    assert_eq!(data.names, None);
+}
+
+#[test]
+fn test_nested_optional_outer_required_inner_null_inner_returns_error() {
+    #[allow(dead_code)]
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "groups[].members[].name")]
+        names: Option<Vec<Vec<String>>>,
+    }
+
+    let json = serde_json::json!({
+        "groups": [
+            { "members": [{ "name": "alice" }] },
+            { "members": null }
+        ]
+    });
+    let result = Data::from_value(json);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_nested_required_outer_optional_inner() {
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "groups[].members[].name")]
+        names: Vec<Option<Vec<String>>>,
+    }
+
+    let json = serde_json::json!({
+        "groups": [
+            { "members": [{ "name": "alice" }] },
+            { "members": null },
+            { "members": [{ "name": "bob" }] }
+        ]
+    });
+    let data = Data::from_value(json).unwrap();
+    assert_eq!(
+        data.names,
+        vec![
+            Some(vec!["alice".to_string()]),
+            None,
+            Some(vec!["bob".to_string()])
+        ]
+    );
+}
+
+#[test]
+fn test_nested_required_outer_optional_inner_null_outer_returns_error() {
+    #[allow(dead_code)]
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "groups[].members[].name")]
+        names: Vec<Option<Vec<String>>>,
+    }
+
+    let json = serde_json::json!({
+        "groups": null
+    });
+    let result = Data::from_value(json);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_nested_both_optional() {
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "groups[].members[].name")]
+        names: Option<Vec<Option<Vec<String>>>>,
+    }
+
+    let json = serde_json::json!({
+        "groups": [
+            { "members": [{ "name": "alice" }] },
+            { "members": null },
+            { "members": [{ "name": "bob" }, { "name": "charlie" }] }
+        ]
+    });
+    let data = Data::from_value(json).unwrap();
+    assert_eq!(
+        data.names,
+        Some(vec![
+            Some(vec!["alice".to_string()]),
+            None,
+            Some(vec!["bob".to_string(), "charlie".to_string()])
+        ])
+    );
+}
+
+#[test]
+fn test_nested_both_optional_null_outer() {
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "groups[].members[].name")]
+        names: Option<Vec<Option<Vec<String>>>>,
+    }
+
+    let json = serde_json::json!({
+        "groups": null
+    });
+    let data = Data::from_value(json).unwrap();
+    assert_eq!(data.names, None);
 }
 
 // === Null Handling ===
@@ -266,4 +712,86 @@ fn test_null_final_value_with_option() {
     });
     let data = ObjectResponse::from_value(json).unwrap();
     assert_eq!(data.address, None);
+}
+
+// === Nested Arrays with Multiple Intermediate Fields ===
+// Path: groups[].info.details.leaders[].name
+// Between groups[] and leaders[], there are TWO intermediate object fields (info, details).
+// Tests verify null handling at each intermediate position, not just immediately after the array.
+
+#[test]
+fn test_nested_arrays_multiple_intermediate_fields_null_at_non_immediate() {
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "groups[].info.details.leaders[].name")]
+        names: Option<Vec<Option<Vec<String>>>>,
+    }
+
+    // null at "details" - second intermediate field (NOT immediately after groups[])
+    let json = serde_json::json!({
+        "groups": [
+            { "info": { "details": { "leaders": [{ "name": "alice" }] } } },
+            { "info": { "details": null } },
+            { "info": { "details": { "leaders": [{ "name": "bob" }] } } }
+        ]
+    });
+    let data = Data::from_value(json).unwrap();
+    assert_eq!(
+        data.names,
+        Some(vec![
+            Some(vec!["alice".to_string()]),
+            None,
+            Some(vec!["bob".to_string()])
+        ])
+    );
+}
+
+#[test]
+fn test_nested_arrays_multiple_intermediate_fields_null_at_inner_array() {
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "groups[].info.details.leaders[].name")]
+        names: Option<Vec<Option<Vec<String>>>>,
+    }
+
+    // null at "leaders" - the inner array itself
+    let json = serde_json::json!({
+        "groups": [
+            { "info": { "details": { "leaders": [{ "name": "alice" }] } } },
+            { "info": { "details": { "leaders": null } } },
+            { "info": { "details": { "leaders": [{ "name": "charlie" }] } } }
+        ]
+    });
+    let data = Data::from_value(json).unwrap();
+    assert_eq!(
+        data.names,
+        Some(vec![
+            Some(vec!["alice".to_string()]),
+            None,
+            Some(vec!["charlie".to_string()])
+        ])
+    );
+}
+
+#[test]
+fn test_nested_arrays_multiple_intermediate_fields_required_null_returns_error() {
+    #[allow(dead_code)]
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "groups[].info.details.leaders[].name")]
+        names: Vec<Vec<String>>,
+    }
+
+    // null at "details" with required type → error
+    let json = serde_json::json!({
+        "groups": [
+            { "info": { "details": { "leaders": [{ "name": "alice" }] } } },
+            { "info": { "details": null } }
+        ]
+    });
+    let result = Data::from_value(json);
+    assert!(result.is_err());
 }

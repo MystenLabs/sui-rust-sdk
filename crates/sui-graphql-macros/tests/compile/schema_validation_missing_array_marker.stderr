@@ -1,0 +1,5 @@
+error: Field 'nodes' is a list type, use 'nodes[]' to iterate over it
+ --> tests/compile/schema_validation_missing_array_marker.rs:7:20
+  |
+7 |     #[field(path = "checkpoints.nodes.digest")]
+  |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^
