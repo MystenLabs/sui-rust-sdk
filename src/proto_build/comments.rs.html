@@ -1,0 +1,46 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/proto-build/src/comments.rs`."><title>comments.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-ca0dd0c4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="proto_build" data-themes="" data-resource-suffix="" data-rustdoc-version="1.93.0 (254b59607 2026-01-19)" data-channel="1.93.0" data-search-js="search-9e2438ea.js" data-stringdex-js="stringdex-a3946164.js" data-settings-js="settings-c38705f0.js" ><script src="../../static.files/storage-e2aeef58.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-a410ff4d.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">proto_build/</div>comments.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><a href="https://docs.rs/prost-types/0.14.3/prost_types/protobuf/source_code_info/struct.Location.html">prost_types::source_code_info::Location</a>;
+<a href=#2 id=2 data-nosnippet>2</a>
+<a href=#3 id=3 data-nosnippet>3</a><span class="doccomment">/// Comments on a Protobuf item.
+<a href=#4 id=4 data-nosnippet>4</a></span><span class="attr">#[derive(<a href="https://doc.rust-lang.org/1.93.0/core/fmt/macros/derive.Debug.html">Debug</a>, <a href="https://doc.rust-lang.org/1.93.0/core/default/derive.Default.html">Default</a>, <a href="https://doc.rust-lang.org/1.93.0/core/clone/derive.Clone.html">Clone</a>)]
+<a href=#5 id=5 data-nosnippet>5</a>#[allow(unused)]
+<a href=#6 id=6 data-nosnippet>6</a></span><span class="kw">pub struct </span><a href="../../proto_build/comments/struct.Comments.html">Comments</a> {
+<a href=#7 id=7 data-nosnippet>7</a>    <span class="doccomment">/// Leading detached blocks of comments.
+<a href=#8 id=8 data-nosnippet>8</a>    </span><span class="kw">pub </span>leading_detached: <a href="https://doc.rust-lang.org/1.93.0/alloc/vec/struct.Vec.html">Vec</a>&lt;<a href="https://doc.rust-lang.org/1.93.0/alloc/vec/struct.Vec.html">Vec</a>&lt;<a href="https://doc.rust-lang.org/1.93.0/alloc/string/struct.String.html">String</a>&gt;&gt;,
+<a href=#9 id=9 data-nosnippet>9</a>
+<a href=#10 id=10 data-nosnippet>10</a>    <span class="doccomment">/// Leading comments.
+<a href=#11 id=11 data-nosnippet>11</a>    </span><span class="kw">pub </span>leading: <a href="https://doc.rust-lang.org/1.93.0/alloc/vec/struct.Vec.html">Vec</a>&lt;<a href="https://doc.rust-lang.org/1.93.0/alloc/string/struct.String.html">String</a>&gt;,
+<a href=#12 id=12 data-nosnippet>12</a>
+<a href=#13 id=13 data-nosnippet>13</a>    <span class="doccomment">/// Trailing comments.
+<a href=#14 id=14 data-nosnippet>14</a>    </span><span class="kw">pub </span>trailing: <a href="https://doc.rust-lang.org/1.93.0/alloc/vec/struct.Vec.html">Vec</a>&lt;<a href="https://doc.rust-lang.org/1.93.0/alloc/string/struct.String.html">String</a>&gt;,
+<a href=#15 id=15 data-nosnippet>15</a>}
+<a href=#16 id=16 data-nosnippet>16</a>
+<a href=#17 id=17 data-nosnippet>17</a><span class="kw">impl </span><a href="#6-15">Comments</a> {
+<a href=#18 id=18 data-nosnippet>18</a>    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>from_location(location: <span class="kw-2">&amp;</span><a href="https://docs.rs/prost-types/0.14.3/prost_types/protobuf/source_code_info/struct.Location.html">Location</a>) -&gt; <a href="#6-15">Comments</a> {
+<a href=#19 id=19 data-nosnippet>19</a>        <span class="kw">let </span>leading_detached = <a href="#18">location</a>
+<a href=#20 id=20 data-nosnippet>20</a>            .leading_detached_comments
+<a href=#21 id=21 data-nosnippet>21</a>            .<a href="https://doc.rust-lang.org/1.93.0/core/foreigntype.slice.html#method.iter">iter</a>()
+<a href=#22 id=22 data-nosnippet>22</a>            .<a href="https://doc.rust-lang.org/1.93.0/core/iter/traits/iterator/trait.Iterator.html#method.map">map</a>(<a href="#40-45">get_lines</a>)
+<a href=#23 id=23 data-nosnippet>23</a>            .<a href="https://doc.rust-lang.org/1.93.0/core/iter/traits/iterator/trait.Iterator.html#method.collect">collect</a>();
+<a href=#24 id=24 data-nosnippet>24</a>        <span class="kw">let </span>leading = <a href="#18">location</a>
+<a href=#25 id=25 data-nosnippet>25</a>            .leading_comments
+<a href=#26 id=26 data-nosnippet>26</a>            .<a href="https://doc.rust-lang.org/1.93.0/core/option/enum.Option.html#method.as_ref">as_ref</a>()
+<a href=#27 id=27 data-nosnippet>27</a>            .<a href="https://doc.rust-lang.org/1.93.0/core/option/enum.Option.html#method.map_or">map_or</a>(<a href="https://doc.rust-lang.org/1.93.0/alloc/vec/struct.Vec.html">Vec</a>::<a href="https://doc.rust-lang.org/1.93.0/alloc/vec/struct.Vec.html#method.new">new</a>(), <a href="#40-45">get_lines</a>);
+<a href=#28 id=28 data-nosnippet>28</a>        <span class="kw">let </span>trailing = <a href="#18">location</a>
+<a href=#29 id=29 data-nosnippet>29</a>            .trailing_comments
+<a href=#30 id=30 data-nosnippet>30</a>            .<a href="https://doc.rust-lang.org/1.93.0/core/option/enum.Option.html#method.as_ref">as_ref</a>()
+<a href=#31 id=31 data-nosnippet>31</a>            .<a href="https://doc.rust-lang.org/1.93.0/core/option/enum.Option.html#method.map_or">map_or</a>(<a href="https://doc.rust-lang.org/1.93.0/alloc/vec/struct.Vec.html">Vec</a>::<a href="https://doc.rust-lang.org/1.93.0/alloc/vec/struct.Vec.html#method.new">new</a>(), <a href="#40-45">get_lines</a>);
+<a href=#32 id=32 data-nosnippet>32</a>        <a href="#6-15">Comments</a> {
+<a href=#33 id=33 data-nosnippet>33</a>            <a href="#19">leading_detached</a>,
+<a href=#34 id=34 data-nosnippet>34</a>            <a href="#24">leading</a>,
+<a href=#35 id=35 data-nosnippet>35</a>            <a href="#28">trailing</a>,
+<a href=#36 id=36 data-nosnippet>36</a>        }
+<a href=#37 id=37 data-nosnippet>37</a>    }
+<a href=#38 id=38 data-nosnippet>38</a>}
+<a href=#39 id=39 data-nosnippet>39</a>
+<a href=#40 id=40 data-nosnippet>40</a><span class="kw">fn </span><a href="../../proto_build/comments/fn.get_lines.html">get_lines</a>&lt;S&gt;(comments: S) -&gt; <a href="https://doc.rust-lang.org/1.93.0/alloc/vec/struct.Vec.html">Vec</a>&lt;<a href="https://doc.rust-lang.org/1.93.0/alloc/string/struct.String.html">String</a>&gt;
+<a href=#41 id=41 data-nosnippet>41</a><span class="kw">where
+<a href=#42 id=42 data-nosnippet>42</a>    </span>S: <a href="https://doc.rust-lang.org/1.93.0/core/convert/trait.AsRef.html">AsRef</a>&lt;<a href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>&gt;,
+<a href=#43 id=43 data-nosnippet>43</a>{
+<a href=#44 id=44 data-nosnippet>44</a>    <a href="#40">comments</a>.<a href="https://doc.rust-lang.org/1.93.0/core/convert/trait.AsRef.html#tymethod.as_ref">as_ref</a>().<a href="https://doc.rust-lang.org/1.93.0/core/foreigntype.str.html#method.lines">lines</a>().<a href="https://doc.rust-lang.org/1.93.0/core/iter/traits/iterator/trait.Iterator.html#method.map">map</a>(<a href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>::<a href="https://doc.rust-lang.org/1.93.0/alloc/borrow/trait.ToOwned.html#tymethod.to_owned">to_owned</a>).<a href="https://doc.rust-lang.org/1.93.0/core/iter/traits/iterator/trait.Iterator.html#method.collect">collect</a>()
+<a href=#45 id=45 data-nosnippet>45</a>}
+</code></pre></div></section></main></body></html>
