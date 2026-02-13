@@ -34,5 +34,5 @@ fn compile_tests() {
     // Type validation tests
     t.compile_fail("tests/compile/type_validation_vec_count_mismatch.rs");
     t.compile_fail("tests/compile/type_validation_trailing_array_mismatch.rs");
-    t.compile_fail("tests/compile/skip_validation_type_mismatch.rs");
+    t.pass("tests/compile/skip_validation_type_mismatch.rs");
 }

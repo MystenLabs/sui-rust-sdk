@@ -147,12 +147,22 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
             .map_err(|e| syn::Error::new(spanned_path.span(), e.to_string()))?;
 
         // Validate path against GraphQL schema
-        if !field.skip_schema_validation {
-            validation::validate_path_against_schema(schema, &parsed_path, spanned_path.span())?;
-        }
+        let terminal_type = if !field.skip_schema_validation {
+            Some(validation::validate_path_against_schema(
+                schema,
+                &parsed_path,
+                spanned_path.span(),
+            )?)
+        } else {
+            None
+        };
 
-        // Validate type's Vec count matches the number of list fields in the path
-        validation::validate_type_matches_path(&parsed_path, &field.ty)?;
+        // Skip Vec excess check when schema validation is skipped (user takes full
+        // responsibility) or when the terminal type is an object-like scalar (e.g., JSON)
+        // whose value can be an array.
+        let skip_vec_excess_check = field.skip_schema_validation
+            || terminal_type.is_some_and(validation::is_object_like_scalar);
+        validation::validate_type_matches_path(&parsed_path, &field.ty, skip_vec_excess_check)?;
 
         // Generate extraction code using the same parsed path
         let type_structure = validation::analyze_type(&field.ty);

@@ -88,15 +88,28 @@ pub fn count_vec_depth(ts: &TypeStructure) -> usize {
     }
 }
 
+/// Scalars whose values can be objects or arrays in JSON.
+///
+/// These scalars represent structured data (not simple strings or numbers), so the macro
+/// cannot validate Vec count — the Rust type is the user's responsibility.
+const OBJECT_LIKE_SCALARS: &[&str] = &[
+    "JSON",
+    "MoveTypeLayout",
+    "MoveTypeSignature",
+    "OpenMoveTypeSignature",
+];
+
 /// Validate a parsed field path against the schema.
 ///
 /// Checks that all fields in the path exist in the schema and that `[]` markers
 /// match the schema's list types. List fields must always use `[]` explicitly.
-pub fn validate_path_against_schema(
-    schema: &Schema,
+///
+/// Returns the terminal type name (the type of the last field in the path).
+pub fn validate_path_against_schema<'a>(
+    schema: &'a Schema,
     path: &ParsedPath,
     span: proc_macro2::Span,
-) -> Result<(), syn::Error> {
+) -> Result<&'a str, syn::Error> {
     let mut current_type = "Query";
 
     for segment in &path.segments {
@@ -127,16 +140,28 @@ pub fn validate_path_against_schema(
         current_type = &field.type_name;
     }
 
-    Ok(())
+    Ok(current_type)
+}
+
+/// Returns true if the type name is a scalar that can represent objects or arrays.
+pub fn is_object_like_scalar(type_name: &str) -> bool {
+    OBJECT_LIKE_SCALARS.contains(&type_name)
 }
 
 /// Validate that the type's Vec count matches the number of list fields in the path.
 ///
+/// When `skip_vec_excess_check` is true, extra Vec wrappers beyond the list count are
+/// allowed. This is used for object-like scalars (e.g., JSON) whose values can be arrays.
+///
 /// # Errors
 ///
-/// - If Vec count > list count: too many Vec wrappers
 /// - If Vec count < list count: points to the specific list field missing a Vec
-pub fn validate_type_matches_path(path: &ParsedPath<'_>, ty: &syn::Type) -> Result<(), syn::Error> {
+/// - If Vec count > list count (and `skip_vec_excess_check` is false): too many Vec wrappers
+pub fn validate_type_matches_path(
+    path: &ParsedPath<'_>,
+    ty: &syn::Type,
+    skip_vec_excess_check: bool,
+) -> Result<(), syn::Error> {
     let type_structure = analyze_type(ty);
     let vec_count = count_vec_depth(&type_structure);
     let list_count = path.list_fields().len();
@@ -153,7 +178,7 @@ pub fn validate_type_matches_path(path: &ParsedPath<'_>, ty: &syn::Type) -> Resu
         ));
     }
 
-    if vec_count > list_count {
+    if !skip_vec_excess_check && vec_count > list_count {
         return Err(syn::Error::new_spanned(
             ty,
             format!(

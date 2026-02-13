@@ -1,13 +1,16 @@
 use sui_graphql_macros::Response;
 
-// Even with skip_schema_validation, type validation still catches mismatches.
-// Path has 1 explicit [], but type has 3 Vec wrappers - too many!
+// With skip_schema_validation, the Vec excess check is skipped — the user takes
+// full responsibility for the type matching the actual JSON structure.
 
 #[derive(Response)]
 #[response(schema = "tests/test_schema.graphql")]
-struct TooManyVecs {
+struct ExtraVecs {
     #[field(path = "items[].name", skip_schema_validation = true)]
-    names: Vec<Vec<Vec<String>>>, // Path can have at most 2 list fields (items[] + trailing)
+    names: Vec<Vec<Vec<String>>>,
 }
 
-fn main() {}
+fn main() {
+    // Just verify it compiles
+    let _ = ExtraVecs::from_value;
+}
