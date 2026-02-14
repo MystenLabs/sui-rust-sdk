@@ -41,6 +41,11 @@ use syn::parse_macro_input;
 /// Use `#[field(path = "...")]` to specify the JSON path to extract each field.
 /// Paths are dot-separated (e.g., `"object.address"` extracts `json["object"]["address"]`).
 ///
+/// # Root Type
+///
+/// By default, field paths are validated against the `Query` type. Use
+/// `#[response(root_type = "...")]` to validate against a different type instead.
+///
 /// # Generated Code
 ///
 /// The macro generates:
@@ -50,6 +55,7 @@ use syn::parse_macro_input;
 /// # Example
 ///
 /// ```ignore
+/// // Query response (default)
 /// #[derive(Response)]
 /// struct ChainInfo {
 ///     #[field(path = "chainIdentifier")]
@@ -57,6 +63,14 @@ use syn::parse_macro_input;
 ///
 ///     #[field(path = "epoch.epochId")]
 ///     epoch_id: Option<u64>,
+/// }
+///
+/// // Mutation response
+/// #[derive(Response)]
+/// #[response(root_type = "Mutation")]
+/// struct ExecuteResult {
+///     #[field(path = "executeTransaction.effects.effectsBcs")]
+///     effects_bcs: Option<String>,
 /// }
 /// ```
 #[proc_macro_derive(Response, attributes(response, field))]
@@ -81,6 +95,8 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
         data: darling::ast::Data<(), ResponseField>, // Struct fields
         #[darling(default)]
         schema: Option<String>, // Custom schema path: #[response(schema = "path/to/schema.graphql")]
+        #[darling(default)]
+        root_type: Option<SpannedValue<String>>, // #[response(root_type = "...")] for non-Query roots
     }
 
     #[derive(Debug, FromField)]
@@ -124,6 +140,32 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
         schema::Schema::load()?
     };
 
+    // Determine root type: use specified root_type or default to "Query"
+    let root_type = parsed
+        .root_type
+        .as_ref()
+        .map(|s| s.as_str())
+        .unwrap_or("Query");
+
+    // Validate that the root type exists in the schema
+    if !schema.has_type(root_type) {
+        use std::fmt::Write;
+
+        let type_names = schema.type_names();
+        let suggestion = validation::find_similar(&type_names, root_type);
+
+        let mut msg = format!("Type '{}' not found in GraphQL schema", root_type);
+        if let Some(suggested) = suggestion {
+            write!(msg, ". Did you mean '{}'?", suggested).unwrap();
+        }
+
+        // We only enter this block if root_type was explicitly specified (and invalid),
+        // since "Query" (the default) always exists in a valid schema.
+        let span = parsed.root_type.as_ref().unwrap().span();
+
+        return Err(syn::Error::new(span, msg));
+    }
+
     let fields = parsed
         .data
         .as_ref()
@@ -150,6 +192,7 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
         let terminal_type = if !field.skip_schema_validation {
             Some(validation::validate_path_against_schema(
                 schema,
+                root_type,
                 &parsed_path,
                 spanned_path.span(),
             )?)
@@ -244,26 +287,26 @@ fn generate_field_extraction(
 ///
 /// ```ignore
 /// (|| {
-///     // "data" (non-list) - null returns None (outer Optional)
-///     let current = current.get("data").ok_or_else(|| "missing 'data'")?;
+///     // "data" (non-list) - missing/null returns None (outer Optional)
+///     let current = current.get("data").unwrap_or(&serde_json::Value::Null);
 ///     if current.is_null() { return Ok(None); }
 ///
-///     // "nodes[]" (list) - null returns None (outer Optional)
-///     let field_value = current.get("nodes").ok_or_else(|| "missing 'nodes'")?;
+///     // "nodes[]" (list) - missing/null returns None (outer Optional)
+///     let field_value = current.get("nodes").unwrap_or(&serde_json::Value::Null);
 ///     if field_value.is_null() { return Ok(None); }
 ///     let array = field_value.as_array().ok_or_else(|| "expected array")?;
 ///     array.iter().map(|current| {
 ///         // Element type: Vec<String> (not Optional, so null = error)
 ///
-///         // "edges[]" (list) - null returns Err
-///         let field_value = current.get("edges").ok_or_else(|| "missing 'edges'")?;
+///         // "edges[]" (list) - missing/null returns Err
+///         let field_value = current.get("edges").unwrap_or(&serde_json::Value::Null);
 ///         if field_value.is_null() { return Err("null at 'edges'"); }
 ///         let array = field_value.as_array().ok_or_else(|| "expected array")?;
 ///         array.iter().map(|current| {
 ///             // Element type: String (not Optional, so null = error)
 ///
-///             // "id" (scalar) - null returns Err
-///             let current = current.get("id").ok_or_else(|| "missing 'id'")?;
+///             // "id" (scalar) - missing/null returns Err
+///             let current = current.get("id").unwrap_or(&serde_json::Value::Null);
 ///             if current.is_null() { return Err("null at 'id'"); }
 ///             serde_json::from_value(current.clone())
 ///         }).collect::<Result<Vec<_>, _>>()
@@ -341,8 +384,8 @@ fn generate_from_segments_core(
         let rest_code = generate_from_segments(full_path, rest, element_type);
 
         quote! {
-            let field_value = current.get(#json_key)
-                .ok_or_else(|| format!("missing field '{}' in path '{}'", #json_key, #full_path))?;
+            // Treat missing fields as null (allows Option<T> to deserialize as None)
+            let field_value = current.get(#json_key).unwrap_or(&serde_json::Value::Null);
             if field_value.is_null() {
                 #on_null
             }
@@ -358,8 +401,8 @@ fn generate_from_segments_core(
             generate_from_segments_core(full_path, rest, type_structure, null_returns_none);
 
         quote! {
-            let current = current.get(#json_key)
-                .ok_or_else(|| format!("missing field '{}' in path '{}'", #json_key, #full_path))?;
+            // Treat missing fields as null (allows Option<T> to deserialize as None)
+            let current = current.get(#json_key).unwrap_or(&serde_json::Value::Null);
             if current.is_null() {
                 #on_null
             }

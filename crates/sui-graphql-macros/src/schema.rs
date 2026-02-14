@@ -147,4 +147,44 @@ impl Schema {
             .map(|t| t.fields.keys().map(|s| s.as_str()).collect())
             .unwrap_or_default()
     }
+
+    /// Check if a type exists in the schema.
+    pub fn has_type(&self, type_name: &str) -> bool {
+        self.types.contains_key(type_name)
+    }
+
+    /// Get all type names in the schema.
+    pub fn type_names(&self) -> Vec<&str> {
+        self.types.keys().map(|s| s.as_str()).collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_has_type() {
+        let schema = Schema::load().unwrap();
+        // Standard GraphQL root types
+        assert!(schema.has_type("Query"));
+        assert!(schema.has_type("Mutation"));
+        // Common Sui types
+        assert!(schema.has_type("Object"));
+        assert!(schema.has_type("DynamicField"));
+        assert!(schema.has_type("MoveObject"));
+        // Non-existent types
+        assert!(!schema.has_type("NonExistent"));
+        assert!(!schema.has_type("query")); // Case-sensitive
+    }
+
+    #[test]
+    fn test_type_names() {
+        let schema = Schema::load().unwrap();
+        let type_names = schema.type_names();
+        // Should contain standard types
+        assert!(type_names.contains(&"Query"));
+        assert!(type_names.contains(&"Mutation"));
+        assert!(type_names.contains(&"Object"));
+    }
 }
