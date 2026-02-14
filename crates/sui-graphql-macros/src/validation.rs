@@ -107,7 +107,7 @@ const OBJECT_LIKE_SCALARS: &[&str] = &[
 /// Returns the terminal type name (the type of the last field in the path).
 pub fn validate_path_against_schema<'a>(
     schema: &'a Schema,
-    root_type: &str,
+    root_type: &'a str,
     path: &ParsedPath,
     span: proc_macro2::Span,
 ) -> Result<&'a str, syn::Error> {

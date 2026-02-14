@@ -287,26 +287,26 @@ fn generate_field_extraction(
 ///
 /// ```ignore
 /// (|| {
-///     // "data" (non-list) - null returns None (outer Optional)
-///     let current = current.get("data").ok_or_else(|| "missing 'data'")?;
+///     // "data" (non-list) - missing/null returns None (outer Optional)
+///     let current = current.get("data").unwrap_or(&serde_json::Value::Null);
 ///     if current.is_null() { return Ok(None); }
 ///
-///     // "nodes[]" (list) - null returns None (outer Optional)
-///     let field_value = current.get("nodes").ok_or_else(|| "missing 'nodes'")?;
+///     // "nodes[]" (list) - missing/null returns None (outer Optional)
+///     let field_value = current.get("nodes").unwrap_or(&serde_json::Value::Null);
 ///     if field_value.is_null() { return Ok(None); }
 ///     let array = field_value.as_array().ok_or_else(|| "expected array")?;
 ///     array.iter().map(|current| {
 ///         // Element type: Vec<String> (not Optional, so null = error)
 ///
-///         // "edges[]" (list) - null returns Err
-///         let field_value = current.get("edges").ok_or_else(|| "missing 'edges'")?;
+///         // "edges[]" (list) - missing/null returns Err
+///         let field_value = current.get("edges").unwrap_or(&serde_json::Value::Null);
 ///         if field_value.is_null() { return Err("null at 'edges'"); }
 ///         let array = field_value.as_array().ok_or_else(|| "expected array")?;
 ///         array.iter().map(|current| {
 ///             // Element type: String (not Optional, so null = error)
 ///
-///             // "id" (scalar) - null returns Err
-///             let current = current.get("id").ok_or_else(|| "missing 'id'")?;
+///             // "id" (scalar) - missing/null returns Err
+///             let current = current.get("id").unwrap_or(&serde_json::Value::Null);
 ///             if current.is_null() { return Err("null at 'id'"); }
 ///             serde_json::from_value(current.clone())
 ///         }).collect::<Result<Vec<_>, _>>()

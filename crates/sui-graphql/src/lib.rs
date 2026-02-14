@@ -8,7 +8,6 @@
 mod bcs;
 mod client;
 mod error;
-mod json;
 mod move_value;
 mod pagination;
 mod response;
@@ -31,7 +30,6 @@ pub use error::Error;
 pub use error::GraphQLError;
 pub use error::Location;
 pub use error::PathFragment;
-pub use json::JsonValue;
 pub use move_value::MoveValue;
 pub use pagination::Page;
 pub use pagination::PageInfo;

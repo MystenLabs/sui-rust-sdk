@@ -24,25 +24,6 @@ pub enum Format {
     Bcs,
 }
 
-/// Builds the format fields (json/bcs) for the GraphQL fragment.
-/// Defaults to BCS if no formats specified.
-fn build_format_fields(formats: &[Format]) -> String {
-    let mut fields = String::new();
-
-    if formats.is_empty() {
-        fields.push_str("bcs");
-    } else {
-        for format in formats {
-            match format {
-                Format::Json => fields.push_str("\njson"),
-                Format::Bcs => fields.push_str("\nbcs"),
-            }
-        }
-    }
-
-    fields
-}
-
 // ============================================================================
 // Request builders
 // ============================================================================
@@ -225,41 +206,43 @@ impl Client {
             page_info: Option<PageInfo>,
         }
 
-        let format_fields = build_format_fields(formats);
-        let query = format!(
-            r#"
-            fragment MoveValueFields on MoveValue {{
-                type {{ repr }}
-                {format_fields}
-            }}
-            query($parent: SuiAddress!, $cursor: String) {{
-                object(address: $parent) {{
-                    dynamicFields(after: $cursor) {{
-                        nodes {{
-                            name {{ ...MoveValueFields }}
-                            value {{
-                                ... on MoveValue {{ ...MoveValueFields }}
-                                ... on MoveObject {{
-                                    contents {{ ...MoveValueFields }}
-                                }}
-                            }}
-                        }}
-                        pageInfo {{
+        const QUERY: &str = r#"
+            fragment MoveValueFields on MoveValue {
+                type { repr }
+                json @include(if: $withJson)
+                bcs @include(if: $withBcs)
+            }
+            query($parent: SuiAddress!, $cursor: String, $withJson: Boolean!, $withBcs: Boolean!) {
+                object(address: $parent) {
+                    dynamicFields(after: $cursor) {
+                        nodes {
+                            name { ...MoveValueFields }
+                            value {
+                                ... on MoveValue { ...MoveValueFields }
+                                ... on MoveObject {
+                                    contents { ...MoveValueFields }
+                                }
+                            }
+                        }
+                        pageInfo {
                             hasNextPage
                             endCursor
-                        }}
-                    }}
-                }}
-            }}
-        "#
-        );
+                        }
+                    }
+                }
+            }
+        "#;
 
+        let with_json = formats.contains(&Format::Json);
+        let with_bcs = formats.is_empty() || formats.contains(&Format::Bcs);
         let variables = serde_json::json!({
             "parent": parent,
             "cursor": cursor,
+            "withJson": with_json,
+            "withBcs": with_bcs,
         });
 
-        let response = self.query::<Response>(&query, variables).await?;
+        let response = self.query::<Response>(QUERY, variables).await?;
 
         let Some(data) = response.into_data() else {
             return Ok(Page {
@@ -302,52 +285,70 @@ impl Client {
             field: Option<DynamicField>,
         }
 
-        let format_fields = build_format_fields(formats);
-        let field_name = match field_type {
-            DynamicFieldType::Field => "dynamicField",
-            DynamicFieldType::Object => "dynamicObjectField",
-        };
+        const DYNAMIC_FIELD_QUERY: &str = r#"
+            fragment MoveValueFields on MoveValue {
+                type { repr }
+                json @include(if: $withJson)
+                bcs @include(if: $withBcs)
+            }
+            query($parent: SuiAddress!, $name: DynamicFieldName!, $withJson: Boolean!, $withBcs: Boolean!) {
+                object(address: $parent) {
+                    dynamicField(name: $name) {
+                        name { ...MoveValueFields }
+                        value {
+                            ... on MoveValue { ...MoveValueFields }
+                            ... on MoveObject {
+                                contents { ...MoveValueFields }
+                            }
+                        }
+                    }
+                }
+            }
+        "#;
 
-        let query = format!(
-            r#"
-            fragment MoveValueFields on MoveValue {{
-                type {{ repr }}
-                {format_fields}
-            }}
-            query($parent: SuiAddress!, $name: DynamicFieldName!) {{
-                object(address: $parent) {{
-                    {field_name}(name: $name) {{
-                        name {{ ...MoveValueFields }}
-                        value {{
-                            ... on MoveValue {{ ...MoveValueFields }}
-                            ... on MoveObject {{
-                                contents {{ ...MoveValueFields }}
-                            }}
-                        }}
-                    }}
-                }}
-            }}
-        "#
-        );
+        const DYNAMIC_OBJECT_FIELD_QUERY: &str = r#"
+            fragment MoveValueFields on MoveValue {
+                type { repr }
+                json @include(if: $withJson)
+                bcs @include(if: $withBcs)
+            }
+            query($parent: SuiAddress!, $name: DynamicFieldName!, $withJson: Boolean!, $withBcs: Boolean!) {
+                object(address: $parent) {
+                    dynamicObjectField(name: $name) {
+                        name { ...MoveValueFields }
+                        value {
+                            ... on MoveValue { ...MoveValueFields }
+                            ... on MoveObject {
+                                contents { ...MoveValueFields }
+                            }
+                        }
+                    }
+                }
+            }
+        "#;
 
+        let with_json = formats.contains(&Format::Json);
+        let with_bcs = formats.is_empty() || formats.contains(&Format::Bcs);
         let variables = serde_json::json!({
             "parent": parent,
             "name": {
                 "type": name_type.to_string(),
                 "bcs": name,
             },
+            "withJson": with_json,
+            "withBcs": with_bcs,
         });
 
         match field_type {
             DynamicFieldType::Field => {
                 let response = self
-                    .query::<DynamicFieldResponse>(&query, variables)
+                    .query::<DynamicFieldResponse>(DYNAMIC_FIELD_QUERY, variables)
                     .await?;
                 Ok(response.into_data().and_then(|d| d.field))
             }
             DynamicFieldType::Object => {
                 let response = self
-                    .query::<DynamicObjectFieldResponse>(&query, variables)
+                    .query::<DynamicObjectFieldResponse>(DYNAMIC_OBJECT_FIELD_QUERY, variables)
                     .await?;
                 Ok(response.into_data().and_then(|d| d.field))
             }

@@ -7,7 +7,6 @@ use sui_graphql_macros::Response;
 use sui_sdk_types::TypeTag;
 
 use crate::bcs::BcsBytes;
-use crate::json::JsonValue;
 
 /// A Move value with type information and optional JSON/BCS representations.
 ///
@@ -23,7 +22,7 @@ pub struct MoveValue {
 
     /// JSON representation (if fetched).
     #[field(path = "json")]
-    pub json: Option<JsonValue>,
+    pub json: Option<serde_json::Value>,
 
     /// BCS representation (if fetched).
     #[field(path = "bcs")]
