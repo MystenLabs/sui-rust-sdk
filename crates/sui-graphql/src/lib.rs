@@ -25,6 +25,7 @@ pub use client::dynamic_fields::DynamicFieldType;
 pub use client::dynamic_fields::DynamicFieldValue;
 pub use client::dynamic_fields::DynamicFieldsRequest;
 pub use client::dynamic_fields::Format;
+pub use client::dynamic_fields::MoveObject;
 pub use client::transactions::TransactionResponse;
 pub use error::Error;
 pub use error::GraphQLError;

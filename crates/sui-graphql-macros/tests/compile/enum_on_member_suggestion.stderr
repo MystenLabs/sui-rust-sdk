@@ -1,0 +1,5 @@
+error: 'MoveValeu' is not a member of union 'DynamicFieldValue'. Members: MoveObject, MoveValue. Did you mean 'MoveValue'?
+ --> tests/compile/enum_on_member_suggestion.rs:6:21
+  |
+6 |     #[response(on = "MoveValeu")]
+  |                     ^^^^^^^^^^^

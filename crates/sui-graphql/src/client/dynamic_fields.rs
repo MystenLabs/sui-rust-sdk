@@ -1,7 +1,6 @@
 //! Dynamic field related convenience methods.
 
 use futures::Stream;
-use serde::Deserialize;
 use serde::Serialize;
 use sui_graphql_macros::Response;
 use sui_sdk_types::Address;
@@ -110,44 +109,24 @@ pub enum DynamicFieldType {
     Object,
 }
 
-/// A dynamic field value that handles the MoveValue/MoveObject union.
-///
-/// This type detects which case and extracts the MoveValue accordingly.
-#[derive(Debug, Clone)]
-pub struct DynamicFieldValue {
-    /// Whether this is a Field or ObjectField.
-    pub field_type: DynamicFieldType,
-    /// The extracted Move value.
-    pub value: MoveValue,
+/// A MoveObject with its address and contents.
+#[derive(Debug, Clone, Response)]
+#[response(root_type = "MoveObject")]
+pub struct MoveObject {
+    /// The object's address.
+    #[field(path = "address")]
+    pub address: Address,
+    /// The object's contents as a MoveValue.
+    #[field(path = "contents")]
+    pub contents: MoveValue,
 }
 
-impl<'de> Deserialize<'de> for DynamicFieldValue {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let raw = serde_json::Value::deserialize(deserializer)?;
-
-        // Detect MoveObject by checking for "contents" field
-        let is_object = raw.get("contents").is_some();
-        let field_type = if is_object {
-            DynamicFieldType::Object
-        } else {
-            DynamicFieldType::Field
-        };
-
-        // Extract MoveValue from correct location
-        let move_value_json = if is_object {
-            raw.get("contents").cloned().unwrap_or_default()
-        } else {
-            raw
-        };
-
-        // Use MoveValue's from_value to deserialize
-        let value = MoveValue::from_value(move_value_json).map_err(serde::de::Error::custom)?;
-
-        Ok(DynamicFieldValue { field_type, value })
-    }
+/// The value of a dynamic field, dispatched by `__typename`.
+#[derive(Debug, Clone, Response)]
+#[response(root_type = "DynamicFieldValue")]
+pub enum DynamicFieldValue {
+    MoveValue(MoveValue),
+    MoveObject(MoveObject),
 }
 
 /// A dynamic field entry with its name and value.
@@ -218,8 +197,10 @@ impl Client {
                         nodes {
                             name { ...MoveValueFields }
                             value {
+                                __typename
                                 ... on MoveValue { ...MoveValueFields }
                                 ... on MoveObject {
+                                    address
                                     contents { ...MoveValueFields }
                                 }
                             }
@@ -415,6 +396,7 @@ mod tests {
                                         "json": "123"
                                     },
                                     "value": {
+                                        "__typename": "MoveValue",
                                         "type": { "repr": "0x2::coin::Coin<0x2::sui::SUI>" },
                                         "json": { "balance": "1000" }
                                     }
@@ -425,6 +407,8 @@ mod tests {
                                         "json": { "id": "0xabc" }
                                     },
                                     "value": {
+                                        "__typename": "MoveObject",
+                                        "address": "0x0000000000000000000000000000000000000000000000000000000000000def",
                                         "contents": {
                                             "type": { "repr": "0x2::kiosk::Item" },
                                             "json": { "price": "500" }
@@ -448,20 +432,20 @@ mod tests {
         let parent: Address = "0x123".parse().unwrap();
         let mut stream = pin!(client.dynamic_fields(parent).format(Format::Json).stream());
 
-        // First field - MoveValue (no "contents" field)
+        // First field - MoveValue
         let field1 = stream.next().await.unwrap().unwrap();
         assert_eq!(field1.name.type_tag, TypeTag::U64);
         assert!(field1.name.json.is_some());
         assert!(field1.name.bcs.is_none()); // BCS not requested
-        assert_eq!(field1.value.field_type, DynamicFieldType::Field);
+        assert!(matches!(field1.value, DynamicFieldValue::MoveValue(_)));
 
-        // Second field - MoveObject (has "contents" field)
+        // Second field - MoveObject
         let field2 = stream.next().await.unwrap().unwrap();
         assert_eq!(
             field2.name.type_tag,
             "0x2::kiosk::Listing".parse::<TypeTag>().unwrap()
         );
-        assert_eq!(field2.value.field_type, DynamicFieldType::Object);
+        assert!(matches!(field2.value, DynamicFieldValue::MoveObject(_)));
 
         // No more fields
         assert!(stream.next().await.is_none());
@@ -484,6 +468,7 @@ mod tests {
                                         "bcs": "ewAAAAAAAAA="
                                     },
                                     "value": {
+                                        "__typename": "MoveValue",
                                         "type": { "repr": "bool" },
                                         "bcs": "AQ=="
                                     }
@@ -550,6 +535,7 @@ mod tests {
                                 "bcs": "ewAAAAAAAAA="
                             },
                             "value": {
+                                "__typename": "MoveValue",
                                 "type": { "repr": "bool" },
                                 "json": true,
                                 "bcs": "AQ=="
@@ -578,7 +564,7 @@ mod tests {
         assert_eq!(field.name.type_tag, TypeTag::U64);
         assert!(field.name.json.is_some());
         assert!(field.name.bcs.is_some());
-        assert_eq!(field.value.field_type, DynamicFieldType::Field);
+        assert!(matches!(field.value, DynamicFieldValue::MoveValue(_)));
     }
 
     #[tokio::test]
@@ -596,6 +582,8 @@ mod tests {
                                 "json": "my_key"
                             },
                             "value": {
+                                "__typename": "MoveObject",
+                                "address": "0x0000000000000000000000000000000000000000000000000000000000000abc",
                                 "contents": {
                                     "type": { "repr": "0x2::coin::Coin<0x2::sui::SUI>" },
                                     "json": { "balance": "1000" }
@@ -621,9 +609,11 @@ mod tests {
 
         assert!(field.is_some());
         let field = field.unwrap();
-        assert_eq!(field.value.field_type, DynamicFieldType::Object);
+        let DynamicFieldValue::MoveObject(ref obj) = field.value else {
+            panic!("expected MoveObject variant");
+        };
         assert_eq!(
-            field.value.value.type_tag,
+            obj.contents.type_tag,
             "0x2::coin::Coin<0x2::sui::SUI>".parse::<TypeTag>().unwrap()
         );
     }

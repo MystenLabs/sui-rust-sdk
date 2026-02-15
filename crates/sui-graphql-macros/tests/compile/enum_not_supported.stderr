@@ -1,7 +1,0 @@
-error: Unsupported shape `enum`. Expected struct with named fields.
- --> tests/compile/enum_not_supported.rs:3:10
-  |
-3 | #[derive(Response)]
-  |          ^^^^^^^^
-  |
-  = note: this error originates in the derive macro `Response` (in Nightly builds, run with -Z macro-backtrace for more info)
