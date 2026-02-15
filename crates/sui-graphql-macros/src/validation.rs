@@ -144,6 +144,31 @@ pub fn validate_path_against_schema<'a>(
     Ok(current_type)
 }
 
+/// Validate that a type name is a member of a union.
+pub fn validate_union_member(
+    schema: &Schema,
+    union_type: &str,
+    member_name: &str,
+    span: proc_macro2::Span,
+) -> Result<(), syn::Error> {
+    let union_types = schema.union_types(union_type);
+    if !union_types.contains(&member_name) {
+        let suggestion = find_similar(&union_types, member_name);
+
+        let mut msg = format!(
+            "'{}' is not a member of union '{}'. Members: {}",
+            member_name,
+            union_type,
+            union_types.join(", ")
+        );
+        if let Some(s) = suggestion {
+            msg.push_str(&format!(". Did you mean '{}'?", s));
+        }
+        return Err(syn::Error::new(span, msg));
+    }
+    Ok(())
+}
+
 /// Returns true if the type name is a scalar that can represent objects or arrays.
 pub fn is_object_like_scalar(type_name: &str) -> bool {
     OBJECT_LIKE_SCALARS.contains(&type_name)

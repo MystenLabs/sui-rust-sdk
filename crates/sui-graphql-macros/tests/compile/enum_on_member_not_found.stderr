@@ -1,0 +1,5 @@
+error: 'NonExistentType' is not a member of union 'DynamicFieldValue'. Members: MoveObject, MoveValue
+ --> tests/compile/enum_on_member_not_found.rs:6:21
+  |
+6 |     #[response(on = "NonExistentType")]
+  |                     ^^^^^^^^^^^^^^^^^

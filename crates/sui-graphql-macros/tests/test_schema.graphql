@@ -54,6 +54,23 @@ type GroupDetails {
     leaders: [Item]
 }
 
+type MoveType {
+    repr: String
+}
+
+type MoveValue {
+    type: MoveType
+    json: JSON
+}
+
+type MoveObject {
+    contents: MoveValue
+    address: SuiAddress
+}
+
+union DynamicFieldValue = MoveObject | MoveValue
+
 scalar SuiAddress
 scalar Int
 scalar String
+scalar JSON

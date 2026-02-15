@@ -1,0 +1,5 @@
+error: 'Object' is not a union type. Enum Response requires root_type to be a GraphQL union
+ --> tests/compile/enum_non_union_root_type.rs:4:62
+  |
+4 | #[response(schema = "tests/test_schema.graphql", root_type = "Object")]
+  |                                                              ^^^^^^^^
