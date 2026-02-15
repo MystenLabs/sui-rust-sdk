@@ -795,3 +795,107 @@ fn test_nested_arrays_multiple_intermediate_fields_required_null_returns_error()
     let result = Data::from_value(json);
     assert!(result.is_err());
 }
+
+// === Enum (GraphQL Union) Dispatch ===
+
+// Inner types for enum variants — these are regular Response structs.
+#[derive(Debug, PartialEq, Response)]
+#[response(schema = "tests/test_schema.graphql", root_type = "MoveValue")]
+struct MoveValueData {
+    #[field(path = "type.repr")]
+    type_repr: Option<String>,
+}
+
+#[derive(Debug, PartialEq, Response)]
+#[response(schema = "tests/test_schema.graphql", root_type = "MoveObject")]
+struct MoveObjectData {
+    #[field(path = "contents.type.repr")]
+    type_repr: Option<String>,
+    #[field(path = "address")]
+    address: Option<String>,
+}
+
+#[derive(Debug, PartialEq, Response)]
+#[response(schema = "tests/test_schema.graphql", root_type = "DynamicFieldValue")]
+enum DynFieldValue {
+    #[response(on = "MoveValue")]
+    Value(MoveValueData),
+    #[response(on = "MoveObject")]
+    Object(MoveObjectData),
+}
+
+#[test]
+fn test_enum_dispatch_move_value() {
+    let json = serde_json::json!({
+        "__typename": "MoveValue",
+        "type": { "repr": "u64" }
+    });
+    let result = DynFieldValue::from_value(json).unwrap();
+    assert_eq!(
+        result,
+        DynFieldValue::Value(MoveValueData {
+            type_repr: Some("u64".to_string()),
+        })
+    );
+}
+
+#[test]
+fn test_enum_dispatch_move_object() {
+    let json = serde_json::json!({
+        "__typename": "MoveObject",
+        "contents": { "type": { "repr": "0x2::coin::Coin" } },
+        "address": "0xabc"
+    });
+    let result = DynFieldValue::from_value(json).unwrap();
+    assert_eq!(
+        result,
+        DynFieldValue::Object(MoveObjectData {
+            type_repr: Some("0x2::coin::Coin".to_string()),
+            address: Some("0xabc".to_string()),
+        })
+    );
+}
+
+#[test]
+fn test_enum_missing_typename_returns_error() {
+    let json = serde_json::json!({
+        "type": { "repr": "u64" }
+    });
+    let result = DynFieldValue::from_value(json);
+    assert!(result.is_err());
+    assert!(result.unwrap_err().contains("__typename"));
+}
+
+#[test]
+fn test_enum_unknown_typename_returns_error() {
+    let json = serde_json::json!({
+        "__typename": "SomeUnknownType",
+        "type": { "repr": "u64" }
+    });
+    let result = DynFieldValue::from_value(json);
+    assert!(result.is_err());
+    assert!(result.unwrap_err().contains("SomeUnknownType"));
+}
+
+// Test that `on` defaults to variant ident when not specified.
+#[derive(Debug, PartialEq, Response)]
+#[response(schema = "tests/test_schema.graphql", root_type = "DynamicFieldValue")]
+enum DynFieldValueDefaultOn {
+    MoveValue(MoveValueData),
+    MoveObject(MoveObjectData),
+}
+
+#[test]
+fn test_enum_default_on() {
+    let json = serde_json::json!({
+        "__typename": "MoveValue",
+        "type": { "repr": "u64" }
+    });
+    let result = DynFieldValueDefaultOn::from_value(json).unwrap();
+    assert_eq!(
+        result,
+        DynFieldValueDefaultOn::MoveValue(MoveValueData {
+            type_repr: Some("u64".to_string()),
+        })
+    );
+}

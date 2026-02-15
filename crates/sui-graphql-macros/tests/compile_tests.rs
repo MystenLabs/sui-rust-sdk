@@ -19,7 +19,6 @@ fn compile_tests() {
     // Tests that should fail with expected errors
     t.compile_fail("tests/compile/missing_field_path_attr.rs");
     t.compile_fail("tests/compile/missing_field_attr.rs");
-    t.compile_fail("tests/compile/enum_not_supported.rs");
     t.compile_fail("tests/compile/empty_path.rs");
     t.compile_fail("tests/compile/tuple_struct_not_supported.rs");
 
@@ -41,4 +40,12 @@ fn compile_tests() {
     // Root type validation tests
     t.compile_fail("tests/compile/root_type_not_found.rs");
     t.compile_fail("tests/compile/root_type_typo_suggestion.rs");
+
+    // Enum (union) validation tests
+    t.compile_fail("tests/compile/enum_non_union_root_type.rs");
+    t.compile_fail("tests/compile/enum_on_member_not_found.rs");
+    t.compile_fail("tests/compile/enum_on_member_suggestion.rs");
+    t.compile_fail("tests/compile/enum_default_member_not_found.rs");
+    t.compile_fail("tests/compile/enum_default_member_suggestion.rs");
+    t.compile_fail("tests/compile/enum_missing_root_type.rs");
 }

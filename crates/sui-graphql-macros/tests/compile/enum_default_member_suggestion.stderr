@@ -1,0 +1,11 @@
+error: 'MoveValeu' is not a member of union 'DynamicFieldValue'. Members: MoveObject, MoveValue. Did you mean 'MoveValue'?
+ --> tests/compile/enum_default_member_suggestion.rs:7:5
+  |
+7 |     MoveValeu(String),
+  |     ^^^^^^^^^
+
+error: hint: use #[response(on = "...")] to specify a GraphQL type name different from the variant name
+ --> tests/compile/enum_default_member_suggestion.rs:7:5
+  |
+7 |     MoveValeu(String),
+  |     ^^^^^^^^^
