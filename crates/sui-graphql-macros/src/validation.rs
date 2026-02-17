@@ -107,10 +107,11 @@ const OBJECT_LIKE_SCALARS: &[&str] = &[
 /// Returns the terminal type name (the type of the last field in the path).
 pub fn validate_path_against_schema<'a>(
     schema: &'a Schema,
+    root_type: &'a str,
     path: &ParsedPath,
     span: proc_macro2::Span,
 ) -> Result<&'a str, syn::Error> {
-    let mut current_type = "Query";
+    let mut current_type: &str = root_type;
 
     for segment in &path.segments {
         let field = schema
@@ -217,7 +218,7 @@ fn field_not_found_error(
 }
 
 /// Find a similar string using Levenshtein distance.
-fn find_similar<'a>(candidates: &[&'a str], target: &str) -> Option<&'a str> {
+pub fn find_similar<'a>(candidates: &[&'a str], target: &str) -> Option<&'a str> {
     candidates
         .iter()
         .filter_map(|&candidate| {

@@ -13,6 +13,8 @@ fn compile_tests() {
     t.pass("tests/compile/basic_extraction.rs");
     t.pass("tests/compile/skip_validation.rs");
     t.pass("tests/compile/schema_validation_with_alias.rs");
+    t.pass("tests/compile/root_type_mutation.rs");
+    t.pass("tests/compile/root_type_dynamic_field.rs");
 
     // Tests that should fail with expected errors
     t.compile_fail("tests/compile/missing_field_path_attr.rs");
@@ -35,4 +37,8 @@ fn compile_tests() {
     t.compile_fail("tests/compile/type_validation_vec_count_mismatch.rs");
     t.compile_fail("tests/compile/type_validation_trailing_array_mismatch.rs");
     t.pass("tests/compile/skip_validation_type_mismatch.rs");
+
+    // Root type validation tests
+    t.compile_fail("tests/compile/root_type_not_found.rs");
+    t.compile_fail("tests/compile/root_type_typo_suggestion.rs");
 }
