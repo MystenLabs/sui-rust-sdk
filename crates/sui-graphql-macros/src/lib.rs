@@ -29,12 +29,59 @@ mod validation;
 
 use darling::FromDeriveInput;
 use darling::FromField;
+use darling::FromVariant;
 use darling::util::SpannedValue;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::DeriveInput;
 use syn::parse_macro_input;
+
+// ---------------------------------------------------------------------------
+// Darling input structures — define the "schema" for macro input.
+// Darling generates parsing code automatically, including error messages.
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, FromDeriveInput)]
+#[darling(attributes(response), supports(struct_named, enum_newtype))]
+struct ResponseInput {
+    ident: syn::Ident,
+    generics: syn::Generics,
+    data: darling::ast::Data<ResponseVariant, ResponseField>,
+    #[darling(default)]
+    schema: Option<String>,
+    #[darling(default)]
+    root_type: Option<SpannedValue<String>>,
+}
+
+/// A struct field (requires `#[field(path = "...")]`).
+#[derive(Debug, FromField)]
+#[darling(attributes(field))]
+struct ResponseField {
+    ident: Option<syn::Ident>,
+    ty: syn::Type,
+    path: SpannedValue<String>,
+    #[darling(default)]
+    skip_schema_validation: bool,
+}
+
+/// The inner type of a newtype enum variant.
+#[derive(Debug, FromField)]
+struct VariantInner {
+    ty: syn::Type,
+}
+
+/// An enum variant mapping to a GraphQL union member.
+#[derive(Debug, FromVariant)]
+#[darling(attributes(response))]
+struct ResponseVariant {
+    ident: syn::Ident,
+    fields: darling::ast::Fields<VariantInner>,
+    /// The GraphQL type name this variant maps to (e.g., `#[response(on = "MoveValue")]`).
+    /// Defaults to the variant ident if not specified.
+    #[darling(default)]
+    on: Option<SpannedValue<String>>,
+}
 
 /// Derive macro for GraphQL response types with nested field extraction.
 ///
@@ -84,31 +131,6 @@ pub fn derive_query_response(input: TokenStream) -> TokenStream {
 }
 
 fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::Error> {
-    // Darling input structures - define the "schema" for macro input.
-    // Darling generates parsing code automatically, including error messages for invalid input.
-
-    #[derive(Debug, FromDeriveInput)]
-    #[darling(attributes(response), supports(struct_named))]
-    struct ResponseInput {
-        ident: syn::Ident,                           // Struct name
-        generics: syn::Generics,                     // Generic parameters
-        data: darling::ast::Data<(), ResponseField>, // Struct fields
-        #[darling(default)]
-        schema: Option<String>, // Custom schema path: #[response(schema = "path/to/schema.graphql")]
-        #[darling(default)]
-        root_type: Option<SpannedValue<String>>, // #[response(root_type = "...")] for non-Query roots
-    }
-
-    #[derive(Debug, FromField)]
-    #[darling(attributes(field))]
-    struct ResponseField {
-        ident: Option<syn::Ident>,
-        ty: syn::Type,
-        path: SpannedValue<String>, // Required - darling will error if missing
-        #[darling(default)]
-        skip_schema_validation: bool,
-    }
-
     let parsed = ResponseInput::from_derive_input(&input)?;
 
     // Load the GraphQL schema for validation.
@@ -166,29 +188,40 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
         return Err(syn::Error::new(span, msg));
     }
 
-    let fields = parsed
-        .data
-        .as_ref()
-        .take_struct()
-        .ok_or_else(|| syn::Error::new_spanned(&input, "Response only supports structs"))?
-        .fields;
+    match parsed.data {
+        darling::ast::Data::Struct(ref fields) => {
+            generate_struct_impl(&parsed, &fields.fields, schema, root_type)
+        }
+        darling::ast::Data::Enum(ref variants) => {
+            generate_enum_impl(&parsed, variants, schema, root_type)
+        }
+    }
+}
+
+/// Generate `from_value` and `Deserialize` for a struct.
+fn generate_struct_impl(
+    input: &ResponseInput,
+    fields: &[ResponseField],
+    schema: &schema::Schema,
+    root_type: &str,
+) -> Result<TokenStream2, syn::Error> {
+    let ident = &input.ident;
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     // Generate extraction code for each field
     let mut field_extractions = Vec::new();
     let mut field_names = Vec::new();
 
-    for field in &fields {
+    for field in fields {
         let field_ident = field
             .ident
             .as_ref()
-            .ok_or_else(|| syn::Error::new_spanned(&input, "Unnamed fields not supported"))?;
+            .expect("darling ensures named fields only");
 
-        // Parse path once - used for both validation and code generation
         let spanned_path = &field.path;
         let parsed_path = path::ParsedPath::parse(spanned_path.as_str())
             .map_err(|e| syn::Error::new(spanned_path.span(), e.to_string()))?;
 
-        // Validate path against GraphQL schema
         let terminal_type = if !field.skip_schema_validation {
             Some(validation::validate_path_against_schema(
                 schema,
@@ -214,16 +247,13 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
         field_names.push(field_ident);
     }
 
-    let struct_ident = &parsed.ident;
-    let (impl_generics, ty_generics, where_clause) = parsed.generics.split_for_impl();
-
     // Generate both `from_value` and `Deserialize` impl:
     //
     // - `from_value`: Core extraction logic, parses from serde_json::Value
     // - `Deserialize`: Allows direct use with serde (e.g., `serde_json::from_str::<MyStruct>(...)`)
     //   and with the GraphQL client's `query::<T>()` which requires `T: DeserializeOwned`
-    let output = quote! {
-        impl #impl_generics #struct_ident #ty_generics #where_clause {
+    Ok(quote! {
+        impl #impl_generics #ident #ty_generics #where_clause {
             pub fn from_value(value: serde_json::Value) -> Result<Self, String> {
                 #(#field_extractions)*
 
@@ -234,7 +264,7 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
         }
 
         // TODO: Implement efficient deserialization that only extracts the fields we need.
-        impl<'de> serde::Deserialize<'de> for #struct_ident #ty_generics #where_clause {
+        impl<'de> serde::Deserialize<'de> for #ident #ty_generics #where_clause {
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where
                 D: serde::Deserializer<'de>,
@@ -243,9 +273,113 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
                 Self::from_value(value).map_err(serde::de::Error::custom)
             }
         }
-    };
+    })
+}
 
-    Ok(output)
+/// Generate `from_value` and `Deserialize` for an enum (GraphQL union).
+///
+/// Each variant wraps a type that implements `from_value`. Dispatches on `__typename`.
+fn generate_enum_impl(
+    input: &ResponseInput,
+    variants: &[ResponseVariant],
+    schema: &schema::Schema,
+    root_type: &str,
+) -> Result<TokenStream2, syn::Error> {
+    let ident = &input.ident;
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+
+    let root_type_span = input
+        .root_type
+        .as_ref()
+        .map(|s| s.span())
+        .unwrap_or_else(|| ident.span());
+
+    if !schema.is_union(root_type) {
+        return Err(syn::Error::new(
+            root_type_span,
+            format!(
+                "'{}' is not a union type. \
+                 Enum Response requires root_type to be a GraphQL union",
+                root_type
+            ),
+        ));
+    }
+
+    let mut match_arms = Vec::new();
+
+    for variant in variants {
+        let variant_ident = &variant.ident;
+
+        // Resolve the GraphQL typename: explicit `on` or variant ident
+        let graphql_typename = variant
+            .on
+            .as_ref()
+            .map(|s| s.as_str().to_string())
+            .unwrap_or_else(|| variant_ident.to_string());
+
+        let span = variant
+            .on
+            .as_ref()
+            .map(|s| s.span())
+            .unwrap_or_else(|| variant_ident.span());
+
+        if let Err(mut err) =
+            validation::validate_union_member(schema, root_type, &graphql_typename, span)
+        {
+            if variant.on.is_none() {
+                err.combine(syn::Error::new(
+                    span,
+                    "hint: use #[response(on = \"...\")] to specify a GraphQL type name different from the variant name",
+                ));
+            }
+            return Err(err);
+        }
+
+        // Newtype variant: delegate to inner type's from_value
+        let inner_ty = &variant.fields.fields[0].ty;
+        match_arms.push(quote! {
+            #graphql_typename => {
+                Ok(Self::#variant_ident(
+                    <#inner_ty>::from_value(value)?
+                ))
+            }
+        });
+    }
+
+    let root_type_str = root_type;
+    let enum_name_str = ident.to_string();
+
+    Ok(quote! {
+        impl #impl_generics #ident #ty_generics #where_clause {
+            pub fn from_value(value: serde_json::Value) -> Result<Self, String> {
+                let typename = value.get("__typename")
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(|| format!(
+                        "union '{}' requires '__typename' in the response to distinguish variants. \
+                         Make sure your query requests '__typename' on this field ({})",
+                        #root_type_str, #enum_name_str
+                    ))?;
+
+                match typename {
+                    #(#match_arms)*
+                    other => Err(format!(
+                        "unknown __typename '{}' for union '{}' ({})",
+                        other, #root_type_str, #enum_name_str
+                    )),
+                }
+            }
+        }
+
+        impl<'de> serde::Deserialize<'de> for #ident #ty_generics #where_clause {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                let value = serde_json::Value::deserialize(deserializer)?;
+                Self::from_value(value).map_err(serde::de::Error::custom)
+            }
+        }
+    })
 }
 
 /// Generate code to extract a single field from JSON using its path.

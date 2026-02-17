@@ -24,6 +24,8 @@ pub struct Schema {
 pub struct TypeInfo {
     pub name: String,
     pub fields: HashMap<String, FieldInfo>,
+    /// For union types, the member type names. `None` for non-union types.
+    pub union_types: Option<Vec<String>>,
 }
 
 /// Information about a field on a type.
@@ -83,6 +85,7 @@ impl Schema {
                         (info.name.clone(), info)
                     })
                     .collect(),
+                union_types: None,
             },
             TypeDefinition::Interface(i) => TypeInfo {
                 name: i.name.clone(),
@@ -94,22 +97,27 @@ impl Schema {
                         (info.name.clone(), info)
                     })
                     .collect(),
+                union_types: None,
             },
             TypeDefinition::Scalar(s) => TypeInfo {
                 name: s.name.clone(),
                 fields: HashMap::new(),
+                union_types: None,
             },
             TypeDefinition::Enum(e) => TypeInfo {
                 name: e.name.clone(),
                 fields: HashMap::new(),
+                union_types: None,
             },
             TypeDefinition::InputObject(io) => TypeInfo {
                 name: io.name.clone(),
                 fields: HashMap::new(),
+                union_types: None,
             },
             TypeDefinition::Union(u) => TypeInfo {
                 name: u.name.clone(),
                 fields: HashMap::new(),
+                union_types: Some(u.types),
             },
         }
     }
@@ -157,6 +165,22 @@ impl Schema {
     pub fn type_names(&self) -> Vec<&str> {
         self.types.keys().map(|s| s.as_str()).collect()
     }
+
+    /// Check if a type is a union type.
+    pub fn is_union(&self, type_name: &str) -> bool {
+        self.types
+            .get(type_name)
+            .is_some_and(|t| t.union_types.is_some())
+    }
+
+    /// Get the member type names of a union.
+    pub fn union_types(&self, type_name: &str) -> Vec<&str> {
+        self.types
+            .get(type_name)
+            .and_then(|t| t.union_types.as_ref())
+            .map(|v| v.iter().map(|s| s.as_str()).collect())
+            .unwrap_or_default()
+    }
 }
 
 #[cfg(test)]
@@ -186,5 +210,28 @@ mod tests {
         assert!(type_names.contains(&"Query"));
         assert!(type_names.contains(&"Mutation"));
         assert!(type_names.contains(&"Object"));
+    }
+
+    fn test_schema() -> Schema {
+        let sdl = include_str!("../tests/test_schema.graphql");
+        Schema::from_sdl(sdl).unwrap()
+    }
+
+    #[test]
+    fn test_union_types() {
+        let schema = test_schema();
+
+        assert!(schema.is_union("DynamicFieldValue"));
+        let members = schema.union_types("DynamicFieldValue");
+        assert!(members.contains(&"MoveObject"));
+        assert!(members.contains(&"MoveValue"));
+
+        // Non-union types
+        assert!(!schema.is_union("Object"));
+        assert!(schema.union_types("Object").is_empty());
+
+        // Non-existent type
+        assert!(!schema.is_union("NonExistent"));
+        assert!(schema.union_types("NonExistent").is_empty());
     }
 }

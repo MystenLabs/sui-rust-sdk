@@ -1,0 +1,5 @@
+error: 'Query' is not a union type. Enum Response requires root_type to be a GraphQL union
+ --> tests/compile/enum_missing_root_type.rs:6:6
+  |
+6 | enum BadEnum {
+  |      ^^^^^^^

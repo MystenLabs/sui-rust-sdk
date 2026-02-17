@@ -1,0 +1,11 @@
+error: 'Value' is not a member of union 'DynamicFieldValue'. Members: MoveObject, MoveValue
+ --> tests/compile/enum_default_member_not_found.rs:7:5
+  |
+7 |     Value(String),
+  |     ^^^^^
+
+error: hint: use #[response(on = "...")] to specify a GraphQL type name different from the variant name
+ --> tests/compile/enum_default_member_not_found.rs:7:5
+  |
+7 |     Value(String),
+  |     ^^^^^
