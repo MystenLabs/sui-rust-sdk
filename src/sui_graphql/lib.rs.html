@@ -1,0 +1,38 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/sui-graphql/src/lib.rs`."><title>lib.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-ca0dd0c4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="sui_graphql" data-themes="" data-resource-suffix="" data-rustdoc-version="1.93.0 (254b59607 2026-01-19)" data-channel="1.93.0" data-search-js="search-9e2438ea.js" data-stringdex-js="stringdex-a3946164.js" data-settings-js="settings-c38705f0.js" ><script src="../../static.files/storage-e2aeef58.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-a410ff4d.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">sui_graphql/</div>lib.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! GraphQL client for the Sui blockchain.
+<a href=#2 id=2 data-nosnippet>2</a>//!
+<a href=#3 id=3 data-nosnippet>3</a>//! This crate provides a simple GraphQL client for interacting with
+<a href=#4 id=4 data-nosnippet>4</a>//! Sui's GraphQL API, with support for partial error handling.
+<a href=#5 id=5 data-nosnippet>5</a>//!
+<a href=#6 id=6 data-nosnippet>6</a>//! See [`Client`] for usage examples.
+<a href=#7 id=7 data-nosnippet>7</a>
+<a href=#8 id=8 data-nosnippet>8</a></span><span class="kw">mod </span><a href="bcs.rs.html#1-65">bcs</a>;
+<a href=#9 id=9 data-nosnippet>9</a><span class="kw">mod </span><a href="client/mod.rs.html#1-130">client</a>;
+<a href=#10 id=10 data-nosnippet>10</a><span class="kw">mod </span><a href="error.rs.html#1-178">error</a>;
+<a href=#11 id=11 data-nosnippet>11</a><span class="kw">mod </span><a href="move_value.rs.html#1-43">move_value</a>;
+<a href=#12 id=12 data-nosnippet>12</a><span class="kw">mod </span><a href="pagination.rs.html#1-200">pagination</a>;
+<a href=#13 id=13 data-nosnippet>13</a><span class="kw">mod </span><a href="response.rs.html#1-70">response</a>;
+<a href=#14 id=14 data-nosnippet>14</a><span class="kw">pub mod </span><a href="scalars.rs.html#1-32">scalars</a>;
+<a href=#15 id=15 data-nosnippet>15</a>
+<a href=#16 id=16 data-nosnippet>16</a><span class="kw">pub use </span><a href="bcs.rs.html#17">bcs::Bcs</a>;
+<a href=#17 id=17 data-nosnippet>17</a><span class="kw">pub use </span><a href="bcs.rs.html#47">bcs::BcsBytes</a>;
+<a href=#18 id=18 data-nosnippet>18</a><span class="kw">pub use </span><a href="client/mod.rs.html#22-25">client::Client</a>;
+<a href=#19 id=19 data-nosnippet>19</a><span class="kw">pub use </span><a href="client/chain.rs.html#17-34">client::chain::Epoch</a>;
+<a href=#20 id=20 data-nosnippet>20</a><span class="kw">pub use </span><a href="client/checkpoints.rs.html#16-21">client::checkpoints::CheckpointResponse</a>;
+<a href=#21 id=21 data-nosnippet>21</a><span class="kw">pub use </span><a href="client/coins.rs.html#17-22">client::coins::Balance</a>;
+<a href=#22 id=22 data-nosnippet>22</a><span class="kw">pub use </span><a href="client/dynamic_fields.rs.html#125-132">client::dynamic_fields::DynamicField</a>;
+<a href=#23 id=23 data-nosnippet>23</a><span class="kw">pub use </span><a href="client/dynamic_fields.rs.html#67-74">client::dynamic_fields::DynamicFieldRequest</a>;
+<a href=#24 id=24 data-nosnippet>24</a><span class="kw">pub use </span><a href="client/dynamic_fields.rs.html#116-119">client::dynamic_fields::DynamicFieldValue</a>;
+<a href=#25 id=25 data-nosnippet>25</a><span class="kw">pub use </span><a href="client/dynamic_fields.rs.html#32-36">client::dynamic_fields::DynamicFieldsRequest</a>;
+<a href=#26 id=26 data-nosnippet>26</a><span class="kw">pub use </span><a href="client/dynamic_fields.rs.html#20-25">client::dynamic_fields::Format</a>;
+<a href=#27 id=27 data-nosnippet>27</a><span class="kw">pub use </span><a href="client/execution.rs.html#18-23">client::execution::ExecutionResult</a>;
+<a href=#28 id=28 data-nosnippet>28</a><span class="kw">pub use </span><a href="client/transactions.rs.html#20-31">client::transactions::TransactionResponse</a>;
+<a href=#29 id=29 data-nosnippet>29</a><span class="kw">pub use </span><a href="error.rs.html#11-31">error::Error</a>;
+<a href=#30 id=30 data-nosnippet>30</a><span class="kw">pub use </span><a href="error.rs.html#70-75">error::GraphQLError</a>;
+<a href=#31 id=31 data-nosnippet>31</a><span class="kw">pub use </span><a href="error.rs.html#122-127">error::Location</a>;
+<a href=#32 id=32 data-nosnippet>32</a><span class="kw">pub use </span><a href="error.rs.html#113-118">error::PathFragment</a>;
+<a href=#33 id=33 data-nosnippet>33</a><span class="kw">pub use </span><a href="move_value.rs.html#36-43">move_value::MoveObject</a>;
+<a href=#34 id=34 data-nosnippet>34</a><span class="kw">pub use </span><a href="move_value.rs.html#19-31">move_value::MoveValue</a>;
+<a href=#35 id=35 data-nosnippet>35</a><span class="kw">pub use </span><a href="pagination.rs.html#13-20">pagination::Page</a>;
+<a href=#36 id=36 data-nosnippet>36</a><span class="kw">pub use </span><a href="pagination.rs.html#25-30">pagination::PageInfo</a>;
+<a href=#37 id=37 data-nosnippet>37</a><span class="kw">pub use </span><a href="response.rs.html#12-15">response::Response</a>;
+</code></pre></div></section></main></body></html>

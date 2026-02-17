@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["DynamicFieldValue","Error","Format","PathFragment"],"mod":["scalars"],"struct":["Balance","Bcs","BcsBytes","CheckpointResponse","Client","DynamicField","DynamicFieldRequest","DynamicFieldsRequest","Epoch","ExecutionResult","GraphQLError","Location","MoveObject","MoveValue","Page","PageInfo","Response","TransactionResponse"]};

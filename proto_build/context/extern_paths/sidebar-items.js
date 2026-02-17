@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["validate_proto_path"],"struct":["ExternPaths"]};

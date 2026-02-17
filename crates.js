@@ -1,0 +1,2 @@
+window.ALL_CRATES = ["integration_tests","proto_build","sui_crypto","sui_graphql","sui_graphql_macros","sui_rpc","sui_sdk_types","sui_transaction_builder"];
+//{"start":21,"fragment_lengths":[19,14,13,14,21,10,16,26]}

@@ -1,0 +1,36 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Derive macro for GraphQL response types with nested field extraction."><title>Response in sui_graphql_macros - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-ca0dd0c4.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="sui_graphql_macros" data-themes="" data-resource-suffix="" data-rustdoc-version="1.93.0 (254b59607 2026-01-19)" data-channel="1.93.0" data-search-js="search-9e2438ea.js" data-stringdex-js="stringdex-a3946164.js" data-settings-js="settings-c38705f0.js" ><script src="../static.files/storage-e2aeef58.js"></script><script defer src="sidebar-items.js"></script><script defer src="../static.files/main-a410ff4d.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc derive"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Response</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../sui_graphql_macros/index.html">sui_<wbr>graphql_<wbr>macros</a><span class="version">0.0.1</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Response</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#root-type" title="Root Type">Root Type</a></li><li><a href="#generated-code" title="Generated Code">Generated Code</a></li><li><a href="#example" title="Example">Example</a></li></ul></section><div id="rustdoc-modnav"><h2 class="in-crate"><a href="index.html">In crate sui_<wbr>graphql_<wbr>macros</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="index.html">sui_graphql_macros</a></div><h1>Derive Macro <span class="derive">Response</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/sui_graphql_macros/lib.rs.html#124-131">Source</a> </span></div><pre class="rust item-decl"><code>#[derive(Response)]
+{
+    <span class="comment">// Attributes available to this derive:</span>
+    #[response]
+    #[field]
+}
+</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Derive macro for GraphQL response types with nested field extraction.</p>
+<p>Use <code>#[field(path = "...")]</code> to specify the JSON path to extract each field.
+Paths are dot-separated (e.g., <code>"object.address"</code> extracts <code>json["object"]["address"]</code>).</p>
+<h2 id="root-type"><a class="doc-anchor" href="#root-type">§</a>Root Type</h2>
+<p>By default, field paths are validated against the <code>Query</code> type. Use
+<code>#[response(root_type = "...")]</code> to validate against a different type instead.</p>
+<h2 id="generated-code"><a class="doc-anchor" href="#generated-code">§</a>Generated Code</h2>
+<p>The macro generates:</p>
+<ul>
+<li><code>from_value(serde_json::Value) -&gt; Result&lt;Self, String&gt;</code> method</li>
+<li><code>Deserialize</code> implementation that uses <code>from_value</code></li>
+</ul>
+<h2 id="example"><a class="doc-anchor" href="#example">§</a>Example</h2>
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="comment">// Query response (default)
+</span><span class="attr">#[derive(Response)]
+</span><span class="kw">struct </span>ChainInfo {
+    <span class="attr">#[field(path = <span class="string">"chainIdentifier"</span>)]
+    </span>chain_id: String,
+
+    <span class="attr">#[field(path = <span class="string">"epoch.epochId"</span>)]
+    </span>epoch_id: <span class="prelude-ty">Option</span>&lt;u64&gt;,
+}
+
+<span class="comment">// Mutation response
+</span><span class="attr">#[derive(Response)]
+#[response(root_type = <span class="string">"Mutation"</span>)]
+</span><span class="kw">struct </span>ExecuteResult {
+    <span class="attr">#[field(path = <span class="string">"executeTransaction.effects.effectsBcs"</span>)]
+    </span>effects_bcs: <span class="prelude-ty">Option</span>&lt;String&gt;,
+}</code></pre></div></div></details></section></div></main></body></html>

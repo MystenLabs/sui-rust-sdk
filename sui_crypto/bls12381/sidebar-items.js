@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["Bls12381PrivateKey","Bls12381VerifyingKey","ValidatorCommitteeSignatureAggregator","ValidatorCommitteeSignatureVerifier"]};
