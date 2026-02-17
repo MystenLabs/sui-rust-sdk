@@ -17,6 +17,10 @@ pub enum Error {
     #[error("Invalid URL: {0}")]
     InvalidUrl(#[from] url::ParseError),
 
+    /// Failed to serialize data (e.g., BCS encoding).
+    #[error("Serialization error: {0}")]
+    Serialization(String),
+
     /// Failed to deserialize or decode response data.
     #[error("Deserialization error: {0}")]
     Deserialization(String),
