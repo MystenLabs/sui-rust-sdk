@@ -4,6 +4,7 @@
 //! returned from GraphQL queries, supporting both JSON and BCS formats.
 
 use sui_graphql_macros::Response;
+use sui_sdk_types::Address;
 use sui_sdk_types::TypeTag;
 
 use crate::bcs::BcsBytes;
@@ -27,4 +28,16 @@ pub struct MoveValue {
     /// BCS representation (if fetched).
     #[field(path = "bcs")]
     pub bcs: Option<BcsBytes>,
+}
+
+/// A Move object with its address and contents.
+#[derive(Debug, Clone, Response)]
+#[response(root_type = "MoveObject")]
+pub struct MoveObject {
+    /// The object's address.
+    #[field(path = "address")]
+    pub address: Address,
+    /// The object's contents as a MoveValue.
+    #[field(path = "contents")]
+    pub contents: MoveValue,
 }

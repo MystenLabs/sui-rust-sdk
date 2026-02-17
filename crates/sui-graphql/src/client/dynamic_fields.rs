@@ -9,6 +9,7 @@ use sui_sdk_types::TypeTag;
 use super::Client;
 use crate::bcs::Bcs;
 use crate::error::Error;
+use crate::move_value::MoveObject;
 use crate::move_value::MoveValue;
 use crate::pagination::Page;
 use crate::pagination::PageInfo;
@@ -102,23 +103,11 @@ impl<'a, N: Serialize> DynamicFieldRequest<'a, N> {
 
 /// The type of a dynamic field.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DynamicFieldType {
+enum DynamicFieldType {
     /// A regular dynamic field (value is wrapped, not accessible by ID).
     Field,
     /// A dynamic object field (child object remains accessible by ID).
     Object,
-}
-
-/// A MoveObject with its address and contents.
-#[derive(Debug, Clone, Response)]
-#[response(root_type = "MoveObject")]
-pub struct MoveObject {
-    /// The object's address.
-    #[field(path = "address")]
-    pub address: Address,
-    /// The object's contents as a MoveValue.
-    #[field(path = "contents")]
-    pub contents: MoveValue,
 }
 
 /// The value of a dynamic field, dispatched by `__typename`.
@@ -158,14 +147,30 @@ impl Client {
         parent: Address,
         name_type: TypeTag,
         name: Bcs<N>,
-        field_type: DynamicFieldType,
     ) -> DynamicFieldRequest<'_, N> {
         DynamicFieldRequest {
             client: self,
             parent,
             name_type,
             name,
-            field_type,
+            field_type: DynamicFieldType::Field,
+            formats: vec![],
+        }
+    }
+
+    /// Create a request builder for fetching a single dynamic object field by name.
+    pub fn dynamic_object_field<N: Serialize>(
+        &self,
+        parent: Address,
+        name_type: TypeTag,
+        name: Bcs<N>,
+    ) -> DynamicFieldRequest<'_, N> {
+        DynamicFieldRequest {
+            client: self,
+            parent,
+            name_type,
+            name,
+            field_type: DynamicFieldType::Object,
             formats: vec![],
         }
     }
@@ -552,7 +557,7 @@ mod tests {
         let name_type: TypeTag = "u64".parse().unwrap();
 
         let field = client
-            .dynamic_field(parent, name_type, Bcs(123u64), DynamicFieldType::Field)
+            .dynamic_field(parent, name_type, Bcs(123u64))
             .format(Format::Json)
             .format(Format::Bcs)
             .fetch()
@@ -601,7 +606,7 @@ mod tests {
         let name_type: TypeTag = "0x1::string::String".parse().unwrap();
 
         let field = client
-            .dynamic_field(parent, name_type, Bcs("my_key"), DynamicFieldType::Object)
+            .dynamic_object_field(parent, name_type, Bcs("my_key"))
             .format(Format::Json)
             .fetch()
             .await
@@ -639,7 +644,7 @@ mod tests {
         let name_type: TypeTag = "u64".parse().unwrap();
 
         let field = client
-            .dynamic_field(parent, name_type, Bcs(999u64), DynamicFieldType::Field)
+            .dynamic_field(parent, name_type, Bcs(999u64))
             .fetch()
             .await
             .unwrap();
