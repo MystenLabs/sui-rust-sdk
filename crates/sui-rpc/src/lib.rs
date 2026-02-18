@@ -13,4 +13,4 @@ pub mod faucet;
 pub use client::Client;
 
 #[doc(hidden)]
-mod _serde;
+pub mod _serde;

@@ -90,36 +90,42 @@ fn v_variable() -> Variable {
 // Well-known type helpers
 // ---------------------------------------------------------------------------
 
-fn well_known_type_serializer(type_path: &TypePath) -> Option<TokenStream> {
+fn well_known_type_serializer(
+    type_path: &TypePath,
+    serde_path: &TokenStream,
+) -> Option<TokenStream> {
     let type_name = type_path.to_string();
     match type_name.as_str() {
-        "google.protobuf.FieldMask" => Some(quote!(crate::_serde::FieldMaskSerializer)),
-        "google.protobuf.Timestamp" => Some(quote!(crate::_serde::TimestampSerializer)),
-        "google.protobuf.Duration" => Some(quote!(crate::_serde::DurationSerializer)),
-        "google.protobuf.Value" => Some(quote!(crate::_serde::ValueSerializer)),
-        "google.protobuf.Any" => Some(quote!(crate::_serde::AnySerializer)),
-        "google.protobuf.Empty" => Some(quote!(crate::_serde::EmptySerializer)),
+        "google.protobuf.FieldMask" => Some(quote!(#serde_path::FieldMaskSerializer)),
+        "google.protobuf.Timestamp" => Some(quote!(#serde_path::TimestampSerializer)),
+        "google.protobuf.Duration" => Some(quote!(#serde_path::DurationSerializer)),
+        "google.protobuf.Value" => Some(quote!(#serde_path::ValueSerializer)),
+        "google.protobuf.Any" => Some(quote!(#serde_path::AnySerializer)),
+        "google.protobuf.Empty" => Some(quote!(#serde_path::EmptySerializer)),
         _ => None,
     }
 }
 
-fn well_known_type_deserializer(type_path: &TypePath) -> Option<TokenStream> {
+fn well_known_type_deserializer(
+    type_path: &TypePath,
+    serde_path: &TokenStream,
+) -> Option<TokenStream> {
     let type_name = type_path.to_string();
     match type_name.as_str() {
-        "google.protobuf.FieldMask" => Some(quote!(crate::_serde::FieldMaskDeserializer)),
-        "google.protobuf.Timestamp" => Some(quote!(crate::_serde::TimestampDeserializer)),
-        "google.protobuf.Duration" => Some(quote!(crate::_serde::DurationDeserializer)),
-        "google.protobuf.Value" => Some(quote!(crate::_serde::ValueDeserializer)),
-        "google.protobuf.Any" => Some(quote!(crate::_serde::AnyDeserializer)),
-        "google.protobuf.Empty" => Some(quote!(crate::_serde::EmptyDeserializer)),
+        "google.protobuf.FieldMask" => Some(quote!(#serde_path::FieldMaskDeserializer)),
+        "google.protobuf.Timestamp" => Some(quote!(#serde_path::TimestampDeserializer)),
+        "google.protobuf.Duration" => Some(quote!(#serde_path::DurationDeserializer)),
+        "google.protobuf.Value" => Some(quote!(#serde_path::ValueDeserializer)),
+        "google.protobuf.Any" => Some(quote!(#serde_path::AnyDeserializer)),
+        "google.protobuf.Empty" => Some(quote!(#serde_path::EmptyDeserializer)),
         _ => None,
     }
 }
 
-fn override_deserializer(scalar: ScalarType) -> Option<TokenStream> {
+fn override_deserializer(scalar: ScalarType, serde_path: &TokenStream) -> Option<TokenStream> {
     match scalar {
-        ScalarType::Bytes => Some(quote!(crate::_serde::BytesDeserialize<_>)),
-        _ if scalar.is_numeric() => Some(quote!(crate::_serde::NumberDeserialize<_>)),
+        ScalarType::Bytes => Some(quote!(#serde_path::BytesDeserialize<_>)),
+        _ if scalar.is_numeric() => Some(quote!(#serde_path::NumberDeserialize<_>)),
         _ => None,
     }
 }
@@ -176,6 +182,7 @@ fn serialize_scalar_variable(
     field_modifier: FieldModifier,
     variable: &Variable,
     field_name: &str,
+    serde_path: &TokenStream,
 ) -> TokenStream {
     let as_ref = &variable.as_ref;
     let raw = &variable.raw;
@@ -193,12 +200,12 @@ fn serialize_scalar_variable(
         },
         ScalarType::Bytes => match field_modifier {
             FieldModifier::Repeated => quote! {
-                struct_ser.serialize_field(#field_name, &#raw.iter().map(crate::_serde::base64::encode).collect::<Vec<_>>())?;
+                struct_ser.serialize_field(#field_name, &#raw.iter().map(#serde_path::base64::encode).collect::<Vec<_>>())?;
             },
             _ => quote! {
                 #[allow(clippy::needless_borrow)]
                 #[allow(clippy::needless_borrows_for_generic_args)]
-                struct_ser.serialize_field(#field_name, crate::_serde::base64::encode(&#raw).as_str())?;
+                struct_ser.serialize_field(#field_name, #serde_path::base64::encode(&#raw).as_str())?;
             },
         },
         _ => quote! {
@@ -213,6 +220,7 @@ fn serialize_variable(
     variable: &Variable,
     preserve_proto_field_names: bool,
 ) -> TokenStream {
+    let serde_path = resolver.serde_path();
     let json_name = field.json_name();
     let field_name = if preserve_proto_field_names {
         field.name.clone()
@@ -221,9 +229,13 @@ fn serialize_variable(
     };
 
     match &field.field_type {
-        FieldType::Scalar(scalar) => {
-            serialize_scalar_variable(*scalar, field.field_modifier, variable, &field_name)
-        }
+        FieldType::Scalar(scalar) => serialize_scalar_variable(
+            *scalar,
+            field.field_modifier,
+            variable,
+            &field_name,
+            serde_path,
+        ),
         FieldType::Enum(path) => {
             let as_unref = &variable.as_unref;
             let raw = &variable.raw;
@@ -270,7 +282,7 @@ fn serialize_variable(
                 FieldType::Scalar(ScalarType::Bytes) => {
                     quote! {
                         let v: std::collections::BTreeMap<_, _> = #raw.iter()
-                            .map(|(k, v)| (k, crate::_serde::base64::encode(v))).collect();
+                            .map(|(k, v)| (k, #serde_path::base64::encode(v))).collect();
                     }
                 }
                 FieldType::Enum(path) => {
@@ -292,8 +304,10 @@ fn serialize_variable(
                 struct_ser.serialize_field(#field_name, &v)?;
             }
         }
-        FieldType::Message(type_name) if well_known_type_serializer(type_name).is_some() => {
-            let wkt_ser = well_known_type_serializer(type_name).unwrap();
+        FieldType::Message(type_name)
+            if well_known_type_serializer(type_name, serde_path).is_some() =>
+        {
+            let wkt_ser = well_known_type_serializer(type_name, serde_path).unwrap();
             let as_ref = &variable.as_ref;
             let raw = &variable.raw;
 
@@ -457,8 +471,12 @@ fn message_serialize_body(
 // Deserialization
 // ===========================================================================
 
-fn encode_scalar_field(scalar: ScalarType, field_modifier: FieldModifier) -> TokenStream {
-    let deser = match override_deserializer(scalar) {
+fn encode_scalar_field(
+    scalar: ScalarType,
+    field_modifier: FieldModifier,
+    serde_path: &TokenStream,
+) -> TokenStream {
+    let deser = match override_deserializer(scalar, serde_path) {
         Some(d) => d,
         None => {
             return match field_modifier {
@@ -489,11 +507,12 @@ fn deserialize_one_of_field_value(
     field: &Field,
     one_of: &OneOf,
 ) -> TokenStream {
+    let serde_path = resolver.serde_path();
     let one_of_type = resolver.rust_type_token(&one_of.path);
     let variant = type_name_ident(field);
 
     match &field.field_type {
-        FieldType::Scalar(s) => match override_deserializer(*s) {
+        FieldType::Scalar(s) => match override_deserializer(*s, serde_path) {
             Some(deser) => quote! {
                 map_.next_value::<::std::option::Option<#deser>>()?.map(|x| #one_of_type::#variant(x.0))
             },
@@ -507,14 +526,16 @@ fn deserialize_one_of_field_value(
                 map_.next_value::<::std::option::Option<#enum_type>>()?.map(|x| #one_of_type::#variant(x as i32))
             }
         }
-        FieldType::Message(type_name) => match well_known_type_deserializer(type_name) {
-            Some(deser) => quote! {
-                map_.next_value::<::std::option::Option<#deser>>()?.map(|x| #one_of_type::#variant(x.0))
-            },
-            None => quote! {
-                map_.next_value::<::std::option::Option<_>>()?.map(#one_of_type::#variant)
-            },
-        },
+        FieldType::Message(type_name) => {
+            match well_known_type_deserializer(type_name, serde_path) {
+                Some(deser) => quote! {
+                    map_.next_value::<::std::option::Option<#deser>>()?.map(|x| #one_of_type::#variant(x.0))
+                },
+                None => quote! {
+                    map_.next_value::<::std::option::Option<_>>()?.map(#one_of_type::#variant)
+                },
+            }
+        }
         FieldType::Map(_, _) => unreachable!("one of cannot contain map fields"),
     }
 }
@@ -524,8 +545,11 @@ fn deserialize_regular_field_value(
     field: &Field,
     btree_map: bool,
 ) -> TokenStream {
+    let serde_path = resolver.serde_path();
     match &field.field_type {
-        FieldType::Scalar(scalar) => encode_scalar_field(*scalar, field.field_modifier),
+        FieldType::Scalar(scalar) => {
+            encode_scalar_field(*scalar, field.field_modifier, serde_path)
+        }
         FieldType::Enum(path) => {
             let enum_type = resolver.rust_type_token(path);
             match field.field_modifier {
@@ -542,7 +566,7 @@ fn deserialize_regular_field_value(
         }
         FieldType::Map(key, value) => deserialize_map_field(resolver, key, value, btree_map),
         FieldType::Message(type_name) => {
-            if let Some(wkt_deser) = well_known_type_deserializer(type_name) {
+            if let Some(wkt_deser) = well_known_type_deserializer(type_name, serde_path) {
                 match field.field_modifier {
                     FieldModifier::Repeated => {
                         quote!(Some(map_.next_value::<Vec<#wkt_deser>>()?.into_iter().map(|x| x.0.into()).collect()))
@@ -567,6 +591,7 @@ fn deserialize_map_field(
     value: &FieldType,
     btree_map: bool,
 ) -> TokenStream {
+    let serde_path = resolver.serde_path();
     let map_type = if btree_map {
         quote!(std::collections::BTreeMap)
     } else {
@@ -579,7 +604,7 @@ fn deserialize_map_field(
         }
         _ if key.is_numeric() => {
             let kt = key.rust_type_token();
-            (quote!(crate::_serde::NumberDeserialize<#kt>), true)
+            (quote!(#serde_path::NumberDeserialize<#kt>), true)
         }
         _ => (quote!(_), false),
     };
@@ -588,13 +613,13 @@ fn deserialize_map_field(
         FieldType::Scalar(scalar) if scalar.is_numeric() => {
             let vt = scalar.rust_type_token();
             (
-                quote!(crate::_serde::NumberDeserialize<#vt>),
+                quote!(#serde_path::NumberDeserialize<#vt>),
                 true,
                 quote!(v.0),
             )
         }
         FieldType::Scalar(ScalarType::Bytes) => (
-            quote!(crate::_serde::BytesDeserialize<_>),
+            quote!(#serde_path::BytesDeserialize<_>),
             true,
             quote!(v.0),
         ),

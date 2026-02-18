@@ -9,6 +9,7 @@ pub struct Resolver<'a> {
     extern_types: &'a [(String, String)],
     retain_enum_prefix: bool,
     package: &'a Package,
+    serde_path: &'a TokenStream,
 }
 
 impl<'a> Resolver<'a> {
@@ -17,12 +18,19 @@ impl<'a> Resolver<'a> {
         extern_types: &'a [(String, String)],
         package: &'a Package,
         retain_enum_prefix: bool,
+        serde_path: &'a TokenStream,
     ) -> Self {
         Resolver {
             extern_types,
             package,
             retain_enum_prefix,
+            serde_path,
         }
+    }
+
+    /// Returns the configured serde module path (e.g. `crate::_serde`).
+    pub fn serde_path(&self) -> &TokenStream {
+        self.serde_path
     }
 
     /// Lookup an extern type, returns the rust path followed by the number of
@@ -125,6 +133,7 @@ impl<'a> Resolver<'a> {
 mod tests {
     use super::*;
     use crate::descriptor::TypeName;
+    use quote::quote;
 
     #[test]
     fn test_resolver() {
@@ -137,7 +146,8 @@ mod tests {
                 "foo::bar::Buz".to_string(),
             ),
         ];
-        let resolver = Resolver::new(extern_types, &resolver_package, false);
+        let serde_path = quote!(crate::_serde);
+        let resolver = Resolver::new(extern_types, &resolver_package, false, &serde_path);
 
         // A type in the same package
         let same_type = TypePath::new(resolver_package.clone()).child(TypeName::new("Foo"));
@@ -195,8 +205,9 @@ mod tests {
     #[test]
     // https://github.com/influxdata/pbjson/issues/48
     fn test_resolver_shared_prefix_false_match() {
+        let serde_path = quote!(crate::_serde);
         assert_eq!(
-            Resolver::new(&[], &Package::new("test.api.v1"), false).rust_type(
+            Resolver::new(&[], &Package::new("test.api.v1"), false, &serde_path).rust_type(
                 &TypePath::new(Package::new("test.domain.v1"))
                     .child(TypeName::new("Foo"))
                     .child(TypeName::new("Bar"))
@@ -208,7 +219,8 @@ mod tests {
     #[test]
     fn test_variant() {
         let package = Package::new("test.syntax3");
-        let resolver = Resolver::new(&[], &package, false);
+        let serde_path = quote!(crate::_serde);
+        let resolver = Resolver::new(&[], &package, false, &serde_path);
 
         let tests = [
             ("MyEnum", "MyEnumFoo", "Foo"),
