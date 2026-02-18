@@ -1,4 +1,7 @@
 use crate::descriptor::{Package, TypePath};
+use crate::escape::ident_from_escaped;
+use proc_macro2::TokenStream;
+use std::str::FromStr;
 
 #[derive(Debug)]
 pub struct Resolver<'a> {
@@ -84,6 +87,18 @@ impl<'a> Resolver<'a> {
             }
         }
         ret
+    }
+
+    /// Returns the rust type for `path` as a `TokenStream`.
+    pub fn rust_type_token(&self, path: &TypePath) -> TokenStream {
+        let s = self.rust_type(path);
+        TokenStream::from_str(&s).unwrap_or_else(|e| panic!("invalid rust type `{s}`: {e}"))
+    }
+
+    /// Returns the variant ident for an enum variant as a `syn::Ident`.
+    pub fn rust_variant_ident(&self, enumeration: &TypePath, variant: &str) -> proc_macro2::Ident {
+        let s = self.rust_variant(enumeration, variant);
+        ident_from_escaped(&s)
     }
 
     pub fn rust_variant(&self, enumeration: &TypePath, variant: &str) -> String {

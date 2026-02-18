@@ -80,7 +80,7 @@
 )]
 
 use prost_types::FileDescriptorProto;
-use std::io::{BufWriter, Error, ErrorKind, Result, Write};
+use std::io::{Error, ErrorKind, Result, Write};
 use std::path::PathBuf;
 
 use crate::descriptor::{Descriptor, Package};
@@ -212,36 +212,28 @@ impl Builder {
         })?;
         output.push("FILENAME");
 
-        let write_factory = move |package: &Package| {
+        for (package, source) in self.generate(prefixes) {
             output.set_file_name(format!("{}.serde.rs", package));
 
-            let file = std::fs::OpenOptions::new()
+            let mut file = std::fs::OpenOptions::new()
                 .write(true)
                 .truncate(true)
                 .create(true)
                 .open(&output)?;
 
-            Ok(BufWriter::new(file))
-        };
-
-        let writers = self.generate(prefixes, write_factory)?;
-        for (_, mut writer) in writers {
-            writer.flush()?;
+            file.write_all(source.as_bytes())?;
+            file.flush()?;
         }
 
         Ok(())
     }
 
-    /// Generates code into instances of write as provided by the `write_factory`
+    /// Generates code for all registered types where `prefixes` contains a prefix of
+    /// the fully-qualified path of the type.
     ///
-    /// This function is intended for use when writing output of code generation
-    /// directly to output files is not desired. For most use cases inside a
-    /// `build.rs` file, the [`build()`][Self::build] method should be preferred.
-    pub fn generate<S: AsRef<str>, W: Write, F: FnMut(&Package) -> Result<W>>(
-        &self,
-        prefixes: &[S],
-        mut write_factory: F,
-    ) -> Result<Vec<(Package, W)>> {
+    /// Returns a vec of `(Package, String)` where each `String` is the formatted source
+    /// code for that package.
+    pub fn generate<S: AsRef<str>>(&self, prefixes: &[S]) -> Vec<(Package, String)> {
         let iter = self.descriptors.iter().filter(move |(t, _)| {
             let exclude = self
                 .exclude
@@ -253,15 +245,16 @@ impl Builder {
             include && !exclude
         });
 
-        // Exploit the fact descriptors is ordered to group together types from the same package
-        let mut ret: Vec<(Package, W)> = Vec::new();
+        // Exploit the fact descriptors is ordered to group together types from the same package.
+        // Collect TokenStream per package, then format once at the end.
+        let mut packages: Vec<(Package, proc_macro2::TokenStream)> = Vec::new();
         for (type_path, descriptor) in iter {
-            let writer = match ret.last_mut() {
-                Some((package, writer)) if package == type_path.package() => writer,
+            let tokens = match packages.last_mut() {
+                Some((package, tokens)) if package == type_path.package() => tokens,
                 _ => {
                     let package = type_path.package();
-                    ret.push((package.clone(), write_factory(package)?));
-                    &mut ret.last_mut().unwrap().1
+                    packages.push((package.clone(), proc_macro2::TokenStream::new()));
+                    &mut packages.last_mut().unwrap().1
                 }
             };
 
@@ -271,30 +264,38 @@ impl Builder {
                 self.retain_enum_prefix,
             );
 
-            match descriptor {
+            let generated = match descriptor {
                 Descriptor::Enum(descriptor) => generate_enum(
                     &resolver,
                     type_path,
                     descriptor,
-                    writer,
                     self.use_integers_for_enums,
-                )?,
+                ),
                 Descriptor::Message(descriptor) => {
-                    if let Some(message) = resolve_message(&self.descriptors, descriptor) {
-                        generate_message(
+                    match resolve_message(&self.descriptors, descriptor) {
+                        Some(message) => generate_message(
                             &resolver,
                             &message,
-                            writer,
                             self.ignore_unknown_fields,
                             &self.btree_map_paths,
                             self.emit_fields,
                             self.preserve_proto_field_names,
-                        )?
+                        ),
+                        None => continue,
                     }
                 }
-            }
+            };
+
+            tokens.extend(generated);
         }
 
-        Ok(ret)
+        packages
+            .into_iter()
+            .map(|(package, tokens)| {
+                let file = syn::parse2(tokens).expect("generated code should be valid syntax");
+                let formatted = prettyplease::unparse(&file);
+                (package, formatted)
+            })
+            .collect()
     }
 }

@@ -40,6 +40,11 @@ impl ScalarType {
         }
     }
 
+    pub fn rust_type_token(&self) -> proc_macro2::TokenStream {
+        use std::str::FromStr;
+        proc_macro2::TokenStream::from_str(self.rust_type()).unwrap()
+    }
+
     pub fn is_numeric(&self) -> bool {
         matches!(
             self,

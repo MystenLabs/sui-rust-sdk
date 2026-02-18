@@ -32,3 +32,15 @@ pub fn escape_type(mut ident: String) -> String {
     }
     ident
 }
+
+/// Convert an already-escaped identifier string to a `proc_macro2::Ident`.
+///
+/// Handles raw identifiers (those starting with `r#`) by using
+/// `Ident::new_raw` for the inner name.
+pub fn ident_from_escaped(escaped: &str) -> proc_macro2::Ident {
+    let span = proc_macro2::Span::call_site();
+    match escaped.strip_prefix("r#") {
+        Some(raw) => proc_macro2::Ident::new_raw(raw, span),
+        None => proc_macro2::Ident::new(escaped, span),
+    }
+}
