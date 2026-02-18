@@ -111,6 +111,7 @@ pub struct Builder {
     emit_fields: bool,
     use_integers_for_enums: bool,
     preserve_proto_field_names: bool,
+    serde_path: Option<String>,
 }
 
 impl Builder {
@@ -203,6 +204,15 @@ impl Builder {
         self
     }
 
+    /// Set the module path prefix for serde helper types.
+    ///
+    /// Defaults to `crate::_serde`. Set to e.g. `sui_rpc::_serde` when generating
+    /// code that lives in a different crate from the `_serde` helpers module.
+    pub fn serde_path(&mut self, path: impl Into<String>) -> &mut Self {
+        self.serde_path = Some(path.into());
+        self
+    }
+
     /// Generates code for all registered types where `prefixes` contains a prefix of
     /// the fully-qualified path of the type
     pub fn build<S: AsRef<str>>(&mut self, prefixes: &[S]) -> Result<()> {
@@ -237,6 +247,11 @@ impl Builder {
     /// Returns a vec of `(Package, String)` where each `String` is the formatted source
     /// code for that package.
     pub fn generate<S: AsRef<str>>(&self, prefixes: &[S]) -> Vec<(Package, String)> {
+        let serde_path_str = self.serde_path.as_deref().unwrap_or("crate::_serde");
+        let serde_path: proc_macro2::TokenStream = serde_path_str
+            .parse()
+            .expect("invalid serde_path");
+
         let iter = self.descriptors.iter().filter(move |(t, _)| {
             let exclude = self
                 .exclude
@@ -265,6 +280,7 @@ impl Builder {
                 &self.extern_paths,
                 type_path.package(),
                 self.retain_enum_prefix,
+                &serde_path,
             );
 
             let generated = match descriptor {
