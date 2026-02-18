@@ -80,15 +80,18 @@
 )]
 
 use prost_types::FileDescriptorProto;
-use std::io::{Error, ErrorKind, Result, Write};
+use std::io::Error;
+use std::io::ErrorKind;
+use std::io::Result;
+use std::io::Write;
 use std::path::PathBuf;
 
-use crate::descriptor::{Descriptor, Package};
+use crate::descriptor::Descriptor;
+use crate::descriptor::Package;
+use crate::generator::generate_enum;
+use crate::generator::generate_message;
 use crate::message::resolve_message;
-use crate::{
-    generator::{generate_enum, generate_message},
-    resolver::Resolver,
-};
+use crate::resolver::Resolver;
 
 mod descriptor;
 mod escape;

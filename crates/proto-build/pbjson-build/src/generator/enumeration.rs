@@ -7,7 +7,8 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 
-use crate::descriptor::{EnumDescriptor, TypePath};
+use crate::descriptor::EnumDescriptor;
+use crate::descriptor::TypePath;
 use crate::resolver::Resolver;
 use std::collections::HashSet;
 

@@ -25,8 +25,14 @@ use proc_macro2::TokenStream;
 use quote::quote;
 
 use crate::descriptor::TypePath;
-use crate::escape::{escape_type, ident_from_escaped};
-use crate::message::{Field, FieldModifier, FieldType, Message, OneOf, ScalarType};
+use crate::escape::escape_type;
+use crate::escape::ident_from_escaped;
+use crate::message::Field;
+use crate::message::FieldModifier;
+use crate::message::FieldType;
+use crate::message::Message;
+use crate::message::OneOf;
+use crate::message::ScalarType;
 use crate::resolver::Resolver;
 
 // ---------------------------------------------------------------------------
@@ -157,11 +163,7 @@ fn field_empty_predicate(member: &Field, emit_fields: bool) -> TokenStream {
     }
 }
 
-fn decode_variant(
-    resolver: &Resolver<'_>,
-    value: &TokenStream,
-    path: &TypePath,
-) -> TokenStream {
+fn decode_variant(resolver: &Resolver<'_>, value: &TokenStream, path: &TypePath) -> TokenStream {
     let enum_type = resolver.rust_type_token(path);
     quote! {
         #enum_type::try_from(#value)
@@ -538,9 +540,7 @@ fn deserialize_regular_field_value(
                 }
             }
         }
-        FieldType::Map(key, value) => {
-            deserialize_map_field(resolver, key, value, btree_map)
-        }
+        FieldType::Map(key, value) => deserialize_map_field(resolver, key, value, btree_map),
         FieldType::Message(type_name) => {
             if let Some(wkt_deser) = well_known_type_deserializer(type_name) {
                 match field.field_modifier {
@@ -686,10 +686,7 @@ fn fields_enum(
     }
 }
 
-fn deserialize_field_name(
-    message: &Message,
-    ignore_unknown_fields: bool,
-) -> TokenStream {
+fn deserialize_field_name(message: &Message, ignore_unknown_fields: bool) -> TokenStream {
     let fields: Vec<(String, String, Option<String>)> = message
         .all_fields()
         .map(|field| {
@@ -703,7 +700,10 @@ fn deserialize_field_name(
     let field_name_strings: Vec<&str> = fields
         .iter()
         .flat_map(|(json_name, _, proto_name)| {
-            proto_name.as_deref().into_iter().chain(std::iter::once(json_name.as_str()))
+            proto_name
+                .as_deref()
+                .into_iter()
+                .chain(std::iter::once(json_name.as_str()))
         })
         .collect();
 
@@ -934,11 +934,17 @@ pub fn generate_message(
 ) -> TokenStream {
     let rust_type = resolver.rust_type_token(&message.path);
 
-    let ser_body = message_serialize_body(resolver, message, emit_fields, preserve_proto_field_names);
+    let ser_body =
+        message_serialize_body(resolver, message, emit_fields, preserve_proto_field_names);
     let ser = super::serialize_impl(&rust_type, ser_body);
 
-    let de_body =
-        message_deserialize_body(resolver, message, &rust_type, ignore_unknown_fields, btree_map_paths);
+    let de_body = message_deserialize_body(
+        resolver,
+        message,
+        &rust_type,
+        ignore_unknown_fields,
+        btree_map_paths,
+    );
     let de = super::deserialize_impl(&rust_type, de_body);
 
     quote! {

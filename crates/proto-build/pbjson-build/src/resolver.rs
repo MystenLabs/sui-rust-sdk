@@ -1,4 +1,5 @@
-use crate::descriptor::{Package, TypePath};
+use crate::descriptor::Package;
+use crate::descriptor::TypePath;
 use crate::escape::ident_from_escaped;
 use proc_macro2::TokenStream;
 use std::str::FromStr;
