@@ -1,3 +1,13 @@
+//! High-level transaction intents.
+//!
+//! Intents describe *what* a transaction should accomplish without requiring the caller to
+//! manually manage coin selection or object resolution. When the transaction is built with
+//! [`TransactionBuilder::build`](crate::TransactionBuilder::build), registered resolvers
+//! communicate with the network to fill in the details.
+//!
+//! Currently the only built-in intent is [`CoinWithBalance`], which requests a coin of a
+//! given type and amount.
+
 use crate::Argument;
 use crate::TransactionBuilder;
 

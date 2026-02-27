@@ -3,6 +3,7 @@
 
 use sui_sdk_types::Address;
 
+/// Errors that can occur when building or resolving a transaction.
 #[derive(thiserror::Error, Debug, Clone)]
 #[non_exhaustive]
 pub enum Error {
