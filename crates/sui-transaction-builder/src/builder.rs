@@ -51,12 +51,15 @@ pub(crate) enum InputArgKind {
     ObjectInput(Address),
     PureInput(Vec<u8>),
     UniquePureInput(usize),
+    // All funds withdrawals are unique
+    FundsWithdrawal(usize),
 }
 
 pub(crate) enum InputArg {
     Gas,
     Pure(Vec<u8>),
     Object(ObjectInput),
+    FundsWithdrawal(sui_sdk_types::FundsWithdrawal),
 }
 
 impl TransactionBuilder {
@@ -157,6 +160,48 @@ impl TransactionBuilder {
                 Argument::new(id)
             }
         }
+    }
+
+    pub fn funds_withdrawal(&mut self, coin_type: TypeTag, amount: u64) -> Argument {
+        let funds_withdrawal = sui_sdk_types::FundsWithdrawal::new(
+            amount,
+            coin_type,
+            sui_sdk_types::WithdrawFrom::Sender,
+        );
+
+        let id = self.arguments.len();
+        self.arguments.insert(id, ResolvedArgument::Unresolved);
+        self.inputs.insert(
+            InputArgKind::FundsWithdrawal(id),
+            (id, InputArg::FundsWithdrawal(funds_withdrawal)),
+        );
+        Argument::new(id)
+    }
+
+    pub fn funds_withdrawal_coin(&mut self, coin_type: TypeTag, amount: u64) -> Argument {
+        let withdrawal = self.funds_withdrawal(coin_type.clone(), amount);
+        self.move_call(
+            Function {
+                package: const { Address::from_static("0x2") },
+                module: const { Identifier::from_static("coin") },
+                function: const { Identifier::from_static("redeem_funds") },
+                type_args: vec![coin_type],
+            },
+            vec![withdrawal],
+        )
+    }
+
+    pub fn funds_withdrawal_balance(&mut self, coin_type: TypeTag, amount: u64) -> Argument {
+        let withdrawal = self.funds_withdrawal(coin_type.clone(), amount);
+        self.move_call(
+            Function {
+                package: const { Address::from_static("0x2") },
+                module: const { Identifier::from_static("balance") },
+                function: const { Identifier::from_static("redeem_funds") },
+                type_args: vec![coin_type],
+            },
+            vec![withdrawal],
+        )
     }
 
     // Metadata
@@ -365,6 +410,10 @@ impl TransactionBuilder {
                     resolved_inputs.push(object_input.try_into_input()?);
                     sui_sdk_types::Argument::Input(resolved_inputs.len() as u16 - 1)
                 }
+                InputArg::FundsWithdrawal(funds_withdrawal) => {
+                    resolved_inputs.push(sui_sdk_types::Input::FundsWithdrawal(funds_withdrawal));
+                    sui_sdk_types::Argument::Input(resolved_inputs.len() as u16 - 1)
+                }
             };
 
             *self.arguments.get_mut(&id).unwrap() = ResolvedArgument::Resolved(arg);
@@ -465,6 +514,11 @@ impl TransactionBuilder {
                 }
                 InputArg::Object(object_input) => {
                     resolved_inputs.push(object_input.to_input_proto());
+                    sui_sdk_types::Argument::Input(resolved_inputs.len() as u16 - 1)
+                }
+                InputArg::FundsWithdrawal(funds_withdrawal) => {
+                    resolved_inputs
+                        .push(sui_sdk_types::Input::FundsWithdrawal(funds_withdrawal).into());
                     sui_sdk_types::Argument::Input(resolved_inputs.len() as u16 - 1)
                 }
             };
