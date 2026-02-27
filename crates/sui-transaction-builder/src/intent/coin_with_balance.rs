@@ -13,6 +13,29 @@ use sui_sdk_types::Address;
 use sui_sdk_types::Identifier;
 use sui_sdk_types::StructTag;
 
+/// An intent requesting a coin of a specific type and balance.
+///
+/// When resolved via [`TransactionBuilder::build`](crate::TransactionBuilder::build), the
+/// resolver selects coins owned by the sender, merges them if necessary, and splits off the
+/// requested amount.
+///
+/// # Examples
+///
+/// ```
+/// use sui_transaction_builder::intent::CoinWithBalance;
+///
+/// // Request 1 SUI (uses gas coin by default)
+/// let coin = CoinWithBalance::sui(1_000_000_000);
+///
+/// // Request a custom coin type
+/// use sui_sdk_types::StructTag;
+/// let usdc = CoinWithBalance::new(
+///     "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC"
+///         .parse()
+///         .unwrap(),
+///     1_000_000,
+/// );
+/// ```
 pub struct CoinWithBalance {
     coin_type: StructTag,
     balance: u64,
@@ -20,6 +43,15 @@ pub struct CoinWithBalance {
 }
 
 impl CoinWithBalance {
+    /// Create a new [`CoinWithBalance`] intent for the given coin type and amount (in base
+    /// units).
+    ///
+    /// ```
+    /// use sui_sdk_types::StructTag;
+    /// use sui_transaction_builder::intent::CoinWithBalance;
+    ///
+    /// let coin = CoinWithBalance::new(StructTag::sui(), 1_000_000_000);
+    /// ```
     pub fn new(coin_type: StructTag, balance: u64) -> Self {
         Self {
             coin_type,
@@ -28,6 +60,16 @@ impl CoinWithBalance {
         }
     }
 
+    /// Shorthand for requesting a SUI coin with the given balance.
+    ///
+    /// By default the resolver will draw from the gas coin. Call
+    /// [`with_use_gas_coin(false)`](Self::with_use_gas_coin) to opt out.
+    ///
+    /// ```
+    /// use sui_transaction_builder::intent::CoinWithBalance;
+    ///
+    /// let one_sui = CoinWithBalance::sui(1_000_000_000);
+    /// ```
     pub fn sui(balance: u64) -> Self {
         Self {
             coin_type: StructTag::sui(),
@@ -36,8 +78,17 @@ impl CoinWithBalance {
         }
     }
 
-    // Used to explicitly opt out of using the gas coin.
-    // This parameter is only respected when coin type is `SUI`.
+    /// Control whether the resolver should draw from the gas coin.
+    ///
+    /// This is only meaningful when the coin type is SUI. Pass `false` to force the resolver
+    /// to select non-gas SUI coins instead.
+    ///
+    /// ```
+    /// use sui_transaction_builder::intent::CoinWithBalance;
+    ///
+    /// // Don't touch the gas coin — select other SUI coins instead
+    /// let coin = CoinWithBalance::sui(1_000_000_000).with_use_gas_coin(false);
+    /// ```
     pub fn with_use_gas_coin(self, use_gas_coin: bool) -> Self {
         Self {
             use_gas_coin,

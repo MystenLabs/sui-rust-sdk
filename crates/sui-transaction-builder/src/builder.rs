@@ -9,7 +9,40 @@ use sui_sdk_types::Transaction;
 use sui_sdk_types::TransactionExpiration;
 use sui_sdk_types::TypeTag;
 
-/// A builder for creating transactions. Use `resolve` to finalize the transaction data.
+/// A builder for creating [programmable transaction blocks][ptb].
+///
+/// Inputs and commands are added incrementally through methods like [`pure`](Self::pure),
+/// [`object`](Self::object), [`move_call`](Self::move_call), and
+/// [`transfer_objects`](Self::transfer_objects). Once all commands and metadata have been set,
+/// call [`try_build`](Self::try_build) for offline building, or [`build`](Self::build) (with
+/// the `intents` feature) to resolve intents and gas via an RPC client.
+///
+/// [ptb]: https://docs.sui.io/concepts/transactions/prog-txn-blocks
+///
+/// # Example
+///
+/// ```
+/// use sui_sdk_types::Address;
+/// use sui_sdk_types::Digest;
+/// use sui_transaction_builder::ObjectInput;
+/// use sui_transaction_builder::TransactionBuilder;
+///
+/// let mut tx = TransactionBuilder::new();
+///
+/// let amount = tx.pure(&1_000_000_000u64);
+/// let gas = tx.gas();
+/// let coins = tx.split_coins(gas, vec![amount]);
+///
+/// let recipient = tx.pure(&Address::ZERO);
+/// tx.transfer_objects(coins, recipient);
+///
+/// tx.set_sender(Address::ZERO);
+/// tx.set_gas_budget(500_000_000);
+/// tx.set_gas_price(1000);
+/// tx.add_gas_objects([ObjectInput::owned(Address::ZERO, 1, Digest::ZERO)]);
+///
+/// let transaction = tx.try_build().expect("build should succeed");
+/// ```
 #[derive(Default)]
 pub struct TransactionBuilder {
     /// The gas objects that will be used to pay for the transaction. The most common way is to
@@ -63,13 +96,32 @@ pub(crate) enum InputArg {
 }
 
 impl TransactionBuilder {
-    /// Create a new transaction builder and initialize its elements to default.
+    /// Create a new, empty transaction builder.
+    ///
+    /// ```
+    /// use sui_transaction_builder::TransactionBuilder;
+    ///
+    /// let tx = TransactionBuilder::new();
+    /// ```
     pub fn new() -> Self {
         Self::default()
     }
 
     // Transaction Inputs
 
+    /// Return an [`Argument`] referring to the gas coin.
+    ///
+    /// The gas coin can be used as an input to commands such as
+    /// [`split_coins`](Self::split_coins).
+    ///
+    /// Note: The gas coin cannot be used when using an account's Address Balance to pay for gas fees.
+    ///
+    /// ```
+    /// use sui_transaction_builder::TransactionBuilder;
+    ///
+    /// let mut tx = TransactionBuilder::new();
+    /// let gas = tx.gas();
+    /// ```
     pub fn gas(&mut self) -> Argument {
         if let Some((index, arg)) = self.inputs.get(&InputArgKind::Gas) {
             assert!(matches!(arg, InputArg::Gas));
@@ -82,6 +134,20 @@ impl TransactionBuilder {
         }
     }
 
+    /// Add a pure input from raw BCS bytes.
+    ///
+    /// If the same bytes have already been added, the existing [`Argument`] is returned
+    /// (inputs are deduplicated). Use [`pure_bytes_unique`](Self::pure_bytes_unique) when
+    /// deduplication is not desired.
+    ///
+    /// ```
+    /// use sui_transaction_builder::TransactionBuilder;
+    ///
+    /// let mut tx = TransactionBuilder::new();
+    /// let a = tx.pure_bytes(vec![1, 0, 0, 0, 0, 0, 0, 0]);
+    /// let b = tx.pure_bytes(vec![1, 0, 0, 0, 0, 0, 0, 0]);
+    /// // `a` and `b` refer to the same input
+    /// ```
     pub fn pure_bytes(&mut self, bytes: Vec<u8>) -> Argument {
         match self.inputs.entry(InputArgKind::PureInput(bytes.clone())) {
             std::collections::hash_map::Entry::Occupied(o) => {
@@ -97,11 +163,38 @@ impl TransactionBuilder {
         }
     }
 
+    /// Add a pure input by serializing `value` to BCS.
+    ///
+    /// Pure inputs are values like integers, addresses, and strings — anything that is not an
+    /// on-chain object. Identical values are deduplicated; use
+    /// [`pure_unique`](Self::pure_unique) if each call must produce a distinct input.
+    ///
+    /// ```
+    /// use sui_sdk_types::Address;
+    /// use sui_transaction_builder::TransactionBuilder;
+    ///
+    /// let mut tx = TransactionBuilder::new();
+    /// let amount = tx.pure(&1_000_000_000u64);
+    /// let recipient = tx.pure(&Address::ZERO);
+    /// ```
     pub fn pure<T: serde::Serialize>(&mut self, value: &T) -> Argument {
         let bytes = bcs::to_bytes(value).expect("bcs serialization failed");
         self.pure_bytes(bytes)
     }
 
+    /// Add a pure input from raw BCS bytes, always creating a new input.
+    ///
+    /// Unlike [`pure_bytes`](Self::pure_bytes), this method never deduplicates — each call
+    /// produces a distinct input even if the bytes are identical.
+    ///
+    /// ```
+    /// use sui_transaction_builder::TransactionBuilder;
+    ///
+    /// let mut tx = TransactionBuilder::new();
+    /// let a = tx.pure_bytes_unique(vec![42]);
+    /// let b = tx.pure_bytes_unique(vec![42]);
+    /// // `a` and `b` are distinct inputs despite identical bytes
+    /// ```
     pub fn pure_bytes_unique(&mut self, bytes: Vec<u8>) -> Argument {
         let id = self.arguments.len();
         self.arguments.insert(id, ResolvedArgument::Unresolved);
@@ -112,11 +205,38 @@ impl TransactionBuilder {
         Argument::new(id)
     }
 
+    /// Add a pure input by serializing `value` to BCS, always creating a new input.
+    ///
+    /// This is the non-deduplicating variant of [`pure`](Self::pure).
+    ///
+    /// ```
+    /// use sui_transaction_builder::TransactionBuilder;
+    ///
+    /// let mut tx = TransactionBuilder::new();
+    /// let a = tx.pure_unique(&1u64);
+    /// let b = tx.pure_unique(&1u64);
+    /// // `a` and `b` are distinct inputs
+    /// ```
     pub fn pure_unique<T: serde::Serialize>(&mut self, value: &T) -> Argument {
         let bytes = bcs::to_bytes(value).expect("bcs serialization failed");
         self.pure_bytes_unique(bytes)
     }
 
+    /// Add an object input to the transaction.
+    ///
+    /// If an object with the same ID has already been added, the existing [`Argument`] is
+    /// returned and any additional metadata (version, digest, mutability) from the new
+    /// [`ObjectInput`] is merged in.
+    ///
+    /// ```
+    /// use sui_sdk_types::Address;
+    /// use sui_sdk_types::Digest;
+    /// use sui_transaction_builder::ObjectInput;
+    /// use sui_transaction_builder::TransactionBuilder;
+    ///
+    /// let mut tx = TransactionBuilder::new();
+    /// let obj = tx.object(ObjectInput::owned(Address::ZERO, 1, Digest::ZERO));
+    /// ```
     pub fn object(&mut self, object: ObjectInput) -> Argument {
         match self
             .inputs
@@ -162,6 +282,13 @@ impl TransactionBuilder {
         }
     }
 
+    /// Add a funds-withdrawal input that requests `amount` of `coin_type` from the sender's
+    /// Address Balance.
+    ///
+    /// The returned [`Argument`] represents the raw `FundsWithdrawal` input. In most cases
+    /// you'll want [`funds_withdrawal_coin`](Self::funds_withdrawal_coin) or
+    /// [`funds_withdrawal_balance`](Self::funds_withdrawal_balance) which additionally call the
+    /// appropriate `redeem_funds` function.
     pub fn funds_withdrawal(&mut self, coin_type: TypeTag, amount: u64) -> Argument {
         let funds_withdrawal = sui_sdk_types::FundsWithdrawal::new(
             amount,
@@ -178,6 +305,10 @@ impl TransactionBuilder {
         Argument::new(id)
     }
 
+    /// Withdraw funds from the sender's Address Balance and redeem them as a `Coin<T>`.
+    ///
+    /// This adds a [`FundsWithdrawal`](sui_sdk_types::FundsWithdrawal) input and calls
+    /// `0x2::coin::redeem_funds` to convert it into a `Coin<T>`.
     pub fn funds_withdrawal_coin(&mut self, coin_type: TypeTag, amount: u64) -> Argument {
         let withdrawal = self.funds_withdrawal(coin_type.clone(), amount);
         self.move_call(
@@ -191,6 +322,10 @@ impl TransactionBuilder {
         )
     }
 
+    /// Withdraw funds from the sender's Address Balance and redeem them as a `Balance<T>`.
+    ///
+    /// This adds a [`FundsWithdrawal`](sui_sdk_types::FundsWithdrawal) input and calls
+    /// `0x2::balance::redeem_funds` to convert it into a `Balance<T>`.
     pub fn funds_withdrawal_balance(&mut self, coin_type: TypeTag, amount: u64) -> Argument {
         let withdrawal = self.funds_withdrawal(coin_type.clone(), amount);
         self.move_call(
@@ -207,6 +342,16 @@ impl TransactionBuilder {
     // Metadata
 
     /// Add one or more gas objects to use to pay for the transaction.
+    ///
+    /// ```
+    /// use sui_sdk_types::Address;
+    /// use sui_sdk_types::Digest;
+    /// use sui_transaction_builder::ObjectInput;
+    /// use sui_transaction_builder::TransactionBuilder;
+    ///
+    /// let mut tx = TransactionBuilder::new();
+    /// tx.add_gas_objects([ObjectInput::owned(Address::ZERO, 1, Digest::ZERO)]);
+    /// ```
     pub fn add_gas_objects<O, I>(&mut self, gas: I)
     where
         O: Into<ObjectInput>,
@@ -216,21 +361,45 @@ impl TransactionBuilder {
     }
 
     /// Set the gas budget for the transaction.
+    ///
+    /// ```
+    /// use sui_transaction_builder::TransactionBuilder;
+    ///
+    /// let mut tx = TransactionBuilder::new();
+    /// tx.set_gas_budget(500_000_000);
+    /// ```
     pub fn set_gas_budget(&mut self, budget: u64) {
         self.gas_budget = Some(budget);
     }
 
     /// Set the gas price for the transaction.
+    ///
+    /// ```
+    /// use sui_transaction_builder::TransactionBuilder;
+    ///
+    /// let mut tx = TransactionBuilder::new();
+    /// tx.set_gas_price(1000);
+    /// ```
     pub fn set_gas_price(&mut self, price: u64) {
         self.gas_price = Some(price);
     }
 
     /// Set the sender of the transaction.
+    ///
+    /// ```
+    /// use sui_sdk_types::Address;
+    /// use sui_transaction_builder::TransactionBuilder;
+    ///
+    /// let mut tx = TransactionBuilder::new();
+    /// tx.set_sender(Address::ZERO);
+    /// ```
     pub fn set_sender(&mut self, sender: Address) {
         self.sender = Some(sender);
     }
 
     /// Set the sponsor of the transaction.
+    ///
+    /// If not set, the sender is used as the gas owner.
     pub fn set_sponsor(&mut self, sponsor: Address) {
         self.sponsor = Some(sponsor);
     }
@@ -251,12 +420,29 @@ impl TransactionBuilder {
 
     /// Call a Move function with the given arguments.
     ///
-    /// - `function` is a structured representation of a package::module::function argument,
-    ///   optionally with type arguments.
-    //
-    // The return value is a result argument that can be used in subsequent commands.
-    // If the move call returns multiple results, you can access them using the
-    // [`Argument::nested`] method.
+    /// `function` is a structured representation of a `package::module::function`, optionally
+    /// with type arguments (see [`Function`] and [`Function::with_type_args`]).
+    ///
+    /// The return value is a result argument that can be used in subsequent commands. If the
+    /// Move call returns multiple results, access them with [`Argument::to_nested`].
+    ///
+    /// ```
+    /// use sui_sdk_types::Address;
+    /// use sui_sdk_types::Identifier;
+    /// use sui_transaction_builder::Function;
+    /// use sui_transaction_builder::TransactionBuilder;
+    ///
+    /// let mut tx = TransactionBuilder::new();
+    /// let result = tx.move_call(
+    ///     Function::new(
+    ///         Address::TWO,
+    ///         Identifier::from_static("coin"),
+    ///         Identifier::from_static("zero"),
+    ///     )
+    ///     .with_type_args(vec!["0x2::sui::SUI".parse().unwrap()]),
+    ///     vec![],
+    /// );
+    /// ```
     pub fn move_call(&mut self, function: Function, arguments: Vec<Argument>) -> Argument {
         let cmd = CommandKind::MoveCall(MoveCall {
             package: function.package,
@@ -268,22 +454,61 @@ impl TransactionBuilder {
         self.command(cmd.into())
     }
 
-    /// Transfer a list of objects to the given address, without producing any result.
+    /// Transfer a list of objects to the given address.
+    ///
+    /// ```
+    /// use sui_sdk_types::Address;
+    /// use sui_transaction_builder::TransactionBuilder;
+    ///
+    /// let mut tx = TransactionBuilder::new();
+    /// let gas = tx.gas();
+    /// let amount = tx.pure(&1_000_000_000u64);
+    /// let coins = tx.split_coins(gas, vec![amount]);
+    /// let recipient = tx.pure(&Address::ZERO);
+    /// tx.transfer_objects(coins, recipient);
+    /// ```
     pub fn transfer_objects(&mut self, objects: Vec<Argument>, address: Argument) {
         let cmd = CommandKind::TransferObjects(TransferObjects { objects, address });
         self.command(cmd.into());
     }
 
     /// Split a coin by the provided amounts, returning multiple results (as many as there are
-    /// amounts). The returned vector of `Arguments` is guaranteed to be the same length as the
+    /// amounts). The returned vector of [`Argument`]s is guaranteed to be the same length as the
     /// provided `amounts` vector.
+    ///
+    /// ```
+    /// use sui_transaction_builder::TransactionBuilder;
+    ///
+    /// let mut tx = TransactionBuilder::new();
+    /// let gas = tx.gas();
+    /// let a = tx.pure(&1_000u64);
+    /// let b = tx.pure(&2_000u64);
+    /// let coins = tx.split_coins(gas, vec![a, b]);
+    /// assert_eq!(coins.len(), 2);
+    /// ```
     pub fn split_coins(&mut self, coin: Argument, amounts: Vec<Argument>) -> Vec<Argument> {
         let amounts_len = amounts.len();
         let cmd = CommandKind::SplitCoins(SplitCoins { coin, amounts });
         self.command(cmd.into()).to_nested(amounts_len)
     }
 
-    /// Merge a list of coins into a single coin, without producing any result.
+    /// Merge a list of coins into a single coin.
+    ///
+    /// ```
+    /// use sui_sdk_types::Address;
+    /// use sui_sdk_types::Digest;
+    /// use sui_transaction_builder::ObjectInput;
+    /// use sui_transaction_builder::TransactionBuilder;
+    ///
+    /// let mut tx = TransactionBuilder::new();
+    /// let coin_a = tx.object(ObjectInput::owned(Address::ZERO, 1, Digest::ZERO));
+    /// let coin_b = tx.object(ObjectInput::owned(
+    ///     Address::from_static("0x1"),
+    ///     1,
+    ///     Digest::ZERO,
+    /// ));
+    /// tx.merge_coins(coin_a, vec![coin_b]);
+    /// ```
     pub fn merge_coins(&mut self, coin: Argument, coins_to_merge: Vec<Argument>) {
         let cmd = CommandKind::MergeCoins(MergeCoins {
             coin,
@@ -292,9 +517,19 @@ impl TransactionBuilder {
         self.command(cmd.into());
     }
 
-    /// Make a move vector from a list of elements. If the elements are not objects, or the vector
-    /// is empty, a type must be supplied.
-    /// It returns the Move vector as an argument, that can be used in subsequent commands.
+    /// Make a Move vector from a list of elements.
+    ///
+    /// If the elements are not objects, or the vector is empty, a `type_` must be supplied.
+    /// Returns the Move vector as an argument that can be used in subsequent commands.
+    ///
+    /// ```
+    /// use sui_transaction_builder::TransactionBuilder;
+    ///
+    /// let mut tx = TransactionBuilder::new();
+    /// let a = tx.pure(&1u64);
+    /// let b = tx.pure(&2u64);
+    /// let vec = tx.make_move_vec(Some("u64".parse().unwrap()), vec![a, b]);
+    /// ```
     pub fn make_move_vec(&mut self, type_: Option<TypeTag>, elements: Vec<Argument>) -> Argument {
         let cmd = CommandKind::MakeMoveVector(MakeMoveVector { type_, elements });
         self.command(cmd.into())
@@ -347,8 +582,21 @@ impl TransactionBuilder {
 
     // Intents
 
-    // Register a transaction intent which may be resolved later to either an input or a sequence
-    // of commands.
+    /// Register a transaction intent which is resolved later to either an input or a sequence
+    /// of commands.
+    ///
+    /// Intents are high-level descriptions of *what* the transaction needs (e.g., a coin of a
+    /// certain value) that get resolved when [`build`](Self::build) is called. See
+    /// [`CoinWithBalance`](crate::intent::CoinWithBalance) for an example of an Intent.
+    ///
+    /// ```
+    /// use sui_transaction_builder::TransactionBuilder;
+    /// use sui_transaction_builder::intent::CoinWithBalance;
+    ///
+    /// let mut tx = TransactionBuilder::new();
+    /// let coin = tx.intent(CoinWithBalance::sui(1_000_000_000));
+    /// // `coin` can be passed to subsequent commands
+    /// ```
     #[cfg(feature = "intents")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "intents")))]
     #[allow(private_bounds)]
@@ -358,8 +606,33 @@ impl TransactionBuilder {
 
     // Building and resolving
 
-    /// Assuming everything is resolved, convert this transaction into the
-    /// resolved form. Returns a [`Transaction`] if successful, or an `Error` if not.
+    /// Build the transaction offline.
+    ///
+    /// All metadata (sender, gas budget, gas price, gas objects) and any object inputs must be
+    /// fully specified before calling this method. Returns an [`Error`](crate::Error) if any
+    /// required fields are missing or if unresolved intents remain.
+    ///
+    /// ```
+    /// use sui_sdk_types::Address;
+    /// use sui_sdk_types::Digest;
+    /// use sui_transaction_builder::ObjectInput;
+    /// use sui_transaction_builder::TransactionBuilder;
+    ///
+    /// let mut tx = TransactionBuilder::new();
+    ///
+    /// let gas = tx.gas();
+    /// let amount = tx.pure(&1_000_000_000u64);
+    /// let coins = tx.split_coins(gas, vec![amount]);
+    /// let recipient = tx.pure(&Address::ZERO);
+    /// tx.transfer_objects(coins, recipient);
+    ///
+    /// tx.set_sender(Address::ZERO);
+    /// tx.set_gas_budget(500_000_000);
+    /// tx.set_gas_price(1000);
+    /// tx.add_gas_objects([ObjectInput::owned(Address::ZERO, 1, Digest::ZERO)]);
+    ///
+    /// let transaction = tx.try_build().unwrap();
+    /// ```
     pub fn try_build(mut self) -> Result<Transaction, Error> {
         let Some(sender) = self.sender else {
             return Err(Error::MissingSender);
@@ -449,6 +722,17 @@ impl TransactionBuilder {
         })
     }
 
+    /// Build the transaction by resolving intents and gas via an RPC client.
+    ///
+    /// This method resolves any registered intents (e.g.,
+    /// [`CoinWithBalance`](crate::intent::CoinWithBalance)), performs gas selection if needed,
+    /// and simulates the transaction before returning the finalized
+    /// [`Transaction`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`Error`](crate::Error) if the sender is not set, intent resolution fails,
+    /// or the simulated execution fails.
     #[cfg(feature = "intents")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "intents")))]
     pub async fn build(mut self, client: &mut sui_rpc::Client) -> Result<Transaction, Error> {
@@ -645,6 +929,14 @@ impl TransactionBuilder {
     }
 }
 
+/// A opaque handle to a transaction input or command result.
+///
+/// Arguments are produced by builder methods like [`TransactionBuilder::pure`],
+/// [`TransactionBuilder::object`], and [`TransactionBuilder::move_call`], and consumed by
+/// command methods like [`TransactionBuilder::transfer_objects`].
+///
+/// For commands that return multiple values (e.g., [`TransactionBuilder::split_coins`]),
+/// use [`to_nested`](Self::to_nested) to access individual results.
 #[derive(Clone, Copy, Debug)]
 pub struct Argument {
     id: usize,
@@ -659,6 +951,32 @@ impl Argument {
         }
     }
 
+    /// Split this argument into `count` nested result arguments.
+    ///
+    /// This is used when a command (like a Move call) returns multiple values. Each element
+    /// in the returned vector refers to the corresponding result index.
+    ///
+    /// [`TransactionBuilder::split_coins`] calls this automatically, but you can use it
+    /// directly for Move calls that return multiple values:
+    ///
+    /// ```
+    /// use sui_sdk_types::Address;
+    /// use sui_sdk_types::Identifier;
+    /// use sui_transaction_builder::Function;
+    /// use sui_transaction_builder::TransactionBuilder;
+    ///
+    /// let mut tx = TransactionBuilder::new();
+    /// let result = tx.move_call(
+    ///     Function::new(
+    ///         Address::TWO,
+    ///         Identifier::from_static("my_module"),
+    ///         Identifier::from_static("multi_return"),
+    ///     ),
+    ///     vec![],
+    /// );
+    /// let nested = result.to_nested(3);
+    /// assert_eq!(nested.len(), 3);
+    /// ```
     pub fn to_nested(self, count: usize) -> Vec<Self> {
         (0..count)
             .map(|sub_index| Argument {
@@ -926,6 +1244,27 @@ pub(crate) struct MoveCall {
     // Return value count??
 }
 
+/// Description of an on-chain object to use as a transaction input.
+///
+/// Use one of the constructors ([`new`](Self::new), [`owned`](Self::owned),
+/// [`shared`](Self::shared), [`immutable`](Self::immutable), [`receiving`](Self::receiving))
+/// and then optionally refine with builder methods like [`with_version`](Self::with_version),
+/// [`with_digest`](Self::with_digest), and [`with_mutable`](Self::with_mutable).
+///
+/// ```
+/// use sui_sdk_types::Address;
+/// use sui_sdk_types::Digest;
+/// use sui_transaction_builder::ObjectInput;
+///
+/// // Fully-specified owned object
+/// let obj = ObjectInput::owned(Address::ZERO, 1, Digest::ZERO);
+///
+/// // Minimal object — additional fields can be filled in by the builder
+/// let obj = ObjectInput::new(Address::ZERO);
+///
+/// // Shared object
+/// let obj = ObjectInput::shared(Address::ZERO, 1, true);
+/// ```
 pub struct ObjectInput {
     object_id: Address,
     kind: Option<ObjectKind>,
@@ -942,6 +1281,10 @@ enum ObjectKind {
 }
 
 impl ObjectInput {
+    /// Create a minimal object input with only an object ID.
+    ///
+    /// Additional metadata (kind, version, digest, mutability) can be later resolved when a
+    /// transaction is built.
     pub fn new(object_id: Address) -> Self {
         Self {
             kind: None,
@@ -1046,6 +1389,10 @@ impl ObjectInput {
         }
     }
 
+    /// Set whether this object is accessed mutably.
+    ///
+    /// This is primarily relevant for shared objects to indicate whether the command will
+    /// take the object by value or mutable reference.
     pub fn with_mutable(self, mutable: bool) -> Self {
         Self {
             mutable: Some(mutable),
@@ -1072,14 +1419,6 @@ impl From<&sui_sdk_types::Object> for ObjectInput {
         }
     }
 }
-
-// impl TryFrom<&sui_rpc::proto::sui::rpc::v2::Object> for ObjectInput {
-//     type Error = sui_rpc::proto::TryFromProtoError;
-
-//     fn try_from(object: &sui_rpc::proto::sui::rpc::v2::Object) -> Result<Self, Self::Error> {
-//         todo!()
-//     }
-// }
 
 // private conversions
 impl ObjectInput {
@@ -1236,7 +1575,24 @@ impl ObjectInput {
     }
 }
 
-/// A separate type to support denoting a function by a more structured representation.
+/// A structured representation of a Move function (`package::module::function`), optionally
+/// with type arguments.
+///
+/// Use [`Function::new`] to create a function reference, and
+/// [`Function::with_type_args`] to add generic type parameters.
+///
+/// ```
+/// use sui_sdk_types::Address;
+/// use sui_sdk_types::Identifier;
+/// use sui_transaction_builder::Function;
+///
+/// let f = Function::new(
+///     Address::TWO,
+///     Identifier::from_static("coin"),
+///     Identifier::from_static("zero"),
+/// )
+/// .with_type_args(vec!["0x2::sui::SUI".parse().unwrap()]);
+/// ```
 pub struct Function {
     /// The package that contains the module with the function.
     package: Address,
@@ -1249,7 +1605,19 @@ pub struct Function {
 }
 
 impl Function {
-    /// Constructor for the function type.
+    /// Create a new function reference.
+    ///
+    /// ```
+    /// use sui_sdk_types::Address;
+    /// use sui_sdk_types::Identifier;
+    /// use sui_transaction_builder::Function;
+    ///
+    /// let f = Function::new(
+    ///     Address::TWO,
+    ///     Identifier::from_static("coin"),
+    ///     Identifier::from_static("zero"),
+    /// );
+    /// ```
     pub fn new(package: Address, module: Identifier, function: Identifier) -> Self {
         Self {
             package,
@@ -1259,6 +1627,20 @@ impl Function {
         }
     }
 
+    /// Set the type arguments for the function call.
+    ///
+    /// ```
+    /// use sui_sdk_types::Address;
+    /// use sui_sdk_types::Identifier;
+    /// use sui_transaction_builder::Function;
+    ///
+    /// let f = Function::new(
+    ///     Address::TWO,
+    ///     Identifier::from_static("coin"),
+    ///     Identifier::from_static("zero"),
+    /// )
+    /// .with_type_args(vec!["0x2::sui::SUI".parse().unwrap()]);
+    /// ```
     pub fn with_type_args(self, type_args: Vec<TypeTag>) -> Self {
         Self { type_args, ..self }
     }
