@@ -10,6 +10,7 @@ use crate::intent::MAX_ARGUMENTS;
 use crate::intent::MAX_GAS_OBJECTS;
 use futures::StreamExt;
 use std::collections::BTreeMap;
+use std::collections::HashSet;
 use sui_rpc::field::FieldMask;
 use sui_rpc::field::FieldMaskUtil;
 use sui_rpc::proto::sui::rpc::v2::GetBalanceRequest;
@@ -231,8 +232,9 @@ impl CoinWithBalanceResolver {
             .into());
         }
 
-        //TODO handle excludes
-        let (coins, remaining) = Self::select_coins(client, &sender, coin_type, sum).await?;
+        let excludes = builder.used_object_ids();
+        let (coins, remaining) =
+            Self::select_coins(client, &sender, coin_type, sum, &excludes).await?;
 
         // If address balance amount isn't enough to cover the remaining requested amount we need
         // to bail
@@ -351,8 +353,9 @@ impl CoinWithBalanceResolver {
             .into());
         }
 
-        //TODO handle excludes
-        let (coins, remaining) = Self::select_coins(client, &sender, &coin_type, sum).await?;
+        let excludes = builder.used_object_ids();
+        let (coins, remaining) =
+            Self::select_coins(client, &sender, &coin_type, sum, &excludes).await?;
 
         // If address balance amount isn't enough to cover the remaining requested amount we need
         // to bail
@@ -444,6 +447,7 @@ impl CoinWithBalanceResolver {
         owner_address: &Address,
         coin_type: &StructTag,
         amount: u64,
+        excludes: &HashSet<Address>,
     ) -> Result<(Vec<ObjectInput>, u64), BoxError> {
         let coin_struct = StructTag::coin(coin_type.clone().into());
         let list_request = ListOwnedObjectsRequest::default()
@@ -464,9 +468,13 @@ impl CoinWithBalanceResolver {
 
         while let Some(object_result) = coin_stream.next().await {
             let object = object_result?;
+            let coin = ObjectInput::try_from_object_proto(&object)?;
+
+            if excludes.contains(&coin.object_id()) {
+                continue;
+            }
 
             remaining = remaining.saturating_sub(object.balance());
-            let coin = ObjectInput::try_from_object_proto(&object)?;
             selected_coins.push(coin);
 
             // if we've found enough, continue collecting coins to smash up to ~500
