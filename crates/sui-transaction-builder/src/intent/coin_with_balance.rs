@@ -8,7 +8,12 @@ use crate::intent::Intent;
 use crate::intent::IntentResolver;
 use crate::intent::MAX_ARGUMENTS;
 use crate::intent::MAX_GAS_OBJECTS;
+use futures::StreamExt;
 use std::collections::BTreeMap;
+use sui_rpc::field::FieldMask;
+use sui_rpc::field::FieldMaskUtil;
+use sui_rpc::proto::sui::rpc::v2::GetBalanceRequest;
+use sui_rpc::proto::sui::rpc::v2::ListOwnedObjectsRequest;
 use sui_sdk_types::Address;
 use sui_sdk_types::Identifier;
 use sui_sdk_types::StructTag;
@@ -201,21 +206,67 @@ impl CoinWithBalanceResolver {
 
         let sum = requests.iter().map(|(_, balance)| *balance).sum();
 
-        let coins = client
-            //TODO populate excludes
-            .select_coins(&sender, &(coin_type.clone().into()), sum, &[])
-            .await?;
+        let balance = client
+            .state_client()
+            .get_balance(
+                GetBalanceRequest::default()
+                    .with_owner(sender)
+                    .with_coin_type(coin_type),
+            )
+            .await?
+            .into_inner()
+            .balance
+            .take()
+            .unwrap_or_default();
 
-        // For SUI need to handle working with gas coin
+        // Early return with an error if the sender does not have sufficient balance
+        if balance.balance() < sum {
+            return Err(format!(
+                "address {} does not have sufficient balance of {}: requested {} available {}",
+                sender,
+                coin_type,
+                sum,
+                balance.balance()
+            )
+            .into());
+        }
+
+        //TODO handle excludes
+        let (coins, remaining) = Self::select_coins(client, &sender, coin_type, sum).await?;
+
+        // If address balance amount isn't enough to cover the remaining requested amount we need
+        // to bail
+        if balance.address_balance() < remaining {
+            return Err(format!(
+                "unable to find sufficient coins of type {}. requested {} found {} and AB of {} is insufficient to cover difference.",
+                coin_type,
+                sum,
+                sum - remaining,
+                balance.address_balance(),
+            )
+            .into());
+        }
+
         let split_coin_args = if let [first, rest @ ..] = coins
             .into_iter()
-            .map(|coin| ObjectInput::try_from_object_proto(&coin).map(|coin| builder.object(coin)))
-            .collect::<Result<Vec<_>, _>>()?
+            .map(|coin| builder.object(coin))
+            .collect::<Vec<_>>()
             .as_slice()
         {
+            // We have at least 1 coin
+
             let mut deps = Vec::new();
             for chunk in rest.chunks(MAX_ARGUMENTS) {
                 builder.merge_coins(*first, chunk.to_vec());
+                deps.push(Argument::new(*builder.commands.last_key_value().unwrap().0));
+            }
+
+            // If the coins we selected were not enough we need to pull from AB for the remaining
+            // amount and merge it into the first coin
+            if remaining > 0 {
+                let ab_coin = builder.funds_withdrawal_coin(coin_type.clone().into(), remaining);
+                deps.push(Argument::new(*builder.commands.last_key_value().unwrap().0));
+                builder.merge_coins(*first, vec![ab_coin]);
                 deps.push(Argument::new(*builder.commands.last_key_value().unwrap().0));
             }
 
@@ -233,9 +284,18 @@ impl CoinWithBalanceResolver {
                     .dependencies
                     .extend(deps);
             }
+
+            //TODO send remaining to AB
+
             coin_outputs
         } else {
-            return Err(format!("unable to find sufficient coins of type {}", coin_type).into());
+            // We have no coins, but have sufficient AB to cover all requested amounts
+            requests
+                .iter()
+                .map(|(_, balance)| {
+                    builder.funds_withdrawal_coin(coin_type.clone().into(), *balance)
+                })
+                .collect()
         };
 
         for (coin, request_index) in split_coin_args
@@ -262,48 +322,113 @@ impl CoinWithBalanceResolver {
             return Err("BUG: requests is empty".into());
         }
 
+        let coin_type = StructTag::sui();
+
         let sum = requests.iter().map(|(_, balance)| *balance).sum();
 
-        let mut coins = client
-            //TODO populate excludes
-            .select_coins(&sender, &(StructTag::sui().into()), sum, &[])
+        let balance = client
+            .state_client()
+            .get_balance(
+                GetBalanceRequest::default()
+                    .with_owner(sender)
+                    .with_coin_type(&coin_type),
+            )
             .await?
-            .into_iter()
-            .map(|coin| ObjectInput::try_from_object_proto(&coin))
-            .collect::<Result<Vec<_>, _>>()?
-            .into_iter();
+            .into_inner()
+            .balance
+            .take()
+            .unwrap_or_default();
 
-        let gas = builder.gas();
-        let mut deps = Vec::new();
-
-        // Append to gas coin up to 250 coins
-        builder
-            .add_gas_objects((&mut coins).take(MAX_GAS_OBJECTS.saturating_sub(builder.gas.len())));
-
-        // Any remaining do a merge coins
-        let remaining = coins.map(|coin| builder.object(coin)).collect::<Vec<_>>();
-
-        for chunk in remaining.chunks(MAX_ARGUMENTS) {
-            builder.merge_coins(gas, chunk.to_vec());
-            deps.push(Argument::new(*builder.commands.last_key_value().unwrap().0));
+        // Early return with an error if the sender does not have sufficient balance
+        if balance.balance() < sum {
+            return Err(format!(
+                "address {} does not have sufficient balance of {}: requested {} available {}",
+                sender,
+                coin_type,
+                sum,
+                balance.balance()
+            )
+            .into());
         }
 
-        let amounts = requests
-            .iter()
-            .map(|(_, balance)| builder.pure(balance))
-            .collect();
-        let split_coin_args = builder.split_coins(gas, amounts);
-        if !deps.is_empty() {
-            builder
-                .commands
-                .last_entry()
-                .unwrap()
-                .get_mut()
-                .dependencies
-                .extend(deps);
+        //TODO handle excludes
+        let (coins, remaining) = Self::select_coins(client, &sender, &coin_type, sum).await?;
+
+        // If address balance amount isn't enough to cover the remaining requested amount we need
+        // to bail
+        if balance.address_balance() < remaining {
+            return Err(format!(
+                "unable to find sufficient coins of type {}. requested {} found {} and AB of {} is insufficient to cover difference.",
+                coin_type,
+                sum,
+                sum - remaining,
+                balance.address_balance(),
+            )
+            .into());
         }
 
-        for (coin, request_index) in split_coin_args
+        let coin_args = if coins.is_empty() {
+            // We have no coins, but have sufficient AB to cover all requested amounts
+            requests
+                .iter()
+                .map(|(_, balance)| {
+                    builder.funds_withdrawal_coin(coin_type.clone().into(), *balance)
+                })
+                .collect()
+        } else {
+            let gas = builder.gas();
+            let mut deps = Vec::new();
+
+            // Append to gas coin up to 250 coins
+            let (use_as_gas, remaining_coins) = coins.split_at(std::cmp::min(
+                coins.len(),
+                MAX_GAS_OBJECTS.saturating_sub(builder.gas.len()),
+            ));
+            builder.add_gas_objects(use_as_gas.iter().cloned());
+
+            // Any remaining do a merge coins
+            for chunk in remaining_coins
+                .iter()
+                .map(|coin| builder.object(coin.clone()))
+                .collect::<Vec<_>>()
+                .chunks(MAX_ARGUMENTS)
+            {
+                builder.merge_coins(gas, chunk.to_vec());
+                deps.push(Argument::new(*builder.commands.last_key_value().unwrap().0));
+            }
+
+            // If the coins we selected were not enough we need to pull from AB for the remaining
+            // amount and merge it into the gas coin
+            if remaining > 0 {
+                // reserve a small amount more to account for budget ~.5 SUI's worth
+                let ab_coin = builder
+                    .funds_withdrawal_coin(coin_type.clone().into(), remaining + 500_000_000);
+                deps.push(Argument::new(*builder.commands.last_key_value().unwrap().0));
+                builder.merge_coins(gas, vec![ab_coin]);
+                deps.push(Argument::new(*builder.commands.last_key_value().unwrap().0));
+            }
+
+            let amounts = requests
+                .iter()
+                .map(|(_, balance)| builder.pure(balance))
+                .collect();
+            let split_coin_args = builder.split_coins(gas, amounts);
+            if !deps.is_empty() {
+                builder
+                    .commands
+                    .last_entry()
+                    .unwrap()
+                    .get_mut()
+                    .dependencies
+                    .extend(deps);
+            }
+
+            // We can't send gas coin to AB so we'll leave as-is
+
+            split_coin_args
+        };
+
+        for (coin, request_index) in coin_args
             .into_iter()
             .zip(requests.iter().map(|(index, _)| *index))
         {
@@ -312,5 +437,44 @@ impl CoinWithBalanceResolver {
         }
 
         Ok(())
+    }
+
+    async fn select_coins(
+        client: &mut sui_rpc::Client,
+        owner_address: &Address,
+        coin_type: &StructTag,
+        amount: u64,
+    ) -> Result<(Vec<ObjectInput>, u64), BoxError> {
+        let coin_struct = StructTag::coin(coin_type.clone().into());
+        let list_request = ListOwnedObjectsRequest::default()
+            .with_owner(owner_address)
+            .with_object_type(&coin_struct)
+            .with_page_size(500u32)
+            .with_read_mask(FieldMask::from_paths([
+                "object_id",
+                "version",
+                "digest",
+                "balance",
+                "owner",
+            ]));
+
+        let mut coin_stream = Box::pin(client.list_owned_objects(list_request));
+        let mut selected_coins = Vec::new();
+        let mut remaining = amount;
+
+        while let Some(object_result) = coin_stream.next().await {
+            let object = object_result?;
+
+            remaining = remaining.saturating_sub(object.balance());
+            let coin = ObjectInput::try_from_object_proto(&object)?;
+            selected_coins.push(coin);
+
+            // if we've found enough, continue collecting coins to smash up to ~500
+            if remaining == 0 && selected_coins.len() >= 500 {
+                break;
+            }
+        }
+
+        Ok((selected_coins, remaining))
     }
 }
