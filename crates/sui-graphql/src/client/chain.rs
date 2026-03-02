@@ -51,7 +51,7 @@ impl Client {
     pub async fn chain_identifier(&self) -> Result<Digest, Error> {
         #[derive(Response)]
         struct Response {
-            #[field(path = "chainIdentifier")]
+            #[field(path = "chainIdentifier?")]
             chain_identifier: Option<Digest>,
         }
 
@@ -82,7 +82,7 @@ impl Client {
     pub async fn protocol_version(&self) -> Result<u64, Error> {
         #[derive(Response)]
         struct Response {
-            #[field(path = "protocolConfigs.protocolVersion")]
+            #[field(path = "protocolConfigs?.protocolVersion?")]
             protocol_version: Option<u64>,
         }
 
@@ -119,25 +119,25 @@ impl Client {
     pub async fn epoch(&self, epoch_id: Option<u64>) -> Result<Option<Epoch>, Error> {
         #[derive(Response)]
         struct Response {
-            #[field(path = "epoch.epochId")]
+            #[field(path = "epoch?.epochId?")]
             epoch_id: Option<u64>,
-            #[field(path = "epoch.protocolConfigs.protocolVersion")]
+            #[field(path = "epoch?.protocolConfigs?.protocolVersion?")]
             protocol_version: Option<u64>,
-            #[field(path = "epoch.referenceGasPrice")]
+            #[field(path = "epoch?.referenceGasPrice?")]
             reference_gas_price: Option<BigInt>,
-            #[field(path = "epoch.startTimestamp")]
+            #[field(path = "epoch?.startTimestamp?")]
             start_timestamp: Option<DateTime>,
-            #[field(path = "epoch.endTimestamp")]
+            #[field(path = "epoch?.endTimestamp?")]
             end_timestamp: Option<DateTime>,
-            #[field(path = "epoch.totalTransactions")]
+            #[field(path = "epoch?.totalTransactions?")]
             total_transactions: Option<u64>,
             // Use alias syntax matching GraphQL: "alias:field" where alias comes first
             // e.g., "firstCheckpoint:checkpoints" validates against "checkpoints" schema
             // but extracts from "firstCheckpoint" in JSON (the aliased name in the query)
-            #[field(path = "epoch.firstCheckpoint:checkpoints.nodes[].sequenceNumber")]
+            #[field(path = "epoch?.firstCheckpoint:checkpoints?.nodes?[].sequenceNumber")]
             first_checkpoint_seq: Option<Vec<u64>>,
             // TODO use nodes[0] once we have support for it
-            #[field(path = "epoch.lastCheckpoint:checkpoints.nodes[].sequenceNumber")]
+            #[field(path = "epoch?.lastCheckpoint:checkpoints?.nodes?[].sequenceNumber")]
             last_checkpoint_seq: Option<Vec<u64>>,
         }
 

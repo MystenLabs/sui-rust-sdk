@@ -8,7 +8,7 @@ use sui_graphql_macros::Response;
 struct EpochCheckpoints {
     // "firstCheckpoint" is the alias used for JSON extraction
     // "checkpoints" is the real field name validated against schema
-    #[field(path = "epoch.firstCheckpoint:checkpoints.nodes[].sequenceNumber")]
+    #[field(path = "epoch?.firstCheckpoint:checkpoints?.nodes?[].sequenceNumber")]
     first_checkpoint_seq: Option<Vec<u64>>,
 }
 

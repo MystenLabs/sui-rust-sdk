@@ -1,0 +1,5 @@
+error: 'nodes' has '[]?' but element type is not wrapped in Option<...>
+ --> tests/compile/type_validation_elements_nullable_without_option.rs:6:14
+  |
+6 |     digests: Vec<String>,
+  |              ^^^^^^^^^^^

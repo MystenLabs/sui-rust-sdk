@@ -58,15 +58,15 @@ fn test_multiple_fields() {
     assert_eq!(data.digest, "abc123");
 }
 
-// === Array Extraction ===
-// Array fields return Option<Vec<T>> - None if null, Some(vec) otherwise
+// === Nullable Array Extraction ===
+// `?` markers control which segments tolerate null. `?[]` makes the array nullable.
 
 #[test]
 fn test_single_array_iteration() {
     #[derive(Response)]
     #[response(schema = "tests/test_schema.graphql")]
     struct CheckpointDigests {
-        #[field(path = "checkpoints.nodes[].digest")]
+        #[field(path = "checkpoints?.nodes?[].digest")]
         digests: Option<Vec<String>>,
     }
 
@@ -95,7 +95,7 @@ fn test_nested_array_iteration() {
     #[derive(Response)]
     #[response(schema = "tests/test_schema.graphql")]
     struct EpochCheckpointDigests {
-        #[field(path = "epochs.nodes[].checkpoints.nodes[].digest")]
+        #[field(path = "epochs?.nodes?[].checkpoints?.nodes?[].digest")]
         checkpoint_digests: Option<Vec<Option<Vec<String>>>>,
     }
 
@@ -141,7 +141,7 @@ fn test_array_with_prefix_path() {
     #[derive(Response)]
     #[response(schema = "tests/test_schema.graphql")]
     struct NestedCheckpoints {
-        #[field(path = "epoch.checkpoints.nodes[].sequenceNumber")]
+        #[field(path = "epoch?.checkpoints?.nodes?[].sequenceNumber")]
         sequence_numbers: Option<Vec<u64>>,
     }
 
@@ -164,7 +164,7 @@ fn test_array_with_prefix_path_null_at_prefix() {
     #[derive(Response)]
     #[response(schema = "tests/test_schema.graphql")]
     struct NestedCheckpoints {
-        #[field(path = "epoch.checkpoints.nodes[].sequenceNumber")]
+        #[field(path = "epoch?.checkpoints?.nodes?[].sequenceNumber")]
         sequence_numbers: Option<Vec<u64>>,
     }
 
@@ -181,7 +181,7 @@ fn test_array_with_prefix_path_null_at_intermediate() {
     #[derive(Response)]
     #[response(schema = "tests/test_schema.graphql")]
     struct NestedCheckpoints {
-        #[field(path = "epoch.checkpoints.nodes[].sequenceNumber")]
+        #[field(path = "epoch?.checkpoints?.nodes?[].sequenceNumber")]
         sequence_numbers: Option<Vec<u64>>,
     }
 
@@ -200,7 +200,7 @@ fn test_empty_array() {
     #[derive(Response)]
     #[response(schema = "tests/test_schema.graphql")]
     struct CheckpointDigests {
-        #[field(path = "checkpoints.nodes[].digest")]
+        #[field(path = "checkpoints?.nodes?[].digest")]
         digests: Option<Vec<String>>,
     }
 
@@ -218,7 +218,7 @@ fn test_null_array_returns_none() {
     #[derive(Response)]
     #[response(schema = "tests/test_schema.graphql")]
     struct CheckpointDigests {
-        #[field(path = "checkpoints.nodes[].digest")]
+        #[field(path = "checkpoints?.nodes?[].digest")]
         digests: Option<Vec<String>>,
     }
 
@@ -236,7 +236,7 @@ fn test_null_parent_of_array() {
     #[derive(Response)]
     #[response(schema = "tests/test_schema.graphql")]
     struct CheckpointDigests {
-        #[field(path = "checkpoints.nodes[].digest")]
+        #[field(path = "checkpoints?.nodes?[].digest")]
         digests: Option<Vec<String>>,
     }
 
@@ -248,12 +248,12 @@ fn test_null_parent_of_array() {
     assert_eq!(data.digests, None);
 }
 
-// === Type-Driven Array Handling ===
-// The Rust type determines how null values are handled:
-// - Vec<T>: array is required, null array → error
-// - Option<Vec<T>>: array is optional, null array → None
-// - Vec<Option<T>>: array required, null elements → None per element
-// - Option<Vec<Option<T>>>: array optional, null elements → None per element
+// === Explicit Null Marker Handling ===
+// `?` markers in the path must match Option wrappers in the type:
+// - `items[].name` + Vec<T>: array required, null → error
+// - `items?[].name` + Option<Vec<T>>: array nullable, null → None
+// - `items[]?.name` + Vec<Option<T>>: elements nullable, null element → None
+// - `items?[]?.name` + Option<Vec<Option<T>>>: both nullable
 
 #[test]
 fn test_required_array_with_valid_data() {
@@ -313,7 +313,7 @@ fn test_optional_array_with_valid_data() {
     #[derive(Response)]
     #[response(schema = "tests/test_schema.graphql")]
     struct Data {
-        #[field(path = "items[].name")]
+        #[field(path = "items?[].name")]
         names: Option<Vec<String>>,
     }
 
@@ -335,7 +335,7 @@ fn test_optional_array_with_null_array_returns_none() {
     #[derive(Response)]
     #[response(schema = "tests/test_schema.graphql")]
     struct Data {
-        #[field(path = "items[].name")]
+        #[field(path = "items?[].name")]
         names: Option<Vec<String>>,
     }
 
@@ -351,7 +351,7 @@ fn test_optional_array_with_empty_array() {
     #[derive(Response)]
     #[response(schema = "tests/test_schema.graphql")]
     struct Data {
-        #[field(path = "items[].name")]
+        #[field(path = "items?[].name")]
         names: Option<Vec<String>>,
     }
 
@@ -367,7 +367,7 @@ fn test_required_array_with_optional_elements() {
     #[derive(Response)]
     #[response(schema = "tests/test_schema.graphql")]
     struct Data {
-        #[field(path = "items[].nickname")]
+        #[field(path = "items[]?.nickname?")]
         nicknames: Vec<Option<String>>,
     }
 
@@ -391,7 +391,7 @@ fn test_required_array_with_optional_elements_null_array_returns_error() {
     #[derive(Debug, Response)]
     #[response(schema = "tests/test_schema.graphql")]
     struct Data {
-        #[field(path = "items[].nickname")]
+        #[field(path = "items[]?.nickname?")]
         nicknames: Vec<Option<String>>,
     }
 
@@ -408,7 +408,7 @@ fn test_optional_array_with_optional_elements() {
     #[derive(Response)]
     #[response(schema = "tests/test_schema.graphql")]
     struct Data {
-        #[field(path = "items[].nickname")]
+        #[field(path = "items?[]?.nickname?")]
         nicknames: Option<Vec<Option<String>>>,
     }
 
@@ -435,7 +435,7 @@ fn test_optional_array_with_optional_elements_null_array() {
     #[derive(Response)]
     #[response(schema = "tests/test_schema.graphql")]
     struct Data {
-        #[field(path = "items[].nickname")]
+        #[field(path = "items?[]?.nickname?")]
         nicknames: Option<Vec<Option<String>>>,
     }
 
@@ -515,7 +515,7 @@ fn test_nested_optional_outer_required_inner() {
     #[derive(Response)]
     #[response(schema = "tests/test_schema.graphql")]
     struct Data {
-        #[field(path = "groups[].members[].name")]
+        #[field(path = "groups?[].members[].name")]
         names: Option<Vec<Vec<String>>>,
     }
 
@@ -540,7 +540,7 @@ fn test_nested_optional_outer_required_inner_null_outer() {
     #[derive(Response)]
     #[response(schema = "tests/test_schema.graphql")]
     struct Data {
-        #[field(path = "groups[].members[].name")]
+        #[field(path = "groups?[].members[].name")]
         names: Option<Vec<Vec<String>>>,
     }
 
@@ -557,7 +557,7 @@ fn test_nested_optional_outer_required_inner_null_inner_returns_error() {
     #[derive(Response)]
     #[response(schema = "tests/test_schema.graphql")]
     struct Data {
-        #[field(path = "groups[].members[].name")]
+        #[field(path = "groups?[].members[].name")]
         names: Option<Vec<Vec<String>>>,
     }
 
@@ -576,7 +576,7 @@ fn test_nested_required_outer_optional_inner() {
     #[derive(Response)]
     #[response(schema = "tests/test_schema.graphql")]
     struct Data {
-        #[field(path = "groups[].members[].name")]
+        #[field(path = "groups[].members?[].name")]
         names: Vec<Option<Vec<String>>>,
     }
 
@@ -604,7 +604,7 @@ fn test_nested_required_outer_optional_inner_null_outer_returns_error() {
     #[derive(Response)]
     #[response(schema = "tests/test_schema.graphql")]
     struct Data {
-        #[field(path = "groups[].members[].name")]
+        #[field(path = "groups[].members?[].name")]
         names: Vec<Option<Vec<String>>>,
     }
 
@@ -620,7 +620,7 @@ fn test_nested_both_optional() {
     #[derive(Response)]
     #[response(schema = "tests/test_schema.graphql")]
     struct Data {
-        #[field(path = "groups[].members[].name")]
+        #[field(path = "groups?[].members?[].name")]
         names: Option<Vec<Option<Vec<String>>>>,
     }
 
@@ -647,7 +647,7 @@ fn test_nested_both_optional_null_outer() {
     #[derive(Response)]
     #[response(schema = "tests/test_schema.graphql")]
     struct Data {
-        #[field(path = "groups[].members[].name")]
+        #[field(path = "groups?[].members?[].name")]
         names: Option<Vec<Option<Vec<String>>>>,
     }
 
@@ -665,7 +665,7 @@ fn test_null_intermediate_with_option() {
     #[derive(Response)]
     #[response(schema = "tests/test_schema.graphql")]
     struct ObjectResponse {
-        #[field(path = "object.address")]
+        #[field(path = "object?.address?")]
         address: Option<String>,
     }
 
@@ -700,7 +700,7 @@ fn test_null_final_value_with_option() {
     #[derive(Response)]
     #[response(schema = "tests/test_schema.graphql")]
     struct ObjectResponse {
-        #[field(path = "object.address")]
+        #[field(path = "object?.address?")]
         address: Option<String>,
     }
 
@@ -724,7 +724,7 @@ fn test_nested_arrays_multiple_intermediate_fields_null_at_non_immediate() {
     #[derive(Response)]
     #[response(schema = "tests/test_schema.graphql")]
     struct Data {
-        #[field(path = "groups[].info.details.leaders[].name")]
+        #[field(path = "groups?[].info?.details?.leaders?[].name")]
         names: Option<Vec<Option<Vec<String>>>>,
     }
 
@@ -752,7 +752,7 @@ fn test_nested_arrays_multiple_intermediate_fields_null_at_inner_array() {
     #[derive(Response)]
     #[response(schema = "tests/test_schema.graphql")]
     struct Data {
-        #[field(path = "groups[].info.details.leaders[].name")]
+        #[field(path = "groups?[].info?.details?.leaders?[].name")]
         names: Option<Vec<Option<Vec<String>>>>,
     }
 
@@ -796,22 +796,104 @@ fn test_nested_arrays_multiple_intermediate_fields_required_null_returns_error()
     assert!(result.is_err());
 }
 
+// === Per-Segment Null Control ===
+// `?` markers control exactly which segments tolerate null.
+// Segments without `?` return errors on null, even inside an Option scope.
+
+#[test]
+fn test_nullable_intermediate_required_terminal() {
+    // `object?` tolerates null, but `address` (no ?) does not
+    #[allow(dead_code)]
+    #[derive(Debug, Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "object?.address")]
+        address: Option<String>,
+    }
+
+    // null at object → None (has ?)
+    let json = serde_json::json!({ "object": null });
+    let data = Data::from_value(json).unwrap();
+    assert_eq!(data.address, None);
+
+    // null at address → Error (no ?)
+    let json = serde_json::json!({ "object": { "address": null } });
+    let result = Data::from_value(json);
+    assert!(result.is_err());
+    assert!(result.unwrap_err().contains("null value at 'address'"));
+}
+
+#[test]
+fn test_required_intermediate_nullable_terminal() {
+    // `object` (no ?) returns error on null, `address?` tolerates null
+    #[allow(dead_code)]
+    #[derive(Debug, Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "object.address?")]
+        address: Option<String>,
+    }
+
+    // null at object → Error (no ?)
+    let json = serde_json::json!({ "object": null });
+    let result = Data::from_value(json);
+    assert!(result.is_err());
+    assert!(result.unwrap_err().contains("null value at 'object'"));
+
+    // null at address → None (has ?)
+    let json = serde_json::json!({ "object": { "address": null } });
+    let data = Data::from_value(json).unwrap();
+    assert_eq!(data.address, None);
+}
+
+#[test]
+fn test_element_nullable_without_field_nullable() {
+    // `[]?` handles null elements, but `nickname` (no ?) errors on null field
+    #[allow(dead_code)]
+    #[derive(Debug, Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "items[]?.nickname")]
+        nicknames: Vec<Option<String>>,
+    }
+
+    // null element → None (from []?)
+    let json = serde_json::json!({
+        "items": [
+            null,
+            { "nickname": "ally" }
+        ]
+    });
+    let data = Data::from_value(json).unwrap();
+    assert_eq!(data.nicknames, vec![None, Some("ally".to_string())]);
+
+    // null nickname field → Error (no ? on nickname)
+    let json = serde_json::json!({
+        "items": [
+            { "nickname": null }
+        ]
+    });
+    let result = Data::from_value(json);
+    assert!(result.is_err());
+    assert!(result.unwrap_err().contains("null value at 'nickname'"));
+}
+
 // === Enum (GraphQL Union) Dispatch ===
 
 // Inner types for enum variants — these are regular Response structs.
 #[derive(Debug, PartialEq, Response)]
 #[response(schema = "tests/test_schema.graphql", root_type = "MoveValue")]
 struct MoveValueData {
-    #[field(path = "type.repr")]
+    #[field(path = "type?.repr?")]
     type_repr: Option<String>,
 }
 
 #[derive(Debug, PartialEq, Response)]
 #[response(schema = "tests/test_schema.graphql", root_type = "MoveObject")]
 struct MoveObjectData {
-    #[field(path = "contents.type.repr")]
+    #[field(path = "contents?.type?.repr?")]
     type_repr: Option<String>,
-    #[field(path = "address")]
+    #[field(path = "address?")]
     address: Option<String>,
 }
 

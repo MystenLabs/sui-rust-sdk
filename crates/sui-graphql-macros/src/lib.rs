@@ -460,13 +460,14 @@ fn generate_from_segments(
     };
 
     // Step 2: Generate core extraction code
-    let core = generate_from_segments_core(full_path, segments, inner_type, is_optional);
+    let core = generate_from_segments_core(full_path, segments, inner_type);
 
-    // Step 3: Wrap Optional types in a closure to capture `return Ok(None)` from null handling.
-    // Without closure, the return would escape to `from_value`. With closure, field gets `None`.
+    // Step 3: Wrap Optional types in a closure so `return Ok(None)` stays local to this field.
     if is_optional {
         quote! {
             (|| {
+                // Handle null elements (from `[]?`) and null top-level values
+                if current.is_null() { return Ok(None) }
                 #core.map(Some)
             })()
         }
@@ -477,13 +478,13 @@ fn generate_from_segments(
 
 /// Core extraction logic that handles both list and non-list segments.
 ///
-/// `null_returns_none`: If true, null values cause early return with `Ok(None)`.
-/// This is set when the outermost type is Optional.
+/// Each segment determines its own null behavior via `is_nullable`:
+/// - `is_nullable = true` (`?` marker): null → `return Ok(None)`
+/// - `is_nullable = false` (no `?`): null → `return Err(...)`
 fn generate_from_segments_core(
     full_path: &str,
     segments: &[path::PathSegment],
     type_structure: &validation::TypeStructure,
-    null_returns_none: bool,
 ) -> TokenStream2 {
     // Base case: no more segments, deserialize the current value
     let Some((segment, rest)) = segments.split_first() else {
@@ -497,8 +498,8 @@ fn generate_from_segments_core(
     // Use alias for JSON extraction if present, otherwise use field name
     let json_key = segment.json_key();
 
-    // Generate null handling based on whether outer type is Optional
-    let on_null = if null_returns_none {
+    // Generate null handling based on this segment's `?` marker
+    let on_null = if segment.is_nullable {
         quote! { return Ok(None) }
     } else {
         quote! {
@@ -506,7 +507,7 @@ fn generate_from_segments_core(
         }
     };
 
-    if segment.is_list {
+    if segment.is_list() {
         // For list segments, unwrap Vector to get element type
         let element_type = match type_structure {
             validation::TypeStructure::Vector(inner) => inner.as_ref(),
@@ -531,8 +532,7 @@ fn generate_from_segments_core(
         }
     } else {
         // For non-list segments, pass type unchanged to handle nested structures
-        let rest_code =
-            generate_from_segments_core(full_path, rest, type_structure, null_returns_none);
+        let rest_code = generate_from_segments_core(full_path, rest, type_structure);
 
         quote! {
             // Treat missing fields as null (allows Option<T> to deserialize as None)

@@ -41,7 +41,7 @@ impl Client {
     pub async fn get_object(&self, object_id: Address) -> Result<Option<Object>, Error> {
         #[derive(Response)]
         struct Response {
-            #[field(path = "object.objectBcs")]
+            #[field(path = "object?.objectBcs?")]
             object: Option<Bcs<Object>>,
         }
 
@@ -68,7 +68,7 @@ impl Client {
     ) -> Result<Option<Object>, Error> {
         #[derive(Response)]
         struct Response {
-            #[field(path = "object.objectBcs")]
+            #[field(path = "object?.objectBcs?")]
             object: Option<Bcs<Object>>,
         }
 
@@ -100,7 +100,7 @@ impl Client {
     ) -> Result<Option<Object>, Error> {
         #[derive(Response)]
         struct Response {
-            #[field(path = "object.objectBcs")]
+            #[field(path = "object?.objectBcs?")]
             object: Option<Bcs<Object>>,
         }
 
@@ -134,7 +134,7 @@ impl Client {
     ) -> Result<Option<Object>, Error> {
         #[derive(Response)]
         struct Response {
-            #[field(path = "object.objectBcs")]
+            #[field(path = "object?.objectBcs?")]
             object: Option<Bcs<Object>>,
         }
 
@@ -196,9 +196,9 @@ impl Client {
     ) -> Result<Page<Object>, Error> {
         #[derive(Response)]
         struct Response {
-            #[field(path = "objects.pageInfo")]
+            #[field(path = "objects?.pageInfo?")]
             page_info: Option<PageInfo>,
-            #[field(path = "objects.nodes[].objectBcs")]
+            #[field(path = "objects?.nodes?[].objectBcs")]
             objects: Option<Vec<Bcs<Object>>>,
         }
 

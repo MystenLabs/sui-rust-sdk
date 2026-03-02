@@ -34,9 +34,9 @@ impl Client {
     ) -> Result<Option<CheckpointResponse>, Error> {
         #[derive(Response)]
         struct Response {
-            #[field(path = "checkpoint.summaryBcs")]
+            #[field(path = "checkpoint?.summaryBcs?")]
             summary_bcs: Option<Bcs<CheckpointSummary>>,
-            #[field(path = "checkpoint.contentBcs")]
+            #[field(path = "checkpoint?.contentBcs?")]
             content_bcs: Option<Bcs<CheckpointContents>>,
         }
 

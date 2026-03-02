@@ -47,9 +47,9 @@ impl Client {
         #[derive(Response)]
         #[response(root_type = "Mutation")]
         struct Response {
-            #[field(path = "executeTransaction.effects.effectsBcs")]
+            #[field(path = "executeTransaction?.effects?.effectsBcs?")]
             effects_bcs: Option<Bcs<TransactionEffects>>,
-            #[field(path = "executeTransaction.effects.balanceChangesJson")]
+            #[field(path = "executeTransaction?.effects?.balanceChangesJson?")]
             balance_changes: Option<Vec<BalanceChange>>,
         }
 
