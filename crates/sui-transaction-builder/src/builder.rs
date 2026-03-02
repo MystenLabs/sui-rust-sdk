@@ -927,6 +927,17 @@ impl TransactionBuilder {
     pub(crate) fn sender(&self) -> Option<Address> {
         self.sender
     }
+
+    /// Collect the object IDs of all objects already used in the builder (gas objects + inputs).
+    #[cfg(feature = "intents")]
+    pub(crate) fn used_object_ids(&self) -> std::collections::HashSet<Address> {
+        let gas_ids = self.gas.iter().map(|o| o.object_id());
+        let input_ids = self.inputs.values().filter_map(|(_, input)| match input {
+            InputArg::Object(o) => Some(o.object_id()),
+            _ => None,
+        });
+        gas_ids.chain(input_ids).collect()
+    }
 }
 
 /// A opaque handle to a transaction input or command result.
@@ -1399,6 +1410,11 @@ impl ObjectInput {
             mutable: Some(mutable),
             ..self
         }
+    }
+
+    #[cfg(feature = "intents")]
+    pub(crate) fn object_id(&self) -> Address {
+        self.object_id
     }
 }
 
