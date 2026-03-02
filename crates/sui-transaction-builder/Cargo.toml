@@ -21,7 +21,7 @@ rustdoc-args = [
 
 [features]
 default = ["intents"]
-intents = ["dep:sui-rpc", "dep:async-trait"]
+intents = ["dep:sui-rpc", "dep:async-trait", "dep:futures"]
 
 [dependencies]
 bcs = "0.1.6"
@@ -30,8 +30,9 @@ sui-sdk-types = { version = "0.2.2", path = "../sui-sdk-types", features = ["ser
 thiserror = "2.0"
 
 # Required for supporting intents and transaction resolution
-sui-rpc = { version = "0.2.2", path = "../sui-rpc", optional = true }
 async-trait = { version = "0.1.89", optional = true }
+sui-rpc = { version = "0.2.2", path = "../sui-rpc", optional = true }
+futures = { version = "0.3", optional = true }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(doc_cfg)'] }

@@ -1265,6 +1265,7 @@ pub(crate) struct MoveCall {
 /// // Shared object
 /// let obj = ObjectInput::shared(Address::ZERO, 1, true);
 /// ```
+#[derive(Clone)]
 pub struct ObjectInput {
     object_id: Address,
     kind: Option<ObjectKind>,
@@ -1502,7 +1503,7 @@ impl ObjectInput {
 
         let mut input =
             sui_rpc::proto::sui::rpc::v2::Input::default().with_object_id(self.object_id);
-        match self.kind {
+        match &self.kind {
             Some(ObjectKind::Shared) => input.set_kind(InputKind::Shared),
             Some(ObjectKind::Receiving) => input.set_kind(InputKind::Receiving),
             Some(ObjectKind::ImmutableOrOwned) => input.set_kind(InputKind::ImmutableOrOwned),
