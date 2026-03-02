@@ -348,6 +348,52 @@ impl SuiNetworkHandle {
         Ok(())
     }
 
+    /// Deposit SUI into the recipient's Address Balance using `0x2::coin::send_funds`.
+    pub async fn deposit_to_address_balance(
+        &mut self,
+        recipient: Address,
+        amount: u64,
+    ) -> Result<()> {
+        let private_key = self.user_keys.first().unwrap();
+        let sender = private_key.public_key().derive_address();
+
+        let mut builder = TransactionBuilder::new();
+        builder.set_sender(sender);
+
+        let coin = builder.intent(CoinWithBalance::sui(amount));
+        let recipient_arg = builder.pure(&recipient);
+        builder.move_call(
+            Function::new(
+                Address::TWO,
+                Identifier::from_static("coin"),
+                Identifier::from_static("send_funds"),
+            )
+            .with_type_args(vec![sui_sdk_types::StructTag::sui().into()]),
+            vec![coin, recipient_arg],
+        );
+
+        let transaction = builder.build(&mut self.client).await?;
+
+        let signature = private_key.sign_transaction(&transaction)?;
+
+        let response = self
+            .client
+            .execute_transaction_and_wait_for_checkpoint(
+                ExecuteTransactionRequest::new(transaction.into())
+                    .with_signatures(vec![signature.into()])
+                    .with_read_mask(FieldMask::from_str("*")),
+                std::time::Duration::from_secs(10),
+            )
+            .await?
+            .into_inner();
+
+        assert!(
+            response.transaction().effects().status().success(),
+            "deposit_to_address_balance failed"
+        );
+        Ok(())
+    }
+
     pub fn build_package(&self, package: &Path) -> Result<(sui_sdk_types::Publish, Digest)> {
         #[derive(serde_derive::Deserialize)]
         struct MoveBuildOutput {
