@@ -21,125 +21,65 @@
 //!
 //! [1]: https://developers.google.com/protocol-buffers/docs/proto3#json
 
-use proc_macro2::TokenStream;
-use quote::quote;
+use std::io::{Result, Write};
 
+use crate::message::{Field, FieldModifier, FieldType, Message, OneOf, ScalarType};
+
+use super::{
+    write_deserialize_end, write_deserialize_start, write_serialize_end, write_serialize_start,
+    Indent,
+};
 use crate::descriptor::TypePath;
 use crate::escape::escape_type;
-use crate::escape::ident_from_escaped;
-use crate::message::Field;
-use crate::message::FieldModifier;
-use crate::message::FieldType;
-use crate::message::Message;
-use crate::message::OneOf;
-use crate::message::ScalarType;
+use crate::generator::write_fields_array;
 use crate::resolver::Resolver;
 
-// ---------------------------------------------------------------------------
-// Ident helpers
-// ---------------------------------------------------------------------------
+pub fn generate_message<W: Write>(
+    resolver: &Resolver<'_>,
+    message: &Message,
+    writer: &mut W,
+    ignore_unknown_fields: bool,
+    btree_map_paths: &[String],
+    emit_fields: bool,
+    preserve_proto_field_names: bool,
+) -> Result<()> {
+    let rust_type = resolver.rust_type(&message.path);
 
-/// Convert a field's rust_field_name (which may have r# prefix) to an Ident.
-fn field_ident(field: &Field) -> proc_macro2::Ident {
-    ident_from_escaped(&field.rust_field_name())
+    // Generate Serialize
+    write_serialize_start(0, &rust_type, writer)?;
+    write_message_serialize(
+        resolver,
+        2,
+        message,
+        writer,
+        emit_fields,
+        preserve_proto_field_names,
+    )?;
+    write_serialize_end(0, writer)?;
+
+    // Generate Deserialize
+    write_deserialize_start(0, &rust_type, writer)?;
+    write_deserialize_message(
+        resolver,
+        2,
+        message,
+        &rust_type,
+        writer,
+        ignore_unknown_fields,
+        btree_map_paths,
+    )?;
+    write_deserialize_end(0, writer)?;
+    Ok(())
 }
 
-/// Convert a field's rust_type_name (CamelCase, possibly with _ suffix) to an Ident.
-fn type_name_ident(field: &Field) -> proc_macro2::Ident {
-    let name = field.rust_type_name();
-    proc_macro2::Ident::new(&name, proc_macro2::Span::call_site())
-}
-
-/// Create a `field_name__` variable ident from an escaped field name.
-fn var_ident(escaped_name: &str) -> proc_macro2::Ident {
-    let raw = escaped_name.strip_prefix("r#").unwrap_or(escaped_name);
-    proc_macro2::Ident::new(&format!("{raw}__"), proc_macro2::Span::call_site())
-}
-
-// ---------------------------------------------------------------------------
-// Variable – abstracts over self.field vs v/*v access patterns
-// ---------------------------------------------------------------------------
-
-struct Variable {
-    /// A reference to the field's value (e.g. `&self.field` or `v`)
-    as_ref: TokenStream,
-    /// The field's value without `&` (e.g. `self.field` or `*v`)
-    as_unref: TokenStream,
-    /// The raw expression (e.g. `self.field` or `v`)
-    raw: TokenStream,
-}
-
-fn self_variable(field: &Field) -> Variable {
-    let ident = field_ident(field);
-    Variable {
-        as_ref: quote!(&self.#ident),
-        as_unref: quote!(self.#ident),
-        raw: quote!(self.#ident),
-    }
-}
-
-fn v_variable() -> Variable {
-    Variable {
-        as_ref: quote!(v),
-        as_unref: quote!(*v),
-        raw: quote!(v),
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Well-known type helpers
-// ---------------------------------------------------------------------------
-
-fn well_known_type_serializer(
-    type_path: &TypePath,
-    serde_path: &TokenStream,
-) -> Option<TokenStream> {
-    let type_name = type_path.to_string();
-    match type_name.as_str() {
-        "google.protobuf.FieldMask" => Some(quote!(#serde_path::FieldMaskSerializer)),
-        "google.protobuf.Timestamp" => Some(quote!(#serde_path::TimestampSerializer)),
-        "google.protobuf.Duration" => Some(quote!(#serde_path::DurationSerializer)),
-        "google.protobuf.Value" => Some(quote!(#serde_path::ValueSerializer)),
-        "google.protobuf.Any" => Some(quote!(#serde_path::AnySerializer)),
-        "google.protobuf.Empty" => Some(quote!(#serde_path::EmptySerializer)),
-        _ => None,
-    }
-}
-
-fn well_known_type_deserializer(
-    type_path: &TypePath,
-    serde_path: &TokenStream,
-) -> Option<TokenStream> {
-    let type_name = type_path.to_string();
-    match type_name.as_str() {
-        "google.protobuf.FieldMask" => Some(quote!(#serde_path::FieldMaskDeserializer)),
-        "google.protobuf.Timestamp" => Some(quote!(#serde_path::TimestampDeserializer)),
-        "google.protobuf.Duration" => Some(quote!(#serde_path::DurationDeserializer)),
-        "google.protobuf.Value" => Some(quote!(#serde_path::ValueDeserializer)),
-        "google.protobuf.Any" => Some(quote!(#serde_path::AnyDeserializer)),
-        "google.protobuf.Empty" => Some(quote!(#serde_path::EmptyDeserializer)),
-        _ => None,
-    }
-}
-
-fn override_deserializer(scalar: ScalarType, serde_path: &TokenStream) -> Option<TokenStream> {
-    match scalar {
-        ScalarType::Bytes => Some(quote!(#serde_path::BytesDeserialize<_>)),
-        _ if scalar.is_numeric() => Some(quote!(#serde_path::NumberDeserialize<_>)),
-        _ => None,
-    }
-}
-
-// ===========================================================================
-// Serialization
-// ===========================================================================
-
-fn field_empty_predicate(member: &Field, emit_fields: bool) -> TokenStream {
+fn write_field_empty_predicate<W: Write>(
+    member: &Field,
+    writer: &mut W,
+    emit_fields: bool,
+) -> Result<()> {
     if emit_fields {
-        return quote!(true);
+        return write!(writer, "true");
     }
-
-    let ident = field_ident(member);
 
     match (&member.field_type, &member.field_modifier) {
         (_, FieldModifier::Required) => unreachable!(),
@@ -147,120 +87,195 @@ fn field_empty_predicate(member: &Field, emit_fields: bool) -> TokenStream {
         | (FieldType::Map(_, _), _)
         | (FieldType::Scalar(ScalarType::String), FieldModifier::UseDefault)
         | (FieldType::Scalar(ScalarType::Bytes), FieldModifier::UseDefault) => {
-            quote!(!self.#ident.is_empty())
+            write!(writer, "!self.{}.is_empty()", member.rust_field_name())
         }
         (_, FieldModifier::Optional) | (FieldType::Message(_), _) => {
-            quote!(self.#ident.is_some())
+            write!(writer, "self.{}.is_some()", member.rust_field_name())
         }
         (FieldType::Scalar(ScalarType::F64), FieldModifier::UseDefault)
         | (FieldType::Scalar(ScalarType::F32), FieldModifier::UseDefault) => {
-            quote!(self.#ident != 0.)
+            write!(writer, "self.{} != 0.", member.rust_field_name())
         }
         (FieldType::Scalar(ScalarType::Bool), FieldModifier::UseDefault) => {
-            quote!(self.#ident)
+            write!(writer, "self.{}", member.rust_field_name())
         }
         (FieldType::Enum(_), FieldModifier::UseDefault)
         | (FieldType::Scalar(ScalarType::I64), FieldModifier::UseDefault)
         | (FieldType::Scalar(ScalarType::I32), FieldModifier::UseDefault)
         | (FieldType::Scalar(ScalarType::U32), FieldModifier::UseDefault)
         | (FieldType::Scalar(ScalarType::U64), FieldModifier::UseDefault) => {
-            quote!(self.#ident != 0)
+            write!(writer, "self.{} != 0", member.rust_field_name())
         }
     }
 }
 
-fn decode_variant(resolver: &Resolver<'_>, value: &TokenStream, path: &TypePath) -> TokenStream {
-    let enum_type = resolver.rust_type_token(path);
-    quote! {
-        #enum_type::try_from(#value)
-            .map_err(|_| serde::ser::Error::custom(format!("Invalid variant {}", #value)))
-    }
-}
-
-fn serialize_scalar_variable(
-    scalar: ScalarType,
-    field_modifier: FieldModifier,
-    variable: &Variable,
-    field_name: &str,
-    serde_path: &TokenStream,
-) -> TokenStream {
-    let as_ref = &variable.as_ref;
-    let raw = &variable.raw;
-
-    match scalar {
-        ScalarType::I64 | ScalarType::U64 => match field_modifier {
-            FieldModifier::Repeated => quote! {
-                struct_ser.serialize_field(#field_name, &#raw.iter().map(ToString::to_string).collect::<Vec<_>>())?;
-            },
-            _ => quote! {
-                #[allow(clippy::needless_borrow)]
-                #[allow(clippy::needless_borrows_for_generic_args)]
-                struct_ser.serialize_field(#field_name, ToString::to_string(&#raw).as_str())?;
-            },
-        },
-        ScalarType::Bytes => match field_modifier {
-            FieldModifier::Repeated => quote! {
-                struct_ser.serialize_field(#field_name, &#raw.iter().map(#serde_path::base64::encode).collect::<Vec<_>>())?;
-            },
-            _ => quote! {
-                #[allow(clippy::needless_borrow)]
-                #[allow(clippy::needless_borrows_for_generic_args)]
-                struct_ser.serialize_field(#field_name, #serde_path::base64::encode(&#raw).as_str())?;
-            },
-        },
-        _ => quote! {
-            struct_ser.serialize_field(#field_name, #as_ref)?;
-        },
-    }
-}
-
-fn serialize_variable(
+fn write_message_serialize<W: Write>(
     resolver: &Resolver<'_>,
-    field: &Field,
-    variable: &Variable,
+    indent: usize,
+    message: &Message,
+    writer: &mut W,
+    emit_fields: bool,
     preserve_proto_field_names: bool,
-) -> TokenStream {
-    let serde_path = resolver.serde_path();
+) -> Result<()> {
+    write_struct_serialize_start(indent, message, writer, emit_fields)?;
+
+    for field in &message.fields {
+        write_serialize_field(
+            resolver,
+            indent,
+            field,
+            writer,
+            emit_fields,
+            preserve_proto_field_names,
+        )?;
+    }
+
+    for one_of in &message.one_ofs {
+        write_serialize_one_of(indent, resolver, one_of, writer, preserve_proto_field_names)?;
+    }
+
+    write_struct_serialize_end(indent, writer)
+}
+
+fn write_struct_serialize_start<W: Write>(
+    indent: usize,
+    message: &Message,
+    writer: &mut W,
+    emit_fields: bool,
+) -> Result<()> {
+    writeln!(writer, "{}use serde::ser::SerializeStruct;", Indent(indent))?;
+
+    let required_len = message
+        .fields
+        .iter()
+        .filter(|member| member.field_modifier.is_required())
+        .count();
+
+    if required_len != message.fields.len() || !message.one_ofs.is_empty() {
+        writeln!(writer, "{}let mut len = {};", Indent(indent), required_len)?;
+    } else {
+        writeln!(writer, "{}let len = {};", Indent(indent), required_len)?;
+    }
+
+    for field in &message.fields {
+        if field.field_modifier.is_required() {
+            continue;
+        }
+        write!(writer, "{}if ", Indent(indent))?;
+        write_field_empty_predicate(field, writer, emit_fields)?;
+        writeln!(writer, " {{")?;
+        writeln!(writer, "{}len += 1;", Indent(indent + 1))?;
+        writeln!(writer, "{}}}", Indent(indent))?;
+    }
+
+    for one_of in &message.one_ofs {
+        writeln!(
+            writer,
+            "{}if self.{}.is_some() {{",
+            Indent(indent),
+            one_of.rust_field_name()
+        )?;
+        writeln!(writer, "{}len += 1;", Indent(indent + 1))?;
+        writeln!(writer, "{}}}", Indent(indent))?;
+    }
+
+    if !message.fields.is_empty() || !message.one_ofs.is_empty() {
+        writeln!(
+            writer,
+            "{}let mut struct_ser = serializer.serialize_struct(\"{}\", len)?;",
+            Indent(indent),
+            message.path
+        )?;
+    } else {
+        writeln!(
+            writer,
+            "{}let struct_ser = serializer.serialize_struct(\"{}\", len)?;",
+            Indent(indent),
+            message.path
+        )?;
+    }
+    Ok(())
+}
+
+fn write_struct_serialize_end<W: Write>(indent: usize, writer: &mut W) -> Result<()> {
+    writeln!(writer, "{}struct_ser.end()", Indent(indent))
+}
+
+fn write_decode_variant<W: Write>(
+    resolver: &Resolver<'_>,
+    indent: usize,
+    value: &str,
+    path: &TypePath,
+    writer: &mut W,
+) -> Result<()> {
+    writeln!(writer, "{}::try_from({})", resolver.rust_type(path), value)?;
+    write!(
+        writer,
+        "{}.map_err(|_| serde::ser::Error::custom(format!(\"Invalid variant {{}}\", {})))",
+        Indent(indent),
+        value
+    )
+}
+
+/// Depending on the type of the field different ways of accessing field's value
+/// are needed - this allows decoupling the type serialization logic from the logic
+/// that manipulates its container e.g. Vec, Option, HashMap
+struct Variable<'a> {
+    /// A reference to the field's value
+    as_ref: &'a str,
+    /// The field's value
+    as_unref: &'a str,
+    /// The field without any leading "&" or "*"
+    raw: &'a str,
+}
+
+fn write_serialize_variable<W: Write>(
+    resolver: &Resolver<'_>,
+    indent: usize,
+    field: &Field,
+    variable: Variable<'_>,
+    writer: &mut W,
+    preserve_proto_field_names: bool,
+) -> Result<()> {
     let json_name = field.json_name();
     let field_name = if preserve_proto_field_names {
-        field.name.clone()
+        field.name.as_str()
     } else {
-        json_name
+        json_name.as_str()
     };
-
     match &field.field_type {
-        FieldType::Scalar(scalar) => serialize_scalar_variable(
+        FieldType::Scalar(scalar) => write_serialize_scalar_variable(
+            indent,
             *scalar,
             field.field_modifier,
             variable,
-            &field_name,
-            serde_path,
+            field_name,
+            writer,
         ),
         FieldType::Enum(path) => {
-            let as_unref = &variable.as_unref;
-            let raw = &variable.raw;
-
-            let decode = match field.field_modifier {
+            write!(writer, "{}let v = ", Indent(indent))?;
+            match field.field_modifier {
                 FieldModifier::Repeated => {
-                    let dv = decode_variant(resolver, &quote!(v), path);
-                    quote! {
-                        let v = #raw.iter().cloned().map(|v| {
-                            #dv
-                        }).collect::<std::result::Result<Vec<_>, _>>()?;
-                    }
+                    writeln!(writer, "{}.iter().cloned().map(|v| {{", variable.raw)?;
+                    write!(writer, "{}", Indent(indent + 1))?;
+                    write_decode_variant(resolver, indent + 2, "v", path, writer)?;
+                    writeln!(writer)?;
+                    write!(
+                        writer,
+                        "{}}}).collect::<std::result::Result<Vec<_>, _>>()",
+                        Indent(indent + 1)
+                    )
                 }
-                _ => {
-                    let dv = decode_variant(resolver, as_unref, path);
-                    quote! {
-                        let v = #dv?;
-                    }
-                }
-            };
+                _ => write_decode_variant(resolver, indent + 1, variable.as_unref, path, writer),
+            }?;
 
-            quote! {
-                #decode
-                struct_ser.serialize_field(#field_name, &v)?;
-            }
+            writeln!(writer, "?;")?;
+            writeln!(
+                writer,
+                "{}struct_ser.serialize_field(\"{}\", &v)?;",
+                Indent(indent),
+                field_name,
+            )
         }
         FieldType::Map(_, value_type)
             if matches!(
@@ -271,709 +286,868 @@ fn serialize_variable(
                     | FieldType::Enum(_)
             ) =>
         {
-            let raw = &variable.raw;
-            let map_transform = match value_type.as_ref() {
+            writeln!(
+                writer,
+                "{}let v: std::collections::BTreeMap<_, _> = {}.iter()",
+                Indent(indent),
+                variable.raw
+            )?;
+
+            match value_type.as_ref() {
                 FieldType::Scalar(ScalarType::I64) | FieldType::Scalar(ScalarType::U64) => {
-                    quote! {
-                        let v: std::collections::BTreeMap<_, _> = #raw.iter()
-                            .map(|(k, v)| (k, v.to_string())).collect();
-                    }
+                    writeln!(
+                        writer,
+                        "{}.map(|(k, v)| (k, v.to_string())).collect();",
+                        Indent(indent + 1)
+                    )?;
                 }
                 FieldType::Scalar(ScalarType::Bytes) => {
-                    quote! {
-                        let v: std::collections::BTreeMap<_, _> = #raw.iter()
-                            .map(|(k, v)| (k, #serde_path::base64::encode(v))).collect();
-                    }
+                    writeln!(
+                        writer,
+                        "{}.map(|(k, v)| (k, crate::_serde::base64::encode(v))).collect();",
+                        Indent(indent + 1)
+                    )?;
                 }
                 FieldType::Enum(path) => {
-                    let enum_type = resolver.rust_type_token(path);
-                    quote! {
-                        let v: std::collections::BTreeMap<_, _> = #raw.iter()
-                            .map(|(k, v)| {
-                                let v = #enum_type::try_from(*v)
-                                    .map_err(|_| serde::ser::Error::custom(format!("Invalid variant {}", *v)))?;
-                                Ok((k, v))
-                            }).collect::<std::result::Result<_, _>>()?;
-                    }
+                    writeln!(writer, "{}.map(|(k, v)| {{", Indent(indent + 1))?;
+                    write!(writer, "{}let v = ", Indent(indent + 2))?;
+                    write_decode_variant(resolver, indent + 3, "*v", path, writer)?;
+                    writeln!(writer, "?;")?;
+                    writeln!(writer, "{}Ok((k, v))", Indent(indent + 2))?;
+                    writeln!(
+                        writer,
+                        "{}}}).collect::<std::result::Result<_,_>>()?;",
+                        Indent(indent + 1)
+                    )?;
                 }
                 _ => unreachable!(),
-            };
-
-            quote! {
-                #map_transform
-                struct_ser.serialize_field(#field_name, &v)?;
             }
+            writeln!(
+                writer,
+                "{}struct_ser.serialize_field(\"{}\", &v)?;",
+                Indent(indent),
+                field_name,
+            )
         }
-        FieldType::Message(type_name)
-            if well_known_type_serializer(type_name, serde_path).is_some() =>
-        {
-            let wkt_ser = well_known_type_serializer(type_name, serde_path).unwrap();
-            let as_ref = &variable.as_ref;
-            let raw = &variable.raw;
+        FieldType::Message(type_name) if well_known_type_serializer(type_name).is_some() => {
+            let well_known_type_serializer = well_known_type_serializer(type_name).unwrap();
 
             match field.field_modifier {
-                FieldModifier::Repeated => quote! {
-                    struct_ser.serialize_field(#field_name, &#raw.iter().map(#wkt_ser).collect::<Vec<_>>())?;
-                },
-                _ => quote! {
-                    struct_ser.serialize_field(#field_name, &#wkt_ser(#as_ref))?;
-                },
+                FieldModifier::Repeated => {
+                    writeln!(
+                        writer,
+                        "{}struct_ser.serialize_field(\"{}\", &{}.iter().map({}).collect::<Vec<_>>())?;",
+                        Indent(indent),
+                        field_name,
+                        variable.raw,
+                        well_known_type_serializer,
+                    )
+                }
+                _ => {
+                    writeln!(
+                        writer,
+                        "{}struct_ser.serialize_field(\"{}\", &{}({}))?;",
+                        Indent(indent),
+                        field_name,
+                        well_known_type_serializer,
+                        variable.as_ref
+                    )
+                }
             }
         }
         _ => {
-            let as_ref = &variable.as_ref;
-            quote! {
-                struct_ser.serialize_field(#field_name, #as_ref)?;
-            }
+            writeln!(
+                writer,
+                "{}struct_ser.serialize_field(\"{}\", {})?;",
+                Indent(indent),
+                field_name,
+                variable.as_ref
+            )
         }
     }
 }
 
-fn serialize_field(
-    resolver: &Resolver<'_>,
-    field: &Field,
-    emit_fields: bool,
-    preserve_proto_field_names: bool,
-) -> TokenStream {
-    let self_var = self_variable(field);
-
-    match &field.field_modifier {
-        FieldModifier::Required => {
-            serialize_variable(resolver, field, &self_var, preserve_proto_field_names)
-        }
-        FieldModifier::Optional => {
-            let v_var = v_variable();
-            let inner = serialize_variable(resolver, field, &v_var, preserve_proto_field_names);
-            let unref = &self_var.as_unref;
-            quote! {
-                if let Some(v) = #unref.as_ref() {
-                    #inner
-                }
-            }
-        }
-        FieldModifier::Repeated | FieldModifier::UseDefault => {
-            let predicate = field_empty_predicate(field, emit_fields);
-            let inner = serialize_variable(resolver, field, &self_var, preserve_proto_field_names);
-            quote! {
-                if #predicate {
-                    #inner
-                }
-            }
-        }
-    }
-}
-
-fn serialize_one_of(
-    resolver: &Resolver<'_>,
-    one_of: &OneOf,
-    preserve_proto_field_names: bool,
-) -> TokenStream {
-    let one_of_field = ident_from_escaped(&one_of.rust_field_name());
-    let one_of_type = resolver.rust_type_token(&one_of.path);
-
-    let arms: Vec<TokenStream> = one_of
-        .fields
-        .iter()
-        .map(|field| {
-            let variant = type_name_ident(field);
-            let v_var = v_variable();
-            let inner = serialize_variable(resolver, field, &v_var, preserve_proto_field_names);
-            quote! {
-                #one_of_type::#variant(v) => {
-                    #inner
-                }
-            }
-        })
-        .collect();
-
-    quote! {
-        if let Some(v) = self.#one_of_field.as_ref() {
-            match v {
-                #(#arms)*
-            }
-        }
-    }
-}
-
-fn message_serialize_body(
-    resolver: &Resolver<'_>,
-    message: &Message,
-    emit_fields: bool,
-    preserve_proto_field_names: bool,
-) -> TokenStream {
-    let message_name = message.path.to_string();
-
-    let required_len = message
-        .fields
-        .iter()
-        .filter(|m| m.field_modifier.is_required())
-        .count();
-
-    let field_len_checks: Vec<TokenStream> = message
-        .fields
-        .iter()
-        .filter(|f| !f.field_modifier.is_required())
-        .map(|f| {
-            let pred = field_empty_predicate(f, emit_fields);
-            quote! { if #pred { len += 1; } }
-        })
-        .collect();
-
-    let one_of_len_checks: Vec<TokenStream> = message
-        .one_ofs
-        .iter()
-        .map(|o| {
-            let ident = ident_from_escaped(&o.rust_field_name());
-            quote! { if self.#ident.is_some() { len += 1; } }
-        })
-        .collect();
-
-    let has_optional = required_len != message.fields.len() || !message.one_ofs.is_empty();
-    let has_fields = !message.fields.is_empty() || !message.one_ofs.is_empty();
-
-    let len_decl = if has_optional {
-        quote!(let mut len = #required_len;)
-    } else {
-        quote!(let len = #required_len;)
-    };
-
-    let struct_ser_decl = if has_fields {
-        quote!(let mut struct_ser = serializer.serialize_struct(#message_name, len)?;)
-    } else {
-        quote!(let struct_ser = serializer.serialize_struct(#message_name, len)?;)
-    };
-
-    let field_sers: Vec<TokenStream> = message
-        .fields
-        .iter()
-        .map(|f| serialize_field(resolver, f, emit_fields, preserve_proto_field_names))
-        .collect();
-
-    let one_of_sers: Vec<TokenStream> = message
-        .one_ofs
-        .iter()
-        .map(|o| serialize_one_of(resolver, o, preserve_proto_field_names))
-        .collect();
-
-    quote! {
-        use serde::ser::SerializeStruct;
-        #len_decl
-        #(#field_len_checks)*
-        #(#one_of_len_checks)*
-        #struct_ser_decl
-        #(#field_sers)*
-        #(#one_of_sers)*
-        struct_ser.end()
-    }
-}
-
-// ===========================================================================
-// Deserialization
-// ===========================================================================
-
-fn encode_scalar_field(
+fn write_serialize_scalar_variable<W: Write>(
+    indent: usize,
     scalar: ScalarType,
     field_modifier: FieldModifier,
-    serde_path: &TokenStream,
-) -> TokenStream {
-    let deser = match override_deserializer(scalar, serde_path) {
-        Some(d) => d,
-        None => {
-            return match field_modifier {
-                FieldModifier::Optional => quote!(map_.next_value()?),
-                _ => quote!(Some(map_.next_value()?)),
-            };
+    variable: Variable<'_>,
+    field_name: &str,
+    writer: &mut W,
+) -> Result<()> {
+    let conversion = match scalar {
+        ScalarType::I64 | ScalarType::U64 => "ToString::to_string",
+        ScalarType::Bytes => "crate::_serde::base64::encode",
+        _ => {
+            return writeln!(
+                writer,
+                "{}struct_ser.serialize_field(\"{}\", {})?;",
+                Indent(indent),
+                field_name,
+                variable.as_ref
+            );
         }
     };
 
     match field_modifier {
-        FieldModifier::Optional => {
-            quote!(map_.next_value::<::std::option::Option<#deser>>()?.map(|x| x.0))
-        }
         FieldModifier::Repeated => {
-            quote! {
-                Some(map_.next_value::<Vec<#deser>>()?
-                    .into_iter().map(|x| x.0).collect())
-            }
+            writeln!(
+                writer,
+                "{}struct_ser.serialize_field(\"{}\", &{}.iter().map({}).collect::<Vec<_>>())?;",
+                Indent(indent),
+                field_name,
+                variable.raw,
+                conversion
+            )
         }
         _ => {
-            quote!(Some(map_.next_value::<#deser>()?.0))
+            writeln!(
+                writer,
+                "{}#[allow(clippy::needless_borrow)]",
+                Indent(indent)
+            )?;
+            writeln!(
+                writer,
+                "{}#[allow(clippy::needless_borrows_for_generic_args)]",
+                Indent(indent)
+            )?;
+            writeln!(
+                writer,
+                "{}struct_ser.serialize_field(\"{}\", {}(&{}).as_str())?;",
+                Indent(indent),
+                field_name,
+                conversion,
+                variable.raw,
+            )
         }
     }
 }
 
-fn deserialize_one_of_field_value(
+fn write_serialize_field<W: Write>(
     resolver: &Resolver<'_>,
+    indent: usize,
     field: &Field,
+    writer: &mut W,
+    emit_fields: bool,
+    preserve_proto_field_names: bool,
+) -> Result<()> {
+    let as_ref = format!("&self.{}", field.rust_field_name());
+    let variable = Variable {
+        as_ref: as_ref.as_str(),
+        as_unref: &as_ref.as_str()[1..],
+        raw: &as_ref.as_str()[1..],
+    };
+
+    match &field.field_modifier {
+        FieldModifier::Required => {
+            write_serialize_variable(
+                resolver,
+                indent,
+                field,
+                variable,
+                writer,
+                preserve_proto_field_names,
+            )?;
+        }
+        FieldModifier::Optional => {
+            writeln!(
+                writer,
+                "{}if let Some(v) = {}.as_ref() {{",
+                Indent(indent),
+                variable.as_unref
+            )?;
+            let variable = Variable {
+                as_ref: "v",
+                as_unref: "*v",
+                raw: "v",
+            };
+            write_serialize_variable(
+                resolver,
+                indent + 1,
+                field,
+                variable,
+                writer,
+                preserve_proto_field_names,
+            )?;
+            writeln!(writer, "{}}}", Indent(indent))?;
+        }
+        FieldModifier::Repeated | FieldModifier::UseDefault => {
+            write!(writer, "{}if ", Indent(indent))?;
+            write_field_empty_predicate(field, writer, emit_fields)?;
+            writeln!(writer, " {{")?;
+            write_serialize_variable(
+                resolver,
+                indent + 1,
+                field,
+                variable,
+                writer,
+                preserve_proto_field_names,
+            )?;
+            writeln!(writer, "{}}}", Indent(indent))?;
+        }
+    }
+    Ok(())
+}
+
+fn write_serialize_one_of<W: Write>(
+    indent: usize,
+    resolver: &Resolver<'_>,
     one_of: &OneOf,
-) -> TokenStream {
-    let serde_path = resolver.serde_path();
-    let one_of_type = resolver.rust_type_token(&one_of.path);
-    let variant = type_name_ident(field);
+    writer: &mut W,
+    preserve_proto_field_names: bool,
+) -> Result<()> {
+    writeln!(
+        writer,
+        "{}if let Some(v) = self.{}.as_ref() {{",
+        Indent(indent),
+        one_of.rust_field_name()
+    )?;
 
-    match &field.field_type {
-        FieldType::Scalar(s) => match override_deserializer(*s, serde_path) {
-            Some(deser) => quote! {
-                map_.next_value::<::std::option::Option<#deser>>()?.map(|x| #one_of_type::#variant(x.0))
-            },
-            None => quote! {
-                map_.next_value::<::std::option::Option<_>>()?.map(#one_of_type::#variant)
-            },
-        },
-        FieldType::Enum(path) => {
-            let enum_type = resolver.rust_type_token(path);
-            quote! {
-                map_.next_value::<::std::option::Option<#enum_type>>()?.map(|x| #one_of_type::#variant(x as i32))
-            }
-        }
-        FieldType::Message(type_name) => {
-            match well_known_type_deserializer(type_name, serde_path) {
-                Some(deser) => quote! {
-                    map_.next_value::<::std::option::Option<#deser>>()?.map(|x| #one_of_type::#variant(x.0))
-                },
-                None => quote! {
-                    map_.next_value::<::std::option::Option<_>>()?.map(#one_of_type::#variant)
-                },
-            }
-        }
-        FieldType::Map(_, _) => unreachable!("one of cannot contain map fields"),
+    writeln!(writer, "{}match v {{", Indent(indent + 1))?;
+    for field in &one_of.fields {
+        writeln!(
+            writer,
+            "{}{}::{}(v) => {{",
+            Indent(indent + 2),
+            resolver.rust_type(&one_of.path),
+            field.rust_type_name(),
+        )?;
+        let variable = Variable {
+            as_ref: "v",
+            as_unref: "*v",
+            raw: "v",
+        };
+        write_serialize_variable(
+            resolver,
+            indent + 3,
+            field,
+            variable,
+            writer,
+            preserve_proto_field_names,
+        )?;
+        writeln!(writer, "{}}}", Indent(indent + 2))?;
     }
+
+    writeln!(writer, "{}}}", Indent(indent + 1),)?;
+    writeln!(writer, "{}}}", Indent(indent))
 }
 
-fn deserialize_regular_field_value(
+fn write_deserialize_message<W: Write>(
     resolver: &Resolver<'_>,
-    field: &Field,
-    btree_map: bool,
-) -> TokenStream {
-    let serde_path = resolver.serde_path();
-    match &field.field_type {
-        FieldType::Scalar(scalar) => {
-            encode_scalar_field(*scalar, field.field_modifier, serde_path)
-        }
-        FieldType::Enum(path) => {
-            let enum_type = resolver.rust_type_token(path);
-            match field.field_modifier {
-                FieldModifier::Optional => {
-                    quote!(map_.next_value::<::std::option::Option<#enum_type>>()?.map(|x| x as i32))
-                }
-                FieldModifier::Repeated => {
-                    quote!(Some(map_.next_value::<Vec<#enum_type>>()?.into_iter().map(|x| x as i32).collect()))
-                }
-                _ => {
-                    quote!(Some(map_.next_value::<#enum_type>()? as i32))
-                }
-            }
-        }
-        FieldType::Map(key, value) => deserialize_map_field(resolver, key, value, btree_map),
-        FieldType::Message(type_name) => {
-            if let Some(wkt_deser) = well_known_type_deserializer(type_name, serde_path) {
-                match field.field_modifier {
-                    FieldModifier::Repeated => {
-                        quote!(Some(map_.next_value::<Vec<#wkt_deser>>()?.into_iter().map(|x| x.0.into()).collect()))
-                    }
-                    _ => {
-                        quote!(map_.next_value::<::std::option::Option<#wkt_deser>>()?.map(|x| x.0.into()))
-                    }
-                }
-            } else {
-                match field.field_modifier {
-                    FieldModifier::Repeated => quote!(Some(map_.next_value()?)),
-                    _ => quote!(map_.next_value()?),
-                }
-            }
-        }
-    }
-}
-
-fn deserialize_map_field(
-    resolver: &Resolver<'_>,
-    key: &ScalarType,
-    value: &FieldType,
-    btree_map: bool,
-) -> TokenStream {
-    let serde_path = resolver.serde_path();
-    let map_type = if btree_map {
-        quote!(std::collections::BTreeMap)
-    } else {
-        quote!(std::collections::HashMap)
-    };
-
-    let (key_type, key_needs_unwrap) = match key {
-        ScalarType::Bytes | ScalarType::F32 | ScalarType::F64 => {
-            panic!("protobuf disallows maps with floating point or bytes keys")
-        }
-        _ if key.is_numeric() => {
-            let kt = key.rust_type_token();
-            (quote!(#serde_path::NumberDeserialize<#kt>), true)
-        }
-        _ => (quote!(_), false),
-    };
-
-    let (val_type, val_needs_transform, val_expr) = match value {
-        FieldType::Scalar(scalar) if scalar.is_numeric() => {
-            let vt = scalar.rust_type_token();
-            (
-                quote!(#serde_path::NumberDeserialize<#vt>),
-                true,
-                quote!(v.0),
-            )
-        }
-        FieldType::Scalar(ScalarType::Bytes) => (
-            quote!(#serde_path::BytesDeserialize<_>),
-            true,
-            quote!(v.0),
-        ),
-        FieldType::Enum(path) => {
-            let enum_type = resolver.rust_type_token(path);
-            (quote!(#enum_type), true, quote!(v as i32))
-        }
-        FieldType::Map(_, _) => panic!("protobuf disallows nested maps"),
-        _ => (quote!(_), false, quote!(v)),
-    };
-
-    let needs_transform = key_needs_unwrap || val_needs_transform;
-    let key_expr = if key_needs_unwrap {
-        quote!(k.0)
-    } else {
-        quote!(k)
-    };
-
-    if needs_transform {
-        quote! {
-            Some(
-                map_.next_value::<#map_type<#key_type, #val_type>>()?
-                    .into_iter().map(|(k, v)| (#key_expr, #val_expr)).collect()
-            )
-        }
-    } else {
-        quote! {
-            Some(
-                map_.next_value::<#map_type<#key_type, #val_type>>()?
-            )
-        }
-    }
-}
-
-fn deserialize_field(
-    resolver: &Resolver<'_>,
-    field: &Field,
-    one_of: Option<&OneOf>,
-    btree_map: bool,
-) -> TokenStream {
-    let owner_name = match one_of {
-        Some(o) => o.rust_field_name(),
-        None => field.rust_field_name(),
-    };
-
-    let json_name = field.json_name();
-    let variant_ident = type_name_ident(field);
-    let var = var_ident(&owner_name);
-
-    let value_expr = match one_of {
-        Some(o) => deserialize_one_of_field_value(resolver, field, o),
-        None => deserialize_regular_field_value(resolver, field, btree_map),
-    };
-
-    quote! {
-        GeneratedField::#variant_ident => {
-            if #var.is_some() {
-                return Err(serde::de::Error::duplicate_field(#json_name));
-            }
-            #var = #value_expr;
-        }
-    }
-}
-
-fn fields_enum(
-    fields: &[(String, String, Option<String>)],
+    indent: usize,
+    message: &Message,
+    rust_type: &str,
+    writer: &mut W,
     ignore_unknown_fields: bool,
-) -> TokenStream {
-    let variants: Vec<proc_macro2::Ident> = fields
-        .iter()
-        .map(|(_, type_name, _)| {
-            let escaped = escape_type(type_name.clone());
-            proc_macro2::Ident::new(&escaped, proc_macro2::Span::call_site())
-        })
-        .collect();
+    btree_map_paths: &[String],
+) -> Result<()> {
+    write_deserialize_field_name(2, message, writer, ignore_unknown_fields)?;
 
-    let skip = if ignore_unknown_fields {
-        quote!(__SkipField__,)
+    writeln!(writer, "{}struct GeneratedVisitor;", Indent(indent))?;
+
+    writeln!(
+        writer,
+        "{}#[allow(clippy::useless_conversion)]",
+        Indent(indent)
+    )?;
+    writeln!(writer, "{}#[allow(clippy::unit_arg)]", Indent(indent))?;
+    writeln!(
+        writer,
+        r#"{indent}impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {{
+{indent}    type Value = {rust_type};
+
+{indent}    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {{
+{indent}        formatter.write_str("struct {name}")
+{indent}    }}
+
+{indent}    fn visit_map<V>(self, mut map_: V) -> std::result::Result<{rust_type}, V::Error>
+{indent}        where
+{indent}            V: serde::de::MapAccess<'de>,
+{indent}    {{"#,
+        indent = Indent(indent),
+        name = message.path,
+        rust_type = rust_type,
+    )?;
+
+    for field in &message.fields {
+        writeln!(
+            writer,
+            "{}let mut {}__ = None;",
+            Indent(indent + 2),
+            field.rust_field_name(),
+        )?;
+    }
+
+    for one_of in &message.one_ofs {
+        writeln!(
+            writer,
+            "{}let mut {}__ = None;",
+            Indent(indent + 2),
+            one_of.rust_field_name(),
+        )?;
+    }
+
+    if !message.fields.is_empty() || !message.one_ofs.is_empty() {
+        writeln!(
+            writer,
+            "{}while let Some(k) = map_.next_key()? {{",
+            Indent(indent + 2)
+        )?;
+
+        writeln!(writer, "{}match k {{", Indent(indent + 3))?;
+
+        let btree_map = btree_map_paths
+            .iter()
+            .any(|prefix| message.path.prefix_match(prefix.as_ref()).is_some());
+
+        for field in &message.fields {
+            write_deserialize_field(resolver, indent + 4, field, None, btree_map, writer)?;
+        }
+
+        for one_of in &message.one_ofs {
+            for field in &one_of.fields {
+                write_deserialize_field(
+                    resolver,
+                    indent + 4,
+                    field,
+                    Some(one_of),
+                    btree_map,
+                    writer,
+                )?;
+            }
+        }
+
+        if ignore_unknown_fields {
+            writeln!(
+                writer,
+                "{}GeneratedField::__SkipField__ => {{",
+                Indent(indent + 4),
+            )?;
+            writeln!(
+                writer,
+                "{}let _ = map_.next_value::<serde::de::IgnoredAny>()?;",
+                Indent(indent + 5),
+            )?;
+            writeln!(writer, "{}}}", Indent(indent + 4))?;
+        }
+
+        writeln!(writer, "{}}}", Indent(indent + 3))?;
+        writeln!(writer, "{}}}", Indent(indent + 2))?;
     } else {
-        quote!()
-    };
+        writeln!(
+            writer,
+            "{}while map_.next_key::<GeneratedField>()?.is_some() {{",
+            Indent(indent + 2)
+        )?;
+        writeln!(
+            writer,
+            "{}let _ = map_.next_value::<serde::de::IgnoredAny>()?;",
+            Indent(indent + 3)
+        )?;
+        writeln!(writer, "{}}}", Indent(indent + 2))?;
+    }
 
-    quote! {
-        #[allow(clippy::enum_variant_names)]
-        enum GeneratedField {
-            #(#variants,)*
-            #skip
+    writeln!(writer, "{}Ok({} {{", Indent(indent + 2), rust_type)?;
+    for field in &message.fields {
+        match field.field_modifier {
+            FieldModifier::Required => {
+                writeln!(
+                    writer,
+                    "{indent}{field}: {field}__.ok_or_else(|| serde::de::Error::missing_field(\"{json_name}\"))?,",
+                    indent = Indent(indent + 3),
+                    field = field.rust_field_name(),
+                    json_name = field.json_name()
+                )?;
+            }
+            FieldModifier::UseDefault | FieldModifier::Repeated => {
+                // Note: this currently does not hydrate optional proto2 fields with defaults
+                writeln!(
+                    writer,
+                    "{indent}{field}: {field}__.unwrap_or_default(),",
+                    indent = Indent(indent + 3),
+                    field = field.rust_field_name()
+                )?;
+            }
+            _ => {
+                writeln!(
+                    writer,
+                    "{indent}{field}: {field}__,",
+                    indent = Indent(indent + 3),
+                    field = field.rust_field_name()
+                )?;
+            }
         }
     }
+    for one_of in &message.one_ofs {
+        writeln!(
+            writer,
+            "{indent}{field}: {field}__,",
+            indent = Indent(indent + 3),
+            field = one_of.rust_field_name(),
+        )?;
+    }
+
+    writeln!(writer, "{}}})", Indent(indent + 2))?;
+    writeln!(writer, "{}}}", Indent(indent + 1))?;
+    writeln!(writer, "{}}}", Indent(indent))?;
+    writeln!(
+        writer,
+        "{}deserializer.deserialize_struct(\"{}\", FIELDS, GeneratedVisitor)",
+        Indent(indent),
+        message.path
+    )
 }
 
-fn deserialize_field_name(message: &Message, ignore_unknown_fields: bool) -> TokenStream {
-    let fields: Vec<(String, String, Option<String>)> = message
+fn write_deserialize_field_name<W: Write>(
+    indent: usize,
+    message: &Message,
+    writer: &mut W,
+    ignore_unknown_fields: bool,
+) -> Result<()> {
+    let fields: Vec<_> = message
         .all_fields()
         .map(|field| {
             let json_name = field.json_name();
-            let proto_name = Some(field.name.clone()).filter(|p| p != &json_name);
+            // only carry the original proto name if it's different from the provided json name
+            let proto_name =
+                Some(field.name.as_str()).filter(|proto_name| proto_name != &json_name);
             (json_name, field.rust_type_name(), proto_name)
         })
         .collect();
 
-    // Build FIELDS array
-    let field_name_strings: Vec<&str> = fields
-        .iter()
-        .flat_map(|(json_name, _, proto_name)| {
-            proto_name
-                .as_deref()
-                .into_iter()
-                .chain(std::iter::once(json_name.as_str()))
-        })
-        .collect();
-
-    let fields_array = super::fields_array(&field_name_strings);
-    let enum_def = fields_enum(&fields, ignore_unknown_fields);
-
-    // Build match arms for visit_str
-    let str_match_arms: Vec<TokenStream> = fields
-        .iter()
-        .map(|(json_name, type_name, proto_name)| {
-            let variant = proc_macro2::Ident::new(
-                &escape_type(type_name.clone()),
-                proc_macro2::Span::call_site(),
-            );
-            match proto_name {
-                Some(proto_name) => quote! {
-                    #json_name | #proto_name => Ok(GeneratedField::#variant),
-                },
-                None => quote! {
-                    #json_name => Ok(GeneratedField::#variant),
-                },
-            }
-        })
-        .collect();
-
-    let unknown_field_handling = if !fields.is_empty() {
-        let fallback = if ignore_unknown_fields {
-            quote!(_ => Ok(GeneratedField::__SkipField__),)
-        } else {
-            quote!(_ => Err(serde::de::Error::unknown_field(value, FIELDS)),)
-        };
-        quote! {
-            match value {
-                #(#str_match_arms)*
-                #fallback
-            }
-        }
-    } else if ignore_unknown_fields {
-        quote!(Ok(GeneratedField::__SkipField__))
-    } else {
-        quote!(Err(serde::de::Error::unknown_field(value, FIELDS)))
-    };
-
-    quote! {
-        #fields_array
-        #enum_def
-        impl<'de> serde::Deserialize<'de> for GeneratedField {
-            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
-            where
-                D: serde::Deserializer<'de>,
-            {
-                struct GeneratedVisitor;
-
-                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-                    type Value = GeneratedField;
-
-                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                        write!(formatter, "expected one of: {:?}", &FIELDS)
-                    }
-
-                    #[allow(unused_variables)]
-                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
-                    where
-                        E: serde::de::Error,
-                    {
-                        #unknown_field_handling
-                    }
-                }
-                deserializer.deserialize_identifier(GeneratedVisitor)
-            }
-        }
-    }
-}
-
-fn message_deserialize_body(
-    resolver: &Resolver<'_>,
-    message: &Message,
-    rust_type: &TokenStream,
-    ignore_unknown_fields: bool,
-    btree_map_paths: &[String],
-) -> TokenStream {
-    let message_name = message.path.to_string();
-    let struct_name_str = format!("struct {}", message.path);
-
-    let field_name_deser = deserialize_field_name(message, ignore_unknown_fields);
-
-    let field_var_inits: Vec<TokenStream> = message
-        .fields
-        .iter()
-        .map(|f| {
-            let v = var_ident(&f.rust_field_name());
-            quote!(let mut #v = None;)
-        })
-        .collect();
-
-    let one_of_var_inits: Vec<TokenStream> = message
-        .one_ofs
-        .iter()
-        .map(|o| {
-            let v = var_ident(&o.rust_field_name());
-            quote!(let mut #v = None;)
-        })
-        .collect();
-
-    let btree_map = btree_map_paths
-        .iter()
-        .any(|prefix| message.path.prefix_match(prefix.as_ref()).is_some());
-
-    let has_fields = !message.fields.is_empty() || !message.one_ofs.is_empty();
-
-    let map_loop = if has_fields {
-        let field_arms: Vec<TokenStream> = message
-            .fields
-            .iter()
-            .map(|f| deserialize_field(resolver, f, None, btree_map))
-            .collect();
-
-        let one_of_arms: Vec<TokenStream> = message
-            .one_ofs
-            .iter()
-            .flat_map(|one_of| {
-                one_of
-                    .fields
-                    .iter()
-                    .map(move |f| deserialize_field(resolver, f, Some(one_of), btree_map))
-            })
-            .collect();
-
-        let skip_arm = if ignore_unknown_fields {
-            quote! {
-                GeneratedField::__SkipField__ => {
-                    let _ = map_.next_value::<serde::de::IgnoredAny>()?;
-                }
-            }
-        } else {
-            quote!()
-        };
-
-        quote! {
-            while let Some(k) = map_.next_key()? {
-                match k {
-                    #(#field_arms)*
-                    #(#one_of_arms)*
-                    #skip_arm
-                }
-            }
-        }
-    } else {
-        quote! {
-            while map_.next_key::<GeneratedField>()?.is_some() {
-                let _ = map_.next_value::<serde::de::IgnoredAny>()?;
-            }
-        }
-    };
-
-    let field_constructions: Vec<TokenStream> = message
-        .fields
-        .iter()
-        .map(|f| {
-            let ident = field_ident(f);
-            let v = var_ident(&f.rust_field_name());
-            let json_name = f.json_name();
-
-            match f.field_modifier {
-                FieldModifier::Required => quote! {
-                    #ident: #v.ok_or_else(|| serde::de::Error::missing_field(#json_name))?,
-                },
-                FieldModifier::UseDefault | FieldModifier::Repeated => quote! {
-                    #ident: #v.unwrap_or_default(),
-                },
-                _ => quote! {
-                    #ident: #v,
-                },
-            }
-        })
-        .collect();
-
-    let one_of_constructions: Vec<TokenStream> = message
-        .one_ofs
-        .iter()
-        .map(|o| {
-            let ident = ident_from_escaped(&o.rust_field_name());
-            let v = var_ident(&o.rust_field_name());
-            quote!(#ident: #v,)
-        })
-        .collect();
-
-    quote! {
-        #field_name_deser
-        struct GeneratedVisitor;
-        #[allow(clippy::useless_conversion)]
-        #[allow(clippy::unit_arg)]
-        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-            type Value = #rust_type;
-
-            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                formatter.write_str(#struct_name_str)
-            }
-
-            fn visit_map<V>(self, mut map_: V) -> std::result::Result<#rust_type, V::Error>
-                where
-                    V: serde::de::MapAccess<'de>,
-            {
-                #(#field_var_inits)*
-                #(#one_of_var_inits)*
-                #map_loop
-                Ok(#rust_type {
-                    #(#field_constructions)*
-                    #(#one_of_constructions)*
-                })
-            }
-        }
-        deserializer.deserialize_struct(#message_name, FIELDS, GeneratedVisitor)
-    }
-}
-
-// ===========================================================================
-// Top-level entry point
-// ===========================================================================
-
-pub fn generate_message(
-    resolver: &Resolver<'_>,
-    message: &Message,
-    ignore_unknown_fields: bool,
-    btree_map_paths: &[String],
-    emit_fields: bool,
-    preserve_proto_field_names: bool,
-) -> TokenStream {
-    let rust_type = resolver.rust_type_token(&message.path);
-
-    let ser_body =
-        message_serialize_body(resolver, message, emit_fields, preserve_proto_field_names);
-    let ser = super::serialize_impl(&rust_type, ser_body);
-
-    let de_body = message_deserialize_body(
-        resolver,
-        message,
-        &rust_type,
+    write_fields_array(
+        writer,
+        indent,
+        fields.iter().flat_map(|(json_name, _, proto_name)| {
+            proto_name.iter().copied().chain([json_name.as_str()])
+        }),
+    )?;
+    write_fields_enum(
+        writer,
+        indent,
+        fields.iter().map(|(_, type_name, _)| type_name.as_str()),
         ignore_unknown_fields,
-        btree_map_paths,
-    );
-    let de = super::deserialize_impl(&rust_type, de_body);
+    )?;
 
-    quote! {
-        #ser
-        #de
+    writeln!(
+        writer,
+        r#"{indent}impl<'de> serde::Deserialize<'de> for GeneratedField {{
+{indent}    fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+{indent}    where
+{indent}        D: serde::Deserializer<'de>,
+{indent}    {{
+{indent}        struct GeneratedVisitor;
+
+{indent}        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {{
+{indent}            type Value = GeneratedField;
+
+{indent}            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {{
+{indent}                write!(formatter, "expected one of: {{:?}}", &FIELDS)
+{indent}            }}
+
+{indent}            #[allow(unused_variables)]
+{indent}            fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+{indent}            where
+{indent}                E: serde::de::Error,
+{indent}            {{"#,
+        indent = Indent(indent)
+    )?;
+
+    if !fields.is_empty() {
+        writeln!(writer, "{}match value {{", Indent(indent + 4))?;
+        for (json_name, type_name, proto_name) in &fields {
+            if let Some(proto_name) = proto_name {
+                writeln!(
+                    writer,
+                    "{}\"{}\" | \"{}\" => Ok(GeneratedField::{}),",
+                    Indent(indent + 5),
+                    json_name,
+                    proto_name,
+                    escape_type(type_name.to_string())
+                )?;
+            } else {
+                writeln!(
+                    writer,
+                    "{}\"{}\" => Ok(GeneratedField::{}),",
+                    Indent(indent + 5),
+                    json_name,
+                    escape_type(type_name.to_string())
+                )?;
+            }
+        }
+        if ignore_unknown_fields {
+            writeln!(
+                writer,
+                "{}_ => Ok(GeneratedField::__SkipField__),",
+                Indent(indent + 5)
+            )?;
+        } else {
+            writeln!(
+                writer,
+                "{}_ => Err(serde::de::Error::unknown_field(value, FIELDS)),",
+                Indent(indent + 5)
+            )?;
+        }
+        writeln!(writer, "{}}}", Indent(indent + 4))?;
+    } else if ignore_unknown_fields {
+        writeln!(
+            writer,
+            "{}Ok(GeneratedField::__SkipField__)",
+            Indent(indent + 5)
+        )?;
+    } else {
+        writeln!(
+            writer,
+            "{}Err(serde::de::Error::unknown_field(value, FIELDS))",
+            Indent(indent + 5)
+        )?;
     }
+
+    writeln!(
+        writer,
+        r#"{indent}            }}
+{indent}        }}
+{indent}        deserializer.deserialize_identifier(GeneratedVisitor)
+{indent}    }}
+{indent}}}"#,
+        indent = Indent(indent)
+    )
+}
+
+fn write_fields_enum<'a, W: Write, I: Iterator<Item = &'a str>>(
+    writer: &mut W,
+    indent: usize,
+    fields: I,
+    ignore_unknown_fields: bool,
+) -> Result<()> {
+    writeln!(
+        writer,
+        "{}#[allow(clippy::enum_variant_names)]",
+        Indent(indent)
+    )?;
+    writeln!(writer, "{}enum GeneratedField {{", Indent(indent))?;
+    for type_name in fields {
+        writeln!(
+            writer,
+            "{}{},",
+            Indent(indent + 1),
+            escape_type(type_name.to_string())
+        )?;
+    }
+
+    if ignore_unknown_fields {
+        writeln!(writer, "{}__SkipField__,", Indent(indent + 1))?;
+    }
+
+    writeln!(writer, "{}}}", Indent(indent))
+}
+
+fn write_deserialize_field<W: Write>(
+    resolver: &Resolver<'_>,
+    indent: usize,
+    field: &Field,
+    one_of: Option<&OneOf>,
+    btree_map: bool,
+    writer: &mut W,
+) -> Result<()> {
+    let field_name = match one_of {
+        Some(one_of) => one_of.rust_field_name(),
+        None => field.rust_field_name(),
+    };
+
+    let json_name = field.json_name();
+    writeln!(
+        writer,
+        "{}GeneratedField::{} => {{",
+        Indent(indent),
+        field.rust_type_name()
+    )?;
+    writeln!(
+        writer,
+        "{}if {}__.is_some() {{",
+        Indent(indent + 1),
+        field_name
+    )?;
+
+    // Note: this will report duplicate field if multiple value are specified for a one of
+    writeln!(
+        writer,
+        "{}return Err(serde::de::Error::duplicate_field(\"{}\"));",
+        Indent(indent + 2),
+        json_name
+    )?;
+    writeln!(writer, "{}}}", Indent(indent + 1))?;
+    write!(writer, "{}{}__ = ", Indent(indent + 1), field_name)?;
+
+    match one_of {
+        Some(one_of) => match &field.field_type {
+            FieldType::Scalar(s) => match override_deserializer(*s) {
+                Some(deserializer) => {
+                    write!(
+                        writer,
+                        "map_.next_value::<::std::option::Option<{}>>()?.map(|x| {}::{}(x.0))",
+                        deserializer,
+                        resolver.rust_type(&one_of.path),
+                        field.rust_type_name()
+                    )?;
+                }
+                None => {
+                    write!(
+                        writer,
+                        "map_.next_value::<::std::option::Option<_>>()?.map({}::{})",
+                        resolver.rust_type(&one_of.path),
+                        field.rust_type_name()
+                    )?;
+                }
+            },
+            FieldType::Enum(path) => {
+                write!(
+                    writer,
+                    "map_.next_value::<::std::option::Option<{}>>()?.map(|x| {}::{}(x as i32))",
+                    resolver.rust_type(path),
+                    resolver.rust_type(&one_of.path),
+                    field.rust_type_name()
+                )?;
+            }
+            FieldType::Message(type_name) => match well_known_type_deserializer(type_name) {
+                Some(deserializer) => {
+                    write!(
+                        writer,
+                        "map_.next_value::<::std::option::Option<{}>>()?.map(|x| {}::{}(x.0))",
+                        deserializer,
+                        resolver.rust_type(&one_of.path),
+                        field.rust_type_name()
+                    )?;
+                }
+                None => {
+                    writeln!(
+                        writer,
+                        "map_.next_value::<::std::option::Option<_>>()?.map({}::{})",
+                        resolver.rust_type(&one_of.path),
+                        field.rust_type_name()
+                    )?;
+                }
+            },
+            FieldType::Map(_, _) => unreachable!("one of cannot contain map fields"),
+        },
+
+        None => match &field.field_type {
+            FieldType::Scalar(scalar) => {
+                write_encode_scalar_field(indent + 1, *scalar, field.field_modifier, writer)?;
+            }
+            FieldType::Enum(path) => match field.field_modifier {
+                FieldModifier::Optional => {
+                    write!(
+                        writer,
+                        "map_.next_value::<::std::option::Option<{}>>()?.map(|x| x as i32)",
+                        resolver.rust_type(path)
+                    )?;
+                }
+                FieldModifier::Repeated => {
+                    write!(
+                        writer,
+                        "Some(map_.next_value::<Vec<{}>>()?.into_iter().map(|x| x as i32).collect())",
+                        resolver.rust_type(path)
+                    )?;
+                }
+                _ => {
+                    write!(
+                        writer,
+                        "Some(map_.next_value::<{}>()? as i32)",
+                        resolver.rust_type(path)
+                    )?;
+                }
+            },
+            FieldType::Map(key, value) => {
+                write!(writer, "Some(")?;
+                writeln!(writer)?;
+                match btree_map {
+                    true => write!(
+                        writer,
+                        "{}map_.next_value::<std::collections::BTreeMap<",
+                        Indent(indent + 2),
+                    )?,
+                    false => write!(
+                        writer,
+                        "{}map_.next_value::<std::collections::HashMap<",
+                        Indent(indent + 2),
+                    )?,
+                }
+
+                let map_k = match key {
+                    ScalarType::Bytes | ScalarType::F32 | ScalarType::F64 => {
+                        panic!("protobuf disallows maps with floating point or bytes keys")
+                    }
+                    _ if key.is_numeric() => {
+                        write!(
+                            writer,
+                            "crate::_serde::NumberDeserialize<{}>",
+                            key.rust_type()
+                        )?;
+                        "k.0"
+                    }
+                    _ => {
+                        write!(writer, "_")?;
+                        "k"
+                    }
+                };
+                write!(writer, ", ")?;
+                let map_v = match value.as_ref() {
+                    FieldType::Scalar(scalar) if scalar.is_numeric() => {
+                        write!(
+                            writer,
+                            "crate::_serde::NumberDeserialize<{}>",
+                            scalar.rust_type()
+                        )?;
+                        "v.0"
+                    }
+                    FieldType::Scalar(ScalarType::Bytes) => {
+                        write!(writer, "crate::_serde::BytesDeserialize<_>",)?;
+                        "v.0"
+                    }
+                    FieldType::Enum(path) => {
+                        write!(writer, "{}", resolver.rust_type(path))?;
+                        "v as i32"
+                    }
+                    FieldType::Map(_, _) => panic!("protobuf disallows nested maps"),
+                    _ => {
+                        write!(writer, "_")?;
+                        "v"
+                    }
+                };
+
+                writeln!(writer, ">>()?")?;
+                if map_k != "k" || map_v != "v" {
+                    writeln!(
+                        writer,
+                        "{}.into_iter().map(|(k,v)| ({}, {})).collect()",
+                        Indent(indent + 3),
+                        map_k,
+                        map_v,
+                    )?;
+                }
+                write!(writer, "{})", Indent(indent + 1))?;
+            }
+            FieldType::Message(type_name) => {
+                if let Some(well_known_type_deserializer) = well_known_type_deserializer(type_name)
+                {
+                    match field.field_modifier {
+                        FieldModifier::Repeated => {
+                            // No explicit presence for repeated fields
+                            write!(
+                                writer,
+                                "Some(map_.next_value::<Vec<{}>>()?.into_iter().map(|x| x.0.into()).collect())",
+                                well_known_type_deserializer
+                            )?;
+                        }
+                        _ => write!(
+                            writer,
+                            "map_.next_value::<::std::option::Option<{}>>()?.map(|x| x.0.into())",
+                            well_known_type_deserializer
+                        )?,
+                    }
+                } else {
+                    match field.field_modifier {
+                        FieldModifier::Repeated => {
+                            // No explicit presence for repeated fields
+                            write!(writer, "Some(map_.next_value()?)")?;
+                        }
+                        _ => write!(writer, "map_.next_value()?")?,
+                    }
+                }
+            }
+        },
+    }
+    writeln!(writer, ";")?;
+    writeln!(writer, "{}}}", Indent(indent))
+}
+
+fn override_deserializer(scalar: ScalarType) -> Option<&'static str> {
+    match scalar {
+        ScalarType::Bytes => Some("crate::_serde::BytesDeserialize<_>"),
+        _ if scalar.is_numeric() => Some("crate::_serde::NumberDeserialize<_>"),
+        _ => None,
+    }
+}
+
+fn well_known_type_deserializer(type_path: &TypePath) -> Option<&'static str> {
+    let type_name = type_path.to_string();
+
+    match type_name.as_str() {
+        "google.protobuf.FieldMask" => Some("crate::_serde::FieldMaskDeserializer"),
+        "google.protobuf.Timestamp" => Some("crate::_serde::TimestampDeserializer"),
+        "google.protobuf.Duration" => Some("crate::_serde::DurationDeserializer"),
+        "google.protobuf.Value" => Some("crate::_serde::ValueDeserializer"),
+        "google.protobuf.Any" => Some("crate::_serde::AnyDeserializer"),
+        "google.protobuf.Empty" => Some("crate::_serde::EmptyDeserializer"),
+        _ => None,
+    }
+}
+
+fn well_known_type_serializer(type_path: &TypePath) -> Option<&'static str> {
+    let type_name = type_path.to_string();
+
+    match type_name.as_str() {
+        "google.protobuf.FieldMask" => Some("crate::_serde::FieldMaskSerializer"),
+        "google.protobuf.Timestamp" => Some("crate::_serde::TimestampSerializer"),
+        "google.protobuf.Duration" => Some("crate::_serde::DurationSerializer"),
+        "google.protobuf.Value" => Some("crate::_serde::ValueSerializer"),
+        "google.protobuf.Any" => Some("crate::_serde::AnySerializer"),
+        "google.protobuf.Empty" => Some("crate::_serde::EmptySerializer"),
+        _ => None,
+    }
+}
+
+fn write_encode_scalar_field<W: Write>(
+    indent: usize,
+    scalar: ScalarType,
+    field_modifier: FieldModifier,
+    writer: &mut W,
+) -> Result<()> {
+    let deserializer = match override_deserializer(scalar) {
+        Some(deserializer) => deserializer,
+        None => {
+            return match field_modifier {
+                FieldModifier::Optional => {
+                    write!(writer, "map_.next_value()?")
+                }
+                _ => write!(writer, "Some(map_.next_value()?)"),
+            };
+        }
+    };
+
+    writeln!(writer)?;
+
+    match field_modifier {
+        FieldModifier::Optional => {
+            writeln!(
+                writer,
+                "{}map_.next_value::<::std::option::Option<{}>>()?.map(|x| x.0)",
+                Indent(indent + 1),
+                deserializer
+            )?;
+        }
+        FieldModifier::Repeated => {
+            writeln!(
+                writer,
+                "{}Some(map_.next_value::<Vec<{}>>()?",
+                Indent(indent + 1),
+                deserializer
+            )?;
+            writeln!(
+                writer,
+                "{}.into_iter().map(|x| x.0).collect())",
+                Indent(indent + 2)
+            )?;
+        }
+        _ => {
+            writeln!(
+                writer,
+                "{}Some(map_.next_value::<{}>()?.0)",
+                Indent(indent + 1),
+                deserializer
+            )?;
+        }
+    }
+    write!(writer, "{}", Indent(indent))
 }

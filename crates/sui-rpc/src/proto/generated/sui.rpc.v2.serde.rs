@@ -828,6 +828,204 @@ impl<'de> serde::Deserialize<'de> for argument::ArgumentKind {
         deserializer.deserialize_any(GeneratedVisitor)
     }
 }
+impl serde::Serialize for AuthenticatedEvent {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if self.checkpoint.is_some() {
+            len += 1;
+        }
+        if self.accumulator_version.is_some() {
+            len += 1;
+        }
+        if self.transaction_idx.is_some() {
+            len += 1;
+        }
+        if self.event_idx.is_some() {
+            len += 1;
+        }
+        if self.event.is_some() {
+            len += 1;
+        }
+        if self.stream_id.is_some() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("sui.rpc.v2.AuthenticatedEvent", len)?;
+        if let Some(v) = self.checkpoint.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("checkpoint", ToString::to_string(&v).as_str())?;
+        }
+        if let Some(v) = self.accumulator_version.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("accumulatorVersion", ToString::to_string(&v).as_str())?;
+        }
+        if let Some(v) = self.transaction_idx.as_ref() {
+            struct_ser.serialize_field("transactionIdx", v)?;
+        }
+        if let Some(v) = self.event_idx.as_ref() {
+            struct_ser.serialize_field("eventIdx", v)?;
+        }
+        if let Some(v) = self.event.as_ref() {
+            struct_ser.serialize_field("event", v)?;
+        }
+        if let Some(v) = self.stream_id.as_ref() {
+            struct_ser.serialize_field("streamId", v)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for AuthenticatedEvent {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "checkpoint",
+            "accumulator_version",
+            "accumulatorVersion",
+            "transaction_idx",
+            "transactionIdx",
+            "event_idx",
+            "eventIdx",
+            "event",
+            "stream_id",
+            "streamId",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Checkpoint,
+            AccumulatorVersion,
+            TransactionIdx,
+            EventIdx,
+            Event,
+            StreamId,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "checkpoint" => Ok(GeneratedField::Checkpoint),
+                            "accumulatorVersion" | "accumulator_version" => Ok(GeneratedField::AccumulatorVersion),
+                            "transactionIdx" | "transaction_idx" => Ok(GeneratedField::TransactionIdx),
+                            "eventIdx" | "event_idx" => Ok(GeneratedField::EventIdx),
+                            "event" => Ok(GeneratedField::Event),
+                            "streamId" | "stream_id" => Ok(GeneratedField::StreamId),
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = AuthenticatedEvent;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2.AuthenticatedEvent")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<AuthenticatedEvent, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut checkpoint__ = None;
+                let mut accumulator_version__ = None;
+                let mut transaction_idx__ = None;
+                let mut event_idx__ = None;
+                let mut event__ = None;
+                let mut stream_id__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Checkpoint => {
+                            if checkpoint__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("checkpoint"));
+                            }
+                            checkpoint__ = 
+                                map_.next_value::<::std::option::Option<crate::_serde::NumberDeserialize<_>>>()?.map(|x| x.0)
+                            ;
+                        }
+                        GeneratedField::AccumulatorVersion => {
+                            if accumulator_version__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("accumulatorVersion"));
+                            }
+                            accumulator_version__ = 
+                                map_.next_value::<::std::option::Option<crate::_serde::NumberDeserialize<_>>>()?.map(|x| x.0)
+                            ;
+                        }
+                        GeneratedField::TransactionIdx => {
+                            if transaction_idx__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("transactionIdx"));
+                            }
+                            transaction_idx__ = 
+                                map_.next_value::<::std::option::Option<crate::_serde::NumberDeserialize<_>>>()?.map(|x| x.0)
+                            ;
+                        }
+                        GeneratedField::EventIdx => {
+                            if event_idx__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("eventIdx"));
+                            }
+                            event_idx__ = 
+                                map_.next_value::<::std::option::Option<crate::_serde::NumberDeserialize<_>>>()?.map(|x| x.0)
+                            ;
+                        }
+                        GeneratedField::Event => {
+                            if event__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("event"));
+                            }
+                            event__ = map_.next_value()?;
+                        }
+                        GeneratedField::StreamId => {
+                            if stream_id__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("streamId"));
+                            }
+                            stream_id__ = map_.next_value()?;
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(AuthenticatedEvent {
+                    checkpoint: checkpoint__,
+                    accumulator_version: accumulator_version__,
+                    transaction_idx: transaction_idx__,
+                    event_idx: event_idx__,
+                    event: event__,
+                    stream_id: stream_id__,
+                })
+            }
+        }
+        deserializer.deserialize_struct("sui.rpc.v2.AuthenticatedEvent", FIELDS, GeneratedVisitor)
+    }
+}
 impl serde::Serialize for AuthenticatorStateExpire {
     #[allow(deprecated)]
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
@@ -13381,6 +13579,285 @@ impl<'de> serde::Deserialize<'de> for GetFunctionResponse {
             )
     }
 }
+impl serde::Serialize for GetObjectInclusionProofRequest {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if self.object_id.is_some() {
+            len += 1;
+        }
+        if self.checkpoint.is_some() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("sui.rpc.v2.GetObjectInclusionProofRequest", len)?;
+        if let Some(v) = self.object_id.as_ref() {
+            struct_ser.serialize_field("objectId", v)?;
+        }
+        if let Some(v) = self.checkpoint.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("checkpoint", ToString::to_string(&v).as_str())?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for GetObjectInclusionProofRequest {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "object_id",
+            "objectId",
+            "checkpoint",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            ObjectId,
+            Checkpoint,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "objectId" | "object_id" => Ok(GeneratedField::ObjectId),
+                            "checkpoint" => Ok(GeneratedField::Checkpoint),
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = GetObjectInclusionProofRequest;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2.GetObjectInclusionProofRequest")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<GetObjectInclusionProofRequest, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut object_id__ = None;
+                let mut checkpoint__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::ObjectId => {
+                            if object_id__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("objectId"));
+                            }
+                            object_id__ = map_.next_value()?;
+                        }
+                        GeneratedField::Checkpoint => {
+                            if checkpoint__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("checkpoint"));
+                            }
+                            checkpoint__ = 
+                                map_.next_value::<::std::option::Option<crate::_serde::NumberDeserialize<_>>>()?.map(|x| x.0)
+                            ;
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(GetObjectInclusionProofRequest {
+                    object_id: object_id__,
+                    checkpoint: checkpoint__,
+                })
+            }
+        }
+        deserializer.deserialize_struct("sui.rpc.v2.GetObjectInclusionProofRequest", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for GetObjectInclusionProofResponse {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if self.object_ref.is_some() {
+            len += 1;
+        }
+        if self.inclusion_proof.is_some() {
+            len += 1;
+        }
+        if self.object_data.is_some() {
+            len += 1;
+        }
+        if self.checkpoint_summary.is_some() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("sui.rpc.v2.GetObjectInclusionProofResponse", len)?;
+        if let Some(v) = self.object_ref.as_ref() {
+            struct_ser.serialize_field("objectRef", v)?;
+        }
+        if let Some(v) = self.inclusion_proof.as_ref() {
+            struct_ser.serialize_field("inclusionProof", v)?;
+        }
+        if let Some(v) = self.object_data.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("objectData", crate::_serde::base64::encode(&v).as_str())?;
+        }
+        if let Some(v) = self.checkpoint_summary.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("checkpointSummary", crate::_serde::base64::encode(&v).as_str())?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for GetObjectInclusionProofResponse {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "object_ref",
+            "objectRef",
+            "inclusion_proof",
+            "inclusionProof",
+            "object_data",
+            "objectData",
+            "checkpoint_summary",
+            "checkpointSummary",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            ObjectRef,
+            InclusionProof,
+            ObjectData,
+            CheckpointSummary,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "objectRef" | "object_ref" => Ok(GeneratedField::ObjectRef),
+                            "inclusionProof" | "inclusion_proof" => Ok(GeneratedField::InclusionProof),
+                            "objectData" | "object_data" => Ok(GeneratedField::ObjectData),
+                            "checkpointSummary" | "checkpoint_summary" => Ok(GeneratedField::CheckpointSummary),
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = GetObjectInclusionProofResponse;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2.GetObjectInclusionProofResponse")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<GetObjectInclusionProofResponse, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut object_ref__ = None;
+                let mut inclusion_proof__ = None;
+                let mut object_data__ = None;
+                let mut checkpoint_summary__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::ObjectRef => {
+                            if object_ref__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("objectRef"));
+                            }
+                            object_ref__ = map_.next_value()?;
+                        }
+                        GeneratedField::InclusionProof => {
+                            if inclusion_proof__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("inclusionProof"));
+                            }
+                            inclusion_proof__ = map_.next_value()?;
+                        }
+                        GeneratedField::ObjectData => {
+                            if object_data__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("objectData"));
+                            }
+                            object_data__ = 
+                                map_.next_value::<::std::option::Option<crate::_serde::BytesDeserialize<_>>>()?.map(|x| x.0)
+                            ;
+                        }
+                        GeneratedField::CheckpointSummary => {
+                            if checkpoint_summary__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("checkpointSummary"));
+                            }
+                            checkpoint_summary__ = 
+                                map_.next_value::<::std::option::Option<crate::_serde::BytesDeserialize<_>>>()?.map(|x| x.0)
+                            ;
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(GetObjectInclusionProofResponse {
+                    object_ref: object_ref__,
+                    inclusion_proof: inclusion_proof__,
+                    object_data: object_data__,
+                    checkpoint_summary: checkpoint_summary__,
+                })
+            }
+        }
+        deserializer.deserialize_struct("sui.rpc.v2.GetObjectInclusionProofResponse", FIELDS, GeneratedVisitor)
+    }
+}
 impl serde::Serialize for GetObjectRequest {
     #[allow(deprecated)]
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
@@ -15705,6 +16182,309 @@ impl<'de> serde::Deserialize<'de> for Linkage {
             }
         }
         deserializer.deserialize_struct("sui.rpc.v2.Linkage", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for ListAuthenticatedEventsRequest {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if self.stream_id.is_some() {
+            len += 1;
+        }
+        if self.start_checkpoint.is_some() {
+            len += 1;
+        }
+        if self.page_size.is_some() {
+            len += 1;
+        }
+        if self.page_token.is_some() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("sui.rpc.v2.ListAuthenticatedEventsRequest", len)?;
+        if let Some(v) = self.stream_id.as_ref() {
+            struct_ser.serialize_field("streamId", v)?;
+        }
+        if let Some(v) = self.start_checkpoint.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("startCheckpoint", ToString::to_string(&v).as_str())?;
+        }
+        if let Some(v) = self.page_size.as_ref() {
+            struct_ser.serialize_field("pageSize", v)?;
+        }
+        if let Some(v) = self.page_token.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("pageToken", crate::_serde::base64::encode(&v).as_str())?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for ListAuthenticatedEventsRequest {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "stream_id",
+            "streamId",
+            "start_checkpoint",
+            "startCheckpoint",
+            "page_size",
+            "pageSize",
+            "page_token",
+            "pageToken",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            StreamId,
+            StartCheckpoint,
+            PageSize,
+            PageToken,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "streamId" | "stream_id" => Ok(GeneratedField::StreamId),
+                            "startCheckpoint" | "start_checkpoint" => Ok(GeneratedField::StartCheckpoint),
+                            "pageSize" | "page_size" => Ok(GeneratedField::PageSize),
+                            "pageToken" | "page_token" => Ok(GeneratedField::PageToken),
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = ListAuthenticatedEventsRequest;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2.ListAuthenticatedEventsRequest")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<ListAuthenticatedEventsRequest, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut stream_id__ = None;
+                let mut start_checkpoint__ = None;
+                let mut page_size__ = None;
+                let mut page_token__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::StreamId => {
+                            if stream_id__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("streamId"));
+                            }
+                            stream_id__ = map_.next_value()?;
+                        }
+                        GeneratedField::StartCheckpoint => {
+                            if start_checkpoint__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("startCheckpoint"));
+                            }
+                            start_checkpoint__ = 
+                                map_.next_value::<::std::option::Option<crate::_serde::NumberDeserialize<_>>>()?.map(|x| x.0)
+                            ;
+                        }
+                        GeneratedField::PageSize => {
+                            if page_size__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("pageSize"));
+                            }
+                            page_size__ = 
+                                map_.next_value::<::std::option::Option<crate::_serde::NumberDeserialize<_>>>()?.map(|x| x.0)
+                            ;
+                        }
+                        GeneratedField::PageToken => {
+                            if page_token__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("pageToken"));
+                            }
+                            page_token__ = 
+                                map_.next_value::<::std::option::Option<crate::_serde::BytesDeserialize<_>>>()?.map(|x| x.0)
+                            ;
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(ListAuthenticatedEventsRequest {
+                    stream_id: stream_id__,
+                    start_checkpoint: start_checkpoint__,
+                    page_size: page_size__,
+                    page_token: page_token__,
+                })
+            }
+        }
+        deserializer.deserialize_struct("sui.rpc.v2.ListAuthenticatedEventsRequest", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for ListAuthenticatedEventsResponse {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if !self.events.is_empty() {
+            len += 1;
+        }
+        if self.highest_indexed_checkpoint.is_some() {
+            len += 1;
+        }
+        if self.next_page_token.is_some() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("sui.rpc.v2.ListAuthenticatedEventsResponse", len)?;
+        if !self.events.is_empty() {
+            struct_ser.serialize_field("events", &self.events)?;
+        }
+        if let Some(v) = self.highest_indexed_checkpoint.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("highestIndexedCheckpoint", ToString::to_string(&v).as_str())?;
+        }
+        if let Some(v) = self.next_page_token.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("nextPageToken", crate::_serde::base64::encode(&v).as_str())?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for ListAuthenticatedEventsResponse {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "events",
+            "highest_indexed_checkpoint",
+            "highestIndexedCheckpoint",
+            "next_page_token",
+            "nextPageToken",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Events,
+            HighestIndexedCheckpoint,
+            NextPageToken,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "events" => Ok(GeneratedField::Events),
+                            "highestIndexedCheckpoint" | "highest_indexed_checkpoint" => Ok(GeneratedField::HighestIndexedCheckpoint),
+                            "nextPageToken" | "next_page_token" => Ok(GeneratedField::NextPageToken),
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = ListAuthenticatedEventsResponse;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2.ListAuthenticatedEventsResponse")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<ListAuthenticatedEventsResponse, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut events__ = None;
+                let mut highest_indexed_checkpoint__ = None;
+                let mut next_page_token__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Events => {
+                            if events__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("events"));
+                            }
+                            events__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::HighestIndexedCheckpoint => {
+                            if highest_indexed_checkpoint__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("highestIndexedCheckpoint"));
+                            }
+                            highest_indexed_checkpoint__ = 
+                                map_.next_value::<::std::option::Option<crate::_serde::NumberDeserialize<_>>>()?.map(|x| x.0)
+                            ;
+                        }
+                        GeneratedField::NextPageToken => {
+                            if next_page_token__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("nextPageToken"));
+                            }
+                            next_page_token__ = 
+                                map_.next_value::<::std::option::Option<crate::_serde::BytesDeserialize<_>>>()?.map(|x| x.0)
+                            ;
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(ListAuthenticatedEventsResponse {
+                    events: events__.unwrap_or_default(),
+                    highest_indexed_checkpoint: highest_indexed_checkpoint__,
+                    next_page_token: next_page_token__,
+                })
+            }
+        }
+        deserializer.deserialize_struct("sui.rpc.v2.ListAuthenticatedEventsResponse", FIELDS, GeneratedVisitor)
     }
 }
 impl serde::Serialize for ListBalancesRequest {
@@ -19218,6 +19998,152 @@ impl<'de> serde::Deserialize<'de> for NameRecord {
         }
         deserializer
             .deserialize_struct("sui.rpc.v2.NameRecord", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for OcsInclusionProof {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0;
+        if self.merkle_proof.is_some() {
+            len += 1;
+        }
+        if self.leaf_index.is_some() {
+            len += 1;
+        }
+        if self.tree_root.is_some() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("sui.rpc.v2.OCSInclusionProof", len)?;
+        if let Some(v) = self.merkle_proof.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("merkleProof", crate::_serde::base64::encode(&v).as_str())?;
+        }
+        if let Some(v) = self.leaf_index.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("leafIndex", ToString::to_string(&v).as_str())?;
+        }
+        if let Some(v) = self.tree_root.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("treeRoot", crate::_serde::base64::encode(&v).as_str())?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for OcsInclusionProof {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "merkle_proof",
+            "merkleProof",
+            "leaf_index",
+            "leafIndex",
+            "tree_root",
+            "treeRoot",
+        ];
+
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            MerkleProof,
+            LeafIndex,
+            TreeRoot,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", &FIELDS)
+                    }
+
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(self, value: &str) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "merkleProof" | "merkle_proof" => Ok(GeneratedField::MerkleProof),
+                            "leafIndex" | "leaf_index" => Ok(GeneratedField::LeafIndex),
+                            "treeRoot" | "tree_root" => Ok(GeneratedField::TreeRoot),
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = OcsInclusionProof;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2.OCSInclusionProof")
+            }
+
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<OcsInclusionProof, V::Error>
+                where
+                    V: serde::de::MapAccess<'de>,
+            {
+                let mut merkle_proof__ = None;
+                let mut leaf_index__ = None;
+                let mut tree_root__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::MerkleProof => {
+                            if merkle_proof__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("merkleProof"));
+                            }
+                            merkle_proof__ = 
+                                map_.next_value::<::std::option::Option<crate::_serde::BytesDeserialize<_>>>()?.map(|x| x.0)
+                            ;
+                        }
+                        GeneratedField::LeafIndex => {
+                            if leaf_index__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("leafIndex"));
+                            }
+                            leaf_index__ = 
+                                map_.next_value::<::std::option::Option<crate::_serde::NumberDeserialize<_>>>()?.map(|x| x.0)
+                            ;
+                        }
+                        GeneratedField::TreeRoot => {
+                            if tree_root__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("treeRoot"));
+                            }
+                            tree_root__ = 
+                                map_.next_value::<::std::option::Option<crate::_serde::BytesDeserialize<_>>>()?.map(|x| x.0)
+                            ;
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(OcsInclusionProof {
+                    merkle_proof: merkle_proof__,
+                    leaf_index: leaf_index__,
+                    tree_root: tree_root__,
+                })
+            }
+        }
+        deserializer.deserialize_struct("sui.rpc.v2.OCSInclusionProof", FIELDS, GeneratedVisitor)
     }
 }
 impl serde::Serialize for Object {
