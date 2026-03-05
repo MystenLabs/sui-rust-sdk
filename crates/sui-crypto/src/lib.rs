@@ -1,5 +1,9 @@
 #![cfg_attr(doc_cfg, feature(doc_cfg))]
 
+extern crate alloc;
+
+pub mod merkle;
+
 use sui_sdk_types::PersonalMessage;
 use sui_sdk_types::Transaction;
 use sui_sdk_types::UserSignature;

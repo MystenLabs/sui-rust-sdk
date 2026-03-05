@@ -550,7 +550,11 @@ fn write_deserialize_message<W: Write>(
         "{}#[allow(clippy::useless_conversion)]",
         Indent(indent)
     )?;
-    writeln!(writer, "{}#[allow(clippy::unit_arg)]", Indent(indent))?;
+    writeln!(
+        writer,
+        "{}#[allow(clippy::unit_arg)]",
+        Indent(indent)
+    )?;
     writeln!(
         writer,
         r#"{indent}impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {{
