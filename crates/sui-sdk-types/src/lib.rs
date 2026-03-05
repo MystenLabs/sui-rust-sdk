@@ -187,6 +187,7 @@ pub use effects::UnchangedConsensusKind;
 pub use effects::UnchangedConsensusObject;
 pub use events::BalanceChange;
 pub use events::Event;
+pub use events::EventId;
 pub use events::TransactionEvents;
 pub use execution_status::CommandArgumentError;
 pub use execution_status::ExecutionError;
