@@ -34,4 +34,6 @@ pub use move_value::MoveObject;
 pub use move_value::MoveValue;
 pub use pagination::Page;
 pub use pagination::PageInfo;
+pub use pagination::paginate;
+pub use pagination::paginate_backward;
 pub use response::Response;

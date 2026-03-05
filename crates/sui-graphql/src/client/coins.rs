@@ -33,7 +33,7 @@ impl Client {
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     let client = Client::new("https://sui-mainnet.mystenlabs.com/graphql")?;
+    ///     let client = Client::new(Client::MAINNET)?;
     ///     let owner: Address = "0x123...".parse()?;
     ///
     ///     // Get SUI balance using the helper
@@ -110,7 +110,7 @@ impl Client {
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     let client = Client::new("https://sui-mainnet.mystenlabs.com/graphql")?;
+    ///     let client = Client::new(Client::MAINNET)?;
     ///     let owner: Address = "0x123...".parse()?;
     ///
     ///     let mut stream = pin!(client.list_balances(owner));
@@ -175,10 +175,7 @@ impl Client {
         let page_info = data
             .as_ref()
             .and_then(|d| d.page_info.clone())
-            .unwrap_or(PageInfo {
-                has_next_page: false,
-                end_cursor: None,
-            });
+            .unwrap_or_default();
 
         let (coin_types, total_balances) = data
             .map(|d| {
@@ -207,6 +204,7 @@ impl Client {
             items: balances,
             has_next_page: page_info.has_next_page,
             end_cursor: page_info.end_cursor,
+            ..Default::default()
         })
     }
 }

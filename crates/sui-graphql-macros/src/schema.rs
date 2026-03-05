@@ -144,7 +144,7 @@ impl Schema {
     }
 
     /// Look up a field on a type.
-    pub fn get_field(&self, type_name: &str, field_name: &str) -> Option<&FieldInfo> {
+    pub fn field(&self, type_name: &str, field_name: &str) -> Option<&FieldInfo> {
         self.types.get(type_name)?.fields.get(field_name)
     }
 

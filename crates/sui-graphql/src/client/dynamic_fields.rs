@@ -231,22 +231,16 @@ impl Client {
         let response = self.query::<Response>(QUERY, variables).await?;
 
         let Some(data) = response.into_data() else {
-            return Ok(Page {
-                items: vec![],
-                has_next_page: false,
-                end_cursor: None,
-            });
+            return Ok(Page::default());
         };
 
-        let page_info = data.page_info.unwrap_or(PageInfo {
-            has_next_page: false,
-            end_cursor: None,
-        });
+        let page_info = data.page_info.unwrap_or_default();
 
         Ok(Page {
             items: data.nodes.unwrap_or_default(),
             has_next_page: page_info.has_next_page,
             end_cursor: page_info.end_cursor,
+            ..Default::default()
         })
     }
 
