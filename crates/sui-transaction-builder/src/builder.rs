@@ -889,14 +889,8 @@ impl TransactionBuilder {
             .success()
         {
             return Err(Error::Input(format!(
-                "txn failed to execute: {}",
-                response
-                    .get_ref()
-                    .transaction()
-                    .effects()
-                    .status()
-                    .error()
-                    .description()
+                "txn failed to execute: {:?}",
+                response.get_ref().transaction().effects().status()
             )));
         }
 
