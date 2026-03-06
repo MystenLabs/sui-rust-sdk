@@ -1,0 +1,5 @@
+error: type is Option but no '?' found at or before 'chainIdentifier'; add '?' to mark which segments are nullable
+ --> tests/compile/type_validation_option_without_question_mark.rs:6:9
+  |
+6 |     id: Option<String>,
+  |         ^^^^^^^^^^^^^^

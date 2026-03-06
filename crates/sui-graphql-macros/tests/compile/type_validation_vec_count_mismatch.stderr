@@ -4,7 +4,7 @@ error: field 'items' is a list but type has no Vec wrapper for it
 8 |     names: String,
   |            ^^^^^^
 
-error: type has 1 Vec wrapper(s) but path 'chainIdentifier' has 0 list field(s)
+error: type has 1 excess Vec wrapper(s) but path 'chainIdentifier' has no matching list field(s)
   --> tests/compile/type_validation_vec_count_mismatch.rs:16:10
    |
 16 |     ids: Vec<String>,

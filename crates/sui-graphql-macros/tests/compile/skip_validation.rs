@@ -4,7 +4,7 @@ use sui_graphql_macros::Response;
 #[derive(Response)]
 #[response(schema = "tests/test_schema.graphql")]
 struct SkipValidationResponse {
-    #[field(path = "object.nonexistentField", skip_schema_validation)]
+    #[field(path = "object?.nonexistentField", skip_schema_validation)]
     value: Option<String>,
 }
 

@@ -1,10 +1,11 @@
 //! Field path validation against the GraphQL schema and Rust types.
 //!
-//! Validates paths and determines iteration by matching:
-//! - Schema: which fields are lists
-//! - Type: how many Vec wrappers
+//! Validates paths by matching:
+//! - Schema: field existence and list types
+//! - Type structure: `Option`/`Vec` nesting matches `?`/`[]` markers in the path
 //!
-//! Iteration happens automatically when schema says list AND type has Vec.
+//! Null markers (`?`) in the path must correspond to `Option` wrappers in the type,
+//! and `[]` markers must correspond to `Vec` wrappers.
 
 use std::fmt::Write;
 
@@ -120,7 +121,7 @@ pub fn validate_path_against_schema<'a>(
             .field(current_type, segment.field)
             .ok_or_else(|| field_not_found_error(schema, current_type, segment.field, span))?;
 
-        if segment.is_list && !field.is_list {
+        if segment.is_list() && !field.is_list {
             return Err(syn::Error::new(
                 span,
                 format!(
@@ -130,7 +131,7 @@ pub fn validate_path_against_schema<'a>(
             ));
         }
 
-        if !segment.is_list && field.is_list {
+        if !segment.is_list() && field.is_list {
             return Err(syn::Error::new(
                 span,
                 format!(
@@ -176,42 +177,110 @@ pub fn is_object_like_scalar(type_name: &str) -> bool {
     OBJECT_LIKE_SCALARS.contains(&type_name)
 }
 
-/// Validate that the type's Vec count matches the number of list fields in the path.
+/// Validate that the Rust type structure matches the `?` and `[]` markers in the path.
+///
+/// Walks segments and checks `TypeStructure` layers match:
+/// - `?` markers on segments before the next `[]` → one `Optional` wrapper
+/// - `[]` marker → one `Vector` wrapper
+/// - `[]?` (elements_nullable) → one `Optional` wrapper on the element type
+///
+/// Multiple `?` markers between `[]` boundaries share one `Option` wrapper.
 ///
 /// When `skip_vec_excess_check` is true, extra Vec wrappers beyond the list count are
 /// allowed. This is used for object-like scalars (e.g., JSON) whose values can be arrays.
-///
-/// # Errors
-///
-/// - If Vec count < list count: points to the specific list field missing a Vec
-/// - If Vec count > list count (and `skip_vec_excess_check` is false): too many Vec wrappers
 pub fn validate_type_matches_path(
     path: &ParsedPath<'_>,
     ty: &syn::Type,
     skip_vec_excess_check: bool,
 ) -> Result<(), syn::Error> {
-    let type_structure = analyze_type(ty);
-    let vec_count = count_vec_depth(&type_structure);
-    let list_count = path.list_fields().len();
+    let analyzed = analyze_type(ty);
+    let mut type_structure = &analyzed;
 
-    if vec_count < list_count {
-        let list_fields = path.list_fields();
-        let mismatched_field = list_fields[vec_count];
+    let mut peeled_optional_in_group = false;
+
+    for segment in &path.segments {
+        // If segment has ?, peel Optional (first time in this group)
+        if segment.is_nullable && !peeled_optional_in_group {
+            let TypeStructure::Optional(inner) = type_structure else {
+                return Err(syn::Error::new_spanned(
+                    ty,
+                    format!(
+                        "'{}' is marked nullable with '?' but type is not wrapped in Option<...>",
+                        segment.field
+                    ),
+                ));
+            };
+            type_structure = inner.as_ref();
+            peeled_optional_in_group = true;
+        }
+
+        // If segment is a list, peel Vector (and handle []?)
+        if let Some(list) = &segment.list {
+            // Catch un-peeled Optional before peeling Vector
+            if !peeled_optional_in_group && matches!(type_structure, TypeStructure::Optional(_)) {
+                return Err(syn::Error::new_spanned(
+                    ty,
+                    format!(
+                        "type is Option but no segment before '{}[]' has a '?' marker; \
+                         add '?' to mark which segment is nullable",
+                        segment.field
+                    ),
+                ));
+            }
+
+            // Peel Vector
+            let TypeStructure::Vector(element_type) = type_structure else {
+                return Err(syn::Error::new_spanned(
+                    ty,
+                    format!(
+                        "field '{}' is a list but type has no Vec wrapper for it",
+                        segment.field
+                    ),
+                ));
+            };
+            type_structure = element_type.as_ref();
+
+            // Handle []? — peel Optional for element type
+            if list.elements_nullable {
+                let TypeStructure::Optional(inner) = type_structure else {
+                    return Err(syn::Error::new_spanned(
+                        ty,
+                        format!(
+                            "'{}' has '[]?' but element type is not wrapped in Option<...>",
+                            segment.field
+                        ),
+                    ));
+                };
+                type_structure = inner.as_ref();
+            }
+
+            // New group starts after [].
+            // If elements_nullable, keep peeled=true so subsequent `?` can coexist.
+            peeled_optional_in_group = list.elements_nullable;
+        }
+    }
+
+    // Final boundary: check for un-peeled Optional
+    if !peeled_optional_in_group && matches!(type_structure, TypeStructure::Optional(_)) {
+        let last_field = path.segments.last().map(|s| s.field).unwrap_or(path.raw);
         return Err(syn::Error::new_spanned(
             ty,
             format!(
-                "field '{}' is a list but type has no Vec wrapper for it",
-                mismatched_field
+                "type is Option but no '?' found at or before '{}'; \
+                 add '?' to mark which segments are nullable",
+                last_field
             ),
         ));
     }
 
-    if !skip_vec_excess_check && vec_count > list_count {
+    // Check for excess Vec wrappers
+    if !skip_vec_excess_check && count_vec_depth(type_structure) > 0 {
         return Err(syn::Error::new_spanned(
             ty,
             format!(
-                "type has {} Vec wrapper(s) but path '{}' has {} list field(s)",
-                vec_count, path.raw, list_count
+                "type has {} excess Vec wrapper(s) but path '{}' has no matching list field(s)",
+                count_vec_depth(type_structure),
+                path.raw
             ),
         ));
     }

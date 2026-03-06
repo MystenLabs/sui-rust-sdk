@@ -184,9 +184,9 @@ impl Client {
     ) -> Result<Page<DynamicField>, Error> {
         #[derive(Response)]
         struct Response {
-            #[field(path = "object.dynamicFields.nodes[]")]
+            #[field(path = "object?.dynamicFields?.nodes?[]")]
             nodes: Option<Vec<DynamicField>>,
-            #[field(path = "object.dynamicFields.pageInfo")]
+            #[field(path = "object?.dynamicFields?.pageInfo?")]
             page_info: Option<PageInfo>,
         }
 
@@ -255,13 +255,13 @@ impl Client {
     ) -> Result<Option<DynamicField>, Error> {
         #[derive(Response)]
         struct DynamicFieldResponse {
-            #[field(path = "object.dynamicField")]
+            #[field(path = "object?.dynamicField?")]
             field: Option<DynamicField>,
         }
 
         #[derive(Response)]
         struct DynamicObjectFieldResponse {
-            #[field(path = "object.dynamicObjectField")]
+            #[field(path = "object?.dynamicObjectField?")]
             field: Option<DynamicField>,
         }
 

@@ -4,7 +4,7 @@ use sui_graphql_macros::Response;
 #[derive(Response)]
 #[response(root_type = "Mutation")]
 struct ExecuteResult {
-    #[field(path = "executeTransaction.effects.effectsBcs")]
+    #[field(path = "executeTransaction?.effects?.effectsBcs?")]
     effects_bcs: Option<String>,
 }
 

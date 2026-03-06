@@ -22,11 +22,11 @@ pub struct MoveValue {
     pub type_tag: TypeTag,
 
     /// JSON representation (if fetched).
-    #[field(path = "json")]
+    #[field(path = "json?")]
     pub json: Option<serde_json::Value>,
 
     /// BCS representation (if fetched).
-    #[field(path = "bcs")]
+    #[field(path = "bcs?")]
     pub bcs: Option<BcsBytes>,
 }
 

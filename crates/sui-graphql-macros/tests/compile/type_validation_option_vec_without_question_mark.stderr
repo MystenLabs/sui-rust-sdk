@@ -1,0 +1,5 @@
+error: type is Option but no segment before 'nodes[]' has a '?' marker; add '?' to mark which segment is nullable
+ --> tests/compile/type_validation_option_vec_without_question_mark.rs:6:14
+  |
+6 |     digests: Option<Vec<String>>,
+  |              ^^^^^^^^^^^^^^^^^^^

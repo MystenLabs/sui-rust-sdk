@@ -1,0 +1,5 @@
+error: 'chainIdentifier' is marked nullable with '?' but type is not wrapped in Option<...>
+ --> tests/compile/type_validation_question_mark_without_option.rs:6:9
+  |
+6 |     id: String,
+  |         ^^^^^^

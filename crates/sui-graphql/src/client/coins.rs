@@ -59,9 +59,9 @@ impl Client {
     ) -> Result<Option<Balance>, Error> {
         #[derive(Response)]
         struct Response {
-            #[field(path = "address.balance.coinType.repr")]
+            #[field(path = "address?.balance?.coinType?.repr?")]
             coin_type: Option<StructTag>,
-            #[field(path = "address.balance.totalBalance")]
+            #[field(path = "address?.balance?.totalBalance?")]
             total_balance: Option<BigInt>,
         }
 
@@ -137,11 +137,11 @@ impl Client {
     ) -> Result<Page<Balance>, Error> {
         #[derive(Response)]
         struct Response {
-            #[field(path = "address.balances.pageInfo")]
+            #[field(path = "address?.balances?.pageInfo?")]
             page_info: Option<PageInfo>,
-            #[field(path = "address.balances.nodes[].coinType.repr")]
+            #[field(path = "address?.balances?.nodes?[].coinType?.repr?")]
             coin_types: Option<Vec<Option<StructTag>>>,
-            #[field(path = "address.balances.nodes[].totalBalance")]
+            #[field(path = "address?.balances?.nodes?[].totalBalance?")]
             total_balances: Option<Vec<Option<BigInt>>>,
         }
 

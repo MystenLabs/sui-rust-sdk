@@ -1,0 +1,5 @@
+error: Invalid suffix '[?]' in path 'object.address[?]'. Valid suffixes: ?, [], ?[], []?, ?[]?
+ --> tests/compile/type_validation_invalid_suffix.rs:5:20
+  |
+5 |     #[field(path = "object.address[?]")]
+  |                    ^^^^^^^^^^^^^^^^^^^

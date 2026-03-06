@@ -35,6 +35,11 @@ fn compile_tests() {
     // Type validation tests
     t.compile_fail("tests/compile/type_validation_vec_count_mismatch.rs");
     t.compile_fail("tests/compile/type_validation_trailing_array_mismatch.rs");
+    t.compile_fail("tests/compile/type_validation_question_mark_without_option.rs");
+    t.compile_fail("tests/compile/type_validation_option_without_question_mark.rs");
+    t.compile_fail("tests/compile/type_validation_option_vec_without_question_mark.rs");
+    t.compile_fail("tests/compile/type_validation_elements_nullable_without_option.rs");
+    t.compile_fail("tests/compile/type_validation_invalid_suffix.rs");
     t.pass("tests/compile/skip_validation_type_mismatch.rs");
 
     // Root type validation tests
