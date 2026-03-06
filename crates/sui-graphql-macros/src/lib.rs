@@ -1,12 +1,17 @@
-//! Procedural macros for sui-graphql with compile-time schema validation.
+//! Compile-time validated derive macro for deserializing Sui GraphQL responses.
 //!
-//! This crate provides the `Response` derive macro that:
-//! - Validates field paths against the Sui GraphQL schema at compile time
-//! - Generates deserialization code for extracting nested fields from JSON responses
+//! GraphQL responses are deeply nested JSON. Rather than manually writing
+//! `serde_json::Value` traversal code (with `.get()`, `.as_array()`, null checks, etc.),
+//! the [`Response`] derive macro generates all of that from a declarative field path.
+//! Paths are validated against the Sui GraphQL schema at compile time, so typos and
+//! type mismatches are caught before your code ever runs.
 //!
-//! # Example
+//! For a complete client that uses this macro, see
+//! [`sui-graphql`](https://docs.rs/sui-graphql).
 //!
-//! ```ignore
+//! # Quick Start
+//!
+//! ```no_run
 //! use sui_graphql_macros::Response;
 //!
 //! #[derive(Response)]
@@ -16,10 +21,121 @@
 //!     #[field(path = "object.version")]
 //!     version: u64,
 //! }
-//!
-//! // The macro validates paths against the schema and generates extraction code.
-//! // Invalid paths like "object.nonexistent" will cause a compile error.
+//! fn main() {}
 //! ```
+//!
+//! The macro validates that `object.address` and `object.version` exist in the schema
+//! and that their types match at compile time. It then generates a
+//! `from_value(serde_json::Value) -> Result<Self, String>` method and a `Deserialize`
+//! implementation, so the struct can be used directly with
+//! `serde_json::from_value` or as a response type in GraphQL client calls.
+//!
+//! # Path Syntax
+//!
+//! Paths use dot-separated segments with optional suffixes:
+//!
+//! | Syntax | Meaning | Rust Type |
+//! |--------|---------|-----------|
+//! | `field` | Required field | `T` |
+//! | `field?` | Nullable field | `Option<T>` |
+//! | `field[]` | Required list | `Vec<T>` |
+//! | `field?[]` | Nullable list | `Option<Vec<T>>` |
+//! | `field[]?` | List with nullable elements | `Vec<Option<T>>` |
+//! | `field?[]?` | Nullable list, nullable elements | `Option<Vec<Option<T>>>` |
+//!
+//! Multiple `?` markers between `[]` boundaries share one `Option` wrapper.
+//! Each `?` controls null tolerance at that specific segment.
+//!
+//! The macro enforces that path suffixes match the Rust type at compile time.
+//! For example, `field?` requires `Option<T>`, and `field[]` requires `Vec<T>`.
+//! A mismatch (e.g., `field?` with `String` or `field` with `Option<String>`)
+//! produces a compile error.
+//!
+//! ## Null Handling
+//!
+//! ```no_run
+//! use sui_graphql_macros::Response;
+//!
+//! #[derive(Response)]
+//! struct Example {
+//!     // null at `object` → error, null at `address` → error
+//!     #[field(path = "object.address")]
+//!     strict: String,
+//!
+//!     // null at `object` → Ok(None), null at `address` → Ok(None)
+//!     #[field(path = "object?.address?")]
+//!     flexible: Option<String>,
+//!
+//!     // null at `object` → Ok(None), null at `address` → error
+//!     #[field(path = "object?.address")]
+//!     partial: Option<String>,
+//! }
+//! fn main() {}
+//! ```
+//!
+//! ## Lists
+//!
+//! Use `[]` to mark list fields. The macro validates this matches the schema.
+//!
+//! ```no_run
+//! use sui_graphql_macros::Response;
+//!
+//! #[derive(Response)]
+//! struct CheckpointDigests {
+//!     #[field(path = "checkpoints.nodes[].digest")]
+//!     digests: Vec<String>,
+//!
+//!     // Nullable list with nullable elements
+//!     #[field(path = "checkpoints?.nodes?[]?.digest?")]
+//!     maybe_digests: Option<Vec<Option<String>>>,
+//! }
+//! fn main() {}
+//! ```
+//!
+//! ## Aliases
+//!
+//! Use `alias:field` when your GraphQL query uses aliases. The alias (before `:`) is the
+//! JSON key used for extraction, while the field name (after `:`) is validated against
+//! the schema. The alias itself is not schema-validated since it is user-defined in the
+//! query.
+//!
+//! ```no_run
+//! use sui_graphql_macros::Response;
+//!
+//! #[derive(Response)]
+//! struct EpochCheckpoints {
+//!     // GraphQL alias "firstCp" maps to schema field "checkpoints"
+//!     #[field(path = "epoch.firstCp:checkpoints.nodes[].sequenceNumber")]
+//!     first_checkpoints: Vec<u64>,
+//! }
+//! fn main() {}
+//! ```
+//!
+//! ## Enums (GraphQL Unions)
+//!
+//! Use `#[response(root_type = "UnionType")]` on enums with newtype variants:
+//!
+//! ```ignore
+//! #[derive(Response)]
+//! #[response(root_type = "DynamicFieldValue")]
+//! enum FieldValue {
+//!     #[response(on = "MoveValue")]
+//!     Value(MoveValueData),
+//!     MoveObject(MoveObjectData), // `on` defaults to variant name
+//! }
+//! ```
+//!
+//! The macro dispatches on `__typename` in the JSON response.
+//!
+//! ## Attributes
+//!
+//! | Attribute | Level | Description |
+//! |-----------|-------|-------------|
+//! | `#[response(root_type = "Type")]` | struct/enum | Schema type to validate against (default: `"Query"`) |
+//! | `#[response(schema = "path")]` | struct/enum | Custom schema file (relative to `CARGO_MANIFEST_DIR`) |
+//! | `#[field(path = "...")]` | field | Dot-separated path with optional `?`/`[]`/alias |
+//! | `#[field(skip_schema_validation)]` | field | Skip compile-time schema checks for this field |
+//! | `#[response(on = "TypeName")]` | variant | GraphQL `__typename` to match (default: variant name) |
 
 extern crate proc_macro;
 

@@ -6,6 +6,15 @@ repository = "https://github.com/mystenlabs/sui-rust-sdk/"
 license = "Apache-2.0"
 edition = "2024"
 description = "Procedural macros for sui-graphql with compile-time validation"
+readme = "README.md"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = [
+    "--cfg=doc_cfg",
+    "-Zunstable-options",
+    "--generate-link-to-definition"
+]
 
 [lib]
 proc-macro = true
@@ -22,3 +31,6 @@ edit-distance = "2.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 trybuild = "1.0"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(doc_cfg)'] }
