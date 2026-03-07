@@ -304,6 +304,162 @@ mod _accessor_impls {
             self
         }
     }
+    impl super::AuthenticatedEvent {
+        pub const fn const_default() -> Self {
+            Self {
+                checkpoint: None,
+                accumulator_version: None,
+                transaction_idx: None,
+                event_idx: None,
+                event: None,
+                stream_id: None,
+            }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::AuthenticatedEvent = super::AuthenticatedEvent::const_default();
+            &DEFAULT
+        }
+        ///If `checkpoint` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn checkpoint_opt_mut(&mut self) -> Option<&mut u64> {
+            self.checkpoint.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `checkpoint`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn checkpoint_mut(&mut self) -> &mut u64 {
+            self.checkpoint.get_or_insert_default()
+        }
+        ///If `checkpoint` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn checkpoint_opt(&self) -> Option<u64> {
+            self.checkpoint.as_ref().map(|field| *field)
+        }
+        ///Sets `checkpoint` with the provided value.
+        pub fn set_checkpoint(&mut self, field: u64) {
+            self.checkpoint = Some(field);
+        }
+        ///Sets `checkpoint` with the provided value.
+        pub fn with_checkpoint(mut self, field: u64) -> Self {
+            self.set_checkpoint(field);
+            self
+        }
+        ///If `accumulator_version` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn accumulator_version_opt_mut(&mut self) -> Option<&mut u64> {
+            self.accumulator_version.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `accumulator_version`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn accumulator_version_mut(&mut self) -> &mut u64 {
+            self.accumulator_version.get_or_insert_default()
+        }
+        ///If `accumulator_version` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn accumulator_version_opt(&self) -> Option<u64> {
+            self.accumulator_version.as_ref().map(|field| *field)
+        }
+        ///Sets `accumulator_version` with the provided value.
+        pub fn set_accumulator_version(&mut self, field: u64) {
+            self.accumulator_version = Some(field);
+        }
+        ///Sets `accumulator_version` with the provided value.
+        pub fn with_accumulator_version(mut self, field: u64) -> Self {
+            self.set_accumulator_version(field);
+            self
+        }
+        ///If `transaction_idx` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn transaction_idx_opt_mut(&mut self) -> Option<&mut u32> {
+            self.transaction_idx.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `transaction_idx`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn transaction_idx_mut(&mut self) -> &mut u32 {
+            self.transaction_idx.get_or_insert_default()
+        }
+        ///If `transaction_idx` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn transaction_idx_opt(&self) -> Option<u32> {
+            self.transaction_idx.as_ref().map(|field| *field)
+        }
+        ///Sets `transaction_idx` with the provided value.
+        pub fn set_transaction_idx(&mut self, field: u32) {
+            self.transaction_idx = Some(field);
+        }
+        ///Sets `transaction_idx` with the provided value.
+        pub fn with_transaction_idx(mut self, field: u32) -> Self {
+            self.set_transaction_idx(field);
+            self
+        }
+        ///If `event_idx` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn event_idx_opt_mut(&mut self) -> Option<&mut u32> {
+            self.event_idx.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `event_idx`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn event_idx_mut(&mut self) -> &mut u32 {
+            self.event_idx.get_or_insert_default()
+        }
+        ///If `event_idx` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn event_idx_opt(&self) -> Option<u32> {
+            self.event_idx.as_ref().map(|field| *field)
+        }
+        ///Sets `event_idx` with the provided value.
+        pub fn set_event_idx(&mut self, field: u32) {
+            self.event_idx = Some(field);
+        }
+        ///Sets `event_idx` with the provided value.
+        pub fn with_event_idx(mut self, field: u32) -> Self {
+            self.set_event_idx(field);
+            self
+        }
+        ///Returns the value of `event`, or the default value if `event` is unset.
+        pub fn event(&self) -> &super::Event {
+            self.event
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::Event::default_instance() as _)
+        }
+        ///If `event` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn event_opt_mut(&mut self) -> Option<&mut super::Event> {
+            self.event.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `event`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn event_mut(&mut self) -> &mut super::Event {
+            self.event.get_or_insert_default()
+        }
+        ///If `event` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn event_opt(&self) -> Option<&super::Event> {
+            self.event.as_ref().map(|field| field as _)
+        }
+        ///Sets `event` with the provided value.
+        pub fn set_event<T: Into<super::Event>>(&mut self, field: T) {
+            self.event = Some(field.into().into());
+        }
+        ///Sets `event` with the provided value.
+        pub fn with_event<T: Into<super::Event>>(mut self, field: T) -> Self {
+            self.set_event(field.into());
+            self
+        }
+        ///If `stream_id` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn stream_id_opt_mut(&mut self) -> Option<&mut String> {
+            self.stream_id.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `stream_id`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn stream_id_mut(&mut self) -> &mut String {
+            self.stream_id.get_or_insert_default()
+        }
+        ///If `stream_id` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn stream_id_opt(&self) -> Option<&str> {
+            self.stream_id.as_ref().map(|field| field as _)
+        }
+        ///Sets `stream_id` with the provided value.
+        pub fn set_stream_id<T: Into<String>>(&mut self, field: T) {
+            self.stream_id = Some(field.into().into());
+        }
+        ///Sets `stream_id` with the provided value.
+        pub fn with_stream_id<T: Into<String>>(mut self, field: T) -> Self {
+            self.set_stream_id(field.into());
+            self
+        }
+    }
     impl super::AuthenticatorStateExpire {
         pub const fn const_default() -> Self {
             Self {
@@ -7734,6 +7890,182 @@ mod _accessor_impls {
             self
         }
     }
+    impl super::GetObjectInclusionProofRequest {
+        pub const fn const_default() -> Self {
+            Self {
+                object_id: None,
+                checkpoint: None,
+            }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::GetObjectInclusionProofRequest = super::GetObjectInclusionProofRequest::const_default();
+            &DEFAULT
+        }
+        ///If `object_id` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn object_id_opt_mut(&mut self) -> Option<&mut String> {
+            self.object_id.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `object_id`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn object_id_mut(&mut self) -> &mut String {
+            self.object_id.get_or_insert_default()
+        }
+        ///If `object_id` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn object_id_opt(&self) -> Option<&str> {
+            self.object_id.as_ref().map(|field| field as _)
+        }
+        ///Sets `object_id` with the provided value.
+        pub fn set_object_id<T: Into<String>>(&mut self, field: T) {
+            self.object_id = Some(field.into().into());
+        }
+        ///Sets `object_id` with the provided value.
+        pub fn with_object_id<T: Into<String>>(mut self, field: T) -> Self {
+            self.set_object_id(field.into());
+            self
+        }
+        ///If `checkpoint` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn checkpoint_opt_mut(&mut self) -> Option<&mut u64> {
+            self.checkpoint.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `checkpoint`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn checkpoint_mut(&mut self) -> &mut u64 {
+            self.checkpoint.get_or_insert_default()
+        }
+        ///If `checkpoint` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn checkpoint_opt(&self) -> Option<u64> {
+            self.checkpoint.as_ref().map(|field| *field)
+        }
+        ///Sets `checkpoint` with the provided value.
+        pub fn set_checkpoint(&mut self, field: u64) {
+            self.checkpoint = Some(field);
+        }
+        ///Sets `checkpoint` with the provided value.
+        pub fn with_checkpoint(mut self, field: u64) -> Self {
+            self.set_checkpoint(field);
+            self
+        }
+    }
+    impl super::GetObjectInclusionProofResponse {
+        pub const fn const_default() -> Self {
+            Self {
+                object_ref: None,
+                inclusion_proof: None,
+                object_data: None,
+                checkpoint_summary: None,
+            }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::GetObjectInclusionProofResponse = super::GetObjectInclusionProofResponse::const_default();
+            &DEFAULT
+        }
+        ///Returns the value of `object_ref`, or the default value if `object_ref` is unset.
+        pub fn object_ref(&self) -> &super::ObjectReference {
+            self.object_ref
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::ObjectReference::default_instance() as _)
+        }
+        ///If `object_ref` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn object_ref_opt_mut(&mut self) -> Option<&mut super::ObjectReference> {
+            self.object_ref.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `object_ref`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn object_ref_mut(&mut self) -> &mut super::ObjectReference {
+            self.object_ref.get_or_insert_default()
+        }
+        ///If `object_ref` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn object_ref_opt(&self) -> Option<&super::ObjectReference> {
+            self.object_ref.as_ref().map(|field| field as _)
+        }
+        ///Sets `object_ref` with the provided value.
+        pub fn set_object_ref<T: Into<super::ObjectReference>>(&mut self, field: T) {
+            self.object_ref = Some(field.into().into());
+        }
+        ///Sets `object_ref` with the provided value.
+        pub fn with_object_ref<T: Into<super::ObjectReference>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_object_ref(field.into());
+            self
+        }
+        ///Returns the value of `inclusion_proof`, or the default value if `inclusion_proof` is unset.
+        pub fn inclusion_proof(&self) -> &super::OcsInclusionProof {
+            self.inclusion_proof
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::OcsInclusionProof::default_instance() as _)
+        }
+        ///If `inclusion_proof` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn inclusion_proof_opt_mut(
+            &mut self,
+        ) -> Option<&mut super::OcsInclusionProof> {
+            self.inclusion_proof.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `inclusion_proof`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn inclusion_proof_mut(&mut self) -> &mut super::OcsInclusionProof {
+            self.inclusion_proof.get_or_insert_default()
+        }
+        ///If `inclusion_proof` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn inclusion_proof_opt(&self) -> Option<&super::OcsInclusionProof> {
+            self.inclusion_proof.as_ref().map(|field| field as _)
+        }
+        ///Sets `inclusion_proof` with the provided value.
+        pub fn set_inclusion_proof<T: Into<super::OcsInclusionProof>>(
+            &mut self,
+            field: T,
+        ) {
+            self.inclusion_proof = Some(field.into().into());
+        }
+        ///Sets `inclusion_proof` with the provided value.
+        pub fn with_inclusion_proof<T: Into<super::OcsInclusionProof>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_inclusion_proof(field.into());
+            self
+        }
+        ///If `object_data` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn object_data_opt(&self) -> Option<&[u8]> {
+            self.object_data.as_ref().map(|field| field as _)
+        }
+        ///Sets `object_data` with the provided value.
+        pub fn set_object_data<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
+            self.object_data = Some(field.into().into());
+        }
+        ///Sets `object_data` with the provided value.
+        pub fn with_object_data<T: Into<::prost::bytes::Bytes>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_object_data(field.into());
+            self
+        }
+        ///If `checkpoint_summary` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn checkpoint_summary_opt(&self) -> Option<&[u8]> {
+            self.checkpoint_summary.as_ref().map(|field| field as _)
+        }
+        ///Sets `checkpoint_summary` with the provided value.
+        pub fn set_checkpoint_summary<T: Into<::prost::bytes::Bytes>>(
+            &mut self,
+            field: T,
+        ) {
+            self.checkpoint_summary = Some(field.into().into());
+        }
+        ///Sets `checkpoint_summary` with the provided value.
+        pub fn with_checkpoint_summary<T: Into<::prost::bytes::Bytes>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_checkpoint_summary(field.into());
+            self
+        }
+    }
     impl super::GetObjectRequest {
         pub const fn const_default() -> Self {
             Self {
@@ -8994,6 +9326,173 @@ mod _accessor_impls {
         ///Sets `upgraded_version` with the provided value.
         pub fn with_upgraded_version(mut self, field: u64) -> Self {
             self.set_upgraded_version(field);
+            self
+        }
+    }
+    impl super::ListAuthenticatedEventsRequest {
+        pub const fn const_default() -> Self {
+            Self {
+                stream_id: None,
+                start_checkpoint: None,
+                page_size: None,
+                page_token: None,
+            }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::ListAuthenticatedEventsRequest = super::ListAuthenticatedEventsRequest::const_default();
+            &DEFAULT
+        }
+        ///If `stream_id` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn stream_id_opt_mut(&mut self) -> Option<&mut String> {
+            self.stream_id.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `stream_id`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn stream_id_mut(&mut self) -> &mut String {
+            self.stream_id.get_or_insert_default()
+        }
+        ///If `stream_id` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn stream_id_opt(&self) -> Option<&str> {
+            self.stream_id.as_ref().map(|field| field as _)
+        }
+        ///Sets `stream_id` with the provided value.
+        pub fn set_stream_id<T: Into<String>>(&mut self, field: T) {
+            self.stream_id = Some(field.into().into());
+        }
+        ///Sets `stream_id` with the provided value.
+        pub fn with_stream_id<T: Into<String>>(mut self, field: T) -> Self {
+            self.set_stream_id(field.into());
+            self
+        }
+        ///If `start_checkpoint` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn start_checkpoint_opt_mut(&mut self) -> Option<&mut u64> {
+            self.start_checkpoint.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `start_checkpoint`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn start_checkpoint_mut(&mut self) -> &mut u64 {
+            self.start_checkpoint.get_or_insert_default()
+        }
+        ///If `start_checkpoint` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn start_checkpoint_opt(&self) -> Option<u64> {
+            self.start_checkpoint.as_ref().map(|field| *field)
+        }
+        ///Sets `start_checkpoint` with the provided value.
+        pub fn set_start_checkpoint(&mut self, field: u64) {
+            self.start_checkpoint = Some(field);
+        }
+        ///Sets `start_checkpoint` with the provided value.
+        pub fn with_start_checkpoint(mut self, field: u64) -> Self {
+            self.set_start_checkpoint(field);
+            self
+        }
+        ///If `page_size` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn page_size_opt_mut(&mut self) -> Option<&mut u32> {
+            self.page_size.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `page_size`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn page_size_mut(&mut self) -> &mut u32 {
+            self.page_size.get_or_insert_default()
+        }
+        ///If `page_size` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn page_size_opt(&self) -> Option<u32> {
+            self.page_size.as_ref().map(|field| *field)
+        }
+        ///Sets `page_size` with the provided value.
+        pub fn set_page_size(&mut self, field: u32) {
+            self.page_size = Some(field);
+        }
+        ///Sets `page_size` with the provided value.
+        pub fn with_page_size(mut self, field: u32) -> Self {
+            self.set_page_size(field);
+            self
+        }
+        ///If `page_token` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn page_token_opt(&self) -> Option<&[u8]> {
+            self.page_token.as_ref().map(|field| field as _)
+        }
+        ///Sets `page_token` with the provided value.
+        pub fn set_page_token<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
+            self.page_token = Some(field.into().into());
+        }
+        ///Sets `page_token` with the provided value.
+        pub fn with_page_token<T: Into<::prost::bytes::Bytes>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_page_token(field.into());
+            self
+        }
+    }
+    impl super::ListAuthenticatedEventsResponse {
+        pub const fn const_default() -> Self {
+            Self {
+                events: Vec::new(),
+                highest_indexed_checkpoint: None,
+                next_page_token: None,
+            }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::ListAuthenticatedEventsResponse = super::ListAuthenticatedEventsResponse::const_default();
+            &DEFAULT
+        }
+        ///Returns the value of `events`, or the default value if `events` is unset.
+        pub fn events(&self) -> &[super::AuthenticatedEvent] {
+            &self.events
+        }
+        ///Returns a mutable reference to `events`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn events_mut(&mut self) -> &mut Vec<super::AuthenticatedEvent> {
+            &mut self.events
+        }
+        ///Sets `events` with the provided value.
+        pub fn set_events(&mut self, field: Vec<super::AuthenticatedEvent>) {
+            self.events = field;
+        }
+        ///Sets `events` with the provided value.
+        pub fn with_events(mut self, field: Vec<super::AuthenticatedEvent>) -> Self {
+            self.set_events(field);
+            self
+        }
+        ///If `highest_indexed_checkpoint` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn highest_indexed_checkpoint_opt_mut(&mut self) -> Option<&mut u64> {
+            self.highest_indexed_checkpoint.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `highest_indexed_checkpoint`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn highest_indexed_checkpoint_mut(&mut self) -> &mut u64 {
+            self.highest_indexed_checkpoint.get_or_insert_default()
+        }
+        ///If `highest_indexed_checkpoint` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn highest_indexed_checkpoint_opt(&self) -> Option<u64> {
+            self.highest_indexed_checkpoint.as_ref().map(|field| *field)
+        }
+        ///Sets `highest_indexed_checkpoint` with the provided value.
+        pub fn set_highest_indexed_checkpoint(&mut self, field: u64) {
+            self.highest_indexed_checkpoint = Some(field);
+        }
+        ///Sets `highest_indexed_checkpoint` with the provided value.
+        pub fn with_highest_indexed_checkpoint(mut self, field: u64) -> Self {
+            self.set_highest_indexed_checkpoint(field);
+            self
+        }
+        ///If `next_page_token` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn next_page_token_opt(&self) -> Option<&[u8]> {
+            self.next_page_token.as_ref().map(|field| field as _)
+        }
+        ///Sets `next_page_token` with the provided value.
+        pub fn set_next_page_token<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
+            self.next_page_token = Some(field.into().into());
+        }
+        ///Sets `next_page_token` with the provided value.
+        pub fn with_next_page_token<T: Into<::prost::bytes::Bytes>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_next_page_token(field.into());
             self
         }
     }
@@ -10784,6 +11283,74 @@ mod _accessor_impls {
             field: ::std::collections::BTreeMap<String, String>,
         ) -> Self {
             self.set_data(field);
+            self
+        }
+    }
+    impl super::OcsInclusionProof {
+        pub const fn const_default() -> Self {
+            Self {
+                merkle_proof: None,
+                leaf_index: None,
+                tree_root: None,
+            }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::OcsInclusionProof = super::OcsInclusionProof::const_default();
+            &DEFAULT
+        }
+        ///If `merkle_proof` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn merkle_proof_opt(&self) -> Option<&[u8]> {
+            self.merkle_proof.as_ref().map(|field| field as _)
+        }
+        ///Sets `merkle_proof` with the provided value.
+        pub fn set_merkle_proof<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
+            self.merkle_proof = Some(field.into().into());
+        }
+        ///Sets `merkle_proof` with the provided value.
+        pub fn with_merkle_proof<T: Into<::prost::bytes::Bytes>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_merkle_proof(field.into());
+            self
+        }
+        ///If `leaf_index` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn leaf_index_opt_mut(&mut self) -> Option<&mut u64> {
+            self.leaf_index.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `leaf_index`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn leaf_index_mut(&mut self) -> &mut u64 {
+            self.leaf_index.get_or_insert_default()
+        }
+        ///If `leaf_index` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn leaf_index_opt(&self) -> Option<u64> {
+            self.leaf_index.as_ref().map(|field| *field)
+        }
+        ///Sets `leaf_index` with the provided value.
+        pub fn set_leaf_index(&mut self, field: u64) {
+            self.leaf_index = Some(field);
+        }
+        ///Sets `leaf_index` with the provided value.
+        pub fn with_leaf_index(mut self, field: u64) -> Self {
+            self.set_leaf_index(field);
+            self
+        }
+        ///If `tree_root` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn tree_root_opt(&self) -> Option<&[u8]> {
+            self.tree_root.as_ref().map(|field| field as _)
+        }
+        ///Sets `tree_root` with the provided value.
+        pub fn set_tree_root<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
+            self.tree_root = Some(field.into().into());
+        }
+        ///Sets `tree_root` with the provided value.
+        pub fn with_tree_root<T: Into<::prost::bytes::Bytes>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_tree_root(field.into());
             self
         }
     }

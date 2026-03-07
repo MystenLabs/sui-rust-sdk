@@ -1,0 +1,26 @@
+[package]
+name = "sui-authenticated-events-client"
+version = "0.0.1"
+edition = "2024"
+license = "Apache-2.0"
+description = "Sui Light Client for verifying checkpoint proofs and streaming authenticated events"
+
+[dependencies]
+anyhow = "1"
+thiserror = "2"
+bcs = "0.1.6"
+serde = { version = "1", features = ["derive"] }
+tracing = "0.1"
+tonic = "0.14"
+bytes = "1"
+futures = "0.3"
+tokio = { version = "1", features = ["sync", "time", "rt"] }
+tokio-stream = "0.1"
+blake2 = "0.10"
+bnum = { version = "0.13", features = ["serde"] }
+sui-sdk-types = { path = "../sui-sdk-types", features = ["serde", "hash"] }
+sui-crypto = { path = "../sui-crypto", features = ["bls12381"] }
+sui-rpc = { path = "../sui-rpc" }
+
+[dev-dependencies]
+serde_json = "1"
