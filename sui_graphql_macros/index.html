@@ -1,0 +1,105 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Compile-time validated derive macro for deserializing Sui GraphQL responses."><title>sui_graphql_macros - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-ca0dd0c4.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="sui_graphql_macros" data-themes="" data-resource-suffix="" data-rustdoc-version="1.93.1 (01f6ddf75 2026-02-11)" data-channel="1.93.1" data-search-js="search-9e2438ea.js" data-stringdex-js="stringdex-a3946164.js" data-settings-js="settings-c38705f0.js" ><script src="../static.files/storage-e2aeef58.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-a410ff4d.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Crate sui_graphql_macros</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../sui_graphql_macros/index.html">sui_<wbr>graphql_<wbr>macros</a><span class="version">0.0.1</span></h2></div><div class="sidebar-elems"><ul class="block"><li><a id="all-types" href="all.html">All Items</a></li></ul><section id="rustdoc-toc"><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#quick-start" title="Quick Start">Quick Start</a></li><li><a href="#path-syntax" title="Path Syntax">Path Syntax</a><ul><li><a href="#null-handling" title="Null Handling">Null Handling</a></li><li><a href="#lists" title="Lists">Lists</a></li><li><a href="#aliases" title="Aliases">Aliases</a></li><li><a href="#enums-graphql-unions" title="Enums (GraphQL Unions)">Enums (GraphQL Unions)</a></li><li><a href="#attributes" title="Attributes">Attributes</a></li></ul></li></ul><h3><a href="#derives">Crate Items</a></h3><ul class="block"><li><a href="#derives" title="Derive Macros">Derive Macros</a></li></ul></section><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content"><div class="main-heading"><h1>Crate <span>sui_<wbr>graphql_<wbr>macros</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/sui_graphql_macros/lib.rs.html#1-662">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Compile-time validated derive macro for deserializing Sui GraphQL responses.</p>
+<p>GraphQL responses are deeply nested JSON. Rather than manually writing
+<code>serde_json::Value</code> traversal code (with <code>.get()</code>, <code>.as_array()</code>, null checks, etc.),
+the <a href="derive.Response.html" title="derive sui_graphql_macros::Response"><code>Response</code></a> derive macro generates all of that from a declarative field path.
+Paths are validated against the Sui GraphQL schema at compile time, so typos and
+type mismatches are caught before your code ever runs.</p>
+<p>For a complete client that uses this macro, see
+<a href="https://docs.rs/sui-graphql"><code>sui-graphql</code></a>.</p>
+<h2 id="quick-start"><a class="doc-anchor" href="#quick-start">§</a>Quick Start</h2>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>sui_graphql_macros::Response;
+
+<span class="attr">#[derive(Response)]
+</span><span class="kw">struct </span>ObjectData {
+    <span class="attr">#[field(path = <span class="string">"object.address"</span>)]
+    </span>address: String,
+    <span class="attr">#[field(path = <span class="string">"object.version"</span>)]
+    </span>version: u64,
+}
+<span class="kw">fn </span>main() {}</code></pre></div>
+<p>The macro validates that <code>object.address</code> and <code>object.version</code> exist in the schema
+and that their types match at compile time. It then generates a
+<code>from_value(serde_json::Value) -&gt; Result&lt;Self, String&gt;</code> method and a <code>Deserialize</code>
+implementation, so the struct can be used directly with
+<code>serde_json::from_value</code> or as a response type in GraphQL client calls.</p>
+<h2 id="path-syntax"><a class="doc-anchor" href="#path-syntax">§</a>Path Syntax</h2>
+<p>Paths use dot-separated segments with optional suffixes:</p>
+<div><table><thead><tr><th>Syntax</th><th>Meaning</th><th>Rust Type</th></tr></thead><tbody>
+<tr><td><code>field</code></td><td>Required field</td><td><code>T</code></td></tr>
+<tr><td><code>field?</code></td><td>Nullable field</td><td><code>Option&lt;T&gt;</code></td></tr>
+<tr><td><code>field[]</code></td><td>Required list</td><td><code>Vec&lt;T&gt;</code></td></tr>
+<tr><td><code>field?[]</code></td><td>Nullable list</td><td><code>Option&lt;Vec&lt;T&gt;&gt;</code></td></tr>
+<tr><td><code>field[]?</code></td><td>List with nullable elements</td><td><code>Vec&lt;Option&lt;T&gt;&gt;</code></td></tr>
+<tr><td><code>field?[]?</code></td><td>Nullable list, nullable elements</td><td><code>Option&lt;Vec&lt;Option&lt;T&gt;&gt;&gt;</code></td></tr>
+</tbody></table>
+</div>
+<p>Multiple <code>?</code> markers between <code>[]</code> boundaries share one <code>Option</code> wrapper.
+Each <code>?</code> controls null tolerance at that specific segment.</p>
+<p>The macro enforces that path suffixes match the Rust type at compile time.
+For example, <code>field?</code> requires <code>Option&lt;T&gt;</code>, and <code>field[]</code> requires <code>Vec&lt;T&gt;</code>.
+A mismatch (e.g., <code>field?</code> with <code>String</code> or <code>field</code> with <code>Option&lt;String&gt;</code>)
+produces a compile error.</p>
+<h3 id="null-handling"><a class="doc-anchor" href="#null-handling">§</a>Null Handling</h3>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>sui_graphql_macros::Response;
+
+<span class="attr">#[derive(Response)]
+</span><span class="kw">struct </span>Example {
+    <span class="comment">// null at `object` → error, null at `address` → error
+    </span><span class="attr">#[field(path = <span class="string">"object.address"</span>)]
+    </span>strict: String,
+
+    <span class="comment">// null at `object` → Ok(None), null at `address` → Ok(None)
+    </span><span class="attr">#[field(path = <span class="string">"object?.address?"</span>)]
+    </span>flexible: <span class="prelude-ty">Option</span>&lt;String&gt;,
+
+    <span class="comment">// null at `object` → Ok(None), null at `address` → error
+    </span><span class="attr">#[field(path = <span class="string">"object?.address"</span>)]
+    </span>partial: <span class="prelude-ty">Option</span>&lt;String&gt;,
+}
+<span class="kw">fn </span>main() {}</code></pre></div><h3 id="lists"><a class="doc-anchor" href="#lists">§</a>Lists</h3>
+<p>Use <code>[]</code> to mark list fields. The macro validates this matches the schema.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>sui_graphql_macros::Response;
+
+<span class="attr">#[derive(Response)]
+</span><span class="kw">struct </span>CheckpointDigests {
+    <span class="attr">#[field(path = <span class="string">"checkpoints.nodes[].digest"</span>)]
+    </span>digests: Vec&lt;String&gt;,
+
+    <span class="comment">// Nullable list with nullable elements
+    </span><span class="attr">#[field(path = <span class="string">"checkpoints?.nodes?[]?.digest?"</span>)]
+    </span>maybe_digests: <span class="prelude-ty">Option</span>&lt;Vec&lt;<span class="prelude-ty">Option</span>&lt;String&gt;&gt;&gt;,
+}
+<span class="kw">fn </span>main() {}</code></pre></div><h3 id="aliases"><a class="doc-anchor" href="#aliases">§</a>Aliases</h3>
+<p>Use <code>alias:field</code> when your GraphQL query uses aliases. The alias (before <code>:</code>) is the
+JSON key used for extraction, while the field name (after <code>:</code>) is validated against
+the schema. The alias itself is not schema-validated since it is user-defined in the
+query.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>sui_graphql_macros::Response;
+
+<span class="attr">#[derive(Response)]
+</span><span class="kw">struct </span>EpochCheckpoints {
+    <span class="comment">// GraphQL alias "firstCp" maps to schema field "checkpoints"
+    </span><span class="attr">#[field(path = <span class="string">"epoch.firstCp:checkpoints.nodes[].sequenceNumber"</span>)]
+    </span>first_checkpoints: Vec&lt;u64&gt;,
+}
+<span class="kw">fn </span>main() {}</code></pre></div><h3 id="enums-graphql-unions"><a class="doc-anchor" href="#enums-graphql-unions">§</a>Enums (GraphQL Unions)</h3>
+<p>Use <code>#[response(root_type = "UnionType")]</code> on enums with newtype variants:</p>
+
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="attr">#[derive(Response)]
+#[response(root_type = <span class="string">"DynamicFieldValue"</span>)]
+</span><span class="kw">enum </span>FieldValue {
+    <span class="attr">#[response(on = <span class="string">"MoveValue"</span>)]
+    </span>Value(MoveValueData),
+    MoveObject(MoveObjectData), <span class="comment">// `on` defaults to variant name
+</span>}</code></pre></div>
+<p>The macro dispatches on <code>__typename</code> in the JSON response.</p>
+<h3 id="attributes"><a class="doc-anchor" href="#attributes">§</a>Attributes</h3><div><table><thead><tr><th>Attribute</th><th>Level</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>#[response(root_type = "Type")]</code></td><td>struct/enum</td><td>Schema type to validate against (default: <code>"Query"</code>)</td></tr>
+<tr><td><code>#[response(schema = "path")]</code></td><td>struct/enum</td><td>Custom schema file (relative to <code>CARGO_MANIFEST_DIR</code>)</td></tr>
+<tr><td><code>#[field(path = "...")]</code></td><td>field</td><td>Dot-separated path with optional <code>?</code>/<code>[]</code>/alias</td></tr>
+<tr><td><code>#[field(skip_schema_validation)]</code></td><td>field</td><td>Skip compile-time schema checks for this field</td></tr>
+<tr><td><code>#[response(on = "TypeName")]</code></td><td>variant</td><td>GraphQL <code>__typename</code> to match (default: variant name)</td></tr>
+</tbody></table>
+</div></div></details><h2 id="derives" class="section-header">Derive Macros<a href="#derives" class="anchor">§</a></h2><dl class="item-table"><dt><a class="derive" href="derive.Response.html" title="derive sui_graphql_macros::Response">Response</a></dt><dd>Derive macro for GraphQL response types with nested field extraction.</dd></dl></section></div></main></body></html>
