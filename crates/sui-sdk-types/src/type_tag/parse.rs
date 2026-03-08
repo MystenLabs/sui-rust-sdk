@@ -135,12 +135,14 @@ pub(super) const fn is_valid_identifier(s: &str) -> bool {
     true
 }
 
-//TODO add proptests
 #[cfg(test)]
 mod tests {
     use super::*;
 
     use std::str::FromStr;
+
+    use proptest::prelude::*;
+    use test_strategy::proptest;
 
     #[cfg(target_arch = "wasm32")]
     use wasm_bindgen_test::wasm_bindgen_test as test;
@@ -262,11 +264,102 @@ mod tests {
         }
     }
 
-    #[test_strategy::proptest]
+    #[proptest]
     fn test_identifier_parsing_matches(s: String) {
         match Identifier::new(&s) {
             Ok(_) => assert!(is_valid_identifier(&s)),
             Err(_) => assert!(!is_valid_identifier(&s)),
         }
+    }
+
+    // Custom strategies that exercise the full TypeTag grammar, including vectors and nested
+    // generics. The existing `Arbitrary` derives intentionally skip these (Vector has weight 0,
+    // type_params is always empty) to keep BCS serialization fuzz tests fast.
+
+    /// Strategy producing valid Move identifiers, including both
+    /// letter-prefixed (`Foo`, `a1`) and underscore-prefixed (`_bar`, `__x1`).
+    fn arb_identifier() -> impl Strategy<Value = Identifier> {
+        prop_oneof!["[a-zA-Z][a-zA-Z0-9_]{0,127}", "_[a-zA-Z0-9_]{1,127}",]
+            .prop_map(|s| Identifier::new(&s).unwrap())
+    }
+
+    /// Strategy producing a StructTag with empty type_params.
+    fn arb_struct_tag_base() -> impl Strategy<Value = StructTag> {
+        (any::<Address>(), arb_identifier(), arb_identifier())
+            .prop_map(|(addr, module, name)| StructTag::new(addr, module, name, Vec::new()))
+    }
+
+    /// Strategy producing valid TypeTags including vectors, structs with generics,
+    /// and nested combinations. Recursion is bounded to depth 4.
+    fn arb_type_tag() -> impl Strategy<Value = TypeTag> {
+        let leaf = prop_oneof![
+            Just(TypeTag::U8),
+            Just(TypeTag::U16),
+            Just(TypeTag::U32),
+            Just(TypeTag::U64),
+            Just(TypeTag::U128),
+            Just(TypeTag::U256),
+            Just(TypeTag::Bool),
+            Just(TypeTag::Address),
+            Just(TypeTag::Signer),
+        ];
+
+        leaf.prop_recursive(
+            4,  // max depth of recursion
+            64, // desired_size (target number of nodes)
+            3,  // expected_branch_size per recursive step
+            |inner| {
+                let vector_strat = inner.clone().prop_map(|t| TypeTag::Vector(Box::new(t)));
+
+                let struct_no_params =
+                    arb_struct_tag_base().prop_map(|s| TypeTag::Struct(Box::new(s)));
+
+                let struct_with_params = (
+                    any::<Address>(),
+                    arb_identifier(),
+                    arb_identifier(),
+                    proptest::collection::vec(inner, 1..=3),
+                )
+                    .prop_map(|(addr, module, name, params)| {
+                        TypeTag::Struct(Box::new(StructTag::new(addr, module, name, params)))
+                    });
+
+                prop_oneof![vector_strat, struct_no_params, struct_with_params,]
+            },
+        )
+    }
+
+    /// Reduced set of primitive TypeTag leaves for depth-focused tests.
+    fn arb_simple_leaf() -> impl Strategy<Value = TypeTag> {
+        prop_oneof![Just(TypeTag::U8), Just(TypeTag::U64), Just(TypeTag::Bool)]
+    }
+
+    #[cfg_attr(target_arch = "wasm32", proptest(cases = 50))]
+    #[proptest]
+    fn type_tag_roundtrip(#[strategy(arb_type_tag())] type_tag: TypeTag) {
+        let s = type_tag.to_string();
+        let parsed = s.parse::<TypeTag>().unwrap();
+        assert_eq!(type_tag, parsed);
+    }
+
+    #[proptest]
+    fn identifier_roundtrip(#[strategy(arb_identifier())] ident: Identifier) {
+        let s = ident.to_string();
+        let parsed = s.parse::<Identifier>().unwrap();
+        assert_eq!(ident, parsed);
+    }
+
+    #[proptest]
+    fn nested_vector_parsing(
+        #[strategy(0u32..=8)] depth: u32,
+        #[strategy(arb_simple_leaf())] leaf: TypeTag,
+    ) {
+        let mut ty = leaf;
+        for _ in 0..depth {
+            ty = TypeTag::Vector(Box::new(ty));
+        }
+        let s = ty.to_string();
+        let parsed = s.parse::<TypeTag>().unwrap();
+        assert_eq!(ty, parsed);
     }
 }
