@@ -9,8 +9,6 @@ use prost_types::FileDescriptorSet;
 use prost_types::field_descriptor_proto::Type;
 use quote::quote;
 
-use crate::ident::to_upper_camel;
-
 pub(crate) fn generate_field_info(packages: &HashMap<String, FileDescriptorSet>, out_dir: &Path) {
     for (package, fds) in packages {
         if package.contains("google") {
@@ -73,7 +71,7 @@ fn generate_field_info_for_message(message: &DescriptorProto) -> TokenStream {
 }
 
 fn generate_field_constants(message: &DescriptorProto, map_types: &HashSet<String>) -> TokenStream {
-    let message_ident = quote::format_ident!("{}", to_upper_camel(message.name()));
+    let message_ident = quote::format_ident!("{}", message.name());
     let mut field_consts = TokenStream::new();
 
     for field in &message.field {
@@ -88,7 +86,7 @@ fn generate_field_constants(message: &DescriptorProto, map_types: &HashSet<Strin
 }
 
 fn generate_message_fields_impl(message: &DescriptorProto) -> TokenStream {
-    let message_ident = quote::format_ident!("{}", to_upper_camel(message.name()));
+    let message_ident = quote::format_ident!("{}", message.name());
 
     let mut field_refs = TokenStream::new();
 
@@ -122,7 +120,7 @@ fn generate_field_constant(
             if field_message_name == message_name || map_types.contains(field_message_name) {
                 quote! { None }
             } else {
-                let field_message = quote::format_ident!("{}", to_upper_camel(field_message_name));
+                let field_message = quote::format_ident!("{}", field_message_name);
                 quote! { Some(#field_message::FIELDS) }
             }
         } else {
@@ -151,9 +149,8 @@ fn generate_field_path_builders_impl(
     message: &DescriptorProto,
     map_types: &HashSet<String>,
 ) -> TokenStream {
-    let rust_name = to_upper_camel(message.name());
-    let message_ident = quote::format_ident!("{}", rust_name);
-    let builder_ident = quote::format_ident!("{}FieldPathBuilder", rust_name);
+    let message_ident = quote::format_ident!("{}", message.name());
+    let builder_ident = quote::format_ident!("{}FieldPathBuilder", message.name());
 
     let mut field_chain_methods = TokenStream::new();
 
@@ -203,7 +200,7 @@ fn generate_field_chain_methods(
     field: &FieldDescriptorProto,
     map_types: &HashSet<String>,
 ) -> TokenStream {
-    let message_ident = quote::format_ident!("{}", to_upper_camel(message_name));
+    let message_ident = quote::format_ident!("{message_name}");
     let field_const = quote::format_ident!("{}_FIELD", field.name().to_ascii_uppercase());
     let name = if field.name() == "type" {
         quote::format_ident!("r#{}", field.name())
@@ -222,8 +219,7 @@ fn generate_field_chain_methods(
                 }
             }
         } else {
-            let return_type =
-                quote::format_ident!("{}FieldPathBuilder", to_upper_camel(field_message_name));
+            let return_type = quote::format_ident!("{}FieldPathBuilder", field_message_name);
             quote! {
                 pub fn #name(mut self) -> #return_type {
                     self.path.push(#message_ident::#field_const.name);

@@ -21,7 +21,6 @@ pub use transaction_execution::ExecuteAndWaitError;
 use crate::proto::sui::rpc::v2::event_service_client::EventServiceClient;
 use crate::proto::sui::rpc::v2::ledger_service_client::LedgerServiceClient;
 use crate::proto::sui::rpc::v2::move_package_service_client::MovePackageServiceClient;
-use crate::proto::sui::rpc::v2::proof_service_client::ProofServiceClient;
 use crate::proto::sui::rpc::v2::signature_verification_service_client::SignatureVerificationServiceClient;
 use crate::proto::sui::rpc::v2::state_service_client::StateServiceClient;
 use crate::proto::sui::rpc::v2::subscription_service_client::SubscriptionServiceClient;
@@ -166,18 +165,6 @@ impl Client {
 
     pub fn event_client(&mut self) -> EventServiceClient<Channel<'_>> {
         EventServiceClient::with_interceptor(&mut self.channel, &self.headers)
-            .accept_compressed(CompressionEncoding::Zstd)
-            .pipe(|client| {
-                if let Some(limit) = self.max_decoding_message_size {
-                    client.max_decoding_message_size(limit)
-                } else {
-                    client
-                }
-            })
-    }
-
-    pub fn proof_client(&mut self) -> ProofServiceClient<Channel<'_>> {
-        ProofServiceClient::with_interceptor(&mut self.channel, &self.headers)
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
                 if let Some(limit) = self.max_decoding_message_size {

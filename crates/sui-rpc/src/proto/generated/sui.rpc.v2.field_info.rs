@@ -3851,6 +3851,187 @@ mod _field_impls {
             EpochFieldPathBuilder::new_with_base(self.path)
         }
     }
+    impl ObjectInclusionProof {
+        pub const MERKLE_PROOF_FIELD: &'static MessageField = &MessageField {
+            name: "merkle_proof",
+            json_name: "merkleProof",
+            number: 1i32,
+            message_fields: None,
+        };
+        pub const LEAF_INDEX_FIELD: &'static MessageField = &MessageField {
+            name: "leaf_index",
+            json_name: "leafIndex",
+            number: 2i32,
+            message_fields: None,
+        };
+        pub const TREE_ROOT_FIELD: &'static MessageField = &MessageField {
+            name: "tree_root",
+            json_name: "treeRoot",
+            number: 3i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for ObjectInclusionProof {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::MERKLE_PROOF_FIELD,
+            Self::LEAF_INDEX_FIELD,
+            Self::TREE_ROOT_FIELD,
+        ];
+    }
+    impl ObjectInclusionProof {
+        pub fn path_builder() -> ObjectInclusionProofFieldPathBuilder {
+            ObjectInclusionProofFieldPathBuilder::new()
+        }
+    }
+    pub struct ObjectInclusionProofFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ObjectInclusionProofFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn merkle_proof(mut self) -> String {
+            self.path.push(ObjectInclusionProof::MERKLE_PROOF_FIELD.name);
+            self.finish()
+        }
+        pub fn leaf_index(mut self) -> String {
+            self.path.push(ObjectInclusionProof::LEAF_INDEX_FIELD.name);
+            self.finish()
+        }
+        pub fn tree_root(mut self) -> String {
+            self.path.push(ObjectInclusionProof::TREE_ROOT_FIELD.name);
+            self.finish()
+        }
+    }
+    impl GetObjectInclusionProofRequest {
+        pub const OBJECT_ID_FIELD: &'static MessageField = &MessageField {
+            name: "object_id",
+            json_name: "objectId",
+            number: 1i32,
+            message_fields: None,
+        };
+        pub const CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "checkpoint",
+            json_name: "checkpoint",
+            number: 2i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for GetObjectInclusionProofRequest {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::OBJECT_ID_FIELD,
+            Self::CHECKPOINT_FIELD,
+        ];
+    }
+    impl GetObjectInclusionProofRequest {
+        pub fn path_builder() -> GetObjectInclusionProofRequestFieldPathBuilder {
+            GetObjectInclusionProofRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct GetObjectInclusionProofRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GetObjectInclusionProofRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn object_id(mut self) -> String {
+            self.path.push(GetObjectInclusionProofRequest::OBJECT_ID_FIELD.name);
+            self.finish()
+        }
+        pub fn checkpoint(mut self) -> String {
+            self.path.push(GetObjectInclusionProofRequest::CHECKPOINT_FIELD.name);
+            self.finish()
+        }
+    }
+    impl GetObjectInclusionProofResponse {
+        pub const OBJECT_REF_FIELD: &'static MessageField = &MessageField {
+            name: "object_ref",
+            json_name: "objectRef",
+            number: 1i32,
+            message_fields: Some(ObjectReference::FIELDS),
+        };
+        pub const INCLUSION_PROOF_FIELD: &'static MessageField = &MessageField {
+            name: "inclusion_proof",
+            json_name: "inclusionProof",
+            number: 2i32,
+            message_fields: Some(ObjectInclusionProof::FIELDS),
+        };
+        pub const OBJECT_DATA_FIELD: &'static MessageField = &MessageField {
+            name: "object_data",
+            json_name: "objectData",
+            number: 3i32,
+            message_fields: None,
+        };
+        pub const CHECKPOINT_SUMMARY_FIELD: &'static MessageField = &MessageField {
+            name: "checkpoint_summary",
+            json_name: "checkpointSummary",
+            number: 4i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for GetObjectInclusionProofResponse {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::OBJECT_REF_FIELD,
+            Self::INCLUSION_PROOF_FIELD,
+            Self::OBJECT_DATA_FIELD,
+            Self::CHECKPOINT_SUMMARY_FIELD,
+        ];
+    }
+    impl GetObjectInclusionProofResponse {
+        pub fn path_builder() -> GetObjectInclusionProofResponseFieldPathBuilder {
+            GetObjectInclusionProofResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct GetObjectInclusionProofResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GetObjectInclusionProofResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn object_ref(mut self) -> ObjectReferenceFieldPathBuilder {
+            self.path.push(GetObjectInclusionProofResponse::OBJECT_REF_FIELD.name);
+            ObjectReferenceFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn inclusion_proof(mut self) -> ObjectInclusionProofFieldPathBuilder {
+            self.path.push(GetObjectInclusionProofResponse::INCLUSION_PROOF_FIELD.name);
+            ObjectInclusionProofFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn object_data(mut self) -> String {
+            self.path.push(GetObjectInclusionProofResponse::OBJECT_DATA_FIELD.name);
+            self.finish()
+        }
+        pub fn checkpoint_summary(mut self) -> String {
+            self.path
+                .push(GetObjectInclusionProofResponse::CHECKPOINT_SUMMARY_FIELD.name);
+            self.finish()
+        }
+    }
     impl Package {
         pub const STORAGE_ID_FIELD: &'static MessageField = &MessageField {
             name: "storage_id",
@@ -5685,187 +5866,6 @@ mod _field_impls {
         }
         pub fn version(mut self) -> String {
             self.path.push(Owner::VERSION_FIELD.name);
-            self.finish()
-        }
-    }
-    impl OcsInclusionProof {
-        pub const MERKLE_PROOF_FIELD: &'static MessageField = &MessageField {
-            name: "merkle_proof",
-            json_name: "merkleProof",
-            number: 1i32,
-            message_fields: None,
-        };
-        pub const LEAF_INDEX_FIELD: &'static MessageField = &MessageField {
-            name: "leaf_index",
-            json_name: "leafIndex",
-            number: 2i32,
-            message_fields: None,
-        };
-        pub const TREE_ROOT_FIELD: &'static MessageField = &MessageField {
-            name: "tree_root",
-            json_name: "treeRoot",
-            number: 3i32,
-            message_fields: None,
-        };
-    }
-    impl MessageFields for OcsInclusionProof {
-        const FIELDS: &'static [&'static MessageField] = &[
-            Self::MERKLE_PROOF_FIELD,
-            Self::LEAF_INDEX_FIELD,
-            Self::TREE_ROOT_FIELD,
-        ];
-    }
-    impl OcsInclusionProof {
-        pub fn path_builder() -> OcsInclusionProofFieldPathBuilder {
-            OcsInclusionProofFieldPathBuilder::new()
-        }
-    }
-    pub struct OcsInclusionProofFieldPathBuilder {
-        path: Vec<&'static str>,
-    }
-    impl OcsInclusionProofFieldPathBuilder {
-        #[allow(clippy::new_without_default)]
-        pub fn new() -> Self {
-            Self { path: Default::default() }
-        }
-        #[doc(hidden)]
-        pub fn new_with_base(base: Vec<&'static str>) -> Self {
-            Self { path: base }
-        }
-        pub fn finish(self) -> String {
-            self.path.join(".")
-        }
-        pub fn merkle_proof(mut self) -> String {
-            self.path.push(OcsInclusionProof::MERKLE_PROOF_FIELD.name);
-            self.finish()
-        }
-        pub fn leaf_index(mut self) -> String {
-            self.path.push(OcsInclusionProof::LEAF_INDEX_FIELD.name);
-            self.finish()
-        }
-        pub fn tree_root(mut self) -> String {
-            self.path.push(OcsInclusionProof::TREE_ROOT_FIELD.name);
-            self.finish()
-        }
-    }
-    impl GetObjectInclusionProofRequest {
-        pub const OBJECT_ID_FIELD: &'static MessageField = &MessageField {
-            name: "object_id",
-            json_name: "objectId",
-            number: 1i32,
-            message_fields: None,
-        };
-        pub const CHECKPOINT_FIELD: &'static MessageField = &MessageField {
-            name: "checkpoint",
-            json_name: "checkpoint",
-            number: 2i32,
-            message_fields: None,
-        };
-    }
-    impl MessageFields for GetObjectInclusionProofRequest {
-        const FIELDS: &'static [&'static MessageField] = &[
-            Self::OBJECT_ID_FIELD,
-            Self::CHECKPOINT_FIELD,
-        ];
-    }
-    impl GetObjectInclusionProofRequest {
-        pub fn path_builder() -> GetObjectInclusionProofRequestFieldPathBuilder {
-            GetObjectInclusionProofRequestFieldPathBuilder::new()
-        }
-    }
-    pub struct GetObjectInclusionProofRequestFieldPathBuilder {
-        path: Vec<&'static str>,
-    }
-    impl GetObjectInclusionProofRequestFieldPathBuilder {
-        #[allow(clippy::new_without_default)]
-        pub fn new() -> Self {
-            Self { path: Default::default() }
-        }
-        #[doc(hidden)]
-        pub fn new_with_base(base: Vec<&'static str>) -> Self {
-            Self { path: base }
-        }
-        pub fn finish(self) -> String {
-            self.path.join(".")
-        }
-        pub fn object_id(mut self) -> String {
-            self.path.push(GetObjectInclusionProofRequest::OBJECT_ID_FIELD.name);
-            self.finish()
-        }
-        pub fn checkpoint(mut self) -> String {
-            self.path.push(GetObjectInclusionProofRequest::CHECKPOINT_FIELD.name);
-            self.finish()
-        }
-    }
-    impl GetObjectInclusionProofResponse {
-        pub const OBJECT_REF_FIELD: &'static MessageField = &MessageField {
-            name: "object_ref",
-            json_name: "objectRef",
-            number: 1i32,
-            message_fields: Some(ObjectReference::FIELDS),
-        };
-        pub const INCLUSION_PROOF_FIELD: &'static MessageField = &MessageField {
-            name: "inclusion_proof",
-            json_name: "inclusionProof",
-            number: 2i32,
-            message_fields: Some(OcsInclusionProof::FIELDS),
-        };
-        pub const OBJECT_DATA_FIELD: &'static MessageField = &MessageField {
-            name: "object_data",
-            json_name: "objectData",
-            number: 3i32,
-            message_fields: None,
-        };
-        pub const CHECKPOINT_SUMMARY_FIELD: &'static MessageField = &MessageField {
-            name: "checkpoint_summary",
-            json_name: "checkpointSummary",
-            number: 4i32,
-            message_fields: None,
-        };
-    }
-    impl MessageFields for GetObjectInclusionProofResponse {
-        const FIELDS: &'static [&'static MessageField] = &[
-            Self::OBJECT_REF_FIELD,
-            Self::INCLUSION_PROOF_FIELD,
-            Self::OBJECT_DATA_FIELD,
-            Self::CHECKPOINT_SUMMARY_FIELD,
-        ];
-    }
-    impl GetObjectInclusionProofResponse {
-        pub fn path_builder() -> GetObjectInclusionProofResponseFieldPathBuilder {
-            GetObjectInclusionProofResponseFieldPathBuilder::new()
-        }
-    }
-    pub struct GetObjectInclusionProofResponseFieldPathBuilder {
-        path: Vec<&'static str>,
-    }
-    impl GetObjectInclusionProofResponseFieldPathBuilder {
-        #[allow(clippy::new_without_default)]
-        pub fn new() -> Self {
-            Self { path: Default::default() }
-        }
-        #[doc(hidden)]
-        pub fn new_with_base(base: Vec<&'static str>) -> Self {
-            Self { path: base }
-        }
-        pub fn finish(self) -> String {
-            self.path.join(".")
-        }
-        pub fn object_ref(mut self) -> ObjectReferenceFieldPathBuilder {
-            self.path.push(GetObjectInclusionProofResponse::OBJECT_REF_FIELD.name);
-            ObjectReferenceFieldPathBuilder::new_with_base(self.path)
-        }
-        pub fn inclusion_proof(mut self) -> OcsInclusionProofFieldPathBuilder {
-            self.path.push(GetObjectInclusionProofResponse::INCLUSION_PROOF_FIELD.name);
-            OcsInclusionProofFieldPathBuilder::new_with_base(self.path)
-        }
-        pub fn object_data(mut self) -> String {
-            self.path.push(GetObjectInclusionProofResponse::OBJECT_DATA_FIELD.name);
-            self.finish()
-        }
-        pub fn checkpoint_summary(mut self) -> String {
-            self.path
-                .push(GetObjectInclusionProofResponse::CHECKPOINT_SUMMARY_FIELD.name);
             self.finish()
         }
     }
