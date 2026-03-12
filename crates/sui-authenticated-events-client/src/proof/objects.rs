@@ -1,27 +1,24 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use serde::Deserialize;
-use serde::Serialize;
 use sui_sdk_types::CheckpointData;
 use sui_sdk_types::Object;
 use sui_sdk_types::ObjectReference;
 
 use crate::proof::base::Proof;
-use crate::proof::base::ProofBuilder;
 use crate::proof::base::ProofContents;
 use crate::proof::base::ProofTarget;
 use crate::proof::error::ProofError;
 use crate::proof::error::ProofResult;
 use crate::proof::transaction_proof::TransactionProof;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ObjectsTarget {
     pub objects: Vec<(ObjectReference, Object)>,
 }
 
-impl ProofBuilder for ObjectsTarget {
-    fn construct(self, checkpoint: &CheckpointData) -> ProofResult<Proof> {
+impl ObjectsTarget {
+    pub fn construct(self, checkpoint: &CheckpointData) -> ProofResult<Proof> {
         let mut object_txs = self.objects.iter().map(|(_, o)| o.previous_transaction());
 
         let target_tx = object_txs.next().ok_or(ProofError::NoTargetsFound)?;
@@ -42,7 +39,7 @@ impl ProofBuilder for ObjectsTarget {
         Ok(Proof {
             targets: ProofTarget::Objects(self.clone()),
             checkpoint_summary: checkpoint.checkpoint_summary.clone(),
-            proof_contents: ProofContents::TransactionProof(transaction_proof),
+            proof_contents: ProofContents::TransactionProof(Box::new(transaction_proof)),
         })
     }
 }

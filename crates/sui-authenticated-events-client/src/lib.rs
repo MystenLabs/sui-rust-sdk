@@ -13,6 +13,7 @@ use std::time::Duration;
 
 use epoch_cache::EpochCache;
 use futures::stream::Stream;
+use sui_crypto::bls12381::ValidatorCommitteeSignatureVerifier;
 use sui_rpc::field::FieldMask;
 use sui_rpc::field::FieldMaskUtil;
 use sui_rpc::proto::sui::rpc::v2::GetCheckpointRequest;
@@ -23,7 +24,6 @@ use sui_rpc::proto::sui::rpc::v2::proof_service_client::ProofServiceClient;
 use sui_sdk_types::Address;
 use sui_sdk_types::Event;
 use sui_sdk_types::Identifier;
-use sui_sdk_types::ObjectData;
 use sui_sdk_types::StructTag;
 use sui_sdk_types::ValidatorCommittee;
 use thiserror::Error;
@@ -32,15 +32,13 @@ use tonic::transport::Channel;
 use crate::proof::base::Proof;
 use crate::proof::base::ProofContents;
 use crate::proof::base::ProofTarget;
-use crate::proof::base::ProofVerifier;
 use crate::proof::committee::extract_new_committee_info;
 use crate::proof::error::ProofError;
 use crate::proof::ocs::OCSProof;
 use crate::proof::ocs::OCSTarget;
-use crate::types::AccumulatorKey;
 use crate::types::EventStreamHead;
-use crate::types::Field;
 use crate::types::derive_event_stream_head_object_id;
+use crate::types::extract_stream_head_from_object;
 
 #[derive(Debug, Clone)]
 pub struct AuthenticatedEvent {
@@ -283,37 +281,13 @@ impl AuthenticatedEventsClient {
         Err(last_err.unwrap().into())
     }
 
-    fn extract_stream_head_from_object(object_bcs: &[u8]) -> Result<EventStreamHead, ClientError> {
-        let object: sui_sdk_types::Object = bcs::from_bytes(object_bcs).map_err(|e| {
-            ClientError::InternalError(format!("Failed to deserialize Object: {}", e))
-        })?;
-
-        let contents = match object.data() {
-            ObjectData::Struct(move_struct) => move_struct.contents(),
-            ObjectData::Package(_) => {
-                return Err(ClientError::InternalError(
-                    "Expected a Move struct, got a package".to_string(),
-                ));
-            }
-        };
-
-        let field: Field<AccumulatorKey, EventStreamHead> =
-            bcs::from_bytes(contents).map_err(|e| {
-                ClientError::InternalError(format!(
-                    "Failed to deserialize EventStreamHead field: {}",
-                    e
-                ))
-            })?;
-        Ok(field.value)
-    }
 
     pub async fn stream_events(
         self: Arc<Self>,
         stream_id: Address,
     ) -> Result<impl Stream<Item = Result<AuthenticatedEvent, ClientError>>, ClientError> {
         let config = self.config.clone();
-        let stream_object_id = derive_event_stream_head_object_id(stream_id)
-            .map_err(|e| ClientError::InternalError(e.to_string()))?;
+        let stream_object_id = derive_event_stream_head_object_id(stream_id);
 
         let result = self
             .fetch_current_stream_head_and_verify(stream_object_id)
@@ -340,8 +314,7 @@ impl AuthenticatedEventsClient {
         stream_id: Address,
         last_verified_checkpoint: u64,
     ) -> Result<impl Stream<Item = Result<AuthenticatedEvent, ClientError>>, ClientError> {
-        let stream_object_id = derive_event_stream_head_object_id(stream_id)
-            .map_err(|e| ClientError::InternalError(e.to_string()))?;
+        let stream_object_id = derive_event_stream_head_object_id(stream_id);
 
         let (verified_head, start_checkpoint) = if last_verified_checkpoint == 0 {
             (None, 0)
@@ -454,7 +427,7 @@ impl AuthenticatedEventsClient {
             .as_ref()
             .ok_or_else(|| ClientError::InternalError("Missing object data".to_string()))?;
 
-        let stream_head = Self::extract_stream_head_from_object(object_data_bytes)?;
+        let stream_head = extract_stream_head_from_object(object_data_bytes)?;
 
         self.verify_ocs_inclusion_proof(&committee, &response)?;
 
@@ -491,7 +464,7 @@ impl AuthenticatedEventsClient {
             .value
             .ok_or_else(|| ClientError::InternalError("Missing bcs value".to_string()))?;
 
-        let stream_head = Self::extract_stream_head_from_object(&object_data_bytes)?;
+        let stream_head = extract_stream_head_from_object(&object_data_bytes)?;
         let checkpoint = stream_head.checkpoint_seq;
 
         let verified_head = self
@@ -587,7 +560,6 @@ impl AuthenticatedEventsClient {
                 ))
             })?;
 
-        use sui_crypto::bls12381::ValidatorCommitteeSignatureVerifier;
         let verifier = ValidatorCommitteeSignatureVerifier::new(current_committee.clone())
             .map_err(|e| {
                 ClientError::VerificationError(format!(

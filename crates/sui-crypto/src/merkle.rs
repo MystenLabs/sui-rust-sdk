@@ -1,9 +1,7 @@
 // Copyright (c) 2022, Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use alloc::format;
-use alloc::vec::Vec;
-use core::fmt::Debug;
+use std::fmt::Debug;
 
 use blake2::digest::Digest as _;
 use blake2::digest::consts::U32;

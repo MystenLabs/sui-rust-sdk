@@ -2,13 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use sui_authenticated_events_client::proof::base::Proof;
-use sui_authenticated_events_client::proof::base::ProofBuilder;
 use sui_authenticated_events_client::proof::base::ProofContents;
 use sui_authenticated_events_client::proof::base::ProofTarget;
-use sui_authenticated_events_client::proof::base::ProofVerifier;
 use sui_authenticated_events_client::proof::committee::CommitteeProof;
 use sui_authenticated_events_client::proof::committee::extract_new_committee_info;
-use sui_authenticated_events_client::proof::objects::ObjectsTarget;
 use sui_sdk_types::CheckpointData;
 use sui_sdk_types::EventId;
 use sui_sdk_types::ValidatorCommittee;
@@ -101,9 +98,7 @@ fn test_object_target_fail_no_data() {
     let bad_proof = Proof {
         checkpoint_summary: full_checkpoint.checkpoint_summary.clone(),
         proof_contents: ProofContents::CommitteeProof(CommitteeProof {}), // WRONG
-        targets: ProofTarget::Objects(ObjectsTarget {
-            objects: vec![(sample_ref, sample_object)],
-        }),
+        targets: ProofTarget::new_objects(vec![(sample_ref, sample_object)]),
     };
 
     assert!(bad_proof.verify(&committee).is_err());
@@ -120,9 +115,7 @@ fn test_object_target_success() {
         sample_object.digest(),
     );
 
-    let target = ProofTarget::Objects(ObjectsTarget {
-        objects: vec![(sample_ref, sample_object)],
-    });
+    let target = ProofTarget::new_objects(vec![(sample_ref, sample_object)]);
     let object_proof = target.construct(&full_checkpoint).unwrap();
 
     assert!(object_proof.verify(&committee).is_ok());

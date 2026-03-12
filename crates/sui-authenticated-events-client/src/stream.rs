@@ -161,7 +161,7 @@ impl EventStreamState {
             )));
         }
 
-        let computed_head = apply_stream_updates(old_head, accumulated_events);
+        let computed_head = apply_stream_updates(old_head, accumulated_events)?;
 
         if computed_head.mmr != new_stream_head.mmr {
             return Err(ClientError::VerificationError(

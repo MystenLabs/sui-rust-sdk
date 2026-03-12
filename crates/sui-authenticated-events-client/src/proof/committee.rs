@@ -1,28 +1,24 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use serde::Deserialize;
-use serde::Serialize;
 use sui_sdk_types::CheckpointData;
 use sui_sdk_types::CheckpointSummary;
 use sui_sdk_types::SignedCheckpointSummary;
 use sui_sdk_types::ValidatorCommittee;
 
 use crate::proof::base::Proof;
-use crate::proof::base::ProofBuilder;
 use crate::proof::base::ProofContents;
-use crate::proof::base::ProofContentsVerifier;
 use crate::proof::base::ProofTarget;
 use crate::proof::error::ProofError;
 use crate::proof::error::ProofResult;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct CommitteeTarget {
     pub committee: ValidatorCommittee,
 }
 
-impl ProofBuilder for CommitteeTarget {
-    fn construct(self, checkpoint: &CheckpointData) -> ProofResult<Proof> {
+impl CommitteeTarget {
+    pub fn construct(self, checkpoint: &CheckpointData) -> ProofResult<Proof> {
         if checkpoint.checkpoint_summary.checkpoint.epoch + 1 != self.committee.epoch {
             return Err(ProofError::EpochMismatch);
         }
@@ -44,11 +40,11 @@ impl ProofBuilder for CommitteeTarget {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct CommitteeProof {}
 
-impl ProofContentsVerifier for CommitteeProof {
-    fn verify(self, targets: &ProofTarget, summary: &CheckpointSummary) -> ProofResult<()> {
+impl CommitteeProof {
+    pub fn verify(self, targets: &ProofTarget, summary: &CheckpointSummary) -> ProofResult<()> {
         match targets {
             ProofTarget::Committee(target) => {
                 let new_committee = extract_new_committee_info(summary)?;

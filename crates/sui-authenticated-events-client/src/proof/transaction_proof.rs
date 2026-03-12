@@ -1,8 +1,6 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use serde::Deserialize;
-use serde::Serialize;
 use sui_sdk_types::CheckpointContents;
 use sui_sdk_types::CheckpointData;
 use sui_sdk_types::CheckpointSummary;
@@ -13,13 +11,12 @@ use sui_sdk_types::SignedTransaction;
 use sui_sdk_types::TransactionEffects;
 use sui_sdk_types::TransactionEvents;
 
-use crate::proof::base::ProofContentsVerifier;
 use crate::proof::base::ProofTarget;
 use crate::proof::error::ProofError;
 use crate::proof::error::ProofResult;
 use crate::types::EventId;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct TransactionProof {
     pub checkpoint_contents: CheckpointContents,
     pub transaction: SignedTransaction,
@@ -102,10 +99,8 @@ impl TransactionProof {
 
         Ok(())
     }
-}
 
-impl ProofContentsVerifier for TransactionProof {
-    fn verify(self, targets: &ProofTarget, summary: &CheckpointSummary) -> ProofResult<()> {
+    pub fn verify(self, targets: &ProofTarget, summary: &CheckpointSummary) -> ProofResult<()> {
         let contents_digest = self.checkpoint_contents.digest();
         if contents_digest != summary.content_digest {
             return Err(ProofError::ContentsDigestMismatch);

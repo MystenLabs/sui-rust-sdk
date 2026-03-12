@@ -4,14 +4,12 @@
 use std::path::PathBuf;
 
 use sui_authenticated_events_client::proof::base::Proof;
-use sui_authenticated_events_client::proof::base::ProofBuilder;
 use sui_authenticated_events_client::proof::base::ProofTarget;
-use sui_authenticated_events_client::proof::base::ProofVerifier;
 use sui_authenticated_events_client::proof::ocs::ModifiedObjectTree;
 use sui_sdk_types::Address;
 use sui_sdk_types::CheckpointCommitment;
 use sui_sdk_types::CheckpointData;
-use sui_sdk_types::Digest;
+use sui_sdk_types::hash::Hasher;
 use sui_sdk_types::ValidatorCommittee;
 
 fn load_genesis_committee() -> ValidatorCommittee {
@@ -59,10 +57,8 @@ fn test_derive_artifacts() {
     };
 
     let computed_artifacts_digest = {
-        use blake2::digest::Digest as _;
-        use blake2::digest::consts::U32;
         let bytes = bcs::to_bytes(&vec![tree.tree_root]).unwrap();
-        Digest::new(blake2::Blake2b::<U32>::digest(&bytes).into())
+        Hasher::digest(&bytes)
     };
     assert_eq!(computed_artifacts_digest, *expected_artifacts_digest);
 }
@@ -73,9 +69,8 @@ fn test_get_object_inclusion_proof() {
     let tree = ModifiedObjectTree::from_checkpoint(&checkpoint).unwrap();
 
     let leaf = &tree.leaves[0];
-    let object_ref = sui_sdk_types::ObjectReference::new(leaf.0, leaf.1, leaf.2);
 
-    let target = ProofTarget::new_ocs_inclusion(object_ref);
+    let target = ProofTarget::new_ocs_inclusion(leaf.clone());
     let proof = target.construct(&checkpoint).unwrap();
 
     assert!(proof.verify(&committee).is_ok());
@@ -119,11 +114,14 @@ fn test_modified_object_tree_properties() {
     assert_eq!(tree.object_pos_map.len(), tree.leaves.len());
 
     for (i, leaf) in tree.leaves.iter().enumerate() {
-        assert_eq!(tree.object_pos_map.get(&leaf.0), Some(&i));
+        assert_eq!(tree.object_pos_map.get(leaf.object_id()), Some(&i));
     }
 
     for window in tree.leaves.windows(2) {
-        assert!(window[0].0 < window[1].0, "Objects should be sorted by ID");
+        assert!(
+            window[0].object_id() < window[1].object_id(),
+            "Objects should be sorted by ID"
+        );
     }
 }
 
@@ -133,9 +131,8 @@ fn test_serialization_roundtrip() {
     let tree = ModifiedObjectTree::from_checkpoint(&checkpoint).unwrap();
 
     let leaf = &tree.leaves[0];
-    let object_ref = sui_sdk_types::ObjectReference::new(leaf.0, leaf.1, leaf.2);
 
-    let target = ProofTarget::new_ocs_inclusion(object_ref);
+    let target = ProofTarget::new_ocs_inclusion(leaf.clone());
     let proof = target.construct(&checkpoint).unwrap();
 
     let json_serialized = serde_json::to_string(&proof).expect("Should serialize to JSON");
@@ -148,7 +145,6 @@ fn test_serialization_roundtrip() {
         bcs::from_bytes(&bcs_serialized).expect("Should deserialize from BCS");
     assert!(bcs_deserialized.verify(&committee).is_ok());
 
-    // Non-inclusion proof roundtrip
     let non_existent_id: Address =
         "0x0000000000000000000000000000000000000000000000000000000000999999"
             .parse()

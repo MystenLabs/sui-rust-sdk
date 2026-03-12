@@ -10,29 +10,27 @@ use sui_sdk_types::CheckpointCommitment;
 use sui_sdk_types::CheckpointData;
 use sui_sdk_types::CheckpointSummary;
 use sui_sdk_types::Digest;
+use sui_sdk_types::hash::Hasher;
 use sui_sdk_types::ObjectReference;
 
 use crate::proof::base::Proof;
-use crate::proof::base::ProofBuilder;
 use crate::proof::base::ProofContents;
-use crate::proof::base::ProofContentsVerifier;
 use crate::proof::base::ProofTarget;
 use crate::proof::error::ProofError;
 use crate::proof::error::ProofResult;
-use crate::types::OrderedObjectRef;
 
 type MerkleTree = sui_crypto::merkle::MerkleTree;
 type MerkleProof = sui_crypto::merkle::MerkleProof;
-type MerkleNonInclusionProof = sui_crypto::merkle::MerkleNonInclusionProof<OrderedObjectRef>;
+type MerkleNonInclusionProof = sui_crypto::merkle::MerkleNonInclusionProof<ObjectReference>;
 type Node = sui_crypto::merkle::Node;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OCSTarget {
     pub object_ref: ObjectReference,
     pub target_type: OCSTargetType,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum OCSTargetType {
     Inclusion,
     NonInclusion,
@@ -67,11 +65,10 @@ impl OCSInclusionProof {
             return Err(ProofError::MismatchedTargetAndProofType);
         }
 
-        let ordered_ref = OrderedObjectRef::from_object_reference(&target.object_ref);
         self.merkle_proof
             .verify_proof_with_unserialized_leaf(
                 &Node::from(self.tree_root.into_inner()),
-                &ordered_ref,
+                &target.object_ref,
                 self.leaf_index,
             )
             .map_err(|_| ProofError::InvalidProof)
@@ -90,9 +87,8 @@ impl OCSNonInclusionProof {
             return Err(ProofError::MismatchedTargetAndProofType);
         }
 
-        let ordered_ref = OrderedObjectRef::from_object_reference(&target.object_ref);
         self.non_inclusion_proof
-            .verify_proof(&Node::from(self.tree_root.into_inner()), &ordered_ref)
+            .verify_proof(&Node::from(self.tree_root.into_inner()), &target.object_ref)
             .map_err(|_| ProofError::InvalidProof)
     }
 }
@@ -128,18 +124,14 @@ fn checkpoint_artifacts_digest(summary: &CheckpointSummary) -> ProofResult<&Dige
 }
 
 fn compute_artifacts_digest(digests: Vec<Digest>) -> ProofResult<Digest> {
-    use blake2::digest::Digest as _;
-    use blake2::digest::consts::U32;
-
     let bytes = bcs::to_bytes(&digests)
         .map_err(|e| ProofError::GeneralError(format!("BCS error: {}", e)))?;
-    let result: [u8; 32] = blake2::Blake2b::<U32>::digest(&bytes).into();
-    Ok(Digest::new(result))
+    Ok(Hasher::digest(&bytes))
 }
 
 #[derive(Debug)]
 pub struct ModifiedObjectTree {
-    pub leaves: Vec<OrderedObjectRef>,
+    pub leaves: Vec<ObjectReference>,
     pub tree: MerkleTree,
     pub tree_root: Digest,
     pub object_pos_map: BTreeMap<Address, usize>,
@@ -154,22 +146,23 @@ impl ModifiedObjectTree {
                 let version = obj_ref.version();
                 let digest = *obj_ref.digest();
                 if let Some((old_version, _)) = latest_object_states.get(&id) {
-                    assert!(
-                        *old_version < version,
-                        "Object states should be monotonically increasing"
-                    );
+                    if *old_version >= version {
+                        return Err(ProofError::GeneralError(
+                            "Object states should be monotonically increasing".to_string(),
+                        ));
+                    }
                 }
                 latest_object_states.insert(id, (version, digest));
             }
         }
 
         let mut object_pos_map = BTreeMap::new();
-        let leaves: Vec<OrderedObjectRef> = latest_object_states
+        let leaves: Vec<ObjectReference> = latest_object_states
             .iter()
             .enumerate()
             .map(|(i, (id, (version, digest)))| {
                 object_pos_map.insert(*id, i);
-                OrderedObjectRef(*id, *version, *digest)
+                ObjectReference::new(*id, *version, *digest)
             })
             .collect();
 
@@ -190,16 +183,15 @@ impl ModifiedObjectTree {
         object_ref: &ObjectReference,
     ) -> ProofResult<OCSInclusionProof> {
         let id = *object_ref.object_id();
-        let ordered = OrderedObjectRef::from_object_reference(object_ref);
         let index = self
             .object_pos_map
             .get(&id)
             .ok_or_else(|| ProofError::GeneralError(format!("Object ID {} not found", id)))?;
 
-        if self.leaves[*index] != ordered {
+        if self.leaves[*index] != *object_ref {
             return Err(ProofError::GeneralError(format!(
                 "Input object ref {:?} does not match the actual ref {:?}",
-                ordered, self.leaves[*index]
+                object_ref, self.leaves[*index]
             )));
         }
 
@@ -226,10 +218,9 @@ impl ModifiedObjectTree {
             )));
         }
 
-        let ordered = OrderedObjectRef::from_object_reference(object_ref);
         let non_inclusion_proof = self
             .tree
-            .compute_non_inclusion_proof(&self.leaves, &ordered)
+            .compute_non_inclusion_proof(&self.leaves, object_ref)
             .map_err(|e| ProofError::GeneralError(e.to_string()))?;
         Ok(OCSNonInclusionProof {
             non_inclusion_proof,
@@ -238,8 +229,8 @@ impl ModifiedObjectTree {
     }
 }
 
-impl ProofBuilder for OCSTarget {
-    fn construct(self, checkpoint: &CheckpointData) -> ProofResult<Proof> {
+impl OCSTarget {
+    pub fn construct(self, checkpoint: &CheckpointData) -> ProofResult<Proof> {
         let modified_object_tree = ModifiedObjectTree::from_checkpoint(checkpoint)?;
         match self.target_type {
             OCSTargetType::Inclusion => {
@@ -266,8 +257,8 @@ impl ProofBuilder for OCSTarget {
     }
 }
 
-impl ProofContentsVerifier for OCSProof {
-    fn verify(self, target: &ProofTarget, summary: &CheckpointSummary) -> ProofResult<()> {
+impl OCSProof {
+    pub fn verify(self, target: &ProofTarget, summary: &CheckpointSummary) -> ProofResult<()> {
         match target {
             ProofTarget::ObjectCheckpointState(target) => {
                 let actual_artifacts_digest = checkpoint_artifacts_digest(summary)?;

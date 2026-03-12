@@ -3,6 +3,7 @@
 
 use serde::Deserialize;
 use serde::Serialize;
+use sui_crypto::bls12381::ValidatorCommitteeSignatureVerifier;
 use sui_sdk_types::CheckpointData;
 use sui_sdk_types::CheckpointSummary;
 use sui_sdk_types::Event;
@@ -22,18 +23,8 @@ use crate::proof::ocs::OCSTarget;
 use crate::proof::transaction_proof::TransactionProof;
 use crate::types::EventId;
 
-pub trait ProofBuilder {
-    fn construct(self, checkpoint: &CheckpointData) -> ProofResult<Proof>;
-}
-
-pub trait ProofVerifier {
-    fn verify(self, committee: &ValidatorCommittee) -> ProofResult<()>;
-}
-
-pub trait ProofContentsVerifier {
-    fn verify(self, targets: &ProofTarget, summary: &CheckpointSummary) -> ProofResult<()>;
-}
-
+/// Proof targets are serialized as part of [`Proof`] for transmission between
+/// prover and verifier. BCS serialization layout must remain stable.
 #[derive(Debug, Serialize, Deserialize)]
 pub enum ProofTarget {
     Objects(ObjectsTarget),
@@ -62,10 +53,8 @@ impl ProofTarget {
     pub fn new_ocs_non_inclusion(object_id: sui_sdk_types::Address) -> Self {
         ProofTarget::ObjectCheckpointState(OCSTarget::new_non_inclusion_target(object_id))
     }
-}
 
-impl ProofBuilder for ProofTarget {
-    fn construct(self, checkpoint: &CheckpointData) -> ProofResult<Proof> {
+    pub fn construct(self, checkpoint: &CheckpointData) -> ProofResult<Proof> {
         match self {
             ProofTarget::Objects(target) => target.construct(checkpoint),
             ProofTarget::Events(target) => target.construct(checkpoint),
@@ -75,6 +64,8 @@ impl ProofBuilder for ProofTarget {
     }
 }
 
+/// A serializable proof that can be transmitted from prover to verifier.
+/// BCS serialization layout must remain stable.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Proof {
     pub targets: ProofTarget,
@@ -82,18 +73,8 @@ pub struct Proof {
     pub proof_contents: ProofContents,
 }
 
-#[allow(clippy::large_enum_variant)]
-#[derive(Debug, Serialize, Deserialize)]
-pub enum ProofContents {
-    TransactionProof(TransactionProof),
-    CommitteeProof(CommitteeProof),
-    ObjectCheckpointStateProof(OCSProof),
-}
-
-impl ProofVerifier for Proof {
-    fn verify(self, committee: &ValidatorCommittee) -> ProofResult<()> {
-        use sui_crypto::bls12381::ValidatorCommitteeSignatureVerifier;
-
+impl Proof {
+    pub fn verify(self, committee: &ValidatorCommittee) -> ProofResult<()> {
         let verifier = ValidatorCommitteeSignatureVerifier::new(committee.clone())
             .map_err(|e| ProofError::SummaryVerificationFailed(e.to_string()))?;
         verifier
@@ -130,8 +111,15 @@ impl ProofVerifier for Proof {
     }
 }
 
-impl ProofContentsVerifier for ProofContents {
-    fn verify(self, targets: &ProofTarget, summary: &CheckpointSummary) -> ProofResult<()> {
+#[derive(Debug, Serialize, Deserialize)]
+pub enum ProofContents {
+    TransactionProof(Box<TransactionProof>),
+    CommitteeProof(CommitteeProof),
+    ObjectCheckpointStateProof(OCSProof),
+}
+
+impl ProofContents {
+    pub fn verify(self, targets: &ProofTarget, summary: &CheckpointSummary) -> ProofResult<()> {
         match self {
             ProofContents::TransactionProof(proof) => proof.verify(targets, summary),
             ProofContents::CommitteeProof(proof) => proof.verify(targets, summary),
