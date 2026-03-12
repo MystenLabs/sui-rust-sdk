@@ -7994,36 +7994,36 @@ mod _accessor_impls {
             self
         }
         ///Returns the value of `inclusion_proof`, or the default value if `inclusion_proof` is unset.
-        pub fn inclusion_proof(&self) -> &super::OcsInclusionProof {
+        pub fn inclusion_proof(&self) -> &super::ObjectInclusionProof {
             self.inclusion_proof
                 .as_ref()
                 .map(|field| field as _)
-                .unwrap_or_else(|| super::OcsInclusionProof::default_instance() as _)
+                .unwrap_or_else(|| super::ObjectInclusionProof::default_instance() as _)
         }
         ///If `inclusion_proof` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
         pub fn inclusion_proof_opt_mut(
             &mut self,
-        ) -> Option<&mut super::OcsInclusionProof> {
+        ) -> Option<&mut super::ObjectInclusionProof> {
             self.inclusion_proof.as_mut().map(|field| field as _)
         }
         ///Returns a mutable reference to `inclusion_proof`.
         ///If the field is unset, it is first initialized with the default value.
-        pub fn inclusion_proof_mut(&mut self) -> &mut super::OcsInclusionProof {
+        pub fn inclusion_proof_mut(&mut self) -> &mut super::ObjectInclusionProof {
             self.inclusion_proof.get_or_insert_default()
         }
         ///If `inclusion_proof` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn inclusion_proof_opt(&self) -> Option<&super::OcsInclusionProof> {
+        pub fn inclusion_proof_opt(&self) -> Option<&super::ObjectInclusionProof> {
             self.inclusion_proof.as_ref().map(|field| field as _)
         }
         ///Sets `inclusion_proof` with the provided value.
-        pub fn set_inclusion_proof<T: Into<super::OcsInclusionProof>>(
+        pub fn set_inclusion_proof<T: Into<super::ObjectInclusionProof>>(
             &mut self,
             field: T,
         ) {
             self.inclusion_proof = Some(field.into().into());
         }
         ///Sets `inclusion_proof` with the provided value.
-        pub fn with_inclusion_proof<T: Into<super::OcsInclusionProof>>(
+        pub fn with_inclusion_proof<T: Into<super::ObjectInclusionProof>>(
             mut self,
             field: T,
         ) -> Self {
@@ -11286,74 +11286,6 @@ mod _accessor_impls {
             self
         }
     }
-    impl super::OcsInclusionProof {
-        pub const fn const_default() -> Self {
-            Self {
-                merkle_proof: None,
-                leaf_index: None,
-                tree_root: None,
-            }
-        }
-        #[doc(hidden)]
-        pub fn default_instance() -> &'static Self {
-            static DEFAULT: super::OcsInclusionProof = super::OcsInclusionProof::const_default();
-            &DEFAULT
-        }
-        ///If `merkle_proof` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn merkle_proof_opt(&self) -> Option<&[u8]> {
-            self.merkle_proof.as_ref().map(|field| field as _)
-        }
-        ///Sets `merkle_proof` with the provided value.
-        pub fn set_merkle_proof<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
-            self.merkle_proof = Some(field.into().into());
-        }
-        ///Sets `merkle_proof` with the provided value.
-        pub fn with_merkle_proof<T: Into<::prost::bytes::Bytes>>(
-            mut self,
-            field: T,
-        ) -> Self {
-            self.set_merkle_proof(field.into());
-            self
-        }
-        ///If `leaf_index` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn leaf_index_opt_mut(&mut self) -> Option<&mut u64> {
-            self.leaf_index.as_mut().map(|field| field as _)
-        }
-        ///Returns a mutable reference to `leaf_index`.
-        ///If the field is unset, it is first initialized with the default value.
-        pub fn leaf_index_mut(&mut self) -> &mut u64 {
-            self.leaf_index.get_or_insert_default()
-        }
-        ///If `leaf_index` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn leaf_index_opt(&self) -> Option<u64> {
-            self.leaf_index.as_ref().map(|field| *field)
-        }
-        ///Sets `leaf_index` with the provided value.
-        pub fn set_leaf_index(&mut self, field: u64) {
-            self.leaf_index = Some(field);
-        }
-        ///Sets `leaf_index` with the provided value.
-        pub fn with_leaf_index(mut self, field: u64) -> Self {
-            self.set_leaf_index(field);
-            self
-        }
-        ///If `tree_root` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn tree_root_opt(&self) -> Option<&[u8]> {
-            self.tree_root.as_ref().map(|field| field as _)
-        }
-        ///Sets `tree_root` with the provided value.
-        pub fn set_tree_root<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
-            self.tree_root = Some(field.into().into());
-        }
-        ///Sets `tree_root` with the provided value.
-        pub fn with_tree_root<T: Into<::prost::bytes::Bytes>>(
-            mut self,
-            field: T,
-        ) -> Self {
-            self.set_tree_root(field.into());
-            self
-        }
-    }
     impl super::Object {
         pub const fn const_default() -> Self {
             Self {
@@ -11719,6 +11651,74 @@ mod _accessor_impls {
         ///Sets `display` with the provided value.
         pub fn with_display<T: Into<super::Display>>(mut self, field: T) -> Self {
             self.set_display(field.into());
+            self
+        }
+    }
+    impl super::ObjectInclusionProof {
+        pub const fn const_default() -> Self {
+            Self {
+                merkle_proof: None,
+                leaf_index: None,
+                tree_root: None,
+            }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::ObjectInclusionProof = super::ObjectInclusionProof::const_default();
+            &DEFAULT
+        }
+        ///If `merkle_proof` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn merkle_proof_opt(&self) -> Option<&[u8]> {
+            self.merkle_proof.as_ref().map(|field| field as _)
+        }
+        ///Sets `merkle_proof` with the provided value.
+        pub fn set_merkle_proof<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
+            self.merkle_proof = Some(field.into().into());
+        }
+        ///Sets `merkle_proof` with the provided value.
+        pub fn with_merkle_proof<T: Into<::prost::bytes::Bytes>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_merkle_proof(field.into());
+            self
+        }
+        ///If `leaf_index` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn leaf_index_opt_mut(&mut self) -> Option<&mut u64> {
+            self.leaf_index.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `leaf_index`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn leaf_index_mut(&mut self) -> &mut u64 {
+            self.leaf_index.get_or_insert_default()
+        }
+        ///If `leaf_index` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn leaf_index_opt(&self) -> Option<u64> {
+            self.leaf_index.as_ref().map(|field| *field)
+        }
+        ///Sets `leaf_index` with the provided value.
+        pub fn set_leaf_index(&mut self, field: u64) {
+            self.leaf_index = Some(field);
+        }
+        ///Sets `leaf_index` with the provided value.
+        pub fn with_leaf_index(mut self, field: u64) -> Self {
+            self.set_leaf_index(field);
+            self
+        }
+        ///If `tree_root` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn tree_root_opt(&self) -> Option<&[u8]> {
+            self.tree_root.as_ref().map(|field| field as _)
+        }
+        ///Sets `tree_root` with the provided value.
+        pub fn set_tree_root<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
+            self.tree_root = Some(field.into().into());
+        }
+        ///Sets `tree_root` with the provided value.
+        pub fn with_tree_root<T: Into<::prost::bytes::Bytes>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_tree_root(field.into());
             self
         }
     }
