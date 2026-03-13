@@ -37,7 +37,7 @@ pub(super) fn proto_object_ref_to_object_reference(
 }
 
 pub(super) fn proto_ocs_inclusion_proof_to_light_client_proof(
-    proto: &sui_rpc::proto::sui::rpc::v2::OcsInclusionProof,
+    proto: &sui_rpc::proto::sui::rpc::v2::ObjectInclusionProof,
 ) -> Result<OCSInclusionProof, ClientError> {
     let merkle_proof_bytes = proto
         .merkle_proof

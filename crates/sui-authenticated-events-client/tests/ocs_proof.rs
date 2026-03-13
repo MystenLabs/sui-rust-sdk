@@ -9,8 +9,8 @@ use sui_authenticated_events_client::proof::ocs::ModifiedObjectTree;
 use sui_sdk_types::Address;
 use sui_sdk_types::CheckpointCommitment;
 use sui_sdk_types::CheckpointData;
-use sui_sdk_types::hash::Hasher;
 use sui_sdk_types::ValidatorCommittee;
+use sui_sdk_types::hash::Hasher;
 
 fn load_genesis_committee() -> ValidatorCommittee {
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));

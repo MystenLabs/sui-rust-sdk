@@ -10,8 +10,8 @@ use sui_sdk_types::CheckpointCommitment;
 use sui_sdk_types::CheckpointData;
 use sui_sdk_types::CheckpointSummary;
 use sui_sdk_types::Digest;
-use sui_sdk_types::hash::Hasher;
 use sui_sdk_types::ObjectReference;
+use sui_sdk_types::hash::Hasher;
 
 use crate::proof::base::Proof;
 use crate::proof::base::ProofContents;

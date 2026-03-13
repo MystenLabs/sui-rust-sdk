@@ -6,15 +6,17 @@ use serde::Deserialize;
 use serde::Serialize;
 use sui_sdk_types::Address;
 use sui_sdk_types::Digest;
-use sui_sdk_types::ObjectData;
-use sui_sdk_types::hash::Hasher;
 use sui_sdk_types::Identifier;
+use sui_sdk_types::ObjectData;
 use sui_sdk_types::StructTag;
 use sui_sdk_types::TypeTag;
+use sui_sdk_types::hash::Hasher;
 
 use crate::ClientError;
 
-pub(crate) type U256 = BUintD8<32>;
+// TODO: this type is defined as pub(crate) in sui-sdk-types/u256.rs
+// we should reuse the existing type
+pub type U256 = BUintD8<32>;
 
 pub use sui_sdk_types::EventId;
 
@@ -73,11 +75,15 @@ pub(crate) fn extract_stream_head_from_object(
         .map_err(|e| ClientError::InternalError(format!("Failed to deserialize Object: {e}")))?;
 
     let ObjectData::Struct(move_struct) = object.data() else {
-        return Err(ClientError::InternalError("Expected a Move struct, got a package".to_string()));
+        return Err(ClientError::InternalError(
+            "Expected a Move struct, got a package".to_string(),
+        ));
     };
 
     let field: Field<AccumulatorKey, EventStreamHead> = bcs::from_bytes(move_struct.contents())
-        .map_err(|e| ClientError::InternalError(format!("Failed to deserialize dynamic field: {e}")))?;
+        .map_err(|e| {
+            ClientError::InternalError(format!("Failed to deserialize dynamic field: {e}"))
+        })?;
 
     Ok(field.value)
 }
