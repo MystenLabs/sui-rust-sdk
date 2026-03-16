@@ -63,9 +63,7 @@ pub(super) fn parse_type_tag(mut input: &str) -> Result<TypeTag, Option<String>>
 
 /// Extract a human-readable message from a winnow error, if one was attached
 /// via `StrContext::Label`.
-fn extract_message(
-    err: winnow::error::ErrMode<winnow::error::ContextError>,
-) -> Option<String> {
+fn extract_message(err: winnow::error::ErrMode<winnow::error::ContextError>) -> Option<String> {
     use winnow::error::StrContext;
 
     let inner = match err {
@@ -146,7 +144,11 @@ fn struct_tag(input: &mut &str, depth: usize) -> ModalResult<StructTag> {
 fn generics_with_depth(input: &mut &str, depth: usize) -> ModalResult<Vec<TypeTag>> {
     separated(
         1..,
-        delimited(space0, |input: &mut &str| type_tag(input, depth + 1), space0),
+        delimited(
+            space0,
+            |input: &mut &str| type_tag(input, depth + 1),
+            space0,
+        ),
         ",",
     )
     .parse_next(input)
