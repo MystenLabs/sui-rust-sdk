@@ -11,7 +11,7 @@ type BoxError = Box<dyn std::error::Error + Send + Sync + 'static>;
 
 #[derive(Debug)]
 pub struct TryFromProtoError {
-    field_violation: FieldViolation,
+    field_violation: Box<FieldViolation>,
     source: Option<BoxError>,
 }
 
@@ -41,14 +41,14 @@ impl std::error::Error for TryFromProtoError {
 
 impl TryFromProtoError {
     pub fn nested<T: AsRef<str>>(mut self, field: T) -> Self {
-        let field = field.as_ref();
-        self.field_violation = self.field_violation.nested(field);
+        let fv = std::mem::take(&mut *self.field_violation);
+        *self.field_violation = fv.nested(field.as_ref());
         self
     }
 
     pub fn nested_at<T: AsRef<str>>(mut self, field: T, index: usize) -> Self {
-        let field = field.as_ref();
-        self.field_violation = self.field_violation.nested_at(field, index);
+        let fv = std::mem::take(&mut *self.field_violation);
+        *self.field_violation = fv.nested_at(field.as_ref(), index);
         self
     }
 
@@ -56,7 +56,9 @@ impl TryFromProtoError {
         let field = field.as_ref();
 
         Self {
-            field_violation: FieldViolation::new(field).with_reason(ErrorReason::FieldMissing),
+            field_violation: Box::new(
+                FieldViolation::new(field).with_reason(ErrorReason::FieldMissing),
+            ),
             source: None,
         }
     }
@@ -66,9 +68,11 @@ impl TryFromProtoError {
         let error = error.into();
 
         Self {
-            field_violation: FieldViolation::new(field)
-                .with_reason(ErrorReason::FieldInvalid)
-                .with_description(error.to_string()),
+            field_violation: Box::new(
+                FieldViolation::new(field)
+                    .with_reason(ErrorReason::FieldInvalid)
+                    .with_description(error.to_string()),
+            ),
             source: Some(error),
         }
     }
@@ -90,7 +94,6 @@ pub fn timestamp_ms_to_proto(timestamp_ms: u64) -> prost_types::Timestamp {
     }
 }
 
-#[allow(clippy::result_large_err)]
 pub fn proto_to_timestamp_ms(timestamp: prost_types::Timestamp) -> Result<u64, TryFromProtoError> {
     let seconds = std::time::Duration::from_secs(
         timestamp
