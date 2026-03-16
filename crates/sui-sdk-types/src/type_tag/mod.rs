@@ -90,7 +90,10 @@ impl std::str::FromStr for TypeTag {
     type Err = TypeParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        parse::parse_type_tag(s).map_err(|_| TypeParseError { source: s.into() })
+        parse::parse_type_tag(s).map_err(|e| TypeParseError {
+            source: s.into(),
+            message: e,
+        })
     }
 }
 
@@ -103,11 +106,16 @@ impl From<StructTag> for TypeTag {
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TypeParseError {
     source: String,
+    message: Option<String>,
 }
 
 impl std::fmt::Display for TypeParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Debug::fmt(self, f)
+        if let Some(message) = &self.message {
+            write!(f, "unable to parse type \"{}\": {message}", self.source)
+        } else {
+            write!(f, "unable to parse type \"{}\"", self.source)
+        }
     }
 }
 
@@ -145,6 +153,7 @@ impl Identifier {
             .map(|ident| Self(ident.into()))
             .map_err(|_| TypeParseError {
                 source: identifier.as_ref().into(),
+                message: None,
             })
     }
 
@@ -186,7 +195,10 @@ impl std::str::FromStr for Identifier {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         parse::parse_identifier(s)
             .map(|ident| Self(ident.into()))
-            .map_err(|_| TypeParseError { source: s.into() })
+            .map_err(|_| TypeParseError {
+                source: s.into(),
+                message: None,
+            })
     }
 }
 
@@ -424,6 +436,9 @@ impl std::str::FromStr for StructTag {
     type Err = TypeParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        parse::parse_struct_tag(s).map_err(|_| TypeParseError { source: s.into() })
+        parse::parse_struct_tag(s).map_err(|e| TypeParseError {
+            source: s.into(),
+            message: e,
+        })
     }
 }
