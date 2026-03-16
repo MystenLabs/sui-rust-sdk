@@ -257,8 +257,8 @@ impl VerifyingKey {
         let modulus = Base64UrlUnpadded::decode_vec(&jwk.n)
             .map_err(|e| SignatureError::from_source(e.to_string()))?;
 
-        let proof = zklogin_proof_to_arkworks(inputs.proof_points()).unwrap();
-        let input_hash = calculate_all_inputs_hash(inputs, signature, &modulus, max_epoch).unwrap();
+        let proof = zklogin_proof_to_arkworks(inputs.proof_points())?;
+        let input_hash = calculate_all_inputs_hash(inputs, signature, &modulus, max_epoch)?;
 
         self.verify_proof(&proof, &[input_hash])
     }
@@ -384,9 +384,11 @@ fn convert_base<T: ToBits>(
     let mut packed: Vec<Fr> = bits
         .rchunks(out_width as usize)
         .map(|chunk| {
-            Fr::from_be_bytes_mod_order(U256::from_radix_be(chunk, 2).unwrap().to_be().digits())
+            U256::from_radix_be(chunk, 2)
+                .map(|v| Fr::from_be_bytes_mod_order(v.to_be().digits()))
+                .ok_or_else(|| SignatureError::from_source("invalid radix-2 conversion"))
         })
-        .collect();
+        .collect::<Result<_, _>>()?;
     packed.reverse();
     match packed.len() != (in_arr.len() * in_width as usize).div_ceil(out_width as usize) {
         true => Err(SignatureError::from_source("invalid input")),
@@ -463,7 +465,12 @@ pub fn calculate_all_inputs_hash(
     let iss_base64_f =
         hash_ascii_str_to_field(&inputs.iss_base64_details().value, MAX_ISS_LEN_B64)?;
     let header_f = hash_ascii_str_to_field(inputs.header_base64(), MAX_HEADER_LEN)?;
-    let modulus_f = hash_to_field(&[U2048::from_be_slice(modulus).unwrap()], 2048, PACK_WIDTH)?;
+    let modulus_f = hash_to_field(
+        &[U2048::from_be_slice(modulus)
+            .ok_or_else(|| SignatureError::from_source("JWK modulus too large for U2048"))?],
+        2048,
+        PACK_WIDTH,
+    )?;
 
     POSEIDON
         .hash(&[
