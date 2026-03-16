@@ -106,5 +106,8 @@ fn zklogin_verify_oversized_jwk_modulus_returns_error() {
     verifier.jwks_mut().insert(jwk_id, jwk);
 
     let result = verifier.verify(&message.signing_digest(), &zklogin_authenticator);
-    assert!(result.is_err(), "expected error for oversized modulus, got Ok");
+    assert!(
+        result.is_err(),
+        "expected error for oversized modulus, got Ok"
+    );
 }
