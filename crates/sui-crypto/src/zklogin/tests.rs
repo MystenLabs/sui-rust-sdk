@@ -1,5 +1,8 @@
+use base64ct::Encoding;
 use signature::Signer;
+use signature::Verifier;
 use sui_sdk_types::PersonalMessage;
+use sui_sdk_types::ZkLoginAuthenticator;
 use sui_sdk_types::ZkLoginInputs;
 
 use crate::SuiVerifier;
@@ -79,4 +82,32 @@ fn zklogin_sign_personal_message() {
     verifier
         .verify_personal_message(&message, &user_signature)
         .unwrap();
+}
+
+/// Regression test: an oversized JWK modulus (> 256 bytes) must return an
+/// error instead of panicking via `unwrap()`.
+#[test]
+fn zklogin_verify_oversized_jwk_modulus_returns_error() {
+    let message = PersonalMessage(b"hello world".into());
+
+    let (mut jwk, jwk_id, inputs, key, max_epoch) = test_zklogin_material();
+
+    // Replace the modulus with a 257-byte value encoded as base64url.
+    // U2048 is 256 bytes, so 257 bytes will overflow it.
+    jwk.n = base64ct::Base64UrlUnpadded::encode_string(&[0x42u8; 257]);
+
+    let signature = key.sign(&message.signing_digest());
+    let zklogin_authenticator = ZkLoginAuthenticator {
+        inputs,
+        max_epoch,
+        signature,
+    };
+    let mut verifier = ZkloginVerifier::new_dev();
+    verifier.jwks_mut().insert(jwk_id, jwk);
+
+    let result = verifier.verify(&message.signing_digest(), &zklogin_authenticator);
+    assert!(
+        result.is_err(),
+        "expected error for oversized modulus, got Ok"
+    );
 }
