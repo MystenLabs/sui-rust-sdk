@@ -19,6 +19,10 @@ use winnow::token::take_while;
 // static ALLOWED_IDENTIFIERS: &str = r"(?:[a-zA-Z][a-zA-Z0-9_]*)|(?:_[a-zA-Z0-9_]+)";
 static MAX_IDENTIFIER_LENGTH: usize = 128;
 
+/// Maximum nesting depth for type tags. Each `vector<...>` or struct generic
+/// type parameter counts as one level.
+static MAX_TYPE_TAG_DEPTH: usize = 128;
+
 pub(super) fn parse_identifier(mut input: &str) -> ModalResult<&str> {
     (identifier, eof).take().parse_next(&mut input)
 }
@@ -51,11 +55,37 @@ fn parse_address<'s>(input: &mut &'s str) -> ModalResult<&'s str> {
         .parse_next(input)
 }
 
-pub(super) fn parse_type_tag(mut input: &str) -> ModalResult<TypeTag> {
-    (type_tag, eof).parse_next(&mut input).map(|(t, _)| t)
+pub(super) fn parse_type_tag(mut input: &str) -> Result<TypeTag, Option<String>> {
+    let tag = type_tag(&mut input, 0).map_err(extract_message)?;
+    eof.parse_next(&mut input).map_err(extract_message)?;
+    Ok(tag)
 }
 
-fn type_tag(input: &mut &str) -> ModalResult<TypeTag> {
+/// Extract a human-readable message from a winnow error, if one was attached
+/// via `StrContext::Label`.
+fn extract_message(err: winnow::error::ErrMode<winnow::error::ContextError>) -> Option<String> {
+    use winnow::error::StrContext;
+
+    let inner = match err {
+        winnow::error::ErrMode::Backtrack(e) | winnow::error::ErrMode::Cut(e) => e,
+        winnow::error::ErrMode::Incomplete(_) => return None,
+    };
+
+    inner.context().find_map(|ctx| match ctx {
+        StrContext::Label(msg) => Some(msg.to_string()),
+        _ => None,
+    })
+}
+
+fn type_tag(input: &mut &str, depth: usize) -> ModalResult<TypeTag> {
+    if depth > MAX_TYPE_TAG_DEPTH {
+        let mut err = winnow::error::ContextError::new();
+        err.push(winnow::error::StrContext::Label(
+            "type exceeds the maximum nesting depth of 128",
+        ));
+        return Err(winnow::error::ErrMode::Cut(err));
+    }
+
     alt((
         "u8".value(TypeTag::U8),
         "u16".value(TypeTag::U16),
@@ -66,17 +96,24 @@ fn type_tag(input: &mut &str) -> ModalResult<TypeTag> {
         "bool".value(TypeTag::Bool),
         "address".value(TypeTag::Address),
         "signer".value(TypeTag::Signer),
-        delimited("vector<", type_tag, ">").map(|ty| TypeTag::Vector(Box::new(ty))),
-        struct_tag.map(|s| TypeTag::Struct(Box::new(s))),
+        |input: &mut &str| {
+            "vector<".parse_next(input)?;
+            let ty = type_tag(input, depth + 1)?;
+            ">".parse_next(input)?;
+            Ok(TypeTag::Vector(Box::new(ty)))
+        },
+        |input: &mut &str| struct_tag(input, depth).map(|s| TypeTag::Struct(Box::new(s))),
     ))
     .parse_next(input)
 }
 
-pub(super) fn parse_struct_tag(mut input: &str) -> ModalResult<StructTag> {
-    (struct_tag, eof).parse_next(&mut input).map(|(s, _)| s)
+pub(super) fn parse_struct_tag(mut input: &str) -> Result<StructTag, Option<String>> {
+    let tag = struct_tag(&mut input, 0).map_err(extract_message)?;
+    eof.parse_next(&mut input).map_err(extract_message)?;
+    Ok(tag)
 }
 
-fn struct_tag(input: &mut &str) -> ModalResult<StructTag> {
+fn struct_tag(input: &mut &str, depth: usize) -> ModalResult<StructTag> {
     let (address, _, module, _, name) = (
         parse_address.try_map(|s| s.parse::<Address>()),
         "::",
@@ -87,9 +124,14 @@ fn struct_tag(input: &mut &str) -> ModalResult<StructTag> {
         .parse_next(input)?;
 
     // optional generic
-    let generics = opt(delimited("<", generics, ">"))
-        .parse_next(input)?
-        .unwrap_or_default();
+    let generics = opt(|input: &mut &str| {
+        "<".parse_next(input)?;
+        let result = generics_with_depth(input, depth)?;
+        ">".parse_next(input)?;
+        Ok(result)
+    })
+    .parse_next(input)?
+    .unwrap_or_default();
 
     Ok(StructTag {
         address,
@@ -99,8 +141,17 @@ fn struct_tag(input: &mut &str) -> ModalResult<StructTag> {
     })
 }
 
-fn generics(input: &mut &str) -> ModalResult<Vec<TypeTag>> {
-    separated(1.., delimited(space0, type_tag, space0), ",").parse_next(input)
+fn generics_with_depth(input: &mut &str, depth: usize) -> ModalResult<Vec<TypeTag>> {
+    separated(
+        1..,
+        delimited(
+            space0,
+            |input: &mut &str| type_tag(input, depth + 1),
+            space0,
+        ),
+        ",",
+    )
+    .parse_next(input)
 }
 
 //
@@ -223,10 +274,9 @@ mod tests {
             "0x5d32d749705c5f07c741f1818df3db466128bf01677611a959b03040ac5dc774::slippage::HopSwapEvent<0x2::sui::SUI, 0x3c86bba6a3d3ce958615ae51cc5604f58956b1583323f664cf5f048da0fcbb19::_spd::_SPD>",
         ];
         for s in valid {
-            let mut input = s;
             assert!(
-                dbg!((type_tag, eof).parse_next(&mut input)).is_ok(),
-                "Failed to parse struct {s}, remainder {input}",
+                dbg!(parse_type_tag(s)).is_ok(),
+                "Failed to parse struct {s}",
             );
         }
     }
@@ -268,5 +318,61 @@ mod tests {
             Ok(_) => assert!(is_valid_identifier(&s)),
             Err(_) => assert!(!is_valid_identifier(&s)),
         }
+    }
+
+    #[test]
+    fn deeply_nested_type_tag_returns_error() {
+        // Build a deeply nested type string: 0x1::m::S<0x1::m::S<0x1::m::S<...>>>
+        // This must return a parse error, not overflow the stack.
+        let depth = 1000;
+        let mut tag = String::from("0x1::m::S");
+        for _ in 0..depth {
+            tag = format!("0x1::m::S<{tag}>");
+        }
+        let err = TypeTag::from_str(&tag).unwrap_err();
+        assert!(
+            err.to_string().contains("nesting depth"),
+            "error should mention nesting depth, got: {err}"
+        );
+    }
+
+    #[test]
+    fn deeply_nested_vector_returns_error() {
+        // Build a deeply nested vector type: vector<vector<vector<...u8...>>>
+        let depth = 1000;
+        let mut tag = String::from("u8");
+        for _ in 0..depth {
+            tag = format!("vector<{tag}>");
+        }
+        assert!(
+            TypeTag::from_str(&tag).is_err(),
+            "deeply nested vector type should be rejected"
+        );
+    }
+
+    #[test]
+    fn type_tag_at_max_depth_is_rejected() {
+        // A type at exactly MAX_TYPE_TAG_DEPTH + 1 nesting levels must fail.
+        let mut tag = String::from("u8");
+        for _ in 0..=MAX_TYPE_TAG_DEPTH {
+            tag = format!("vector<{tag}>");
+        }
+        assert!(
+            TypeTag::from_str(&tag).is_err(),
+            "type tag exceeding max depth should be rejected"
+        );
+    }
+
+    #[test]
+    fn type_tag_within_max_depth_is_accepted() {
+        // A type with moderate nesting should still parse fine.
+        let mut tag = String::from("u8");
+        for _ in 0..16 {
+            tag = format!("vector<{tag}>");
+        }
+        assert!(
+            TypeTag::from_str(&tag).is_ok(),
+            "moderately nested type tag should parse successfully"
+        );
     }
 }
