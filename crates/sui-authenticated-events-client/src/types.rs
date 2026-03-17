@@ -1,7 +1,6 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use bnum::BUintD8;
 use serde::Deserialize;
 use serde::Serialize;
 use sui_sdk_types::Address;
@@ -10,13 +9,10 @@ use sui_sdk_types::Identifier;
 use sui_sdk_types::ObjectData;
 use sui_sdk_types::StructTag;
 use sui_sdk_types::TypeTag;
+pub use sui_sdk_types::U256;
 use sui_sdk_types::hash::Hasher;
 
 use crate::ClientError;
-
-// TODO: this type is defined as pub(crate) in sui-sdk-types/u256.rs
-// we should reuse the existing type
-pub type U256 = BUintD8<32>;
 
 pub use sui_sdk_types::EventId;
 

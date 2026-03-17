@@ -115,7 +115,7 @@ impl Proof {
 pub enum ProofContents {
     TransactionProof(Box<TransactionProof>),
     CommitteeProof(CommitteeProof),
-    ObjectCheckpointStateProof(OCSProof),
+    ObjectCheckpointStateProof(Box<OCSProof>),
 }
 
 impl ProofContents {

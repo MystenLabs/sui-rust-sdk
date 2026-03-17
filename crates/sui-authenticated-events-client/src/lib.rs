@@ -614,8 +614,8 @@ impl AuthenticatedEventsClient {
         let proof = Proof {
             targets: ProofTarget::ObjectCheckpointState(target),
             checkpoint_summary: signed_summary,
-            proof_contents: ProofContents::ObjectCheckpointStateProof(OCSProof::Inclusion(
-                ocs_inclusion_proof,
+            proof_contents: ProofContents::ObjectCheckpointStateProof(Box::new(
+                OCSProof::Inclusion(ocs_inclusion_proof),
             )),
         };
 

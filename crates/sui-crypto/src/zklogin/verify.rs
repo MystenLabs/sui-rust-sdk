@@ -19,6 +19,7 @@ use sui_sdk_types::Jwk;
 use sui_sdk_types::Secp256k1PublicKey;
 use sui_sdk_types::Secp256r1PublicKey;
 use sui_sdk_types::SimpleSignature;
+use sui_sdk_types::U256;
 use sui_sdk_types::ZkLoginInputs;
 use sui_sdk_types::ZkLoginProof;
 
@@ -329,7 +330,6 @@ fn public_key_to_frs(signature: &SimpleSignature) -> Result<(Fr, Fr), SignatureE
     Ok((eph_public_key_0, eph_public_key_1))
 }
 
-pub(crate) type U256 = bnum::BUintD8<32>;
 pub(crate) type U2048 = bnum::BUintD8<256>;
 
 const MAX_HEADER_LEN: u8 = 248;

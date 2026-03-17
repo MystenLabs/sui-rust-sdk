@@ -115,6 +115,7 @@ mod object;
 mod transaction;
 mod type_tag;
 mod u256;
+pub use u256::U256;
 
 pub use address::Address;
 pub use address::AddressParseError;

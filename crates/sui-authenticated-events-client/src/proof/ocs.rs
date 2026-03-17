@@ -145,12 +145,12 @@ impl ModifiedObjectTree {
                 let id = *obj_ref.object_id();
                 let version = obj_ref.version();
                 let digest = *obj_ref.digest();
-                if let Some((old_version, _)) = latest_object_states.get(&id) {
-                    if *old_version >= version {
-                        return Err(ProofError::GeneralError(
-                            "Object states should be monotonically increasing".to_string(),
-                        ));
-                    }
+                if let Some((old_version, _)) = latest_object_states.get(&id)
+                    && *old_version >= version
+                {
+                    return Err(ProofError::GeneralError(
+                        "Object states should be monotonically increasing".to_string(),
+                    ));
                 }
                 latest_object_states.insert(id, (version, digest));
             }
@@ -238,8 +238,8 @@ impl OCSTarget {
                 Ok(Proof {
                     targets: ProofTarget::ObjectCheckpointState(self),
                     checkpoint_summary: checkpoint.checkpoint_summary.clone(),
-                    proof_contents: ProofContents::ObjectCheckpointStateProof(OCSProof::Inclusion(
-                        proof,
+                    proof_contents: ProofContents::ObjectCheckpointStateProof(Box::new(
+                        OCSProof::Inclusion(proof),
                     )),
                 })
             }
@@ -248,9 +248,9 @@ impl OCSTarget {
                 Ok(Proof {
                     targets: ProofTarget::ObjectCheckpointState(self),
                     checkpoint_summary: checkpoint.checkpoint_summary.clone(),
-                    proof_contents: ProofContents::ObjectCheckpointStateProof(
+                    proof_contents: ProofContents::ObjectCheckpointStateProof(Box::new(
                         OCSProof::NonInclusion(proof),
-                    ),
+                    )),
                 })
             }
         }
