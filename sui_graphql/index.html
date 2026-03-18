@@ -1,0 +1,97 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="GraphQL client for the Sui blockchain."><title>sui_graphql - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-77263533.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="sui_graphql" data-themes="" data-resource-suffix="" data-rustdoc-version="1.94.0 (4a4ef493e 2026-03-02)" data-channel="1.94.0" data-search-js="search-9e2438ea.js" data-stringdex-js="stringdex-b897f86f.js" data-settings-js="settings-c38705f0.js" ><script src="../static.files/storage-e2aeef58.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-7bab91a1.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-ffcac47a.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Crate sui_graphql</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../sui_graphql/index.html">sui_<wbr>graphql</a><span class="version">0.0.1</span></h2></div><div class="sidebar-elems"><ul class="block"><li><a id="all-types" href="all.html">All Items</a></li></ul><section id="rustdoc-toc"><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#quick-start" title="Quick Start">Quick Start</a></li><li><a href="#streaming" title="Streaming">Streaming</a></li><li><a href="#custom-queries" title="Custom Queries">Custom Queries</a></li></ul><h3><a href="#modules">Crate Items</a></h3><ul class="block"><li><a href="#modules" title="Modules">Modules</a></li><li><a href="#structs" title="Structs">Structs</a></li><li><a href="#enums" title="Enums">Enums</a></li><li><a href="#functions" title="Functions">Functions</a></li></ul></section><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content"><div class="main-heading"><h1>Crate <span>sui_<wbr>graphql</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/sui_graphql/lib.rs.html#1-150">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>GraphQL client for the <a href="https://sui.io">Sui</a> blockchain.</p>
+<p>This crate provides a typed GraphQL client for Sui’s GraphQL API with
+automatic BCS deserialization and pagination support.</p>
+<h2 id="quick-start"><a class="doc-anchor" href="#quick-start">§</a>Quick Start</h2>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>sui_graphql::Client;
+
+<span class="attr">#[tokio::main]
+</span><span class="kw">async fn </span>main() -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
+    <span class="kw">let </span>client = Client::new(Client::MAINNET)<span class="question-mark">?</span>;
+
+    <span class="comment">// Chain info
+    </span><span class="kw">let </span>chain_id = client.chain_identifier().<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="macro">println!</span>(<span class="string">"Chain: {chain_id}"</span>);
+
+    <span class="comment">// Fetch objects, transactions, checkpoints
+    </span><span class="kw">let </span>obj = client.get_object(<span class="string">"0x5"</span>.parse()<span class="question-mark">?</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">let </span>tx = client.get_transaction(<span class="string">"digest..."</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">let </span>cp = client.get_checkpoint(<span class="prelude-val">None</span>).<span class="kw">await</span><span class="question-mark">?</span>; <span class="comment">// latest
+
+    </span><span class="prelude-val">Ok</span>(())
+}</code></pre></div><h2 id="streaming"><a class="doc-anchor" href="#streaming">§</a>Streaming</h2>
+<p>List methods return async streams with automatic pagination:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>futures::StreamExt;
+<span class="kw">use </span>std::pin::pin;
+<span class="kw">use </span>sui_graphql::Client;
+<span class="kw">use </span>sui_sdk_types::Address;
+
+<span class="attr">#[tokio::main]
+</span><span class="kw">async fn </span>main() -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
+    <span class="kw">let </span>client = Client::new(Client::MAINNET)<span class="question-mark">?</span>;
+    <span class="kw">let </span>owner: Address = <span class="string">"0x123..."</span>.parse()<span class="question-mark">?</span>;
+
+    <span class="kw">let </span><span class="kw-2">mut </span>stream = <span class="macro">pin!</span>(client.list_objects(owner));
+    <span class="kw">while let </span><span class="prelude-val">Some</span>(obj) = stream.next().<span class="kw">await </span>{
+        <span class="kw">let </span>obj = obj<span class="question-mark">?</span>;
+        <span class="macro">println!</span>(<span class="string">"Object version: {}"</span>, obj.version());
+    }
+    <span class="prelude-val">Ok</span>(())
+}</code></pre></div><h2 id="custom-queries"><a class="doc-anchor" href="#custom-queries">§</a>Custom Queries</h2>
+<p>For queries beyond the built-in methods, use <a href="struct.Client.html#method.query" title="method sui_graphql::Client::query"><code>Client::query</code></a> with a
+response type that implements <a href="https://docs.rs/serde_core/1.0.228/serde_core/de/trait.DeserializeOwned.html" title="trait serde_core::de::DeserializeOwned"><code>serde::de::DeserializeOwned</code></a>. The
+<a href="https://docs.rs/sui-graphql-macros"><code>sui-graphql-macros</code></a> crate provides <code>#[derive(Response)]</code> which generates
+the deserialization code from declarative field paths, with compile-time
+validation against the Sui GraphQL schema.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>sui_graphql::Client;
+<span class="kw">use </span>sui_graphql_macros::Response;
+
+<span class="comment">// Define a response type with field paths into the GraphQL response JSON.
+// Paths are validated against the schema at compile time — typos like
+// "epoch.epochIdd" will produce a compile error with a "Did you mean?" suggestion.
+</span><span class="attr">#[derive(Response)]
+</span><span class="kw">struct </span>MyResponse {
+    <span class="attr">#[field(path = <span class="string">"epoch.epochId"</span>)]
+    </span>epoch_id: u64,
+    <span class="comment">// Use `[]` to extract items from a list field
+    </span><span class="attr">#[field(path = <span class="string">"epoch.checkpoints.nodes[].digest"</span>)]
+    </span>checkpoint_digests: Vec&lt;String&gt;,
+    <span class="comment">// Use `?` to mark nullable fields — null returns Ok(None) instead of an error.
+    // Without `?`, a null value at that segment is a runtime error.
+    </span><span class="attr">#[field(path = <span class="string">"epoch.referenceGasPrice?"</span>)]
+    </span>gas_price: <span class="prelude-ty">Option</span>&lt;u64&gt;,
+}
+
+<span class="attr">#[tokio::main]
+</span><span class="kw">async fn </span>main() -&gt; <span class="prelude-ty">Result</span>&lt;(), sui_graphql::Error&gt; {
+    <span class="kw">let </span>client = Client::new(Client::MAINNET)<span class="question-mark">?</span>;
+
+    <span class="kw">let </span>query = <span class="string">r#"
+        query($epoch_id: UInt53) {
+            epoch(id: $epoch_id) {
+                epochId
+                checkpoints { nodes { digest } }
+                referenceGasPrice
+            }
+        }
+    "#</span>;
+    <span class="kw">let </span>variables = <span class="macro">serde_json::json!</span>({ <span class="string">"epoch_id"</span>: <span class="number">100 </span>});
+
+    <span class="kw">let </span>response = client.query::&lt;MyResponse&gt;(query, variables).<span class="kw">await</span><span class="question-mark">?</span>;
+
+    <span class="comment">// GraphQL supports partial success — data and errors can coexist
+    </span><span class="kw">for </span>err <span class="kw">in </span>response.errors() {
+        <span class="macro">eprintln!</span>(<span class="string">"GraphQL error: {}"</span>, err.message());
+    }
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(data) = response.data() {
+        <span class="macro">println!</span>(<span class="string">"Epoch: {}"</span>, data.epoch_id);
+        <span class="macro">println!</span>(<span class="string">"Checkpoints: {:?}"</span>, data.checkpoint_digests);
+        <span class="macro">println!</span>(<span class="string">"Gas price: {:?}"</span>, data.gas_price);
+    }
+    <span class="prelude-val">Ok</span>(())
+}</code></pre></div>
+<p>For the full path syntax reference (<code>?</code>, <code>[]</code>, aliases, enums), see the
+<a href="https://docs.rs/sui-graphql-macros"><code>sui-graphql-macros</code> documentation</a>.</p>
+<p>See <a href="struct.Client.html" title="struct sui_graphql::Client"><code>Client</code></a> for the full list of available methods.</p>
+</div></details><h2 id="modules" class="section-header">Modules<a href="#modules" class="anchor">§</a></h2><dl class="item-table"><dt><a class="mod" href="scalars/index.html" title="mod sui_graphql::scalars">scalars</a></dt><dd>GraphQL scalar types for Sui.</dd></dl><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><dl class="item-table"><dt><a class="struct" href="struct.Balance.html" title="struct sui_graphql::Balance">Balance</a></dt><dd>Balance information for a coin type.</dd><dt><a class="struct" href="struct.Bcs.html" title="struct sui_graphql::Bcs">Bcs</a></dt><dd>A wrapper for BCS-encoded values.</dd><dt><a class="struct" href="struct.BcsBytes.html" title="struct sui_graphql::BcsBytes">BcsBytes</a></dt><dd>Raw BCS bytes that can be deserialized into any type.</dd><dt><a class="struct" href="struct.CheckpointResponse.html" title="struct sui_graphql::CheckpointResponse">Checkpoint<wbr>Response</a></dt><dd>A checkpoint response containing the summary and contents.</dd><dt><a class="struct" href="struct.Client.html" title="struct sui_graphql::Client">Client</a></dt><dd>GraphQL client for Sui blockchain.</dd><dt><a class="struct" href="struct.DynamicField.html" title="struct sui_graphql::DynamicField">Dynamic<wbr>Field</a></dt><dd>A dynamic field entry with its name and value.</dd><dt><a class="struct" href="struct.DynamicFieldRequest.html" title="struct sui_graphql::DynamicFieldRequest">Dynamic<wbr>Field<wbr>Request</a></dt><dd>Builder for fetching a single dynamic field by name.</dd><dt><a class="struct" href="struct.DynamicFieldsRequest.html" title="struct sui_graphql::DynamicFieldsRequest">Dynamic<wbr>Fields<wbr>Request</a></dt><dd>Builder for listing dynamic fields on an object.</dd><dt><a class="struct" href="struct.Epoch.html" title="struct sui_graphql::Epoch">Epoch</a></dt><dd>Information about an epoch.</dd><dt><a class="struct" href="struct.ExecutionResult.html" title="struct sui_graphql::ExecutionResult">Execution<wbr>Result</a></dt><dd>The result of executing a transaction on chain.</dd><dt><a class="struct" href="struct.GraphQLError.html" title="struct sui_graphql::GraphQLError">GraphQL<wbr>Error</a></dt><dd>A single GraphQL error.</dd><dt><a class="struct" href="struct.Location.html" title="struct sui_graphql::Location">Location</a></dt><dd>Location in the GraphQL query where an error occurred.</dd><dt><a class="struct" href="struct.MoveObject.html" title="struct sui_graphql::MoveObject">Move<wbr>Object</a></dt><dd>A Move object with its address and contents.</dd><dt><a class="struct" href="struct.MoveValue.html" title="struct sui_graphql::MoveValue">Move<wbr>Value</a></dt><dd>A Move value with type information and optional JSON/BCS representations.</dd><dt><a class="struct" href="struct.Page.html" title="struct sui_graphql::Page">Page</a></dt><dd>A page of results from a paginated GraphQL query.</dd><dt><a class="struct" href="struct.PageInfo.html" title="struct sui_graphql::PageInfo">Page<wbr>Info</a></dt><dd>GraphQL PageInfo from Connection responses.</dd><dt><a class="struct" href="struct.Response.html" title="struct sui_graphql::Response">Response</a></dt><dd>A GraphQL response containing data and/or errors.</dd><dt><a class="struct" href="struct.TransactionResponse.html" title="struct sui_graphql::TransactionResponse">Transaction<wbr>Response</a></dt><dd>A transaction response containing the transaction data and its effects.</dd></dl><h2 id="enums" class="section-header">Enums<a href="#enums" class="anchor">§</a></h2><dl class="item-table"><dt><a class="enum" href="enum.DynamicFieldValue.html" title="enum sui_graphql::DynamicFieldValue">Dynamic<wbr>Field<wbr>Value</a></dt><dd>The value of a dynamic field, dispatched by <code>__typename</code>.</dd><dt><a class="enum" href="enum.Error.html" title="enum sui_graphql::Error">Error</a></dt><dd>Error type for GraphQL client operations.</dd><dt><a class="enum" href="enum.Format.html" title="enum sui_graphql::Format">Format</a></dt><dd>The format to fetch for Move values.</dd><dt><a class="enum" href="enum.PathFragment.html" title="enum sui_graphql::PathFragment">Path<wbr>Fragment</a></dt><dd>A segment in an error path - either a field name or array index.</dd></dl><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><dl class="item-table"><dt><a class="fn" href="fn.paginate.html" title="fn sui_graphql::paginate">paginate</a></dt><dd>Creates a paginated stream from a fetch function.</dd><dt><a class="fn" href="fn.paginate_backward.html" title="fn sui_graphql::paginate_backward">paginate_<wbr>backward</a></dt><dd>Creates a backward paginated stream from a fetch function.</dd></dl></section></div></main></body></html>
