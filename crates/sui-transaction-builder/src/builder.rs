@@ -888,15 +888,15 @@ impl TransactionBuilder {
             .status()
             .success()
         {
-            return Err(Error::Input(format!(
-                "txn failed to execute: {}",
-                response
-                    .get_ref()
-                    .transaction()
-                    .effects()
-                    .status()
-                    .error()
-                    .description()
+            let error = response
+                .get_ref()
+                .transaction()
+                .effects()
+                .status()
+                .error()
+                .clone();
+            return Err(Error::SimulationFailure(Box::new(
+                crate::error::SimulationFailure::new(error),
             )));
         }
 

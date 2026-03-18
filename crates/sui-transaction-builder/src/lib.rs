@@ -58,3 +58,6 @@ pub use builder::Function;
 pub use builder::ObjectInput;
 pub use builder::TransactionBuilder;
 pub use error::Error;
+#[cfg(feature = "intents")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "intents")))]
+pub use error::SimulationFailure;
