@@ -1528,6 +1528,234 @@ mod _field_impls {
             self.finish()
         }
     }
+    impl ListAuthenticatedEventsRequest {
+        pub const STREAM_ID_FIELD: &'static MessageField = &MessageField {
+            name: "stream_id",
+            json_name: "streamId",
+            number: 1i32,
+            message_fields: None,
+        };
+        pub const START_CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "start_checkpoint",
+            json_name: "startCheckpoint",
+            number: 2i32,
+            message_fields: None,
+        };
+        pub const PAGE_SIZE_FIELD: &'static MessageField = &MessageField {
+            name: "page_size",
+            json_name: "pageSize",
+            number: 3i32,
+            message_fields: None,
+        };
+        pub const PAGE_TOKEN_FIELD: &'static MessageField = &MessageField {
+            name: "page_token",
+            json_name: "pageToken",
+            number: 4i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for ListAuthenticatedEventsRequest {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::STREAM_ID_FIELD,
+            Self::START_CHECKPOINT_FIELD,
+            Self::PAGE_SIZE_FIELD,
+            Self::PAGE_TOKEN_FIELD,
+        ];
+    }
+    impl ListAuthenticatedEventsRequest {
+        pub fn path_builder() -> ListAuthenticatedEventsRequestFieldPathBuilder {
+            ListAuthenticatedEventsRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct ListAuthenticatedEventsRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ListAuthenticatedEventsRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn stream_id(mut self) -> String {
+            self.path.push(ListAuthenticatedEventsRequest::STREAM_ID_FIELD.name);
+            self.finish()
+        }
+        pub fn start_checkpoint(mut self) -> String {
+            self.path.push(ListAuthenticatedEventsRequest::START_CHECKPOINT_FIELD.name);
+            self.finish()
+        }
+        pub fn page_size(mut self) -> String {
+            self.path.push(ListAuthenticatedEventsRequest::PAGE_SIZE_FIELD.name);
+            self.finish()
+        }
+        pub fn page_token(mut self) -> String {
+            self.path.push(ListAuthenticatedEventsRequest::PAGE_TOKEN_FIELD.name);
+            self.finish()
+        }
+    }
+    impl ListAuthenticatedEventsResponse {
+        pub const EVENTS_FIELD: &'static MessageField = &MessageField {
+            name: "events",
+            json_name: "events",
+            number: 1i32,
+            message_fields: Some(AuthenticatedEvent::FIELDS),
+        };
+        pub const HIGHEST_INDEXED_CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "highest_indexed_checkpoint",
+            json_name: "highestIndexedCheckpoint",
+            number: 2i32,
+            message_fields: None,
+        };
+        pub const NEXT_PAGE_TOKEN_FIELD: &'static MessageField = &MessageField {
+            name: "next_page_token",
+            json_name: "nextPageToken",
+            number: 3i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for ListAuthenticatedEventsResponse {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::EVENTS_FIELD,
+            Self::HIGHEST_INDEXED_CHECKPOINT_FIELD,
+            Self::NEXT_PAGE_TOKEN_FIELD,
+        ];
+    }
+    impl ListAuthenticatedEventsResponse {
+        pub fn path_builder() -> ListAuthenticatedEventsResponseFieldPathBuilder {
+            ListAuthenticatedEventsResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct ListAuthenticatedEventsResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ListAuthenticatedEventsResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn events(mut self) -> AuthenticatedEventFieldPathBuilder {
+            self.path.push(ListAuthenticatedEventsResponse::EVENTS_FIELD.name);
+            AuthenticatedEventFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn highest_indexed_checkpoint(mut self) -> String {
+            self.path
+                .push(
+                    ListAuthenticatedEventsResponse::HIGHEST_INDEXED_CHECKPOINT_FIELD
+                        .name,
+                );
+            self.finish()
+        }
+        pub fn next_page_token(mut self) -> String {
+            self.path.push(ListAuthenticatedEventsResponse::NEXT_PAGE_TOKEN_FIELD.name);
+            self.finish()
+        }
+    }
+    impl AuthenticatedEvent {
+        pub const CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "checkpoint",
+            json_name: "checkpoint",
+            number: 1i32,
+            message_fields: None,
+        };
+        pub const ACCUMULATOR_VERSION_FIELD: &'static MessageField = &MessageField {
+            name: "accumulator_version",
+            json_name: "accumulatorVersion",
+            number: 2i32,
+            message_fields: None,
+        };
+        pub const TRANSACTION_IDX_FIELD: &'static MessageField = &MessageField {
+            name: "transaction_idx",
+            json_name: "transactionIdx",
+            number: 3i32,
+            message_fields: None,
+        };
+        pub const EVENT_IDX_FIELD: &'static MessageField = &MessageField {
+            name: "event_idx",
+            json_name: "eventIdx",
+            number: 4i32,
+            message_fields: None,
+        };
+        pub const EVENT_FIELD: &'static MessageField = &MessageField {
+            name: "event",
+            json_name: "event",
+            number: 5i32,
+            message_fields: Some(Event::FIELDS),
+        };
+        pub const STREAM_ID_FIELD: &'static MessageField = &MessageField {
+            name: "stream_id",
+            json_name: "streamId",
+            number: 6i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for AuthenticatedEvent {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::CHECKPOINT_FIELD,
+            Self::ACCUMULATOR_VERSION_FIELD,
+            Self::TRANSACTION_IDX_FIELD,
+            Self::EVENT_IDX_FIELD,
+            Self::EVENT_FIELD,
+            Self::STREAM_ID_FIELD,
+        ];
+    }
+    impl AuthenticatedEvent {
+        pub fn path_builder() -> AuthenticatedEventFieldPathBuilder {
+            AuthenticatedEventFieldPathBuilder::new()
+        }
+    }
+    pub struct AuthenticatedEventFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl AuthenticatedEventFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn checkpoint(mut self) -> String {
+            self.path.push(AuthenticatedEvent::CHECKPOINT_FIELD.name);
+            self.finish()
+        }
+        pub fn accumulator_version(mut self) -> String {
+            self.path.push(AuthenticatedEvent::ACCUMULATOR_VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn transaction_idx(mut self) -> String {
+            self.path.push(AuthenticatedEvent::TRANSACTION_IDX_FIELD.name);
+            self.finish()
+        }
+        pub fn event_idx(mut self) -> String {
+            self.path.push(AuthenticatedEvent::EVENT_IDX_FIELD.name);
+            self.finish()
+        }
+        pub fn event(mut self) -> EventFieldPathBuilder {
+            self.path.push(AuthenticatedEvent::EVENT_FIELD.name);
+            EventFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn stream_id(mut self) -> String {
+            self.path.push(AuthenticatedEvent::STREAM_ID_FIELD.name);
+            self.finish()
+        }
+    }
     impl ExecutedTransaction {
         pub const DIGEST_FIELD: &'static MessageField = &MessageField {
             name: "digest",
@@ -3621,6 +3849,187 @@ mod _field_impls {
         pub fn epoch(mut self) -> EpochFieldPathBuilder {
             self.path.push(GetEpochResponse::EPOCH_FIELD.name);
             EpochFieldPathBuilder::new_with_base(self.path)
+        }
+    }
+    impl ObjectInclusionProof {
+        pub const MERKLE_PROOF_FIELD: &'static MessageField = &MessageField {
+            name: "merkle_proof",
+            json_name: "merkleProof",
+            number: 1i32,
+            message_fields: None,
+        };
+        pub const LEAF_INDEX_FIELD: &'static MessageField = &MessageField {
+            name: "leaf_index",
+            json_name: "leafIndex",
+            number: 2i32,
+            message_fields: None,
+        };
+        pub const TREE_ROOT_FIELD: &'static MessageField = &MessageField {
+            name: "tree_root",
+            json_name: "treeRoot",
+            number: 3i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for ObjectInclusionProof {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::MERKLE_PROOF_FIELD,
+            Self::LEAF_INDEX_FIELD,
+            Self::TREE_ROOT_FIELD,
+        ];
+    }
+    impl ObjectInclusionProof {
+        pub fn path_builder() -> ObjectInclusionProofFieldPathBuilder {
+            ObjectInclusionProofFieldPathBuilder::new()
+        }
+    }
+    pub struct ObjectInclusionProofFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ObjectInclusionProofFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn merkle_proof(mut self) -> String {
+            self.path.push(ObjectInclusionProof::MERKLE_PROOF_FIELD.name);
+            self.finish()
+        }
+        pub fn leaf_index(mut self) -> String {
+            self.path.push(ObjectInclusionProof::LEAF_INDEX_FIELD.name);
+            self.finish()
+        }
+        pub fn tree_root(mut self) -> String {
+            self.path.push(ObjectInclusionProof::TREE_ROOT_FIELD.name);
+            self.finish()
+        }
+    }
+    impl GetObjectInclusionProofRequest {
+        pub const OBJECT_ID_FIELD: &'static MessageField = &MessageField {
+            name: "object_id",
+            json_name: "objectId",
+            number: 1i32,
+            message_fields: None,
+        };
+        pub const CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "checkpoint",
+            json_name: "checkpoint",
+            number: 2i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for GetObjectInclusionProofRequest {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::OBJECT_ID_FIELD,
+            Self::CHECKPOINT_FIELD,
+        ];
+    }
+    impl GetObjectInclusionProofRequest {
+        pub fn path_builder() -> GetObjectInclusionProofRequestFieldPathBuilder {
+            GetObjectInclusionProofRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct GetObjectInclusionProofRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GetObjectInclusionProofRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn object_id(mut self) -> String {
+            self.path.push(GetObjectInclusionProofRequest::OBJECT_ID_FIELD.name);
+            self.finish()
+        }
+        pub fn checkpoint(mut self) -> String {
+            self.path.push(GetObjectInclusionProofRequest::CHECKPOINT_FIELD.name);
+            self.finish()
+        }
+    }
+    impl GetObjectInclusionProofResponse {
+        pub const OBJECT_REF_FIELD: &'static MessageField = &MessageField {
+            name: "object_ref",
+            json_name: "objectRef",
+            number: 1i32,
+            message_fields: Some(ObjectReference::FIELDS),
+        };
+        pub const INCLUSION_PROOF_FIELD: &'static MessageField = &MessageField {
+            name: "inclusion_proof",
+            json_name: "inclusionProof",
+            number: 2i32,
+            message_fields: Some(ObjectInclusionProof::FIELDS),
+        };
+        pub const OBJECT_DATA_FIELD: &'static MessageField = &MessageField {
+            name: "object_data",
+            json_name: "objectData",
+            number: 3i32,
+            message_fields: None,
+        };
+        pub const CHECKPOINT_SUMMARY_FIELD: &'static MessageField = &MessageField {
+            name: "checkpoint_summary",
+            json_name: "checkpointSummary",
+            number: 4i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for GetObjectInclusionProofResponse {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::OBJECT_REF_FIELD,
+            Self::INCLUSION_PROOF_FIELD,
+            Self::OBJECT_DATA_FIELD,
+            Self::CHECKPOINT_SUMMARY_FIELD,
+        ];
+    }
+    impl GetObjectInclusionProofResponse {
+        pub fn path_builder() -> GetObjectInclusionProofResponseFieldPathBuilder {
+            GetObjectInclusionProofResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct GetObjectInclusionProofResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GetObjectInclusionProofResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn object_ref(mut self) -> ObjectReferenceFieldPathBuilder {
+            self.path.push(GetObjectInclusionProofResponse::OBJECT_REF_FIELD.name);
+            ObjectReferenceFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn inclusion_proof(mut self) -> ObjectInclusionProofFieldPathBuilder {
+            self.path.push(GetObjectInclusionProofResponse::INCLUSION_PROOF_FIELD.name);
+            ObjectInclusionProofFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn object_data(mut self) -> String {
+            self.path.push(GetObjectInclusionProofResponse::OBJECT_DATA_FIELD.name);
+            self.finish()
+        }
+        pub fn checkpoint_summary(mut self) -> String {
+            self.path
+                .push(GetObjectInclusionProofResponse::CHECKPOINT_SUMMARY_FIELD.name);
+            self.finish()
         }
     }
     impl Package {
