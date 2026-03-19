@@ -1,6 +1,100 @@
-// Before we can expose this in the public interface it likely needs to be wrapped so that the type
-// from our dependency doesn't leak
-pub(crate) type U256 = bnum::BUintD8<32>;
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct U256(bnum::BUintD8<32>);
+
+impl U256 {
+    pub const ZERO: Self = Self(bnum::BUintD8::<32>::ZERO);
+    pub const ONE: Self = Self(bnum::BUintD8::<32>::ONE);
+
+    pub const fn from_digits(digits: [u8; 32]) -> Self {
+        Self(bnum::BUintD8::<32>::from_digits(digits))
+    }
+
+    pub const fn digits(&self) -> &[u8; 32] {
+        self.0.digits()
+    }
+
+    pub const fn from_le(value: Self) -> Self {
+        Self(bnum::BUintD8::<32>::from_le(value.0))
+    }
+
+    pub const fn from_be(value: Self) -> Self {
+        Self(bnum::BUintD8::<32>::from_be(value.0))
+    }
+
+    pub const fn to_le(self) -> Self {
+        Self(self.0.to_le())
+    }
+
+    pub const fn to_be(self) -> Self {
+        Self(self.0.to_be())
+    }
+
+    pub const fn from_str_radix(s: &str, radix: u32) -> Result<Self, bnum::errors::ParseIntError> {
+        match bnum::BUintD8::<32>::from_str_radix(s, radix) {
+            Ok(v) => Ok(Self(v)),
+            Err(e) => Err(e),
+        }
+    }
+
+    pub fn to_str_radix(&self, radix: u32) -> String {
+        self.0.to_str_radix(radix)
+    }
+
+    pub fn from_radix_be(buf: &[u8], radix: u32) -> Option<Self> {
+        bnum::BUintD8::<32>::from_radix_be(buf, radix).map(Self)
+    }
+
+    pub fn from_le_slice(slice: &[u8]) -> Option<Self> {
+        bnum::BUintD8::<32>::from_le_slice(slice).map(Self)
+    }
+
+    pub fn to_radix_be(&self, radix: u32) -> Vec<u8> {
+        self.0.to_radix_be(radix)
+    }
+}
+
+impl From<u8> for U256 {
+    fn from(value: u8) -> Self {
+        Self(bnum::BUintD8::<32>::from(value))
+    }
+}
+
+impl From<u64> for U256 {
+    fn from(value: u64) -> Self {
+        Self(bnum::BUintD8::<32>::from(value))
+    }
+}
+
+impl std::str::FromStr for U256 {
+    type Err = bnum::errors::ParseIntError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        bnum::BUintD8::<32>::from_str_radix(s, 10).map(Self)
+    }
+}
+
+impl std::fmt::Display for U256 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0.to_str_radix(10))
+    }
+}
+
+#[cfg(feature = "serde")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
+impl serde::Serialize for U256 {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serde::Serialize::serialize(self.digits(), serializer)
+    }
+}
+
+#[cfg(feature = "serde")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
+impl<'de> serde::Deserialize<'de> for U256 {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let digits: [u8; 32] = serde::Deserialize::deserialize(deserializer)?;
+        Ok(Self::from_digits(digits))
+    }
+}
 
 // This is a constant time assert to ensure that the backing storage for U256 is 32 bytes long
 #[allow(unused)]

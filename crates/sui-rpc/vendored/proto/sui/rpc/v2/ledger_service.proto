@@ -12,6 +12,7 @@ import "sui/rpc/v2/checkpoint.proto";
 import "sui/rpc/v2/epoch.proto";
 import "sui/rpc/v2/executed_transaction.proto";
 import "sui/rpc/v2/object.proto";
+import "sui/rpc/v2/object_reference.proto";
 
 service LedgerService {
   // Query the service for general information about its current state.
@@ -26,6 +27,8 @@ service LedgerService {
   rpc GetCheckpoint(GetCheckpointRequest) returns (GetCheckpointResponse);
 
   rpc GetEpoch(GetEpochRequest) returns (GetEpochResponse);
+
+  rpc GetObjectInclusionProof(GetObjectInclusionProofRequest) returns (GetObjectInclusionProofResponse);
 }
 
 message GetServiceInfoRequest {}
@@ -162,4 +165,22 @@ message GetEpochRequest {
 
 message GetEpochResponse {
   optional Epoch epoch = 1;
+}
+
+message ObjectInclusionProof {
+  optional bytes merkle_proof = 1;
+  optional uint64 leaf_index = 2;
+  optional bytes tree_root = 3;
+}
+
+message GetObjectInclusionProofRequest {
+  optional string object_id = 1;
+  optional uint64 checkpoint = 2;
+}
+
+message GetObjectInclusionProofResponse {
+  optional sui.rpc.v2.ObjectReference object_ref = 1;
+  optional ObjectInclusionProof inclusion_proof = 2;
+  optional bytes object_data = 3;
+  optional bytes checkpoint_summary = 4;
 }

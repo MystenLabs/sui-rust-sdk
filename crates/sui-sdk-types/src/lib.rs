@@ -115,6 +115,7 @@ mod object;
 mod transaction;
 mod type_tag;
 mod u256;
+pub use u256::U256;
 
 pub use address::Address;
 pub use address::AddressParseError;
@@ -187,6 +188,7 @@ pub use effects::UnchangedConsensusKind;
 pub use effects::UnchangedConsensusObject;
 pub use events::BalanceChange;
 pub use events::Event;
+pub use events::EventId;
 pub use events::TransactionEvents;
 pub use execution_status::CommandArgumentError;
 pub use execution_status::ExecutionError;

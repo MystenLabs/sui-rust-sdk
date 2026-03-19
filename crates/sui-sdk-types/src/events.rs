@@ -1,4 +1,5 @@
 use super::Address;
+use super::Digest;
 use super::Identifier;
 use super::StructTag;
 use super::TypeTag;
@@ -60,6 +61,16 @@ pub struct Event {
         serde(with = "crate::_serde::ReadableBase64Encoded")
     )]
     pub contents: Vec<u8>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+pub struct EventId {
+    pub tx_digest: Digest,
+    pub event_seq: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]

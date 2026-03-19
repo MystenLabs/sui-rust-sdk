@@ -23,6 +23,7 @@ rustdoc-args = [
 
 [features]
 default = []
+merkle = ["dep:serde", "dep:serde_derive"]
 ed25519 = ["dep:ed25519-dalek", "dep:rand_core"]
 secp256r1 = ["dep:p256", "dep:rand_core"]
 passkey = ["secp256r1", "dep:sha2"]
@@ -56,6 +57,9 @@ bls12381 = ["dep:blst", "dep:rand_core", "signature/std"]
 [dependencies]
 signature = "2.2"
 sui-sdk-types = { version = "0.2.0", path = "../sui-sdk-types", default-features = false, features = ["hash", "serde"] }
+blake2 = "0.10"
+bcs = { version = "0.1.6" }
+thiserror = "2"
 
 # RNG support
 rand_core = { version = "0.6.4", optional = true }
@@ -81,7 +85,7 @@ ark-std = { version = "0.4.0", optional = true }
 base64ct = { version = "1.8.0", features = ["alloc"], optional = true }
 bnum = { version = "0.13.0", optional = true }
 itertools = { version = "0.14.0", optional = true }
-serde = { version = "1.0.228", optional = true }
+serde = { version = "1.0.228", features = ["derive"], optional = true }
 serde_derive = { version = "1.0.228", optional = true }
 serde_json = { version = "1.0.145", optional = true }
 

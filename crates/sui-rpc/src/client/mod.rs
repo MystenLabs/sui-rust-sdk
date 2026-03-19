@@ -18,6 +18,7 @@ mod lists;
 mod transaction_execution;
 pub use transaction_execution::ExecuteAndWaitError;
 
+use crate::proto::sui::rpc::v2::event_service_client::EventServiceClient;
 use crate::proto::sui::rpc::v2::ledger_service_client::LedgerServiceClient;
 use crate::proto::sui::rpc::v2::move_package_service_client::MovePackageServiceClient;
 use crate::proto::sui::rpc::v2::signature_verification_service_client::SignatureVerificationServiceClient;
@@ -152,6 +153,18 @@ impl Client {
         &mut self,
     ) -> SignatureVerificationServiceClient<Channel<'_>> {
         SignatureVerificationServiceClient::with_interceptor(&mut self.channel, &self.headers)
+            .accept_compressed(CompressionEncoding::Zstd)
+            .pipe(|client| {
+                if let Some(limit) = self.max_decoding_message_size {
+                    client.max_decoding_message_size(limit)
+                } else {
+                    client
+                }
+            })
+    }
+
+    pub fn event_client(&mut self) -> EventServiceClient<Channel<'_>> {
+        EventServiceClient::with_interceptor(&mut self.channel, &self.headers)
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
                 if let Some(limit) = self.max_decoding_message_size {

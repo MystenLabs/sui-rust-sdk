@@ -14,6 +14,8 @@ pub use v2::TransactionEffectsV2;
 pub use v2::UnchangedConsensusKind;
 pub use v2::UnchangedConsensusObject;
 
+use crate::Digest;
+use crate::ObjectReference;
 use crate::execution_status::ExecutionStatus;
 
 /// The output or effects of executing a transaction
@@ -59,6 +61,54 @@ impl TransactionEffects {
         match self {
             TransactionEffects::V1(e) => e.gas_summary(),
             TransactionEffects::V2(e) => e.gas_summary(),
+        }
+    }
+
+    pub fn transaction_digest(&self) -> &Digest {
+        match self {
+            Self::V1(v1) => &v1.transaction_digest,
+            Self::V2(v2) => &v2.transaction_digest,
+        }
+    }
+
+    pub fn events_digest(&self) -> Option<&Digest> {
+        match self {
+            Self::V1(v1) => v1.events_digest.as_ref(),
+            Self::V2(v2) => v2.events_digest.as_ref(),
+        }
+    }
+
+    pub fn changed_objects(&self) -> Vec<ObjectReference> {
+        match self {
+            Self::V1(v1) => {
+                let mut refs = Vec::new();
+                for obj in &v1.created {
+                    refs.push(obj.reference.clone());
+                }
+                for obj in &v1.mutated {
+                    refs.push(obj.reference.clone());
+                }
+                for obj in &v1.unwrapped {
+                    refs.push(obj.reference.clone());
+                }
+                refs
+            }
+            Self::V2(v2) => v2
+                .changed_objects
+                .iter()
+                .filter_map(|changed| {
+                    let id = changed.object_id;
+                    match &changed.output_state {
+                        ObjectOut::ObjectWrite { digest, .. } => {
+                            Some(ObjectReference::new(id, v2.lamport_version, *digest))
+                        }
+                        ObjectOut::PackageWrite { version, digest } => {
+                            Some(ObjectReference::new(id, *version, *digest))
+                        }
+                        ObjectOut::NotExist | ObjectOut::AccumulatorWrite(_) => None,
+                    }
+                })
+                .collect(),
         }
     }
 }

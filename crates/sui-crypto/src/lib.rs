@@ -1,5 +1,9 @@
 #![cfg_attr(doc_cfg, feature(doc_cfg))]
 
+#[cfg(feature = "merkle")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "merkle")))]
+pub mod merkle;
+
 use sui_sdk_types::PersonalMessage;
 use sui_sdk_types::Transaction;
 use sui_sdk_types::UserSignature;
