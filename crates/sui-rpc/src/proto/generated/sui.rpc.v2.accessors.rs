@@ -6,7 +6,10 @@ mod _accessor_impls {
                 address: None,
                 accumulator_type: None,
                 operation: None,
-                value: None,
+                value_kind: None,
+                integer_value: None,
+                integer_tuple: Vec::new(),
+                event_digest_value: Vec::new(),
             }
         }
         #[doc(hidden)]
@@ -66,26 +69,73 @@ mod _accessor_impls {
             self.set_operation(field.into());
             self
         }
-        ///If `value` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn value_opt_mut(&mut self) -> Option<&mut u64> {
-            self.value.as_mut().map(|field| field as _)
+        ///Sets `value_kind` with the provided value.
+        pub fn with_value_kind<T: Into<super::accumulator_write::AccumulatorValue>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_value_kind(field.into());
+            self
         }
-        ///Returns a mutable reference to `value`.
+        ///If `integer_value` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn integer_value_opt_mut(&mut self) -> Option<&mut u64> {
+            self.integer_value.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `integer_value`.
         ///If the field is unset, it is first initialized with the default value.
-        pub fn value_mut(&mut self) -> &mut u64 {
-            self.value.get_or_insert_default()
+        pub fn integer_value_mut(&mut self) -> &mut u64 {
+            self.integer_value.get_or_insert_default()
         }
-        ///If `value` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn value_opt(&self) -> Option<u64> {
-            self.value.as_ref().map(|field| *field)
+        ///If `integer_value` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn integer_value_opt(&self) -> Option<u64> {
+            self.integer_value.as_ref().map(|field| *field)
         }
-        ///Sets `value` with the provided value.
-        pub fn set_value(&mut self, field: u64) {
-            self.value = Some(field);
+        ///Sets `integer_value` with the provided value.
+        pub fn set_integer_value(&mut self, field: u64) {
+            self.integer_value = Some(field);
         }
-        ///Sets `value` with the provided value.
-        pub fn with_value(mut self, field: u64) -> Self {
-            self.set_value(field);
+        ///Sets `integer_value` with the provided value.
+        pub fn with_integer_value(mut self, field: u64) -> Self {
+            self.set_integer_value(field);
+            self
+        }
+        ///Returns the value of `integer_tuple`, or the default value if `integer_tuple` is unset.
+        pub fn integer_tuple(&self) -> &[u64] {
+            &self.integer_tuple
+        }
+        ///Returns a mutable reference to `integer_tuple`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn integer_tuple_mut(&mut self) -> &mut Vec<u64> {
+            &mut self.integer_tuple
+        }
+        ///Sets `integer_tuple` with the provided value.
+        pub fn set_integer_tuple(&mut self, field: Vec<u64>) {
+            self.integer_tuple = field;
+        }
+        ///Sets `integer_tuple` with the provided value.
+        pub fn with_integer_tuple(mut self, field: Vec<u64>) -> Self {
+            self.set_integer_tuple(field);
+            self
+        }
+        ///Returns the value of `event_digest_value`, or the default value if `event_digest_value` is unset.
+        pub fn event_digest_value(&self) -> &[super::EventDigestEntry] {
+            &self.event_digest_value
+        }
+        ///Returns a mutable reference to `event_digest_value`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn event_digest_value_mut(&mut self) -> &mut Vec<super::EventDigestEntry> {
+            &mut self.event_digest_value
+        }
+        ///Sets `event_digest_value` with the provided value.
+        pub fn set_event_digest_value(&mut self, field: Vec<super::EventDigestEntry>) {
+            self.event_digest_value = field;
+        }
+        ///Sets `event_digest_value` with the provided value.
+        pub fn with_event_digest_value(
+            mut self,
+            field: Vec<super::EventDigestEntry>,
+        ) -> Self {
+            self.set_event_digest_value(field);
             self
         }
     }
@@ -5211,6 +5261,63 @@ mod _accessor_impls {
         ///Sets `json` with the provided value.
         pub fn with_json<T: Into<::prost_types::Value>>(mut self, field: T) -> Self {
             self.set_json(field.into());
+            self
+        }
+    }
+    impl super::EventDigestEntry {
+        pub const fn const_default() -> Self {
+            Self {
+                event_index: None,
+                digest: None,
+            }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::EventDigestEntry = super::EventDigestEntry::const_default();
+            &DEFAULT
+        }
+        ///If `event_index` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn event_index_opt_mut(&mut self) -> Option<&mut u64> {
+            self.event_index.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `event_index`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn event_index_mut(&mut self) -> &mut u64 {
+            self.event_index.get_or_insert_default()
+        }
+        ///If `event_index` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn event_index_opt(&self) -> Option<u64> {
+            self.event_index.as_ref().map(|field| *field)
+        }
+        ///Sets `event_index` with the provided value.
+        pub fn set_event_index(&mut self, field: u64) {
+            self.event_index = Some(field);
+        }
+        ///Sets `event_index` with the provided value.
+        pub fn with_event_index(mut self, field: u64) -> Self {
+            self.set_event_index(field);
+            self
+        }
+        ///If `digest` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn digest_opt_mut(&mut self) -> Option<&mut String> {
+            self.digest.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `digest`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn digest_mut(&mut self) -> &mut String {
+            self.digest.get_or_insert_default()
+        }
+        ///If `digest` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn digest_opt(&self) -> Option<&str> {
+            self.digest.as_ref().map(|field| field as _)
+        }
+        ///Sets `digest` with the provided value.
+        pub fn set_digest<T: Into<String>>(&mut self, field: T) {
+            self.digest = Some(field.into().into());
+        }
+        ///Sets `digest` with the provided value.
+        pub fn with_digest<T: Into<String>>(mut self, field: T) -> Self {
+            self.set_digest(field.into());
             self
         }
     }

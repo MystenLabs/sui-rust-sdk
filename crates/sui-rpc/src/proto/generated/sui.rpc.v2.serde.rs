@@ -92,7 +92,16 @@ impl serde::Serialize for AccumulatorWrite {
         if self.operation.is_some() {
             len += 1;
         }
-        if self.value.is_some() {
+        if self.value_kind.is_some() {
+            len += 1;
+        }
+        if self.integer_value.is_some() {
+            len += 1;
+        }
+        if !self.integer_tuple.is_empty() {
+            len += 1;
+        }
+        if !self.event_digest_value.is_empty() {
             len += 1;
         }
         let mut struct_ser = serializer
@@ -110,10 +119,32 @@ impl serde::Serialize for AccumulatorWrite {
                 ))?;
             struct_ser.serialize_field("operation", &v)?;
         }
-        if let Some(v) = self.value.as_ref() {
+        if let Some(v) = self.value_kind.as_ref() {
+            let v = accumulator_write::AccumulatorValue::try_from(*v)
+                .map_err(|_| serde::ser::Error::custom(
+                    format!("Invalid variant {}", * v),
+                ))?;
+            struct_ser.serialize_field("valueKind", &v)?;
+        }
+        if let Some(v) = self.integer_value.as_ref() {
             #[allow(clippy::needless_borrow)]
             #[allow(clippy::needless_borrows_for_generic_args)]
-            struct_ser.serialize_field("value", ToString::to_string(&v).as_str())?;
+            struct_ser
+                .serialize_field("integerValue", ToString::to_string(&v).as_str())?;
+        }
+        if !self.integer_tuple.is_empty() {
+            struct_ser
+                .serialize_field(
+                    "integerTuple",
+                    &self
+                        .integer_tuple
+                        .iter()
+                        .map(ToString::to_string)
+                        .collect::<Vec<_>>(),
+                )?;
+        }
+        if !self.event_digest_value.is_empty() {
+            struct_ser.serialize_field("eventDigestValue", &self.event_digest_value)?;
         }
         struct_ser.end()
     }
@@ -129,14 +160,24 @@ impl<'de> serde::Deserialize<'de> for AccumulatorWrite {
             "accumulator_type",
             "accumulatorType",
             "operation",
-            "value",
+            "value_kind",
+            "valueKind",
+            "integer_value",
+            "integerValue",
+            "integer_tuple",
+            "integerTuple",
+            "event_digest_value",
+            "eventDigestValue",
         ];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             Address,
             AccumulatorType,
             Operation,
-            Value,
+            ValueKind,
+            IntegerValue,
+            IntegerTuple,
+            EventDigestValue,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -169,7 +210,16 @@ impl<'de> serde::Deserialize<'de> for AccumulatorWrite {
                                 Ok(GeneratedField::AccumulatorType)
                             }
                             "operation" => Ok(GeneratedField::Operation),
-                            "value" => Ok(GeneratedField::Value),
+                            "valueKind" | "value_kind" => Ok(GeneratedField::ValueKind),
+                            "integerValue" | "integer_value" => {
+                                Ok(GeneratedField::IntegerValue)
+                            }
+                            "integerTuple" | "integer_tuple" => {
+                                Ok(GeneratedField::IntegerTuple)
+                            }
+                            "eventDigestValue" | "event_digest_value" => {
+                                Ok(GeneratedField::EventDigestValue)
+                            }
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -198,7 +248,10 @@ impl<'de> serde::Deserialize<'de> for AccumulatorWrite {
                 let mut address__ = None;
                 let mut accumulator_type__ = None;
                 let mut operation__ = None;
-                let mut value__ = None;
+                let mut value_kind__ = None;
+                let mut integer_value__ = None;
+                let mut integer_tuple__ = None;
+                let mut event_digest_value__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Address => {
@@ -227,15 +280,49 @@ impl<'de> serde::Deserialize<'de> for AccumulatorWrite {
                                 >()?
                                 .map(|x| x as i32);
                         }
-                        GeneratedField::Value => {
-                            if value__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("value"));
+                        GeneratedField::ValueKind => {
+                            if value_kind__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("valueKind"));
                             }
-                            value__ = map_
+                            value_kind__ = map_
+                                .next_value::<
+                                    ::std::option::Option<accumulator_write::AccumulatorValue>,
+                                >()?
+                                .map(|x| x as i32);
+                        }
+                        GeneratedField::IntegerValue => {
+                            if integer_value__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("integerValue"),
+                                );
+                            }
+                            integer_value__ = map_
                                 .next_value::<
                                     ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
                                 >()?
                                 .map(|x| x.0);
+                        }
+                        GeneratedField::IntegerTuple => {
+                            if integer_tuple__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("integerTuple"),
+                                );
+                            }
+                            integer_tuple__ = Some(
+                                map_
+                                    .next_value::<Vec<crate::_serde::NumberDeserialize<_>>>()?
+                                    .into_iter()
+                                    .map(|x| x.0)
+                                    .collect(),
+                            );
+                        }
+                        GeneratedField::EventDigestValue => {
+                            if event_digest_value__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("eventDigestValue"),
+                                );
+                            }
+                            event_digest_value__ = Some(map_.next_value()?);
                         }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
@@ -246,7 +333,10 @@ impl<'de> serde::Deserialize<'de> for AccumulatorWrite {
                     address: address__,
                     accumulator_type: accumulator_type__,
                     operation: operation__,
-                    value: value__,
+                    value_kind: value_kind__,
+                    integer_value: integer_value__,
+                    integer_tuple: integer_tuple__.unwrap_or_default(),
+                    event_digest_value: event_digest_value__.unwrap_or_default(),
                 })
             }
         }
@@ -322,6 +412,92 @@ impl<'de> serde::Deserialize<'de> for accumulator_write::AccumulatorOperation {
                     }
                     "MERGE" => Ok(accumulator_write::AccumulatorOperation::Merge),
                     "SPLIT" => Ok(accumulator_write::AccumulatorOperation::Split),
+                    _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
+                }
+            }
+        }
+        deserializer.deserialize_any(GeneratedVisitor)
+    }
+}
+impl serde::Serialize for accumulator_write::AccumulatorValue {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let variant = match self {
+            Self::Unknown => "ACCUMULATOR_VALUE_UNKNOWN",
+            Self::Integer => "INTEGER",
+            Self::IntegerTuple => "INTEGER_TUPLE",
+            Self::EventDigest => "EVENT_DIGEST",
+        };
+        serializer.serialize_str(variant)
+    }
+}
+impl<'de> serde::Deserialize<'de> for accumulator_write::AccumulatorValue {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "ACCUMULATOR_VALUE_UNKNOWN",
+            "INTEGER",
+            "INTEGER_TUPLE",
+            "EVENT_DIGEST",
+        ];
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = accumulator_write::AccumulatorValue;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                write!(formatter, "expected one of: {:?}", & FIELDS)
+            }
+            fn visit_i64<E>(self, v: i64) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                i32::try_from(v)
+                    .ok()
+                    .and_then(|x| x.try_into().ok())
+                    .ok_or_else(|| {
+                        serde::de::Error::invalid_value(
+                            serde::de::Unexpected::Signed(v),
+                            &self,
+                        )
+                    })
+            }
+            fn visit_u64<E>(self, v: u64) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                i32::try_from(v)
+                    .ok()
+                    .and_then(|x| x.try_into().ok())
+                    .ok_or_else(|| {
+                        serde::de::Error::invalid_value(
+                            serde::de::Unexpected::Unsigned(v),
+                            &self,
+                        )
+                    })
+            }
+            fn visit_str<E>(self, value: &str) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                match value {
+                    "ACCUMULATOR_VALUE_UNKNOWN" => {
+                        Ok(accumulator_write::AccumulatorValue::Unknown)
+                    }
+                    "INTEGER" => Ok(accumulator_write::AccumulatorValue::Integer),
+                    "INTEGER_TUPLE" => {
+                        Ok(accumulator_write::AccumulatorValue::IntegerTuple)
+                    }
+                    "EVENT_DIGEST" => {
+                        Ok(accumulator_write::AccumulatorValue::EventDigest)
+                    }
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }
@@ -9002,6 +9178,135 @@ impl<'de> serde::Deserialize<'de> for Event {
             }
         }
         deserializer.deserialize_struct("sui.rpc.v2.Event", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for EventDigestEntry {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0usize;
+        if self.event_index.is_some() {
+            len += 1;
+        }
+        if self.digest.is_some() {
+            len += 1;
+        }
+        let mut struct_ser = serializer
+            .serialize_struct("sui.rpc.v2.EventDigestEntry", len)?;
+        if let Some(v) = self.event_index.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("eventIndex", ToString::to_string(&v).as_str())?;
+        }
+        if let Some(v) = self.digest.as_ref() {
+            struct_ser.serialize_field("digest", v)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for EventDigestEntry {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &["event_index", "eventIndex", "digest"];
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            EventIndex,
+            Digest,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(
+                deserializer: D,
+            ) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+                    fn expecting(
+                        &self,
+                        formatter: &mut std::fmt::Formatter<'_>,
+                    ) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", & FIELDS)
+                    }
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(
+                        self,
+                        value: &str,
+                    ) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "eventIndex" | "event_index" => {
+                                Ok(GeneratedField::EventIndex)
+                            }
+                            "digest" => Ok(GeneratedField::Digest),
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = EventDigestEntry;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2.EventDigestEntry")
+            }
+            fn visit_map<V>(
+                self,
+                mut map_: V,
+            ) -> std::result::Result<EventDigestEntry, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                let mut event_index__ = None;
+                let mut digest__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::EventIndex => {
+                            if event_index__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("eventIndex"));
+                            }
+                            event_index__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::Digest => {
+                            if digest__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("digest"));
+                            }
+                            digest__ = map_.next_value()?;
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(EventDigestEntry {
+                    event_index: event_index__,
+                    digest: digest__,
+                })
+            }
+        }
+        deserializer
+            .deserialize_struct("sui.rpc.v2.EventDigestEntry", FIELDS, GeneratedVisitor)
     }
 }
 impl serde::Serialize for ExecuteTransactionRequest {

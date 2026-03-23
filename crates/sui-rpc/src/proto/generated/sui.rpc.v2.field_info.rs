@@ -1096,6 +1096,55 @@ mod _field_impls {
             self.finish()
         }
     }
+    impl EventDigestEntry {
+        pub const EVENT_INDEX_FIELD: &'static MessageField = &MessageField {
+            name: "event_index",
+            json_name: "eventIndex",
+            number: 1i32,
+            message_fields: None,
+        };
+        pub const DIGEST_FIELD: &'static MessageField = &MessageField {
+            name: "digest",
+            json_name: "digest",
+            number: 2i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for EventDigestEntry {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::EVENT_INDEX_FIELD,
+            Self::DIGEST_FIELD,
+        ];
+    }
+    impl EventDigestEntry {
+        pub fn path_builder() -> EventDigestEntryFieldPathBuilder {
+            EventDigestEntryFieldPathBuilder::new()
+        }
+    }
+    pub struct EventDigestEntryFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl EventDigestEntryFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn event_index(mut self) -> String {
+            self.path.push(EventDigestEntry::EVENT_INDEX_FIELD.name);
+            self.finish()
+        }
+        pub fn digest(mut self) -> String {
+            self.path.push(EventDigestEntry::DIGEST_FIELD.name);
+            self.finish()
+        }
+    }
     impl AccumulatorWrite {
         pub const ADDRESS_FIELD: &'static MessageField = &MessageField {
             name: "address",
@@ -1115,11 +1164,29 @@ mod _field_impls {
             number: 3i32,
             message_fields: None,
         };
-        pub const VALUE_FIELD: &'static MessageField = &MessageField {
-            name: "value",
-            json_name: "value",
+        pub const VALUE_KIND_FIELD: &'static MessageField = &MessageField {
+            name: "value_kind",
+            json_name: "valueKind",
+            number: 4i32,
+            message_fields: None,
+        };
+        pub const INTEGER_VALUE_FIELD: &'static MessageField = &MessageField {
+            name: "integer_value",
+            json_name: "integerValue",
             number: 5i32,
             message_fields: None,
+        };
+        pub const INTEGER_TUPLE_FIELD: &'static MessageField = &MessageField {
+            name: "integer_tuple",
+            json_name: "integerTuple",
+            number: 6i32,
+            message_fields: None,
+        };
+        pub const EVENT_DIGEST_VALUE_FIELD: &'static MessageField = &MessageField {
+            name: "event_digest_value",
+            json_name: "eventDigestValue",
+            number: 7i32,
+            message_fields: Some(EventDigestEntry::FIELDS),
         };
     }
     impl MessageFields for AccumulatorWrite {
@@ -1127,7 +1194,10 @@ mod _field_impls {
             Self::ADDRESS_FIELD,
             Self::ACCUMULATOR_TYPE_FIELD,
             Self::OPERATION_FIELD,
-            Self::VALUE_FIELD,
+            Self::VALUE_KIND_FIELD,
+            Self::INTEGER_VALUE_FIELD,
+            Self::INTEGER_TUPLE_FIELD,
+            Self::EVENT_DIGEST_VALUE_FIELD,
         ];
     }
     impl AccumulatorWrite {
@@ -1162,9 +1232,21 @@ mod _field_impls {
             self.path.push(AccumulatorWrite::OPERATION_FIELD.name);
             self.finish()
         }
-        pub fn value(mut self) -> String {
-            self.path.push(AccumulatorWrite::VALUE_FIELD.name);
+        pub fn value_kind(mut self) -> String {
+            self.path.push(AccumulatorWrite::VALUE_KIND_FIELD.name);
             self.finish()
+        }
+        pub fn integer_value(mut self) -> String {
+            self.path.push(AccumulatorWrite::INTEGER_VALUE_FIELD.name);
+            self.finish()
+        }
+        pub fn integer_tuple(mut self) -> String {
+            self.path.push(AccumulatorWrite::INTEGER_TUPLE_FIELD.name);
+            self.finish()
+        }
+        pub fn event_digest_value(mut self) -> EventDigestEntryFieldPathBuilder {
+            self.path.push(AccumulatorWrite::EVENT_DIGEST_VALUE_FIELD.name);
+            EventDigestEntryFieldPathBuilder::new_with_base(self.path)
         }
     }
     impl UnchangedConsensusObject {

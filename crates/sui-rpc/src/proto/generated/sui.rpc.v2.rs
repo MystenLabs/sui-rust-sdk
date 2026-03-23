@@ -368,7 +368,7 @@ pub struct TransactionEffects {
 }
 /// Input/output state of an object that was changed during execution.
 #[non_exhaustive]
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ChangedObject {
     /// ID of the object.
     #[prost(string, optional, tag = "1")]
@@ -538,8 +538,19 @@ pub mod changed_object {
         }
     }
 }
+/// An entry in an event digest accumulator value.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct EventDigestEntry {
+    /// Index of the event within its transaction.
+    #[prost(uint64, optional, tag = "1")]
+    pub event_index: ::core::option::Option<u64>,
+    /// Digest of the event.
+    #[prost(string, optional, tag = "2")]
+    pub digest: ::core::option::Option<::prost::alloc::string::String>,
+}
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AccumulatorWrite {
     #[prost(string, optional, tag = "1")]
     pub address: ::core::option::Option<::prost::alloc::string::String>,
@@ -551,8 +562,20 @@ pub struct AccumulatorWrite {
         tag = "3"
     )]
     pub operation: ::core::option::Option<i32>,
+    #[prost(enumeration = "accumulator_write::AccumulatorValue", optional, tag = "4")]
+    pub value_kind: ::core::option::Option<i32>,
+    /// Set when the accumulator value is an integer (value_kind = INTEGER).
     #[prost(uint64, optional, tag = "5")]
-    pub value: ::core::option::Option<u64>,
+    pub integer_value: ::core::option::Option<u64>,
+    /// Set, with len 2, when the accumulator value is an integer tuple
+    /// (value_kind = INTEGER_TUPLE).
+    #[prost(uint64, repeated, tag = "6")]
+    pub integer_tuple: ::prost::alloc::vec::Vec<u64>,
+    /// Set when the accumulator value is an event digest list (value_kind = EVENT_DIGEST).
+    /// Contains a non-empty list of (event_index, digest) pairs representing
+    /// authenticated event stream entries within a transaction.
+    #[prost(message, repeated, tag = "7")]
+    pub event_digest_value: ::prost::alloc::vec::Vec<EventDigestEntry>,
 }
 /// Nested message and enum types in `AccumulatorWrite`.
 pub mod accumulator_write {
@@ -592,6 +615,49 @@ pub mod accumulator_write {
                 "ACCUMULATOR_OPERATION_UNKNOWN" => Some(Self::Unknown),
                 "MERGE" => Some(Self::Merge),
                 "SPLIT" => Some(Self::Split),
+                _ => None,
+            }
+        }
+    }
+    #[non_exhaustive]
+    #[derive(
+        Clone,
+        Copy,
+        Debug,
+        PartialEq,
+        Eq,
+        Hash,
+        PartialOrd,
+        Ord,
+        ::prost::Enumeration
+    )]
+    #[repr(i32)]
+    pub enum AccumulatorValue {
+        Unknown = 0,
+        Integer = 1,
+        IntegerTuple = 2,
+        EventDigest = 3,
+    }
+    impl AccumulatorValue {
+        /// String value of the enum field names used in the ProtoBuf definition.
+        ///
+        /// The values are not transformed in any way and thus are considered stable
+        /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+        pub fn as_str_name(&self) -> &'static str {
+            match self {
+                Self::Unknown => "ACCUMULATOR_VALUE_UNKNOWN",
+                Self::Integer => "INTEGER",
+                Self::IntegerTuple => "INTEGER_TUPLE",
+                Self::EventDigest => "EVENT_DIGEST",
+            }
+        }
+        /// Creates an enum from field names used in the ProtoBuf definition.
+        pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+            match value {
+                "ACCUMULATOR_VALUE_UNKNOWN" => Some(Self::Unknown),
+                "INTEGER" => Some(Self::Integer),
+                "INTEGER_TUPLE" => Some(Self::IntegerTuple),
+                "EVENT_DIGEST" => Some(Self::EventDigest),
                 _ => None,
             }
         }
