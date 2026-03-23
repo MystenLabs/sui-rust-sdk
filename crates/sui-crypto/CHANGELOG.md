@@ -1,3 +1,10 @@
+# [0.3.0] - 2026-03-23
+
+## Fixed
+- [#227] replace panicking unwraps with proper error handling in zklogin verify
+
+[#227]: https://github.com/MystenLabs/sui-rust-sdk/pull/227
+
 # [0.2.0] - 2026-01-05
 
 ## Changed
@@ -73,6 +80,7 @@
 
 Initial release
 
+[0.3.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-crypto-0.3.0
 [0.2.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-crypto-0.2.0
 [0.1.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-crypto-0.1.0
 [0.0.8]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-crypto-0.0.8

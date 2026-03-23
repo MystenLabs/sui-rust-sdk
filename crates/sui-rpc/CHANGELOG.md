@@ -1,3 +1,21 @@
+# [0.3.0] - 2026-03-23
+
+## Added
+- [#216] add support for `Object.display` and `SimulateTransactionResponse.suggested_gas_price`
+- [#231] add proto support for `AccumulatorValue::EventDigest` and `AccumulatorValue::IntegerTuple`
+  for authenticated event streams
+- add `Unimplemented*` default stubs for all generated gRPC service traits
+
+## Fixed
+- [#228] box `FieldViolation` in `TryFromProtoError` to reduce stack size
+- [#212] handle the case where a transaction has already been executed
+- support partial errors in `Object.display`
+
+[#212]: https://github.com/MystenLabs/sui-rust-sdk/pull/212
+[#216]: https://github.com/MystenLabs/sui-rust-sdk/pull/216
+[#228]: https://github.com/MystenLabs/sui-rust-sdk/pull/228
+[#231]: https://github.com/MystenLabs/sui-rust-sdk/pull/231
+
 # [0.2.2] - 2026-01-20
 
 ## Added
@@ -85,6 +103,7 @@
 
 Initial release
 
+[0.3.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.3.0
 [0.2.2]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.2.2
 [0.2.1]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.2.1
 [0.2.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.2.0

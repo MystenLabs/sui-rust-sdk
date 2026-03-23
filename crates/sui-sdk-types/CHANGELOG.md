@@ -1,3 +1,20 @@
+# [0.3.0] - 2026-03-23
+
+## Added
+- [#231] add support for `AccumulatorValue::EventDigest` and `AccumulatorValue::IntegerTuple`
+  for authenticated event streams
+- `AccumulatorValue` is now a public type
+
+## Breaking
+- [#231] `AccumulatorWrite::new()` now takes an `AccumulatorValue` directly instead of `u64`
+- [#231] `AccumulatorWrite::value()` now returns `&AccumulatorValue` instead of `u64`
+
+## Fixed
+- [#226] limit type tag parsing depth to prevent stack overflow
+
+[#226]: https://github.com/MystenLabs/sui-rust-sdk/pull/226
+[#231]: https://github.com/MystenLabs/sui-rust-sdk/pull/231
+
 # [0.2.2] - 2026-01-20
 
 ## Added
@@ -187,6 +204,7 @@
 
 Initial release
 
+[0.3.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.3.0
 [0.2.2]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.2.2
 [0.2.1]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.2.1
 [0.2.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.2.0
