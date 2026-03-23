@@ -46,7 +46,7 @@ impl<'a> DynamicFieldsRequest<'a> {
     }
 
     /// Execute the request and return a stream of dynamic fields.
-    pub fn stream(self) -> impl Stream<Item = Result<DynamicField, Error>> + 'a {
+    pub fn list(self) -> impl Stream<Item = Result<DynamicField, Error>> + 'a {
         let client = self.client.clone();
         let formats = self.formats;
         let parent = self.parent;
@@ -84,7 +84,7 @@ impl<'a, N: Serialize> DynamicFieldRequest<'a, N> {
     }
 
     /// Execute the request and return the dynamic field if found.
-    pub async fn fetch(self) -> Result<Option<DynamicField>, Error> {
+    pub async fn get(self) -> Result<Option<DynamicField>, Error> {
         self.client
             .fetch_single_dynamic_field(
                 self.parent,
@@ -373,7 +373,7 @@ mod tests {
         let client = Client::new(&mock_server.uri()).unwrap();
 
         let parent: Address = "0x123".parse().unwrap();
-        let mut stream = pin!(client.dynamic_fields(parent).stream());
+        let mut stream = pin!(client.dynamic_fields(parent).list());
         let result = stream.next().await;
         assert!(result.is_none());
     }
@@ -429,7 +429,7 @@ mod tests {
         let client = Client::new(&mock_server.uri()).unwrap();
 
         let parent: Address = "0x123".parse().unwrap();
-        let mut stream = pin!(client.dynamic_fields(parent).format(Format::Json).stream());
+        let mut stream = pin!(client.dynamic_fields(parent).format(Format::Json).list());
 
         // First field - MoveValue
         let field1 = stream.next().await.unwrap().unwrap();
@@ -488,7 +488,7 @@ mod tests {
 
         let parent: Address = "0x123".parse().unwrap();
         // Default - no format specified
-        let mut stream = pin!(client.dynamic_fields(parent).stream());
+        let mut stream = pin!(client.dynamic_fields(parent).list());
 
         let field = stream.next().await.unwrap().unwrap();
         assert_eq!(field.name.type_tag, TypeTag::U64);
@@ -513,7 +513,7 @@ mod tests {
         let client = Client::new(&mock_server.uri()).unwrap();
 
         let parent: Address = "0x999".parse().unwrap();
-        let mut stream = pin!(client.dynamic_fields(parent).stream());
+        let mut stream = pin!(client.dynamic_fields(parent).list());
         let result = stream.next().await;
         assert!(result.is_none());
     }
@@ -554,7 +554,7 @@ mod tests {
             .dynamic_field(parent, name_type, Bcs(123u64))
             .format(Format::Json)
             .format(Format::Bcs)
-            .fetch()
+            .get()
             .await
             .unwrap();
 
@@ -602,7 +602,7 @@ mod tests {
         let field = client
             .dynamic_object_field(parent, name_type, Bcs("my_key"))
             .format(Format::Json)
-            .fetch()
+            .get()
             .await
             .unwrap();
 
@@ -639,7 +639,7 @@ mod tests {
 
         let field = client
             .dynamic_field(parent, name_type, Bcs(999u64))
-            .fetch()
+            .get()
             .await
             .unwrap();
 
