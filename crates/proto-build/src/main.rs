@@ -66,6 +66,7 @@ fn main() {
         .message_attribute(".sui.rpc", "#[non_exhaustive]")
         .enum_attribute(".sui.rpc", "#[non_exhaustive]")
         .btree_map(".")
+        .generate_default_stubs(true)
         .out_dir(&out_dir)
         .compile_fds(fds.clone())
     {

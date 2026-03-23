@@ -2320,49 +2320,63 @@ pub mod ledger_service_server {
         ) -> std::result::Result<
             tonic::Response<super::GetServiceInfoResponse>,
             tonic::Status,
-        >;
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
         async fn get_object(
             &self,
             request: tonic::Request<super::GetObjectRequest>,
         ) -> std::result::Result<
             tonic::Response<super::GetObjectResponse>,
             tonic::Status,
-        >;
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
         async fn batch_get_objects(
             &self,
             request: tonic::Request<super::BatchGetObjectsRequest>,
         ) -> std::result::Result<
             tonic::Response<super::BatchGetObjectsResponse>,
             tonic::Status,
-        >;
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
         async fn get_transaction(
             &self,
             request: tonic::Request<super::GetTransactionRequest>,
         ) -> std::result::Result<
             tonic::Response<super::GetTransactionResponse>,
             tonic::Status,
-        >;
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
         async fn batch_get_transactions(
             &self,
             request: tonic::Request<super::BatchGetTransactionsRequest>,
         ) -> std::result::Result<
             tonic::Response<super::BatchGetTransactionsResponse>,
             tonic::Status,
-        >;
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
         async fn get_checkpoint(
             &self,
             request: tonic::Request<super::GetCheckpointRequest>,
         ) -> std::result::Result<
             tonic::Response<super::GetCheckpointResponse>,
             tonic::Status,
-        >;
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
         async fn get_epoch(
             &self,
             request: tonic::Request<super::GetEpochRequest>,
         ) -> std::result::Result<
             tonic::Response<super::GetEpochResponse>,
             tonic::Status,
-        >;
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
     }
     #[derive(Debug)]
     pub struct LedgerServiceServer<T> {
@@ -3557,28 +3571,36 @@ pub mod move_package_service_server {
         ) -> std::result::Result<
             tonic::Response<super::GetPackageResponse>,
             tonic::Status,
-        >;
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
         async fn get_datatype(
             &self,
             request: tonic::Request<super::GetDatatypeRequest>,
         ) -> std::result::Result<
             tonic::Response<super::GetDatatypeResponse>,
             tonic::Status,
-        >;
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
         async fn get_function(
             &self,
             request: tonic::Request<super::GetFunctionRequest>,
         ) -> std::result::Result<
             tonic::Response<super::GetFunctionResponse>,
             tonic::Status,
-        >;
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
         async fn list_package_versions(
             &self,
             request: tonic::Request<super::ListPackageVersionsRequest>,
         ) -> std::result::Result<
             tonic::Response<super::ListPackageVersionsResponse>,
             tonic::Status,
-        >;
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
     }
     #[derive(Debug)]
     pub struct MovePackageServiceServer<T> {
@@ -4110,14 +4132,18 @@ pub mod name_service_server {
         ) -> std::result::Result<
             tonic::Response<super::LookupNameResponse>,
             tonic::Status,
-        >;
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
         async fn reverse_lookup_name(
             &self,
             request: tonic::Request<super::ReverseLookupNameRequest>,
         ) -> std::result::Result<
             tonic::Response<super::ReverseLookupNameResponse>,
             tonic::Status,
-        >;
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
     }
     #[derive(Debug)]
     pub struct NameServiceServer<T> {
@@ -5019,7 +5045,9 @@ pub mod signature_verification_service_server {
         ) -> std::result::Result<
             tonic::Response<super::VerifySignatureResponse>,
             tonic::Status,
-        >;
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
     }
     #[derive(Debug)]
     pub struct SignatureVerificationServiceServer<T> {
@@ -5910,35 +5938,45 @@ pub mod state_service_server {
         ) -> std::result::Result<
             tonic::Response<super::ListDynamicFieldsResponse>,
             tonic::Status,
-        >;
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
         async fn list_owned_objects(
             &self,
             request: tonic::Request<super::ListOwnedObjectsRequest>,
         ) -> std::result::Result<
             tonic::Response<super::ListOwnedObjectsResponse>,
             tonic::Status,
-        >;
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
         async fn get_coin_info(
             &self,
             request: tonic::Request<super::GetCoinInfoRequest>,
         ) -> std::result::Result<
             tonic::Response<super::GetCoinInfoResponse>,
             tonic::Status,
-        >;
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
         async fn get_balance(
             &self,
             request: tonic::Request<super::GetBalanceRequest>,
         ) -> std::result::Result<
             tonic::Response<super::GetBalanceResponse>,
             tonic::Status,
-        >;
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
         async fn list_balances(
             &self,
             request: tonic::Request<super::ListBalancesRequest>,
         ) -> std::result::Result<
             tonic::Response<super::ListBalancesResponse>,
             tonic::Status,
-        >;
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
     }
     #[derive(Debug)]
     pub struct StateServiceServer<T> {
@@ -6452,15 +6490,6 @@ pub mod subscription_service_server {
     /// Generated trait containing gRPC methods that should be implemented for use with SubscriptionServiceServer.
     #[async_trait]
     pub trait SubscriptionService: std::marker::Send + std::marker::Sync + 'static {
-        /// Server streaming response type for the SubscribeCheckpoints method.
-        type SubscribeCheckpointsStream: tonic::codegen::tokio_stream::Stream<
-                Item = std::result::Result<
-                    super::SubscribeCheckpointsResponse,
-                    tonic::Status,
-                >,
-            >
-            + std::marker::Send
-            + 'static;
         /// Subscribe to the stream of checkpoints.
         ///
         /// This API provides a subscription to the checkpoint stream for the Sui
@@ -6476,9 +6505,11 @@ pub mod subscription_service_server {
             &self,
             request: tonic::Request<super::SubscribeCheckpointsRequest>,
         ) -> std::result::Result<
-            tonic::Response<Self::SubscribeCheckpointsStream>,
+            tonic::Response<BoxStream<super::SubscribeCheckpointsResponse>>,
             tonic::Status,
-        >;
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
     }
     #[derive(Debug)]
     pub struct SubscriptionServiceServer<T> {
@@ -6565,7 +6596,9 @@ pub mod subscription_service_server {
                         super::SubscribeCheckpointsRequest,
                     > for SubscribeCheckpointsSvc<T> {
                         type Response = super::SubscribeCheckpointsResponse;
-                        type ResponseStream = T::SubscribeCheckpointsStream;
+                        type ResponseStream = BoxStream<
+                            super::SubscribeCheckpointsResponse,
+                        >;
                         type Future = BoxFuture<
                             tonic::Response<Self::ResponseStream>,
                             tonic::Status,
@@ -8150,14 +8183,18 @@ pub mod transaction_execution_service_server {
         ) -> std::result::Result<
             tonic::Response<super::ExecuteTransactionResponse>,
             tonic::Status,
-        >;
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
         async fn simulate_transaction(
             &self,
             request: tonic::Request<super::SimulateTransactionRequest>,
         ) -> std::result::Result<
             tonic::Response<super::SimulateTransactionResponse>,
             tonic::Status,
-        >;
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
     }
     #[derive(Debug)]
     pub struct TransactionExecutionServiceServer<T> {
