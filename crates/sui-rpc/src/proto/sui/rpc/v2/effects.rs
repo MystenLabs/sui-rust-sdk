@@ -649,6 +649,7 @@ impl TryFrom<changed_object::IdOperation> for sui_sdk_types::IdOperation {
 impl From<sui_sdk_types::AccumulatorWrite> for AccumulatorWrite {
     fn from(value: sui_sdk_types::AccumulatorWrite) -> Self {
         use accumulator_write::AccumulatorOperation;
+        use accumulator_write::AccumulatorValue as ProtoAccumulatorValue;
 
         let mut message = Self::default();
 
@@ -661,7 +662,27 @@ impl From<sui_sdk_types::AccumulatorWrite> for AccumulatorWrite {
             _ => AccumulatorOperation::Unknown,
         });
 
-        message.set_value(value.value());
+        match value.value() {
+            sui_sdk_types::AccumulatorValue::Integer(v) => {
+                message.set_value_kind(ProtoAccumulatorValue::Integer);
+                message.set_integer_value(*v);
+            }
+            sui_sdk_types::AccumulatorValue::IntegerTuple(first, second) => {
+                message.set_value_kind(ProtoAccumulatorValue::IntegerTuple);
+                message.integer_tuple = vec![*first, *second];
+            }
+            sui_sdk_types::AccumulatorValue::EventDigest(entries) => {
+                message.set_value_kind(ProtoAccumulatorValue::EventDigest);
+                message.event_digest_value = entries
+                    .iter()
+                    .map(|(event_index, digest)| EventDigestEntry {
+                        event_index: Some(*event_index),
+                        digest: Some(digest.to_string()),
+                    })
+                    .collect();
+            }
+            _ => {}
+        }
 
         message
     }
@@ -694,11 +715,57 @@ impl TryFrom<&AccumulatorWrite> for sui_sdk_types::AccumulatorWrite {
             }
         };
 
-        let value = value
-            .value_opt()
-            .ok_or_else(|| TryFromProtoError::missing("value"))?;
+        let accumulator_value = match value.value_kind() {
+            accumulator_write::AccumulatorValue::Unknown => {
+                return Err(TryFromProtoError::invalid(
+                    "value_kind",
+                    "unknown accumulator value kind",
+                ));
+            }
+            accumulator_write::AccumulatorValue::Integer => {
+                let v = value
+                    .integer_value_opt()
+                    .ok_or_else(|| TryFromProtoError::missing("integer_value"))?;
+                sui_sdk_types::AccumulatorValue::Integer(v)
+            }
+            accumulator_write::AccumulatorValue::IntegerTuple => {
+                if value.integer_tuple.len() != 2 {
+                    return Err(TryFromProtoError::invalid(
+                        "integer_tuple",
+                        "expected exactly 2 elements",
+                    ));
+                }
+                sui_sdk_types::AccumulatorValue::IntegerTuple(
+                    value.integer_tuple[0],
+                    value.integer_tuple[1],
+                )
+            }
+            accumulator_write::AccumulatorValue::EventDigest => {
+                let entries = value
+                    .event_digest_value
+                    .iter()
+                    .map(|entry| {
+                        let event_index = entry
+                            .event_index
+                            .ok_or_else(|| TryFromProtoError::missing("event_index"))?;
+                        let digest = entry
+                            .digest_opt()
+                            .ok_or_else(|| TryFromProtoError::missing("digest"))?
+                            .parse()
+                            .map_err(|e| TryFromProtoError::invalid("digest", e))?;
+                        Ok((event_index, digest))
+                    })
+                    .collect::<Result<Vec<_>, TryFromProtoError>>()?;
+                sui_sdk_types::AccumulatorValue::EventDigest(entries)
+            }
+        };
 
-        Ok(Self::new(address, accumulator_type, operation, value))
+        Ok(Self::new(
+            address,
+            accumulator_type,
+            operation,
+            accumulator_value,
+        ))
     }
 }
 

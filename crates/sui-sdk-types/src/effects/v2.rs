@@ -269,13 +269,13 @@ impl AccumulatorWrite {
         address: Address,
         type_: TypeTag,
         operation: AccumulatorOperation,
-        value: u64,
+        value: AccumulatorValue,
     ) -> Self {
         Self {
             address,
             type_,
             operation,
-            value: AccumulatorValue::Integer(value),
+            value,
         }
     }
 
@@ -291,10 +291,8 @@ impl AccumulatorWrite {
         self.operation
     }
 
-    pub fn value(&self) -> u64 {
-        match self.value {
-            AccumulatorValue::Integer(value) => value,
-        }
+    pub fn value(&self) -> &AccumulatorValue {
+        &self.value
     }
 }
 
@@ -319,8 +317,20 @@ pub enum AccumulatorOperation {
 )]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 #[non_exhaustive]
-enum AccumulatorValue {
+pub enum AccumulatorValue {
     Integer(u64),
+
+    IntegerTuple(u64, u64),
+
+    /// A non-empty list of `(event_index_in_transaction, event_digest)` pairs.
+    ///
+    /// This variant is used for authenticated event streams, where an accumulator
+    /// records which events (by index within their transaction) have occurred,
+    /// allowing cryptographic verification of the event log.
+    EventDigest(
+        #[cfg_attr(feature = "proptest", any(proptest::collection::size_range(1..=4).lift()))]
+        Vec<(u64, Digest)>,
+    ),
 }
 
 /// Defines what happened to an ObjectId during execution

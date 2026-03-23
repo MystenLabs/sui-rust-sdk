@@ -173,6 +173,7 @@ pub use digest::Digest;
 pub use digest::DigestParseError;
 pub use digest::SigningDigest;
 pub use effects::AccumulatorOperation;
+pub use effects::AccumulatorValue;
 pub use effects::AccumulatorWrite;
 pub use effects::ChangedObject;
 pub use effects::IdOperation;

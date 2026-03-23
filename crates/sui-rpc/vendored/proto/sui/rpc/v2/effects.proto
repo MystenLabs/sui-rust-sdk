@@ -119,6 +119,14 @@ message ChangedObject {
   optional string object_type = 11;
 }
 
+// An entry in an event digest accumulator value.
+message EventDigestEntry {
+  // Index of the event within its transaction.
+  optional uint64 event_index = 1;
+  // Digest of the event.
+  optional string digest = 2;
+}
+
 message AccumulatorWrite {
   optional string address = 1;
   optional string accumulator_type = 2;
@@ -131,14 +139,25 @@ message AccumulatorWrite {
 
   optional AccumulatorOperation operation = 3;
 
-  // enum AccumulatorValue {
-  //   ACCUMULATOR_VALUE_UNKNOWN = 0;
-  //   INTEGER = 1;
-  // }
-  // optional AccumulatorValue value_kind = 4;
-  reserved 4; // AccumulatorValueKind
+  enum AccumulatorValue {
+    ACCUMULATOR_VALUE_UNKNOWN = 0;
+    INTEGER = 1;
+    INTEGER_TUPLE = 2;
+    EVENT_DIGEST = 3;
+  }
+  optional AccumulatorValue value_kind = 4;
 
-  optional uint64 value = 5;
+  // Set when the accumulator value is an integer (value_kind = INTEGER).
+  optional uint64 integer_value = 5;
+
+  // Set, with len 2, when the accumulator value is an integer tuple
+  // (value_kind = INTEGER_TUPLE).
+  repeated uint64 integer_tuple = 6;
+
+  // Set when the accumulator value is an event digest list (value_kind = EVENT_DIGEST).
+  // Contains a non-empty list of (event_index, digest) pairs representing
+  // authenticated event stream entries within a transaction.
+  repeated EventDigestEntry event_digest_value = 7;
 }
 
 // A consensus object that wasn't changed during execution.
