@@ -1,10 +1,14 @@
 use std::time::Duration;
 use tap::Pipe;
 use tonic::codec::CompressionEncoding;
+use tonic::service::interceptor::InterceptedService;
 use tonic::transport::channel::ClientTlsConfig;
 
 mod response_ext;
 pub use response_ext::ResponseExt;
+
+mod byte_count;
+pub use byte_count::ByteCount;
 
 mod interceptors;
 pub use interceptors::HeadersInterceptor;
@@ -27,9 +31,8 @@ use crate::proto::sui::rpc::v2::transaction_execution_service_client::Transactio
 
 type Result<T, E = tonic::Status> = std::result::Result<T, E>;
 type BoxError = Box<dyn std::error::Error + Send + Sync + 'static>;
-type Channel<'a> = tonic::service::interceptor::InterceptedService<
-    &'a mut tonic::transport::Channel,
-    &'a HeadersInterceptor,
+type Channel<'a> = byte_count::ByteCountService<
+    InterceptedService<&'a mut tonic::transport::Channel, &'a HeadersInterceptor>,
 >;
 
 #[derive(Clone)]
@@ -38,6 +41,7 @@ pub struct Client {
     channel: tonic::transport::Channel,
     headers: HeadersInterceptor,
     max_decoding_message_size: Option<usize>,
+    byte_count: bool,
 }
 
 impl Client {
@@ -83,6 +87,7 @@ impl Client {
             channel,
             headers: Default::default(),
             max_decoding_message_size: None,
+            byte_count: false,
         })
     }
 
@@ -96,81 +101,118 @@ impl Client {
         self
     }
 
+    pub fn with_byte_count(mut self) -> Self {
+        self.byte_count = true;
+        self
+    }
+
     pub fn uri(&self) -> &http::Uri {
         &self.uri
     }
 
+    fn make_channel<'a>(
+        channel: &'a mut tonic::transport::Channel,
+        headers: &'a HeadersInterceptor,
+        byte_count: bool,
+    ) -> Channel<'a> {
+        byte_count::ByteCountService::new(InterceptedService::new(channel, headers), byte_count)
+    }
+
     pub fn ledger_client(&mut self) -> LedgerServiceClient<Channel<'_>> {
-        LedgerServiceClient::with_interceptor(&mut self.channel, &self.headers)
-            .accept_compressed(CompressionEncoding::Zstd)
-            .pipe(|client| {
-                if let Some(limit) = self.max_decoding_message_size {
-                    client.max_decoding_message_size(limit)
-                } else {
-                    client
-                }
-            })
+        LedgerServiceClient::new(Self::make_channel(
+            &mut self.channel,
+            &self.headers,
+            self.byte_count,
+        ))
+        .accept_compressed(CompressionEncoding::Zstd)
+        .pipe(|client| {
+            if let Some(limit) = self.max_decoding_message_size {
+                client.max_decoding_message_size(limit)
+            } else {
+                client
+            }
+        })
     }
 
     pub fn state_client(&mut self) -> StateServiceClient<Channel<'_>> {
-        StateServiceClient::with_interceptor(&mut self.channel, &self.headers)
-            .accept_compressed(CompressionEncoding::Zstd)
-            .pipe(|client| {
-                if let Some(limit) = self.max_decoding_message_size {
-                    client.max_decoding_message_size(limit)
-                } else {
-                    client
-                }
-            })
+        StateServiceClient::new(Self::make_channel(
+            &mut self.channel,
+            &self.headers,
+            self.byte_count,
+        ))
+        .accept_compressed(CompressionEncoding::Zstd)
+        .pipe(|client| {
+            if let Some(limit) = self.max_decoding_message_size {
+                client.max_decoding_message_size(limit)
+            } else {
+                client
+            }
+        })
     }
 
     pub fn execution_client(&mut self) -> TransactionExecutionServiceClient<Channel<'_>> {
-        TransactionExecutionServiceClient::with_interceptor(&mut self.channel, &self.headers)
-            .accept_compressed(CompressionEncoding::Zstd)
-            .pipe(|client| {
-                if let Some(limit) = self.max_decoding_message_size {
-                    client.max_decoding_message_size(limit)
-                } else {
-                    client
-                }
-            })
+        TransactionExecutionServiceClient::new(Self::make_channel(
+            &mut self.channel,
+            &self.headers,
+            self.byte_count,
+        ))
+        .accept_compressed(CompressionEncoding::Zstd)
+        .pipe(|client| {
+            if let Some(limit) = self.max_decoding_message_size {
+                client.max_decoding_message_size(limit)
+            } else {
+                client
+            }
+        })
     }
 
     pub fn package_client(&mut self) -> MovePackageServiceClient<Channel<'_>> {
-        MovePackageServiceClient::with_interceptor(&mut self.channel, &self.headers)
-            .accept_compressed(CompressionEncoding::Zstd)
-            .pipe(|client| {
-                if let Some(limit) = self.max_decoding_message_size {
-                    client.max_decoding_message_size(limit)
-                } else {
-                    client
-                }
-            })
+        MovePackageServiceClient::new(Self::make_channel(
+            &mut self.channel,
+            &self.headers,
+            self.byte_count,
+        ))
+        .accept_compressed(CompressionEncoding::Zstd)
+        .pipe(|client| {
+            if let Some(limit) = self.max_decoding_message_size {
+                client.max_decoding_message_size(limit)
+            } else {
+                client
+            }
+        })
     }
 
     pub fn signature_verification_client(
         &mut self,
     ) -> SignatureVerificationServiceClient<Channel<'_>> {
-        SignatureVerificationServiceClient::with_interceptor(&mut self.channel, &self.headers)
-            .accept_compressed(CompressionEncoding::Zstd)
-            .pipe(|client| {
-                if let Some(limit) = self.max_decoding_message_size {
-                    client.max_decoding_message_size(limit)
-                } else {
-                    client
-                }
-            })
+        SignatureVerificationServiceClient::new(Self::make_channel(
+            &mut self.channel,
+            &self.headers,
+            self.byte_count,
+        ))
+        .accept_compressed(CompressionEncoding::Zstd)
+        .pipe(|client| {
+            if let Some(limit) = self.max_decoding_message_size {
+                client.max_decoding_message_size(limit)
+            } else {
+                client
+            }
+        })
     }
 
     pub fn subscription_client(&mut self) -> SubscriptionServiceClient<Channel<'_>> {
-        SubscriptionServiceClient::with_interceptor(&mut self.channel, &self.headers)
-            .accept_compressed(CompressionEncoding::Zstd)
-            .pipe(|client| {
-                if let Some(limit) = self.max_decoding_message_size {
-                    client.max_decoding_message_size(limit)
-                } else {
-                    client
-                }
-            })
+        SubscriptionServiceClient::new(Self::make_channel(
+            &mut self.channel,
+            &self.headers,
+            self.byte_count,
+        ))
+        .accept_compressed(CompressionEncoding::Zstd)
+        .pipe(|client| {
+            if let Some(limit) = self.max_decoding_message_size {
+                client.max_decoding_message_size(limit)
+            } else {
+                client
+            }
+        })
     }
 }
