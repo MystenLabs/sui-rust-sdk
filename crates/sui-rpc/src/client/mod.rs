@@ -32,6 +32,13 @@ type Channel<'a> = tonic::service::interceptor::InterceptedService<
     &'a HeadersInterceptor,
 >;
 
+const DEFAULT_CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
+const DEFAULT_TCP_KEEPALIVE_IDLE: Duration = Duration::from_secs(15);
+const DEFAULT_TCP_KEEPALIVE_INTERVAL: Duration = Duration::from_secs(5);
+const DEFAULT_TCP_KEEPALIVE_RETRIES: u32 = 3;
+const DEFAULT_HTTP2_KEEP_ALIVE_INTERVAL: Duration = Duration::from_secs(5);
+const DEFAULT_HTTP2_KEEP_ALIVE_TIMEOUT: Duration = Duration::from_secs(20);
+
 #[derive(Clone)]
 pub struct Client {
     uri: http::Uri,
@@ -84,9 +91,14 @@ impl Client {
                 .map_err(Into::into)
                 .map_err(tonic::Status::from_error)?;
         }
+
         let channel = endpoint
-            .connect_timeout(Duration::from_secs(5))
-            .http2_keep_alive_interval(Duration::from_secs(5))
+            .connect_timeout(DEFAULT_CONNECT_TIMEOUT)
+            .tcp_keepalive(Some(DEFAULT_TCP_KEEPALIVE_IDLE))
+            .tcp_keepalive_interval(Some(DEFAULT_TCP_KEEPALIVE_INTERVAL))
+            .tcp_keepalive_retries(Some(DEFAULT_TCP_KEEPALIVE_RETRIES))
+            .http2_keep_alive_interval(DEFAULT_HTTP2_KEEP_ALIVE_INTERVAL)
+            .keep_alive_timeout(DEFAULT_HTTP2_KEEP_ALIVE_TIMEOUT)
             .connect_lazy();
 
         Ok(Self {
