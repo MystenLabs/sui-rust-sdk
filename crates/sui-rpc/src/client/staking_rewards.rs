@@ -136,7 +136,7 @@ impl Client {
             .collect())
     }
 
-    async fn calculate_rewards(
+    pub async fn calculate_rewards(
         &mut self,
         staked_sui_ids: &[Address],
     ) -> Result<Vec<(Address, u64)>> {
@@ -207,7 +207,7 @@ impl Client {
         Ok(rewards)
     }
 
-    async fn get_validator_address_by_pool_id(
+    pub async fn get_validator_address_by_pool_id(
         &mut self,
         pool_ids: &[Address],
     ) -> Result<Vec<(Address, Address)>> {
