@@ -56,6 +56,17 @@ impl Client {
     /// URL for the public-good, Sui Foundation provided archive for testnet.
     pub const TESTNET_ARCHIVE: &str = "https://archive.testnet.sui.io";
 
+    pub fn from_endpoint(endpoint: &tonic::transport::Endpoint) -> Self {
+        let uri = endpoint.uri().clone();
+        let channel = endpoint.connect_lazy();
+        Self {
+            uri,
+            channel,
+            headers: Default::default(),
+            max_decoding_message_size: None,
+        }
+    }
+
     #[allow(clippy::result_large_err)]
     pub fn new<T>(uri: T) -> Result<Self>
     where
