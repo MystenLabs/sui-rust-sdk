@@ -12,8 +12,8 @@
 //! # Feature flags
 //!
 //! - `intents` *(enabled by default)*: Enables high-level transaction intents (e.g.,
-//!   [`CoinWithBalance`](intent::CoinWithBalance)) and the async [`TransactionBuilder::build`]
-//!   method that resolves intents and gas via an RPC client.
+//!   [`Coin`](intent::Coin) and [`Balance`](intent::Balance)) and the async
+//!   [`TransactionBuilder::build`] method that resolves intents and gas via an RPC client.
 //!
 //! # Example
 //!

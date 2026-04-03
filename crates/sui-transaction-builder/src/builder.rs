@@ -587,14 +587,14 @@ impl TransactionBuilder {
     ///
     /// Intents are high-level descriptions of *what* the transaction needs (e.g., a coin of a
     /// certain value) that get resolved when [`build`](Self::build) is called. See
-    /// [`CoinWithBalance`](crate::intent::CoinWithBalance) for an example of an Intent.
+    /// [`Coin`](crate::intent::Coin) for an example of an Intent.
     ///
     /// ```
     /// use sui_transaction_builder::TransactionBuilder;
-    /// use sui_transaction_builder::intent::CoinWithBalance;
+    /// use sui_transaction_builder::intent::Coin;
     ///
     /// let mut tx = TransactionBuilder::new();
-    /// let coin = tx.intent(CoinWithBalance::sui(1_000_000_000));
+    /// let coin = tx.intent(Coin::sui(1_000_000_000));
     /// // `coin` can be passed to subsequent commands
     /// ```
     #[cfg(feature = "intents")]
@@ -725,7 +725,7 @@ impl TransactionBuilder {
     /// Build the transaction by resolving intents and gas via an RPC client.
     ///
     /// This method resolves any registered intents (e.g.,
-    /// [`CoinWithBalance`](crate::intent::CoinWithBalance)), performs gas selection if needed,
+    /// [`Coin`](crate::intent::Coin)), performs gas selection if needed,
     /// and simulates the transaction before returning the finalized
     /// [`Transaction`].
     ///

@@ -5,13 +5,16 @@
 //! [`TransactionBuilder::build`](crate::TransactionBuilder::build), registered resolvers
 //! communicate with the network to fill in the details.
 //!
-//! Currently the only built-in intent is [`CoinWithBalance`], which requests a coin of a
-//! given type and amount.
+//! The built-in intents are [`Coin`] (requesting a `Coin<T>`) and [`Balance`] (requesting a
+//! `Balance<T>`). Both are handled by the same resolver so that mixed requests for the same
+//! coin type are accounted for together.
 
 use crate::Argument;
 use crate::TransactionBuilder;
 
 mod coin_with_balance;
+pub use coin_with_balance::Balance;
+pub use coin_with_balance::Coin;
 pub use coin_with_balance::CoinWithBalance;
 
 const MAX_GAS_OBJECTS: usize = 250; // 256
