@@ -604,6 +604,42 @@ impl TransactionBuilder {
         intent.register(self)
     }
 
+    /// Shorthand for `self.intent(Coin::new(coin_type, amount))`.
+    ///
+    /// Returns an [`Argument`] representing a `Coin<T>` with the requested
+    /// balance, resolved during [`build`](Self::build).
+    ///
+    /// ```
+    /// use sui_sdk_types::StructTag;
+    /// use sui_transaction_builder::TransactionBuilder;
+    ///
+    /// let mut tx = TransactionBuilder::new();
+    /// let coin = tx.coin(StructTag::sui(), 1_000_000_000);
+    /// ```
+    #[cfg(feature = "intents")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "intents")))]
+    pub fn coin(&mut self, coin_type: sui_sdk_types::StructTag, amount: u64) -> Argument {
+        self.intent(crate::intent::Coin::new(coin_type, amount))
+    }
+
+    /// Shorthand for `self.intent(Balance::new(coin_type, amount))`.
+    ///
+    /// Returns an [`Argument`] representing a `Balance<T>` with the
+    /// requested amount, resolved during [`build`](Self::build).
+    ///
+    /// ```
+    /// use sui_sdk_types::StructTag;
+    /// use sui_transaction_builder::TransactionBuilder;
+    ///
+    /// let mut tx = TransactionBuilder::new();
+    /// let bal = tx.balance(StructTag::sui(), 1_000_000_000);
+    /// ```
+    #[cfg(feature = "intents")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "intents")))]
+    pub fn balance(&mut self, coin_type: sui_sdk_types::StructTag, amount: u64) -> Argument {
+        self.intent(crate::intent::Balance::new(coin_type, amount))
+    }
+
     // Building and resolving
 
     /// Build the transaction offline.
