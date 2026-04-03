@@ -1,7 +1,13 @@
 use std::time::Duration;
 use tap::Pipe;
+use tonic::body::Body;
 use tonic::codec::CompressionEncoding;
 use tonic::transport::channel::ClientTlsConfig;
+use tower::Layer;
+use tower::Service;
+use tower::ServiceBuilder;
+use tower::util::BoxLayer;
+use tower::util::BoxService;
 
 mod response_ext;
 pub use response_ext::ResponseExt;
@@ -27,9 +33,13 @@ use crate::proto::sui::rpc::v2::transaction_execution_service_client::Transactio
 
 type Result<T, E = tonic::Status> = std::result::Result<T, E>;
 type BoxError = Box<dyn std::error::Error + Send + Sync + 'static>;
-type Channel<'a> = tonic::service::interceptor::InterceptedService<
-    &'a mut tonic::transport::Channel,
-    &'a HeadersInterceptor,
+type BoxedChannel = BoxService<http::Request<Body>, http::Response<Body>, tonic::Status>;
+
+type RequestLayer = BoxLayer<
+    BoxService<http::Request<Body>, http::Response<Body>, BoxError>,
+    http::Request<Body>,
+    http::Response<Body>,
+    BoxError,
 >;
 
 const DEFAULT_CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
@@ -45,6 +55,9 @@ pub struct Client {
     channel: tonic::transport::Channel,
     headers: HeadersInterceptor,
     max_decoding_message_size: Option<usize>,
+
+    /// Layer to apply to all RPC requests
+    request_layer: Option<RequestLayer>,
 }
 
 impl Client {
@@ -71,6 +84,7 @@ impl Client {
             channel,
             headers: Default::default(),
             max_decoding_message_size: None,
+            request_layer: None,
         }
     }
 
@@ -106,11 +120,66 @@ impl Client {
             channel,
             headers: Default::default(),
             max_decoding_message_size: None,
+            request_layer: None,
         })
     }
 
     pub fn with_headers(mut self, headers: HeadersInterceptor) -> Self {
         self.headers = headers;
+        self
+    }
+
+    /// Provide an optional [`Layer`] that will be used to wrap all RPC
+    /// requests.
+    ///
+    /// This could be helpful in providing global metrics and logging
+    /// for all outbound requests.
+    ///
+    /// The layer's service may return any response body that implements
+    /// [`http_body::Body<Data = bytes::Bytes>`] and any error type that
+    /// implements `Into<Box<dyn Error + Send + Sync>>`. Both are mapped
+    /// to the internal types automatically.
+    ///
+    /// # Example
+    ///
+    /// Add a layer that logs each request URI:
+    ///
+    /// ```
+    /// # let _rt = tokio::runtime::Builder::new_current_thread()
+    /// #     .build()
+    /// #     .unwrap();
+    /// # let _guard = _rt.enter();
+    /// use sui_rpc::Client;
+    /// use tower::ServiceBuilder;
+    ///
+    /// let client = Client::new(Client::MAINNET_FULLNODE)
+    ///     .unwrap()
+    ///     .request_layer(ServiceBuilder::new().map_request(|req: http::Request<_>| {
+    ///         println!("request to {}", req.uri());
+    ///         req
+    ///     }));
+    /// ```
+    pub fn request_layer<L, ResBody, E>(mut self, layer: L) -> Self
+    where
+        L: Layer<BoxService<http::Request<Body>, http::Response<Body>, BoxError>>
+            + Send
+            + Sync
+            + 'static,
+        L::Service: Service<http::Request<Body>, Response = http::Response<ResBody>, Error = E>
+            + Send
+            + 'static,
+        <L::Service as Service<http::Request<Body>>>::Future: Send + 'static,
+        ResBody: http_body::Body<Data = bytes::Bytes> + Send + 'static,
+        ResBody::Error: Into<BoxError>,
+        E: Into<BoxError> + Send + 'static,
+    {
+        let layer = BoxLayer::new(
+            ServiceBuilder::new()
+                .map_response(|resp: http::Response<ResBody>| resp.map(Body::new))
+                .map_err(Into::<BoxError>::into)
+                .layer(layer),
+        );
+        self.request_layer = Some(layer);
         self
     }
 
@@ -123,8 +192,43 @@ impl Client {
         &self.uri
     }
 
-    pub fn ledger_client(&mut self) -> LedgerServiceClient<Channel<'_>> {
-        LedgerServiceClient::with_interceptor(&mut self.channel, &self.headers)
+    fn channel(&self) -> BoxedChannel {
+        let headers = self.headers.clone();
+
+        // Build the base service with headers applied at the HTTP level and the
+        // transport error mapped to BoxError for compatibility with user layers.
+        let base = BoxService::new(
+            ServiceBuilder::new()
+                .map_err(|e: tonic::transport::Error| -> BoxError { Box::new(e) })
+                .map_request(move |mut req: http::Request<Body>| {
+                    if !headers.headers().is_empty() {
+                        req.headers_mut()
+                            .extend(headers.headers().clone().into_headers());
+                    }
+                    req
+                })
+                .service(self.channel.clone()),
+        );
+
+        // Apply the user's outbound request layer if present.
+        let layered = if let Some(layer) = &self.request_layer {
+            layer.layer(base)
+        } else {
+            base
+        };
+
+        // Map the final error to tonic::Status (a concrete type) so that
+        // downstream users of the tonic-generated clients don't run into
+        // lifetime-inference issues with async_trait and Box<dyn Error>.
+        BoxService::new(
+            ServiceBuilder::new()
+                .map_err(tonic::Status::from_error)
+                .service(layered),
+        )
+    }
+
+    pub fn ledger_client(&mut self) -> LedgerServiceClient<BoxedChannel> {
+        LedgerServiceClient::new(self.channel())
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
                 if let Some(limit) = self.max_decoding_message_size {
@@ -135,8 +239,8 @@ impl Client {
             })
     }
 
-    pub fn state_client(&mut self) -> StateServiceClient<Channel<'_>> {
-        StateServiceClient::with_interceptor(&mut self.channel, &self.headers)
+    pub fn state_client(&mut self) -> StateServiceClient<BoxedChannel> {
+        StateServiceClient::new(self.channel())
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
                 if let Some(limit) = self.max_decoding_message_size {
@@ -147,8 +251,8 @@ impl Client {
             })
     }
 
-    pub fn execution_client(&mut self) -> TransactionExecutionServiceClient<Channel<'_>> {
-        TransactionExecutionServiceClient::with_interceptor(&mut self.channel, &self.headers)
+    pub fn execution_client(&mut self) -> TransactionExecutionServiceClient<BoxedChannel> {
+        TransactionExecutionServiceClient::new(self.channel())
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
                 if let Some(limit) = self.max_decoding_message_size {
@@ -159,8 +263,8 @@ impl Client {
             })
     }
 
-    pub fn package_client(&mut self) -> MovePackageServiceClient<Channel<'_>> {
-        MovePackageServiceClient::with_interceptor(&mut self.channel, &self.headers)
+    pub fn package_client(&mut self) -> MovePackageServiceClient<BoxedChannel> {
+        MovePackageServiceClient::new(self.channel())
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
                 if let Some(limit) = self.max_decoding_message_size {
@@ -173,8 +277,8 @@ impl Client {
 
     pub fn signature_verification_client(
         &mut self,
-    ) -> SignatureVerificationServiceClient<Channel<'_>> {
-        SignatureVerificationServiceClient::with_interceptor(&mut self.channel, &self.headers)
+    ) -> SignatureVerificationServiceClient<BoxedChannel> {
+        SignatureVerificationServiceClient::new(self.channel())
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
                 if let Some(limit) = self.max_decoding_message_size {
@@ -185,8 +289,8 @@ impl Client {
             })
     }
 
-    pub fn subscription_client(&mut self) -> SubscriptionServiceClient<Channel<'_>> {
-        SubscriptionServiceClient::with_interceptor(&mut self.channel, &self.headers)
+    pub fn subscription_client(&mut self) -> SubscriptionServiceClient<BoxedChannel> {
+        SubscriptionServiceClient::new(self.channel())
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
                 if let Some(limit) = self.max_decoding_message_size {
