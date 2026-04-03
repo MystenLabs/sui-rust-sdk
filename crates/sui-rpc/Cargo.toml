@@ -39,8 +39,10 @@ tap = "1"
 base64 = "0.22.1"
 serde_json = "1.0.145"
 http = "1.3.1"
+http-body = "1"
 futures = "0.3"
 tokio = { version = "1.40", features = ["time"] }
+tower = { version = "0.5.3", default-features = false, features = ["util"] }
 
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"], optional = true }
 
@@ -51,6 +53,7 @@ proptest = { version = "1.8.0", default-features = false, features = ["std"] }
 test-strategy = { version = "0.4" }
 sui-sdk-types = { version = "0.3.0", path = "../sui-sdk-types", default-features = false, features = ["proptest", "serde", "hash"] }
 serde_json = { version = "1.0.145" }
+tokio = { version = "1.40", features = ["rt"] }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(doc_cfg)'] }
