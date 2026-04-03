@@ -58,6 +58,77 @@ impl ObjectReference {
         &self.digest
     }
 
+    /// Construct a synthetic coin reservation reference.
+    ///
+    /// The reservation ref encodes an address-balance reservation for coin
+    /// usage so that the server can reserve the specified `balance` of the
+    /// sender's address balance and transparently create a `Coin<T>` without
+    /// requiring actual coin objects.
+    ///
+    /// See the [coin reservation protocol][cr] for the full specification.
+    ///
+    /// [cr]: https://github.com/mystenlabs/sui/blob/main/crates/sui-types/src/coin_reservation.rs
+    #[cfg(all(feature = "hash", feature = "serde"))]
+    #[cfg_attr(doc_cfg, doc(cfg(all(feature = "hash", feature = "serde"))))]
+    pub fn coin_reservation(
+        coin_type: &crate::StructTag,
+        balance: u64,
+        epoch: u64,
+        chain_id: Digest,
+        owner: Address,
+    ) -> Self {
+        use super::Identifier;
+
+        // Derive the accumulator object ID for (owner, Balance<SUI>).
+        //
+        // The parent is the accumulator root object (0xacc). The key is
+        // the BCS-serialized owner address. The key type tag is
+        // `accumulator::Key<balance::Balance<SUI>>`.
+        let accumulator_root = const { Address::from_static("0xacc") };
+
+        let balance_sui_type = StructTag::new(
+            Address::TWO,
+            Identifier::from_static("balance"),
+            Identifier::from_static("Balance"),
+            vec![coin_type.clone().into()],
+        );
+        let key_type_tag: super::TypeTag = StructTag::new(
+            Address::TWO,
+            Identifier::from_static("accumulator"),
+            Identifier::from_static("Key"),
+            vec![balance_sui_type.into()],
+        )
+        .into();
+
+        let object_id = accumulator_root.derive_dynamic_child_id(&key_type_tag, owner.as_ref());
+
+        // XOR-mask the object ID with the chain identifier to prevent
+        // cross-chain replay.
+        let masked_id = {
+            let id_bytes = object_id.into_inner();
+            let mask_bytes = chain_id.into_inner();
+            let mut masked = [0u8; 32];
+            for i in 0..32 {
+                masked[i] = id_bytes[i] ^ mask_bytes[i];
+            }
+            Address::new(masked)
+        };
+
+        // Construct the magic digest:
+        //   bytes  0-7:  reservation balance (LE u64)
+        //   bytes  8-11: epoch ID (LE u32)
+        //   bytes 12-31: magic constant [0xac; 20]
+        let digest = {
+            let mut bytes = [0u8; 32];
+            bytes[0..8].copy_from_slice(&balance.to_le_bytes());
+            bytes[8..12].copy_from_slice(&(epoch as u32).to_le_bytes());
+            bytes[12..32].copy_from_slice(&[0xac; 20]);
+            Digest::new(bytes)
+        };
+
+        Self::new(masked_id, 0, digest)
+    }
+
     /// Returns a 3-tuple containing the object id, version, and digest.
     pub fn into_parts(self) -> (Address, Version, Digest) {
         let Self {
