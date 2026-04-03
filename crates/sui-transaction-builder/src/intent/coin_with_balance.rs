@@ -1,13 +1,12 @@
-use crate::Argument;
 use crate::Function;
 use crate::ObjectInput;
-use crate::TransactionBuilder;
-use crate::builder::ResolvedArgument;
 use crate::intent::BoxError;
 use crate::intent::Intent;
+use crate::intent::IntentId;
 use crate::intent::IntentResolver;
 use crate::intent::MAX_ARGUMENTS;
 use crate::intent::MAX_GAS_OBJECTS;
+use crate::intent::ResolveContext;
 use futures::StreamExt;
 use std::collections::BTreeMap;
 use std::collections::HashSet;
@@ -92,7 +91,7 @@ impl CoinWithBalance {
     /// ```
     /// use sui_transaction_builder::intent::CoinWithBalance;
     ///
-    /// // Don't touch the gas coin — select other SUI coins instead
+    /// // Don't touch the gas coin -- select other SUI coins instead
     /// let coin = CoinWithBalance::sui(1_000_000_000).with_use_gas_coin(false);
     /// ```
     pub fn with_use_gas_coin(self, use_gas_coin: bool) -> Self {
@@ -104,14 +103,16 @@ impl CoinWithBalance {
 }
 
 impl Intent for CoinWithBalance {
-    fn register(self, builder: &mut TransactionBuilder) -> Argument {
-        builder.register_resolver(CoinWithBalanceResolver);
-        builder.unresolved(self)
-    }
+    type Resolver = CoinWithBalanceResolver;
 }
 
-#[derive(Debug)]
-struct CoinWithBalanceResolver;
+/// Resolver for [`CoinWithBalance`] intents.
+///
+/// This resolver is registered automatically when a [`CoinWithBalance`]
+/// intent is added to a [`TransactionBuilder`](crate::TransactionBuilder).
+/// You do not need to construct it directly.
+#[derive(Debug, Default)]
+pub struct CoinWithBalanceResolver;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum CoinType {
@@ -123,25 +124,21 @@ enum CoinType {
 impl IntentResolver for CoinWithBalanceResolver {
     async fn resolve(
         &self,
-        builder: &mut TransactionBuilder,
+        ctx: &mut ResolveContext<'_>,
         client: &mut sui_rpc::Client,
     ) -> Result<(), BoxError> {
-        // Collect all the requests
-        let mut requests: BTreeMap<CoinType, Vec<(usize, u64)>> = BTreeMap::new();
+        // Collect all the requests.
+        let mut requests: BTreeMap<CoinType, Vec<(IntentId, u64)>> = BTreeMap::new();
         let mut zero_values = Vec::new();
 
-        for (id, intent) in builder.intents.extract_if(.., |_id, intent| {
-            intent.downcast_ref::<CoinWithBalance>().is_some()
-        }) {
-            let request = intent.downcast_ref::<CoinWithBalance>().unwrap();
-
+        for (id, request) in ctx.take_intents::<CoinWithBalance>() {
             if request.balance == 0 {
-                zero_values.push((id, request.coin_type.clone()));
+                zero_values.push((id, request.coin_type));
             } else {
                 let coin_type = if request.coin_type == StructTag::sui() && request.use_gas_coin {
                     CoinType::Gas
                 } else {
-                    CoinType::Coin(request.coin_type.clone())
+                    CoinType::Coin(request.coin_type)
                 };
                 requests
                     .entry(coin_type)
@@ -151,19 +148,16 @@ impl IntentResolver for CoinWithBalanceResolver {
         }
 
         for (id, coin_type) in zero_values {
-            CoinWithBalanceResolver::resolve_zero_balance_coin(builder, coin_type, id);
+            Self::resolve_zero_balance_coin(ctx, coin_type, id);
         }
 
         for (coin_type, requests) in requests {
             match coin_type {
                 CoinType::Gas => {
-                    CoinWithBalanceResolver::resolve_gas_coin(builder, client, &requests).await?;
+                    Self::resolve_gas_coin(ctx, client, &requests).await?;
                 }
                 CoinType::Coin(coin_type) => {
-                    CoinWithBalanceResolver::resolve_coin_type(
-                        builder, client, &coin_type, &requests,
-                    )
-                    .await?;
+                    Self::resolve_coin_type(ctx, client, &coin_type, &requests).await?;
                 }
             }
         }
@@ -174,11 +168,11 @@ impl IntentResolver for CoinWithBalanceResolver {
 
 impl CoinWithBalanceResolver {
     fn resolve_zero_balance_coin(
-        builder: &mut TransactionBuilder,
+        ctx: &mut ResolveContext<'_>,
         coin_type: StructTag,
-        request_id: usize,
+        request_id: IntentId,
     ) {
-        let coin = builder.move_call(
+        let coin = ctx.move_call(
             Function::new(
                 Address::TWO,
                 Identifier::from_static("coin"),
@@ -188,16 +182,16 @@ impl CoinWithBalanceResolver {
             vec![],
         );
 
-        *builder.arguments.get_mut(&request_id).unwrap() = ResolvedArgument::ReplaceWith(coin);
+        ctx.redirect_argument(request_id, coin);
     }
 
     async fn resolve_coin_type(
-        builder: &mut TransactionBuilder,
+        ctx: &mut ResolveContext<'_>,
         client: &mut sui_rpc::Client,
         coin_type: &StructTag,
-        requests: &[(usize, u64)],
+        requests: &[(IntentId, u64)],
     ) -> Result<(), BoxError> {
-        let sender = builder
+        let sender = ctx
             .sender()
             .ok_or("Sender must be set to resolve CoinWithBalance")?;
 
@@ -220,7 +214,7 @@ impl CoinWithBalanceResolver {
             .take()
             .unwrap_or_default();
 
-        // Early return with an error if the sender does not have sufficient balance
+        // Early return with an error if the sender does not have sufficient balance.
         if balance.balance() < sum {
             return Err(format!(
                 "address {} does not have sufficient balance of {}: requested {} available {}",
@@ -232,12 +226,12 @@ impl CoinWithBalanceResolver {
             .into());
         }
 
-        let excludes = builder.used_object_ids();
+        let excludes = ctx.used_object_ids();
         let (coins, remaining) =
             Self::select_coins(client, &sender, coin_type, sum, &excludes).await?;
 
         // If address balance amount isn't enough to cover the remaining requested amount we need
-        // to bail
+        // to bail.
         if balance.address_balance() < remaining {
             return Err(format!(
                 "unable to find sufficient coins of type {}. requested {} found {} and AB of {} is insufficient to cover difference.",
@@ -251,72 +245,60 @@ impl CoinWithBalanceResolver {
 
         let split_coin_args = if let [first, rest @ ..] = coins
             .into_iter()
-            .map(|coin| builder.object(coin))
+            .map(|coin| ctx.object(coin))
             .collect::<Vec<_>>()
             .as_slice()
         {
-            // We have at least 1 coin
+            // We have at least 1 coin.
 
             let mut deps = Vec::new();
             for chunk in rest.chunks(MAX_ARGUMENTS) {
-                builder.merge_coins(*first, chunk.to_vec());
-                deps.push(Argument::new(*builder.commands.last_key_value().unwrap().0));
+                ctx.merge_coins(*first, chunk.to_vec());
+                deps.push(ctx.last_command_argument());
             }
 
             // If the coins we selected were not enough we need to pull from AB for the remaining
-            // amount and merge it into the first coin
+            // amount and merge it into the first coin.
             if remaining > 0 {
-                let ab_coin = builder.funds_withdrawal_coin(coin_type.clone().into(), remaining);
-                deps.push(Argument::new(*builder.commands.last_key_value().unwrap().0));
-                builder.merge_coins(*first, vec![ab_coin]);
-                deps.push(Argument::new(*builder.commands.last_key_value().unwrap().0));
+                let ab_coin = ctx.funds_withdrawal_coin(coin_type.clone().into(), remaining);
+                deps.push(ctx.last_command_argument());
+                ctx.merge_coins(*first, vec![ab_coin]);
+                deps.push(ctx.last_command_argument());
             }
 
             let amounts = requests
                 .iter()
-                .map(|(_, balance)| builder.pure(balance))
+                .map(|(_, balance)| ctx.pure(balance))
                 .collect();
-            let coin_outputs = builder.split_coins(*first, amounts);
+            let coin_outputs = ctx.split_coins(*first, amounts);
             if !deps.is_empty() {
-                builder
-                    .commands
-                    .last_entry()
-                    .unwrap()
-                    .get_mut()
-                    .dependencies
-                    .extend(deps);
+                ctx.add_dependencies_to_last_command(deps);
             }
 
             //TODO send remaining to AB
 
             coin_outputs
         } else {
-            // We have no coins, but have sufficient AB to cover all requested amounts
+            // We have no coins, but have sufficient AB to cover all requested amounts.
             requests
                 .iter()
-                .map(|(_, balance)| {
-                    builder.funds_withdrawal_coin(coin_type.clone().into(), *balance)
-                })
+                .map(|(_, balance)| ctx.funds_withdrawal_coin(coin_type.clone().into(), *balance))
                 .collect()
         };
 
-        for (coin, request_index) in split_coin_args
-            .into_iter()
-            .zip(requests.iter().map(|(index, _)| *index))
-        {
-            *builder.arguments.get_mut(&request_index).unwrap() =
-                ResolvedArgument::ReplaceWith(coin);
+        for (coin, (request_id, _)) in split_coin_args.into_iter().zip(requests.iter()) {
+            ctx.redirect_argument(*request_id, coin);
         }
 
         Ok(())
     }
 
     async fn resolve_gas_coin(
-        builder: &mut TransactionBuilder,
+        ctx: &mut ResolveContext<'_>,
         client: &mut sui_rpc::Client,
-        requests: &[(usize, u64)],
+        requests: &[(IntentId, u64)],
     ) -> Result<(), BoxError> {
-        let sender = builder
+        let sender = ctx
             .sender()
             .ok_or("Sender must be set to resolve CoinWithBalance")?;
 
@@ -341,7 +323,7 @@ impl CoinWithBalanceResolver {
             .take()
             .unwrap_or_default();
 
-        // Early return with an error if the sender does not have sufficient balance
+        // Early return with an error if the sender does not have sufficient balance.
         if balance.balance() < sum {
             return Err(format!(
                 "address {} does not have sufficient balance of {}: requested {} available {}",
@@ -353,12 +335,12 @@ impl CoinWithBalanceResolver {
             .into());
         }
 
-        let excludes = builder.used_object_ids();
+        let excludes = ctx.used_object_ids();
         let (coins, remaining) =
             Self::select_coins(client, &sender, &coin_type, sum, &excludes).await?;
 
         // If address balance amount isn't enough to cover the remaining requested amount we need
-        // to bail
+        // to bail.
         if balance.address_balance() < remaining {
             return Err(format!(
                 "unable to find sufficient coins of type {}. requested {} found {} and AB of {} is insufficient to cover difference.",
@@ -371,72 +353,62 @@ impl CoinWithBalanceResolver {
         }
 
         let coin_args = if coins.is_empty() {
-            // We have no coins, but have sufficient AB to cover all requested amounts
+            // We have no coins, but have sufficient AB to cover all requested amounts.
             requests
                 .iter()
                 .map(|(_, balance)| {
-                    builder.funds_withdrawal_coin(coin_type.clone().into(), *balance)
+                    ctx.funds_withdrawal_coin(coin_type.clone().into(), *balance)
                 })
                 .collect()
         } else {
-            let gas = builder.gas();
+            let gas = ctx.gas();
             let mut deps = Vec::new();
 
-            // Append to gas coin up to 250 coins
+            // Append to gas coin up to 250 coins.
             let (use_as_gas, remaining_coins) = coins.split_at(std::cmp::min(
                 coins.len(),
-                MAX_GAS_OBJECTS.saturating_sub(builder.gas.len()),
+                MAX_GAS_OBJECTS.saturating_sub(ctx.gas_object_count()),
             ));
-            builder.add_gas_objects(use_as_gas.iter().cloned());
+            ctx.add_gas_objects(use_as_gas.iter().cloned());
 
-            // Any remaining do a merge coins
+            // Any remaining do a merge coins.
             for chunk in remaining_coins
                 .iter()
-                .map(|coin| builder.object(coin.clone()))
+                .map(|coin| ctx.object(coin.clone()))
                 .collect::<Vec<_>>()
                 .chunks(MAX_ARGUMENTS)
             {
-                builder.merge_coins(gas, chunk.to_vec());
-                deps.push(Argument::new(*builder.commands.last_key_value().unwrap().0));
+                ctx.merge_coins(gas, chunk.to_vec());
+                deps.push(ctx.last_command_argument());
             }
 
             // If the coins we selected were not enough we need to pull from AB for the remaining
-            // amount and merge it into the gas coin
+            // amount and merge it into the gas coin.
             if remaining > 0 {
-                // reserve a small amount more to account for budget ~.5 SUI's worth
-                let ab_coin = builder
-                    .funds_withdrawal_coin(coin_type.clone().into(), remaining + 500_000_000);
-                deps.push(Argument::new(*builder.commands.last_key_value().unwrap().0));
-                builder.merge_coins(gas, vec![ab_coin]);
-                deps.push(Argument::new(*builder.commands.last_key_value().unwrap().0));
+                // Reserve a small amount more to account for budget ~.5 SUI's worth.
+                let ab_coin =
+                    ctx.funds_withdrawal_coin(coin_type.clone().into(), remaining + 500_000_000);
+                deps.push(ctx.last_command_argument());
+                ctx.merge_coins(gas, vec![ab_coin]);
+                deps.push(ctx.last_command_argument());
             }
 
             let amounts = requests
                 .iter()
-                .map(|(_, balance)| builder.pure(balance))
+                .map(|(_, balance)| ctx.pure(balance))
                 .collect();
-            let split_coin_args = builder.split_coins(gas, amounts);
+            let split_coin_args = ctx.split_coins(gas, amounts);
             if !deps.is_empty() {
-                builder
-                    .commands
-                    .last_entry()
-                    .unwrap()
-                    .get_mut()
-                    .dependencies
-                    .extend(deps);
+                ctx.add_dependencies_to_last_command(deps);
             }
 
-            // We can't send gas coin to AB so we'll leave as-is
+            // We can't send gas coin to AB so we'll leave as-is.
 
             split_coin_args
         };
 
-        for (coin, request_index) in coin_args
-            .into_iter()
-            .zip(requests.iter().map(|(index, _)| *index))
-        {
-            *builder.arguments.get_mut(&request_index).unwrap() =
-                ResolvedArgument::ReplaceWith(coin);
+        for (coin, (request_id, _)) in coin_args.into_iter().zip(requests.iter()) {
+            ctx.redirect_argument(*request_id, coin);
         }
 
         Ok(())
@@ -477,7 +449,7 @@ impl CoinWithBalanceResolver {
             remaining = remaining.saturating_sub(object.balance());
             selected_coins.push(coin);
 
-            // if we've found enough, continue collecting coins to smash up to ~500
+            // If we've found enough, continue collecting coins to smash up to ~500.
             if remaining == 0 && selected_coins.len() >= 500 {
                 break;
             }

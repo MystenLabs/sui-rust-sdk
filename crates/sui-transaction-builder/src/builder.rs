@@ -599,9 +599,11 @@ impl TransactionBuilder {
     /// ```
     #[cfg(feature = "intents")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "intents")))]
-    #[allow(private_bounds)]
     pub fn intent<I: crate::intent::Intent>(&mut self, intent: I) -> Argument {
-        intent.register(self)
+        self.resolvers
+            .entry(std::any::TypeId::of::<I::Resolver>())
+            .or_insert_with(|| Box::new(I::Resolver::default()));
+        self.unresolved(intent)
     }
 
     // Building and resolving
@@ -770,8 +772,9 @@ impl TransactionBuilder {
 
         let resolvers = std::mem::take(&mut self.resolvers);
         for resolver in resolvers.values() {
+            let mut ctx = crate::intent::ResolveContext::new(&mut self);
             resolver
-                .resolve(&mut self, client)
+                .resolve(&mut ctx, client)
                 .await
                 .map_err(|e| Error::Input(e.to_string()))?;
         }
@@ -907,12 +910,6 @@ impl TransactionBuilder {
             .bcs()
             .deserialize()
             .map_err(|e| Error::Input(e.to_string()))
-    }
-
-    #[cfg(feature = "intents")]
-    pub(crate) fn register_resolver<R: crate::intent::IntentResolver>(&mut self, resolver: R) {
-        self.resolvers
-            .insert(resolver.type_id(), Box::new(resolver));
     }
 
     #[cfg(feature = "intents")]
