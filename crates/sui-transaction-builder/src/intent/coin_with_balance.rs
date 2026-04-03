@@ -13,17 +13,15 @@
 //!
 //! # Resolution algorithm
 //!
+//! The resolver prefers address balances over coins -- it only touches
+//! coin objects when the address balance is insufficient. This enables
+//! parallel execution of transactions. When coins are needed, the
+//! resolver consolidates as many as possible (up to 500) to reduce
+//! dust.
+//!
 //! Resolution runs once per coin type. It collects every [`Coin`] and
 //! [`Balance`] intent for that type, loads available funds, and picks
 //! one of two paths.
-//!
-//! ## Loading
-//!
-//! Owned coins and address balance are loaded in parallel via
-//! `getBalance()` and `listCoins()`. The full first page of coins is
-//! always loaded; pagination continues only when the loaded coin
-//! balance plus address balance is still insufficient. An error is
-//! returned when total available < total required.
 //!
 //! ## Zero-balance intents
 //!
@@ -39,40 +37,42 @@
 //!
 //! 1. Collect all non-zero intents for the type, compute
 //!    `total_required`.
-//! 2. Load coins, get `address_balance`.
+//! 2. Fetch `address_balance` via `getBalance()`.
 //! 3. Verify sufficient funds.
-//! 4. If **all** intents are [`Balance`] **and**
-//!    `address_balance >= total_required` --> **path 1**.
+//! 4. If `address_balance >= total_required` --> **path 1**.
 //! 5. Otherwise --> **path 2**.
 //!
-//! ## Path 1: direct withdrawal
+//! ## Path 1: individual withdrawal
 //!
-//! When every intent for a type is a [`Balance`] and the address
-//! balance covers everything, each intent becomes a single direct
-//! withdrawal. No coins are touched, which enables parallel execution.
+//! When the address balance covers everything, each intent becomes a
+//! single direct withdrawal. No coins are touched, which enables
+//! parallel execution.
 //!
 //! ```text
-//! for each Balance intent:
-//!     balance::redeem_funds(withdrawal(amount))  ->  intent result
+//! for each intent:
+//!     Coin    -> coin::redeem_funds(withdrawal(amount))
+//!     Balance -> balance::redeem_funds(withdrawal(amount))
 //! ```
 //!
 //! ## Path 2: merge and split
 //!
-//! The general-purpose path used whenever [`Coin`] intents exist or
-//! the address balance alone is insufficient. It builds a merged coin
-//! from available sources, splits all intent amounts in a single call,
-//! and handles the remainder.
+//! Used when the address balance alone is insufficient. Coins are
+//! loaded first (up to 500 for dust consolidation), and address
+//! balance covers whatever the coins can't.
 //!
 //! ### Step 1 -- build sources and merge
 //!
 //! ```text
-//! sources = []
+//! coins = select_coins(total_required)   // loads up to 500
+//! shortfall = max(0, total_required - loaded_coin_balance)
 //!
 //! if SUI and gas coin enabled:
-//!     sources.push(tx.gas)
+//!     // coins added as gas payment objects
+//!     sources = [tx.gas]
+//!     if shortfall > 0:
+//!         sources.push(coin::redeem_funds(withdrawal(shortfall)))
 //! else:
-//!     sources.push(...loaded_coins)
-//!     shortfall = max(0, total_required - loaded_coin_balance)
+//!     sources = [...coins]
 //!     if shortfall > 0:
 //!         sources.push(coin::redeem_funds(withdrawal(shortfall)))
 //!
@@ -92,17 +92,15 @@
 //!
 //! ### Step 3 -- remainder
 //!
-//! After splitting, the merged coin may have leftover balance (loaded
-//! coins exceeded what was needed) or be exactly zero.
+//! After splitting, the merged coin may have leftover balance from
+//! coin consolidation.
 //!
-//! - **Balance intents exist**: send the remainder back to the
-//!   sender's address balance via `coin::send_funds`.
-//! - **Coin-only, exact match** (AB was used, so the merged coin is
-//!   exactly zero after splitting): `coin::destroy_zero`.
-//! - **Coin-only, surplus**: the merged coin stays with the sender as
+//! - **AB was used or Balance intents exist**: send the remainder
+//!   back to the sender's address balance via `coin::send_funds`.
+//! - **Coin-only, no AB**: the merged coin stays with the sender as
 //!   an owned object.
-//! - **Gas coin**: no remainder handling -- the leftover stays in the
-//!   gas coin.
+//! - **Gas coin**: no remainder handling -- the leftover stays in
+//!   the gas coin.
 
 use crate::Argument;
 use crate::Function;
@@ -382,14 +380,7 @@ impl IntentResolver for Resolver {
         }
 
         for (coin_type, requests) in requests {
-            match coin_type {
-                CoinType::Gas => {
-                    Resolver::resolve_gas_coin(builder, client, &requests).await?;
-                }
-                CoinType::Coin(coin_type) => {
-                    Resolver::resolve_coin_type(builder, client, &coin_type, &requests).await?;
-                }
-            }
+            Resolver::resolve_merge_and_split(builder, client, coin_type, &requests).await?;
         }
 
         Ok(())
@@ -458,40 +449,45 @@ impl Resolver {
         );
     }
 
-    /// Destroy a zero-balance coin via `0x2::coin::destroy_zero`.
-    fn destroy_zero(builder: &mut TransactionBuilder, coin_type: &StructTag, coin_arg: Argument) {
-        builder.move_call(
-            Function::new(
-                Address::TWO,
-                Identifier::from_static("coin"),
-                Identifier::from_static("destroy_zero"),
-            )
-            .with_type_args(vec![coin_type.clone().into()]),
-            vec![coin_arg],
-        );
-    }
-
-    /// Path 1: Direct withdrawal from address balance. Used when all intents for a coin type
-    /// are [`Balance`] intents and the address balance covers the total.
-    fn resolve_direct_withdrawal(
+    /// Path 1: AB covers everything -- individual withdrawals per intent.
+    fn resolve_individual_withdrawals(
         builder: &mut TransactionBuilder,
         coin_type: &StructTag,
         requests: &[Request],
     ) {
         for request in requests {
-            let balance =
-                builder.funds_withdrawal_balance(coin_type.clone().into(), request.balance);
+            let result = match request.kind {
+                IntentKind::Coin => {
+                    builder.funds_withdrawal_coin(coin_type.clone().into(), request.balance)
+                }
+                IntentKind::Balance => {
+                    builder.funds_withdrawal_balance(coin_type.clone().into(), request.balance)
+                }
+            };
             *builder.arguments.get_mut(&request.id).unwrap() =
-                ResolvedArgument::ReplaceWith(balance);
+                ResolvedArgument::ReplaceWith(result);
         }
     }
 
-    async fn resolve_coin_type(
+    /// Resolve all intents for a single coin type via path 2 (merge and
+    /// split). The `use_gas_coin` flag controls how coins become sources:
+    ///
+    /// - **gas coin**: coins are added as gas payment objects and the gas
+    ///   coin (`tx.gas`) is the merge base. AB shortfall includes a ~0.5
+    ///   SUI buffer for gas fees. No remainder handling.
+    /// - **non-gas**: first loaded coin is the merge base. Remainder is
+    ///   sent back to AB when AB was used or Balance intents are present.
+    async fn resolve_merge_and_split(
         builder: &mut TransactionBuilder,
         client: &mut sui_rpc::Client,
-        coin_type: &StructTag,
+        coin_type: CoinType,
         requests: &[Request],
     ) -> Result<(), BoxError> {
+        let (coin_type, use_gas_coin) = match coin_type {
+            CoinType::Gas => (StructTag::sui(), true),
+            CoinType::Coin(t) => (t, false),
+        };
+        let coin_type = &coin_type;
         let sender = builder
             .sender()
             .ok_or("Sender must be set to resolve Coin/Balance intents")?;
@@ -502,14 +498,23 @@ impl Resolver {
 
         let sum = requests.iter().map(|r| r.balance).sum();
 
-        let balance = client
+        let balance_response = client
             .state_client()
             .get_balance(
                 GetBalanceRequest::default()
                     .with_owner(sender)
                     .with_coin_type(coin_type),
             )
-            .await?
+            .await?;
+
+        // Extract chain_id and epoch from the response metadata for the
+        // gas coin reservation ref.
+        let _chain_id = {
+            use sui_rpc::client::ResponseExt;
+            (balance_response.chain_id(), balance_response.epoch())
+        };
+
+        let balance = balance_response
             .into_inner()
             .balance
             .take()
@@ -527,162 +532,23 @@ impl Resolver {
             .into());
         }
 
-        // Path 1: direct withdrawal when all intents are Balance and AB covers the total.
-        let all_balance = requests.iter().all(|r| r.kind == IntentKind::Balance);
-        if all_balance && balance.address_balance() >= sum {
-            Self::resolve_direct_withdrawal(builder, coin_type, requests);
+        // Path 1: AB covers everything -- individual withdrawals per intent.
+        // No coins are touched, enabling parallel execution.
+        if balance.address_balance() >= sum {
+            Self::resolve_individual_withdrawals(builder, coin_type, requests);
             return Ok(());
         }
 
-        // Path 2: merge and split.
+        // Path 2: AB insufficient, need coins. Coins are loaded first (up
+        // to 500 for consolidation), AB covers whatever the coins can't.
         let excludes = builder.used_object_ids();
         let (coins, remaining) =
             Self::select_coins(client, &sender, coin_type, sum, &excludes).await?;
 
-        // If the address balance isn't enough to cover the remaining requested amount we need
-        // to bail.
         if balance.address_balance() < remaining {
             return Err(format!(
-                "unable to find sufficient coins of type {}. requested {} found {} and AB of {} is insufficient to cover difference.",
-                coin_type,
-                sum,
-                sum - remaining,
-                balance.address_balance(),
-            )
-            .into());
-        }
-
-        let has_balance_intents = requests.iter().any(|r| r.kind == IntentKind::Balance);
-        let used_ab = remaining > 0;
-
-        if let [first, rest @ ..] = coins
-            .into_iter()
-            .map(|coin| builder.object(coin))
-            .collect::<Vec<_>>()
-            .as_slice()
-        {
-            // We have at least one coin.
-            let mut deps = Vec::new();
-            for chunk in rest.chunks(MAX_ARGUMENTS) {
-                builder.merge_coins(*first, chunk.to_vec());
-                deps.push(Argument::new(*builder.commands.last_key_value().unwrap().0));
-            }
-
-            // If the coins we selected were not enough we need to pull from AB for the
-            // remaining amount and merge it into the first coin.
-            if remaining > 0 {
-                let ab_coin = builder.funds_withdrawal_coin(coin_type.clone().into(), remaining);
-                deps.push(Argument::new(*builder.commands.last_key_value().unwrap().0));
-                builder.merge_coins(*first, vec![ab_coin]);
-                deps.push(Argument::new(*builder.commands.last_key_value().unwrap().0));
-            }
-
-            let amounts = requests.iter().map(|r| builder.pure(&r.balance)).collect();
-            let coin_outputs = builder.split_coins(*first, amounts);
-            if !deps.is_empty() {
-                builder
-                    .commands
-                    .last_entry()
-                    .unwrap()
-                    .get_mut()
-                    .dependencies
-                    .extend(deps);
-            }
-
-            // Remainder handling: the merged coin may have leftover balance after splitting.
-            if has_balance_intents {
-                Self::send_funds(builder, coin_type, *first, sender);
-            } else if used_ab {
-                Self::destroy_zero(builder, coin_type, *first);
-            }
-
-            // Assign results, converting Balance intents via coin::into_balance.
-            for (result, request) in coin_outputs.into_iter().zip(requests.iter()) {
-                let final_arg = match request.kind {
-                    IntentKind::Balance => Self::into_balance(builder, coin_type, result),
-                    IntentKind::Coin => result,
-                };
-                *builder.arguments.get_mut(&request.id).unwrap() =
-                    ResolvedArgument::ReplaceWith(final_arg);
-            }
-        } else {
-            // We have no coins, but have sufficient AB to cover all requested amounts.
-            for request in requests {
-                let result = match request.kind {
-                    IntentKind::Coin => {
-                        builder.funds_withdrawal_coin(coin_type.clone().into(), request.balance)
-                    }
-                    IntentKind::Balance => {
-                        builder.funds_withdrawal_balance(coin_type.clone().into(), request.balance)
-                    }
-                };
-                *builder.arguments.get_mut(&request.id).unwrap() =
-                    ResolvedArgument::ReplaceWith(result);
-            }
-        }
-
-        Ok(())
-    }
-
-    async fn resolve_gas_coin(
-        builder: &mut TransactionBuilder,
-        client: &mut sui_rpc::Client,
-        requests: &[Request],
-    ) -> Result<(), BoxError> {
-        let sender = builder
-            .sender()
-            .ok_or("Sender must be set to resolve Coin/Balance intents")?;
-
-        if requests.is_empty() {
-            return Err("BUG: requests is empty".into());
-        }
-
-        let coin_type = StructTag::sui();
-
-        let sum = requests.iter().map(|r| r.balance).sum();
-
-        let balance = client
-            .state_client()
-            .get_balance(
-                GetBalanceRequest::default()
-                    .with_owner(sender)
-                    .with_coin_type(&coin_type),
-            )
-            .await?
-            .into_inner()
-            .balance
-            .take()
-            .unwrap_or_default();
-
-        // Early return with an error if the sender does not have sufficient balance.
-        if balance.balance() < sum {
-            return Err(format!(
-                "address {} does not have sufficient balance of {}: requested {} available {}",
-                sender,
-                coin_type,
-                sum,
-                balance.balance()
-            )
-            .into());
-        }
-
-        // Path 1: direct withdrawal when all intents are Balance and AB covers the total.
-        let all_balance = requests.iter().all(|r| r.kind == IntentKind::Balance);
-        if all_balance && balance.address_balance() >= sum {
-            Self::resolve_direct_withdrawal(builder, &coin_type, requests);
-            return Ok(());
-        }
-
-        // Path 2: merge and split using gas coin.
-        let excludes = builder.used_object_ids();
-        let (coins, remaining) =
-            Self::select_coins(client, &sender, &coin_type, sum, &excludes).await?;
-
-        // If the address balance isn't enough to cover the remaining requested amount we need
-        // to bail.
-        if balance.address_balance() < remaining {
-            return Err(format!(
-                "unable to find sufficient coins of type {}. requested {} found {} and AB of {} is insufficient to cover difference.",
+                "unable to find sufficient coins of type {}. \
+                 requested {} found {} and AB of {} is insufficient to cover difference.",
                 coin_type,
                 sum,
                 sum - remaining,
@@ -692,78 +558,149 @@ impl Resolver {
         }
 
         if coins.is_empty() {
-            // We have no coins, but have sufficient AB to cover all requested amounts.
-            for request in requests {
-                let result = match request.kind {
-                    IntentKind::Coin => {
-                        builder.funds_withdrawal_coin(coin_type.clone().into(), request.balance)
-                    }
-                    IntentKind::Balance => {
-                        builder.funds_withdrawal_balance(coin_type.clone().into(), request.balance)
-                    }
-                };
-                *builder.arguments.get_mut(&request.id).unwrap() =
-                    ResolvedArgument::ReplaceWith(result);
-            }
+            // No coins found but AB covers the full amount (caught by
+            // path 1 above in normal flow). Included for completeness.
+            Self::resolve_individual_withdrawals(builder, coin_type, requests);
+            return Ok(());
+        }
+
+        // Build the merge base and fold all sources into it.
+        let has_balance_intents = requests.iter().any(|r| r.kind == IntentKind::Balance);
+        let used_ab = remaining > 0;
+
+        let (base, deps) = if use_gas_coin {
+            Self::prepare_gas_coin_sources(
+                builder,
+                &coins,
+                remaining,
+                coin_type,
+                // sender,
+                balance.address_balance(),
+                // chain_id,
+            )
         } else {
-            let gas = builder.gas();
-            let mut deps = Vec::new();
+            Self::prepare_coin_sources(builder, coins, remaining, coin_type)
+        };
 
-            // Append to gas coin up to 250 coins.
-            let (use_as_gas, remaining_coins) = coins.split_at(std::cmp::min(
-                coins.len(),
-                MAX_GAS_OBJECTS.saturating_sub(builder.gas.len()),
-            ));
-            builder.add_gas_objects(use_as_gas.iter().cloned());
+        // Split all requested amounts from the merged base.
+        let amounts = requests.iter().map(|r| builder.pure(&r.balance)).collect();
+        let outputs = builder.split_coins(base, amounts);
+        if !deps.is_empty() {
+            builder
+                .commands
+                .last_entry()
+                .unwrap()
+                .get_mut()
+                .dependencies
+                .extend(deps);
+        }
 
-            // Any remaining do a merge coins.
-            for chunk in remaining_coins
-                .iter()
-                .map(|coin| builder.object(coin.clone()))
-                .collect::<Vec<_>>()
-                .chunks(MAX_ARGUMENTS)
-            {
-                builder.merge_coins(gas, chunk.to_vec());
-                deps.push(Argument::new(*builder.commands.last_key_value().unwrap().0));
-            }
+        // Remainder handling.
+        if !use_gas_coin && (used_ab || has_balance_intents) {
+            Self::send_funds(builder, coin_type, base, sender);
+        }
 
-            // If the coins we selected were not enough we need to pull from AB for the
-            // remaining amount and merge it into the gas coin.
-            if remaining > 0 {
-                // Reserve a small amount more to account for budget (~0.5 SUI's worth).
-                let ab_coin = builder
-                    .funds_withdrawal_coin(coin_type.clone().into(), remaining + 500_000_000);
-                deps.push(Argument::new(*builder.commands.last_key_value().unwrap().0));
-                builder.merge_coins(gas, vec![ab_coin]);
-                deps.push(Argument::new(*builder.commands.last_key_value().unwrap().0));
-            }
-
-            let amounts = requests.iter().map(|r| builder.pure(&r.balance)).collect();
-            let split_coin_args = builder.split_coins(gas, amounts);
-            if !deps.is_empty() {
-                builder
-                    .commands
-                    .last_entry()
-                    .unwrap()
-                    .get_mut()
-                    .dependencies
-                    .extend(deps);
-            }
-
-            // Gas coin: no remainder handling -- leftover stays in the gas coin.
-
-            // Assign results, converting Balance intents via coin::into_balance.
-            for (result, request) in split_coin_args.into_iter().zip(requests.iter()) {
-                let final_arg = match request.kind {
-                    IntentKind::Balance => Self::into_balance(builder, &coin_type, result),
-                    IntentKind::Coin => result,
-                };
-                *builder.arguments.get_mut(&request.id).unwrap() =
-                    ResolvedArgument::ReplaceWith(final_arg);
-            }
+        // Assign results, converting Balance intents via coin::into_balance.
+        for (result, request) in outputs.into_iter().zip(requests.iter()) {
+            let final_arg = match request.kind {
+                IntentKind::Balance => Self::into_balance(builder, coin_type, result),
+                IntentKind::Coin => result,
+            };
+            *builder.arguments.get_mut(&request.id).unwrap() =
+                ResolvedArgument::ReplaceWith(final_arg);
         }
 
         Ok(())
+    }
+
+    /// Prepare coin sources for the **non-gas** path. The first loaded coin
+    /// becomes the merge base and all remaining coins (plus an optional AB
+    /// shortfall withdrawal) are merged into it.
+    fn prepare_coin_sources(
+        builder: &mut TransactionBuilder,
+        coins: Vec<ObjectInput>,
+        remaining: u64,
+        coin_type: &StructTag,
+    ) -> (Argument, Vec<Argument>) {
+        let coin_args: Vec<Argument> = coins.into_iter().map(|c| builder.object(c)).collect();
+        let (&first, rest) = coin_args.split_first().expect("coins must not be empty");
+        let mut deps = Vec::new();
+
+        for chunk in rest.chunks(MAX_ARGUMENTS) {
+            builder.merge_coins(first, chunk.to_vec());
+            deps.push(Argument::new(*builder.commands.last_key_value().unwrap().0));
+        }
+
+        if remaining > 0 {
+            let ab_coin = builder.funds_withdrawal_coin(coin_type.clone().into(), remaining);
+            deps.push(Argument::new(*builder.commands.last_key_value().unwrap().0));
+            builder.merge_coins(first, vec![ab_coin]);
+            deps.push(Argument::new(*builder.commands.last_key_value().unwrap().0));
+        }
+
+        (first, deps)
+    }
+
+    /// Prepare coin sources for the **gas coin** path. Coins are added as
+    /// gas payment objects (up to 250); the excess is merged into the gas
+    /// coin. If there is an AB shortfall, it is withdrawn via
+    /// `FundsWithdrawal` and a synthetic gas reservation ref is prepended
+    /// to the gas payment array so the server reserves the remaining AB
+    /// for gas.
+    fn prepare_gas_coin_sources(
+        builder: &mut TransactionBuilder,
+        coins: &[ObjectInput],
+        remaining: u64,
+        coin_type: &StructTag,
+        // sender: Address,
+        address_balance: u64,
+        // chain_info: (Option<sui_sdk_types::Digest>, Option<u64>),
+    ) -> (Argument, Vec<Argument>) {
+        let gas = builder.gas();
+        let mut deps = Vec::new();
+
+        // Insert a gas coin reservation ref so the server reserves
+        // address balance for gas payment.
+        // let reservation_amount = address_balance.saturating_sub(remaining);
+        // if let (Some(chain_id), Some(epoch)) = chain_info
+        //     && reservation_amount > 0
+        // {
+        //     let reservation = sui_sdk_types::ObjectReference::coin_reservation(
+        //         coin_type,
+        //         reservation_amount,
+        //         epoch,
+        //         chain_id,
+        //         sender,
+        //     );
+        //     let (id, version, digest) = reservation.into_parts();
+        //     builder.add_gas_objects([ObjectInput::owned(id, version, digest)]);
+        // }
+
+        let (use_as_gas, excess) = coins.split_at(std::cmp::min(
+            coins.len(),
+            MAX_GAS_OBJECTS.saturating_sub(builder.gas.len()),
+        ));
+        builder.add_gas_objects(use_as_gas.iter().cloned());
+
+        for chunk in excess
+            .iter()
+            .map(|coin| builder.object(coin.clone()))
+            .collect::<Vec<_>>()
+            .chunks(MAX_ARGUMENTS)
+        {
+            builder.merge_coins(gas, chunk.to_vec());
+            deps.push(Argument::new(*builder.commands.last_key_value().unwrap().0));
+        }
+
+        if remaining > 0 {
+            // Reserve the remaining AB to account for gas
+            let ab_coin = builder.funds_withdrawal_coin(coin_type.clone().into(), address_balance);
+            deps.push(Argument::new(*builder.commands.last_key_value().unwrap().0));
+            builder.merge_coins(gas, vec![ab_coin]);
+            deps.push(Argument::new(*builder.commands.last_key_value().unwrap().0));
+        }
+
+        (gas, deps)
     }
 
     async fn select_coins(

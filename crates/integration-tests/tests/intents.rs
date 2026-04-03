@@ -210,12 +210,12 @@ async fn coin_gas_coin_with_address_balance_fallback() -> Result<()> {
     let (private_key, sender) = fresh_account();
     let recipient = Address::ZERO;
 
-    sui.fund(&[(sender, 2 * MIST_PER_SUI)]).await?;
-    sui.deposit_to_address_balance(sender, 10 * MIST_PER_SUI)
+    // 5 SUI in coins, 3 SUI in AB. Request 7 SUI (AB < 7, forces Path 2).
+    sui.fund(&[(sender, 5 * MIST_PER_SUI)]).await?;
+    sui.deposit_to_address_balance(sender, 3 * MIST_PER_SUI)
         .await?;
 
-    // Request more than the coin balance but within total (coins + AB).
-    let request_amount = 5 * MIST_PER_SUI;
+    let request_amount = 7 * MIST_PER_SUI;
     let mut builder = TransactionBuilder::new();
     builder.set_sender(sender);
     let coin = builder.intent(Coin::sui(request_amount));
@@ -269,12 +269,12 @@ async fn coin_non_gas_with_address_balance_fallback() -> Result<()> {
     let (private_key, sender) = fresh_account();
     let recipient = Address::ZERO;
 
+    // 5 SUI in coins, 3 SUI in AB. Request 6 SUI (AB < 6, forces Path 2).
     sui.fund(&[(sender, 5 * MIST_PER_SUI)]).await?;
-    sui.deposit_to_address_balance(sender, 10 * MIST_PER_SUI)
+    sui.deposit_to_address_balance(sender, 3 * MIST_PER_SUI)
         .await?;
 
-    // use_gas_coin(false) -> resolve_coin_type, request triggers AB fallback.
-    let request_amount = 8 * MIST_PER_SUI;
+    let request_amount = 6 * MIST_PER_SUI;
     let mut builder = TransactionBuilder::new();
     builder.set_sender(sender);
     let coin = builder.intent(Coin::sui(request_amount).with_use_gas_coin(false));
@@ -419,38 +419,40 @@ async fn coin_with_balance_alias_works() -> Result<()> {
 // Coin intent -- remainder handling
 // ---------------------------------------------------------------------------
 
-/// Non-gas coin path with only Coin intents and AB used should call
-/// coin::destroy_zero for the exact-match remainder.
+/// Non-gas coin path with Coin intents and AB used should send the
+/// remainder back to AB via coin::send_funds.
 #[tokio::test]
-async fn coin_remainder_destroy_zero_with_ab() -> Result<()> {
+async fn coin_remainder_sent_to_ab_when_ab_used() -> Result<()> {
     let mut sui = SuiNetworkBuilder::default().build().await?;
     let (private_key, sender) = fresh_account();
 
-    // Small coins + large AB.
-    sui.fund(&[(sender, 2 * MIST_PER_SUI)]).await?;
-    sui.deposit_to_address_balance(sender, 10 * MIST_PER_SUI)
+    // 2 SUI in coins, 5 SUI in AB. Request 5 SUI (AB < 5... wait,
+    // AB=5 >= 5 so Path 1). Use sum > AB to force Path 2.
+    // 5 SUI in coins, 3 SUI in AB. Request 6 SUI.
+    sui.fund(&[(sender, 5 * MIST_PER_SUI)]).await?;
+    sui.deposit_to_address_balance(sender, 3 * MIST_PER_SUI)
         .await?;
 
     let mut builder = TransactionBuilder::new();
     builder.set_sender(sender);
-    let coin = builder.intent(Coin::sui(5 * MIST_PER_SUI).with_use_gas_coin(false));
+    let coin = builder.intent(Coin::sui(6 * MIST_PER_SUI).with_use_gas_coin(false));
     let recipient = builder.pure(&Address::ZERO);
     builder.transfer_objects(vec![coin], recipient);
 
     let transaction = builder.build(&mut sui.client).await?;
 
-    // Coin-only with AB shortfall: exact match after split, remainder is
-    // zero -> destroy_zero.
+    // Coin-only with AB shortfall: remainder (from consolidated coins)
+    // sent back to AB.
     assert!(has_funds_withdrawal(&transaction));
     assert!(
-        has_move_call(&transaction, Address::TWO, "coin", "destroy_zero"),
-        "should call coin::destroy_zero for exact coin-only remainder with AB"
+        has_move_call(&transaction, Address::TWO, "coin", "send_funds"),
+        "should call coin::send_funds for remainder when AB is used"
     );
 
     execute(&mut sui.client, &private_key, transaction).await?;
 
     let balances = owned_sui_coins(&mut sui.client, Address::ZERO).await?;
-    assert_eq!(balances, [5 * MIST_PER_SUI]);
+    assert_eq!(balances, [6 * MIST_PER_SUI]);
 
     Ok(())
 }
@@ -764,21 +766,22 @@ async fn balance_gas_coin_with_ab_fallback() -> Result<()> {
 }
 
 /// Balance intent with use_gas_coin(false) forces the non-gas coin path
-/// (path 2). A Coin intent is mixed in to prevent path 1 selection.
+/// (path 2). AB < total forces coin usage.
 #[tokio::test]
 async fn balance_non_gas_coin_fallback() -> Result<()> {
     let mut sui = SuiNetworkBuilder::default().build().await?;
     let (private_key, sender) = fresh_account();
 
-    // Coins for the intent, AB for gas.
+    // 5 SUI in coins, 3 SUI in AB. sum=4 (2 Balance + 2 Coin), AB < 4
+    // so Path 2.
     sui.fund(&[(sender, 5 * MIST_PER_SUI)]).await?;
-    sui.deposit_to_address_balance(sender, 5 * MIST_PER_SUI)
+    sui.deposit_to_address_balance(sender, 3 * MIST_PER_SUI)
         .await?;
 
     let mut builder = TransactionBuilder::new();
     builder.set_sender(sender);
-    let bal = builder.intent(Balance::sui(MIST_PER_SUI).with_use_gas_coin(false));
-    let coin_intent = builder.intent(Coin::sui(MIST_PER_SUI).with_use_gas_coin(false));
+    let bal = builder.intent(Balance::sui(2 * MIST_PER_SUI).with_use_gas_coin(false));
+    let coin_intent = builder.intent(Coin::sui(2 * MIST_PER_SUI).with_use_gas_coin(false));
     let bal_coin = balance_to_coin(&mut builder, bal);
     let recipient = builder.pure(&Address::ZERO);
     builder.transfer_objects(vec![bal_coin, coin_intent], recipient);
@@ -796,7 +799,7 @@ async fn balance_non_gas_coin_fallback() -> Result<()> {
     execute(&mut sui.client, &private_key, transaction).await?;
 
     let balances = owned_sui_coins(&mut sui.client, Address::ZERO).await?;
-    assert_eq!(balances, [MIST_PER_SUI, MIST_PER_SUI]);
+    assert_eq!(balances, [2 * MIST_PER_SUI, 2 * MIST_PER_SUI]);
 
     Ok(())
 }
@@ -931,8 +934,9 @@ async fn mixed_coin_and_balance_with_ab_fallback() -> Result<()> {
     let mut sui = SuiNetworkBuilder::default().build().await?;
     let (private_key, sender) = fresh_account();
 
-    sui.fund(&[(sender, 2 * MIST_PER_SUI)]).await?;
-    sui.deposit_to_address_balance(sender, 20 * MIST_PER_SUI)
+    // 5 SUI in coins, 3 SUI in AB. sum=7 (3 Coin + 4 Balance), AB < 7.
+    sui.fund(&[(sender, 5 * MIST_PER_SUI)]).await?;
+    sui.deposit_to_address_balance(sender, 3 * MIST_PER_SUI)
         .await?;
 
     let mut builder = TransactionBuilder::new();
