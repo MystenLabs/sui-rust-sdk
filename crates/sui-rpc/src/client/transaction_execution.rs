@@ -80,76 +80,86 @@ impl Client {
     /// A `Result` containing the response if the transaction was executed and checkpoint confirmed,
     /// or an error that may still include the response if execution succeeded but checkpoint
     /// confirmation failed.
+    // NOTE: body aggressively Box::pins/Boxes locals and inner futures to shrink the async
+    // state machine for callers running on small-stack threads (for example, macOS default 2MB).
     pub async fn execute_transaction_and_wait_for_checkpoint(
         &mut self,
         request: impl tonic::IntoRequest<ExecuteTransactionRequest>,
         timeout: Duration,
     ) -> Result<Response<ExecuteTransactionResponse>, ExecuteAndWaitError> {
+        // Hoist owned sub-clients up front so later awaits don't re-borrow &mut self, and so
+        // that `self` is not part of the state machine across the big awaits.
+        let mut subscription_client = self.subscription_client();
+        let mut execution_client = self.execution_client();
+        let mut ledger_client = self.ledger_client();
+
         // Subscribe to checkpoint stream before execution to avoid missing the transaction.
-        // Uses minimal read mask for efficiency since we only nee digest confirmation.
+        // Uses minimal read mask for efficiency since we only need digest confirmation.
         // Once server-side filtering is available, we should filter by transaction digest to
         // further reduce bandwidth.
-        let mut checkpoint_stream = match self
-            .subscription_client()
-            .subscribe_checkpoints(SubscribeCheckpointsRequest::default().with_read_mask(
-                FieldMask::from_str("transactions.digest,sequence_number,summary.timestamp"),
-            ))
-            .await
-        {
-            Ok(stream) => stream.into_inner(),
+        let subscribe_fut = Box::pin(subscription_client.subscribe_checkpoints(
+            SubscribeCheckpointsRequest::default().with_read_mask(FieldMask::from_str(
+                "transactions.digest,sequence_number,summary.timestamp",
+            )),
+        ));
+        let checkpoint_stream: Box<tonic::Streaming<_>> = match subscribe_fut.await {
+            Ok(stream) => Box::new(stream.into_inner()),
             Err(e) => return Err(ExecuteAndWaitError::RpcError(e)),
         };
 
-        // Calculate digest from the input transaction to avoid relying on response read mask
-        let request = request.into_request();
-        let transaction = match request.get_ref().transaction_opt() {
-            Some(tx) => tx,
-            None => return Err(ExecuteAndWaitError::MissingTransaction),
+        // Calculate digest from the input transaction to avoid relying on response read mask.
+        // Scope the unboxed request tightly so it's dropped before the next await.
+        let (request, executed_txn_digest) = {
+            let request = request.into_request();
+            let transaction = match request.get_ref().transaction_opt() {
+                Some(tx) => tx,
+                None => return Err(ExecuteAndWaitError::MissingTransaction),
+            };
+            let digest = match sui_sdk_types::Transaction::try_from(transaction) {
+                Ok(tx) => tx.digest().to_string(),
+                Err(e) => return Err(ExecuteAndWaitError::ProtoConversionError(e)),
+            };
+            (request, digest)
         };
 
-        let executed_txn_digest = match sui_sdk_types::Transaction::try_from(transaction) {
-            Ok(tx) => tx.digest().to_string(),
-            Err(e) => return Err(ExecuteAndWaitError::ProtoConversionError(e)),
-        };
-
-        let mut response = match self.execution_client().execute_transaction(request).await {
-            Ok(resp) => resp,
+        let execute_fut = Box::pin(execution_client.execute_transaction(request));
+        // Box the Response immediately so the large inlined proto body lives on the heap, not
+        // in subsequent await-point state.
+        let mut response: Box<Response<ExecuteTransactionResponse>> = match execute_fut.await {
+            Ok(resp) => Box::new(resp),
             Err(e) => return Err(ExecuteAndWaitError::RpcError(e)),
         };
 
         // First query the fullnode directly to see if it already has the txn. This is to handle
-        // the case where an already executed transaction is sent multiple times
-        if let Ok(resp) = self
-            .ledger_client()
-            .get_transaction(
-                GetTransactionRequest::default()
-                    .with_digest(&executed_txn_digest)
-                    .with_read_mask(FieldMask::from_str("digest,checkpoint,timestamp")),
-            )
-            .await
+        // the case where an already executed transaction is sent multiple times.
+        let get_tx_fut = Box::pin(ledger_client.get_transaction(
+            GetTransactionRequest::default()
+                .with_digest(&executed_txn_digest)
+                .with_read_mask(FieldMask::from_str("digest,checkpoint,timestamp")),
+        ));
+        if let Ok(resp) = get_tx_fut.await
             && resp.get_ref().transaction().checkpoint_opt().is_some()
         {
             let checkpoint = resp.get_ref().transaction().checkpoint();
             let timestamp = resp.get_ref().transaction().timestamp;
+            drop(resp);
             response
                 .get_mut()
                 .transaction_mut()
                 .set_checkpoint(checkpoint);
             response.get_mut().transaction_mut().timestamp = timestamp;
-            return Ok(response);
+            return Ok(*response);
         }
 
-        // Wait for the transaction to appear in a checkpoint, at which point indexes will have been
-        // updated.
-        let timeout_future = tokio::time::sleep(timeout);
-        let checkpoint_future = async {
-            while let Some(response) = checkpoint_stream.try_next().await? {
-                let checkpoint = response.checkpoint();
-
+        // Wait for the transaction to appear in a checkpoint, at which point indexes will have
+        // been updated. Box::pin both arms so the outer select! state only holds pointers.
+        let mut timeout_future = Box::pin(tokio::time::sleep(timeout));
+        let mut checkpoint_future = Box::pin(async move {
+            let mut checkpoint_stream = checkpoint_stream;
+            while let Some(msg) = checkpoint_stream.try_next().await? {
+                let checkpoint = msg.checkpoint();
                 for tx in checkpoint.transactions() {
-                    let digest = tx.digest();
-
-                    if digest == executed_txn_digest {
+                    if tx.digest() == executed_txn_digest {
                         return Ok((checkpoint.sequence_number(), checkpoint.summary().timestamp));
                     }
                 }
@@ -157,10 +167,10 @@ impl Client {
             Err(tonic::Status::aborted(
                 "checkpoint stream ended unexpectedly",
             ))
-        };
+        });
 
         tokio::select! {
-            result = checkpoint_future => {
+            result = &mut checkpoint_future => {
                 match result {
                     Ok((checkpoint, timestamp)) => {
                         response
@@ -168,13 +178,16 @@ impl Client {
                             .transaction_mut()
                             .set_checkpoint(checkpoint);
                         response.get_mut().transaction_mut().timestamp = timestamp;
-                        Ok(response)
+                        Ok(*response)
                     }
-                    Err(e) => Err(ExecuteAndWaitError::CheckpointStreamError { response, error: e })
+                    Err(e) => Err(ExecuteAndWaitError::CheckpointStreamError {
+                        response: *response,
+                        error: e,
+                    }),
                 }
             },
-            _ = timeout_future => {
-                Err(ExecuteAndWaitError::CheckpointTimeout ( response))
+            _ = &mut timeout_future => {
+                Err(ExecuteAndWaitError::CheckpointTimeout(*response))
             }
         }
     }
