@@ -132,11 +132,13 @@ impl Client {
 
         // First query the fullnode directly to see if it already has the txn. This is to handle
         // the case where an already executed transaction is sent multiple times.
-        let get_tx_fut = Box::pin(ledger_client.get_transaction(
-            GetTransactionRequest::default()
-                .with_digest(&executed_txn_digest)
-                .with_read_mask(FieldMask::from_str("digest,checkpoint,timestamp")),
-        ));
+        let get_tx_fut = Box::pin(
+            ledger_client.get_transaction(
+                GetTransactionRequest::default()
+                    .with_digest(&executed_txn_digest)
+                    .with_read_mask(FieldMask::from_str("digest,checkpoint,timestamp")),
+            ),
+        );
         if let Ok(resp) = get_tx_fut.await
             && resp.get_ref().transaction().checkpoint_opt().is_some()
         {
