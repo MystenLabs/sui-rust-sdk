@@ -17,6 +17,8 @@ pub use interceptors::HeadersInterceptor;
 
 mod staking_rewards;
 pub use staking_rewards::DelegatedStake;
+pub use staking_rewards::calculate_rewards;
+pub use staking_rewards::get_validator_address_by_pool_id;
 
 mod coin_selection;
 mod lists;

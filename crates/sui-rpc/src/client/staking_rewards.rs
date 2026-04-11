@@ -1,6 +1,7 @@
 use prost_types::FieldMask;
 use sui_sdk_types::Address;
 
+use crate::client::BoxedChannel;
 use crate::field::FieldMaskUtil;
 use crate::proto::sui::rpc::v2::Argument;
 use crate::proto::sui::rpc::v2::GetObjectRequest;
@@ -12,6 +13,7 @@ use crate::proto::sui::rpc::v2::ProgrammableTransaction;
 use crate::proto::sui::rpc::v2::SimulateTransactionRequest;
 use crate::proto::sui::rpc::v2::Transaction;
 use crate::proto::sui::rpc::v2::simulate_transaction_request::TransactionChecks;
+use crate::proto::sui::rpc::v2::transaction_execution_service_client::TransactionExecutionServiceClient;
 
 use super::Client;
 use super::Result;
@@ -140,144 +142,159 @@ impl Client {
         &mut self,
         staked_sui_ids: &[Address],
     ) -> Result<Vec<(Address, u64)>> {
-        let mut ptb = ProgrammableTransaction::default()
-            .with_inputs(vec![Input::default().with_object_id("0x5")]);
-        let system_object = Argument::new_input(0);
-
-        for id in staked_sui_ids {
-            let staked_sui = Argument::new_input(ptb.inputs.len() as u16);
-
-            ptb.inputs.push(Input::default().with_object_id(id));
-
-            ptb.commands.push(
-                MoveCall::default()
-                    .with_package("0x3")
-                    .with_module("sui_system")
-                    .with_function("calculate_rewards")
-                    .with_arguments(vec![system_object, staked_sui])
-                    .into(),
-            );
-        }
-
-        let transaction = Transaction::default().with_kind(ptb).with_sender("0x0");
-
-        let resp = self
-            .execution_client()
-            .simulate_transaction(
-                SimulateTransactionRequest::new(transaction)
-                    .with_read_mask(FieldMask::from_paths([
-                        "command_outputs.return_values.value",
-                        "transaction.effects.status",
-                    ]))
-                    .with_checks(TransactionChecks::Disabled),
-            )
-            .await?
-            .into_inner();
-
-        if !resp.transaction().effects().status().success() {
-            return Err(tonic::Status::from_error(
-                "transaction execution failed".into(),
-            ));
-        }
-
-        if staked_sui_ids.len() != resp.command_outputs.len() {
-            return Err(tonic::Status::from_error(
-                "missing transaction command_outputs".into(),
-            ));
-        }
-
-        let mut rewards = Vec::with_capacity(staked_sui_ids.len());
-
-        for (id, output) in staked_sui_ids.iter().zip(resp.command_outputs) {
-            let bcs_rewards = output
-                .return_values
-                .first()
-                .and_then(|o| o.value_opt())
-                .ok_or_else(|| tonic::Status::from_error("missing bcs".into()))?;
-
-            let reward =
-                if bcs_rewards.name() == "u64" && bcs_rewards.value().len() == size_of::<u64>() {
-                    u64::from_le_bytes(bcs_rewards.value().try_into().unwrap())
-                } else {
-                    return Err(tonic::Status::from_error("missing rewards".into()));
-                };
-            rewards.push((*id, reward));
-        }
-
-        Ok(rewards)
+        calculate_rewards(self.execution_client(), staked_sui_ids).await
     }
 
     pub async fn get_validator_address_by_pool_id(
         &mut self,
         pool_ids: &[Address],
     ) -> Result<Vec<(Address, Address)>> {
-        let mut ptb = ProgrammableTransaction::default()
-            .with_inputs(vec![Input::default().with_object_id("0x5")]);
-        let system_object = Argument::new_input(0);
-
-        for id in pool_ids {
-            let pool_id = Argument::new_input(ptb.inputs.len() as u16);
-
-            ptb.inputs
-                .push(Input::default().with_pure(id.into_inner().to_vec()));
-
-            ptb.commands.push(
-                MoveCall::default()
-                    .with_package("0x3")
-                    .with_module("sui_system")
-                    .with_function("validator_address_by_pool_id")
-                    .with_arguments(vec![system_object, pool_id])
-                    .into(),
-            );
-        }
-
-        let transaction = Transaction::default().with_kind(ptb).with_sender("0x0");
-
-        let resp = self
-            .execution_client()
-            .simulate_transaction(
-                SimulateTransactionRequest::new(transaction)
-                    .with_read_mask(FieldMask::from_paths([
-                        "command_outputs.return_values.value",
-                        "transaction.effects.status",
-                    ]))
-                    .with_checks(TransactionChecks::Disabled),
-            )
-            .await?
-            .into_inner();
-
-        if !resp.transaction().effects().status().success() {
-            return Err(tonic::Status::from_error(
-                "transaction execution failed".into(),
-            ));
-        }
-
-        if pool_ids.len() != resp.command_outputs.len() {
-            return Err(tonic::Status::from_error(
-                "missing transaction command_outputs".into(),
-            ));
-        }
-
-        let mut addresses = Vec::with_capacity(pool_ids.len());
-
-        for (id, output) in pool_ids.iter().zip(resp.command_outputs) {
-            let validator_address = output
-                .return_values
-                .first()
-                .and_then(|o| o.value_opt())
-                .ok_or_else(|| tonic::Status::from_error("missing bcs".into()))?;
-
-            let address = if validator_address.name() == "address"
-                && validator_address.value().len() == Address::LENGTH
-            {
-                Address::from_bytes(validator_address.value())
-                    .map_err(|e| tonic::Status::from_error(e.into()))?
-            } else {
-                return Err(tonic::Status::from_error("missing address".into()));
-            };
-            addresses.push((*id, address));
-        }
-
-        Ok(addresses)
+        get_validator_address_by_pool_id(self.execution_client(), pool_ids).await
     }
+}
+
+/// Construct and dry run a PTB to calculate the rewards for a list of staked SUI objects.
+pub async fn calculate_rewards(
+    client: TransactionExecutionServiceClient<BoxedChannel>,
+    staked_sui_ids: &[Address],
+) -> Result<Vec<(Address, u64)>> {
+    let mut ptb = ProgrammableTransaction::default()
+        .with_inputs(vec![Input::default().with_object_id("0x5")]);
+    let system_object = Argument::new_input(0);
+
+    for id in staked_sui_ids {
+        let staked_sui = Argument::new_input(ptb.inputs.len() as u16);
+
+        ptb.inputs.push(Input::default().with_object_id(id));
+
+        ptb.commands.push(
+            MoveCall::default()
+                .with_package("0x3")
+                .with_module("sui_system")
+                .with_function("calculate_rewards")
+                .with_arguments(vec![system_object, staked_sui])
+                .into(),
+        );
+    }
+
+    let transaction = Transaction::default().with_kind(ptb).with_sender("0x0");
+
+    let resp = client
+        .simulate_transaction(
+            SimulateTransactionRequest::new(transaction)
+                .with_read_mask(FieldMask::from_paths([
+                    "command_outputs.return_values.value",
+                    "transaction.effects.status",
+                ]))
+                .with_checks(TransactionChecks::Disabled),
+        )
+        .await?
+        .into_inner();
+
+    if !resp.transaction().effects().status().success() {
+        return Err(tonic::Status::from_error(
+            "transaction execution failed".into(),
+        ));
+    }
+
+    if staked_sui_ids.len() != resp.command_outputs.len() {
+        return Err(tonic::Status::from_error(
+            "missing transaction command_outputs".into(),
+        ));
+    }
+
+    let mut rewards = Vec::with_capacity(staked_sui_ids.len());
+
+    for (id, output) in staked_sui_ids.iter().zip(resp.command_outputs) {
+        let bcs_rewards = output
+            .return_values
+            .first()
+            .and_then(|o| o.value_opt())
+            .ok_or_else(|| tonic::Status::from_error("missing bcs".into()))?;
+
+        let reward = if bcs_rewards.name() == "u64" && bcs_rewards.value().len() == size_of::<u64>()
+        {
+            u64::from_le_bytes(bcs_rewards.value().try_into().unwrap())
+        } else {
+            return Err(tonic::Status::from_error("missing rewards".into()));
+        };
+        rewards.push((*id, reward));
+    }
+
+    Ok(rewards)
+}
+
+/// Construct and dry run a PTB to get the corresponding validator addresses for a list of staking
+/// pool ids.
+pub async fn get_validator_address_by_pool_id(
+    client: TransactionExecutionServiceClient<BoxedChannel>,
+    pool_ids: &[Address],
+) -> Result<Vec<(Address, Address)>> {
+    let mut ptb = ProgrammableTransaction::default()
+        .with_inputs(vec![Input::default().with_object_id("0x5")]);
+    let system_object = Argument::new_input(0);
+
+    for id in pool_ids {
+        let pool_id = Argument::new_input(ptb.inputs.len() as u16);
+
+        ptb.inputs
+            .push(Input::default().with_pure(id.into_inner().to_vec()));
+
+        ptb.commands.push(
+            MoveCall::default()
+                .with_package("0x3")
+                .with_module("sui_system")
+                .with_function("validator_address_by_pool_id")
+                .with_arguments(vec![system_object, pool_id])
+                .into(),
+        );
+    }
+
+    let transaction = Transaction::default().with_kind(ptb).with_sender("0x0");
+
+    let resp = client
+        .simulate_transaction(
+            SimulateTransactionRequest::new(transaction)
+                .with_read_mask(FieldMask::from_paths([
+                    "command_outputs.return_values.value",
+                    "transaction.effects.status",
+                ]))
+                .with_checks(TransactionChecks::Disabled),
+        )
+        .await?
+        .into_inner();
+
+    if !resp.transaction().effects().status().success() {
+        return Err(tonic::Status::from_error(
+            "transaction execution failed".into(),
+        ));
+    }
+
+    if pool_ids.len() != resp.command_outputs.len() {
+        return Err(tonic::Status::from_error(
+            "missing transaction command_outputs".into(),
+        ));
+    }
+
+    let mut addresses = Vec::with_capacity(pool_ids.len());
+
+    for (id, output) in pool_ids.iter().zip(resp.command_outputs) {
+        let validator_address = output
+            .return_values
+            .first()
+            .and_then(|o| o.value_opt())
+            .ok_or_else(|| tonic::Status::from_error("missing bcs".into()))?;
+
+        let address = if validator_address.name() == "address"
+            && validator_address.value().len() == Address::LENGTH
+        {
+            Address::from_bytes(validator_address.value())
+                .map_err(|e| tonic::Status::from_error(e.into()))?
+        } else {
+            return Err(tonic::Status::from_error("missing address".into()));
+        };
+        addresses.push((*id, address));
+    }
+
+    Ok(addresses)
 }
