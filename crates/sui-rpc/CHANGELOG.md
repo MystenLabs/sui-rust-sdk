@@ -1,3 +1,21 @@
+# [0.3.1] - 2026-04-13
+
+## Added
+- [#233] make `Client::calculate_rewards` and
+  `Client::get_validator_address_by_pool_id` public
+- [#235] allow constructing a `Client` from a configured tonic `Endpoint`
+- [#237] add support for user-provided request middleware via
+  `Client::request_layer`, which wraps all outbound RPC requests with an
+  arbitrary `tower::Layer`
+
+## Changed
+- [#236] update the default endpoint configuration
+
+[#233]: https://github.com/MystenLabs/sui-rust-sdk/pull/233
+[#235]: https://github.com/MystenLabs/sui-rust-sdk/pull/235
+[#236]: https://github.com/MystenLabs/sui-rust-sdk/pull/236
+[#237]: https://github.com/MystenLabs/sui-rust-sdk/pull/237
+
 # [0.3.0] - 2026-03-23
 
 ## Added
@@ -103,6 +121,7 @@
 
 Initial release
 
+[0.3.1]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.3.1
 [0.3.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.3.0
 [0.2.2]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.2.2
 [0.2.1]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.2.1

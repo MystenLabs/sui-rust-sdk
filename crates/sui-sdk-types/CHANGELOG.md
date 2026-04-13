@@ -1,3 +1,12 @@
+# [0.3.1] - 2026-04-13
+
+## Added
+- [#238] add `ObjectReference::coin_reservation` for constructing synthetic
+  coin reservation references that encode an address-balance reservation
+  for the server to transparently materialize as a coin input
+
+[#238]: https://github.com/MystenLabs/sui-rust-sdk/pull/238
+
 # [0.3.0] - 2026-03-23
 
 ## Added
@@ -204,6 +213,7 @@
 
 Initial release
 
+[0.3.1]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.3.1
 [0.3.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.3.0
 [0.2.2]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.2.2
 [0.2.1]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.2.1
