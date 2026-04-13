@@ -1,0 +1,35 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Creates a backward paginated stream from a fetch function."><title>paginate_backward in sui_graphql - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-77263533.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="sui_graphql" data-themes="" data-resource-suffix="" data-rustdoc-version="1.94.1 (e408947bf 2026-03-25)" data-channel="1.94.1" data-search-js="search-9e2438ea.js" data-stringdex-js="stringdex-b897f86f.js" data-settings-js="settings-c38705f0.js" ><script src="../static.files/storage-e2aeef58.js"></script><script defer src="sidebar-items.js"></script><script defer src="../static.files/main-7bab91a1.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-ffcac47a.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc fn"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">paginate_backward</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../sui_graphql/index.html">sui_<wbr>graphql</a><span class="version">0.3.0</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">paginate_<wbr>backward</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#requirements" title="Requirements">Requirements</a></li><li><a href="#page-size" title="Page Size">Page Size</a></li><li><a href="#example" title="Example">Example</a></li></ul></section><div id="rustdoc-modnav"><h2 class="in-crate"><a href="index.html">In crate sui_<wbr>graphql</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="index.html">sui_graphql</a></div><h1>Function <span class="fn">paginate_<wbr>backward</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/sui_graphql/pagination.rs.html#152-178">Source</a> </span></div><pre class="rust item-decl"><code>pub fn paginate_backward&lt;T, F, Fut&gt;(
+    fetch_page: F,
+) -&gt; impl Stream&lt;Item = <a class="enum" href="https://doc.rust-lang.org/1.94.1/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;T, <a class="enum" href="enum.Error.html" title="enum sui_graphql::Error">Error</a>&gt;&gt;<div class="where">where
+    T: 'static,
+    F: <a class="trait" href="https://doc.rust-lang.org/1.94.1/core/ops/function/trait.Fn.html" title="trait core::ops::function::Fn">Fn</a>(<a class="enum" href="https://doc.rust-lang.org/1.94.1/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.94.1/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;) -&gt; Fut + <a class="trait" href="https://doc.rust-lang.org/1.94.1/core/clone/trait.Clone.html" title="trait core::clone::Clone">Clone</a> + 'static,
+    Fut: <a class="trait" href="https://doc.rust-lang.org/1.94.1/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="enum" href="https://doc.rust-lang.org/1.94.1/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="struct" href="struct.Page.html" title="struct sui_graphql::Page">Page</a>&lt;T&gt;, <a class="enum" href="enum.Error.html" title="enum sui_graphql::Error">Error</a>&gt;&gt;,</div></code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Creates a backward paginated stream from a fetch function.</p>
+<p>Similar to <a href="fn.paginate.html" title="fn sui_graphql::paginate"><code>paginate</code></a>, but iterates backward through pages using
+<code>has_previous_page</code> and <code>start_cursor</code> instead of <code>has_next_page</code> and <code>end_cursor</code>.</p>
+<p>Note: Items within each page are yielded in the order returned by the server.
+The backward pagination only affects which pages are fetched, not item order within pages.</p>
+<h2 id="requirements"><a class="doc-anchor" href="#requirements">§</a>Requirements</h2>
+<p>The fetch function must return a <a href="struct.Page.html" title="struct sui_graphql::Page"><code>Page</code></a> with <code>has_previous_page</code> and <code>start_cursor</code>
+populated. The GraphQL query should:</p>
+<ol>
+<li>Use <code>last</code> and <code>before</code> parameters (instead of <code>first</code> and <code>after</code> for forward pagination)</li>
+<li>Query <code>hasPreviousPage</code> and <code>startCursor</code> in <code>pageInfo</code></li>
+</ol>
+<h2 id="page-size"><a class="doc-anchor" href="#page-size">§</a>Page Size</h2>
+<p>The <code>last</code> parameter specifies how many items to fetch per page. If <code>last</code> exceeds the
+server’s maximum page size, the request will fail. Query <code>serviceConfig</code> to discover
+the page size limits:</p>
+<div class="example-wrap"><pre class="language-graphql"><code>query {
+  serviceConfig {
+    defaultPageSize(type: &quot;Query&quot;, field: &quot;objects&quot;)
+    maxPageSize(type: &quot;Query&quot;, field: &quot;objects&quot;)
+  }
+}</code></pre></div><h2 id="example"><a class="doc-anchor" href="#example">§</a>Example</h2>
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="kw">let </span>stream = paginate_backward(<span class="kw">move </span>|cursor| {
+    <span class="kw">let </span>client = client.clone();
+    <span class="kw">async move </span>{
+        <span class="comment">// Query with `last` and `before` parameters
+        // and fetch `hasPreviousPage` and `startCursor` in pageInfo
+        </span>client.fetch_page_backward(cursor.as_deref()).<span class="kw">await
+    </span>}
+});</code></pre></div></div></details></section></div></main></body></html>
