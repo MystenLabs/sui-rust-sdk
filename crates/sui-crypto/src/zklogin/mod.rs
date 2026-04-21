@@ -28,8 +28,8 @@ impl ZkloginVerifier {
         }
     }
 
-    pub fn new_mainnet() -> Self {
-        Self::new(verify::VerifyingKey::new_mainnet())
+    pub fn new_prod() -> Self {
+        Self::new(verify::VerifyingKey::new_prod())
     }
 
     pub fn new_dev() -> Self {

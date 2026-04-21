@@ -86,7 +86,8 @@ fn bn254_to_fr(f: &Bn254FieldElement) -> Fr {
     Fr::from_be_bytes_mod_order(f.padded())
 }
 
-fn mainnet_verifying_key() -> VerifyingKey {
+/// Used for mainnet and testnet.
+fn prod_verifying_key() -> VerifyingKey {
     const CIRCOM_ALPHA_G1: CircomG1 = build_circom_g1([
         "21529901943976716921335152104180790524318946701278905588288070441048877064089",
         "7775817982019986089115946956794180159548389285968353014325286374017358010641",
@@ -159,7 +160,7 @@ fn mainnet_verifying_key() -> VerifyingKey {
     }
 }
 
-/// Load a fixed verifying key from zkLogin.vkey output. This is based on a local setup and should not use in production.
+/// Load a fixed verifying key from zkLogin.vkey output. This is based on a local setup, used for devnets and local envs.
 fn dev_verifying_key() -> VerifyingKey {
     const CIRCOM_ALPHA_G1: CircomG1 = build_circom_g1([
         "20491192805390485299153009773594534940189261866228447918068658471970481763042",
@@ -236,10 +237,15 @@ impl VerifyingKey {
         Self { inner }
     }
 
-    pub fn new_mainnet() -> Self {
-        mainnet_verifying_key()
+    /// Prod vk is used for both mainnet and testnet.
+    pub fn new_prod() -> Self {
+        prod_verifying_key()
     }
 
+    #[deprecated(note = "use new_prod instead for better naming")]
+    pub fn new_mainnet() -> Self {
+        prod_verifying_key()
+    }
     pub fn new_dev() -> Self {
         dev_verifying_key()
     }
