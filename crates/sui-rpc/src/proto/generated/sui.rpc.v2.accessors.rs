@@ -13317,7 +13317,10 @@ mod _accessor_impls {
     }
     impl super::SubscribeCheckpointsRequest {
         pub const fn const_default() -> Self {
-            Self { read_mask: None }
+            Self {
+                read_mask: None,
+                from_checkpoint: None,
+            }
         }
         #[doc(hidden)]
         pub fn default_instance() -> &'static Self {
@@ -13347,6 +13350,28 @@ mod _accessor_impls {
             field: T,
         ) -> Self {
             self.set_read_mask(field.into());
+            self
+        }
+        ///If `from_checkpoint` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn from_checkpoint_opt_mut(&mut self) -> Option<&mut u64> {
+            self.from_checkpoint.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `from_checkpoint`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn from_checkpoint_mut(&mut self) -> &mut u64 {
+            self.from_checkpoint.get_or_insert_default()
+        }
+        ///If `from_checkpoint` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn from_checkpoint_opt(&self) -> Option<u64> {
+            self.from_checkpoint.as_ref().map(|field| *field)
+        }
+        ///Sets `from_checkpoint` with the provided value.
+        pub fn set_from_checkpoint(&mut self, field: u64) {
+            self.from_checkpoint = Some(field);
+        }
+        ///Sets `from_checkpoint` with the provided value.
+        pub fn with_from_checkpoint(mut self, field: u64) -> Self {
+            self.set_from_checkpoint(field);
             self
         }
     }

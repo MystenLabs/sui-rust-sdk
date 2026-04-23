@@ -6329,6 +6329,20 @@ pub struct SubscribeCheckpointsRequest {
     /// SubscribeCheckpointsResponse should be returned.
     #[prost(message, optional, tag = "1")]
     pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
+    /// Optional. The checkpoint sequence number at which the stream should
+    /// begin (inclusive). If set, the server replays historical checkpoints
+    /// starting from this sequence number and then continues with live events.
+    /// If omitted, the stream begins with the latest executed checkpoint as
+    /// seen by the server.
+    ///
+    /// If the requested checkpoint is no longer available on the server (e.g.
+    /// it falls outside the server's retention window), the server responds
+    /// with a `NOT_FOUND` error.
+    ///
+    /// NOTE: This field is not yet supported. Setting it currently results in
+    /// an `UNIMPLEMENTED` error.
+    #[prost(uint64, optional, tag = "2")]
+    pub from_checkpoint: ::core::option::Option<u64>,
 }
 /// Response message for SubscriptionService.SubscribeCheckpoints
 #[non_exhaustive]
@@ -6436,11 +6450,12 @@ pub mod subscription_service_client {
         /// Subscribe to the stream of checkpoints.
         ///
         /// This API provides a subscription to the checkpoint stream for the Sui
-        /// blockchain. When a subscription is initialized the stream will begin with
-        /// the latest executed checkpoint as seen by the server. Responses are
-        /// guaranteed to return checkpoints in-order and without gaps. This enables
-        /// clients to know exactly the last checkpoint they have processed and in the
-        /// event the subscription terminates (either by the client/server or by the
+        /// blockchain. By default, the stream begins with the latest executed
+        /// checkpoint as seen by the server. Clients may optionally request
+        /// historical replay by setting `from_checkpoint`. Responses are guaranteed
+        /// to return checkpoints in-order and without gaps. This enables clients
+        /// to know exactly the last checkpoint they have processed and in the event
+        /// the subscription terminates (either by the client/server or by the
         /// connection breaking), clients will be able to reinitialize a subscription
         /// and then leverage other APIs in order to request data for the checkpoints
         /// they missed.
@@ -6493,11 +6508,12 @@ pub mod subscription_service_server {
         /// Subscribe to the stream of checkpoints.
         ///
         /// This API provides a subscription to the checkpoint stream for the Sui
-        /// blockchain. When a subscription is initialized the stream will begin with
-        /// the latest executed checkpoint as seen by the server. Responses are
-        /// guaranteed to return checkpoints in-order and without gaps. This enables
-        /// clients to know exactly the last checkpoint they have processed and in the
-        /// event the subscription terminates (either by the client/server or by the
+        /// blockchain. By default, the stream begins with the latest executed
+        /// checkpoint as seen by the server. Clients may optionally request
+        /// historical replay by setting `from_checkpoint`. Responses are guaranteed
+        /// to return checkpoints in-order and without gaps. This enables clients
+        /// to know exactly the last checkpoint they have processed and in the event
+        /// the subscription terminates (either by the client/server or by the
         /// connection breaking), clients will be able to reinitialize a subscription
         /// and then leverage other APIs in order to request data for the checkpoints
         /// they missed.

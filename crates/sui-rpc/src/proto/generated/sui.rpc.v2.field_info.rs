@@ -7881,9 +7881,18 @@ mod _field_impls {
             number: 1i32,
             message_fields: None,
         };
+        pub const FROM_CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "from_checkpoint",
+            json_name: "fromCheckpoint",
+            number: 2i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for SubscribeCheckpointsRequest {
-        const FIELDS: &'static [&'static MessageField] = &[Self::READ_MASK_FIELD];
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::READ_MASK_FIELD,
+            Self::FROM_CHECKPOINT_FIELD,
+        ];
     }
     impl SubscribeCheckpointsRequest {
         pub fn path_builder() -> SubscribeCheckpointsRequestFieldPathBuilder {
@@ -7907,6 +7916,10 @@ mod _field_impls {
         }
         pub fn read_mask(mut self) -> String {
             self.path.push(SubscribeCheckpointsRequest::READ_MASK_FIELD.name);
+            self.finish()
+        }
+        pub fn from_checkpoint(mut self) -> String {
+            self.path.push(SubscribeCheckpointsRequest::FROM_CHECKPOINT_FIELD.name);
             self.finish()
         }
     }

@@ -24573,11 +24573,20 @@ impl serde::Serialize for SubscribeCheckpointsRequest {
         if self.read_mask.is_some() {
             len += 1;
         }
+        if self.from_checkpoint.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer
             .serialize_struct("sui.rpc.v2.SubscribeCheckpointsRequest", len)?;
         if let Some(v) = self.read_mask.as_ref() {
             struct_ser
                 .serialize_field("readMask", &crate::_serde::FieldMaskSerializer(v))?;
+        }
+        if let Some(v) = self.from_checkpoint.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser
+                .serialize_field("fromCheckpoint", ToString::to_string(&v).as_str())?;
         }
         struct_ser.end()
     }
@@ -24588,10 +24597,16 @@ impl<'de> serde::Deserialize<'de> for SubscribeCheckpointsRequest {
     where
         D: serde::Deserializer<'de>,
     {
-        const FIELDS: &[&str] = &["read_mask", "readMask"];
+        const FIELDS: &[&str] = &[
+            "read_mask",
+            "readMask",
+            "from_checkpoint",
+            "fromCheckpoint",
+        ];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             ReadMask,
+            FromCheckpoint,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -24620,6 +24635,9 @@ impl<'de> serde::Deserialize<'de> for SubscribeCheckpointsRequest {
                     {
                         match value {
                             "readMask" | "read_mask" => Ok(GeneratedField::ReadMask),
+                            "fromCheckpoint" | "from_checkpoint" => {
+                                Ok(GeneratedField::FromCheckpoint)
+                            }
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -24646,6 +24664,7 @@ impl<'de> serde::Deserialize<'de> for SubscribeCheckpointsRequest {
                 V: serde::de::MapAccess<'de>,
             {
                 let mut read_mask__ = None;
+                let mut from_checkpoint__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::ReadMask => {
@@ -24658,6 +24677,18 @@ impl<'de> serde::Deserialize<'de> for SubscribeCheckpointsRequest {
                                 >()?
                                 .map(|x| x.0.into());
                         }
+                        GeneratedField::FromCheckpoint => {
+                            if from_checkpoint__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("fromCheckpoint"),
+                                );
+                            }
+                            from_checkpoint__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -24665,6 +24696,7 @@ impl<'de> serde::Deserialize<'de> for SubscribeCheckpointsRequest {
                 }
                 Ok(SubscribeCheckpointsRequest {
                     read_mask: read_mask__,
+                    from_checkpoint: from_checkpoint__,
                 })
             }
         }
