@@ -440,7 +440,6 @@ mod tests {
         prop_oneof![Just(TypeTag::U8), Just(TypeTag::U64), Just(TypeTag::Bool)]
     }
 
-    #[cfg_attr(target_arch = "wasm32", proptest(cases = 50))]
     #[proptest]
     fn type_tag_roundtrip(#[strategy(arb_type_tag())] type_tag: TypeTag) {
         let s = type_tag.to_string();
