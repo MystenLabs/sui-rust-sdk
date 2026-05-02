@@ -75,10 +75,31 @@ impl Client {
         self
     }
 
-    /// Merge the given headers into the client's outgoing-request header set,
-    /// overwriting any existing entries with the same name.
+    /// Merge the given headers into the client's outgoing-request header set.
+    ///
+    /// For every header name present in `headers`, all existing values for that
+    /// name on the client are replaced with the values from `headers`. Header
+    /// names not present in `headers` are left untouched. Within `headers`,
+    /// multiple values for the same name are preserved (appended in order).
+    ///
+    /// Note: this differs from [`HeaderMap`]'s own `Extend` impl, which appends
+    /// for every entry — that would let stale `Authorization` / `X-Api-Key`
+    /// values linger alongside the new ones.
     pub fn extend_headers(&mut self, headers: HeaderMap) -> &mut Self {
-        self.headers.extend(headers);
+        let mut current_key: Option<reqwest::header::HeaderName> = None;
+        for (key, value) in headers {
+            match key {
+                Some(k) => {
+                    self.headers.insert(k.clone(), value);
+                    current_key = Some(k);
+                }
+                None => {
+                    if let Some(k) = &current_key {
+                        self.headers.append(k, value);
+                    }
+                }
+            }
+        }
         self
     }
 
@@ -277,6 +298,50 @@ mod tests {
 
         let mut client = Client::new(&server.uri()).unwrap();
         client.basic_auth("alice", Some("hunter2"));
+        let _: Response<Chain> = client
+            .query("query { chainIdentifier }", serde_json::json!({}))
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn extend_headers_overwrites_existing_keys() {
+        // Start with X-Api-Key=stale + X-Tenant=monsoon. Extend with
+        // X-Api-Key=fresh and X-Trace=abc — the result must be:
+        //   X-Api-Key: fresh        (stale value gone, not appended alongside)
+        //   X-Tenant:  monsoon      (untouched)
+        //   X-Trace:   abc          (new entry)
+        let server = MockServer::start().await;
+        let mut initial = HeaderMap::new();
+        initial.insert("X-Api-Key", HeaderValue::from_static("stale"));
+        initial.insert("X-Tenant", HeaderValue::from_static("monsoon"));
+
+        let mut overlay = HeaderMap::new();
+        overlay.insert("X-Api-Key", HeaderValue::from_static("fresh"));
+        overlay.insert("X-Trace", HeaderValue::from_static("abc"));
+
+        Mock::given(method("POST"))
+            .and(path("/"))
+            .and(header("x-api-key", "fresh"))
+            .and(header("x-tenant", "monsoon"))
+            .and(header("x-trace", "abc"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(ok_body()))
+            .expect(1)
+            .mount(&server)
+            .await;
+
+        let mut client = Client::new(&server.uri()).unwrap().with_headers(initial);
+        client.extend_headers(overlay);
+
+        // Sanity-check the in-memory map: X-Api-Key has exactly one value,
+        // not two. (wiremock's `header(...)` matcher only checks presence,
+        // so this guards against silent multi-value duplication.)
+        assert_eq!(client.headers.get_all("X-Api-Key").iter().count(), 1);
+        assert_eq!(
+            client.headers.get("X-Api-Key").unwrap(),
+            &HeaderValue::from_static("fresh")
+        );
+
         let _: Response<Chain> = client
             .query("query { chainIdentifier }", serde_json::json!({}))
             .await
