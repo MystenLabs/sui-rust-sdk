@@ -95,7 +95,9 @@ macro_rules! impl_base64_helper {
             fn from_str(s: &str) -> Result<Self, Self::Err> {
                 let mut buf = [0; $base::LENGTH];
                 let decoded = <base64ct::Base64 as base64ct::Encoding>::decode(s, &mut buf)?;
-                assert_eq!(decoded.len(), $base::LENGTH);
+                if decoded.len() != $base::LENGTH {
+                    return Err(base64ct::Error::InvalidLength);
+                }
                 Ok(Self(buf))
             }
         }
@@ -141,6 +143,21 @@ macro_rules! impl_base64_helper {
                 let s = $display(&array.0).to_string();
                 let a = s.parse::<$fromstr>().unwrap();
                 assert_eq!(array, a);
+            }
+
+            // Fuzz the `FromStr` impl to ensure it never panics on
+            // arbitrary input. The strategy is restricted to the base64
+            // alphabet so that decode often succeeds, which exercises the
+            // length-validation path rather than bailing out early on
+            // invalid characters.
+            #[proptest]
+            fn fromstr_does_not_panic(#[strategy("[A-Za-z0-9+/=]{0,128}")] s: String) {
+                let _ = s.parse::<$fromstr>();
+            }
+
+            #[test]
+            fn short_decode_errors() {
+                "AAAA".parse::<$fromstr>().unwrap_err();
             }
         }
     };
