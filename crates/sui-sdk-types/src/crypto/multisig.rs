@@ -286,8 +286,17 @@ impl MultisigAggregatedSignature {
 
 impl PartialEq for MultisigAggregatedSignature {
     fn eq(&self, other: &Self) -> bool {
-        // Skip comparing the legacy bitmap since we always convert to the new bitmap form
+        // Compare every field, including `legacy_bitmap`. Although the
+        // legacy bitmap is logically redundant with `bitmap` (they encode
+        // the same information in different formats), `to_bytes` prefers
+        // the legacy form whenever it is `Some`, so two signatures that
+        // differ only by `legacy_bitmap` will serialize to different byte
+        // strings. Excluding `legacy_bitmap` from `==` would let downstream
+        // consumers observe values where `a == b` but
+        // `bcs::to_bytes(a) != bcs::to_bytes(b)`, breaking standard
+        // Eq/Serialize expectations.
         self.bitmap == other.bitmap
+            && self.legacy_bitmap == other.legacy_bitmap
             && self.signatures == other.signatures
             && self.committee == other.committee
     }
@@ -855,5 +864,28 @@ mod serialization {
                 })
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[cfg(target_arch = "wasm32")]
+    use wasm_bindgen_test::wasm_bindgen_test as test;
+
+    // Regression test: `legacy_bitmap` used to be excluded from
+    // `PartialEq`, so two signatures whose `to_bytes` output differed
+    // (because the legacy form is preferred when present) could compare
+    // equal. Equality must now imply byte equality.
+    #[test]
+    fn partial_eq_includes_legacy_bitmap() {
+        let committee = MultisigCommittee::new(Vec::new(), 0);
+        let a = MultisigAggregatedSignature::new(committee.clone(), Vec::new(), 0);
+        let mut b = MultisigAggregatedSignature::new(committee, Vec::new(), 0);
+        assert_eq!(a, b);
+
+        b.with_legacy_bitmap(crate::Bitmap::new());
+        assert_ne!(a, b);
     }
 }
