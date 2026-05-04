@@ -285,13 +285,36 @@ impl<'de> serde::Deserialize<'de> for Bitmap {
             let b64: std::borrow::Cow<'de, str> = serde::Deserialize::deserialize(deserializer)?;
             let bytes = <base64ct::Base64 as base64ct::Encoding>::decode_vec(&b64)
                 .map_err(serde::de::Error::custom)?;
-            Self::deserialize_from(&bytes[..]).map_err(serde::de::Error::custom)
+            deserialize_canonical_bitmap(&bytes).map_err(serde::de::Error::custom)
         } else {
             let bytes: std::borrow::Cow<'de, [u8]> =
                 serde_with::Bytes::deserialize_as(deserializer)?;
-            Self::deserialize_from(&bytes[..]).map_err(serde::de::Error::custom)
+            deserialize_canonical_bitmap(&bytes).map_err(serde::de::Error::custom)
         }
     }
+}
+
+/// Deserialize a roaring bitmap from `bytes` and ensure the entire input
+/// was consumed. The library documents BCS canonical encoding ("one-to-one
+/// correspondence between in-memory values and valid byte representations")
+/// as a guarantee, so any trailing bytes after the canonical roaring
+/// payload must be rejected — otherwise an attacker can produce multiple
+/// distinct BCS encodings of the same logical bitmap (and, by extension,
+/// of any signature type that contains one).
+#[cfg(feature = "serde")]
+fn deserialize_canonical_bitmap(bytes: &[u8]) -> std::io::Result<Bitmap> {
+    let mut reader: &[u8] = bytes;
+    let bitmap = Bitmap::deserialize_from(&mut reader)?;
+    if !reader.is_empty() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            format!(
+                "trailing bytes after roaring bitmap encoding: {} byte(s) remaining",
+                reader.len(),
+            ),
+        ));
+    }
+    Ok(bitmap)
 }
 
 #[cfg(feature = "proptest")]
@@ -321,5 +344,34 @@ mod test {
 
         roaring::RoaringBitmap::deserialize_from(&bytes[..]).unwrap_err();
         Bitmap::deserialize_from(&bytes[..]).unwrap_err();
+    }
+
+    // Regression test: padding the BCS-encoded bitmap field with arbitrary
+    // bytes used to deserialize successfully and produce a logically
+    // equivalent `Bitmap`, breaking the documented BCS canonical-encoding
+    // guarantee. Any input that is not a fully-consumed canonical roaring
+    // payload must now be rejected.
+    #[test]
+    fn bcs_deserialize_rejects_trailing_bytes() {
+        let bitmap: Bitmap = (1..4).collect();
+        let mut canonical = Vec::new();
+        bitmap.serialize_into(&mut canonical).unwrap();
+
+        // The canonical encoding round-trips.
+        let canonical_bcs = bcs::to_bytes::<Vec<u8>>(&canonical).unwrap();
+        let decoded: Bitmap = bcs::from_bytes(&canonical_bcs).unwrap();
+        assert_eq!(decoded, bitmap);
+
+        // Padding the bytes field with junk and updating the length prefix
+        // produces a non-canonical encoding that decodes to the same logical
+        // value via roaring::deserialize_from but contains trailing bytes.
+        let mut padded = canonical.clone();
+        padded.extend_from_slice(&[0xff, 0xff, 0xff, 0xff]);
+        let padded_bcs = bcs::to_bytes::<Vec<u8>>(&padded).unwrap();
+        let err = bcs::from_bytes::<Bitmap>(&padded_bcs).unwrap_err();
+        assert!(
+            err.to_string().contains("trailing bytes"),
+            "unexpected error: {err}"
+        );
     }
 }
