@@ -271,6 +271,17 @@ mod signed_transaction {
                         } = seq.next_element()?.ok_or_else(|| {
                             serde::de::Error::custom("expected a sequence with length 1")
                         })?;
+
+                        // Reject deserializers that don't expose `size_hint`
+                        // but provide more elements than expected — without
+                        // this probe, trailing elements would be silently
+                        // dropped.
+                        if seq.next_element::<serde::de::IgnoredAny>()?.is_some() {
+                            return Err(serde::de::Error::custom(
+                                "expected a sequence with length 1",
+                            ));
+                        }
+
                         Ok(SignedTransaction {
                             transaction,
                             signatures,
