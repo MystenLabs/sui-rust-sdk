@@ -194,13 +194,7 @@ impl Bitmap {
     #[cfg(feature = "serde")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
     pub fn deserialize_from<R: std::io::Read>(reader: R) -> std::io::Result<Self> {
-        let rb = roaring::RoaringBitmap::deserialize_from(reader)?;
-
-        // Need to explicilty build by iterating the read bitmap to enforce uniquness since the
-        // deserialization path doesn't guarantee it.
-        let mut bitmap = Self::new();
-        bitmap.extend(rb);
-        Ok(bitmap)
+        roaring::RoaringBitmap::deserialize_from(reader).map(Self)
     }
 
     /// Serialize this bitmap into [the standard Roaring on-disk format][format].
