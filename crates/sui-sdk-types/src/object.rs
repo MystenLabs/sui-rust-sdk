@@ -626,9 +626,6 @@ mod serialization {
         /// (i.e., `0x2::dynamic_field::Field<0x2::accumulator::Key<0x2::balance::Balance<T>>, 0x2::accumulator::U128>`
         /// where T != 0x2::sui::SUI)
         BalanceAccumulatorField(TypeTag),
-        // NOTE: if adding a new type here, and there are existing on-chain objects of that
-        // type with Other(_), that is ok, but you must hand-roll PartialEq/Eq/Ord/maybe Hash
-        // to make sure the new type and Other(_) are interpreted consistently.
     }
 
     /// See `MoveStructType`
@@ -649,9 +646,6 @@ mod serialization {
         /// (i.e., `0x2::dynamic_field::Field<0x2::accumulator::Key<0x2::balance::Balance<T>>, 0x2::accumulator::U128>`
         /// where T != 0x2::sui::SUI)
         BalanceAccumulatorField(&'a TypeTag),
-        // NOTE: if adding a new type here, and there are existing on-chain objects of that
-        // type with Other(_), that is ok, but you must hand-roll PartialEq/Eq/Ord/maybe Hash
-        // to make sure the new type and Other(_) are interpreted consistently.
     }
 
     impl MoveStructType {
@@ -667,6 +661,20 @@ mod serialization {
                 MoveStructType::BalanceAccumulatorField(type_tag) => {
                     StructTag::balance_accumulator_field(type_tag)
                 }
+            }
+        }
+
+        /// Wire-format variant index. Used to compare a parsed
+        /// `MoveStructType` against the canonical encoding produced by
+        /// `MoveStructTypeRef::from_struct_tag`.
+        fn variant_index(&self) -> u8 {
+            match self {
+                Self::Other(_) => 0,
+                Self::GasCoin => 1,
+                Self::StakedSui => 2,
+                Self::Coin(_) => 3,
+                Self::SuiBalanceAccumulatorField => 4,
+                Self::BalanceAccumulatorField(_) => 5,
             }
         }
     }
@@ -704,6 +712,17 @@ mod serialization {
                 Self::Other(s)
             }
         }
+
+        fn variant_index(&self) -> u8 {
+            match self {
+                Self::Other(_) => 0,
+                Self::GasCoin => 1,
+                Self::StakedSui => 2,
+                Self::Coin(_) => 3,
+                Self::SuiBalanceAccumulatorField => 4,
+                Self::BalanceAccumulatorField(_) => 5,
+            }
+        }
     }
 
     pub(super) struct BinaryMoveStructType;
@@ -723,8 +742,24 @@ mod serialization {
         where
             D: Deserializer<'de>,
         {
-            let struct_type = MoveStructType::deserialize(deserializer)?;
-            Ok(struct_type.into_struct_tag())
+            // Enforce that the wire form matches the canonical encoding for
+            // the resulting `StructTag`. Without this, the same logical
+            // value could be reached from multiple BCS byte strings (e.g.
+            // `Other(0x2::coin::Coin<0x2::sui::SUI>)` vs `GasCoin`), but
+            // re-serializing via `MoveStructTypeRef::from_struct_tag` would
+            // always emit the specialized form, breaking byte-faithful
+            // round-trips and any downstream digest computed over them.
+            let parsed = MoveStructType::deserialize(deserializer)?;
+            let parsed_idx = parsed.variant_index();
+            let tag = parsed.into_struct_tag();
+            let canonical_idx = MoveStructTypeRef::from_struct_tag(&tag).variant_index();
+            if parsed_idx != canonical_idx {
+                return Err(serde::de::Error::custom(format!(
+                    "non-canonical MoveStructType encoding: variant {parsed_idx} \
+                     would be re-encoded as variant {canonical_idx}",
+                )));
+            }
+            Ok(tag)
         }
     }
 
@@ -989,6 +1024,101 @@ mod serialization {
                 json_err.to_string().contains("MoveStruct contents"),
                 "unexpected JSON error: {json_err}"
             );
+        }
+
+        // Regression test: a non-canonical `MoveStructType` wire form (e.g.
+        // `Other(GasCoin's StructTag)`) used to deserialize successfully and
+        // then re-serialize as the specialized variant, producing different
+        // BCS bytes from the same logical value. Each non-canonical encoding
+        // must now be rejected at deserialization.
+        #[test]
+        fn non_canonical_move_struct_type_is_rejected() {
+            use crate::StructTag;
+            use crate::TypeTag;
+
+            // Build a complete `Object` BCS payload around a
+            // caller-supplied `type_` byte sequence. Everything else
+            // (contents, owner, digest, rebate) is canonical and valid so
+            // the only possible failure is the `type_` canonicalization
+            // check.
+            fn object_bytes_with_type(type_bytes: &[u8]) -> Vec<u8> {
+                let mut bytes = Vec::new();
+                bytes.push(0x00); // ObjectData::Struct
+                bytes.extend_from_slice(type_bytes);
+                bytes.push(0x00); // has_public_transfer
+                bytes.extend_from_slice(&[0u8; 8]); // version
+                bytes.push(0x20); // contents uleb128 length = 32
+                bytes.extend_from_slice(&[0u8; 32]); // contents (valid id)
+                bytes.push(0x03); // Owner::Immutable
+                bytes.push(0x20); // digest length prefix
+                bytes.extend_from_slice(&[0u8; 32]); // digest
+                bytes.extend_from_slice(&[0u8; 8]); // storage_rebate
+                bytes
+            }
+
+            // BCS encodes enum tags as uleb128, which is a single byte for
+            // values 0-127. Variant indices used here:
+            //   0 = Other(StructTag)
+            //   3 = Coin(TypeTag)
+            //   5 = BalanceAccumulatorField(TypeTag)
+            let cases: Vec<(&str, Vec<u8>)> = vec![
+                (
+                    "Other(GasCoin tag)",
+                    [&[0u8][..], &bcs::to_bytes(&StructTag::gas_coin()).unwrap()].concat(),
+                ),
+                (
+                    "Other(StakedSui tag)",
+                    [
+                        &[0u8][..],
+                        &bcs::to_bytes(&StructTag::staked_sui()).unwrap(),
+                    ]
+                    .concat(),
+                ),
+                (
+                    "Other(Coin<non-SUI> tag)",
+                    [
+                        &[0u8][..],
+                        &bcs::to_bytes(&StructTag::coin(TypeTag::U64)).unwrap(),
+                    ]
+                    .concat(),
+                ),
+                (
+                    "Other(SuiBalanceAccumulatorField tag)",
+                    [
+                        &[0u8][..],
+                        &bcs::to_bytes(&StructTag::balance_accumulator_field(
+                            StructTag::sui().into(),
+                        ))
+                        .unwrap(),
+                    ]
+                    .concat(),
+                ),
+                (
+                    "Coin(SUI's TypeTag)",
+                    [
+                        &[3u8][..],
+                        &bcs::to_bytes(&TypeTag::from(StructTag::sui())).unwrap(),
+                    ]
+                    .concat(),
+                ),
+                (
+                    "BalanceAccumulatorField(SUI's TypeTag)",
+                    [
+                        &[5u8][..],
+                        &bcs::to_bytes(&TypeTag::from(StructTag::sui())).unwrap(),
+                    ]
+                    .concat(),
+                ),
+            ];
+
+            for (label, type_bytes) in cases {
+                let bytes = object_bytes_with_type(&type_bytes);
+                let err = bcs::from_bytes::<Object>(&bytes).unwrap_err();
+                assert!(
+                    err.to_string().contains("non-canonical MoveStructType"),
+                    "{label}: unexpected error: {err}"
+                );
+            }
         }
     }
 }
