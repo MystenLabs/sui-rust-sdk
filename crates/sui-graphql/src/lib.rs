@@ -55,15 +55,17 @@
 //!
 //! For queries beyond the built-in methods, use [`Client::query`] with a
 //! response type that implements [`serde::de::DeserializeOwned`]. The
-//! [`sui-graphql-macros`] crate provides `#[derive(Response)]` which generates
-//! the deserialization code from declarative field paths, with compile-time
-//! validation against the Sui GraphQL schema.
+//! [`sui-graphql-macros`] crate provides `graphql_query!` to validate the
+//! query string and `#[derive(Response)]` to generate the response
+//! deserialization code, both checked against the Sui GraphQL schema at
+//! compile time.
 //!
 //! [`sui-graphql-macros`]: https://docs.rs/sui-graphql-macros
 //!
 //! ```no_run
 //! use sui_graphql::Client;
 //! use sui_graphql_macros::Response;
+//! use sui_graphql_macros::graphql_query;
 //!
 //! // Define a response type with field paths into the GraphQL response JSON.
 //! // Paths are validated against the schema at compile time — typos like
@@ -85,18 +87,19 @@
 //! async fn main() -> Result<(), sui_graphql::Error> {
 //!     let client = Client::new(Client::MAINNET)?;
 //!
-//!     let query = r#"
-//!         query($epoch_id: UInt53) {
-//!             epoch(id: $epoch_id) {
+//!     // `graphql_query!` validates the query against the schema at compile time.
+//!     const QUERY: &str = graphql_query!(
+//!         "query($epochId: UInt53) {
+//!             epoch(epochId: $epochId) {
 //!                 epochId
 //!                 checkpoints { nodes { digest } }
 //!                 referenceGasPrice
 //!             }
-//!         }
-//!     "#;
-//!     let variables = serde_json::json!({ "epoch_id": 100 });
+//!         }"
+//!     );
+//!     let variables = serde_json::json!({ "epochId": 100 });
 //!
-//!     let response = client.query::<MyResponse>(query, variables).await?;
+//!     let response = client.query::<MyResponse>(QUERY, variables).await?;
 //!
 //!     // GraphQL supports partial success — data and errors can coexist
 //!     for err in response.errors() {
@@ -148,3 +151,4 @@ pub use pagination::PageInfo;
 pub use pagination::paginate;
 pub use pagination::paginate_backward;
 pub use response::Response;
+pub use sui_graphql_macros::graphql_query;

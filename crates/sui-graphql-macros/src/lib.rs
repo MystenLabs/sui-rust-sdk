@@ -1,12 +1,15 @@
-//! Compile-time validated derive macro for deserializing Sui GraphQL responses.
+//! Compile-time validated macros for the Sui GraphQL API.
 //!
-//! GraphQL responses are deeply nested JSON. Rather than manually writing
-//! `serde_json::Value` traversal code (with `.get()`, `.as_array()`, null checks, etc.),
-//! the [`Response`] derive macro generates all of that from a declarative field path.
-//! Paths are validated against the Sui GraphQL schema at compile time, so typos and
-//! type mismatches are caught before your code ever runs.
+//! Two macros, both validated against the embedded Sui GraphQL schema:
 //!
-//! For a complete client that uses this macro, see
+//! - [`Response`] — derive macro for response types. Generates JSON
+//!   deserialization from declarative field paths, catching unknown fields
+//!   and type mismatches before your code runs.
+//! - [`graphql_query!`] — function-style macro for query/mutation strings.
+//!   Validates the source against the schema, so unknown fields, undefined
+//!   variables, and bad arguments fail to compile.
+//!
+//! For a complete client that uses both, see
 //! [`sui-graphql`](https://docs.rs/sui-graphql).
 //!
 //! # Quick Start
@@ -140,6 +143,7 @@
 extern crate proc_macro;
 
 mod path;
+mod query;
 mod schema;
 mod validation;
 
@@ -244,6 +248,18 @@ pub fn derive_query_response(input: TokenStream) -> TokenStream {
         Ok(tokens) => tokens.into(),
         Err(err) => err.to_compile_error().into(),
     }
+}
+
+/// Validate a GraphQL query or mutation against the embedded Sui schema at
+/// compile time and return it as a `&'static str`.
+///
+/// On a syntactically or semantically invalid input (unknown field, wrong
+/// argument type, undefined variable, etc.) the macro emits one
+/// `compile_error!` per apollo-compiler diagnostic, so the offending call
+/// site fails to build with the diagnostic text inline.
+#[proc_macro]
+pub fn graphql_query(input: TokenStream) -> TokenStream {
+    query::expand(input)
 }
 
 fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::Error> {

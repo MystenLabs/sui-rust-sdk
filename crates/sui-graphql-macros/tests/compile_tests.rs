@@ -53,4 +53,14 @@ fn compile_tests() {
     t.compile_fail("tests/compile/enum_default_member_not_found.rs");
     t.compile_fail("tests/compile/enum_default_member_suggestion.rs");
     t.compile_fail("tests/compile/enum_missing_root_type.rs");
+
+    // graphql_query! macro tests
+    t.pass("tests/compile/graphql_query_simple.rs");
+    t.pass("tests/compile/graphql_query_with_variables.rs");
+    t.pass("tests/compile/graphql_query_mutation.rs");
+    t.compile_fail("tests/compile/graphql_query_unknown_field.rs");
+    t.compile_fail("tests/compile/graphql_query_undefined_variable.rs");
+    t.compile_fail("tests/compile/graphql_query_variable_typo.rs");
+    t.compile_fail("tests/compile/graphql_query_invalid_syntax.rs");
+    t.compile_fail("tests/compile/graphql_query_multiple_errors.rs");
 }

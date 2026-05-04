@@ -1,0 +1,7 @@
+error: GraphQL [line 1, col 9]: type `Query` does not have a field `chainIdentifierr`
+ --> tests/compile/graphql_query_unknown_field.rs:5:17
+  |
+5 | const Q: &str = graphql_query!("query { chainIdentifierr }");
+  |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: this error originates in the macro `graphql_query` (in Nightly builds, run with -Z macro-backtrace for more info)

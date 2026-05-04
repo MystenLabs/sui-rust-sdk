@@ -3,6 +3,7 @@
 use base64ct::Base64;
 use base64ct::Encoding;
 use sui_graphql_macros::Response;
+use sui_graphql_macros::graphql_query;
 use sui_rpc::proto::sui::rpc::v2::BalanceChange;
 use sui_sdk_types::Transaction;
 use sui_sdk_types::TransactionEffects;
@@ -53,16 +54,16 @@ impl Client {
             balance_changes: Option<Vec<BalanceChange>>,
         }
 
-        const MUTATION: &str = r#"
-            mutation($txDataBcs: Base64!, $signatures: [Base64!]!) {
+        const MUTATION: &str = graphql_query!(
+            "mutation($txDataBcs: Base64!, $signatures: [Base64!]!) {
                 executeTransaction(transactionDataBcs: $txDataBcs, signatures: $signatures) {
                     effects {
                         effectsBcs
                         balanceChangesJson
                     }
                 }
-            }
-        "#;
+            }"
+        );
 
         let tx_bytes =
             bcs::to_bytes(transaction).map_err(|e| Error::Serialization(e.to_string()))?;

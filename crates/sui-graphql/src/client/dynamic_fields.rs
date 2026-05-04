@@ -3,6 +3,7 @@
 use futures::Stream;
 use serde::Serialize;
 use sui_graphql_macros::Response;
+use sui_graphql_macros::graphql_query;
 use sui_sdk_types::Address;
 use sui_sdk_types::TypeTag;
 
@@ -190,8 +191,8 @@ impl Client {
             page_info: Option<PageInfo>,
         }
 
-        const QUERY: &str = r#"
-            fragment MoveValueFields on MoveValue {
+        const QUERY: &str = graphql_query!(
+            "fragment MoveValueFields on MoveValue {
                 type { repr }
                 json @include(if: $withJson)
                 bcs @include(if: $withBcs)
@@ -216,8 +217,8 @@ impl Client {
                         }
                     }
                 }
-            }
-        "#;
+            }"
+        );
 
         let with_json = formats.contains(&Format::Json);
         let with_bcs = formats.is_empty() || formats.contains(&Format::Bcs);
@@ -265,8 +266,8 @@ impl Client {
             field: Option<DynamicField>,
         }
 
-        const DYNAMIC_FIELD_QUERY: &str = r#"
-            fragment MoveValueFields on MoveValue {
+        const DYNAMIC_FIELD_QUERY: &str = graphql_query!(
+            "fragment MoveValueFields on MoveValue {
                 type { repr }
                 json @include(if: $withJson)
                 bcs @include(if: $withBcs)
@@ -283,11 +284,11 @@ impl Client {
                         }
                     }
                 }
-            }
-        "#;
+            }"
+        );
 
-        const DYNAMIC_OBJECT_FIELD_QUERY: &str = r#"
-            fragment MoveValueFields on MoveValue {
+        const DYNAMIC_OBJECT_FIELD_QUERY: &str = graphql_query!(
+            "fragment MoveValueFields on MoveValue {
                 type { repr }
                 json @include(if: $withJson)
                 bcs @include(if: $withBcs)
@@ -304,8 +305,8 @@ impl Client {
                         }
                     }
                 }
-            }
-        "#;
+            }"
+        );
 
         let with_json = formats.contains(&Format::Json);
         let with_bcs = formats.is_empty() || formats.contains(&Format::Bcs);

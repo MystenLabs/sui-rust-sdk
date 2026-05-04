@@ -1,6 +1,7 @@
 //! Checkpoint-related convenience methods.
 
 use sui_graphql_macros::Response;
+use sui_graphql_macros::graphql_query;
 use sui_sdk_types::CheckpointContents;
 use sui_sdk_types::CheckpointSummary;
 
@@ -40,14 +41,14 @@ impl Client {
             content_bcs: Option<Bcs<CheckpointContents>>,
         }
 
-        const QUERY: &str = r#"
-            query($sequenceNumber: UInt53) {
+        const QUERY: &str = graphql_query!(
+            "query($sequenceNumber: UInt53) {
                 checkpoint(sequenceNumber: $sequenceNumber) {
                     summaryBcs
                     contentBcs
                 }
-            }
-        "#;
+            }"
+        );
         let variables = serde_json::json!({ "sequenceNumber": sequence_number });
 
         let response = self.query::<Response>(QUERY, variables).await?;

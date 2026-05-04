@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::sync::LazyLock;
 
 /// The embedded Sui GraphQL schema.
-const SCHEMA_SDL: &str = include_str!("../schema/sui.graphql");
+pub(crate) const SCHEMA_SDL: &str = include_str!("../schema/sui.graphql");
 
 /// Parsed and indexed schema, cached for reuse across macro invocations.
 static SCHEMA: LazyLock<Result<Schema, String>> =

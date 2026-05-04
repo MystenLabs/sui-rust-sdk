@@ -2,6 +2,7 @@
 
 use futures::Stream;
 use sui_graphql_macros::Response;
+use sui_graphql_macros::graphql_query;
 use sui_sdk_types::Address;
 use sui_sdk_types::StructTag;
 
@@ -65,8 +66,8 @@ impl Client {
             total_balance: Option<BigInt>,
         }
 
-        const QUERY: &str = r#"
-            query($owner: SuiAddress!, $coinType: String!) {
+        const QUERY: &str = graphql_query!(
+            "query($owner: SuiAddress!, $coinType: String!) {
                 address(address: $owner) {
                     balance(coinType: $coinType) {
                         coinType {
@@ -75,8 +76,8 @@ impl Client {
                         totalBalance
                     }
                 }
-            }
-        "#;
+            }"
+        );
 
         let variables = serde_json::json!({
             "owner": owner,
@@ -145,8 +146,8 @@ impl Client {
             total_balances: Option<Vec<Option<BigInt>>>,
         }
 
-        const QUERY: &str = r#"
-            query($owner: SuiAddress!, $after: String) {
+        const QUERY: &str = graphql_query!(
+            "query($owner: SuiAddress!, $after: String) {
                 address(address: $owner) {
                     balances(after: $after) {
                         pageInfo {
@@ -161,8 +162,8 @@ impl Client {
                         }
                     }
                 }
-            }
-        "#;
+            }"
+        );
 
         let variables = serde_json::json!({
             "owner": owner,

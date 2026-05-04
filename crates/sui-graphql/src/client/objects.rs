@@ -2,6 +2,7 @@
 
 use futures::Stream;
 use sui_graphql_macros::Response;
+use sui_graphql_macros::graphql_query;
 use sui_sdk_types::Address;
 use sui_sdk_types::Object;
 
@@ -45,13 +46,13 @@ impl Client {
             object: Option<Bcs<Object>>,
         }
 
-        const QUERY: &str = r#"
-            query($id: SuiAddress!) {
+        const QUERY: &str = graphql_query!(
+            "query($id: SuiAddress!) {
                 object(address: $id) {
                     objectBcs
                 }
-            }
-        "#;
+            }"
+        );
 
         let variables = serde_json::json!({ "id": object_id });
 
@@ -72,13 +73,13 @@ impl Client {
             object: Option<Bcs<Object>>,
         }
 
-        const QUERY: &str = r#"
-            query($id: SuiAddress!, $version: UInt53) {
+        const QUERY: &str = graphql_query!(
+            "query($id: SuiAddress!, $version: UInt53) {
                 object(address: $id, version: $version) {
                     objectBcs
                 }
-            }
-        "#;
+            }"
+        );
 
         let variables = serde_json::json!({
             "id": object_id,
@@ -104,13 +105,13 @@ impl Client {
             object: Option<Bcs<Object>>,
         }
 
-        const QUERY: &str = r#"
-            query($id: SuiAddress!, $atCheckpoint: UInt53) {
+        const QUERY: &str = graphql_query!(
+            "query($id: SuiAddress!, $atCheckpoint: UInt53) {
                 object(address: $id, atCheckpoint: $atCheckpoint) {
                     objectBcs
                 }
-            }
-        "#;
+            }"
+        );
 
         let variables = serde_json::json!({
             "id": object_id,
@@ -138,13 +139,13 @@ impl Client {
             object: Option<Bcs<Object>>,
         }
 
-        const QUERY: &str = r#"
-            query($id: SuiAddress!, $rootVersion: UInt53) {
+        const QUERY: &str = graphql_query!(
+            "query($id: SuiAddress!, $rootVersion: UInt53) {
                 object(address: $id, rootVersion: $rootVersion) {
                     objectBcs
                 }
-            }
-        "#;
+            }"
+        );
 
         let variables = serde_json::json!({
             "id": object_id,
@@ -202,8 +203,8 @@ impl Client {
             objects: Option<Vec<Bcs<Object>>>,
         }
 
-        const QUERY: &str = r#"
-            query($owner: SuiAddress!, $after: String) {
+        const QUERY: &str = graphql_query!(
+            "query($owner: SuiAddress!, $after: String) {
                 objects(filter: { owner: $owner }, after: $after) {
                     pageInfo {
                         hasNextPage
@@ -213,8 +214,8 @@ impl Client {
                         objectBcs
                     }
                 }
-            }
-        "#;
+            }"
+        );
 
         let variables = serde_json::json!({
             "owner": owner,
