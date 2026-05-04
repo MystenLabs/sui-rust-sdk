@@ -342,11 +342,7 @@ pub struct UpgradeInfo {
 /// object-contents = uleb128 (address *OCTET) ; length followed by contents
 /// ```
 #[derive(Eq, PartialEq, Debug, Clone, Hash)]
-//TODO hand-roll a Deserialize impl to enforce that an objectid is present
-#[cfg_attr(
-    feature = "serde",
-    derive(serde_derive::Serialize, serde_derive::Deserialize)
-)]
+#[cfg_attr(feature = "serde", derive(serde_derive::Serialize))]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
 pub struct MoveStruct {
     /// The type of this object
@@ -732,6 +728,49 @@ mod serialization {
         }
     }
 
+    /// Mirror of `MoveStruct`'s fields used solely as a deserialization
+    /// target. Lets us validate `contents` after the wire decode but before
+    /// the value reaches the public type, where `object_id()` would otherwise
+    /// panic on truncated input.
+    #[derive(serde_derive::Deserialize)]
+    struct RawMoveStruct {
+        #[serde(with = "::serde_with::As::<BinaryMoveStructType>")]
+        type_: StructTag,
+        has_public_transfer: bool,
+        version: Version,
+        #[serde(with = "crate::_serde::ReadableBase64Encoded")]
+        contents: Vec<u8>,
+    }
+
+    impl<'de> Deserialize<'de> for MoveStruct {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let RawMoveStruct {
+                type_,
+                has_public_transfer,
+                version,
+                contents,
+            } = RawMoveStruct::deserialize(deserializer)?;
+
+            if contents.len() < Address::LENGTH {
+                return Err(serde::de::Error::custom(format!(
+                    "MoveStruct contents must be at least {} bytes (object id), got {}",
+                    Address::LENGTH,
+                    contents.len(),
+                )));
+            }
+
+            Ok(MoveStruct {
+                type_,
+                has_public_transfer,
+                version,
+                contents,
+            })
+        }
+    }
+
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
     enum BinaryGenesisObject {
         RawObject { data: ObjectData, owner: Owner },
@@ -899,6 +938,57 @@ mod serialization {
 
             let sui = Object::from_bcs_base64(sui_address_balance_type).unwrap();
             assert_eq!(sui.to_bcs_base64().unwrap(), sui_address_balance_type);
+        }
+
+        // Regression test: deserializing a `MoveStruct` whose `contents` is
+        // shorter than the 32-byte object id used to make `object_id()`
+        // panic via `id_opt(...).unwrap()`. Both BCS and JSON paths must
+        // reject the truncated input rather than produce a value that will
+        // panic on the next `object_id()` call.
+        #[test]
+        fn truncated_move_struct_contents_is_rejected() {
+            // BCS layout: ObjectData::Struct(0x00) | GasCoin tag (0x01) |
+            // has_public_transfer (0x00) | version u64 (8 bytes) |
+            // contents uleb128 length (10) | contents (10 bytes) |
+            // Owner::Immutable (0x03) | digest (1+32 bytes) |
+            // storage_rebate u64 (8 bytes).
+            let mut bytes = Vec::new();
+            bytes.push(0x00);
+            bytes.push(0x01);
+            bytes.push(0x00);
+            bytes.extend_from_slice(&[0u8; 8]);
+            bytes.push(0x0a);
+            bytes.extend_from_slice(&[0u8; 10]);
+            bytes.push(0x03);
+            bytes.push(0x20);
+            bytes.extend_from_slice(&[0u8; 32]);
+            bytes.extend_from_slice(&[0u8; 8]);
+
+            let bcs_err = bcs::from_bytes::<Object>(&bytes).unwrap_err();
+            assert!(
+                bcs_err.to_string().contains("MoveStruct contents"),
+                "unexpected BCS error: {bcs_err}"
+            );
+
+            let json = serde_json::json!({
+                "data": {
+                    "Struct": {
+                        "type_": "GasCoin",
+                        "has_public_transfer": false,
+                        "version": 0,
+                        "contents": "AAAAAAAAAAAAAA=="
+                    }
+                },
+                "owner": "immutable",
+                "previous_transaction":
+                    "11111111111111111111111111111111",
+                "storage_rebate": 0,
+            });
+            let json_err = serde_json::from_value::<Object>(json).unwrap_err();
+            assert!(
+                json_err.to_string().contains("MoveStruct contents"),
+                "unexpected JSON error: {json_err}"
+            );
         }
     }
 }
