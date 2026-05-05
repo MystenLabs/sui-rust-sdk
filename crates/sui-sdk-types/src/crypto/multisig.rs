@@ -610,6 +610,35 @@ mod serialization {
                             "bitmap does not match legacy_bitmap",
                         ));
                     }
+                    // The legacy BCS form encodes each member public key
+                    // via `Base64MultisigMemberPublicKey`, which only
+                    // supports Ed25519/Secp256k1/Secp256r1. A
+                    // `legacy_bitmap` attached to a committee with a
+                    // ZkLogin or Passkey member therefore cannot be
+                    // re-serialized: `to_bytes()` would route through
+                    // the legacy branch, hit the explicit `Err` for
+                    // those variants, and panic via the inner
+                    // `.expect("serialization cannot fail")`. Reject the
+                    // combination at deserialization so an untrusted
+                    // JSON payload cannot crash a worker thread on its
+                    // first `to_bytes()`.
+                    for member in &readable.committee.members {
+                        match member.public_key {
+                            MultisigMemberPublicKey::ZkLogin(_) => {
+                                return Err(serde::de::Error::custom(
+                                    "zklogin member is not representable in legacy multisig",
+                                ));
+                            }
+                            MultisigMemberPublicKey::Passkey(_) => {
+                                return Err(serde::de::Error::custom(
+                                    "passkey member is not representable in legacy multisig",
+                                ));
+                            }
+                            MultisigMemberPublicKey::Ed25519(_)
+                            | MultisigMemberPublicKey::Secp256k1(_)
+                            | MultisigMemberPublicKey::Secp256r1(_) => {}
+                        }
+                    }
                 }
                 Ok(Self {
                     signatures: readable.signatures,
@@ -964,5 +993,48 @@ mod test {
         );
         serde_json::from_str::<MultisigAggregatedSignature>(&consistent)
             .expect("consistent dual bitmap must be accepted");
+    }
+
+    // Regression test: `to_bytes()` used to panic via
+    // `.expect("serialization cannot fail")` when `legacy_bitmap` was
+    // present alongside a ZkLogin or Passkey committee member, because
+    // the legacy member encoding (`Base64MultisigMemberPublicKey`)
+    // explicitly returns `Err` for those variants. The JSON
+    // deserializer must reject the combination so an attacker cannot
+    // craft a payload that crashes a consumer on its first `to_bytes()`.
+    #[cfg(feature = "serde")]
+    #[test]
+    fn json_legacy_bitmap_with_zklogin_member_is_rejected() {
+        let legacy_b64 = {
+            use base64ct::Encoding;
+            let mut buf = Vec::new();
+            crate::Bitmap::new().serialize_into(&mut buf).unwrap();
+            base64ct::Base64::encode_string(&buf)
+        };
+
+        let payload = format!(
+            r#"{{
+                "signatures":[],
+                "bitmap":0,
+                "legacy_bitmap":"{legacy_b64}",
+                "committee":{{
+                    "members":[{{
+                        "public_key":{{
+                            "scheme":"zklogin",
+                            "iss":"https://accounts.google.com",
+                            "address_seed":"7"
+                        }},
+                        "weight":1
+                    }}],
+                    "threshold":1
+                }}
+            }}"#
+        );
+        let err = serde_json::from_str::<MultisigAggregatedSignature>(&payload)
+            .expect_err("zklogin member with legacy bitmap must be rejected");
+        assert!(
+            err.to_string().contains("zklogin"),
+            "unexpected error: {err}"
+        );
     }
 }
