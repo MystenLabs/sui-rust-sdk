@@ -715,6 +715,9 @@ mod test {
         use super::*;
         use sui_sdk_types::SignatureScheme;
 
+        #[cfg(target_arch = "wasm32")]
+        use wasm_bindgen_test::wasm_bindgen_test as test;
+
         // Upstream test vector: `Ed25519KeyPair::generate(&mut StdRng::from_seed([0; 32]))`
         // encoded with `SuiKeyPair::encode()` produces this string. The leading
         // flag byte is 0x00 (Ed25519); the remaining 32 bytes are the private
