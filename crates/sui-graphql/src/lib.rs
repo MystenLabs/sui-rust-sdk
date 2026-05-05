@@ -124,6 +124,12 @@ mod pagination;
 mod response;
 pub mod scalars;
 
+/// Re-export of [`reqwest::header`] so callers using
+/// [`Client::with_headers`](crate::Client::with_headers) /
+/// [`Client::extend_headers`](crate::Client::extend_headers) don't need to add
+/// `reqwest` as a direct dependency.
+pub use reqwest::header;
+
 pub use bcs::Bcs;
 pub use bcs::BcsBytes;
 pub use client::Client;
