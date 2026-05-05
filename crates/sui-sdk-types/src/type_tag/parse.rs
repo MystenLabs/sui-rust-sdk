@@ -1,3 +1,5 @@
+use std::cell::Cell;
+
 use super::Address;
 use super::Identifier;
 use super::StructTag;
@@ -20,8 +22,20 @@ use winnow::token::take_while;
 static MAX_IDENTIFIER_LENGTH: usize = 128;
 
 /// Maximum nesting depth for type tags. Each `vector<...>` or struct generic
-/// type parameter counts as one level.
-static MAX_TYPE_TAG_DEPTH: usize = 128;
+/// type parameter counts as one level. The bound is inclusive of depth 0:
+/// a type tag at depth 0 (the outermost) is one of `MAX_TYPE_TAG_DEPTH`
+/// allowed levels, so `depth >= MAX_TYPE_TAG_DEPTH` is rejected. Shared
+/// with the BCS deserialization path in `super::serialization` so both
+/// formats reject the same set of pathological inputs.
+pub(super) static MAX_TYPE_TAG_DEPTH: usize = 128;
+
+/// Maximum number of `TypeTag` nodes in a single parsed/deserialized type.
+/// Each instance of `TypeTag` (primitive, vector, or struct) counts as one
+/// node. Catches "wide" types — e.g. a struct with hundreds of generic
+/// parameters at low depth — that the depth bound alone misses. Shared
+/// with the BCS deserialization path so both formats reject the same
+/// set of pathological inputs.
+pub(super) static MAX_TYPE_NODE_COUNT: u64 = 256;
 
 pub(super) fn parse_identifier(mut input: &str) -> ModalResult<&str> {
     (identifier, eof).take().parse_next(&mut input)
@@ -56,7 +70,8 @@ fn parse_address<'s>(input: &mut &'s str) -> ModalResult<&'s str> {
 }
 
 pub(super) fn parse_type_tag(mut input: &str) -> Result<TypeTag, Option<String>> {
-    let tag = type_tag(&mut input, 0).map_err(extract_message)?;
+    let nodes = Cell::new(0u64);
+    let tag = type_tag(&mut input, 0, &nodes).map_err(extract_message)?;
     eof.parse_next(&mut input).map_err(extract_message)?;
     Ok(tag)
 }
@@ -77,8 +92,28 @@ fn extract_message(err: winnow::error::ErrMode<winnow::error::ContextError>) -> 
     })
 }
 
-fn type_tag(input: &mut &str, depth: usize) -> ModalResult<TypeTag> {
-    if depth > MAX_TYPE_TAG_DEPTH {
+/// Increment the node counter and reject if it exceeds `MAX_TYPE_NODE_COUNT`.
+/// Called once per `TypeTag` instance (every primitive, every `vector<...>`,
+/// and every `struct<...>`); each instance counts as one node.
+fn account_node(
+    nodes: &Cell<u64>,
+) -> Result<(), winnow::error::ErrMode<winnow::error::ContextError>> {
+    let next = nodes.get().saturating_add(1);
+    if next > MAX_TYPE_NODE_COUNT {
+        let mut err = winnow::error::ContextError::new();
+        err.push(winnow::error::StrContext::Label(
+            "type exceeds the maximum node count of 256",
+        ));
+        return Err(winnow::error::ErrMode::Cut(err));
+    }
+    nodes.set(next);
+    Ok(())
+}
+
+fn type_tag(input: &mut &str, depth: usize, nodes: &Cell<u64>) -> ModalResult<TypeTag> {
+    account_node(nodes)?;
+
+    if depth >= MAX_TYPE_TAG_DEPTH {
         let mut err = winnow::error::ContextError::new();
         err.push(winnow::error::StrContext::Label(
             "type exceeds the maximum nesting depth of 128",
@@ -98,22 +133,28 @@ fn type_tag(input: &mut &str, depth: usize) -> ModalResult<TypeTag> {
         "signer".value(TypeTag::Signer),
         |input: &mut &str| {
             "vector<".parse_next(input)?;
-            let ty = type_tag(input, depth + 1)?;
+            let ty = type_tag(input, depth + 1, nodes)?;
             ">".parse_next(input)?;
             Ok(TypeTag::Vector(Box::new(ty)))
         },
-        |input: &mut &str| struct_tag(input, depth).map(|s| TypeTag::Struct(Box::new(s))),
+        |input: &mut &str| struct_tag(input, depth, nodes).map(|s| TypeTag::Struct(Box::new(s))),
     ))
     .parse_next(input)
 }
 
 pub(super) fn parse_struct_tag(mut input: &str) -> Result<StructTag, Option<String>> {
-    let tag = struct_tag(&mut input, 0).map_err(extract_message)?;
+    let nodes = Cell::new(0u64);
+    // Count the outer StructTag itself as one node, matching the behaviour
+    // when the same shape is parsed as `TypeTag::Struct(_)` via
+    // `parse_type_tag`. Without this, the two entry points would have
+    // different node-count boundaries for the same logical type.
+    account_node(&nodes).map_err(extract_message)?;
+    let tag = struct_tag(&mut input, 0, &nodes).map_err(extract_message)?;
     eof.parse_next(&mut input).map_err(extract_message)?;
     Ok(tag)
 }
 
-fn struct_tag(input: &mut &str, depth: usize) -> ModalResult<StructTag> {
+fn struct_tag(input: &mut &str, depth: usize, nodes: &Cell<u64>) -> ModalResult<StructTag> {
     let (address, _, module, _, name) = (
         parse_address.try_map(|s| s.parse::<Address>()),
         "::",
@@ -126,7 +167,7 @@ fn struct_tag(input: &mut &str, depth: usize) -> ModalResult<StructTag> {
     // optional generic
     let generics = opt(|input: &mut &str| {
         "<".parse_next(input)?;
-        let result = generics_with_depth(input, depth)?;
+        let result = generics_with_depth(input, depth, nodes)?;
         ">".parse_next(input)?;
         Ok(result)
     })
@@ -141,12 +182,16 @@ fn struct_tag(input: &mut &str, depth: usize) -> ModalResult<StructTag> {
     })
 }
 
-fn generics_with_depth(input: &mut &str, depth: usize) -> ModalResult<Vec<TypeTag>> {
+fn generics_with_depth(
+    input: &mut &str,
+    depth: usize,
+    nodes: &Cell<u64>,
+) -> ModalResult<Vec<TypeTag>> {
     separated(
         1..,
         delimited(
             space0,
-            |input: &mut &str| type_tag(input, depth + 1),
+            |input: &mut &str| type_tag(input, depth + 1, nodes),
             space0,
         ),
         ",",
@@ -375,6 +420,73 @@ mod tests {
         assert!(
             TypeTag::from_str(&tag).is_ok(),
             "moderately nested type tag should parse successfully"
+        );
+    }
+
+    // Regression test for the node-count check, which catches "wide" types
+    // that the depth bound alone misses. Each `TypeTag` instance counts as
+    // one node, so `0x1::M::F<u8, ..., u8>` with `MAX_TYPE_NODE_COUNT`
+    // primitive type_params totals `MAX_TYPE_NODE_COUNT + 1` nodes (one
+    // for the outer struct's containing TypeTag) — one past the limit.
+    #[test]
+    fn type_tag_at_max_node_count_is_rejected() {
+        let mut tag = String::from("0x1::M::F<u8");
+        for _ in 1..MAX_TYPE_NODE_COUNT {
+            tag.push_str(",u8");
+        }
+        tag.push('>');
+        let err = TypeTag::from_str(&tag).unwrap_err();
+        assert!(
+            err.to_string().contains("node count"),
+            "expected node-count error, got: {err}"
+        );
+    }
+
+    #[test]
+    fn type_tag_at_exact_max_node_count_is_accepted() {
+        // `MAX_TYPE_NODE_COUNT - 1` u8 type_params + the outer struct
+        // wrapper = exactly `MAX_TYPE_NODE_COUNT` nodes.
+        let mut tag = String::from("0x1::M::F<u8");
+        for _ in 1..(MAX_TYPE_NODE_COUNT - 1) {
+            tag.push_str(",u8");
+        }
+        tag.push('>');
+        assert!(
+            TypeTag::from_str(&tag).is_ok(),
+            "type tag at exact max node count should be accepted"
+        );
+    }
+
+    // `parse_struct_tag` counts the outer StructTag as one node so its
+    // boundary matches `parse_type_tag` for the same shape: the same
+    // `Foo<u8 × N>` shape is rejected/accepted at the same `N` regardless
+    // of which entry point is used.
+    #[test]
+    fn struct_tag_at_max_node_count_is_rejected() {
+        let mut tag = String::from("0x1::M::F<u8");
+        for _ in 1..MAX_TYPE_NODE_COUNT {
+            tag.push_str(",u8");
+        }
+        tag.push('>');
+        let err = tag.parse::<StructTag>().unwrap_err();
+        assert!(
+            err.to_string().contains("node count"),
+            "expected node-count error, got: {err}"
+        );
+    }
+
+    #[test]
+    fn struct_tag_at_exact_max_node_count_is_accepted() {
+        // `MAX_TYPE_NODE_COUNT - 1` u8 type_params + the outer StructTag
+        // = exactly `MAX_TYPE_NODE_COUNT` nodes.
+        let mut tag = String::from("0x1::M::F<u8");
+        for _ in 1..(MAX_TYPE_NODE_COUNT - 1) {
+            tag.push_str(",u8");
+        }
+        tag.push('>');
+        assert!(
+            tag.parse::<StructTag>().is_ok(),
+            "struct tag at exact max node count should be accepted"
         );
     }
 
