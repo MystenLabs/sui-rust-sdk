@@ -220,6 +220,70 @@ mod keypair {
                 InnerKeypair::Secp256r1(private_key) => private_key.to_pem(),
             }
         }
+
+        #[cfg(feature = "bech32")]
+        #[cfg_attr(doc_cfg, doc(cfg(feature = "bech32")))]
+        /// Decode a Bech32 `suiprivkey` string produced by the Sui CLI.
+        ///
+        /// The leading flag byte selects the scheme. Only the simple schemes
+        /// (Ed25519, Secp256k1, Secp256r1) are accepted, matching the
+        /// upstream `sui-types` parser.
+        pub fn from_suiprivkey(s: &str) -> Result<Self, SignatureError> {
+            let (scheme, key) = crate::suipriv::decode(s)?;
+            let inner = match scheme {
+                #[cfg(feature = "ed25519")]
+                SignatureScheme::Ed25519 => {
+                    let bytes: [u8; crate::ed25519::Ed25519PrivateKey::LENGTH] =
+                        key.try_into().map_err(|_: Vec<u8>| {
+                            SignatureError::from_source(
+                                "suipriv key has invalid length for ed25519",
+                            )
+                        })?;
+                    InnerKeypair::Ed25519(crate::ed25519::Ed25519PrivateKey::new(bytes))
+                }
+                #[cfg(feature = "secp256k1")]
+                SignatureScheme::Secp256k1 => {
+                    let bytes: [u8; crate::secp256k1::Secp256k1PrivateKey::LENGTH] =
+                        key.try_into().map_err(|_: Vec<u8>| {
+                            SignatureError::from_source(
+                                "suipriv key has invalid length for secp256k1",
+                            )
+                        })?;
+                    InnerKeypair::Secp256k1(crate::secp256k1::Secp256k1PrivateKey::new(bytes)?)
+                }
+                #[cfg(feature = "secp256r1")]
+                SignatureScheme::Secp256r1 => {
+                    let bytes: [u8; crate::secp256r1::Secp256r1PrivateKey::LENGTH] =
+                        key.try_into().map_err(|_: Vec<u8>| {
+                            SignatureError::from_source(
+                                "suipriv key has invalid length for secp256r1",
+                            )
+                        })?;
+                    InnerKeypair::Secp256r1(crate::secp256r1::Secp256r1PrivateKey::new(bytes))
+                }
+                other => {
+                    return Err(SignatureError::from_source(format!(
+                        "unsupported scheme `{}` in suipriv encoding",
+                        other.name(),
+                    )));
+                }
+            };
+            Ok(Self { inner })
+        }
+
+        #[cfg(feature = "bech32")]
+        #[cfg_attr(doc_cfg, doc(cfg(feature = "bech32")))]
+        /// Encode this private key as a Bech32 `suiprivkey` string.
+        pub fn to_suiprivkey(&self) -> Result<String, SignatureError> {
+            match &self.inner {
+                #[cfg(feature = "ed25519")]
+                InnerKeypair::Ed25519(private_key) => private_key.to_suiprivkey(),
+                #[cfg(feature = "secp256k1")]
+                InnerKeypair::Secp256k1(private_key) => private_key.to_suiprivkey(),
+                #[cfg(feature = "secp256r1")]
+                InnerKeypair::Secp256r1(private_key) => private_key.to_suiprivkey(),
+            }
+        }
     }
 
     impl Signer<SimpleSignature> for SimpleKeypair {
@@ -637,5 +701,111 @@ mod test {
         assert_eq!(der, from_der.to_der().unwrap());
         let from_pem = SimpleVerifiyingKey::from_pem(&pem).unwrap();
         assert_eq!(pem, from_pem.to_pem().unwrap());
+    }
+
+    // Round-trip and rejection tests for the suiprivkey Bech32 format.
+    //
+    // These mirror the format produced by the Sui CLI and the upstream
+    // `sui-types` crate. `EXPECTED_ED25519_VECTOR` is taken directly from
+    // `crates/sui-types/src/unit_tests/crypto_tests.rs` in the main sui repo
+    // and is included as a regression vector against any future encoding
+    // drift.
+    #[cfg(feature = "bech32")]
+    mod bech32 {
+        use super::*;
+        use sui_sdk_types::SignatureScheme;
+
+        // Upstream test vector: `Ed25519KeyPair::generate(&mut StdRng::from_seed([0; 32]))`
+        // encoded with `SuiKeyPair::encode()` produces this string. The leading
+        // flag byte is 0x00 (Ed25519); the remaining 32 bytes are the private
+        // key.
+        const UPSTREAM_ED25519_SUIPRIVKEY: &str =
+            "suiprivkey1qzdlfxn2qa2lj5uprl8pyhexs02sg2wrhdy7qaq50cqgnffw4c2477kg9h3";
+
+        #[proptest]
+        fn ed25519_round_trip(signer: Ed25519PrivateKey) {
+            let encoded = signer.to_suiprivkey().unwrap();
+            let decoded = Ed25519PrivateKey::from_suiprivkey(&encoded).unwrap();
+            assert_eq!(decoded.public_key(), signer.public_key());
+
+            // SimpleKeypair dispatch agrees.
+            let keypair = SimpleKeypair::from_suiprivkey(&encoded).unwrap();
+            assert_eq!(keypair.scheme(), signer.scheme());
+            assert_eq!(encoded, keypair.to_suiprivkey().unwrap());
+        }
+
+        #[proptest]
+        fn secp256k1_round_trip(signer: Secp256k1PrivateKey) {
+            let encoded = signer.to_suiprivkey().unwrap();
+            let decoded = Secp256k1PrivateKey::from_suiprivkey(&encoded).unwrap();
+            assert_eq!(decoded.public_key(), signer.public_key());
+
+            let keypair = SimpleKeypair::from_suiprivkey(&encoded).unwrap();
+            assert_eq!(keypair.scheme(), signer.scheme());
+            assert_eq!(encoded, keypair.to_suiprivkey().unwrap());
+        }
+
+        #[proptest]
+        fn secp256r1_round_trip(signer: Secp256r1PrivateKey) {
+            let encoded = signer.to_suiprivkey().unwrap();
+            let decoded = Secp256r1PrivateKey::from_suiprivkey(&encoded).unwrap();
+            assert_eq!(decoded.public_key(), signer.public_key());
+
+            let keypair = SimpleKeypair::from_suiprivkey(&encoded).unwrap();
+            assert_eq!(keypair.scheme(), signer.scheme());
+            assert_eq!(encoded, keypair.to_suiprivkey().unwrap());
+        }
+
+        #[test]
+        fn upstream_ed25519_vector_round_trips() {
+            let keypair = SimpleKeypair::from_suiprivkey(UPSTREAM_ED25519_SUIPRIVKEY).unwrap();
+            assert_eq!(keypair.scheme(), SignatureScheme::Ed25519);
+            assert_eq!(
+                keypair.to_suiprivkey().unwrap(),
+                UPSTREAM_ED25519_SUIPRIVKEY
+            );
+
+            // Per-scheme decoder accepts it too.
+            Ed25519PrivateKey::from_suiprivkey(UPSTREAM_ED25519_SUIPRIVKEY).unwrap();
+            // Wrong-scheme per-scheme decoders reject it.
+            Secp256k1PrivateKey::from_suiprivkey(UPSTREAM_ED25519_SUIPRIVKEY).unwrap_err();
+            Secp256r1PrivateKey::from_suiprivkey(UPSTREAM_ED25519_SUIPRIVKEY).unwrap_err();
+        }
+
+        #[test]
+        fn rejects_wrong_hrp() {
+            // Same payload as the upstream Ed25519 vector but encoded with a
+            // different HRP — must fail.
+            let bytes = ::bech32::primitives::decode::CheckedHrpstring::new::<::bech32::Bech32>(
+                UPSTREAM_ED25519_SUIPRIVKEY,
+            )
+            .unwrap()
+            .byte_iter()
+            .collect::<Vec<_>>();
+            let wrong_hrp = ::bech32::Hrp::parse("notsui").unwrap();
+            let encoded = ::bech32::encode::<::bech32::Bech32>(wrong_hrp, &bytes).unwrap();
+
+            SimpleKeypair::from_suiprivkey(&encoded).unwrap_err();
+            Ed25519PrivateKey::from_suiprivkey(&encoded).unwrap_err();
+        }
+
+        #[test]
+        fn rejects_bech32m_checksum() {
+            // Re-encode the upstream Ed25519 payload using the Bech32m
+            // checksum variant. A correctly-implemented decoder must reject
+            // this, since the suipriv format uses BIP-173 Bech32 only.
+            let bytes = ::bech32::primitives::decode::CheckedHrpstring::new::<::bech32::Bech32>(
+                UPSTREAM_ED25519_SUIPRIVKEY,
+            )
+            .unwrap()
+            .byte_iter()
+            .collect::<Vec<_>>();
+            let hrp = ::bech32::Hrp::parse("suiprivkey").unwrap();
+            let bech32m = ::bech32::encode::<::bech32::Bech32m>(hrp, &bytes).unwrap();
+            assert_ne!(bech32m, UPSTREAM_ED25519_SUIPRIVKEY);
+
+            SimpleKeypair::from_suiprivkey(&bech32m).unwrap_err();
+            Ed25519PrivateKey::from_suiprivkey(&bech32m).unwrap_err();
+        }
     }
 }

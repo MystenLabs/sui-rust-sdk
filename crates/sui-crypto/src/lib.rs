@@ -49,6 +49,16 @@ pub mod zklogin;
 )]
 pub mod simple;
 
+#[cfg(all(
+    feature = "bech32",
+    any(
+        feature = "ed25519",
+        feature = "secp256r1",
+        feature = "secp256k1"
+    )
+))]
+mod suipriv;
+
 #[cfg(any(
     feature = "ed25519",
     feature = "secp256r1",

@@ -107,6 +107,34 @@ impl Ed25519PrivateKey {
     pub(crate) fn from_dalek(private_key: ed25519_dalek::SigningKey) -> Self {
         Self(private_key)
     }
+
+    #[cfg(feature = "bech32")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "bech32")))]
+    /// Decode a Bech32 `suiprivkey` string produced by the Sui CLI.
+    ///
+    /// Returns an error if the string does not have the `suiprivkey` HRP, has
+    /// an invalid Bech32 (BIP-173) checksum, has a flag byte that is not
+    /// Ed25519, or has the wrong number of key bytes.
+    pub fn from_suiprivkey(s: &str) -> Result<Self, SignatureError> {
+        let (scheme, key) = crate::suipriv::decode(s)?;
+        if scheme != SignatureScheme::Ed25519 {
+            return Err(SignatureError::from_source(format!(
+                "suipriv scheme flag is `{}`, expected `ed25519`",
+                scheme.name(),
+            )));
+        }
+        let bytes: [u8; Self::LENGTH] = key.try_into().map_err(|_: Vec<u8>| {
+            SignatureError::from_source("suipriv key has invalid length for ed25519")
+        })?;
+        Ok(Self::new(bytes))
+    }
+
+    #[cfg(feature = "bech32")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "bech32")))]
+    /// Encode this private key as a Bech32 `suiprivkey` string.
+    pub fn to_suiprivkey(&self) -> Result<String, SignatureError> {
+        crate::suipriv::encode(SignatureScheme::Ed25519, self.0.to_bytes().as_slice())
+    }
 }
 
 impl Signer<Ed25519Signature> for Ed25519PrivateKey {
