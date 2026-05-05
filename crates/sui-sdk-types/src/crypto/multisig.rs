@@ -592,6 +592,25 @@ mod serialization {
         {
             if deserializer.is_human_readable() {
                 let readable = ReadableMultisigAggregatedSignature::deserialize(deserializer)?;
+                // Mirror the BCS legacy branch's invariant: when
+                // `legacy_bitmap` is present, `bitmap` is derived from it
+                // (`from_serialized_bytes` always rebuilds it via
+                // `roaring_bitmap_to_u16`). Rejecting any other
+                // combination prevents a JSON payload from carrying two
+                // independent signer sets — one observed by `bitmap()`
+                // and another emitted by `to_bytes()` — which would let
+                // an attacker exhibit different attributable signers
+                // through different accessor paths on the same
+                // logical signature.
+                if let Some(legacy_bitmap) = &readable.legacy_bitmap {
+                    let derived =
+                        roaring_bitmap_to_u16(legacy_bitmap).map_err(serde::de::Error::custom)?;
+                    if derived != readable.bitmap {
+                        return Err(serde::de::Error::custom(
+                            "bitmap does not match legacy_bitmap",
+                        ));
+                    }
+                }
                 Ok(Self {
                     signatures: readable.signatures,
                     bitmap: readable.bitmap,
@@ -903,5 +922,47 @@ mod test {
 
         b.with_legacy_bitmap(crate::Bitmap::new());
         assert_ne!(a, b);
+    }
+
+    // Regression test: the JSON deserializer used to copy `bitmap` and
+    // `legacy_bitmap` straight onto the value without checking that
+    // they encoded the same signer set, letting a single payload carry
+    // one signer set observed by `bitmap()` and a different one emitted
+    // by `to_bytes()` (which prefers the legacy form when present). The
+    // BCS legacy branch always derives `bitmap` from `legacy_bitmap`, so
+    // the JSON path must reject inputs where those two fields disagree.
+    #[cfg(feature = "serde")]
+    #[test]
+    fn json_dual_bitmap_must_be_consistent() {
+        let mut roaring = crate::Bitmap::new();
+        roaring.insert(5);
+        let legacy_b64 = {
+            use base64ct::Encoding;
+            let mut buf = Vec::new();
+            roaring.serialize_into(&mut buf).unwrap();
+            base64ct::Base64::encode_string(&buf)
+        };
+
+        // `bitmap` claims signer 0, `legacy_bitmap` claims signer 5.
+        let inconsistent = format!(
+            r#"{{"signatures":[],"bitmap":1,"legacy_bitmap":"{legacy_b64}",
+                "committee":{{"members":[],"threshold":0}}}}"#
+        );
+        let err = serde_json::from_str::<MultisigAggregatedSignature>(&inconsistent)
+            .expect_err("inconsistent dual bitmap must be rejected");
+        assert!(
+            err.to_string().contains("legacy_bitmap"),
+            "unexpected error: {err}"
+        );
+
+        // The canonical form (bitmap derived from legacy_bitmap) is
+        // accepted.
+        let consistent = format!(
+            r#"{{"signatures":[],"bitmap":{},"legacy_bitmap":"{legacy_b64}",
+                "committee":{{"members":[],"threshold":0}}}}"#,
+            1u16 << 5,
+        );
+        serde_json::from_str::<MultisigAggregatedSignature>(&consistent)
+            .expect("consistent dual bitmap must be accepted");
     }
 }
