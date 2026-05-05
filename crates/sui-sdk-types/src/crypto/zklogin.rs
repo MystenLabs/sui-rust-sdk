@@ -269,7 +269,12 @@ impl ZkLoginClaim {
                 }
             }
 
-            let last_char_offset = (index_mod_4 + s.len() as u8 - 1) % 4;
+            // Compute the offset in `usize` so that an `s.len()` past
+            // `u8::MAX` cannot wrap to a small value (or underflow when
+            // combined with the `- 1`). The earlier match has already
+            // narrowed `*index_mod_4` to `0..=2`, and `s.len() >= 2`,
+            // so the unsigned subtraction never underflows here.
+            let last_char_offset = (*index_mod_4 as usize + s.len() - 1) % 4;
             match last_char_offset {
                 3 => {}
                 2 => {
@@ -682,6 +687,25 @@ mod test {
             err.to_string().contains("non-canonical"),
             "unexpected error: {err}"
         );
+    }
+
+    // Regression test: `decode_base64_url` used to compute
+    // `(index_mod_4 + s.len() as u8 - 1) % 4` in `u8`. With an
+    // attacker-supplied JWT claim value of length 256 the cast
+    // truncates `s.len()` to `0` and the subtraction underflows,
+    // panicking under `debug_assertions`. The arithmetic must now use
+    // `usize` so that the function returns a structured error rather
+    // than crashing the caller.
+    #[cfg(feature = "serde")]
+    #[test]
+    fn long_claim_value_does_not_panic_on_u8_overflow() {
+        use super::ZkLoginClaim;
+
+        let claim = ZkLoginClaim {
+            value: "A".repeat(256),
+            index_mod_4: 0,
+        };
+        assert!(claim.verify_extended_claim("iss").is_err());
     }
 }
 
