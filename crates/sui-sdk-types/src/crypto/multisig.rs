@@ -108,6 +108,22 @@ impl MultisigMember {
 /// Sui blockchain. The number of required signautres to authorize the execution of a transaction
 /// is determined by `(signature_0_weight + signature_1_weight ..) >= threshold`.
 ///
+/// # Validity
+///
+/// Deserialization (BCS, JSON, or `from_serialized_bytes` on a containing
+/// `MultisigAggregatedSignature`) does **not** enforce structural validity:
+/// the resulting committee may have zero members, zero threshold, threshold
+/// greater than the sum of weights, duplicate members, or more than the
+/// `MAX_COMMITTEE_SIZE` limit. Validity is checked downstream by the
+/// verifier in `sui-crypto` before any signature is verified.
+///
+/// Consumers who inspect a deserialized committee — counting members,
+/// summing weights, indexing by bitmap, etc. — without first running
+/// signature verification **must** call [`MultisigCommittee::is_valid`]
+/// and reject the committee if it returns `false`. Skipping this check
+/// can cause downstream code to operate on attacker-supplied,
+/// well-formed-looking but malformed committees.
+///
 /// # BCS
 ///
 /// The BCS serialized form for this type is defined by the following ABNF:
