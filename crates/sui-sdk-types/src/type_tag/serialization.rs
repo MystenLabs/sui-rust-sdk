@@ -373,7 +373,16 @@ impl<'de, 'a> Visitor<'de> for TypeTagVecVisitor<'a> {
     where
         A: serde::de::SeqAccess<'de>,
     {
-        let mut out = Vec::with_capacity(seq.size_hint().unwrap_or(0));
+        // Clamp the wire-supplied length hint by the remaining node budget
+        // so an attacker-supplied uleb128 sequence length cannot drive
+        // `Vec::with_capacity` past the node-count bound the deserializer
+        // is already prepared to enforce. Without this clamp, the bcs
+        // crate's `SeqAccess::size_hint` propagates the parsed uleb32
+        // length (up to ~2 billion) and `Vec::<TypeTag>::with_capacity`
+        // attempts a multi-GB allocation before any element is parsed.
+        let remaining = MAX_TYPE_NODE_COUNT.saturating_sub(self.nodes.get()) as usize;
+        let cap = seq.size_hint().unwrap_or(0).min(remaining);
+        let mut out = Vec::with_capacity(cap);
         while let Some(t) = seq.next_element_seed(TypeTagSeed {
             depth: self.depth,
             nodes: self.nodes,
@@ -644,5 +653,28 @@ mod test {
         let bytes = bcs::to_bytes(&st).unwrap();
         let parsed: StructTag = bcs::from_bytes(&bytes).unwrap();
         assert_eq!(parsed, st);
+    }
+
+    // Regression test: the visitor used to call
+    // `Vec::with_capacity(seq.size_hint().unwrap_or(0))` before any
+    // per-element bound was enforced, so an attacker-supplied uleb32
+    // type_params length of `0x7fffffff` could request a ~32 GB
+    // allocation from a 42-byte BCS payload. The visitor must now clamp
+    // the hint by the remaining node-count budget so this payload fails
+    // through normal short-input handling instead of aborting on
+    // allocation failure. If the regression returns, this test will
+    // OOM-abort the process before it can fail cleanly.
+    #[test]
+    fn bcs_struct_tag_huge_type_params_length_does_not_overallocate() {
+        // Variant tag 0x07 (Struct), 32-byte zero address, "a" as
+        // module, "b" as name, then a uleb128 of 0x7fffffff for the
+        // length of `type_params`.
+        let mut bytes = vec![SerializedTypeTagVariant::Struct as u8];
+        bytes.extend_from_slice(&[0u8; Address::LENGTH]);
+        bytes.extend_from_slice(&[0x01, b'a']);
+        bytes.extend_from_slice(&[0x01, b'b']);
+        bytes.extend_from_slice(&[0xff, 0xff, 0xff, 0xff, 0x07]);
+
+        assert!(bcs::from_bytes::<TypeTag>(&bytes).is_err());
     }
 }
