@@ -64,7 +64,8 @@ impl Client {
     ///
     /// ```no_run
     /// use sui_graphql::Client;
-    /// use sui_graphql::header::{HeaderMap, HeaderValue};
+    /// use sui_graphql::header::HeaderMap;
+    /// use sui_graphql::header::HeaderValue;
     ///
     /// let mut headers = HeaderMap::new();
     /// headers.insert("X-Api-Key", HeaderValue::from_static("my-key"));
@@ -116,8 +117,7 @@ impl Client {
         let mut header = reqwest::header::HeaderValue::from_str(&value)
             .expect("token is always a valid HeaderValue");
         header.set_sensitive(true);
-        self.headers
-            .insert(reqwest::header::AUTHORIZATION, header);
+        self.headers.insert(reqwest::header::AUTHORIZATION, header);
         self
     }
 
@@ -131,7 +131,8 @@ impl Client {
         U: std::fmt::Display,
         P: std::fmt::Display,
     {
-        use base64ct::{Base64, Encoding};
+        use base64ct::Base64;
+        use base64ct::Encoding;
         let pair = match password {
             Some(p) => format!("{username}:{p}"),
             None => format!("{username}:"),
@@ -140,8 +141,7 @@ impl Client {
         let mut header = reqwest::header::HeaderValue::from_str(&value)
             .expect("base64 is always a valid HeaderValue");
         header.set_sensitive(true);
-        self.headers
-            .insert(reqwest::header::AUTHORIZATION, header);
+        self.headers.insert(reqwest::header::AUTHORIZATION, header);
         self
     }
 
@@ -216,8 +216,12 @@ impl Client {
 mod tests {
     use super::*;
     use reqwest::header::HeaderValue;
-    use wiremock::matchers::{header, method, path};
-    use wiremock::{Mock, MockServer, ResponseTemplate};
+    use wiremock::Mock;
+    use wiremock::MockServer;
+    use wiremock::ResponseTemplate;
+    use wiremock::matchers::header;
+    use wiremock::matchers::method;
+    use wiremock::matchers::path;
 
     #[test]
     fn test_client_new() {
