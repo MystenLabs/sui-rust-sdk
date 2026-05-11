@@ -14,38 +14,45 @@ mod message_graph;
 
 fn main() {
     let root_dir = PathBuf::from(std::env!("CARGO_MANIFEST_DIR"));
-    let proto_dir = root_dir
+    let vendored_proto_dir = root_dir
         .join("../sui-rpc/vendored/proto")
         .canonicalize()
         .unwrap();
+    let local_proto_dir = root_dir.join("../sui-rpc/proto").canonicalize().unwrap();
     let out_dir = root_dir
         .join("../sui-rpc/src/proto/generated")
         .canonicalize()
         .unwrap();
 
     let proto_ext = std::ffi::OsStr::new("proto");
-    let proto_files = walkdir::WalkDir::new(&proto_dir)
-        .into_iter()
-        .filter_map(|entry| {
-            (|| {
-                let entry = entry?;
-                if entry.file_type().is_dir() {
-                    return Ok(None);
-                }
+    let mut proto_files = Vec::new();
+    for proto_dir in [&vendored_proto_dir, &local_proto_dir] {
+        proto_files.extend(
+            walkdir::WalkDir::new(proto_dir)
+                .into_iter()
+                .filter_map(|entry| {
+                    (|| {
+                        let entry = entry?;
+                        if entry.file_type().is_dir() {
+                            return Ok(None);
+                        }
 
-                let path = entry.into_path();
-                if path.extension() != Some(proto_ext) {
-                    return Ok(None);
-                }
+                        let path = entry.into_path();
+                        if path.extension() != Some(proto_ext) {
+                            return Ok(None);
+                        }
 
-                Ok(Some(path))
-            })()
-            .transpose()
-        })
-        .collect::<Result<Vec<_>, walkdir::Error>>()
-        .unwrap();
+                        Ok(Some(path))
+                    })()
+                    .transpose()
+                })
+                .collect::<Result<Vec<_>, walkdir::Error>>()
+                .unwrap(),
+        );
+    }
+    proto_files.sort();
 
-    let mut fds = protox::Compiler::new(std::slice::from_ref(&proto_dir))
+    let mut fds = protox::Compiler::new([vendored_proto_dir, local_proto_dir])
         .unwrap()
         .include_source_info(true)
         .include_imports(true)

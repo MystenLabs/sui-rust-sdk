@@ -1,0 +1,38 @@
+// Copyright (c) Mysten Labs, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package sui.rpc.v2alpha;
+
+// Ordering for the paginated result set.
+enum PaginationOrdering {
+  // Return results in increasing cursor order.
+  PAGINATION_ORDERING_ASCENDING = 0;
+
+  // Return results in decreasing cursor order.
+  PAGINATION_ORDERING_DESCENDING = 1;
+}
+
+// Token-bounded pagination.
+message Pagination {
+  // The maximum number of items to return. Each method applies its own default
+  // and maximum.
+  optional uint32 page_size = 1;
+
+  // A page token, received from a previous list call. Provide this to retrieve
+  // the next page. When paginating, checkpoint bounds, filters, and ordering
+  // must match the call that provided the page token.
+  optional bytes page_token = 2;
+
+  // Ordering for returned results. Defaults to ASCENDING.
+  PaginationOrdering ordering = 4;
+}
+
+// Terminal pagination metadata for a successful list stream.
+message PageInfo {
+  // A token, which can be sent as `page_token` to retrieve the next page. If
+  // this field is omitted, there are no more matching items in the bounded
+  // request.
+  optional bytes next_page_token = 1;
+}

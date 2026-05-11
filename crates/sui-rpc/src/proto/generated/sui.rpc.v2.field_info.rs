@@ -1,4 +1,4 @@
-mod _field_impls {
+pub(crate) mod _field_impls {
     #![allow(clippy::wrong_self_convention)]
     use super::*;
     use crate::field::MessageFields;
