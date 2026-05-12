@@ -708,11 +708,11 @@ pub(crate) mod _field_impls {
             number: 4i32,
             message_fields: Some(TransactionFilter::FIELDS),
         };
-        pub const PAGINATION_FIELD: &'static MessageField = &MessageField {
-            name: "pagination",
-            json_name: "pagination",
+        pub const OPTIONS_FIELD: &'static MessageField = &MessageField {
+            name: "options",
+            json_name: "options",
             number: 5i32,
-            message_fields: Some(Pagination::FIELDS),
+            message_fields: Some(QueryOptions::FIELDS),
         };
     }
     impl MessageFields for ListCheckpointsRequest {
@@ -721,7 +721,7 @@ pub(crate) mod _field_impls {
             Self::START_CHECKPOINT_FIELD,
             Self::END_CHECKPOINT_FIELD,
             Self::FILTER_FIELD,
-            Self::PAGINATION_FIELD,
+            Self::OPTIONS_FIELD,
         ];
     }
     impl ListCheckpointsRequest {
@@ -760,9 +760,9 @@ pub(crate) mod _field_impls {
             self.path.push(ListCheckpointsRequest::FILTER_FIELD.name);
             TransactionFilterFieldPathBuilder::new_with_base(self.path)
         }
-        pub fn pagination(mut self) -> PaginationFieldPathBuilder {
-            self.path.push(ListCheckpointsRequest::PAGINATION_FIELD.name);
-            PaginationFieldPathBuilder::new_with_base(self.path)
+        pub fn options(mut self) -> QueryOptionsFieldPathBuilder {
+            self.path.push(ListCheckpointsRequest::OPTIONS_FIELD.name);
+            QueryOptionsFieldPathBuilder::new_with_base(self.path)
         }
     }
     impl CheckpointItem {
@@ -888,11 +888,11 @@ pub(crate) mod _field_impls {
             number: 4i32,
             message_fields: Some(TransactionFilter::FIELDS),
         };
-        pub const PAGINATION_FIELD: &'static MessageField = &MessageField {
-            name: "pagination",
-            json_name: "pagination",
+        pub const OPTIONS_FIELD: &'static MessageField = &MessageField {
+            name: "options",
+            json_name: "options",
             number: 5i32,
-            message_fields: Some(Pagination::FIELDS),
+            message_fields: Some(QueryOptions::FIELDS),
         };
     }
     impl MessageFields for ListTransactionsRequest {
@@ -901,7 +901,7 @@ pub(crate) mod _field_impls {
             Self::START_CHECKPOINT_FIELD,
             Self::END_CHECKPOINT_FIELD,
             Self::FILTER_FIELD,
-            Self::PAGINATION_FIELD,
+            Self::OPTIONS_FIELD,
         ];
     }
     impl ListTransactionsRequest {
@@ -940,9 +940,9 @@ pub(crate) mod _field_impls {
             self.path.push(ListTransactionsRequest::FILTER_FIELD.name);
             TransactionFilterFieldPathBuilder::new_with_base(self.path)
         }
-        pub fn pagination(mut self) -> PaginationFieldPathBuilder {
-            self.path.push(ListTransactionsRequest::PAGINATION_FIELD.name);
-            PaginationFieldPathBuilder::new_with_base(self.path)
+        pub fn options(mut self) -> QueryOptionsFieldPathBuilder {
+            self.path.push(ListTransactionsRequest::OPTIONS_FIELD.name);
+            QueryOptionsFieldPathBuilder::new_with_base(self.path)
         }
     }
     impl TransactionItem {
@@ -1068,11 +1068,11 @@ pub(crate) mod _field_impls {
             number: 4i32,
             message_fields: Some(EventFilter::FIELDS),
         };
-        pub const PAGINATION_FIELD: &'static MessageField = &MessageField {
-            name: "pagination",
-            json_name: "pagination",
+        pub const OPTIONS_FIELD: &'static MessageField = &MessageField {
+            name: "options",
+            json_name: "options",
             number: 5i32,
-            message_fields: Some(Pagination::FIELDS),
+            message_fields: Some(QueryOptions::FIELDS),
         };
     }
     impl MessageFields for ListEventsRequest {
@@ -1081,7 +1081,7 @@ pub(crate) mod _field_impls {
             Self::START_CHECKPOINT_FIELD,
             Self::END_CHECKPOINT_FIELD,
             Self::FILTER_FIELD,
-            Self::PAGINATION_FIELD,
+            Self::OPTIONS_FIELD,
         ];
     }
     impl ListEventsRequest {
@@ -1120,9 +1120,9 @@ pub(crate) mod _field_impls {
             self.path.push(ListEventsRequest::FILTER_FIELD.name);
             EventFilterFieldPathBuilder::new_with_base(self.path)
         }
-        pub fn pagination(mut self) -> PaginationFieldPathBuilder {
-            self.path.push(ListEventsRequest::PAGINATION_FIELD.name);
-            PaginationFieldPathBuilder::new_with_base(self.path)
+        pub fn options(mut self) -> QueryOptionsFieldPathBuilder {
+            self.path.push(ListEventsRequest::OPTIONS_FIELD.name);
+            QueryOptionsFieldPathBuilder::new_with_base(self.path)
         }
     }
     impl EventItem {
@@ -1256,17 +1256,23 @@ pub(crate) mod _field_impls {
             EndOfResultsFieldPathBuilder::new_with_base(self.path)
         }
     }
-    impl Pagination {
-        pub const PAGE_SIZE_FIELD: &'static MessageField = &MessageField {
-            name: "page_size",
-            json_name: "pageSize",
+    impl QueryOptions {
+        pub const LIMIT_ITEMS_FIELD: &'static MessageField = &MessageField {
+            name: "limit_items",
+            json_name: "limitItems",
             number: 1i32,
             message_fields: None,
         };
-        pub const CURSOR_FIELD: &'static MessageField = &MessageField {
-            name: "cursor",
-            json_name: "cursor",
+        pub const AFTER_FIELD: &'static MessageField = &MessageField {
+            name: "after",
+            json_name: "after",
             number: 2i32,
+            message_fields: None,
+        };
+        pub const BEFORE_FIELD: &'static MessageField = &MessageField {
+            name: "before",
+            json_name: "before",
+            number: 3i32,
             message_fields: None,
         };
         pub const ORDERING_FIELD: &'static MessageField = &MessageField {
@@ -1276,22 +1282,23 @@ pub(crate) mod _field_impls {
             message_fields: None,
         };
     }
-    impl MessageFields for Pagination {
+    impl MessageFields for QueryOptions {
         const FIELDS: &'static [&'static MessageField] = &[
-            Self::PAGE_SIZE_FIELD,
-            Self::CURSOR_FIELD,
+            Self::LIMIT_ITEMS_FIELD,
+            Self::AFTER_FIELD,
+            Self::BEFORE_FIELD,
             Self::ORDERING_FIELD,
         ];
     }
-    impl Pagination {
-        pub fn path_builder() -> PaginationFieldPathBuilder {
-            PaginationFieldPathBuilder::new()
+    impl QueryOptions {
+        pub fn path_builder() -> QueryOptionsFieldPathBuilder {
+            QueryOptionsFieldPathBuilder::new()
         }
     }
-    pub struct PaginationFieldPathBuilder {
+    pub struct QueryOptionsFieldPathBuilder {
         path: Vec<&'static str>,
     }
-    impl PaginationFieldPathBuilder {
+    impl QueryOptionsFieldPathBuilder {
         #[allow(clippy::new_without_default)]
         pub fn new() -> Self {
             Self { path: Default::default() }
@@ -1303,22 +1310,33 @@ pub(crate) mod _field_impls {
         pub fn finish(self) -> String {
             self.path.join(".")
         }
-        pub fn page_size(mut self) -> String {
-            self.path.push(Pagination::PAGE_SIZE_FIELD.name);
+        pub fn limit_items(mut self) -> String {
+            self.path.push(QueryOptions::LIMIT_ITEMS_FIELD.name);
             self.finish()
         }
-        pub fn cursor(mut self) -> String {
-            self.path.push(Pagination::CURSOR_FIELD.name);
+        pub fn after(mut self) -> String {
+            self.path.push(QueryOptions::AFTER_FIELD.name);
+            self.finish()
+        }
+        pub fn before(mut self) -> String {
+            self.path.push(QueryOptions::BEFORE_FIELD.name);
             self.finish()
         }
         pub fn ordering(mut self) -> String {
-            self.path.push(Pagination::ORDERING_FIELD.name);
+            self.path.push(QueryOptions::ORDERING_FIELD.name);
             self.finish()
         }
     }
-    impl EndOfResults {}
+    impl EndOfResults {
+        pub const REASON_FIELD: &'static MessageField = &MessageField {
+            name: "reason",
+            json_name: "reason",
+            number: 1i32,
+            message_fields: None,
+        };
+    }
     impl MessageFields for EndOfResults {
-        const FIELDS: &'static [&'static MessageField] = &[];
+        const FIELDS: &'static [&'static MessageField] = &[Self::REASON_FIELD];
     }
     impl EndOfResults {
         pub fn path_builder() -> EndOfResultsFieldPathBuilder {
@@ -1339,6 +1357,10 @@ pub(crate) mod _field_impls {
         }
         pub fn finish(self) -> String {
             self.path.join(".")
+        }
+        pub fn reason(mut self) -> String {
+            self.path.push(EndOfResults::REASON_FIELD.name);
+            self.finish()
         }
     }
 }

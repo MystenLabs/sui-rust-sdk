@@ -161,7 +161,7 @@ mod _accessor_impls {
     }
     impl super::EndOfResults {
         pub const fn const_default() -> Self {
-            Self {}
+            Self { reason: 0 }
         }
         #[doc(hidden)]
         pub fn default_instance() -> &'static Self {
@@ -850,7 +850,7 @@ mod _accessor_impls {
                 start_checkpoint: None,
                 end_checkpoint: None,
                 filter: None,
-                pagination: None,
+                options: None,
             }
         }
         #[doc(hidden)]
@@ -959,33 +959,33 @@ mod _accessor_impls {
             self.set_filter(field.into());
             self
         }
-        ///Returns the value of `pagination`, or the default value if `pagination` is unset.
-        pub fn pagination(&self) -> &super::Pagination {
-            self.pagination
+        ///Returns the value of `options`, or the default value if `options` is unset.
+        pub fn options(&self) -> &super::QueryOptions {
+            self.options
                 .as_ref()
                 .map(|field| field as _)
-                .unwrap_or_else(|| super::Pagination::default_instance() as _)
+                .unwrap_or_else(|| super::QueryOptions::default_instance() as _)
         }
-        ///If `pagination` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn pagination_opt_mut(&mut self) -> Option<&mut super::Pagination> {
-            self.pagination.as_mut().map(|field| field as _)
+        ///If `options` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn options_opt_mut(&mut self) -> Option<&mut super::QueryOptions> {
+            self.options.as_mut().map(|field| field as _)
         }
-        ///Returns a mutable reference to `pagination`.
+        ///Returns a mutable reference to `options`.
         ///If the field is unset, it is first initialized with the default value.
-        pub fn pagination_mut(&mut self) -> &mut super::Pagination {
-            self.pagination.get_or_insert_default()
+        pub fn options_mut(&mut self) -> &mut super::QueryOptions {
+            self.options.get_or_insert_default()
         }
-        ///If `pagination` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn pagination_opt(&self) -> Option<&super::Pagination> {
-            self.pagination.as_ref().map(|field| field as _)
+        ///If `options` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn options_opt(&self) -> Option<&super::QueryOptions> {
+            self.options.as_ref().map(|field| field as _)
         }
-        ///Sets `pagination` with the provided value.
-        pub fn set_pagination<T: Into<super::Pagination>>(&mut self, field: T) {
-            self.pagination = Some(field.into().into());
+        ///Sets `options` with the provided value.
+        pub fn set_options<T: Into<super::QueryOptions>>(&mut self, field: T) {
+            self.options = Some(field.into().into());
         }
-        ///Sets `pagination` with the provided value.
-        pub fn with_pagination<T: Into<super::Pagination>>(mut self, field: T) -> Self {
-            self.set_pagination(field.into());
+        ///Sets `options` with the provided value.
+        pub fn with_options<T: Into<super::QueryOptions>>(mut self, field: T) -> Self {
+            self.set_options(field.into());
             self
         }
     }
@@ -1118,7 +1118,7 @@ mod _accessor_impls {
                 start_checkpoint: None,
                 end_checkpoint: None,
                 filter: None,
-                pagination: None,
+                options: None,
             }
         }
         #[doc(hidden)]
@@ -1224,33 +1224,33 @@ mod _accessor_impls {
             self.set_filter(field.into());
             self
         }
-        ///Returns the value of `pagination`, or the default value if `pagination` is unset.
-        pub fn pagination(&self) -> &super::Pagination {
-            self.pagination
+        ///Returns the value of `options`, or the default value if `options` is unset.
+        pub fn options(&self) -> &super::QueryOptions {
+            self.options
                 .as_ref()
                 .map(|field| field as _)
-                .unwrap_or_else(|| super::Pagination::default_instance() as _)
+                .unwrap_or_else(|| super::QueryOptions::default_instance() as _)
         }
-        ///If `pagination` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn pagination_opt_mut(&mut self) -> Option<&mut super::Pagination> {
-            self.pagination.as_mut().map(|field| field as _)
+        ///If `options` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn options_opt_mut(&mut self) -> Option<&mut super::QueryOptions> {
+            self.options.as_mut().map(|field| field as _)
         }
-        ///Returns a mutable reference to `pagination`.
+        ///Returns a mutable reference to `options`.
         ///If the field is unset, it is first initialized with the default value.
-        pub fn pagination_mut(&mut self) -> &mut super::Pagination {
-            self.pagination.get_or_insert_default()
+        pub fn options_mut(&mut self) -> &mut super::QueryOptions {
+            self.options.get_or_insert_default()
         }
-        ///If `pagination` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn pagination_opt(&self) -> Option<&super::Pagination> {
-            self.pagination.as_ref().map(|field| field as _)
+        ///If `options` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn options_opt(&self) -> Option<&super::QueryOptions> {
+            self.options.as_ref().map(|field| field as _)
         }
-        ///Sets `pagination` with the provided value.
-        pub fn set_pagination<T: Into<super::Pagination>>(&mut self, field: T) {
-            self.pagination = Some(field.into().into());
+        ///Sets `options` with the provided value.
+        pub fn set_options<T: Into<super::QueryOptions>>(&mut self, field: T) {
+            self.options = Some(field.into().into());
         }
-        ///Sets `pagination` with the provided value.
-        pub fn with_pagination<T: Into<super::Pagination>>(mut self, field: T) -> Self {
-            self.set_pagination(field.into());
+        ///Sets `options` with the provided value.
+        pub fn with_options<T: Into<super::QueryOptions>>(mut self, field: T) -> Self {
+            self.set_options(field.into());
             self
         }
     }
@@ -1383,7 +1383,7 @@ mod _accessor_impls {
                 start_checkpoint: None,
                 end_checkpoint: None,
                 filter: None,
-                pagination: None,
+                options: None,
             }
         }
         #[doc(hidden)]
@@ -1492,33 +1492,33 @@ mod _accessor_impls {
             self.set_filter(field.into());
             self
         }
-        ///Returns the value of `pagination`, or the default value if `pagination` is unset.
-        pub fn pagination(&self) -> &super::Pagination {
-            self.pagination
+        ///Returns the value of `options`, or the default value if `options` is unset.
+        pub fn options(&self) -> &super::QueryOptions {
+            self.options
                 .as_ref()
                 .map(|field| field as _)
-                .unwrap_or_else(|| super::Pagination::default_instance() as _)
+                .unwrap_or_else(|| super::QueryOptions::default_instance() as _)
         }
-        ///If `pagination` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn pagination_opt_mut(&mut self) -> Option<&mut super::Pagination> {
-            self.pagination.as_mut().map(|field| field as _)
+        ///If `options` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn options_opt_mut(&mut self) -> Option<&mut super::QueryOptions> {
+            self.options.as_mut().map(|field| field as _)
         }
-        ///Returns a mutable reference to `pagination`.
+        ///Returns a mutable reference to `options`.
         ///If the field is unset, it is first initialized with the default value.
-        pub fn pagination_mut(&mut self) -> &mut super::Pagination {
-            self.pagination.get_or_insert_default()
+        pub fn options_mut(&mut self) -> &mut super::QueryOptions {
+            self.options.get_or_insert_default()
         }
-        ///If `pagination` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn pagination_opt(&self) -> Option<&super::Pagination> {
-            self.pagination.as_ref().map(|field| field as _)
+        ///If `options` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn options_opt(&self) -> Option<&super::QueryOptions> {
+            self.options.as_ref().map(|field| field as _)
         }
-        ///Sets `pagination` with the provided value.
-        pub fn set_pagination<T: Into<super::Pagination>>(&mut self, field: T) {
-            self.pagination = Some(field.into().into());
+        ///Sets `options` with the provided value.
+        pub fn set_options<T: Into<super::QueryOptions>>(&mut self, field: T) {
+            self.options = Some(field.into().into());
         }
-        ///Sets `pagination` with the provided value.
-        pub fn with_pagination<T: Into<super::Pagination>>(mut self, field: T) -> Self {
-            self.set_pagination(field.into());
+        ///Sets `options` with the provided value.
+        pub fn with_options<T: Into<super::QueryOptions>>(mut self, field: T) -> Self {
+            self.set_options(field.into());
             self
         }
     }
@@ -1676,52 +1676,66 @@ mod _accessor_impls {
             self
         }
     }
-    impl super::Pagination {
+    impl super::QueryOptions {
         pub const fn const_default() -> Self {
             Self {
-                page_size: None,
-                cursor: None,
+                limit_items: None,
+                after: None,
+                before: None,
                 ordering: 0,
             }
         }
         #[doc(hidden)]
         pub fn default_instance() -> &'static Self {
-            static DEFAULT: super::Pagination = super::Pagination::const_default();
+            static DEFAULT: super::QueryOptions = super::QueryOptions::const_default();
             &DEFAULT
         }
-        ///If `page_size` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn page_size_opt_mut(&mut self) -> Option<&mut u32> {
-            self.page_size.as_mut().map(|field| field as _)
+        ///If `limit_items` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn limit_items_opt_mut(&mut self) -> Option<&mut u32> {
+            self.limit_items.as_mut().map(|field| field as _)
         }
-        ///Returns a mutable reference to `page_size`.
+        ///Returns a mutable reference to `limit_items`.
         ///If the field is unset, it is first initialized with the default value.
-        pub fn page_size_mut(&mut self) -> &mut u32 {
-            self.page_size.get_or_insert_default()
+        pub fn limit_items_mut(&mut self) -> &mut u32 {
+            self.limit_items.get_or_insert_default()
         }
-        ///If `page_size` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn page_size_opt(&self) -> Option<u32> {
-            self.page_size.as_ref().map(|field| *field)
+        ///If `limit_items` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn limit_items_opt(&self) -> Option<u32> {
+            self.limit_items.as_ref().map(|field| *field)
         }
-        ///Sets `page_size` with the provided value.
-        pub fn set_page_size(&mut self, field: u32) {
-            self.page_size = Some(field);
+        ///Sets `limit_items` with the provided value.
+        pub fn set_limit_items(&mut self, field: u32) {
+            self.limit_items = Some(field);
         }
-        ///Sets `page_size` with the provided value.
-        pub fn with_page_size(mut self, field: u32) -> Self {
-            self.set_page_size(field);
+        ///Sets `limit_items` with the provided value.
+        pub fn with_limit_items(mut self, field: u32) -> Self {
+            self.set_limit_items(field);
             self
         }
-        ///If `cursor` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn cursor_opt(&self) -> Option<&[u8]> {
-            self.cursor.as_ref().map(|field| field as _)
+        ///If `after` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn after_opt(&self) -> Option<&[u8]> {
+            self.after.as_ref().map(|field| field as _)
         }
-        ///Sets `cursor` with the provided value.
-        pub fn set_cursor<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
-            self.cursor = Some(field.into().into());
+        ///Sets `after` with the provided value.
+        pub fn set_after<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
+            self.after = Some(field.into().into());
         }
-        ///Sets `cursor` with the provided value.
-        pub fn with_cursor<T: Into<::prost::bytes::Bytes>>(mut self, field: T) -> Self {
-            self.set_cursor(field.into());
+        ///Sets `after` with the provided value.
+        pub fn with_after<T: Into<::prost::bytes::Bytes>>(mut self, field: T) -> Self {
+            self.set_after(field.into());
+            self
+        }
+        ///If `before` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn before_opt(&self) -> Option<&[u8]> {
+            self.before.as_ref().map(|field| field as _)
+        }
+        ///Sets `before` with the provided value.
+        pub fn set_before<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
+            self.before = Some(field.into().into());
+        }
+        ///Sets `before` with the provided value.
+        pub fn with_before<T: Into<::prost::bytes::Bytes>>(mut self, field: T) -> Self {
+            self.set_before(field.into());
             self
         }
     }

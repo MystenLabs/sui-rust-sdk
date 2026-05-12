@@ -247,20 +247,20 @@ pub struct ListCheckpointsRequest {
     /// all checkpoints in the range are returned.
     #[prost(message, optional, tag = "4")]
     pub filter: ::core::option::Option<TransactionFilter>,
-    /// Optional cursor-bounded pagination. If unspecified, reads in ascending order
-    /// with the default page size. The maximum page size is 100; values above
+    /// Optional cursor-bounded query options. If unspecified, reads in ascending order
+    /// with the default item limit. The maximum item limit is 100; values above
     /// 100 will be coerced to 100. To read additional results, pass the last
-    /// received item cursor until the stream returns `EndOfResults`.
+    /// received item cursor as `options.after` until the stream returns `EndOfResults`.
     #[prost(message, optional, tag = "5")]
-    pub pagination: ::core::option::Option<Pagination>,
+    pub options: ::core::option::Option<QueryOptions>,
 }
 /// One checkpoint item.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CheckpointItem {
-    /// Opaque cursor for this item. It may be sent as `pagination.cursor` with
-    /// the same request parameters to resume after this item in the current scan
-    /// direction.
+    /// Opaque cursor for this item. It may be sent as `options.after` or
+    /// `options.before` with compatible request parameters to resume or bound
+    /// a later query.
     #[prost(bytes = "bytes", optional, tag = "1")]
     pub cursor: ::core::option::Option<::prost::bytes::Bytes>,
     /// One matching checkpoint.
@@ -282,7 +282,8 @@ pub mod list_checkpoints_response {
         /// One matching checkpoint.
         #[prost(message, tag = "1")]
         Item(super::CheckpointItem),
-        /// Final frame indicating the bounded query has no more matching results.
+        /// Final frame indicating the effective query interval has no more matching
+        /// results.
         #[prost(message, tag = "2")]
         End(super::EndOfResults),
     }
@@ -306,20 +307,20 @@ pub struct ListTransactionsRequest {
     /// If absent, all transactions in the range are returned.
     #[prost(message, optional, tag = "4")]
     pub filter: ::core::option::Option<TransactionFilter>,
-    /// Optional cursor-bounded pagination. If unspecified, reads in ascending order
-    /// with the default page size. The maximum page size is 500; values above
+    /// Optional cursor-bounded query options. If unspecified, reads in ascending order
+    /// with the default item limit. The maximum item limit is 500; values above
     /// 500 will be coerced to 500. To read additional results, pass the last
-    /// received item cursor until the stream returns `EndOfResults`.
+    /// received item cursor as `options.after` until the stream returns `EndOfResults`.
     #[prost(message, optional, tag = "5")]
-    pub pagination: ::core::option::Option<Pagination>,
+    pub options: ::core::option::Option<QueryOptions>,
 }
 /// One transaction item.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct TransactionItem {
-    /// Opaque cursor for this item. It may be sent as `pagination.cursor` with
-    /// the same request parameters to resume after this item in the current scan
-    /// direction.
+    /// Opaque cursor for this item. It may be sent as `options.after` or
+    /// `options.before` with compatible request parameters to resume or bound
+    /// a later query.
     #[prost(bytes = "bytes", optional, tag = "1")]
     pub cursor: ::core::option::Option<::prost::bytes::Bytes>,
     /// One matching transaction.
@@ -341,7 +342,8 @@ pub mod list_transactions_response {
         /// One matching transaction.
         #[prost(message, tag = "1")]
         Item(super::TransactionItem),
-        /// Final frame indicating the bounded query has no more matching results.
+        /// Final frame indicating the effective query interval has no more matching
+        /// results.
         #[prost(message, tag = "2")]
         End(super::EndOfResults),
     }
@@ -364,20 +366,20 @@ pub struct ListEventsRequest {
     /// If absent, all events in the range are returned.
     #[prost(message, optional, tag = "4")]
     pub filter: ::core::option::Option<EventFilter>,
-    /// Optional cursor-bounded pagination. If unspecified, reads in ascending order
-    /// with the default page size. The maximum page size is 1000; values above
+    /// Optional cursor-bounded query options. If unspecified, reads in ascending order
+    /// with the default item limit. The maximum item limit is 1000; values above
     /// 1000 will be coerced to 1000. To read additional results, pass the last
-    /// received item cursor until the stream returns `EndOfResults`.
+    /// received item cursor as `options.after` until the stream returns `EndOfResults`.
     #[prost(message, optional, tag = "5")]
-    pub pagination: ::core::option::Option<Pagination>,
+    pub options: ::core::option::Option<QueryOptions>,
 }
 /// One event item.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EventItem {
-    /// Opaque cursor for this item. It may be sent as `pagination.cursor` with
-    /// the same request parameters to resume after this item in the current scan
-    /// direction.
+    /// Opaque cursor for this item. It may be sent as `options.after` or
+    /// `options.before` with compatible request parameters to resume or bound
+    /// a later query.
     #[prost(bytes = "bytes", optional, tag = "1")]
     pub cursor: ::core::option::Option<::prost::bytes::Bytes>,
     /// The checkpoint containing the transaction that emitted this event.
@@ -408,7 +410,8 @@ pub mod list_events_response {
         /// One matching event.
         #[prost(message, tag = "1")]
         Item(super::EventItem),
-        /// Final frame indicating the bounded query has no more matching results.
+        /// Final frame indicating the effective query interval has no more matching
+        /// results.
         #[prost(message, tag = "2")]
         End(super::EndOfResults),
     }
@@ -424,7 +427,7 @@ pub mod ledger_service_client {
     )]
     use tonic::codegen::*;
     use tonic::codegen::http::Uri;
-    /// LedgerService provides paginated, filtered access to checkpoints, transactions, and events.
+    /// LedgerService provides bounded, filtered access to checkpoints, transactions, and events.
     #[derive(Debug, Clone)]
     pub struct LedgerServiceClient<T> {
         inner: tonic::client::Grpc<T>,
@@ -505,10 +508,10 @@ pub mod ledger_service_client {
             self.inner = self.inner.max_encoding_message_size(limit);
             self
         }
-        /// List checkpoints matching the provided filters, with pagination.
+        /// List checkpoints matching the provided filters.
         ///
         /// Checkpoints are returned in ascending or descending checkpoint sequence
-        /// number order according to the pagination ordering.
+        /// number order according to the query options ordering.
         /// A checkpoint matches if any transaction it contains satisfies the filter.
         pub async fn list_checkpoints(
             &mut self,
@@ -536,10 +539,10 @@ pub mod ledger_service_client {
                 );
             self.inner.server_streaming(req, path, codec).await
         }
-        /// List transactions matching the provided filters, with pagination.
+        /// List transactions matching the provided filters.
         ///
         /// Transactions are returned in ascending or descending transaction sequence
-        /// order according to the pagination ordering.
+        /// order according to the query options ordering.
         pub async fn list_transactions(
             &mut self,
             request: impl tonic::IntoRequest<super::ListTransactionsRequest>,
@@ -566,10 +569,10 @@ pub mod ledger_service_client {
                 );
             self.inner.server_streaming(req, path, codec).await
         }
-        /// List events matching the provided filters, with pagination.
+        /// List events matching the provided filters.
         ///
         /// Events are returned in ascending or descending packed event sequence order
-        /// according to the pagination ordering.
+        /// according to the query options ordering.
         pub async fn list_events(
             &mut self,
             request: impl tonic::IntoRequest<super::ListEventsRequest>,
@@ -609,10 +612,10 @@ pub mod ledger_service_server {
     /// Generated trait containing gRPC methods that should be implemented for use with LedgerServiceServer.
     #[async_trait]
     pub trait LedgerService: std::marker::Send + std::marker::Sync + 'static {
-        /// List checkpoints matching the provided filters, with pagination.
+        /// List checkpoints matching the provided filters.
         ///
         /// Checkpoints are returned in ascending or descending checkpoint sequence
-        /// number order according to the pagination ordering.
+        /// number order according to the query options ordering.
         /// A checkpoint matches if any transaction it contains satisfies the filter.
         async fn list_checkpoints(
             &self,
@@ -623,10 +626,10 @@ pub mod ledger_service_server {
         > {
             Err(tonic::Status::unimplemented("Not yet implemented"))
         }
-        /// List transactions matching the provided filters, with pagination.
+        /// List transactions matching the provided filters.
         ///
         /// Transactions are returned in ascending or descending transaction sequence
-        /// order according to the pagination ordering.
+        /// order according to the query options ordering.
         async fn list_transactions(
             &self,
             request: tonic::Request<super::ListTransactionsRequest>,
@@ -636,10 +639,10 @@ pub mod ledger_service_server {
         > {
             Err(tonic::Status::unimplemented("Not yet implemented"))
         }
-        /// List events matching the provided filters, with pagination.
+        /// List events matching the provided filters.
         ///
         /// Events are returned in ascending or descending packed event sequence order
-        /// according to the pagination ordering.
+        /// according to the query options ordering.
         async fn list_events(
             &self,
             request: tonic::Request<super::ListEventsRequest>,
@@ -650,7 +653,7 @@ pub mod ledger_service_server {
             Err(tonic::Status::unimplemented("Not yet implemented"))
         }
     }
-    /// LedgerService provides paginated, filtered access to checkpoints, transactions, and events.
+    /// LedgerService provides bounded, filtered access to checkpoints, transactions, and events.
     #[derive(Debug)]
     pub struct LedgerServiceServer<T> {
         inner: Arc<T>,
@@ -909,56 +912,117 @@ pub mod ledger_service_server {
         const NAME: &'static str = SERVICE_NAME;
     }
 }
-/// Cursor-bounded pagination.
+/// Cursor-bounded query options.
+///
+/// `after` and `before` are canonical ledger-position bounds, not
+/// ordering-relative cursors. `after` always excludes items at or below that
+/// cursor, and `before` always excludes items at or above that cursor. Ordering
+/// only controls the order of returned items within the resulting open interval.
+///
+/// For example, with `after = A`, `before = B`, `ordering = DESCENDING`, and
+/// `limit_items = N`, the response contains up to N matching items in descending
+/// order from the interval `(A, B)`. If N items are returned without
+/// `EndOfResults`, resume by keeping `after = A` and setting `before` to the
+/// last returned item cursor. That last cursor is the lowest item returned in
+/// ledger order, so it becomes the next exclusive upper bound.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct Pagination {
+pub struct QueryOptions {
     /// The maximum number of items to return. Each method applies its own default
-    /// and maximum.
+    /// and maximum. EndOfResults does not count against this limit.
     #[prost(uint32, optional, tag = "1")]
-    pub page_size: ::core::option::Option<u32>,
-    /// Opaque cursor from a previous list or subscription response. For list
-    /// methods, pass the last received item cursor to resume after that item.
-    /// Continue paginating until the response stream includes `EndOfResults`.
-    /// When paginating, filters and ordering must match the call that provided the
-    /// cursor.
+    pub limit_items: ::core::option::Option<u32>,
+    /// Opaque exclusive lower bound. Results must be strictly after this cursor in
+    /// canonical ledger order.
     #[prost(bytes = "bytes", optional, tag = "2")]
-    pub cursor: ::core::option::Option<::prost::bytes::Bytes>,
+    pub after: ::core::option::Option<::prost::bytes::Bytes>,
+    /// Opaque exclusive upper bound. Results must be strictly before this cursor
+    /// in canonical ledger order.
+    #[prost(bytes = "bytes", optional, tag = "3")]
+    pub before: ::core::option::Option<::prost::bytes::Bytes>,
     /// Ordering for returned results. Defaults to ASCENDING.
-    #[prost(enumeration = "PaginationOrdering", tag = "4")]
+    ///
+    /// Ordering only controls the order of results within the bounded interval;
+    /// cursor bounds keep the same meaning for ascending and descending reads.
+    #[prost(enumeration = "Ordering", tag = "4")]
     pub ordering: i32,
 }
-/// Final response frame indicating the bounded list query has no more matching
-/// results. If absent, clients should resume with the last item cursor.
+/// Final response frame indicating the effective query interval has no more
+/// matching results. The interval is the intersection of checkpoint bounds,
+/// cursor bounds, chain/index bounds, and filters. If absent, clients should
+/// resume with the last item cursor.
 #[non_exhaustive]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct EndOfResults {}
-/// Ordering for the paginated result set.
+pub struct EndOfResults {
+    /// Boundary that ended the scan. For ascending reads this is the high end of
+    /// the effective interval; for descending reads this is the low end.
+    #[prost(enumeration = "EndOfResultsReason", tag = "1")]
+    pub reason: i32,
+}
+/// Ordering for the returned result set.
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
-pub enum PaginationOrdering {
+pub enum Ordering {
     /// Return results in increasing cursor order.
     Ascending = 0,
     /// Return results in decreasing cursor order.
     Descending = 1,
 }
-impl PaginationOrdering {
+impl Ordering {
     /// String value of the enum field names used in the ProtoBuf definition.
     ///
     /// The values are not transformed in any way and thus are considered stable
     /// (if the ProtoBuf definition does not change) and safe for programmatic use.
     pub fn as_str_name(&self) -> &'static str {
         match self {
-            Self::Ascending => "PAGINATION_ORDERING_ASCENDING",
-            Self::Descending => "PAGINATION_ORDERING_DESCENDING",
+            Self::Ascending => "ORDERING_ASCENDING",
+            Self::Descending => "ORDERING_DESCENDING",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
     pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
         match value {
-            "PAGINATION_ORDERING_ASCENDING" => Some(Self::Ascending),
-            "PAGINATION_ORDERING_DESCENDING" => Some(Self::Descending),
+            "ORDERING_ASCENDING" => Some(Self::Ascending),
+            "ORDERING_DESCENDING" => Some(Self::Descending),
+            _ => None,
+        }
+    }
+}
+/// Reason the effective query interval has no more matching results.
+#[non_exhaustive]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum EndOfResultsReason {
+    /// The terminal reason was not specified.
+    Unspecified = 0,
+    /// The scan reached a requested checkpoint range bound.
+    CheckpointBound = 1,
+    /// The scan reached an exclusive cursor bound.
+    CursorBound = 2,
+    /// The scan reached the currently indexed ledger tip.
+    LedgerTip = 3,
+}
+impl EndOfResultsReason {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "END_OF_RESULTS_REASON_UNSPECIFIED",
+            Self::CheckpointBound => "END_OF_RESULTS_REASON_CHECKPOINT_BOUND",
+            Self::CursorBound => "END_OF_RESULTS_REASON_CURSOR_BOUND",
+            Self::LedgerTip => "END_OF_RESULTS_REASON_LEDGER_TIP",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "END_OF_RESULTS_REASON_UNSPECIFIED" => Some(Self::Unspecified),
+            "END_OF_RESULTS_REASON_CHECKPOINT_BOUND" => Some(Self::CheckpointBound),
+            "END_OF_RESULTS_REASON_CURSOR_BOUND" => Some(Self::CursorBound),
+            "END_OF_RESULTS_REASON_LEDGER_TIP" => Some(Self::LedgerTip),
             _ => None,
         }
     }

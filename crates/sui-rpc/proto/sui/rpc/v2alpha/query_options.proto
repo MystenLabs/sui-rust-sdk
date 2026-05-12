@@ -1,0 +1,73 @@
+// Copyright (c) Mysten Labs, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package sui.rpc.v2alpha;
+
+// Ordering for the returned result set.
+enum Ordering {
+  // Return results in increasing cursor order.
+  ORDERING_ASCENDING = 0;
+
+  // Return results in decreasing cursor order.
+  ORDERING_DESCENDING = 1;
+}
+
+// Cursor-bounded query options.
+//
+// `after` and `before` are canonical ledger-position bounds, not
+// ordering-relative cursors. `after` always excludes items at or below that
+// cursor, and `before` always excludes items at or above that cursor. Ordering
+// only controls the order of returned items within the resulting open interval.
+//
+// For example, with `after = A`, `before = B`, `ordering = DESCENDING`, and
+// `limit_items = N`, the response contains up to N matching items in descending
+// order from the interval `(A, B)`. If N items are returned without
+// `EndOfResults`, resume by keeping `after = A` and setting `before` to the
+// last returned item cursor. That last cursor is the lowest item returned in
+// ledger order, so it becomes the next exclusive upper bound.
+message QueryOptions {
+  // The maximum number of items to return. Each method applies its own default
+  // and maximum. EndOfResults does not count against this limit.
+  optional uint32 limit_items = 1;
+
+  // Opaque exclusive lower bound. Results must be strictly after this cursor in
+  // canonical ledger order.
+  optional bytes after = 2;
+
+  // Opaque exclusive upper bound. Results must be strictly before this cursor
+  // in canonical ledger order.
+  optional bytes before = 3;
+
+  // Ordering for returned results. Defaults to ASCENDING.
+  //
+  // Ordering only controls the order of results within the bounded interval;
+  // cursor bounds keep the same meaning for ascending and descending reads.
+  Ordering ordering = 4;
+}
+
+// Reason the effective query interval has no more matching results.
+enum EndOfResultsReason {
+  // The terminal reason was not specified.
+  END_OF_RESULTS_REASON_UNSPECIFIED = 0;
+
+  // The scan reached a requested checkpoint range bound.
+  END_OF_RESULTS_REASON_CHECKPOINT_BOUND = 1;
+
+  // The scan reached an exclusive cursor bound.
+  END_OF_RESULTS_REASON_CURSOR_BOUND = 2;
+
+  // The scan reached the currently indexed ledger tip.
+  END_OF_RESULTS_REASON_LEDGER_TIP = 3;
+}
+
+// Final response frame indicating the effective query interval has no more
+// matching results. The interval is the intersection of checkpoint bounds,
+// cursor bounds, chain/index bounds, and filters. If absent, clients should
+// resume with the last item cursor.
+message EndOfResults {
+  // Boundary that ended the scan. For ascending reads this is the high end of
+  // the effective interval; for descending reads this is the low end.
+  EndOfResultsReason reason = 1;
+}

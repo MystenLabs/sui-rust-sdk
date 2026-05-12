@@ -464,9 +464,19 @@ impl serde::Serialize for EndOfResults {
         S: serde::Serializer,
     {
         use serde::ser::SerializeStruct;
-        let len = 0usize;
-        let struct_ser = serializer
+        let mut len = 0usize;
+        if self.reason != 0 {
+            len += 1;
+        }
+        let mut struct_ser = serializer
             .serialize_struct("sui.rpc.v2alpha.EndOfResults", len)?;
+        if self.reason != 0 {
+            let v = EndOfResultsReason::try_from(self.reason)
+                .map_err(|_| serde::ser::Error::custom(
+                    format!("Invalid variant {}", self.reason),
+                ))?;
+            struct_ser.serialize_field("reason", &v)?;
+        }
         struct_ser.end()
     }
 }
@@ -476,9 +486,10 @@ impl<'de> serde::Deserialize<'de> for EndOfResults {
     where
         D: serde::Deserializer<'de>,
     {
-        const FIELDS: &[&str] = &[];
+        const FIELDS: &[&str] = &["reason"];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
+            Reason,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -505,7 +516,10 @@ impl<'de> serde::Deserialize<'de> for EndOfResults {
                     where
                         E: serde::de::Error,
                     {
-                        Ok(GeneratedField::__SkipField__)
+                        match value {
+                            "reason" => Ok(GeneratedField::Reason),
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
                     }
                 }
                 deserializer.deserialize_identifier(GeneratedVisitor)
@@ -529,14 +543,117 @@ impl<'de> serde::Deserialize<'de> for EndOfResults {
             where
                 V: serde::de::MapAccess<'de>,
             {
-                while map_.next_key::<GeneratedField>()?.is_some() {
-                    let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                let mut reason__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Reason => {
+                            if reason__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("reason"));
+                            }
+                            reason__ = Some(
+                                map_.next_value::<EndOfResultsReason>()? as i32,
+                            );
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
                 }
-                Ok(EndOfResults {})
+                Ok(EndOfResults {
+                    reason: reason__.unwrap_or_default(),
+                })
             }
         }
         deserializer
             .deserialize_struct("sui.rpc.v2alpha.EndOfResults", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for EndOfResultsReason {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let variant = match self {
+            Self::Unspecified => "END_OF_RESULTS_REASON_UNSPECIFIED",
+            Self::CheckpointBound => "END_OF_RESULTS_REASON_CHECKPOINT_BOUND",
+            Self::CursorBound => "END_OF_RESULTS_REASON_CURSOR_BOUND",
+            Self::LedgerTip => "END_OF_RESULTS_REASON_LEDGER_TIP",
+        };
+        serializer.serialize_str(variant)
+    }
+}
+impl<'de> serde::Deserialize<'de> for EndOfResultsReason {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "END_OF_RESULTS_REASON_UNSPECIFIED",
+            "END_OF_RESULTS_REASON_CHECKPOINT_BOUND",
+            "END_OF_RESULTS_REASON_CURSOR_BOUND",
+            "END_OF_RESULTS_REASON_LEDGER_TIP",
+        ];
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = EndOfResultsReason;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                write!(formatter, "expected one of: {:?}", & FIELDS)
+            }
+            fn visit_i64<E>(self, v: i64) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                i32::try_from(v)
+                    .ok()
+                    .and_then(|x| x.try_into().ok())
+                    .ok_or_else(|| {
+                        serde::de::Error::invalid_value(
+                            serde::de::Unexpected::Signed(v),
+                            &self,
+                        )
+                    })
+            }
+            fn visit_u64<E>(self, v: u64) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                i32::try_from(v)
+                    .ok()
+                    .and_then(|x| x.try_into().ok())
+                    .ok_or_else(|| {
+                        serde::de::Error::invalid_value(
+                            serde::de::Unexpected::Unsigned(v),
+                            &self,
+                        )
+                    })
+            }
+            fn visit_str<E>(self, value: &str) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                match value {
+                    "END_OF_RESULTS_REASON_UNSPECIFIED" => {
+                        Ok(EndOfResultsReason::Unspecified)
+                    }
+                    "END_OF_RESULTS_REASON_CHECKPOINT_BOUND" => {
+                        Ok(EndOfResultsReason::CheckpointBound)
+                    }
+                    "END_OF_RESULTS_REASON_CURSOR_BOUND" => {
+                        Ok(EndOfResultsReason::CursorBound)
+                    }
+                    "END_OF_RESULTS_REASON_LEDGER_TIP" => {
+                        Ok(EndOfResultsReason::LedgerTip)
+                    }
+                    _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
+                }
+            }
+        }
+        deserializer.deserialize_any(GeneratedVisitor)
     }
 }
 impl serde::Serialize for EventFilter {
@@ -1496,7 +1613,7 @@ impl serde::Serialize for ListCheckpointsRequest {
         if self.filter.is_some() {
             len += 1;
         }
-        if self.pagination.is_some() {
+        if self.options.is_some() {
             len += 1;
         }
         let mut struct_ser = serializer
@@ -1520,8 +1637,8 @@ impl serde::Serialize for ListCheckpointsRequest {
         if let Some(v) = self.filter.as_ref() {
             struct_ser.serialize_field("filter", v)?;
         }
-        if let Some(v) = self.pagination.as_ref() {
-            struct_ser.serialize_field("pagination", v)?;
+        if let Some(v) = self.options.as_ref() {
+            struct_ser.serialize_field("options", v)?;
         }
         struct_ser.end()
     }
@@ -1540,7 +1657,7 @@ impl<'de> serde::Deserialize<'de> for ListCheckpointsRequest {
             "end_checkpoint",
             "endCheckpoint",
             "filter",
-            "pagination",
+            "options",
         ];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
@@ -1548,7 +1665,7 @@ impl<'de> serde::Deserialize<'de> for ListCheckpointsRequest {
             StartCheckpoint,
             EndCheckpoint,
             Filter,
-            Pagination,
+            Options,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -1584,7 +1701,7 @@ impl<'de> serde::Deserialize<'de> for ListCheckpointsRequest {
                                 Ok(GeneratedField::EndCheckpoint)
                             }
                             "filter" => Ok(GeneratedField::Filter),
-                            "pagination" => Ok(GeneratedField::Pagination),
+                            "options" => Ok(GeneratedField::Options),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -1614,7 +1731,7 @@ impl<'de> serde::Deserialize<'de> for ListCheckpointsRequest {
                 let mut start_checkpoint__ = None;
                 let mut end_checkpoint__ = None;
                 let mut filter__ = None;
-                let mut pagination__ = None;
+                let mut options__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::ReadMask => {
@@ -1657,11 +1774,11 @@ impl<'de> serde::Deserialize<'de> for ListCheckpointsRequest {
                             }
                             filter__ = map_.next_value()?;
                         }
-                        GeneratedField::Pagination => {
-                            if pagination__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("pagination"));
+                        GeneratedField::Options => {
+                            if options__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("options"));
                             }
-                            pagination__ = map_.next_value()?;
+                            options__ = map_.next_value()?;
                         }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
@@ -1673,7 +1790,7 @@ impl<'de> serde::Deserialize<'de> for ListCheckpointsRequest {
                     start_checkpoint: start_checkpoint__,
                     end_checkpoint: end_checkpoint__,
                     filter: filter__,
-                    pagination: pagination__,
+                    options: options__,
                 })
             }
         }
@@ -1833,7 +1950,7 @@ impl serde::Serialize for ListEventsRequest {
         if self.filter.is_some() {
             len += 1;
         }
-        if self.pagination.is_some() {
+        if self.options.is_some() {
             len += 1;
         }
         let mut struct_ser = serializer
@@ -1857,8 +1974,8 @@ impl serde::Serialize for ListEventsRequest {
         if let Some(v) = self.filter.as_ref() {
             struct_ser.serialize_field("filter", v)?;
         }
-        if let Some(v) = self.pagination.as_ref() {
-            struct_ser.serialize_field("pagination", v)?;
+        if let Some(v) = self.options.as_ref() {
+            struct_ser.serialize_field("options", v)?;
         }
         struct_ser.end()
     }
@@ -1877,7 +1994,7 @@ impl<'de> serde::Deserialize<'de> for ListEventsRequest {
             "end_checkpoint",
             "endCheckpoint",
             "filter",
-            "pagination",
+            "options",
         ];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
@@ -1885,7 +2002,7 @@ impl<'de> serde::Deserialize<'de> for ListEventsRequest {
             StartCheckpoint,
             EndCheckpoint,
             Filter,
-            Pagination,
+            Options,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -1921,7 +2038,7 @@ impl<'de> serde::Deserialize<'de> for ListEventsRequest {
                                 Ok(GeneratedField::EndCheckpoint)
                             }
                             "filter" => Ok(GeneratedField::Filter),
-                            "pagination" => Ok(GeneratedField::Pagination),
+                            "options" => Ok(GeneratedField::Options),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -1951,7 +2068,7 @@ impl<'de> serde::Deserialize<'de> for ListEventsRequest {
                 let mut start_checkpoint__ = None;
                 let mut end_checkpoint__ = None;
                 let mut filter__ = None;
-                let mut pagination__ = None;
+                let mut options__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::ReadMask => {
@@ -1994,11 +2111,11 @@ impl<'de> serde::Deserialize<'de> for ListEventsRequest {
                             }
                             filter__ = map_.next_value()?;
                         }
-                        GeneratedField::Pagination => {
-                            if pagination__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("pagination"));
+                        GeneratedField::Options => {
+                            if options__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("options"));
                             }
-                            pagination__ = map_.next_value()?;
+                            options__ = map_.next_value()?;
                         }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
@@ -2010,7 +2127,7 @@ impl<'de> serde::Deserialize<'de> for ListEventsRequest {
                     start_checkpoint: start_checkpoint__,
                     end_checkpoint: end_checkpoint__,
                     filter: filter__,
-                    pagination: pagination__,
+                    options: options__,
                 })
             }
         }
@@ -2170,7 +2287,7 @@ impl serde::Serialize for ListTransactionsRequest {
         if self.filter.is_some() {
             len += 1;
         }
-        if self.pagination.is_some() {
+        if self.options.is_some() {
             len += 1;
         }
         let mut struct_ser = serializer
@@ -2194,8 +2311,8 @@ impl serde::Serialize for ListTransactionsRequest {
         if let Some(v) = self.filter.as_ref() {
             struct_ser.serialize_field("filter", v)?;
         }
-        if let Some(v) = self.pagination.as_ref() {
-            struct_ser.serialize_field("pagination", v)?;
+        if let Some(v) = self.options.as_ref() {
+            struct_ser.serialize_field("options", v)?;
         }
         struct_ser.end()
     }
@@ -2214,7 +2331,7 @@ impl<'de> serde::Deserialize<'de> for ListTransactionsRequest {
             "end_checkpoint",
             "endCheckpoint",
             "filter",
-            "pagination",
+            "options",
         ];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
@@ -2222,7 +2339,7 @@ impl<'de> serde::Deserialize<'de> for ListTransactionsRequest {
             StartCheckpoint,
             EndCheckpoint,
             Filter,
-            Pagination,
+            Options,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -2258,7 +2375,7 @@ impl<'de> serde::Deserialize<'de> for ListTransactionsRequest {
                                 Ok(GeneratedField::EndCheckpoint)
                             }
                             "filter" => Ok(GeneratedField::Filter),
-                            "pagination" => Ok(GeneratedField::Pagination),
+                            "options" => Ok(GeneratedField::Options),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -2288,7 +2405,7 @@ impl<'de> serde::Deserialize<'de> for ListTransactionsRequest {
                 let mut start_checkpoint__ = None;
                 let mut end_checkpoint__ = None;
                 let mut filter__ = None;
-                let mut pagination__ = None;
+                let mut options__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::ReadMask => {
@@ -2331,11 +2448,11 @@ impl<'de> serde::Deserialize<'de> for ListTransactionsRequest {
                             }
                             filter__ = map_.next_value()?;
                         }
-                        GeneratedField::Pagination => {
-                            if pagination__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("pagination"));
+                        GeneratedField::Options => {
+                            if options__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("options"));
                             }
-                            pagination__ = map_.next_value()?;
+                            options__ = map_.next_value()?;
                         }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
@@ -2347,7 +2464,7 @@ impl<'de> serde::Deserialize<'de> for ListTransactionsRequest {
                     start_checkpoint: start_checkpoint__,
                     end_checkpoint: end_checkpoint__,
                     filter: filter__,
-                    pagination: pagination__,
+                    options: options__,
                 })
             }
         }
@@ -2596,186 +2713,29 @@ impl<'de> serde::Deserialize<'de> for MoveCallFilter {
             )
     }
 }
-impl serde::Serialize for Pagination {
-    #[allow(deprecated)]
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        use serde::ser::SerializeStruct;
-        let mut len = 0usize;
-        if self.page_size.is_some() {
-            len += 1;
-        }
-        if self.cursor.is_some() {
-            len += 1;
-        }
-        if self.ordering != 0 {
-            len += 1;
-        }
-        let mut struct_ser = serializer
-            .serialize_struct("sui.rpc.v2alpha.Pagination", len)?;
-        if let Some(v) = self.page_size.as_ref() {
-            struct_ser.serialize_field("pageSize", v)?;
-        }
-        if let Some(v) = self.cursor.as_ref() {
-            #[allow(clippy::needless_borrow)]
-            #[allow(clippy::needless_borrows_for_generic_args)]
-            struct_ser
-                .serialize_field("cursor", crate::_serde::base64::encode(&v).as_str())?;
-        }
-        if self.ordering != 0 {
-            let v = PaginationOrdering::try_from(self.ordering)
-                .map_err(|_| serde::ser::Error::custom(
-                    format!("Invalid variant {}", self.ordering),
-                ))?;
-            struct_ser.serialize_field("ordering", &v)?;
-        }
-        struct_ser.end()
-    }
-}
-impl<'de> serde::Deserialize<'de> for Pagination {
-    #[allow(deprecated)]
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        const FIELDS: &[&str] = &["page_size", "pageSize", "cursor", "ordering"];
-        #[allow(clippy::enum_variant_names)]
-        enum GeneratedField {
-            PageSize,
-            Cursor,
-            Ordering,
-            __SkipField__,
-        }
-        impl<'de> serde::Deserialize<'de> for GeneratedField {
-            fn deserialize<D>(
-                deserializer: D,
-            ) -> std::result::Result<GeneratedField, D::Error>
-            where
-                D: serde::Deserializer<'de>,
-            {
-                struct GeneratedVisitor;
-                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-                    type Value = GeneratedField;
-                    fn expecting(
-                        &self,
-                        formatter: &mut std::fmt::Formatter<'_>,
-                    ) -> std::fmt::Result {
-                        write!(formatter, "expected one of: {:?}", & FIELDS)
-                    }
-                    #[allow(unused_variables)]
-                    fn visit_str<E>(
-                        self,
-                        value: &str,
-                    ) -> std::result::Result<GeneratedField, E>
-                    where
-                        E: serde::de::Error,
-                    {
-                        match value {
-                            "pageSize" | "page_size" => Ok(GeneratedField::PageSize),
-                            "cursor" => Ok(GeneratedField::Cursor),
-                            "ordering" => Ok(GeneratedField::Ordering),
-                            _ => Ok(GeneratedField::__SkipField__),
-                        }
-                    }
-                }
-                deserializer.deserialize_identifier(GeneratedVisitor)
-            }
-        }
-        struct GeneratedVisitor;
-        #[allow(clippy::useless_conversion)]
-        #[allow(clippy::unit_arg)]
-        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-            type Value = Pagination;
-            fn expecting(
-                &self,
-                formatter: &mut std::fmt::Formatter<'_>,
-            ) -> std::fmt::Result {
-                formatter.write_str("struct sui.rpc.v2alpha.Pagination")
-            }
-            fn visit_map<V>(
-                self,
-                mut map_: V,
-            ) -> std::result::Result<Pagination, V::Error>
-            where
-                V: serde::de::MapAccess<'de>,
-            {
-                let mut page_size__ = None;
-                let mut cursor__ = None;
-                let mut ordering__ = None;
-                while let Some(k) = map_.next_key()? {
-                    match k {
-                        GeneratedField::PageSize => {
-                            if page_size__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("pageSize"));
-                            }
-                            page_size__ = map_
-                                .next_value::<
-                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
-                                >()?
-                                .map(|x| x.0);
-                        }
-                        GeneratedField::Cursor => {
-                            if cursor__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("cursor"));
-                            }
-                            cursor__ = map_
-                                .next_value::<
-                                    ::std::option::Option<crate::_serde::BytesDeserialize<_>>,
-                                >()?
-                                .map(|x| x.0);
-                        }
-                        GeneratedField::Ordering => {
-                            if ordering__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("ordering"));
-                            }
-                            ordering__ = Some(
-                                map_.next_value::<PaginationOrdering>()? as i32,
-                            );
-                        }
-                        GeneratedField::__SkipField__ => {
-                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
-                        }
-                    }
-                }
-                Ok(Pagination {
-                    page_size: page_size__,
-                    cursor: cursor__,
-                    ordering: ordering__.unwrap_or_default(),
-                })
-            }
-        }
-        deserializer
-            .deserialize_struct("sui.rpc.v2alpha.Pagination", FIELDS, GeneratedVisitor)
-    }
-}
-impl serde::Serialize for PaginationOrdering {
+impl serde::Serialize for Ordering {
     #[allow(deprecated)]
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
         let variant = match self {
-            Self::Ascending => "PAGINATION_ORDERING_ASCENDING",
-            Self::Descending => "PAGINATION_ORDERING_DESCENDING",
+            Self::Ascending => "ORDERING_ASCENDING",
+            Self::Descending => "ORDERING_DESCENDING",
         };
         serializer.serialize_str(variant)
     }
 }
-impl<'de> serde::Deserialize<'de> for PaginationOrdering {
+impl<'de> serde::Deserialize<'de> for Ordering {
     #[allow(deprecated)]
     fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
-        const FIELDS: &[&str] = &[
-            "PAGINATION_ORDERING_ASCENDING",
-            "PAGINATION_ORDERING_DESCENDING",
-        ];
+        const FIELDS: &[&str] = &["ORDERING_ASCENDING", "ORDERING_DESCENDING"];
         struct GeneratedVisitor;
         impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-            type Value = PaginationOrdering;
+            type Value = Ordering;
             fn expecting(
                 &self,
                 formatter: &mut std::fmt::Formatter<'_>,
@@ -2815,15 +2775,196 @@ impl<'de> serde::Deserialize<'de> for PaginationOrdering {
                 E: serde::de::Error,
             {
                 match value {
-                    "PAGINATION_ORDERING_ASCENDING" => Ok(PaginationOrdering::Ascending),
-                    "PAGINATION_ORDERING_DESCENDING" => {
-                        Ok(PaginationOrdering::Descending)
-                    }
+                    "ORDERING_ASCENDING" => Ok(Ordering::Ascending),
+                    "ORDERING_DESCENDING" => Ok(Ordering::Descending),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }
         }
         deserializer.deserialize_any(GeneratedVisitor)
+    }
+}
+impl serde::Serialize for QueryOptions {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0usize;
+        if self.limit_items.is_some() {
+            len += 1;
+        }
+        if self.after.is_some() {
+            len += 1;
+        }
+        if self.before.is_some() {
+            len += 1;
+        }
+        if self.ordering != 0 {
+            len += 1;
+        }
+        let mut struct_ser = serializer
+            .serialize_struct("sui.rpc.v2alpha.QueryOptions", len)?;
+        if let Some(v) = self.limit_items.as_ref() {
+            struct_ser.serialize_field("limitItems", v)?;
+        }
+        if let Some(v) = self.after.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser
+                .serialize_field("after", crate::_serde::base64::encode(&v).as_str())?;
+        }
+        if let Some(v) = self.before.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser
+                .serialize_field("before", crate::_serde::base64::encode(&v).as_str())?;
+        }
+        if self.ordering != 0 {
+            let v = Ordering::try_from(self.ordering)
+                .map_err(|_| serde::ser::Error::custom(
+                    format!("Invalid variant {}", self.ordering),
+                ))?;
+            struct_ser.serialize_field("ordering", &v)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for QueryOptions {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "limit_items",
+            "limitItems",
+            "after",
+            "before",
+            "ordering",
+        ];
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            LimitItems,
+            After,
+            Before,
+            Ordering,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(
+                deserializer: D,
+            ) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+                    fn expecting(
+                        &self,
+                        formatter: &mut std::fmt::Formatter<'_>,
+                    ) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", & FIELDS)
+                    }
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(
+                        self,
+                        value: &str,
+                    ) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "limitItems" | "limit_items" => {
+                                Ok(GeneratedField::LimitItems)
+                            }
+                            "after" => Ok(GeneratedField::After),
+                            "before" => Ok(GeneratedField::Before),
+                            "ordering" => Ok(GeneratedField::Ordering),
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = QueryOptions;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2alpha.QueryOptions")
+            }
+            fn visit_map<V>(
+                self,
+                mut map_: V,
+            ) -> std::result::Result<QueryOptions, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                let mut limit_items__ = None;
+                let mut after__ = None;
+                let mut before__ = None;
+                let mut ordering__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::LimitItems => {
+                            if limit_items__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("limitItems"));
+                            }
+                            limit_items__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::After => {
+                            if after__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("after"));
+                            }
+                            after__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::BytesDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::Before => {
+                            if before__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("before"));
+                            }
+                            before__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::BytesDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::Ordering => {
+                            if ordering__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("ordering"));
+                            }
+                            ordering__ = Some(map_.next_value::<Ordering>()? as i32);
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(QueryOptions {
+                    limit_items: limit_items__,
+                    after: after__,
+                    before: before__,
+                    ordering: ordering__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer
+            .deserialize_struct("sui.rpc.v2alpha.QueryOptions", FIELDS, GeneratedVisitor)
     }
 }
 impl serde::Serialize for SenderFilter {

@@ -10,27 +10,27 @@ import "sui/rpc/v2/checkpoint.proto";
 import "sui/rpc/v2/event.proto";
 import "sui/rpc/v2/executed_transaction.proto";
 import "sui/rpc/v2alpha/filter.proto";
-import "sui/rpc/v2alpha/pagination.proto";
+import "sui/rpc/v2alpha/query_options.proto";
 
-// LedgerService provides paginated, filtered access to checkpoints, transactions, and events.
+// LedgerService provides bounded, filtered access to checkpoints, transactions, and events.
 service LedgerService {
-  // List checkpoints matching the provided filters, with pagination.
+  // List checkpoints matching the provided filters.
   //
   // Checkpoints are returned in ascending or descending checkpoint sequence
-  // number order according to the pagination ordering.
+  // number order according to the query options ordering.
   // A checkpoint matches if any transaction it contains satisfies the filter.
   rpc ListCheckpoints(ListCheckpointsRequest) returns (stream ListCheckpointsResponse);
 
-  // List transactions matching the provided filters, with pagination.
+  // List transactions matching the provided filters.
   //
   // Transactions are returned in ascending or descending transaction sequence
-  // order according to the pagination ordering.
+  // order according to the query options ordering.
   rpc ListTransactions(ListTransactionsRequest) returns (stream ListTransactionsResponse);
 
-  // List events matching the provided filters, with pagination.
+  // List events matching the provided filters.
   //
   // Events are returned in ascending or descending packed event sequence order
-  // according to the pagination ordering.
+  // according to the query options ordering.
   rpc ListEvents(ListEventsRequest) returns (stream ListEventsResponse);
 }
 
@@ -52,18 +52,18 @@ message ListCheckpointsRequest {
   // all checkpoints in the range are returned.
   optional TransactionFilter filter = 4;
 
-  // Optional cursor-bounded pagination. If unspecified, reads in ascending order
-  // with the default page size. The maximum page size is 100; values above
+  // Optional cursor-bounded query options. If unspecified, reads in ascending order
+  // with the default item limit. The maximum item limit is 100; values above
   // 100 will be coerced to 100. To read additional results, pass the last
-  // received item cursor until the stream returns `EndOfResults`.
-  optional Pagination pagination = 5;
+  // received item cursor as `options.after` until the stream returns `EndOfResults`.
+  optional QueryOptions options = 5;
 }
 
 // One checkpoint item.
 message CheckpointItem {
-  // Opaque cursor for this item. It may be sent as `pagination.cursor` with
-  // the same request parameters to resume after this item in the current scan
-  // direction.
+  // Opaque cursor for this item. It may be sent as `options.after` or
+  // `options.before` with compatible request parameters to resume or bound
+  // a later query.
   optional bytes cursor = 1;
 
   // One matching checkpoint.
@@ -76,7 +76,8 @@ message ListCheckpointsResponse {
     // One matching checkpoint.
     CheckpointItem item = 1;
 
-    // Final frame indicating the bounded query has no more matching results.
+    // Final frame indicating the effective query interval has no more matching
+    // results.
     EndOfResults end = 2;
   }
 }
@@ -98,18 +99,18 @@ message ListTransactionsRequest {
   // If absent, all transactions in the range are returned.
   optional TransactionFilter filter = 4;
 
-  // Optional cursor-bounded pagination. If unspecified, reads in ascending order
-  // with the default page size. The maximum page size is 500; values above
+  // Optional cursor-bounded query options. If unspecified, reads in ascending order
+  // with the default item limit. The maximum item limit is 500; values above
   // 500 will be coerced to 500. To read additional results, pass the last
-  // received item cursor until the stream returns `EndOfResults`.
-  optional Pagination pagination = 5;
+  // received item cursor as `options.after` until the stream returns `EndOfResults`.
+  optional QueryOptions options = 5;
 }
 
 // One transaction item.
 message TransactionItem {
-  // Opaque cursor for this item. It may be sent as `pagination.cursor` with
-  // the same request parameters to resume after this item in the current scan
-  // direction.
+  // Opaque cursor for this item. It may be sent as `options.after` or
+  // `options.before` with compatible request parameters to resume or bound
+  // a later query.
   optional bytes cursor = 1;
 
   // One matching transaction.
@@ -122,7 +123,8 @@ message ListTransactionsResponse {
     // One matching transaction.
     TransactionItem item = 1;
 
-    // Final frame indicating the bounded query has no more matching results.
+    // Final frame indicating the effective query interval has no more matching
+    // results.
     EndOfResults end = 2;
   }
 }
@@ -143,18 +145,18 @@ message ListEventsRequest {
   // If absent, all events in the range are returned.
   optional EventFilter filter = 4;
 
-  // Optional cursor-bounded pagination. If unspecified, reads in ascending order
-  // with the default page size. The maximum page size is 1000; values above
+  // Optional cursor-bounded query options. If unspecified, reads in ascending order
+  // with the default item limit. The maximum item limit is 1000; values above
   // 1000 will be coerced to 1000. To read additional results, pass the last
-  // received item cursor until the stream returns `EndOfResults`.
-  optional Pagination pagination = 5;
+  // received item cursor as `options.after` until the stream returns `EndOfResults`.
+  optional QueryOptions options = 5;
 }
 
 // One event item.
 message EventItem {
-  // Opaque cursor for this item. It may be sent as `pagination.cursor` with
-  // the same request parameters to resume after this item in the current scan
-  // direction.
+  // Opaque cursor for this item. It may be sent as `options.after` or
+  // `options.before` with compatible request parameters to resume or bound
+  // a later query.
   optional bytes cursor = 1;
 
   // The checkpoint containing the transaction that emitted this event.
@@ -176,7 +178,8 @@ message ListEventsResponse {
     // One matching event.
     EventItem item = 1;
 
-    // Final frame indicating the bounded query has no more matching results.
+    // Final frame indicating the effective query interval has no more matching
+    // results.
     EndOfResults end = 2;
   }
 }
