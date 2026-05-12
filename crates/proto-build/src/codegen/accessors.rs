@@ -95,6 +95,13 @@ fn generate_accessors_functions_for_field(
     field: &Field,
     oneof: Option<&OneofField>,
 ) -> TokenStream {
+    // Prost already generates enum accessors for singular proto3 enum fields
+    // (`field()` and `set_field(...)`). Emitting our own setter here creates
+    // duplicate inherent methods.
+    if oneof.is_none() && !field.is_optional() && !field.is_repeated() && field.is_enum() {
+        return TokenStream::new();
+    }
+
     let package = format!("{}.__accessors", message.package);
     let name = quote::format_ident!("{}", field.rust_struct_field_name());
     let name_opt = quote::format_ident!("{}_opt", field.inner.name());

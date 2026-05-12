@@ -1,0 +1,86 @@
+// Copyright (c) Mysten Labs, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package sui.rpc.v2alpha;
+
+// Ordering for the returned result set.
+enum Ordering {
+  // Return results in increasing cursor order.
+  ORDERING_ASCENDING = 0;
+
+  // Return results in decreasing cursor order.
+  ORDERING_DESCENDING = 1;
+}
+
+// Cursor-bounded query options.
+//
+// `after` and `before` are canonical ledger-position bounds, not
+// ordering-relative cursors. `after` always excludes items at or below that
+// cursor, and `before` always excludes items at or above that cursor. Ordering
+// only controls the order of returned items within the resulting open interval.
+//
+// For example, with `after = A`, `before = B`, `ordering = DESCENDING`, and
+// `limit_items = N`, the response contains up to N matching items in descending
+// order from the interval `(A, B)`. If the response ends with
+// `QUERY_END_REASON_ITEM_LIMIT`, resume by keeping `after = A` and setting
+// `before` to the returned `QueryEnd.cursor`. That cursor is the lowest item
+// returned in ledger order, so it becomes the next exclusive upper bound.
+message QueryOptions {
+  // The maximum number of items to return. Each method applies its own default
+  // and maximum. QueryEnd does not count against this limit.
+  optional uint32 limit_items = 1;
+
+  // Opaque exclusive lower bound. Results must be strictly after this cursor in
+  // canonical ledger order.
+  optional bytes after = 2;
+
+  // Opaque exclusive upper bound. Results must be strictly before this cursor
+  // in canonical ledger order.
+  optional bytes before = 3;
+
+  // Ordering for returned results. Defaults to ASCENDING.
+  //
+  // Ordering only controls the order of results within the bounded interval;
+  // cursor bounds keep the same meaning for ascending and descending reads.
+  Ordering ordering = 4;
+}
+
+// Reason the server stopped this query response.
+enum QueryEndReason {
+  // The stop reason was not specified.
+  QUERY_END_REASON_UNSPECIFIED = 0;
+
+  // The response reached the requested item limit. Resume from `QueryEnd.cursor`
+  // to continue reading the same effective interval.
+  QUERY_END_REASON_ITEM_LIMIT = 1;
+
+  // The response reached the server's maximum checkpoint scan width before it
+  // reached the effective interval bound. Resume from `QueryEnd.cursor`.
+  QUERY_END_REASON_SCAN_LIMIT = 2;
+
+  // The scan reached a requested checkpoint range bound.
+  QUERY_END_REASON_CHECKPOINT_BOUND = 3;
+
+  // The scan reached an exclusive cursor bound.
+  QUERY_END_REASON_CURSOR_BOUND = 4;
+
+  // The scan reached the currently indexed ledger tip.
+  QUERY_END_REASON_LEDGER_TIP = 5;
+}
+
+// Final response frame for a successful query stream. Every successful stream
+// returns exactly one QueryEnd after all item frames. Use `cursor` as
+// `options.after` for ascending continuation and `options.before` for
+// descending continuation. If a stream disconnects before QueryEnd, resume from
+// the last item cursor received.
+message QueryEnd {
+  // Opaque continuation cursor. For ITEM_LIMIT this is the last returned item
+  // cursor. For other reasons it may be a scan-frontier cursor that does not
+  // correspond to a returned item.
+  optional bytes cursor = 1;
+
+  // Reason this response stopped.
+  QueryEndReason reason = 2;
+}
