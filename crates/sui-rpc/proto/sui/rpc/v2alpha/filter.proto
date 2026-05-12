@@ -65,11 +65,11 @@ message TransactionPredicate {
 }
 
 // DNF filter for events: any term may match, and each term is an AND of
-// signed literals. Sender and affected-object predicates match all events from
-// matching transactions; emit-module, event-type, and event-stream-head
-// predicates match individual event-space dimensions. An absent filter matches
-// everything. A present filter must have at least one term, and every term must
-// have at least one included literal.
+// signed literals. Sender predicates match all events from matching
+// transactions; emit-module, event-type, and event-stream-head predicates match
+// individual event-space dimensions. An absent filter matches everything. A
+// present filter must have at least one term, and every term must have at least
+// one included literal.
 message EventFilter {
   // Terms are ORed together.
   repeated EventTerm terms = 1;
@@ -98,18 +98,14 @@ message EventPredicate {
     // Match events from transactions sent by the specified address.
     SenderFilter sender = 1;
 
-    // Match events from transactions whose effects include a change for the
-    // specified object.
-    AffectedObjectFilter affected_object = 2;
-
     // Match events whose package/module fields match the specified filter.
-    EmitModuleFilter emit_module = 3;
+    EmitModuleFilter emit_module = 2;
 
     // Match events whose type matches the specified filter.
-    EventTypeFilter event_type = 4;
+    EventTypeFilter event_type = 3;
 
     // Match events committed to the specified authenticated event stream head.
-    EventStreamHeadFilter event_stream_head = 5;
+    EventStreamHeadFilter event_stream_head = 4;
   }
 }
 

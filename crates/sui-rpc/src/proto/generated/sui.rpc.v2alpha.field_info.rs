@@ -356,35 +356,28 @@ pub(crate) mod _field_impls {
             number: 1i32,
             message_fields: Some(SenderFilter::FIELDS),
         };
-        pub const AFFECTED_OBJECT_FIELD: &'static MessageField = &MessageField {
-            name: "affected_object",
-            json_name: "affectedObject",
-            number: 2i32,
-            message_fields: Some(AffectedObjectFilter::FIELDS),
-        };
         pub const EMIT_MODULE_FIELD: &'static MessageField = &MessageField {
             name: "emit_module",
             json_name: "emitModule",
-            number: 3i32,
+            number: 2i32,
             message_fields: Some(EmitModuleFilter::FIELDS),
         };
         pub const EVENT_TYPE_FIELD: &'static MessageField = &MessageField {
             name: "event_type",
             json_name: "eventType",
-            number: 4i32,
+            number: 3i32,
             message_fields: Some(EventTypeFilter::FIELDS),
         };
         pub const EVENT_STREAM_HEAD_FIELD: &'static MessageField = &MessageField {
             name: "event_stream_head",
             json_name: "eventStreamHead",
-            number: 5i32,
+            number: 4i32,
             message_fields: Some(EventStreamHeadFilter::FIELDS),
         };
     }
     impl MessageFields for EventPredicate {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::SENDER_FIELD,
-            Self::AFFECTED_OBJECT_FIELD,
             Self::EMIT_MODULE_FIELD,
             Self::EVENT_TYPE_FIELD,
             Self::EVENT_STREAM_HEAD_FIELD,
@@ -413,10 +406,6 @@ pub(crate) mod _field_impls {
         pub fn sender(mut self) -> SenderFilterFieldPathBuilder {
             self.path.push(EventPredicate::SENDER_FIELD.name);
             SenderFilterFieldPathBuilder::new_with_base(self.path)
-        }
-        pub fn affected_object(mut self) -> AffectedObjectFilterFieldPathBuilder {
-            self.path.push(EventPredicate::AFFECTED_OBJECT_FIELD.name);
-            AffectedObjectFilterFieldPathBuilder::new_with_base(self.path)
         }
         pub fn emit_module(mut self) -> EmitModuleFilterFieldPathBuilder {
             self.path.push(EventPredicate::EMIT_MODULE_FIELD.name);

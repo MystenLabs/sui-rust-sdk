@@ -904,9 +904,6 @@ impl serde::Serialize for EventPredicate {
                 event_predicate::Predicate::Sender(v) => {
                     struct_ser.serialize_field("sender", v)?;
                 }
-                event_predicate::Predicate::AffectedObject(v) => {
-                    struct_ser.serialize_field("affectedObject", v)?;
-                }
                 event_predicate::Predicate::EmitModule(v) => {
                     struct_ser.serialize_field("emitModule", v)?;
                 }
@@ -929,8 +926,6 @@ impl<'de> serde::Deserialize<'de> for EventPredicate {
     {
         const FIELDS: &[&str] = &[
             "sender",
-            "affected_object",
-            "affectedObject",
             "emit_module",
             "emitModule",
             "event_type",
@@ -941,7 +936,6 @@ impl<'de> serde::Deserialize<'de> for EventPredicate {
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             Sender,
-            AffectedObject,
             EmitModule,
             EventType,
             EventStreamHead,
@@ -973,9 +967,6 @@ impl<'de> serde::Deserialize<'de> for EventPredicate {
                     {
                         match value {
                             "sender" => Ok(GeneratedField::Sender),
-                            "affectedObject" | "affected_object" => {
-                                Ok(GeneratedField::AffectedObject)
-                            }
                             "emitModule" | "emit_module" => {
                                 Ok(GeneratedField::EmitModule)
                             }
@@ -1018,16 +1009,6 @@ impl<'de> serde::Deserialize<'de> for EventPredicate {
                             predicate__ = map_
                                 .next_value::<::std::option::Option<_>>()?
                                 .map(event_predicate::Predicate::Sender);
-                        }
-                        GeneratedField::AffectedObject => {
-                            if predicate__.is_some() {
-                                return Err(
-                                    serde::de::Error::duplicate_field("affectedObject"),
-                                );
-                            }
-                            predicate__ = map_
-                                .next_value::<::std::option::Option<_>>()?
-                                .map(event_predicate::Predicate::AffectedObject);
                         }
                         GeneratedField::EmitModule => {
                             if predicate__.is_some() {

@@ -81,11 +81,11 @@ pub mod transaction_predicate {
     }
 }
 /// DNF filter for events: any term may match, and each term is an AND of
-/// signed literals. Sender and affected-object predicates match all events from
-/// matching transactions; emit-module, event-type, and event-stream-head
-/// predicates match individual event-space dimensions. An absent filter matches
-/// everything. A present filter must have at least one term, and every term must
-/// have at least one included literal.
+/// signed literals. Sender predicates match all events from matching
+/// transactions; emit-module, event-type, and event-stream-head predicates match
+/// individual event-space dimensions. An absent filter matches everything. A
+/// present filter must have at least one term, and every term must have at least
+/// one included literal.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EventFilter {
@@ -125,7 +125,7 @@ pub mod event_literal {
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct EventPredicate {
-    #[prost(oneof = "event_predicate::Predicate", tags = "1, 2, 3, 4, 5")]
+    #[prost(oneof = "event_predicate::Predicate", tags = "1, 2, 3, 4")]
     pub predicate: ::core::option::Option<event_predicate::Predicate>,
 }
 /// Nested message and enum types in `EventPredicate`.
@@ -136,18 +136,14 @@ pub mod event_predicate {
         /// Match events from transactions sent by the specified address.
         #[prost(message, tag = "1")]
         Sender(super::SenderFilter),
-        /// Match events from transactions whose effects include a change for the
-        /// specified object.
-        #[prost(message, tag = "2")]
-        AffectedObject(super::AffectedObjectFilter),
         /// Match events whose package/module fields match the specified filter.
-        #[prost(message, tag = "3")]
+        #[prost(message, tag = "2")]
         EmitModule(super::EmitModuleFilter),
         /// Match events whose type matches the specified filter.
-        #[prost(message, tag = "4")]
+        #[prost(message, tag = "3")]
         EventType(super::EventTypeFilter),
         /// Match events committed to the specified authenticated event stream head.
-        #[prost(message, tag = "5")]
+        #[prost(message, tag = "4")]
         EventStreamHead(super::EventStreamHeadFilter),
     }
 }
