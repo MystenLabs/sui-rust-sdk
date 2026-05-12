@@ -23,6 +23,9 @@ rustdoc-args = [
 [features]
 default = []
 faucet = ["dep:reqwest"]
+# Alpha/experimental APIs. Items behind this feature are not covered by
+# the crate's semver guarantees and may change or be removed at any time.
+unstable = []
 
 [dependencies]
 bcs = "0.1.6"
