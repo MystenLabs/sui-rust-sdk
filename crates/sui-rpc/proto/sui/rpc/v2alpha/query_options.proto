@@ -23,13 +23,13 @@ enum Ordering {
 //
 // For example, with `after = A`, `before = B`, `ordering = DESCENDING`, and
 // `limit_items = N`, the response contains up to N matching items in descending
-// order from the interval `(A, B)`. If N items are returned without
-// `EndOfResults`, resume by keeping `after = A` and setting `before` to the
-// last returned item cursor. That last cursor is the lowest item returned in
-// ledger order, so it becomes the next exclusive upper bound.
+// order from the interval `(A, B)`. If the response ends with
+// `QUERY_END_REASON_ITEM_LIMIT`, resume by keeping `after = A` and setting
+// `before` to the returned `QueryEnd.cursor`. That cursor is the lowest item
+// returned in ledger order, so it becomes the next exclusive upper bound.
 message QueryOptions {
   // The maximum number of items to return. Each method applies its own default
-  // and maximum. EndOfResults does not count against this limit.
+  // and maximum. QueryEnd does not count against this limit.
   optional uint32 limit_items = 1;
 
   // Opaque exclusive lower bound. Results must be strictly after this cursor in
@@ -47,27 +47,40 @@ message QueryOptions {
   Ordering ordering = 4;
 }
 
-// Reason the effective query interval has no more matching results.
-enum EndOfResultsReason {
-  // The terminal reason was not specified.
-  END_OF_RESULTS_REASON_UNSPECIFIED = 0;
+// Reason the server stopped this query response.
+enum QueryEndReason {
+  // The stop reason was not specified.
+  QUERY_END_REASON_UNSPECIFIED = 0;
+
+  // The response reached the requested item limit. Resume from `QueryEnd.cursor`
+  // to continue reading the same effective interval.
+  QUERY_END_REASON_ITEM_LIMIT = 1;
+
+  // The response reached the server's maximum checkpoint scan width before it
+  // reached the effective interval bound. Resume from `QueryEnd.cursor`.
+  QUERY_END_REASON_SCAN_LIMIT = 2;
 
   // The scan reached a requested checkpoint range bound.
-  END_OF_RESULTS_REASON_CHECKPOINT_BOUND = 1;
+  QUERY_END_REASON_CHECKPOINT_BOUND = 3;
 
   // The scan reached an exclusive cursor bound.
-  END_OF_RESULTS_REASON_CURSOR_BOUND = 2;
+  QUERY_END_REASON_CURSOR_BOUND = 4;
 
   // The scan reached the currently indexed ledger tip.
-  END_OF_RESULTS_REASON_LEDGER_TIP = 3;
+  QUERY_END_REASON_LEDGER_TIP = 5;
 }
 
-// Final response frame indicating the effective query interval has no more
-// matching results. The interval is the intersection of checkpoint bounds,
-// cursor bounds, chain/index bounds, and filters. If absent, clients should
-// resume with the last item cursor.
-message EndOfResults {
-  // Boundary that ended the scan. For ascending reads this is the high end of
-  // the effective interval; for descending reads this is the low end.
-  EndOfResultsReason reason = 1;
+// Final response frame for a successful query stream. Every successful stream
+// returns exactly one QueryEnd after all item frames. Use `cursor` as
+// `options.after` for ascending continuation and `options.before` for
+// descending continuation. If a stream disconnects before QueryEnd, resume from
+// the last item cursor received.
+message QueryEnd {
+  // Opaque continuation cursor. For ITEM_LIMIT this is the last returned item
+  // cursor. For other reasons it may be a scan-frontier cursor that does not
+  // correspond to a returned item.
+  optional bytes cursor = 1;
+
+  // Reason this response stopped.
+  QueryEndReason reason = 2;
 }

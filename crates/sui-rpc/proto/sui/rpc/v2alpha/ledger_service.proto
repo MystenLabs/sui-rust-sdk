@@ -40,11 +40,12 @@ message ListCheckpointsRequest {
   // returned (e.g. summary, contents, signatures).
   optional google.protobuf.FieldMask read_mask = 1;
 
-  // Required. Start of the checkpoint range to query (inclusive).
+  // Optional. Start of the checkpoint range to query (inclusive). Defaults to
+  // genesis.
   optional uint64 start_checkpoint = 2;
 
-  // Required. End of the checkpoint range to query (exclusive). The range
-  // width must not exceed 3,000,000 checkpoints.
+  // Optional. End of the checkpoint range to query (exclusive). Defaults to the
+  // current indexed ledger tip.
   optional uint64 end_checkpoint = 3;
 
   // Optional. DNF filter over indexed transaction dimensions. A checkpoint
@@ -54,8 +55,9 @@ message ListCheckpointsRequest {
 
   // Optional cursor-bounded query options. If unspecified, reads in ascending order
   // with the default item limit. The maximum item limit is 100; values above
-  // 100 will be coerced to 100. To read additional results, pass the last
-  // received item cursor as `options.after` until the stream returns `EndOfResults`.
+  // 100 will be coerced to 100. Every successful stream ends with QueryEnd; use
+  // its cursor as the next `options.after` for ascending reads or
+  // `options.before` for descending reads.
   optional QueryOptions options = 5;
 }
 
@@ -76,9 +78,8 @@ message ListCheckpointsResponse {
     // One matching checkpoint.
     CheckpointItem item = 1;
 
-    // Final frame indicating the effective query interval has no more matching
-    // results.
-    EndOfResults end = 2;
+    // Final frame for this successful query stream.
+    QueryEnd end = 2;
   }
 }
 
@@ -88,11 +89,12 @@ message ListTransactionsRequest {
   // should be returned.
   optional google.protobuf.FieldMask read_mask = 1;
 
-  // Required. Start of the checkpoint range to query (inclusive).
+  // Optional. Start of the checkpoint range to query (inclusive). Defaults to
+  // genesis.
   optional uint64 start_checkpoint = 2;
 
-  // Required. End of the checkpoint range to query (exclusive). The range
-  // width must not exceed 3,000,000 checkpoints.
+  // Optional. End of the checkpoint range to query (exclusive). Defaults to the
+  // current indexed ledger tip.
   optional uint64 end_checkpoint = 3;
 
   // Optional. DNF filter over indexed dimensions.
@@ -101,8 +103,9 @@ message ListTransactionsRequest {
 
   // Optional cursor-bounded query options. If unspecified, reads in ascending order
   // with the default item limit. The maximum item limit is 500; values above
-  // 500 will be coerced to 500. To read additional results, pass the last
-  // received item cursor as `options.after` until the stream returns `EndOfResults`.
+  // 500 will be coerced to 500. Every successful stream ends with QueryEnd; use
+  // its cursor as the next `options.after` for ascending reads or
+  // `options.before` for descending reads.
   optional QueryOptions options = 5;
 }
 
@@ -123,9 +126,8 @@ message ListTransactionsResponse {
     // One matching transaction.
     TransactionItem item = 1;
 
-    // Final frame indicating the effective query interval has no more matching
-    // results.
-    EndOfResults end = 2;
+    // Final frame for this successful query stream.
+    QueryEnd end = 2;
   }
 }
 
@@ -134,11 +136,12 @@ message ListEventsRequest {
   // Optional. Mask for specifying which parts of the Event should be returned.
   optional google.protobuf.FieldMask read_mask = 1;
 
-  // Required. Start of the checkpoint range to query (inclusive).
+  // Optional. Start of the checkpoint range to query (inclusive). Defaults to
+  // genesis.
   optional uint64 start_checkpoint = 2;
 
-  // Required. End of the checkpoint range to query (exclusive). The range
-  // width must not exceed 3,000,000 checkpoints.
+  // Optional. End of the checkpoint range to query (exclusive). Defaults to the
+  // current indexed ledger tip.
   optional uint64 end_checkpoint = 3;
 
   // Optional. DNF filter over indexed dimensions.
@@ -147,8 +150,9 @@ message ListEventsRequest {
 
   // Optional cursor-bounded query options. If unspecified, reads in ascending order
   // with the default item limit. The maximum item limit is 1000; values above
-  // 1000 will be coerced to 1000. To read additional results, pass the last
-  // received item cursor as `options.after` until the stream returns `EndOfResults`.
+  // 1000 will be coerced to 1000. Every successful stream ends with QueryEnd; use
+  // its cursor as the next `options.after` for ascending reads or
+  // `options.before` for descending reads.
   optional QueryOptions options = 5;
 }
 
@@ -178,8 +182,7 @@ message ListEventsResponse {
     // One matching event.
     EventItem item = 1;
 
-    // Final frame indicating the effective query interval has no more matching
-    // results.
-    EndOfResults end = 2;
+    // Final frame for this successful query stream.
+    QueryEnd end = 2;
   }
 }

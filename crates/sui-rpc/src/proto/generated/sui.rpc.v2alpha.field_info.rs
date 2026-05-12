@@ -825,7 +825,7 @@ pub(crate) mod _field_impls {
             name: "end",
             json_name: "end",
             number: 2i32,
-            message_fields: Some(EndOfResults::FIELDS),
+            message_fields: Some(QueryEnd::FIELDS),
         };
     }
     impl MessageFields for ListCheckpointsResponse {
@@ -858,9 +858,9 @@ pub(crate) mod _field_impls {
             self.path.push(ListCheckpointsResponse::ITEM_FIELD.name);
             CheckpointItemFieldPathBuilder::new_with_base(self.path)
         }
-        pub fn end(mut self) -> EndOfResultsFieldPathBuilder {
+        pub fn end(mut self) -> QueryEndFieldPathBuilder {
             self.path.push(ListCheckpointsResponse::END_FIELD.name);
-            EndOfResultsFieldPathBuilder::new_with_base(self.path)
+            QueryEndFieldPathBuilder::new_with_base(self.path)
         }
     }
     impl ListTransactionsRequest {
@@ -1005,7 +1005,7 @@ pub(crate) mod _field_impls {
             name: "end",
             json_name: "end",
             number: 2i32,
-            message_fields: Some(EndOfResults::FIELDS),
+            message_fields: Some(QueryEnd::FIELDS),
         };
     }
     impl MessageFields for ListTransactionsResponse {
@@ -1038,9 +1038,9 @@ pub(crate) mod _field_impls {
             self.path.push(ListTransactionsResponse::ITEM_FIELD.name);
             TransactionItemFieldPathBuilder::new_with_base(self.path)
         }
-        pub fn end(mut self) -> EndOfResultsFieldPathBuilder {
+        pub fn end(mut self) -> QueryEndFieldPathBuilder {
             self.path.push(ListTransactionsResponse::END_FIELD.name);
-            EndOfResultsFieldPathBuilder::new_with_base(self.path)
+            QueryEndFieldPathBuilder::new_with_base(self.path)
         }
     }
     impl ListEventsRequest {
@@ -1218,7 +1218,7 @@ pub(crate) mod _field_impls {
             name: "end",
             json_name: "end",
             number: 2i32,
-            message_fields: Some(EndOfResults::FIELDS),
+            message_fields: Some(QueryEnd::FIELDS),
         };
     }
     impl MessageFields for ListEventsResponse {
@@ -1251,9 +1251,9 @@ pub(crate) mod _field_impls {
             self.path.push(ListEventsResponse::ITEM_FIELD.name);
             EventItemFieldPathBuilder::new_with_base(self.path)
         }
-        pub fn end(mut self) -> EndOfResultsFieldPathBuilder {
+        pub fn end(mut self) -> QueryEndFieldPathBuilder {
             self.path.push(ListEventsResponse::END_FIELD.name);
-            EndOfResultsFieldPathBuilder::new_with_base(self.path)
+            QueryEndFieldPathBuilder::new_with_base(self.path)
         }
     }
     impl QueryOptions {
@@ -1327,26 +1327,35 @@ pub(crate) mod _field_impls {
             self.finish()
         }
     }
-    impl EndOfResults {
-        pub const REASON_FIELD: &'static MessageField = &MessageField {
-            name: "reason",
-            json_name: "reason",
+    impl QueryEnd {
+        pub const CURSOR_FIELD: &'static MessageField = &MessageField {
+            name: "cursor",
+            json_name: "cursor",
             number: 1i32,
             message_fields: None,
         };
+        pub const REASON_FIELD: &'static MessageField = &MessageField {
+            name: "reason",
+            json_name: "reason",
+            number: 2i32,
+            message_fields: None,
+        };
     }
-    impl MessageFields for EndOfResults {
-        const FIELDS: &'static [&'static MessageField] = &[Self::REASON_FIELD];
+    impl MessageFields for QueryEnd {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::CURSOR_FIELD,
+            Self::REASON_FIELD,
+        ];
     }
-    impl EndOfResults {
-        pub fn path_builder() -> EndOfResultsFieldPathBuilder {
-            EndOfResultsFieldPathBuilder::new()
+    impl QueryEnd {
+        pub fn path_builder() -> QueryEndFieldPathBuilder {
+            QueryEndFieldPathBuilder::new()
         }
     }
-    pub struct EndOfResultsFieldPathBuilder {
+    pub struct QueryEndFieldPathBuilder {
         path: Vec<&'static str>,
     }
-    impl EndOfResultsFieldPathBuilder {
+    impl QueryEndFieldPathBuilder {
         #[allow(clippy::new_without_default)]
         pub fn new() -> Self {
             Self { path: Default::default() }
@@ -1358,8 +1367,12 @@ pub(crate) mod _field_impls {
         pub fn finish(self) -> String {
             self.path.join(".")
         }
+        pub fn cursor(mut self) -> String {
+            self.path.push(QueryEnd::CURSOR_FIELD.name);
+            self.finish()
+        }
         pub fn reason(mut self) -> String {
-            self.path.push(EndOfResults::REASON_FIELD.name);
+            self.path.push(QueryEnd::REASON_FIELD.name);
             self.finish()
         }
     }

@@ -235,11 +235,12 @@ pub struct ListCheckpointsRequest {
     /// returned (e.g. summary, contents, signatures).
     #[prost(message, optional, tag = "1")]
     pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
-    /// Required. Start of the checkpoint range to query (inclusive).
+    /// Optional. Start of the checkpoint range to query (inclusive). Defaults to
+    /// genesis.
     #[prost(uint64, optional, tag = "2")]
     pub start_checkpoint: ::core::option::Option<u64>,
-    /// Required. End of the checkpoint range to query (exclusive). The range
-    /// width must not exceed 3,000,000 checkpoints.
+    /// Optional. End of the checkpoint range to query (exclusive). Defaults to the
+    /// current indexed ledger tip.
     #[prost(uint64, optional, tag = "3")]
     pub end_checkpoint: ::core::option::Option<u64>,
     /// Optional. DNF filter over indexed transaction dimensions. A checkpoint
@@ -249,8 +250,9 @@ pub struct ListCheckpointsRequest {
     pub filter: ::core::option::Option<TransactionFilter>,
     /// Optional cursor-bounded query options. If unspecified, reads in ascending order
     /// with the default item limit. The maximum item limit is 100; values above
-    /// 100 will be coerced to 100. To read additional results, pass the last
-    /// received item cursor as `options.after` until the stream returns `EndOfResults`.
+    /// 100 will be coerced to 100. Every successful stream ends with QueryEnd; use
+    /// its cursor as the next `options.after` for ascending reads or
+    /// `options.before` for descending reads.
     #[prost(message, optional, tag = "5")]
     pub options: ::core::option::Option<QueryOptions>,
 }
@@ -282,10 +284,9 @@ pub mod list_checkpoints_response {
         /// One matching checkpoint.
         #[prost(message, tag = "1")]
         Item(super::CheckpointItem),
-        /// Final frame indicating the effective query interval has no more matching
-        /// results.
+        /// Final frame for this successful query stream.
         #[prost(message, tag = "2")]
-        End(super::EndOfResults),
+        End(super::QueryEnd),
     }
 }
 /// Request message for LedgerService.ListTransactions.
@@ -296,11 +297,12 @@ pub struct ListTransactionsRequest {
     /// should be returned.
     #[prost(message, optional, tag = "1")]
     pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
-    /// Required. Start of the checkpoint range to query (inclusive).
+    /// Optional. Start of the checkpoint range to query (inclusive). Defaults to
+    /// genesis.
     #[prost(uint64, optional, tag = "2")]
     pub start_checkpoint: ::core::option::Option<u64>,
-    /// Required. End of the checkpoint range to query (exclusive). The range
-    /// width must not exceed 3,000,000 checkpoints.
+    /// Optional. End of the checkpoint range to query (exclusive). Defaults to the
+    /// current indexed ledger tip.
     #[prost(uint64, optional, tag = "3")]
     pub end_checkpoint: ::core::option::Option<u64>,
     /// Optional. DNF filter over indexed dimensions.
@@ -309,8 +311,9 @@ pub struct ListTransactionsRequest {
     pub filter: ::core::option::Option<TransactionFilter>,
     /// Optional cursor-bounded query options. If unspecified, reads in ascending order
     /// with the default item limit. The maximum item limit is 500; values above
-    /// 500 will be coerced to 500. To read additional results, pass the last
-    /// received item cursor as `options.after` until the stream returns `EndOfResults`.
+    /// 500 will be coerced to 500. Every successful stream ends with QueryEnd; use
+    /// its cursor as the next `options.after` for ascending reads or
+    /// `options.before` for descending reads.
     #[prost(message, optional, tag = "5")]
     pub options: ::core::option::Option<QueryOptions>,
 }
@@ -342,10 +345,9 @@ pub mod list_transactions_response {
         /// One matching transaction.
         #[prost(message, tag = "1")]
         Item(super::TransactionItem),
-        /// Final frame indicating the effective query interval has no more matching
-        /// results.
+        /// Final frame for this successful query stream.
         #[prost(message, tag = "2")]
-        End(super::EndOfResults),
+        End(super::QueryEnd),
     }
 }
 /// Request message for LedgerService.ListEvents.
@@ -355,11 +357,12 @@ pub struct ListEventsRequest {
     /// Optional. Mask for specifying which parts of the Event should be returned.
     #[prost(message, optional, tag = "1")]
     pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
-    /// Required. Start of the checkpoint range to query (inclusive).
+    /// Optional. Start of the checkpoint range to query (inclusive). Defaults to
+    /// genesis.
     #[prost(uint64, optional, tag = "2")]
     pub start_checkpoint: ::core::option::Option<u64>,
-    /// Required. End of the checkpoint range to query (exclusive). The range
-    /// width must not exceed 3,000,000 checkpoints.
+    /// Optional. End of the checkpoint range to query (exclusive). Defaults to the
+    /// current indexed ledger tip.
     #[prost(uint64, optional, tag = "3")]
     pub end_checkpoint: ::core::option::Option<u64>,
     /// Optional. DNF filter over indexed dimensions.
@@ -368,8 +371,9 @@ pub struct ListEventsRequest {
     pub filter: ::core::option::Option<EventFilter>,
     /// Optional cursor-bounded query options. If unspecified, reads in ascending order
     /// with the default item limit. The maximum item limit is 1000; values above
-    /// 1000 will be coerced to 1000. To read additional results, pass the last
-    /// received item cursor as `options.after` until the stream returns `EndOfResults`.
+    /// 1000 will be coerced to 1000. Every successful stream ends with QueryEnd; use
+    /// its cursor as the next `options.after` for ascending reads or
+    /// `options.before` for descending reads.
     #[prost(message, optional, tag = "5")]
     pub options: ::core::option::Option<QueryOptions>,
 }
@@ -410,10 +414,9 @@ pub mod list_events_response {
         /// One matching event.
         #[prost(message, tag = "1")]
         Item(super::EventItem),
-        /// Final frame indicating the effective query interval has no more matching
-        /// results.
+        /// Final frame for this successful query stream.
         #[prost(message, tag = "2")]
-        End(super::EndOfResults),
+        End(super::QueryEnd),
     }
 }
 /// Generated client implementations.
@@ -921,15 +924,15 @@ pub mod ledger_service_server {
 ///
 /// For example, with `after = A`, `before = B`, `ordering = DESCENDING`, and
 /// `limit_items = N`, the response contains up to N matching items in descending
-/// order from the interval `(A, B)`. If N items are returned without
-/// `EndOfResults`, resume by keeping `after = A` and setting `before` to the
-/// last returned item cursor. That last cursor is the lowest item returned in
-/// ledger order, so it becomes the next exclusive upper bound.
+/// order from the interval `(A, B)`. If the response ends with
+/// `QUERY_END_REASON_ITEM_LIMIT`, resume by keeping `after = A` and setting
+/// `before` to the returned `QueryEnd.cursor`. That cursor is the lowest item
+/// returned in ledger order, so it becomes the next exclusive upper bound.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct QueryOptions {
     /// The maximum number of items to return. Each method applies its own default
-    /// and maximum. EndOfResults does not count against this limit.
+    /// and maximum. QueryEnd does not count against this limit.
     #[prost(uint32, optional, tag = "1")]
     pub limit_items: ::core::option::Option<u32>,
     /// Opaque exclusive lower bound. Results must be strictly after this cursor in
@@ -947,16 +950,21 @@ pub struct QueryOptions {
     #[prost(enumeration = "Ordering", tag = "4")]
     pub ordering: i32,
 }
-/// Final response frame indicating the effective query interval has no more
-/// matching results. The interval is the intersection of checkpoint bounds,
-/// cursor bounds, chain/index bounds, and filters. If absent, clients should
-/// resume with the last item cursor.
+/// Final response frame for a successful query stream. Every successful stream
+/// returns exactly one QueryEnd after all item frames. Use `cursor` as
+/// `options.after` for ascending continuation and `options.before` for
+/// descending continuation. If a stream disconnects before QueryEnd, resume from
+/// the last item cursor received.
 #[non_exhaustive]
-#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct EndOfResults {
-    /// Boundary that ended the scan. For ascending reads this is the high end of
-    /// the effective interval; for descending reads this is the low end.
-    #[prost(enumeration = "EndOfResultsReason", tag = "1")]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct QueryEnd {
+    /// Opaque continuation cursor. For ITEM_LIMIT this is the last returned item
+    /// cursor. For other reasons it may be a scan-frontier cursor that does not
+    /// correspond to a returned item.
+    #[prost(bytes = "bytes", optional, tag = "1")]
+    pub cursor: ::core::option::Option<::prost::bytes::Bytes>,
+    /// Reason this response stopped.
+    #[prost(enumeration = "QueryEndReason", tag = "2")]
     pub reason: i32,
 }
 /// Ordering for the returned result set.
@@ -989,40 +997,50 @@ impl Ordering {
         }
     }
 }
-/// Reason the effective query interval has no more matching results.
+/// Reason the server stopped this query response.
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
-pub enum EndOfResultsReason {
-    /// The terminal reason was not specified.
+pub enum QueryEndReason {
+    /// The stop reason was not specified.
     Unspecified = 0,
+    /// The response reached the requested item limit. Resume from `QueryEnd.cursor`
+    /// to continue reading the same effective interval.
+    ItemLimit = 1,
+    /// The response reached the server's maximum checkpoint scan width before it
+    /// reached the effective interval bound. Resume from `QueryEnd.cursor`.
+    ScanLimit = 2,
     /// The scan reached a requested checkpoint range bound.
-    CheckpointBound = 1,
+    CheckpointBound = 3,
     /// The scan reached an exclusive cursor bound.
-    CursorBound = 2,
+    CursorBound = 4,
     /// The scan reached the currently indexed ledger tip.
-    LedgerTip = 3,
+    LedgerTip = 5,
 }
-impl EndOfResultsReason {
+impl QueryEndReason {
     /// String value of the enum field names used in the ProtoBuf definition.
     ///
     /// The values are not transformed in any way and thus are considered stable
     /// (if the ProtoBuf definition does not change) and safe for programmatic use.
     pub fn as_str_name(&self) -> &'static str {
         match self {
-            Self::Unspecified => "END_OF_RESULTS_REASON_UNSPECIFIED",
-            Self::CheckpointBound => "END_OF_RESULTS_REASON_CHECKPOINT_BOUND",
-            Self::CursorBound => "END_OF_RESULTS_REASON_CURSOR_BOUND",
-            Self::LedgerTip => "END_OF_RESULTS_REASON_LEDGER_TIP",
+            Self::Unspecified => "QUERY_END_REASON_UNSPECIFIED",
+            Self::ItemLimit => "QUERY_END_REASON_ITEM_LIMIT",
+            Self::ScanLimit => "QUERY_END_REASON_SCAN_LIMIT",
+            Self::CheckpointBound => "QUERY_END_REASON_CHECKPOINT_BOUND",
+            Self::CursorBound => "QUERY_END_REASON_CURSOR_BOUND",
+            Self::LedgerTip => "QUERY_END_REASON_LEDGER_TIP",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
     pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
         match value {
-            "END_OF_RESULTS_REASON_UNSPECIFIED" => Some(Self::Unspecified),
-            "END_OF_RESULTS_REASON_CHECKPOINT_BOUND" => Some(Self::CheckpointBound),
-            "END_OF_RESULTS_REASON_CURSOR_BOUND" => Some(Self::CursorBound),
-            "END_OF_RESULTS_REASON_LEDGER_TIP" => Some(Self::LedgerTip),
+            "QUERY_END_REASON_UNSPECIFIED" => Some(Self::Unspecified),
+            "QUERY_END_REASON_ITEM_LIMIT" => Some(Self::ItemLimit),
+            "QUERY_END_REASON_SCAN_LIMIT" => Some(Self::ScanLimit),
+            "QUERY_END_REASON_CHECKPOINT_BOUND" => Some(Self::CheckpointBound),
+            "QUERY_END_REASON_CURSOR_BOUND" => Some(Self::CursorBound),
+            "QUERY_END_REASON_LEDGER_TIP" => Some(Self::LedgerTip),
             _ => None,
         }
     }

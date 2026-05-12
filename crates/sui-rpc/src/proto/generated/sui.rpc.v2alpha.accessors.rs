@@ -159,16 +159,6 @@ mod _accessor_impls {
             self
         }
     }
-    impl super::EndOfResults {
-        pub const fn const_default() -> Self {
-            Self { reason: 0 }
-        }
-        #[doc(hidden)]
-        pub fn default_instance() -> &'static Self {
-            static DEFAULT: super::EndOfResults = super::EndOfResults::const_default();
-            &DEFAULT
-        }
-    }
     impl super::EventFilter {
         pub const fn const_default() -> Self {
             Self { terms: Vec::new() }
@@ -1055,17 +1045,17 @@ mod _accessor_impls {
             self
         }
         ///Returns the value of `end`, or the default value if `end` is unset.
-        pub fn end(&self) -> &super::EndOfResults {
+        pub fn end(&self) -> &super::QueryEnd {
             if let Some(super::list_checkpoints_response::Response::End(field)) = &self
                 .response
             {
                 field as _
             } else {
-                super::EndOfResults::default_instance() as _
+                super::QueryEnd::default_instance() as _
             }
         }
         ///If `end` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn end_opt(&self) -> Option<&super::EndOfResults> {
+        pub fn end_opt(&self) -> Option<&super::QueryEnd> {
             if let Some(super::list_checkpoints_response::Response::End(field)) = &self
                 .response
             {
@@ -1075,7 +1065,7 @@ mod _accessor_impls {
             }
         }
         ///If `end` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn end_opt_mut(&mut self) -> Option<&mut super::EndOfResults> {
+        pub fn end_opt_mut(&mut self) -> Option<&mut super::QueryEnd> {
             if let Some(super::list_checkpoints_response::Response::End(field)) = &mut self
                 .response
             {
@@ -1087,11 +1077,11 @@ mod _accessor_impls {
         ///Returns a mutable reference to `end`.
         ///If the field is unset, it is first initialized with the default value.
         ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn end_mut(&mut self) -> &mut super::EndOfResults {
+        pub fn end_mut(&mut self) -> &mut super::QueryEnd {
             if self.end_opt_mut().is_none() {
                 self.response = Some(
                     super::list_checkpoints_response::Response::End(
-                        super::EndOfResults::default(),
+                        super::QueryEnd::default(),
                     ),
                 );
             }
@@ -1099,14 +1089,14 @@ mod _accessor_impls {
         }
         ///Sets `end` with the provided value.
         ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn set_end<T: Into<super::EndOfResults>>(&mut self, field: T) {
+        pub fn set_end<T: Into<super::QueryEnd>>(&mut self, field: T) {
             self.response = Some(
                 super::list_checkpoints_response::Response::End(field.into().into()),
             );
         }
         ///Sets `end` with the provided value.
         ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn with_end<T: Into<super::EndOfResults>>(mut self, field: T) -> Self {
+        pub fn with_end<T: Into<super::QueryEnd>>(mut self, field: T) -> Self {
             self.set_end(field.into());
             self
         }
@@ -1320,17 +1310,17 @@ mod _accessor_impls {
             self
         }
         ///Returns the value of `end`, or the default value if `end` is unset.
-        pub fn end(&self) -> &super::EndOfResults {
+        pub fn end(&self) -> &super::QueryEnd {
             if let Some(super::list_events_response::Response::End(field)) = &self
                 .response
             {
                 field as _
             } else {
-                super::EndOfResults::default_instance() as _
+                super::QueryEnd::default_instance() as _
             }
         }
         ///If `end` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn end_opt(&self) -> Option<&super::EndOfResults> {
+        pub fn end_opt(&self) -> Option<&super::QueryEnd> {
             if let Some(super::list_events_response::Response::End(field)) = &self
                 .response
             {
@@ -1340,7 +1330,7 @@ mod _accessor_impls {
             }
         }
         ///If `end` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn end_opt_mut(&mut self) -> Option<&mut super::EndOfResults> {
+        pub fn end_opt_mut(&mut self) -> Option<&mut super::QueryEnd> {
             if let Some(super::list_events_response::Response::End(field)) = &mut self
                 .response
             {
@@ -1352,11 +1342,11 @@ mod _accessor_impls {
         ///Returns a mutable reference to `end`.
         ///If the field is unset, it is first initialized with the default value.
         ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn end_mut(&mut self) -> &mut super::EndOfResults {
+        pub fn end_mut(&mut self) -> &mut super::QueryEnd {
             if self.end_opt_mut().is_none() {
                 self.response = Some(
                     super::list_events_response::Response::End(
-                        super::EndOfResults::default(),
+                        super::QueryEnd::default(),
                     ),
                 );
             }
@@ -1364,14 +1354,14 @@ mod _accessor_impls {
         }
         ///Sets `end` with the provided value.
         ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn set_end<T: Into<super::EndOfResults>>(&mut self, field: T) {
+        pub fn set_end<T: Into<super::QueryEnd>>(&mut self, field: T) {
             self.response = Some(
                 super::list_events_response::Response::End(field.into().into()),
             );
         }
         ///Sets `end` with the provided value.
         ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn with_end<T: Into<super::EndOfResults>>(mut self, field: T) -> Self {
+        pub fn with_end<T: Into<super::QueryEnd>>(mut self, field: T) -> Self {
             self.set_end(field.into());
             self
         }
@@ -1588,17 +1578,17 @@ mod _accessor_impls {
             self
         }
         ///Returns the value of `end`, or the default value if `end` is unset.
-        pub fn end(&self) -> &super::EndOfResults {
+        pub fn end(&self) -> &super::QueryEnd {
             if let Some(super::list_transactions_response::Response::End(field)) = &self
                 .response
             {
                 field as _
             } else {
-                super::EndOfResults::default_instance() as _
+                super::QueryEnd::default_instance() as _
             }
         }
         ///If `end` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn end_opt(&self) -> Option<&super::EndOfResults> {
+        pub fn end_opt(&self) -> Option<&super::QueryEnd> {
             if let Some(super::list_transactions_response::Response::End(field)) = &self
                 .response
             {
@@ -1608,7 +1598,7 @@ mod _accessor_impls {
             }
         }
         ///If `end` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn end_opt_mut(&mut self) -> Option<&mut super::EndOfResults> {
+        pub fn end_opt_mut(&mut self) -> Option<&mut super::QueryEnd> {
             if let Some(super::list_transactions_response::Response::End(field)) = &mut self
                 .response
             {
@@ -1620,11 +1610,11 @@ mod _accessor_impls {
         ///Returns a mutable reference to `end`.
         ///If the field is unset, it is first initialized with the default value.
         ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn end_mut(&mut self) -> &mut super::EndOfResults {
+        pub fn end_mut(&mut self) -> &mut super::QueryEnd {
             if self.end_opt_mut().is_none() {
                 self.response = Some(
                     super::list_transactions_response::Response::End(
-                        super::EndOfResults::default(),
+                        super::QueryEnd::default(),
                     ),
                 );
             }
@@ -1632,14 +1622,14 @@ mod _accessor_impls {
         }
         ///Sets `end` with the provided value.
         ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn set_end<T: Into<super::EndOfResults>>(&mut self, field: T) {
+        pub fn set_end<T: Into<super::QueryEnd>>(&mut self, field: T) {
             self.response = Some(
                 super::list_transactions_response::Response::End(field.into().into()),
             );
         }
         ///Sets `end` with the provided value.
         ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn with_end<T: Into<super::EndOfResults>>(mut self, field: T) -> Self {
+        pub fn with_end<T: Into<super::QueryEnd>>(mut self, field: T) -> Self {
             self.set_end(field.into());
             self
         }
@@ -1673,6 +1663,29 @@ mod _accessor_impls {
         ///Sets `function` with the provided value.
         pub fn with_function<T: Into<String>>(mut self, field: T) -> Self {
             self.set_function(field.into());
+            self
+        }
+    }
+    impl super::QueryEnd {
+        pub const fn const_default() -> Self {
+            Self { cursor: None, reason: 0 }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::QueryEnd = super::QueryEnd::const_default();
+            &DEFAULT
+        }
+        ///If `cursor` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn cursor_opt(&self) -> Option<&[u8]> {
+            self.cursor.as_ref().map(|field| field as _)
+        }
+        ///Sets `cursor` with the provided value.
+        pub fn set_cursor<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
+            self.cursor = Some(field.into().into());
+        }
+        ///Sets `cursor` with the provided value.
+        pub fn with_cursor<T: Into<::prost::bytes::Bytes>>(mut self, field: T) -> Self {
+            self.set_cursor(field.into());
             self
         }
     }

@@ -457,205 +457,6 @@ impl<'de> serde::Deserialize<'de> for EmitModuleFilter {
             )
     }
 }
-impl serde::Serialize for EndOfResults {
-    #[allow(deprecated)]
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        use serde::ser::SerializeStruct;
-        let mut len = 0usize;
-        if self.reason != 0 {
-            len += 1;
-        }
-        let mut struct_ser = serializer
-            .serialize_struct("sui.rpc.v2alpha.EndOfResults", len)?;
-        if self.reason != 0 {
-            let v = EndOfResultsReason::try_from(self.reason)
-                .map_err(|_| serde::ser::Error::custom(
-                    format!("Invalid variant {}", self.reason),
-                ))?;
-            struct_ser.serialize_field("reason", &v)?;
-        }
-        struct_ser.end()
-    }
-}
-impl<'de> serde::Deserialize<'de> for EndOfResults {
-    #[allow(deprecated)]
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        const FIELDS: &[&str] = &["reason"];
-        #[allow(clippy::enum_variant_names)]
-        enum GeneratedField {
-            Reason,
-            __SkipField__,
-        }
-        impl<'de> serde::Deserialize<'de> for GeneratedField {
-            fn deserialize<D>(
-                deserializer: D,
-            ) -> std::result::Result<GeneratedField, D::Error>
-            where
-                D: serde::Deserializer<'de>,
-            {
-                struct GeneratedVisitor;
-                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-                    type Value = GeneratedField;
-                    fn expecting(
-                        &self,
-                        formatter: &mut std::fmt::Formatter<'_>,
-                    ) -> std::fmt::Result {
-                        write!(formatter, "expected one of: {:?}", & FIELDS)
-                    }
-                    #[allow(unused_variables)]
-                    fn visit_str<E>(
-                        self,
-                        value: &str,
-                    ) -> std::result::Result<GeneratedField, E>
-                    where
-                        E: serde::de::Error,
-                    {
-                        match value {
-                            "reason" => Ok(GeneratedField::Reason),
-                            _ => Ok(GeneratedField::__SkipField__),
-                        }
-                    }
-                }
-                deserializer.deserialize_identifier(GeneratedVisitor)
-            }
-        }
-        struct GeneratedVisitor;
-        #[allow(clippy::useless_conversion)]
-        #[allow(clippy::unit_arg)]
-        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-            type Value = EndOfResults;
-            fn expecting(
-                &self,
-                formatter: &mut std::fmt::Formatter<'_>,
-            ) -> std::fmt::Result {
-                formatter.write_str("struct sui.rpc.v2alpha.EndOfResults")
-            }
-            fn visit_map<V>(
-                self,
-                mut map_: V,
-            ) -> std::result::Result<EndOfResults, V::Error>
-            where
-                V: serde::de::MapAccess<'de>,
-            {
-                let mut reason__ = None;
-                while let Some(k) = map_.next_key()? {
-                    match k {
-                        GeneratedField::Reason => {
-                            if reason__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("reason"));
-                            }
-                            reason__ = Some(
-                                map_.next_value::<EndOfResultsReason>()? as i32,
-                            );
-                        }
-                        GeneratedField::__SkipField__ => {
-                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
-                        }
-                    }
-                }
-                Ok(EndOfResults {
-                    reason: reason__.unwrap_or_default(),
-                })
-            }
-        }
-        deserializer
-            .deserialize_struct("sui.rpc.v2alpha.EndOfResults", FIELDS, GeneratedVisitor)
-    }
-}
-impl serde::Serialize for EndOfResultsReason {
-    #[allow(deprecated)]
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let variant = match self {
-            Self::Unspecified => "END_OF_RESULTS_REASON_UNSPECIFIED",
-            Self::CheckpointBound => "END_OF_RESULTS_REASON_CHECKPOINT_BOUND",
-            Self::CursorBound => "END_OF_RESULTS_REASON_CURSOR_BOUND",
-            Self::LedgerTip => "END_OF_RESULTS_REASON_LEDGER_TIP",
-        };
-        serializer.serialize_str(variant)
-    }
-}
-impl<'de> serde::Deserialize<'de> for EndOfResultsReason {
-    #[allow(deprecated)]
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        const FIELDS: &[&str] = &[
-            "END_OF_RESULTS_REASON_UNSPECIFIED",
-            "END_OF_RESULTS_REASON_CHECKPOINT_BOUND",
-            "END_OF_RESULTS_REASON_CURSOR_BOUND",
-            "END_OF_RESULTS_REASON_LEDGER_TIP",
-        ];
-        struct GeneratedVisitor;
-        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-            type Value = EndOfResultsReason;
-            fn expecting(
-                &self,
-                formatter: &mut std::fmt::Formatter<'_>,
-            ) -> std::fmt::Result {
-                write!(formatter, "expected one of: {:?}", & FIELDS)
-            }
-            fn visit_i64<E>(self, v: i64) -> std::result::Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                i32::try_from(v)
-                    .ok()
-                    .and_then(|x| x.try_into().ok())
-                    .ok_or_else(|| {
-                        serde::de::Error::invalid_value(
-                            serde::de::Unexpected::Signed(v),
-                            &self,
-                        )
-                    })
-            }
-            fn visit_u64<E>(self, v: u64) -> std::result::Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                i32::try_from(v)
-                    .ok()
-                    .and_then(|x| x.try_into().ok())
-                    .ok_or_else(|| {
-                        serde::de::Error::invalid_value(
-                            serde::de::Unexpected::Unsigned(v),
-                            &self,
-                        )
-                    })
-            }
-            fn visit_str<E>(self, value: &str) -> std::result::Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                match value {
-                    "END_OF_RESULTS_REASON_UNSPECIFIED" => {
-                        Ok(EndOfResultsReason::Unspecified)
-                    }
-                    "END_OF_RESULTS_REASON_CHECKPOINT_BOUND" => {
-                        Ok(EndOfResultsReason::CheckpointBound)
-                    }
-                    "END_OF_RESULTS_REASON_CURSOR_BOUND" => {
-                        Ok(EndOfResultsReason::CursorBound)
-                    }
-                    "END_OF_RESULTS_REASON_LEDGER_TIP" => {
-                        Ok(EndOfResultsReason::LedgerTip)
-                    }
-                    _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
-                }
-            }
-        }
-        deserializer.deserialize_any(GeneratedVisitor)
-    }
-}
 impl serde::Serialize for EventFilter {
     #[allow(deprecated)]
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
@@ -2777,6 +2578,223 @@ impl<'de> serde::Deserialize<'de> for Ordering {
                 match value {
                     "ORDERING_ASCENDING" => Ok(Ordering::Ascending),
                     "ORDERING_DESCENDING" => Ok(Ordering::Descending),
+                    _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
+                }
+            }
+        }
+        deserializer.deserialize_any(GeneratedVisitor)
+    }
+}
+impl serde::Serialize for QueryEnd {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0usize;
+        if self.cursor.is_some() {
+            len += 1;
+        }
+        if self.reason != 0 {
+            len += 1;
+        }
+        let mut struct_ser = serializer
+            .serialize_struct("sui.rpc.v2alpha.QueryEnd", len)?;
+        if let Some(v) = self.cursor.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser
+                .serialize_field("cursor", crate::_serde::base64::encode(&v).as_str())?;
+        }
+        if self.reason != 0 {
+            let v = QueryEndReason::try_from(self.reason)
+                .map_err(|_| serde::ser::Error::custom(
+                    format!("Invalid variant {}", self.reason),
+                ))?;
+            struct_ser.serialize_field("reason", &v)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for QueryEnd {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &["cursor", "reason"];
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Cursor,
+            Reason,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(
+                deserializer: D,
+            ) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+                    fn expecting(
+                        &self,
+                        formatter: &mut std::fmt::Formatter<'_>,
+                    ) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", & FIELDS)
+                    }
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(
+                        self,
+                        value: &str,
+                    ) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "cursor" => Ok(GeneratedField::Cursor),
+                            "reason" => Ok(GeneratedField::Reason),
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = QueryEnd;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2alpha.QueryEnd")
+            }
+            fn visit_map<V>(self, mut map_: V) -> std::result::Result<QueryEnd, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                let mut cursor__ = None;
+                let mut reason__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Cursor => {
+                            if cursor__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("cursor"));
+                            }
+                            cursor__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::BytesDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::Reason => {
+                            if reason__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("reason"));
+                            }
+                            reason__ = Some(map_.next_value::<QueryEndReason>()? as i32);
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(QueryEnd {
+                    cursor: cursor__,
+                    reason: reason__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer
+            .deserialize_struct("sui.rpc.v2alpha.QueryEnd", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for QueryEndReason {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let variant = match self {
+            Self::Unspecified => "QUERY_END_REASON_UNSPECIFIED",
+            Self::ItemLimit => "QUERY_END_REASON_ITEM_LIMIT",
+            Self::ScanLimit => "QUERY_END_REASON_SCAN_LIMIT",
+            Self::CheckpointBound => "QUERY_END_REASON_CHECKPOINT_BOUND",
+            Self::CursorBound => "QUERY_END_REASON_CURSOR_BOUND",
+            Self::LedgerTip => "QUERY_END_REASON_LEDGER_TIP",
+        };
+        serializer.serialize_str(variant)
+    }
+}
+impl<'de> serde::Deserialize<'de> for QueryEndReason {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "QUERY_END_REASON_UNSPECIFIED",
+            "QUERY_END_REASON_ITEM_LIMIT",
+            "QUERY_END_REASON_SCAN_LIMIT",
+            "QUERY_END_REASON_CHECKPOINT_BOUND",
+            "QUERY_END_REASON_CURSOR_BOUND",
+            "QUERY_END_REASON_LEDGER_TIP",
+        ];
+        struct GeneratedVisitor;
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = QueryEndReason;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                write!(formatter, "expected one of: {:?}", & FIELDS)
+            }
+            fn visit_i64<E>(self, v: i64) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                i32::try_from(v)
+                    .ok()
+                    .and_then(|x| x.try_into().ok())
+                    .ok_or_else(|| {
+                        serde::de::Error::invalid_value(
+                            serde::de::Unexpected::Signed(v),
+                            &self,
+                        )
+                    })
+            }
+            fn visit_u64<E>(self, v: u64) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                i32::try_from(v)
+                    .ok()
+                    .and_then(|x| x.try_into().ok())
+                    .ok_or_else(|| {
+                        serde::de::Error::invalid_value(
+                            serde::de::Unexpected::Unsigned(v),
+                            &self,
+                        )
+                    })
+            }
+            fn visit_str<E>(self, value: &str) -> std::result::Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                match value {
+                    "QUERY_END_REASON_UNSPECIFIED" => Ok(QueryEndReason::Unspecified),
+                    "QUERY_END_REASON_ITEM_LIMIT" => Ok(QueryEndReason::ItemLimit),
+                    "QUERY_END_REASON_SCAN_LIMIT" => Ok(QueryEndReason::ScanLimit),
+                    "QUERY_END_REASON_CHECKPOINT_BOUND" => {
+                        Ok(QueryEndReason::CheckpointBound)
+                    }
+                    "QUERY_END_REASON_CURSOR_BOUND" => Ok(QueryEndReason::CursorBound),
+                    "QUERY_END_REASON_LEDGER_TIP" => Ok(QueryEndReason::LedgerTip),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }
