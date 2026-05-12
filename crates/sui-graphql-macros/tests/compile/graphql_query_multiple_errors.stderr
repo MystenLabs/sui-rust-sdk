@@ -1,0 +1,29 @@
+error: GraphQL [line 3, col 9]: type `Query` does not have a field `foo`
+  --> tests/compile/graphql_query_multiple_errors.rs:7:17
+   |
+ 7 |   const Q: &str = graphql_query!(
+   |  _________________^
+ 8 | |     "query {
+ 9 | |         chainIdentifier
+10 | |         foo
+11 | |         bar
+12 | |     }"
+13 | | );
+   | |_^
+   |
+   = note: this error originates in the macro `graphql_query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: GraphQL [line 4, col 9]: type `Query` does not have a field `bar`
+  --> tests/compile/graphql_query_multiple_errors.rs:7:17
+   |
+ 7 |   const Q: &str = graphql_query!(
+   |  _________________^
+ 8 | |     "query {
+ 9 | |         chainIdentifier
+10 | |         foo
+11 | |         bar
+12 | |     }"
+13 | | );
+   | |_^
+   |
+   = note: this error originates in the macro `graphql_query` (in Nightly builds, run with -Z macro-backtrace for more info)

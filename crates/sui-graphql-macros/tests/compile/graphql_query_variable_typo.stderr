@@ -1,0 +1,29 @@
+error: GraphQL [line 1, col 7]: unused variable: `$id`
+  --> tests/compile/graphql_query_variable_typo.rs:6:17
+   |
+ 6 |   const Q: &str = graphql_query!(
+   |  _________________^
+ 7 | |     "query($id: SuiAddress!) {
+ 8 | |         object(address: $idd) {
+ 9 | |             version
+10 | |         }
+11 | |     }"
+12 | | );
+   | |_^
+   |
+   = note: this error originates in the macro `graphql_query` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: GraphQL [line 2, col 25]: variable `$idd` is not defined
+  --> tests/compile/graphql_query_variable_typo.rs:6:17
+   |
+ 6 |   const Q: &str = graphql_query!(
+   |  _________________^
+ 7 | |     "query($id: SuiAddress!) {
+ 8 | |         object(address: $idd) {
+ 9 | |             version
+10 | |         }
+11 | |     }"
+12 | | );
+   | |_^
+   |
+   = note: this error originates in the macro `graphql_query` (in Nightly builds, run with -Z macro-backtrace for more info)

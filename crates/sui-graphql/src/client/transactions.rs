@@ -1,6 +1,7 @@
 //! Transaction-related convenience methods.
 
 use sui_graphql_macros::Response;
+use sui_graphql_macros::graphql_query;
 use sui_sdk_types::Transaction;
 use sui_sdk_types::TransactionEffects;
 
@@ -76,8 +77,8 @@ impl Client {
             timestamp: Option<DateTime>,
         }
 
-        const QUERY: &str = r#"
-            query($digest: String!) {
+        const QUERY: &str = graphql_query!(
+            "query($digest: String!) {
                 transaction(digest: $digest) {
                     transactionBcs
                     effects {
@@ -89,8 +90,8 @@ impl Client {
                         timestamp
                     }
                 }
-            }
-        "#;
+            }"
+        );
 
         let variables = serde_json::json!({ "digest": digest });
 

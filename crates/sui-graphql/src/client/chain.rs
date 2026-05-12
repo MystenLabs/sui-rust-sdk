@@ -1,6 +1,7 @@
 //! Chain information convenience methods.
 
 use sui_graphql_macros::Response;
+use sui_graphql_macros::graphql_query;
 
 use super::Client;
 use crate::error::Error;
@@ -55,7 +56,7 @@ impl Client {
             chain_identifier: Option<Digest>,
         }
 
-        const QUERY: &str = "query { chainIdentifier }";
+        const QUERY: &str = graphql_query!("query { chainIdentifier }");
 
         let response = self.query::<Response>(QUERY, serde_json::json!({})).await?;
 
@@ -86,7 +87,7 @@ impl Client {
             protocol_version: Option<u64>,
         }
 
-        const QUERY: &str = "query { protocolConfigs { protocolVersion } }";
+        const QUERY: &str = graphql_query!("query { protocolConfigs { protocolVersion } }");
 
         let response = self.query::<Response>(QUERY, serde_json::json!({})).await?;
 
@@ -141,8 +142,8 @@ impl Client {
             last_checkpoint_seq: Option<Vec<u64>>,
         }
 
-        const QUERY: &str = r#"
-            query($epochId: UInt53) {
+        const QUERY: &str = graphql_query!(
+            "query($epochId: UInt53) {
                 epoch(epochId: $epochId) {
                     epochId
                     protocolConfigs {
@@ -163,8 +164,8 @@ impl Client {
                         }
                     }
                 }
-            }
-        "#;
+            }"
+        );
 
         let variables = serde_json::json!({
             "epochId": epoch_id,

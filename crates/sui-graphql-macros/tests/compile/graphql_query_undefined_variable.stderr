@@ -1,0 +1,14 @@
+error: GraphQL [line 2, col 25]: variable `$id` is not defined
+  --> tests/compile/graphql_query_undefined_variable.rs:5:17
+   |
+ 5 |   const Q: &str = graphql_query!(
+   |  _________________^
+ 6 | |     "query {
+ 7 | |         object(address: $id) {
+ 8 | |             version
+ 9 | |         }
+10 | |     }"
+11 | | );
+   | |_^
+   |
+   = note: this error originates in the macro `graphql_query` (in Nightly builds, run with -Z macro-backtrace for more info)
