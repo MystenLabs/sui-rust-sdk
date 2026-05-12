@@ -457,6 +457,88 @@ impl<'de> serde::Deserialize<'de> for EmitModuleFilter {
             )
     }
 }
+impl serde::Serialize for EndOfResults {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let len = 0usize;
+        let struct_ser = serializer
+            .serialize_struct("sui.rpc.v2alpha.EndOfResults", len)?;
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for EndOfResults {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[];
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(
+                deserializer: D,
+            ) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+                    fn expecting(
+                        &self,
+                        formatter: &mut std::fmt::Formatter<'_>,
+                    ) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", & FIELDS)
+                    }
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(
+                        self,
+                        value: &str,
+                    ) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        Ok(GeneratedField::__SkipField__)
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = EndOfResults;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2alpha.EndOfResults")
+            }
+            fn visit_map<V>(
+                self,
+                mut map_: V,
+            ) -> std::result::Result<EndOfResults, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                while map_.next_key::<GeneratedField>()?.is_some() {
+                    let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                }
+                Ok(EndOfResults {})
+            }
+        }
+        deserializer
+            .deserialize_struct("sui.rpc.v2alpha.EndOfResults", FIELDS, GeneratedVisitor)
+    }
+}
 impl serde::Serialize for EventFilter {
     #[allow(deprecated)]
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
@@ -1621,8 +1703,8 @@ impl serde::Serialize for ListCheckpointsResponse {
                 list_checkpoints_response::Response::Item(v) => {
                     struct_ser.serialize_field("item", v)?;
                 }
-                list_checkpoints_response::Response::PageInfo(v) => {
-                    struct_ser.serialize_field("pageInfo", v)?;
+                list_checkpoints_response::Response::End(v) => {
+                    struct_ser.serialize_field("end", v)?;
                 }
             }
         }
@@ -1635,11 +1717,11 @@ impl<'de> serde::Deserialize<'de> for ListCheckpointsResponse {
     where
         D: serde::Deserializer<'de>,
     {
-        const FIELDS: &[&str] = &["item", "page_info", "pageInfo"];
+        const FIELDS: &[&str] = &["item", "end"];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             Item,
-            PageInfo,
+            End,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -1668,7 +1750,7 @@ impl<'de> serde::Deserialize<'de> for ListCheckpointsResponse {
                     {
                         match value {
                             "item" => Ok(GeneratedField::Item),
-                            "pageInfo" | "page_info" => Ok(GeneratedField::PageInfo),
+                            "end" => Ok(GeneratedField::End),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -1705,13 +1787,13 @@ impl<'de> serde::Deserialize<'de> for ListCheckpointsResponse {
                                 .next_value::<::std::option::Option<_>>()?
                                 .map(list_checkpoints_response::Response::Item);
                         }
-                        GeneratedField::PageInfo => {
+                        GeneratedField::End => {
                             if response__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("pageInfo"));
+                                return Err(serde::de::Error::duplicate_field("end"));
                             }
                             response__ = map_
                                 .next_value::<::std::option::Option<_>>()?
-                                .map(list_checkpoints_response::Response::PageInfo);
+                                .map(list_checkpoints_response::Response::End);
                         }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
@@ -1958,8 +2040,8 @@ impl serde::Serialize for ListEventsResponse {
                 list_events_response::Response::Item(v) => {
                     struct_ser.serialize_field("item", v)?;
                 }
-                list_events_response::Response::PageInfo(v) => {
-                    struct_ser.serialize_field("pageInfo", v)?;
+                list_events_response::Response::End(v) => {
+                    struct_ser.serialize_field("end", v)?;
                 }
             }
         }
@@ -1972,11 +2054,11 @@ impl<'de> serde::Deserialize<'de> for ListEventsResponse {
     where
         D: serde::Deserializer<'de>,
     {
-        const FIELDS: &[&str] = &["item", "page_info", "pageInfo"];
+        const FIELDS: &[&str] = &["item", "end"];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             Item,
-            PageInfo,
+            End,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -2005,7 +2087,7 @@ impl<'de> serde::Deserialize<'de> for ListEventsResponse {
                     {
                         match value {
                             "item" => Ok(GeneratedField::Item),
-                            "pageInfo" | "page_info" => Ok(GeneratedField::PageInfo),
+                            "end" => Ok(GeneratedField::End),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -2042,13 +2124,13 @@ impl<'de> serde::Deserialize<'de> for ListEventsResponse {
                                 .next_value::<::std::option::Option<_>>()?
                                 .map(list_events_response::Response::Item);
                         }
-                        GeneratedField::PageInfo => {
+                        GeneratedField::End => {
                             if response__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("pageInfo"));
+                                return Err(serde::de::Error::duplicate_field("end"));
                             }
                             response__ = map_
                                 .next_value::<::std::option::Option<_>>()?
-                                .map(list_events_response::Response::PageInfo);
+                                .map(list_events_response::Response::End);
                         }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
@@ -2295,8 +2377,8 @@ impl serde::Serialize for ListTransactionsResponse {
                 list_transactions_response::Response::Item(v) => {
                     struct_ser.serialize_field("item", v)?;
                 }
-                list_transactions_response::Response::PageInfo(v) => {
-                    struct_ser.serialize_field("pageInfo", v)?;
+                list_transactions_response::Response::End(v) => {
+                    struct_ser.serialize_field("end", v)?;
                 }
             }
         }
@@ -2309,11 +2391,11 @@ impl<'de> serde::Deserialize<'de> for ListTransactionsResponse {
     where
         D: serde::Deserializer<'de>,
     {
-        const FIELDS: &[&str] = &["item", "page_info", "pageInfo"];
+        const FIELDS: &[&str] = &["item", "end"];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             Item,
-            PageInfo,
+            End,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -2342,7 +2424,7 @@ impl<'de> serde::Deserialize<'de> for ListTransactionsResponse {
                     {
                         match value {
                             "item" => Ok(GeneratedField::Item),
-                            "pageInfo" | "page_info" => Ok(GeneratedField::PageInfo),
+                            "end" => Ok(GeneratedField::End),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -2379,13 +2461,13 @@ impl<'de> serde::Deserialize<'de> for ListTransactionsResponse {
                                 .next_value::<::std::option::Option<_>>()?
                                 .map(list_transactions_response::Response::Item);
                         }
-                        GeneratedField::PageInfo => {
+                        GeneratedField::End => {
                             if response__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("pageInfo"));
+                                return Err(serde::de::Error::duplicate_field("end"));
                             }
                             response__ = map_
                                 .next_value::<::std::option::Option<_>>()?
-                                .map(list_transactions_response::Response::PageInfo);
+                                .map(list_transactions_response::Response::End);
                         }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
@@ -2512,120 +2594,6 @@ impl<'de> serde::Deserialize<'de> for MoveCallFilter {
                 FIELDS,
                 GeneratedVisitor,
             )
-    }
-}
-impl serde::Serialize for PageInfo {
-    #[allow(deprecated)]
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        use serde::ser::SerializeStruct;
-        let mut len = 0usize;
-        if self.next_cursor.is_some() {
-            len += 1;
-        }
-        let mut struct_ser = serializer
-            .serialize_struct("sui.rpc.v2alpha.PageInfo", len)?;
-        if let Some(v) = self.next_cursor.as_ref() {
-            #[allow(clippy::needless_borrow)]
-            #[allow(clippy::needless_borrows_for_generic_args)]
-            struct_ser
-                .serialize_field(
-                    "nextCursor",
-                    crate::_serde::base64::encode(&v).as_str(),
-                )?;
-        }
-        struct_ser.end()
-    }
-}
-impl<'de> serde::Deserialize<'de> for PageInfo {
-    #[allow(deprecated)]
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        const FIELDS: &[&str] = &["next_cursor", "nextCursor"];
-        #[allow(clippy::enum_variant_names)]
-        enum GeneratedField {
-            NextCursor,
-            __SkipField__,
-        }
-        impl<'de> serde::Deserialize<'de> for GeneratedField {
-            fn deserialize<D>(
-                deserializer: D,
-            ) -> std::result::Result<GeneratedField, D::Error>
-            where
-                D: serde::Deserializer<'de>,
-            {
-                struct GeneratedVisitor;
-                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-                    type Value = GeneratedField;
-                    fn expecting(
-                        &self,
-                        formatter: &mut std::fmt::Formatter<'_>,
-                    ) -> std::fmt::Result {
-                        write!(formatter, "expected one of: {:?}", & FIELDS)
-                    }
-                    #[allow(unused_variables)]
-                    fn visit_str<E>(
-                        self,
-                        value: &str,
-                    ) -> std::result::Result<GeneratedField, E>
-                    where
-                        E: serde::de::Error,
-                    {
-                        match value {
-                            "nextCursor" | "next_cursor" => {
-                                Ok(GeneratedField::NextCursor)
-                            }
-                            _ => Ok(GeneratedField::__SkipField__),
-                        }
-                    }
-                }
-                deserializer.deserialize_identifier(GeneratedVisitor)
-            }
-        }
-        struct GeneratedVisitor;
-        #[allow(clippy::useless_conversion)]
-        #[allow(clippy::unit_arg)]
-        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-            type Value = PageInfo;
-            fn expecting(
-                &self,
-                formatter: &mut std::fmt::Formatter<'_>,
-            ) -> std::fmt::Result {
-                formatter.write_str("struct sui.rpc.v2alpha.PageInfo")
-            }
-            fn visit_map<V>(self, mut map_: V) -> std::result::Result<PageInfo, V::Error>
-            where
-                V: serde::de::MapAccess<'de>,
-            {
-                let mut next_cursor__ = None;
-                while let Some(k) = map_.next_key()? {
-                    match k {
-                        GeneratedField::NextCursor => {
-                            if next_cursor__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("nextCursor"));
-                            }
-                            next_cursor__ = map_
-                                .next_value::<
-                                    ::std::option::Option<crate::_serde::BytesDeserialize<_>>,
-                                >()?
-                                .map(|x| x.0);
-                        }
-                        GeneratedField::__SkipField__ => {
-                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
-                        }
-                    }
-                }
-                Ok(PageInfo {
-                    next_cursor: next_cursor__,
-                })
-            }
-        }
-        deserializer
-            .deserialize_struct("sui.rpc.v2alpha.PageInfo", FIELDS, GeneratedVisitor)
     }
 }
 impl serde::Serialize for Pagination {

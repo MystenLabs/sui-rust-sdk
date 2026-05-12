@@ -821,17 +821,17 @@ pub(crate) mod _field_impls {
             number: 1i32,
             message_fields: Some(CheckpointItem::FIELDS),
         };
-        pub const PAGE_INFO_FIELD: &'static MessageField = &MessageField {
-            name: "page_info",
-            json_name: "pageInfo",
+        pub const END_FIELD: &'static MessageField = &MessageField {
+            name: "end",
+            json_name: "end",
             number: 2i32,
-            message_fields: Some(PageInfo::FIELDS),
+            message_fields: Some(EndOfResults::FIELDS),
         };
     }
     impl MessageFields for ListCheckpointsResponse {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::ITEM_FIELD,
-            Self::PAGE_INFO_FIELD,
+            Self::END_FIELD,
         ];
     }
     impl ListCheckpointsResponse {
@@ -858,9 +858,9 @@ pub(crate) mod _field_impls {
             self.path.push(ListCheckpointsResponse::ITEM_FIELD.name);
             CheckpointItemFieldPathBuilder::new_with_base(self.path)
         }
-        pub fn page_info(mut self) -> PageInfoFieldPathBuilder {
-            self.path.push(ListCheckpointsResponse::PAGE_INFO_FIELD.name);
-            PageInfoFieldPathBuilder::new_with_base(self.path)
+        pub fn end(mut self) -> EndOfResultsFieldPathBuilder {
+            self.path.push(ListCheckpointsResponse::END_FIELD.name);
+            EndOfResultsFieldPathBuilder::new_with_base(self.path)
         }
     }
     impl ListTransactionsRequest {
@@ -1001,17 +1001,17 @@ pub(crate) mod _field_impls {
             number: 1i32,
             message_fields: Some(TransactionItem::FIELDS),
         };
-        pub const PAGE_INFO_FIELD: &'static MessageField = &MessageField {
-            name: "page_info",
-            json_name: "pageInfo",
+        pub const END_FIELD: &'static MessageField = &MessageField {
+            name: "end",
+            json_name: "end",
             number: 2i32,
-            message_fields: Some(PageInfo::FIELDS),
+            message_fields: Some(EndOfResults::FIELDS),
         };
     }
     impl MessageFields for ListTransactionsResponse {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::ITEM_FIELD,
-            Self::PAGE_INFO_FIELD,
+            Self::END_FIELD,
         ];
     }
     impl ListTransactionsResponse {
@@ -1038,9 +1038,9 @@ pub(crate) mod _field_impls {
             self.path.push(ListTransactionsResponse::ITEM_FIELD.name);
             TransactionItemFieldPathBuilder::new_with_base(self.path)
         }
-        pub fn page_info(mut self) -> PageInfoFieldPathBuilder {
-            self.path.push(ListTransactionsResponse::PAGE_INFO_FIELD.name);
-            PageInfoFieldPathBuilder::new_with_base(self.path)
+        pub fn end(mut self) -> EndOfResultsFieldPathBuilder {
+            self.path.push(ListTransactionsResponse::END_FIELD.name);
+            EndOfResultsFieldPathBuilder::new_with_base(self.path)
         }
     }
     impl ListEventsRequest {
@@ -1214,17 +1214,17 @@ pub(crate) mod _field_impls {
             number: 1i32,
             message_fields: Some(EventItem::FIELDS),
         };
-        pub const PAGE_INFO_FIELD: &'static MessageField = &MessageField {
-            name: "page_info",
-            json_name: "pageInfo",
+        pub const END_FIELD: &'static MessageField = &MessageField {
+            name: "end",
+            json_name: "end",
             number: 2i32,
-            message_fields: Some(PageInfo::FIELDS),
+            message_fields: Some(EndOfResults::FIELDS),
         };
     }
     impl MessageFields for ListEventsResponse {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::ITEM_FIELD,
-            Self::PAGE_INFO_FIELD,
+            Self::END_FIELD,
         ];
     }
     impl ListEventsResponse {
@@ -1251,9 +1251,9 @@ pub(crate) mod _field_impls {
             self.path.push(ListEventsResponse::ITEM_FIELD.name);
             EventItemFieldPathBuilder::new_with_base(self.path)
         }
-        pub fn page_info(mut self) -> PageInfoFieldPathBuilder {
-            self.path.push(ListEventsResponse::PAGE_INFO_FIELD.name);
-            PageInfoFieldPathBuilder::new_with_base(self.path)
+        pub fn end(mut self) -> EndOfResultsFieldPathBuilder {
+            self.path.push(ListEventsResponse::END_FIELD.name);
+            EndOfResultsFieldPathBuilder::new_with_base(self.path)
         }
     }
     impl Pagination {
@@ -1316,26 +1316,19 @@ pub(crate) mod _field_impls {
             self.finish()
         }
     }
-    impl PageInfo {
-        pub const NEXT_CURSOR_FIELD: &'static MessageField = &MessageField {
-            name: "next_cursor",
-            json_name: "nextCursor",
-            number: 1i32,
-            message_fields: None,
-        };
+    impl EndOfResults {}
+    impl MessageFields for EndOfResults {
+        const FIELDS: &'static [&'static MessageField] = &[];
     }
-    impl MessageFields for PageInfo {
-        const FIELDS: &'static [&'static MessageField] = &[Self::NEXT_CURSOR_FIELD];
-    }
-    impl PageInfo {
-        pub fn path_builder() -> PageInfoFieldPathBuilder {
-            PageInfoFieldPathBuilder::new()
+    impl EndOfResults {
+        pub fn path_builder() -> EndOfResultsFieldPathBuilder {
+            EndOfResultsFieldPathBuilder::new()
         }
     }
-    pub struct PageInfoFieldPathBuilder {
+    pub struct EndOfResultsFieldPathBuilder {
         path: Vec<&'static str>,
     }
-    impl PageInfoFieldPathBuilder {
+    impl EndOfResultsFieldPathBuilder {
         #[allow(clippy::new_without_default)]
         pub fn new() -> Self {
             Self { path: Default::default() }
@@ -1346,10 +1339,6 @@ pub(crate) mod _field_impls {
         }
         pub fn finish(self) -> String {
             self.path.join(".")
-        }
-        pub fn next_cursor(mut self) -> String {
-            self.path.push(PageInfo::NEXT_CURSOR_FIELD.name);
-            self.finish()
         }
     }
 }

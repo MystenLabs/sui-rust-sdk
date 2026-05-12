@@ -249,7 +249,8 @@ pub struct ListCheckpointsRequest {
     pub filter: ::core::option::Option<TransactionFilter>,
     /// Optional cursor-bounded pagination. If unspecified, reads in ascending order
     /// with the default page size. The maximum page size is 100; values above
-    /// 100 will be coerced to 100.
+    /// 100 will be coerced to 100. To read additional results, pass the last
+    /// received item cursor until the stream returns `EndOfResults`.
     #[prost(message, optional, tag = "5")]
     pub pagination: ::core::option::Option<Pagination>,
 }
@@ -281,9 +282,9 @@ pub mod list_checkpoints_response {
         /// One matching checkpoint.
         #[prost(message, tag = "1")]
         Item(super::CheckpointItem),
-        /// Final pagination metadata.
+        /// Final frame indicating the bounded query has no more matching results.
         #[prost(message, tag = "2")]
-        PageInfo(super::PageInfo),
+        End(super::EndOfResults),
     }
 }
 /// Request message for LedgerService.ListTransactions.
@@ -307,7 +308,8 @@ pub struct ListTransactionsRequest {
     pub filter: ::core::option::Option<TransactionFilter>,
     /// Optional cursor-bounded pagination. If unspecified, reads in ascending order
     /// with the default page size. The maximum page size is 500; values above
-    /// 500 will be coerced to 500.
+    /// 500 will be coerced to 500. To read additional results, pass the last
+    /// received item cursor until the stream returns `EndOfResults`.
     #[prost(message, optional, tag = "5")]
     pub pagination: ::core::option::Option<Pagination>,
 }
@@ -339,9 +341,9 @@ pub mod list_transactions_response {
         /// One matching transaction.
         #[prost(message, tag = "1")]
         Item(super::TransactionItem),
-        /// Final pagination metadata.
+        /// Final frame indicating the bounded query has no more matching results.
         #[prost(message, tag = "2")]
-        PageInfo(super::PageInfo),
+        End(super::EndOfResults),
     }
 }
 /// Request message for LedgerService.ListEvents.
@@ -364,7 +366,8 @@ pub struct ListEventsRequest {
     pub filter: ::core::option::Option<EventFilter>,
     /// Optional cursor-bounded pagination. If unspecified, reads in ascending order
     /// with the default page size. The maximum page size is 1000; values above
-    /// 1000 will be coerced to 1000.
+    /// 1000 will be coerced to 1000. To read additional results, pass the last
+    /// received item cursor until the stream returns `EndOfResults`.
     #[prost(message, optional, tag = "5")]
     pub pagination: ::core::option::Option<Pagination>,
 }
@@ -405,9 +408,9 @@ pub mod list_events_response {
         /// One matching event.
         #[prost(message, tag = "1")]
         Item(super::EventItem),
-        /// Final pagination metadata.
+        /// Final frame indicating the bounded query has no more matching results.
         #[prost(message, tag = "2")]
-        PageInfo(super::PageInfo),
+        End(super::EndOfResults),
     }
 }
 /// Generated client implementations.
@@ -914,25 +917,22 @@ pub struct Pagination {
     /// and maximum.
     #[prost(uint32, optional, tag = "1")]
     pub page_size: ::core::option::Option<u32>,
-    /// Opaque cursor from a previous list or subscription response. Provide this
-    /// to continue from the server-defined resume position. When paginating,
-    /// filters and ordering must match the call that provided the cursor.
-    /// Checkpoint bounds are applied independently and do not need to match.
+    /// Opaque cursor from a previous list or subscription response. For list
+    /// methods, pass the last received item cursor to resume after that item.
+    /// Continue paginating until the response stream includes `EndOfResults`.
+    /// When paginating, filters and ordering must match the call that provided the
+    /// cursor.
     #[prost(bytes = "bytes", optional, tag = "2")]
     pub cursor: ::core::option::Option<::prost::bytes::Bytes>,
     /// Ordering for returned results. Defaults to ASCENDING.
     #[prost(enumeration = "PaginationOrdering", tag = "4")]
     pub ordering: i32,
 }
-/// Terminal pagination metadata for a successful list stream.
+/// Final response frame indicating the bounded list query has no more matching
+/// results. If absent, clients should resume with the last item cursor.
 #[non_exhaustive]
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct PageInfo {
-    /// Cursor to continue with the next matching item. If this field is omitted,
-    /// there are no more matching items in the bounded request.
-    #[prost(bytes = "bytes", optional, tag = "1")]
-    pub next_cursor: ::core::option::Option<::prost::bytes::Bytes>,
-}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct EndOfResults {}
 /// Ordering for the paginated result set.
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]

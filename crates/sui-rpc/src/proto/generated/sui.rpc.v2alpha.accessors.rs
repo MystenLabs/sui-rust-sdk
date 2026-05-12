@@ -159,6 +159,16 @@ mod _accessor_impls {
             self
         }
     }
+    impl super::EndOfResults {
+        pub const fn const_default() -> Self {
+            Self {}
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::EndOfResults = super::EndOfResults::const_default();
+            &DEFAULT
+        }
+    }
     impl super::EventFilter {
         pub const fn const_default() -> Self {
             Self { terms: Vec::new() }
@@ -1044,19 +1054,19 @@ mod _accessor_impls {
             self.set_item(field.into());
             self
         }
-        ///Returns the value of `page_info`, or the default value if `page_info` is unset.
-        pub fn page_info(&self) -> &super::PageInfo {
-            if let Some(super::list_checkpoints_response::Response::PageInfo(field)) = &self
+        ///Returns the value of `end`, or the default value if `end` is unset.
+        pub fn end(&self) -> &super::EndOfResults {
+            if let Some(super::list_checkpoints_response::Response::End(field)) = &self
                 .response
             {
                 field as _
             } else {
-                super::PageInfo::default_instance() as _
+                super::EndOfResults::default_instance() as _
             }
         }
-        ///If `page_info` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn page_info_opt(&self) -> Option<&super::PageInfo> {
-            if let Some(super::list_checkpoints_response::Response::PageInfo(field)) = &self
+        ///If `end` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn end_opt(&self) -> Option<&super::EndOfResults> {
+            if let Some(super::list_checkpoints_response::Response::End(field)) = &self
                 .response
             {
                 Some(field as _)
@@ -1064,9 +1074,9 @@ mod _accessor_impls {
                 None
             }
         }
-        ///If `page_info` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn page_info_opt_mut(&mut self) -> Option<&mut super::PageInfo> {
-            if let Some(super::list_checkpoints_response::Response::PageInfo(field)) = &mut self
+        ///If `end` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn end_opt_mut(&mut self) -> Option<&mut super::EndOfResults> {
+            if let Some(super::list_checkpoints_response::Response::End(field)) = &mut self
                 .response
             {
                 Some(field as _)
@@ -1074,30 +1084,30 @@ mod _accessor_impls {
                 None
             }
         }
-        ///Returns a mutable reference to `page_info`.
+        ///Returns a mutable reference to `end`.
         ///If the field is unset, it is first initialized with the default value.
         ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn page_info_mut(&mut self) -> &mut super::PageInfo {
-            if self.page_info_opt_mut().is_none() {
+        pub fn end_mut(&mut self) -> &mut super::EndOfResults {
+            if self.end_opt_mut().is_none() {
                 self.response = Some(
-                    super::list_checkpoints_response::Response::PageInfo(
-                        super::PageInfo::default(),
+                    super::list_checkpoints_response::Response::End(
+                        super::EndOfResults::default(),
                     ),
                 );
             }
-            self.page_info_opt_mut().unwrap()
+            self.end_opt_mut().unwrap()
         }
-        ///Sets `page_info` with the provided value.
+        ///Sets `end` with the provided value.
         ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn set_page_info<T: Into<super::PageInfo>>(&mut self, field: T) {
+        pub fn set_end<T: Into<super::EndOfResults>>(&mut self, field: T) {
             self.response = Some(
-                super::list_checkpoints_response::Response::PageInfo(field.into().into()),
+                super::list_checkpoints_response::Response::End(field.into().into()),
             );
         }
-        ///Sets `page_info` with the provided value.
+        ///Sets `end` with the provided value.
         ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn with_page_info<T: Into<super::PageInfo>>(mut self, field: T) -> Self {
-            self.set_page_info(field.into());
+        pub fn with_end<T: Into<super::EndOfResults>>(mut self, field: T) -> Self {
+            self.set_end(field.into());
             self
         }
     }
@@ -1309,19 +1319,19 @@ mod _accessor_impls {
             self.set_item(field.into());
             self
         }
-        ///Returns the value of `page_info`, or the default value if `page_info` is unset.
-        pub fn page_info(&self) -> &super::PageInfo {
-            if let Some(super::list_events_response::Response::PageInfo(field)) = &self
+        ///Returns the value of `end`, or the default value if `end` is unset.
+        pub fn end(&self) -> &super::EndOfResults {
+            if let Some(super::list_events_response::Response::End(field)) = &self
                 .response
             {
                 field as _
             } else {
-                super::PageInfo::default_instance() as _
+                super::EndOfResults::default_instance() as _
             }
         }
-        ///If `page_info` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn page_info_opt(&self) -> Option<&super::PageInfo> {
-            if let Some(super::list_events_response::Response::PageInfo(field)) = &self
+        ///If `end` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn end_opt(&self) -> Option<&super::EndOfResults> {
+            if let Some(super::list_events_response::Response::End(field)) = &self
                 .response
             {
                 Some(field as _)
@@ -1329,9 +1339,9 @@ mod _accessor_impls {
                 None
             }
         }
-        ///If `page_info` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn page_info_opt_mut(&mut self) -> Option<&mut super::PageInfo> {
-            if let Some(super::list_events_response::Response::PageInfo(field)) = &mut self
+        ///If `end` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn end_opt_mut(&mut self) -> Option<&mut super::EndOfResults> {
+            if let Some(super::list_events_response::Response::End(field)) = &mut self
                 .response
             {
                 Some(field as _)
@@ -1339,30 +1349,30 @@ mod _accessor_impls {
                 None
             }
         }
-        ///Returns a mutable reference to `page_info`.
+        ///Returns a mutable reference to `end`.
         ///If the field is unset, it is first initialized with the default value.
         ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn page_info_mut(&mut self) -> &mut super::PageInfo {
-            if self.page_info_opt_mut().is_none() {
+        pub fn end_mut(&mut self) -> &mut super::EndOfResults {
+            if self.end_opt_mut().is_none() {
                 self.response = Some(
-                    super::list_events_response::Response::PageInfo(
-                        super::PageInfo::default(),
+                    super::list_events_response::Response::End(
+                        super::EndOfResults::default(),
                     ),
                 );
             }
-            self.page_info_opt_mut().unwrap()
+            self.end_opt_mut().unwrap()
         }
-        ///Sets `page_info` with the provided value.
+        ///Sets `end` with the provided value.
         ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn set_page_info<T: Into<super::PageInfo>>(&mut self, field: T) {
+        pub fn set_end<T: Into<super::EndOfResults>>(&mut self, field: T) {
             self.response = Some(
-                super::list_events_response::Response::PageInfo(field.into().into()),
+                super::list_events_response::Response::End(field.into().into()),
             );
         }
-        ///Sets `page_info` with the provided value.
+        ///Sets `end` with the provided value.
         ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn with_page_info<T: Into<super::PageInfo>>(mut self, field: T) -> Self {
-            self.set_page_info(field.into());
+        pub fn with_end<T: Into<super::EndOfResults>>(mut self, field: T) -> Self {
+            self.set_end(field.into());
             self
         }
     }
@@ -1577,19 +1587,19 @@ mod _accessor_impls {
             self.set_item(field.into());
             self
         }
-        ///Returns the value of `page_info`, or the default value if `page_info` is unset.
-        pub fn page_info(&self) -> &super::PageInfo {
-            if let Some(super::list_transactions_response::Response::PageInfo(field)) = &self
+        ///Returns the value of `end`, or the default value if `end` is unset.
+        pub fn end(&self) -> &super::EndOfResults {
+            if let Some(super::list_transactions_response::Response::End(field)) = &self
                 .response
             {
                 field as _
             } else {
-                super::PageInfo::default_instance() as _
+                super::EndOfResults::default_instance() as _
             }
         }
-        ///If `page_info` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn page_info_opt(&self) -> Option<&super::PageInfo> {
-            if let Some(super::list_transactions_response::Response::PageInfo(field)) = &self
+        ///If `end` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn end_opt(&self) -> Option<&super::EndOfResults> {
+            if let Some(super::list_transactions_response::Response::End(field)) = &self
                 .response
             {
                 Some(field as _)
@@ -1597,9 +1607,9 @@ mod _accessor_impls {
                 None
             }
         }
-        ///If `page_info` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn page_info_opt_mut(&mut self) -> Option<&mut super::PageInfo> {
-            if let Some(super::list_transactions_response::Response::PageInfo(field)) = &mut self
+        ///If `end` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn end_opt_mut(&mut self) -> Option<&mut super::EndOfResults> {
+            if let Some(super::list_transactions_response::Response::End(field)) = &mut self
                 .response
             {
                 Some(field as _)
@@ -1607,32 +1617,30 @@ mod _accessor_impls {
                 None
             }
         }
-        ///Returns a mutable reference to `page_info`.
+        ///Returns a mutable reference to `end`.
         ///If the field is unset, it is first initialized with the default value.
         ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn page_info_mut(&mut self) -> &mut super::PageInfo {
-            if self.page_info_opt_mut().is_none() {
+        pub fn end_mut(&mut self) -> &mut super::EndOfResults {
+            if self.end_opt_mut().is_none() {
                 self.response = Some(
-                    super::list_transactions_response::Response::PageInfo(
-                        super::PageInfo::default(),
+                    super::list_transactions_response::Response::End(
+                        super::EndOfResults::default(),
                     ),
                 );
             }
-            self.page_info_opt_mut().unwrap()
+            self.end_opt_mut().unwrap()
         }
-        ///Sets `page_info` with the provided value.
+        ///Sets `end` with the provided value.
         ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn set_page_info<T: Into<super::PageInfo>>(&mut self, field: T) {
+        pub fn set_end<T: Into<super::EndOfResults>>(&mut self, field: T) {
             self.response = Some(
-                super::list_transactions_response::Response::PageInfo(
-                    field.into().into(),
-                ),
+                super::list_transactions_response::Response::End(field.into().into()),
             );
         }
-        ///Sets `page_info` with the provided value.
+        ///Sets `end` with the provided value.
         ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn with_page_info<T: Into<super::PageInfo>>(mut self, field: T) -> Self {
-            self.set_page_info(field.into());
+        pub fn with_end<T: Into<super::EndOfResults>>(mut self, field: T) -> Self {
+            self.set_end(field.into());
             self
         }
     }
@@ -1665,32 +1673,6 @@ mod _accessor_impls {
         ///Sets `function` with the provided value.
         pub fn with_function<T: Into<String>>(mut self, field: T) -> Self {
             self.set_function(field.into());
-            self
-        }
-    }
-    impl super::PageInfo {
-        pub const fn const_default() -> Self {
-            Self { next_cursor: None }
-        }
-        #[doc(hidden)]
-        pub fn default_instance() -> &'static Self {
-            static DEFAULT: super::PageInfo = super::PageInfo::const_default();
-            &DEFAULT
-        }
-        ///If `next_cursor` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn next_cursor_opt(&self) -> Option<&[u8]> {
-            self.next_cursor.as_ref().map(|field| field as _)
-        }
-        ///Sets `next_cursor` with the provided value.
-        pub fn set_next_cursor<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
-            self.next_cursor = Some(field.into().into());
-        }
-        ///Sets `next_cursor` with the provided value.
-        pub fn with_next_cursor<T: Into<::prost::bytes::Bytes>>(
-            mut self,
-            field: T,
-        ) -> Self {
-            self.set_next_cursor(field.into());
             self
         }
     }

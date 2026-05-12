@@ -54,7 +54,8 @@ message ListCheckpointsRequest {
 
   // Optional cursor-bounded pagination. If unspecified, reads in ascending order
   // with the default page size. The maximum page size is 100; values above
-  // 100 will be coerced to 100.
+  // 100 will be coerced to 100. To read additional results, pass the last
+  // received item cursor until the stream returns `EndOfResults`.
   optional Pagination pagination = 5;
 }
 
@@ -75,8 +76,8 @@ message ListCheckpointsResponse {
     // One matching checkpoint.
     CheckpointItem item = 1;
 
-    // Final pagination metadata.
-    PageInfo page_info = 2;
+    // Final frame indicating the bounded query has no more matching results.
+    EndOfResults end = 2;
   }
 }
 
@@ -99,7 +100,8 @@ message ListTransactionsRequest {
 
   // Optional cursor-bounded pagination. If unspecified, reads in ascending order
   // with the default page size. The maximum page size is 500; values above
-  // 500 will be coerced to 500.
+  // 500 will be coerced to 500. To read additional results, pass the last
+  // received item cursor until the stream returns `EndOfResults`.
   optional Pagination pagination = 5;
 }
 
@@ -120,8 +122,8 @@ message ListTransactionsResponse {
     // One matching transaction.
     TransactionItem item = 1;
 
-    // Final pagination metadata.
-    PageInfo page_info = 2;
+    // Final frame indicating the bounded query has no more matching results.
+    EndOfResults end = 2;
   }
 }
 
@@ -143,7 +145,8 @@ message ListEventsRequest {
 
   // Optional cursor-bounded pagination. If unspecified, reads in ascending order
   // with the default page size. The maximum page size is 1000; values above
-  // 1000 will be coerced to 1000.
+  // 1000 will be coerced to 1000. To read additional results, pass the last
+  // received item cursor until the stream returns `EndOfResults`.
   optional Pagination pagination = 5;
 }
 
@@ -173,7 +176,7 @@ message ListEventsResponse {
     // One matching event.
     EventItem item = 1;
 
-    // Final pagination metadata.
-    PageInfo page_info = 2;
+    // Final frame indicating the bounded query has no more matching results.
+    EndOfResults end = 2;
   }
 }
