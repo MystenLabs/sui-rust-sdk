@@ -1263,9 +1263,9 @@ pub(crate) mod _field_impls {
             number: 1i32,
             message_fields: None,
         };
-        pub const PAGE_TOKEN_FIELD: &'static MessageField = &MessageField {
-            name: "page_token",
-            json_name: "pageToken",
+        pub const CURSOR_FIELD: &'static MessageField = &MessageField {
+            name: "cursor",
+            json_name: "cursor",
             number: 2i32,
             message_fields: None,
         };
@@ -1279,7 +1279,7 @@ pub(crate) mod _field_impls {
     impl MessageFields for Pagination {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::PAGE_SIZE_FIELD,
-            Self::PAGE_TOKEN_FIELD,
+            Self::CURSOR_FIELD,
             Self::ORDERING_FIELD,
         ];
     }
@@ -1307,8 +1307,8 @@ pub(crate) mod _field_impls {
             self.path.push(Pagination::PAGE_SIZE_FIELD.name);
             self.finish()
         }
-        pub fn page_token(mut self) -> String {
-            self.path.push(Pagination::PAGE_TOKEN_FIELD.name);
+        pub fn cursor(mut self) -> String {
+            self.path.push(Pagination::CURSOR_FIELD.name);
             self.finish()
         }
         pub fn ordering(mut self) -> String {
@@ -1317,15 +1317,15 @@ pub(crate) mod _field_impls {
         }
     }
     impl PageInfo {
-        pub const NEXT_PAGE_TOKEN_FIELD: &'static MessageField = &MessageField {
-            name: "next_page_token",
-            json_name: "nextPageToken",
+        pub const NEXT_CURSOR_FIELD: &'static MessageField = &MessageField {
+            name: "next_cursor",
+            json_name: "nextCursor",
             number: 1i32,
             message_fields: None,
         };
     }
     impl MessageFields for PageInfo {
-        const FIELDS: &'static [&'static MessageField] = &[Self::NEXT_PAGE_TOKEN_FIELD];
+        const FIELDS: &'static [&'static MessageField] = &[Self::NEXT_CURSOR_FIELD];
     }
     impl PageInfo {
         pub fn path_builder() -> PageInfoFieldPathBuilder {
@@ -1347,8 +1347,8 @@ pub(crate) mod _field_impls {
         pub fn finish(self) -> String {
             self.path.join(".")
         }
-        pub fn next_page_token(mut self) -> String {
-            self.path.push(PageInfo::NEXT_PAGE_TOKEN_FIELD.name);
+        pub fn next_cursor(mut self) -> String {
+            self.path.push(PageInfo::NEXT_CURSOR_FIELD.name);
             self.finish()
         }
     }

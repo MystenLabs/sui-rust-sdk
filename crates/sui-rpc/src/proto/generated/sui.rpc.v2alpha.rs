@@ -247,7 +247,7 @@ pub struct ListCheckpointsRequest {
     /// all checkpoints in the range are returned.
     #[prost(message, optional, tag = "4")]
     pub filter: ::core::option::Option<TransactionFilter>,
-    /// Optional token-bounded pagination. If unspecified, reads in ascending order
+    /// Optional cursor-bounded pagination. If unspecified, reads in ascending order
     /// with the default page size. The maximum page size is 100; values above
     /// 100 will be coerced to 100.
     #[prost(message, optional, tag = "5")]
@@ -257,8 +257,9 @@ pub struct ListCheckpointsRequest {
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CheckpointItem {
-    /// Opaque cursor for this item. It may be sent as `page_token` with the same
-    /// request parameters to resume after this item in the current scan direction.
+    /// Opaque cursor for this item. It may be sent as `pagination.cursor` with
+    /// the same request parameters to resume after this item in the current scan
+    /// direction.
     #[prost(bytes = "bytes", optional, tag = "1")]
     pub cursor: ::core::option::Option<::prost::bytes::Bytes>,
     /// One matching checkpoint.
@@ -304,7 +305,7 @@ pub struct ListTransactionsRequest {
     /// If absent, all transactions in the range are returned.
     #[prost(message, optional, tag = "4")]
     pub filter: ::core::option::Option<TransactionFilter>,
-    /// Optional token-bounded pagination. If unspecified, reads in ascending order
+    /// Optional cursor-bounded pagination. If unspecified, reads in ascending order
     /// with the default page size. The maximum page size is 500; values above
     /// 500 will be coerced to 500.
     #[prost(message, optional, tag = "5")]
@@ -314,8 +315,9 @@ pub struct ListTransactionsRequest {
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct TransactionItem {
-    /// Opaque cursor for this item. It may be sent as `page_token` with the same
-    /// request parameters to resume after this item in the current scan direction.
+    /// Opaque cursor for this item. It may be sent as `pagination.cursor` with
+    /// the same request parameters to resume after this item in the current scan
+    /// direction.
     #[prost(bytes = "bytes", optional, tag = "1")]
     pub cursor: ::core::option::Option<::prost::bytes::Bytes>,
     /// One matching transaction.
@@ -360,7 +362,7 @@ pub struct ListEventsRequest {
     /// If absent, all events in the range are returned.
     #[prost(message, optional, tag = "4")]
     pub filter: ::core::option::Option<EventFilter>,
-    /// Optional token-bounded pagination. If unspecified, reads in ascending order
+    /// Optional cursor-bounded pagination. If unspecified, reads in ascending order
     /// with the default page size. The maximum page size is 1000; values above
     /// 1000 will be coerced to 1000.
     #[prost(message, optional, tag = "5")]
@@ -370,8 +372,9 @@ pub struct ListEventsRequest {
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EventItem {
-    /// Opaque cursor for this item. It may be sent as `page_token` with the same
-    /// request parameters to resume after this item in the current scan direction.
+    /// Opaque cursor for this item. It may be sent as `pagination.cursor` with
+    /// the same request parameters to resume after this item in the current scan
+    /// direction.
     #[prost(bytes = "bytes", optional, tag = "1")]
     pub cursor: ::core::option::Option<::prost::bytes::Bytes>,
     /// The checkpoint containing the transaction that emitted this event.
@@ -903,7 +906,7 @@ pub mod ledger_service_server {
         const NAME: &'static str = SERVICE_NAME;
     }
 }
-/// Token-bounded pagination.
+/// Cursor-bounded pagination.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Pagination {
@@ -911,11 +914,12 @@ pub struct Pagination {
     /// and maximum.
     #[prost(uint32, optional, tag = "1")]
     pub page_size: ::core::option::Option<u32>,
-    /// A page token, received from a previous list call. Provide this to retrieve
-    /// the next page. When paginating, checkpoint bounds, filters, and ordering
-    /// must match the call that provided the page token.
+    /// Opaque cursor from a previous list or subscription response. Provide this
+    /// to continue from the server-defined resume position. When paginating,
+    /// filters and ordering must match the call that provided the cursor.
+    /// Checkpoint bounds are applied independently and do not need to match.
     #[prost(bytes = "bytes", optional, tag = "2")]
-    pub page_token: ::core::option::Option<::prost::bytes::Bytes>,
+    pub cursor: ::core::option::Option<::prost::bytes::Bytes>,
     /// Ordering for returned results. Defaults to ASCENDING.
     #[prost(enumeration = "PaginationOrdering", tag = "4")]
     pub ordering: i32,
@@ -924,11 +928,10 @@ pub struct Pagination {
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct PageInfo {
-    /// A token, which can be sent as `page_token` to retrieve the next page. If
-    /// this field is omitted, there are no more matching items in the bounded
-    /// request.
+    /// Cursor to continue with the next matching item. If this field is omitted,
+    /// there are no more matching items in the bounded request.
     #[prost(bytes = "bytes", optional, tag = "1")]
-    pub next_page_token: ::core::option::Option<::prost::bytes::Bytes>,
+    pub next_cursor: ::core::option::Option<::prost::bytes::Bytes>,
 }
 /// Ordering for the paginated result set.
 #[non_exhaustive]

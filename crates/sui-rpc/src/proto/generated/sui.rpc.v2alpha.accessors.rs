@@ -1670,27 +1670,27 @@ mod _accessor_impls {
     }
     impl super::PageInfo {
         pub const fn const_default() -> Self {
-            Self { next_page_token: None }
+            Self { next_cursor: None }
         }
         #[doc(hidden)]
         pub fn default_instance() -> &'static Self {
             static DEFAULT: super::PageInfo = super::PageInfo::const_default();
             &DEFAULT
         }
-        ///If `next_page_token` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn next_page_token_opt(&self) -> Option<&[u8]> {
-            self.next_page_token.as_ref().map(|field| field as _)
+        ///If `next_cursor` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn next_cursor_opt(&self) -> Option<&[u8]> {
+            self.next_cursor.as_ref().map(|field| field as _)
         }
-        ///Sets `next_page_token` with the provided value.
-        pub fn set_next_page_token<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
-            self.next_page_token = Some(field.into().into());
+        ///Sets `next_cursor` with the provided value.
+        pub fn set_next_cursor<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
+            self.next_cursor = Some(field.into().into());
         }
-        ///Sets `next_page_token` with the provided value.
-        pub fn with_next_page_token<T: Into<::prost::bytes::Bytes>>(
+        ///Sets `next_cursor` with the provided value.
+        pub fn with_next_cursor<T: Into<::prost::bytes::Bytes>>(
             mut self,
             field: T,
         ) -> Self {
-            self.set_next_page_token(field.into());
+            self.set_next_cursor(field.into());
             self
         }
     }
@@ -1698,7 +1698,7 @@ mod _accessor_impls {
         pub const fn const_default() -> Self {
             Self {
                 page_size: None,
-                page_token: None,
+                cursor: None,
                 ordering: 0,
             }
         }
@@ -1729,20 +1729,17 @@ mod _accessor_impls {
             self.set_page_size(field);
             self
         }
-        ///If `page_token` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn page_token_opt(&self) -> Option<&[u8]> {
-            self.page_token.as_ref().map(|field| field as _)
+        ///If `cursor` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn cursor_opt(&self) -> Option<&[u8]> {
+            self.cursor.as_ref().map(|field| field as _)
         }
-        ///Sets `page_token` with the provided value.
-        pub fn set_page_token<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
-            self.page_token = Some(field.into().into());
+        ///Sets `cursor` with the provided value.
+        pub fn set_cursor<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
+            self.cursor = Some(field.into().into());
         }
-        ///Sets `page_token` with the provided value.
-        pub fn with_page_token<T: Into<::prost::bytes::Bytes>>(
-            mut self,
-            field: T,
-        ) -> Self {
-            self.set_page_token(field.into());
+        ///Sets `cursor` with the provided value.
+        pub fn with_cursor<T: Into<::prost::bytes::Bytes>>(mut self, field: T) -> Self {
+            self.set_cursor(field.into());
             self
         }
     }

@@ -2522,17 +2522,17 @@ impl serde::Serialize for PageInfo {
     {
         use serde::ser::SerializeStruct;
         let mut len = 0usize;
-        if self.next_page_token.is_some() {
+        if self.next_cursor.is_some() {
             len += 1;
         }
         let mut struct_ser = serializer
             .serialize_struct("sui.rpc.v2alpha.PageInfo", len)?;
-        if let Some(v) = self.next_page_token.as_ref() {
+        if let Some(v) = self.next_cursor.as_ref() {
             #[allow(clippy::needless_borrow)]
             #[allow(clippy::needless_borrows_for_generic_args)]
             struct_ser
                 .serialize_field(
-                    "nextPageToken",
+                    "nextCursor",
                     crate::_serde::base64::encode(&v).as_str(),
                 )?;
         }
@@ -2545,10 +2545,10 @@ impl<'de> serde::Deserialize<'de> for PageInfo {
     where
         D: serde::Deserializer<'de>,
     {
-        const FIELDS: &[&str] = &["next_page_token", "nextPageToken"];
+        const FIELDS: &[&str] = &["next_cursor", "nextCursor"];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
-            NextPageToken,
+            NextCursor,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -2576,8 +2576,8 @@ impl<'de> serde::Deserialize<'de> for PageInfo {
                         E: serde::de::Error,
                     {
                         match value {
-                            "nextPageToken" | "next_page_token" => {
-                                Ok(GeneratedField::NextPageToken)
+                            "nextCursor" | "next_cursor" => {
+                                Ok(GeneratedField::NextCursor)
                             }
                             _ => Ok(GeneratedField::__SkipField__),
                         }
@@ -2601,16 +2601,14 @@ impl<'de> serde::Deserialize<'de> for PageInfo {
             where
                 V: serde::de::MapAccess<'de>,
             {
-                let mut next_page_token__ = None;
+                let mut next_cursor__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
-                        GeneratedField::NextPageToken => {
-                            if next_page_token__.is_some() {
-                                return Err(
-                                    serde::de::Error::duplicate_field("nextPageToken"),
-                                );
+                        GeneratedField::NextCursor => {
+                            if next_cursor__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("nextCursor"));
                             }
-                            next_page_token__ = map_
+                            next_cursor__ = map_
                                 .next_value::<
                                     ::std::option::Option<crate::_serde::BytesDeserialize<_>>,
                                 >()?
@@ -2622,7 +2620,7 @@ impl<'de> serde::Deserialize<'de> for PageInfo {
                     }
                 }
                 Ok(PageInfo {
-                    next_page_token: next_page_token__,
+                    next_cursor: next_cursor__,
                 })
             }
         }
@@ -2641,7 +2639,7 @@ impl serde::Serialize for Pagination {
         if self.page_size.is_some() {
             len += 1;
         }
-        if self.page_token.is_some() {
+        if self.cursor.is_some() {
             len += 1;
         }
         if self.ordering != 0 {
@@ -2652,14 +2650,11 @@ impl serde::Serialize for Pagination {
         if let Some(v) = self.page_size.as_ref() {
             struct_ser.serialize_field("pageSize", v)?;
         }
-        if let Some(v) = self.page_token.as_ref() {
+        if let Some(v) = self.cursor.as_ref() {
             #[allow(clippy::needless_borrow)]
             #[allow(clippy::needless_borrows_for_generic_args)]
             struct_ser
-                .serialize_field(
-                    "pageToken",
-                    crate::_serde::base64::encode(&v).as_str(),
-                )?;
+                .serialize_field("cursor", crate::_serde::base64::encode(&v).as_str())?;
         }
         if self.ordering != 0 {
             let v = PaginationOrdering::try_from(self.ordering)
@@ -2677,17 +2672,11 @@ impl<'de> serde::Deserialize<'de> for Pagination {
     where
         D: serde::Deserializer<'de>,
     {
-        const FIELDS: &[&str] = &[
-            "page_size",
-            "pageSize",
-            "page_token",
-            "pageToken",
-            "ordering",
-        ];
+        const FIELDS: &[&str] = &["page_size", "pageSize", "cursor", "ordering"];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             PageSize,
-            PageToken,
+            Cursor,
             Ordering,
             __SkipField__,
         }
@@ -2717,7 +2706,7 @@ impl<'de> serde::Deserialize<'de> for Pagination {
                     {
                         match value {
                             "pageSize" | "page_size" => Ok(GeneratedField::PageSize),
-                            "pageToken" | "page_token" => Ok(GeneratedField::PageToken),
+                            "cursor" => Ok(GeneratedField::Cursor),
                             "ordering" => Ok(GeneratedField::Ordering),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
@@ -2745,7 +2734,7 @@ impl<'de> serde::Deserialize<'de> for Pagination {
                 V: serde::de::MapAccess<'de>,
             {
                 let mut page_size__ = None;
-                let mut page_token__ = None;
+                let mut cursor__ = None;
                 let mut ordering__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
@@ -2759,11 +2748,11 @@ impl<'de> serde::Deserialize<'de> for Pagination {
                                 >()?
                                 .map(|x| x.0);
                         }
-                        GeneratedField::PageToken => {
-                            if page_token__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("pageToken"));
+                        GeneratedField::Cursor => {
+                            if cursor__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("cursor"));
                             }
-                            page_token__ = map_
+                            cursor__ = map_
                                 .next_value::<
                                     ::std::option::Option<crate::_serde::BytesDeserialize<_>>,
                                 >()?
@@ -2784,7 +2773,7 @@ impl<'de> serde::Deserialize<'de> for Pagination {
                 }
                 Ok(Pagination {
                     page_size: page_size__,
-                    page_token: page_token__,
+                    cursor: cursor__,
                     ordering: ordering__.unwrap_or_default(),
                 })
             }

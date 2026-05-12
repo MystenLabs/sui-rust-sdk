@@ -52,7 +52,7 @@ message ListCheckpointsRequest {
   // all checkpoints in the range are returned.
   optional TransactionFilter filter = 4;
 
-  // Optional token-bounded pagination. If unspecified, reads in ascending order
+  // Optional cursor-bounded pagination. If unspecified, reads in ascending order
   // with the default page size. The maximum page size is 100; values above
   // 100 will be coerced to 100.
   optional Pagination pagination = 5;
@@ -60,8 +60,9 @@ message ListCheckpointsRequest {
 
 // One checkpoint item.
 message CheckpointItem {
-  // Opaque cursor for this item. It may be sent as `page_token` with the same
-  // request parameters to resume after this item in the current scan direction.
+  // Opaque cursor for this item. It may be sent as `pagination.cursor` with
+  // the same request parameters to resume after this item in the current scan
+  // direction.
   optional bytes cursor = 1;
 
   // One matching checkpoint.
@@ -96,7 +97,7 @@ message ListTransactionsRequest {
   // If absent, all transactions in the range are returned.
   optional TransactionFilter filter = 4;
 
-  // Optional token-bounded pagination. If unspecified, reads in ascending order
+  // Optional cursor-bounded pagination. If unspecified, reads in ascending order
   // with the default page size. The maximum page size is 500; values above
   // 500 will be coerced to 500.
   optional Pagination pagination = 5;
@@ -104,8 +105,9 @@ message ListTransactionsRequest {
 
 // One transaction item.
 message TransactionItem {
-  // Opaque cursor for this item. It may be sent as `page_token` with the same
-  // request parameters to resume after this item in the current scan direction.
+  // Opaque cursor for this item. It may be sent as `pagination.cursor` with
+  // the same request parameters to resume after this item in the current scan
+  // direction.
   optional bytes cursor = 1;
 
   // One matching transaction.
@@ -139,7 +141,7 @@ message ListEventsRequest {
   // If absent, all events in the range are returned.
   optional EventFilter filter = 4;
 
-  // Optional token-bounded pagination. If unspecified, reads in ascending order
+  // Optional cursor-bounded pagination. If unspecified, reads in ascending order
   // with the default page size. The maximum page size is 1000; values above
   // 1000 will be coerced to 1000.
   optional Pagination pagination = 5;
@@ -147,8 +149,9 @@ message ListEventsRequest {
 
 // One event item.
 message EventItem {
-  // Opaque cursor for this item. It may be sent as `page_token` with the same
-  // request parameters to resume after this item in the current scan direction.
+  // Opaque cursor for this item. It may be sent as `pagination.cursor` with
+  // the same request parameters to resume after this item in the current scan
+  // direction.
   optional bytes cursor = 1;
 
   // The checkpoint containing the transaction that emitted this event.
