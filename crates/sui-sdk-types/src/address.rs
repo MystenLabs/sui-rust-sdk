@@ -279,6 +279,15 @@ const fn hex_address_bytes(bytes: &[u8]) -> Result<[u8; Address::LENGTH], HexDec
         return Err(HexDecodeError::EmptyInput);
     }
     let hex = remove_0x_prefix(bytes);
+    // A bare `"0x"` is semantically the same as an empty input: there are
+    // no hex digits to decode. Without this check the function would
+    // silently return `Address::ZERO`, which is inconsistent with the
+    // already-rejected empty-input case and turns a typo (e.g. embedding
+    // `Address::from_static("0x")` instead of the intended literal) into
+    // a silent zero address rather than a compile-time panic.
+    if hex.is_empty() {
+        return Err(HexDecodeError::EmptyInput);
+    }
     if hex.len() > 64 {
         return Err(HexDecodeError::InputTooLong(hex.len()));
     }
@@ -380,5 +389,48 @@ mod test {
         let s = address.to_string();
         let a = s.parse::<Address>().unwrap();
         assert_eq!(address, a);
+    }
+
+    // Regression: a bare `"0x"` used to decode to `Address::ZERO` while the
+    // empty string `""` was rejected with `EmptyInput`. The two inputs are
+    // semantically identical (both contain zero hex digits) and so should
+    // produce the same outcome. Without this check, a typo such as
+    // `Address::from_static("0x")` — meant to be a real address literal but
+    // accidentally truncated — would silently produce the zero address
+    // instead of a clear compile-time panic, and `Address::from_hex("0x")`
+    // would silently succeed at runtime.
+    #[test]
+    fn rejects_empty_after_strip() {
+        let bare_prefix = Address::from_hex("0x");
+        let empty = Address::from_hex("");
+        assert!(
+            bare_prefix.is_err(),
+            "`0x` must be rejected like empty input"
+        );
+        assert!(empty.is_err());
+        assert_eq!(bare_prefix.unwrap_err(), empty.unwrap_err());
+    }
+
+    #[test]
+    fn rejects_empty_input() {
+        assert!(Address::from_hex("").is_err());
+    }
+
+    // `Address::from_static` is a `const fn` that unwraps the result of
+    // `hex_address_bytes`. A bare `"0x"` literal must therefore panic at
+    // const-evaluation rather than silently produce `Address::ZERO`.
+    #[test]
+    #[should_panic(expected = "input hex string must be non-empty")]
+    fn from_static_bare_prefix_panics() {
+        let _ = Address::from_static("0x");
+    }
+
+    // Sanity: real hex literals (including odd-length and minimal) still
+    // round-trip as before.
+    #[test]
+    fn short_hex_inputs_still_parse() {
+        for s in ["0x0", "0x1", "0x00", "0xf", "0xff"] {
+            assert!(Address::from_hex(s).is_ok(), "expected {s} to parse");
+        }
     }
 }
