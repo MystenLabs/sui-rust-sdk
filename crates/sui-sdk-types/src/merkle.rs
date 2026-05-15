@@ -315,6 +315,154 @@ impl MerkleTree {
         }
         Ok(MerkleProof { path })
     }
+
+    /// Build a non-inclusion proof showing that `target` does not appear in
+    /// this tree.
+    ///
+    /// The tree must have been built from `sorted_leaves` in sorted order;
+    /// the caller is responsible for passing the same sorted slice it built
+    /// the tree from. Returns [`MerkleError::InvalidInput`] if `target` is
+    /// actually present in `sorted_leaves`.
+    pub fn compute_non_inclusion_proof<L>(
+        &self,
+        sorted_leaves: &[L],
+        target: &L,
+    ) -> Result<MerkleNonInclusionProof<L>, MerkleError>
+    where
+        L: Ord + Clone,
+    {
+        let position = sorted_leaves.partition_point(|leaf| leaf <= target);
+        if position > 0 && &sorted_leaves[position - 1] == target {
+            return Err(MerkleError::InvalidInput);
+        }
+
+        let left_leaf = if position > 0 {
+            Some((
+                sorted_leaves[position - 1].clone(),
+                self.get_proof(position - 1)?,
+            ))
+        } else {
+            None
+        };
+
+        let right_leaf = if position < sorted_leaves.len() {
+            Some((sorted_leaves[position].clone(), self.get_proof(position)?))
+        } else {
+            None
+        };
+
+        Ok(MerkleNonInclusionProof {
+            index: position,
+            left_leaf,
+            right_leaf,
+        })
+    }
+}
+
+/// A non-inclusion proof for a tree built over **sorted** leaves.
+///
+/// The proof shows that a target leaf does not appear in the tree by
+/// presenting its two neighbours in sorted order (with their inclusion
+/// proofs) and asserting `left < target < right`.
+///
+/// Edge cases:
+/// - For an empty tree, both neighbours are `None` and `index` is `0`; any
+///   target is automatically non-included.
+/// - When the target sorts before every leaf, `left_leaf` is `None`,
+///   `right_leaf` is the first leaf, and `index` is `0`.
+/// - When the target sorts after every leaf, `right_leaf` is `None` and
+///   `left_leaf` is the right-most leaf in the tree (which is detected via
+///   [`MerkleProof::is_right_most`] during verification).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MerkleNonInclusionProof<L> {
+    /// The position where `target` would be inserted into the sorted leaf
+    /// list to keep it sorted. `left_leaf` lives at `index - 1` (when
+    /// present), `right_leaf` at `index`.
+    index: usize,
+    /// Inclusion proof for the leaf immediately less than `target`, or
+    /// `None` if `target` sorts before every leaf.
+    left_leaf: Option<(L, MerkleProof)>,
+    /// Inclusion proof for the leaf immediately greater than `target`, or
+    /// `None` if `target` sorts after every leaf.
+    right_leaf: Option<(L, MerkleProof)>,
+}
+
+impl<L> MerkleNonInclusionProof<L> {
+    /// Construct a proof directly from its parts. Mostly useful for
+    /// reconstructing a proof from out-of-band data; the usual way to
+    /// produce a proof is [`MerkleTree::compute_non_inclusion_proof`].
+    pub fn new(
+        index: usize,
+        left_leaf: Option<(L, MerkleProof)>,
+        right_leaf: Option<(L, MerkleProof)>,
+    ) -> Self {
+        Self {
+            index,
+            left_leaf,
+            right_leaf,
+        }
+    }
+
+    /// The position where `target` would be inserted to keep the leaf list
+    /// sorted.
+    pub fn index(&self) -> usize {
+        self.index
+    }
+
+    /// The left neighbour leaf and its inclusion proof, if any.
+    pub fn left_leaf(&self) -> Option<&(L, MerkleProof)> {
+        self.left_leaf.as_ref()
+    }
+
+    /// The right neighbour leaf and its inclusion proof, if any.
+    pub fn right_leaf(&self) -> Option<&(L, MerkleProof)> {
+        self.right_leaf.as_ref()
+    }
+}
+
+impl<L> MerkleNonInclusionProof<L>
+where
+    L: Ord + Serialize,
+{
+    /// Verify that `target` is not in the tree whose root is `root`.
+    pub fn verify_proof(&self, root: &Node, target: &L) -> Result<(), MerkleError> {
+        // An empty tree contains nothing, so non-inclusion is trivial.
+        if root.as_ref() == EMPTY_NODE.as_ref() {
+            return Ok(());
+        }
+
+        let right_leaf_index = self.index;
+        let left_leaf_with_index = self.left_leaf.as_ref().zip(self.index.checked_sub(1));
+
+        if let Some(((left_leaf, left_proof), left_leaf_index)) = left_leaf_with_index {
+            left_proof.verify_proof_with_unserialized_leaf(root, left_leaf, left_leaf_index)?;
+            if left_leaf >= target {
+                return Err(MerkleError::InvalidProof);
+            }
+        } else if right_leaf_index != 0 || self.right_leaf.is_none() {
+            // Without a left neighbour we must be inserting at the very
+            // start of the leaf list and there must be a right neighbour
+            // to compare against.
+            return Err(MerkleError::InvalidProof);
+        }
+
+        if let Some((right_leaf, right_proof)) = &self.right_leaf {
+            right_proof.verify_proof_with_unserialized_leaf(root, right_leaf, right_leaf_index)?;
+            if right_leaf <= target {
+                return Err(MerkleError::InvalidProof);
+            }
+        } else if let Some(((_, left_proof), left_leaf_index)) = left_leaf_with_index {
+            // Without a right neighbour the left neighbour must be the
+            // tree's right-most leaf, otherwise the gap is fictional.
+            if !left_proof.is_right_most(left_leaf_index) {
+                return Err(MerkleError::InvalidProof);
+            }
+        } else {
+            return Err(MerkleError::InvalidProof);
+        }
+
+        Ok(())
+    }
 }
 
 /// Hash a leaf with the [`LEAF_PREFIX`] domain separator.
@@ -466,6 +614,116 @@ mod tests {
                 assert_eq!(proof.is_right_most(j), expected);
             }
         }
+    }
+
+    /// Non-inclusion proof for an empty tree: any target is trivially
+    /// non-included, both neighbours are absent, and the index is zero.
+    #[test]
+    fn non_inclusion_empty_tree() {
+        let tree = MerkleTree::build_from_unserialized::<[&[u8]; 0]>([]).unwrap();
+        let leaves: [&[u8]; 0] = [];
+        let proof = tree
+            .compute_non_inclusion_proof(&leaves, &b"foo".as_ref())
+            .unwrap();
+        assert!(proof.left_leaf().is_none());
+        assert!(proof.right_leaf().is_none());
+        assert_eq!(proof.index(), 0);
+        proof.verify_proof(&tree.root(), &b"foo".as_ref()).unwrap();
+        proof.verify_proof(&tree.root(), &b"bar".as_ref()).unwrap();
+    }
+
+    /// Single-leaf tree: a different target is non-included; the leaf
+    /// itself cannot have a non-inclusion proof constructed.
+    #[test]
+    fn non_inclusion_single_leaf() {
+        let leaves: [&[u8]; 1] = [b"foo"];
+        let tree = MerkleTree::build_from_unserialized(&leaves).unwrap();
+
+        let proof = tree
+            .compute_non_inclusion_proof(&leaves, &b"bar".as_ref())
+            .unwrap();
+        proof.verify_proof(&tree.root(), &b"bar".as_ref()).unwrap();
+
+        // Re-using a proof against a leaf that is in the tree must fail.
+        assert_eq!(
+            proof.verify_proof(&tree.root(), &b"foo".as_ref()),
+            Err(MerkleError::InvalidProof),
+        );
+
+        // Asking for a non-inclusion proof of a leaf that is in the tree
+        // is a caller error.
+        assert_eq!(
+            tree.compute_non_inclusion_proof(&leaves, &b"foo".as_ref()),
+            Err(MerkleError::InvalidInput),
+        );
+    }
+
+    /// Many-leaf tree: every non-tree target verifies as non-included, and
+    /// every tree-member target is rejected by the constructor.
+    #[test]
+    fn non_inclusion_multiple_leaves() {
+        const RAW: [&str; 9] = [
+            "foo", "bar", "fizz", "baz", "buzz", "fizz", "foobar", "walrus", "fizz",
+        ];
+        let mut sorted: Vec<&str> = RAW.to_vec();
+        sorted.sort();
+        sorted.dedup();
+        let tree = MerkleTree::build_from_unserialized(&sorted).unwrap();
+
+        // Mix of targets that are not in the tree and targets that are.
+        let probes = ["fuzz", "yankee", "aloha", "foo", "bar", "fizz", "walrus"];
+        for probe in probes {
+            let result = tree.compute_non_inclusion_proof(&sorted, &probe);
+            if sorted.contains(&probe) {
+                assert_eq!(result, Err(MerkleError::InvalidInput));
+            } else {
+                let proof = result.unwrap();
+                proof.verify_proof(&tree.root(), &probe).unwrap();
+            }
+        }
+    }
+
+    /// Targets at the extremes of the sort order land in the two
+    /// asymmetric branches (no left neighbour, or no right neighbour with
+    /// the left neighbour being the right-most leaf).
+    #[test]
+    fn non_inclusion_at_extremes() {
+        let sorted: [&str; 3] = ["bar", "foo", "qux"];
+        let tree = MerkleTree::build_from_unserialized(&sorted).unwrap();
+
+        // Before everything.
+        let before = tree.compute_non_inclusion_proof(&sorted, &"aaa").unwrap();
+        assert!(before.left_leaf().is_none());
+        assert!(before.right_leaf().is_some());
+        assert_eq!(before.index(), 0);
+        before.verify_proof(&tree.root(), &"aaa").unwrap();
+
+        // After everything.
+        let after = tree.compute_non_inclusion_proof(&sorted, &"zzz").unwrap();
+        assert!(after.left_leaf().is_some());
+        assert!(after.right_leaf().is_none());
+        assert_eq!(after.index(), sorted.len());
+        after.verify_proof(&tree.root(), &"zzz").unwrap();
+    }
+
+    /// Forged proof that claims `index = 0` while also supplying a left
+    /// neighbour does not panic and does not verify. Mirrors upstream's
+    /// regression test for `is_valid_neighbor` returning sensibly.
+    #[test]
+    fn non_inclusion_forged_zero_index_with_left_leaf() {
+        let leaves: [&[u8]; 1] = [b"foo"];
+        let tree = MerkleTree::build_from_unserialized(&leaves).unwrap();
+        let fake: &[u8] = b"fake";
+
+        let forged = MerkleNonInclusionProof::new(
+            0,
+            Some((fake, tree.get_proof(0).unwrap())),
+            Some((fake, tree.get_proof(0).unwrap())),
+        );
+        assert_eq!(
+            forged.verify_proof(&tree.root(), &fake),
+            Err(MerkleError::InvalidProof),
+        );
     }
 
     /// Pinned root for `TEST_INPUT` under our `LEAF_PREFIX`/`INNER_PREFIX`/
