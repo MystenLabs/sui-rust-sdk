@@ -769,6 +769,189 @@ mod _accessor_impls {
             self
         }
     }
+    impl super::GetOcsInclusionProofRequest {
+        pub const fn const_default() -> Self {
+            Self {
+                object_id: None,
+                checkpoint: None,
+            }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::GetOcsInclusionProofRequest = super::GetOcsInclusionProofRequest::const_default();
+            &DEFAULT
+        }
+        ///If `object_id` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn object_id_opt_mut(&mut self) -> Option<&mut String> {
+            self.object_id.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `object_id`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn object_id_mut(&mut self) -> &mut String {
+            self.object_id.get_or_insert_default()
+        }
+        ///If `object_id` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn object_id_opt(&self) -> Option<&str> {
+            self.object_id.as_ref().map(|field| field as _)
+        }
+        ///Sets `object_id` with the provided value.
+        pub fn set_object_id<T: Into<String>>(&mut self, field: T) {
+            self.object_id = Some(field.into().into());
+        }
+        ///Sets `object_id` with the provided value.
+        pub fn with_object_id<T: Into<String>>(mut self, field: T) -> Self {
+            self.set_object_id(field.into());
+            self
+        }
+        ///If `checkpoint` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn checkpoint_opt_mut(&mut self) -> Option<&mut u64> {
+            self.checkpoint.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `checkpoint`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn checkpoint_mut(&mut self) -> &mut u64 {
+            self.checkpoint.get_or_insert_default()
+        }
+        ///If `checkpoint` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn checkpoint_opt(&self) -> Option<u64> {
+            self.checkpoint.as_ref().map(|field| *field)
+        }
+        ///Sets `checkpoint` with the provided value.
+        pub fn set_checkpoint(&mut self, field: u64) {
+            self.checkpoint = Some(field);
+        }
+        ///Sets `checkpoint` with the provided value.
+        pub fn with_checkpoint(mut self, field: u64) -> Self {
+            self.set_checkpoint(field);
+            self
+        }
+    }
+    impl super::GetOcsInclusionProofResponse {
+        pub const fn const_default() -> Self {
+            Self {
+                object_ref: None,
+                inclusion_proof: None,
+                object_data: None,
+                checkpoint_summary: None,
+            }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::GetOcsInclusionProofResponse = super::GetOcsInclusionProofResponse::const_default();
+            &DEFAULT
+        }
+        ///Returns the value of `object_ref`, or the default value if `object_ref` is unset.
+        pub fn object_ref(&self) -> &super::super::v2::ObjectReference {
+            self.object_ref
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| {
+                    super::super::v2::ObjectReference::default_instance() as _
+                })
+        }
+        ///If `object_ref` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn object_ref_opt_mut(
+            &mut self,
+        ) -> Option<&mut super::super::v2::ObjectReference> {
+            self.object_ref.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `object_ref`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn object_ref_mut(&mut self) -> &mut super::super::v2::ObjectReference {
+            self.object_ref.get_or_insert_default()
+        }
+        ///If `object_ref` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn object_ref_opt(&self) -> Option<&super::super::v2::ObjectReference> {
+            self.object_ref.as_ref().map(|field| field as _)
+        }
+        ///Sets `object_ref` with the provided value.
+        pub fn set_object_ref<T: Into<super::super::v2::ObjectReference>>(
+            &mut self,
+            field: T,
+        ) {
+            self.object_ref = Some(field.into().into());
+        }
+        ///Sets `object_ref` with the provided value.
+        pub fn with_object_ref<T: Into<super::super::v2::ObjectReference>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_object_ref(field.into());
+            self
+        }
+        ///Returns the value of `inclusion_proof`, or the default value if `inclusion_proof` is unset.
+        pub fn inclusion_proof(&self) -> &super::OcsInclusionProof {
+            self.inclusion_proof
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::OcsInclusionProof::default_instance() as _)
+        }
+        ///If `inclusion_proof` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn inclusion_proof_opt_mut(
+            &mut self,
+        ) -> Option<&mut super::OcsInclusionProof> {
+            self.inclusion_proof.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `inclusion_proof`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn inclusion_proof_mut(&mut self) -> &mut super::OcsInclusionProof {
+            self.inclusion_proof.get_or_insert_default()
+        }
+        ///If `inclusion_proof` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn inclusion_proof_opt(&self) -> Option<&super::OcsInclusionProof> {
+            self.inclusion_proof.as_ref().map(|field| field as _)
+        }
+        ///Sets `inclusion_proof` with the provided value.
+        pub fn set_inclusion_proof<T: Into<super::OcsInclusionProof>>(
+            &mut self,
+            field: T,
+        ) {
+            self.inclusion_proof = Some(field.into().into());
+        }
+        ///Sets `inclusion_proof` with the provided value.
+        pub fn with_inclusion_proof<T: Into<super::OcsInclusionProof>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_inclusion_proof(field.into());
+            self
+        }
+        ///If `object_data` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn object_data_opt(&self) -> Option<&[u8]> {
+            self.object_data.as_ref().map(|field| field as _)
+        }
+        ///Sets `object_data` with the provided value.
+        pub fn set_object_data<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
+            self.object_data = Some(field.into().into());
+        }
+        ///Sets `object_data` with the provided value.
+        pub fn with_object_data<T: Into<::prost::bytes::Bytes>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_object_data(field.into());
+            self
+        }
+        ///If `checkpoint_summary` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn checkpoint_summary_opt(&self) -> Option<&[u8]> {
+            self.checkpoint_summary.as_ref().map(|field| field as _)
+        }
+        ///Sets `checkpoint_summary` with the provided value.
+        pub fn set_checkpoint_summary<T: Into<::prost::bytes::Bytes>>(
+            &mut self,
+            field: T,
+        ) {
+            self.checkpoint_summary = Some(field.into().into());
+        }
+        ///Sets `checkpoint_summary` with the provided value.
+        pub fn with_checkpoint_summary<T: Into<::prost::bytes::Bytes>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_checkpoint_summary(field.into());
+            self
+        }
+    }
     impl super::ListCheckpointsRequest {
         pub const fn const_default() -> Self {
             Self {
@@ -1570,6 +1753,90 @@ mod _accessor_impls {
             self
         }
     }
+    impl super::MerkleNode {
+        pub const fn const_default() -> Self {
+            Self { node: None }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::MerkleNode = super::MerkleNode::const_default();
+            &DEFAULT
+        }
+        ///Returns the value of `digest`, or the default value if `digest` is unset.
+        pub fn digest(&self) -> &[u8] {
+            if let Some(super::merkle_node::Node::Digest(field)) = &self.node {
+                field as _
+            } else {
+                &[]
+            }
+        }
+        ///If `digest` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn digest_opt(&self) -> Option<&[u8]> {
+            if let Some(super::merkle_node::Node::Digest(field)) = &self.node {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///If `digest` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn digest_opt_mut(&mut self) -> Option<&mut ::prost::bytes::Bytes> {
+            if let Some(super::merkle_node::Node::Digest(field)) = &mut self.node {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///Returns a mutable reference to `digest`.
+        ///If the field is unset, it is first initialized with the default value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn digest_mut(&mut self) -> &mut ::prost::bytes::Bytes {
+            if self.digest_opt_mut().is_none() {
+                self.node = Some(
+                    super::merkle_node::Node::Digest(::prost::bytes::Bytes::default()),
+                );
+            }
+            self.digest_opt_mut().unwrap()
+        }
+        ///Sets `digest` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn set_digest<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
+            self.node = Some(super::merkle_node::Node::Digest(field.into().into()));
+        }
+        ///Sets `digest` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn with_digest<T: Into<::prost::bytes::Bytes>>(mut self, field: T) -> Self {
+            self.set_digest(field.into());
+            self
+        }
+    }
+    impl super::MerkleProof {
+        pub const fn const_default() -> Self {
+            Self { path: Vec::new() }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::MerkleProof = super::MerkleProof::const_default();
+            &DEFAULT
+        }
+        ///Returns the value of `path`, or the default value if `path` is unset.
+        pub fn path(&self) -> &[super::MerkleNode] {
+            &self.path
+        }
+        ///Returns a mutable reference to `path`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn path_mut(&mut self) -> &mut Vec<super::MerkleNode> {
+            &mut self.path
+        }
+        ///Sets `path` with the provided value.
+        pub fn set_path(&mut self, field: Vec<super::MerkleNode>) {
+            self.path = field;
+        }
+        ///Sets `path` with the provided value.
+        pub fn with_path(mut self, field: Vec<super::MerkleNode>) -> Self {
+            self.set_path(field);
+            self
+        }
+    }
     impl super::MoveCallFilter {
         pub const fn const_default() -> Self {
             Self { function: None }
@@ -1599,6 +1866,90 @@ mod _accessor_impls {
         ///Sets `function` with the provided value.
         pub fn with_function<T: Into<String>>(mut self, field: T) -> Self {
             self.set_function(field.into());
+            self
+        }
+    }
+    impl super::OcsInclusionProof {
+        pub const fn const_default() -> Self {
+            Self {
+                merkle_proof: None,
+                leaf_index: None,
+                tree_root: None,
+            }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::OcsInclusionProof = super::OcsInclusionProof::const_default();
+            &DEFAULT
+        }
+        ///Returns the value of `merkle_proof`, or the default value if `merkle_proof` is unset.
+        pub fn merkle_proof(&self) -> &super::MerkleProof {
+            self.merkle_proof
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::MerkleProof::default_instance() as _)
+        }
+        ///If `merkle_proof` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn merkle_proof_opt_mut(&mut self) -> Option<&mut super::MerkleProof> {
+            self.merkle_proof.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `merkle_proof`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn merkle_proof_mut(&mut self) -> &mut super::MerkleProof {
+            self.merkle_proof.get_or_insert_default()
+        }
+        ///If `merkle_proof` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn merkle_proof_opt(&self) -> Option<&super::MerkleProof> {
+            self.merkle_proof.as_ref().map(|field| field as _)
+        }
+        ///Sets `merkle_proof` with the provided value.
+        pub fn set_merkle_proof<T: Into<super::MerkleProof>>(&mut self, field: T) {
+            self.merkle_proof = Some(field.into().into());
+        }
+        ///Sets `merkle_proof` with the provided value.
+        pub fn with_merkle_proof<T: Into<super::MerkleProof>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_merkle_proof(field.into());
+            self
+        }
+        ///If `leaf_index` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn leaf_index_opt_mut(&mut self) -> Option<&mut u64> {
+            self.leaf_index.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `leaf_index`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn leaf_index_mut(&mut self) -> &mut u64 {
+            self.leaf_index.get_or_insert_default()
+        }
+        ///If `leaf_index` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn leaf_index_opt(&self) -> Option<u64> {
+            self.leaf_index.as_ref().map(|field| *field)
+        }
+        ///Sets `leaf_index` with the provided value.
+        pub fn set_leaf_index(&mut self, field: u64) {
+            self.leaf_index = Some(field);
+        }
+        ///Sets `leaf_index` with the provided value.
+        pub fn with_leaf_index(mut self, field: u64) -> Self {
+            self.set_leaf_index(field);
+            self
+        }
+        ///If `tree_root` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn tree_root_opt(&self) -> Option<&[u8]> {
+            self.tree_root.as_ref().map(|field| field as _)
+        }
+        ///Sets `tree_root` with the provided value.
+        pub fn set_tree_root<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
+            self.tree_root = Some(field.into().into());
+        }
+        ///Sets `tree_root` with the provided value.
+        pub fn with_tree_root<T: Into<::prost::bytes::Bytes>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_tree_root(field.into());
             self
         }
     }
