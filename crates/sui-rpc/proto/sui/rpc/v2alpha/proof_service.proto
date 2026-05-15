@@ -1,0 +1,103 @@
+// Copyright (c) Mysten Labs, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package sui.rpc.v2alpha;
+
+import "google/protobuf/empty.proto";
+import "sui/rpc/v2/object_reference.proto";
+
+// ProofService provides cryptographic proofs of blockchain state.
+//
+// Proofs in this service are anchored at a checkpoint summary's
+// `checkpoint_artifacts_digest`, which commits to the Object Checkpoint
+// State (OCS) -- the per-checkpoint Merkle tree of object references
+// written in that checkpoint. "OCS" appears throughout this file to refer
+// to that commitment scheme; see the doc on `OcsInclusionProof` below for
+// the full definition.
+service ProofService {
+  // Returns an OCS inclusion proof showing that a specific object was
+  // written in a specific checkpoint.
+  rpc GetOcsInclusionProof(GetOcsInclusionProofRequest) returns (GetOcsInclusionProofResponse);
+}
+
+// A node in a Blake2b256 Merkle tree.
+//
+// An empty node represents an empty subtree (used as padding for odd-sized
+// levels and as the root of a tree built from zero leaves). A digest node
+// carries a 32-byte Blake2b256 hash of either a leaf or an inner node.
+message MerkleNode {
+  oneof node {
+    // Marker for an empty subtree.
+    google.protobuf.Empty empty = 1;
+
+    // 32-byte Blake2b256 hash.
+    bytes digest = 2;
+  }
+}
+
+// An inclusion proof for a leaf in a Blake2b256 Merkle tree.
+//
+// The proof carries the sibling node hashes on the path from the leaf up
+// to the root, leaf-side first. To verify, hash the leaf bytes with the
+// `0x00` leaf prefix, then walk `path` upward and compute each parent as
+// `BLAKE2b-256(0x01 || left || right)`. The final computed hash must equal
+// the tree root.
+message MerkleProof {
+  // Sibling node hashes, leaf-side first.
+  repeated MerkleNode path = 1;
+}
+
+// An Object Checkpoint State (OCS) inclusion proof.
+//
+// The OCS is a Blake2b256 Merkle tree built by each checkpoint over the
+// set of object references it modified (created, mutated, unwrapped, or
+// otherwise written). Each leaf is a BCS-encoded
+// `(ObjectID, SequenceNumber, ObjectDigest)` tuple, with leaves arranged
+// in ascending `ObjectID` order. The tree's root is committed to by the
+// containing `CheckpointSummary` via the `CheckpointArtifacts` variant of
+// its `checkpoint_commitments`.
+//
+// An `OcsInclusionProof` proves that a particular leaf appears in this
+// tree. Combined with a verified `CheckpointSummary` it cryptographically
+// authenticates that a specific object reference was written in a specific
+// checkpoint.
+message OcsInclusionProof {
+  // Merkle inclusion proof for the leaf.
+  optional MerkleProof merkle_proof = 1;
+
+  // Position of the leaf in the modified-objects tree.
+  optional uint64 leaf_index = 2;
+
+  // 32-byte Merkle root of the modified-objects tree.
+  optional bytes tree_root = 3;
+}
+
+// Request for an OCS (Object Checkpoint State) inclusion proof at a
+// specific checkpoint.
+message GetOcsInclusionProofRequest {
+  // Required. The object id to prove inclusion of (hex-encoded address).
+  optional string object_id = 1;
+
+  // Required. The checkpoint sequence number at which to prove inclusion.
+  optional uint64 checkpoint = 2;
+}
+
+// Response containing the OCS inclusion proof and the materials needed to
+// verify it end-to-end.
+message GetOcsInclusionProofResponse {
+  // Object reference being proven (object id, version, digest).
+  optional sui.rpc.v2.ObjectReference object_ref = 1;
+
+  // Inclusion proof.
+  optional OcsInclusionProof inclusion_proof = 2;
+
+  // BCS-encoded `Object` data for the object being proven.
+  optional bytes object_data = 3;
+
+  // BCS-encoded `CertifiedCheckpointSummary` carrying the
+  // `checkpoint_artifacts_digest` that `inclusion_proof.tree_root` must
+  // reconstruct, along with the BLS aggregate signature attesting to it.
+  optional bytes checkpoint_summary = 4;
+}
