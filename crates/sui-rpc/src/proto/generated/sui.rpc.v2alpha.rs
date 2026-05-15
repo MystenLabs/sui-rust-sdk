@@ -911,6 +911,433 @@ pub mod ledger_service_server {
         const NAME: &'static str = SERVICE_NAME;
     }
 }
+/// A node in a Blake2b256 Merkle tree.
+///
+/// An empty node represents an empty subtree (used as padding for odd-sized
+/// levels and as the root of a tree built from zero leaves). A digest node
+/// carries a 32-byte Blake2b256 hash of either a leaf or an inner node.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct MerkleNode {
+    #[prost(oneof = "merkle_node::Node", tags = "1, 2")]
+    pub node: ::core::option::Option<merkle_node::Node>,
+}
+/// Nested message and enum types in `MerkleNode`.
+pub mod merkle_node {
+    #[non_exhaustive]
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
+    pub enum Node {
+        /// Marker for an empty subtree.
+        #[prost(message, tag = "1")]
+        Empty(()),
+        /// 32-byte Blake2b256 hash.
+        #[prost(bytes, tag = "2")]
+        Digest(::prost::bytes::Bytes),
+    }
+}
+/// An inclusion proof for a leaf in a Blake2b256 Merkle tree.
+///
+/// The proof carries the sibling node hashes on the path from the leaf up
+/// to the root, leaf-side first. To verify, hash the leaf bytes with the
+/// `0x00` leaf prefix, then walk `path` upward and compute each parent as
+/// `BLAKE2b-256(0x01 || left || right)`. The final computed hash must equal
+/// the tree root.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MerkleProof {
+    /// Sibling node hashes, leaf-side first.
+    #[prost(message, repeated, tag = "1")]
+    pub path: ::prost::alloc::vec::Vec<MerkleNode>,
+}
+/// An Object Checkpoint State (OCS) inclusion proof.
+///
+/// The OCS is a Blake2b256 Merkle tree built by each checkpoint over the
+/// set of object references it modified (created, mutated, unwrapped, or
+/// otherwise written). Each leaf is a BCS-encoded
+/// `(ObjectID, SequenceNumber, ObjectDigest)` tuple, with leaves arranged
+/// in ascending `ObjectID` order. The tree's root is committed to by the
+/// containing `CheckpointSummary` via the `CheckpointArtifacts` variant of
+/// its `checkpoint_commitments`.
+///
+/// An `OcsInclusionProof` proves that a particular leaf appears in this
+/// tree. Combined with a verified `CheckpointSummary` it cryptographically
+/// authenticates that a specific object reference was written in a specific
+/// checkpoint.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct OcsInclusionProof {
+    /// Merkle inclusion proof for the leaf.
+    #[prost(message, optional, tag = "1")]
+    pub merkle_proof: ::core::option::Option<MerkleProof>,
+    /// Position of the leaf in the modified-objects tree.
+    #[prost(uint64, optional, tag = "2")]
+    pub leaf_index: ::core::option::Option<u64>,
+    /// 32-byte Merkle root of the modified-objects tree.
+    #[prost(bytes = "bytes", optional, tag = "3")]
+    pub tree_root: ::core::option::Option<::prost::bytes::Bytes>,
+}
+/// Request for an OCS (Object Checkpoint State) inclusion proof at a
+/// specific checkpoint.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetOcsInclusionProofRequest {
+    /// Required. The object id to prove inclusion of (hex-encoded address).
+    #[prost(string, optional, tag = "1")]
+    pub object_id: ::core::option::Option<::prost::alloc::string::String>,
+    /// Required. The checkpoint sequence number at which to prove inclusion.
+    #[prost(uint64, optional, tag = "2")]
+    pub checkpoint: ::core::option::Option<u64>,
+}
+/// Response containing the OCS inclusion proof and the materials needed to
+/// verify it end-to-end.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetOcsInclusionProofResponse {
+    /// Object reference being proven (object id, version, digest).
+    #[prost(message, optional, tag = "1")]
+    pub object_ref: ::core::option::Option<super::v2::ObjectReference>,
+    /// Inclusion proof.
+    #[prost(message, optional, tag = "2")]
+    pub inclusion_proof: ::core::option::Option<OcsInclusionProof>,
+    /// BCS-encoded `Object` data for the object being proven.
+    #[prost(bytes = "bytes", optional, tag = "3")]
+    pub object_data: ::core::option::Option<::prost::bytes::Bytes>,
+    /// BCS-encoded `CertifiedCheckpointSummary` carrying the
+    /// `checkpoint_artifacts_digest` that `inclusion_proof.tree_root` must
+    /// reconstruct, along with the BLS aggregate signature attesting to it.
+    #[prost(bytes = "bytes", optional, tag = "4")]
+    pub checkpoint_summary: ::core::option::Option<::prost::bytes::Bytes>,
+}
+/// Generated client implementations.
+pub mod proof_service_client {
+    #![allow(
+        unused_variables,
+        dead_code,
+        missing_docs,
+        clippy::wildcard_imports,
+        clippy::let_unit_value,
+    )]
+    use tonic::codegen::*;
+    use tonic::codegen::http::Uri;
+    /// ProofService provides cryptographic proofs of blockchain state.
+    ///
+    /// Proofs in this service are anchored at a checkpoint summary's
+    /// `checkpoint_artifacts_digest`, which commits to the Object Checkpoint
+    /// State (OCS) -- the per-checkpoint Merkle tree of object references
+    /// written in that checkpoint. "OCS" appears throughout this file to refer
+    /// to that commitment scheme; see the doc on `OcsInclusionProof` below for
+    /// the full definition.
+    #[derive(Debug, Clone)]
+    pub struct ProofServiceClient<T> {
+        inner: tonic::client::Grpc<T>,
+    }
+    impl ProofServiceClient<tonic::transport::Channel> {
+        /// Attempt to create a new client by connecting to a given endpoint.
+        pub async fn connect<D>(dst: D) -> Result<Self, tonic::transport::Error>
+        where
+            D: TryInto<tonic::transport::Endpoint>,
+            D::Error: Into<StdError>,
+        {
+            let conn = tonic::transport::Endpoint::new(dst)?.connect().await?;
+            Ok(Self::new(conn))
+        }
+    }
+    impl<T> ProofServiceClient<T>
+    where
+        T: tonic::client::GrpcService<tonic::body::Body>,
+        T::Error: Into<StdError>,
+        T::ResponseBody: Body<Data = Bytes> + std::marker::Send + 'static,
+        <T::ResponseBody as Body>::Error: Into<StdError> + std::marker::Send,
+    {
+        pub fn new(inner: T) -> Self {
+            let inner = tonic::client::Grpc::new(inner);
+            Self { inner }
+        }
+        pub fn with_origin(inner: T, origin: Uri) -> Self {
+            let inner = tonic::client::Grpc::with_origin(inner, origin);
+            Self { inner }
+        }
+        pub fn with_interceptor<F>(
+            inner: T,
+            interceptor: F,
+        ) -> ProofServiceClient<InterceptedService<T, F>>
+        where
+            F: tonic::service::Interceptor,
+            T::ResponseBody: Default,
+            T: tonic::codegen::Service<
+                http::Request<tonic::body::Body>,
+                Response = http::Response<
+                    <T as tonic::client::GrpcService<tonic::body::Body>>::ResponseBody,
+                >,
+            >,
+            <T as tonic::codegen::Service<
+                http::Request<tonic::body::Body>,
+            >>::Error: Into<StdError> + std::marker::Send + std::marker::Sync,
+        {
+            ProofServiceClient::new(InterceptedService::new(inner, interceptor))
+        }
+        /// Compress requests with the given encoding.
+        ///
+        /// This requires the server to support it otherwise it might respond with an
+        /// error.
+        #[must_use]
+        pub fn send_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.inner = self.inner.send_compressed(encoding);
+            self
+        }
+        /// Enable decompressing responses.
+        #[must_use]
+        pub fn accept_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.inner = self.inner.accept_compressed(encoding);
+            self
+        }
+        /// Limits the maximum size of a decoded message.
+        ///
+        /// Default: `4MB`
+        #[must_use]
+        pub fn max_decoding_message_size(mut self, limit: usize) -> Self {
+            self.inner = self.inner.max_decoding_message_size(limit);
+            self
+        }
+        /// Limits the maximum size of an encoded message.
+        ///
+        /// Default: `usize::MAX`
+        #[must_use]
+        pub fn max_encoding_message_size(mut self, limit: usize) -> Self {
+            self.inner = self.inner.max_encoding_message_size(limit);
+            self
+        }
+        /// Returns an OCS inclusion proof showing that a specific object was
+        /// written in a specific checkpoint.
+        pub async fn get_ocs_inclusion_proof(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetOcsInclusionProofRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::GetOcsInclusionProofResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/sui.rpc.v2alpha.ProofService/GetOcsInclusionProof",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "sui.rpc.v2alpha.ProofService",
+                        "GetOcsInclusionProof",
+                    ),
+                );
+            self.inner.unary(req, path, codec).await
+        }
+    }
+}
+/// Generated server implementations.
+pub mod proof_service_server {
+    #![allow(
+        unused_variables,
+        dead_code,
+        missing_docs,
+        clippy::wildcard_imports,
+        clippy::let_unit_value,
+    )]
+    use tonic::codegen::*;
+    /// Generated trait containing gRPC methods that should be implemented for use with ProofServiceServer.
+    #[async_trait]
+    pub trait ProofService: std::marker::Send + std::marker::Sync + 'static {
+        /// Returns an OCS inclusion proof showing that a specific object was
+        /// written in a specific checkpoint.
+        async fn get_ocs_inclusion_proof(
+            &self,
+            request: tonic::Request<super::GetOcsInclusionProofRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::GetOcsInclusionProofResponse>,
+            tonic::Status,
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
+    }
+    /// ProofService provides cryptographic proofs of blockchain state.
+    ///
+    /// Proofs in this service are anchored at a checkpoint summary's
+    /// `checkpoint_artifacts_digest`, which commits to the Object Checkpoint
+    /// State (OCS) -- the per-checkpoint Merkle tree of object references
+    /// written in that checkpoint. "OCS" appears throughout this file to refer
+    /// to that commitment scheme; see the doc on `OcsInclusionProof` below for
+    /// the full definition.
+    #[derive(Debug)]
+    pub struct ProofServiceServer<T> {
+        inner: Arc<T>,
+        accept_compression_encodings: EnabledCompressionEncodings,
+        send_compression_encodings: EnabledCompressionEncodings,
+        max_decoding_message_size: Option<usize>,
+        max_encoding_message_size: Option<usize>,
+    }
+    impl<T> ProofServiceServer<T> {
+        pub fn new(inner: T) -> Self {
+            Self::from_arc(Arc::new(inner))
+        }
+        pub fn from_arc(inner: Arc<T>) -> Self {
+            Self {
+                inner,
+                accept_compression_encodings: Default::default(),
+                send_compression_encodings: Default::default(),
+                max_decoding_message_size: None,
+                max_encoding_message_size: None,
+            }
+        }
+        pub fn with_interceptor<F>(
+            inner: T,
+            interceptor: F,
+        ) -> InterceptedService<Self, F>
+        where
+            F: tonic::service::Interceptor,
+        {
+            InterceptedService::new(Self::new(inner), interceptor)
+        }
+        /// Enable decompressing requests with the given encoding.
+        #[must_use]
+        pub fn accept_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.accept_compression_encodings.enable(encoding);
+            self
+        }
+        /// Compress responses with the given encoding, if the client supports it.
+        #[must_use]
+        pub fn send_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.send_compression_encodings.enable(encoding);
+            self
+        }
+        /// Limits the maximum size of a decoded message.
+        ///
+        /// Default: `4MB`
+        #[must_use]
+        pub fn max_decoding_message_size(mut self, limit: usize) -> Self {
+            self.max_decoding_message_size = Some(limit);
+            self
+        }
+        /// Limits the maximum size of an encoded message.
+        ///
+        /// Default: `usize::MAX`
+        #[must_use]
+        pub fn max_encoding_message_size(mut self, limit: usize) -> Self {
+            self.max_encoding_message_size = Some(limit);
+            self
+        }
+    }
+    impl<T, B> tonic::codegen::Service<http::Request<B>> for ProofServiceServer<T>
+    where
+        T: ProofService,
+        B: Body + std::marker::Send + 'static,
+        B::Error: Into<StdError> + std::marker::Send + 'static,
+    {
+        type Response = http::Response<tonic::body::Body>;
+        type Error = std::convert::Infallible;
+        type Future = BoxFuture<Self::Response, Self::Error>;
+        fn poll_ready(
+            &mut self,
+            _cx: &mut Context<'_>,
+        ) -> Poll<std::result::Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
+        }
+        fn call(&mut self, req: http::Request<B>) -> Self::Future {
+            match req.uri().path() {
+                "/sui.rpc.v2alpha.ProofService/GetOcsInclusionProof" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetOcsInclusionProofSvc<T: ProofService>(pub Arc<T>);
+                    impl<
+                        T: ProofService,
+                    > tonic::server::UnaryService<super::GetOcsInclusionProofRequest>
+                    for GetOcsInclusionProofSvc<T> {
+                        type Response = super::GetOcsInclusionProofResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::GetOcsInclusionProofRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as ProofService>::get_ocs_inclusion_proof(
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = GetOcsInclusionProofSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                _ => {
+                    Box::pin(async move {
+                        let mut response = http::Response::new(
+                            tonic::body::Body::default(),
+                        );
+                        let headers = response.headers_mut();
+                        headers
+                            .insert(
+                                tonic::Status::GRPC_STATUS,
+                                (tonic::Code::Unimplemented as i32).into(),
+                            );
+                        headers
+                            .insert(
+                                http::header::CONTENT_TYPE,
+                                tonic::metadata::GRPC_CONTENT_TYPE,
+                            );
+                        Ok(response)
+                    })
+                }
+            }
+        }
+    }
+    impl<T> Clone for ProofServiceServer<T> {
+        fn clone(&self) -> Self {
+            let inner = self.inner.clone();
+            Self {
+                inner,
+                accept_compression_encodings: self.accept_compression_encodings,
+                send_compression_encodings: self.send_compression_encodings,
+                max_decoding_message_size: self.max_decoding_message_size,
+                max_encoding_message_size: self.max_encoding_message_size,
+            }
+        }
+    }
+    /// Generated gRPC service name
+    pub const SERVICE_NAME: &str = "sui.rpc.v2alpha.ProofService";
+    impl<T> tonic::server::NamedService for ProofServiceServer<T> {
+        const NAME: &'static str = SERVICE_NAME;
+    }
+}
 /// Cursor-bounded query options.
 ///
 /// `after` and `before` are canonical ledger-position bounds, not
