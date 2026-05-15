@@ -251,6 +251,8 @@ pub use type_tag::Identifier;
 pub use type_tag::StructTag;
 pub use type_tag::TypeParseError;
 pub use type_tag::TypeTag;
+pub use u256::U256;
+pub use u256::U256ParseError;
 
 #[cfg(feature = "serde")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
