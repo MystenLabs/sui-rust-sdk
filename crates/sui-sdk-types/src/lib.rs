@@ -18,12 +18,10 @@
 //!   library.
 //! - `hash`: Enables support for hashing, which is required for deriving addresses and calculating
 //!   digests for various types.
-//! - `merkle`: Enables a Blake2b256 Merkle tree implementation in the [`merkle`] module, used to
-//!   construct and verify the inclusion/non-inclusion proofs the Sui network produces. Implies
-//!   the `hash` and `serde` features.
-//! - `proof`: Enables the OCS (Object Checkpoint State) proof verifier types in the [`proof`]
-//!   module, which authenticate an object reference against a trusted checkpoint summary's
-//!   `CheckpointArtifacts` commitment. Implies the `merkle` feature.
+//! - `proof`: Enables the proof verification primitives needed to authenticate state against a
+//!   trusted checkpoint summary. This includes the Blake2b256 Merkle tree implementation in the
+//!   [`merkle`] module and the OCS (Object Checkpoint State) proof verifier types in the
+//!   [`proof`] module. Implies the `hash` and `serde` features.
 //! - `proptest`: Enables support for the [proptest] library by providing implementations of
 //!   [proptest::arbitrary::Arbitrary] for many types.
 //!
@@ -117,8 +115,8 @@ mod gas;
 #[cfg(feature = "hash")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "hash")))]
 pub mod hash;
-#[cfg(feature = "merkle")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "merkle")))]
+#[cfg(feature = "proof")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "proof")))]
 pub mod merkle;
 mod object;
 #[cfg(feature = "proof")]
