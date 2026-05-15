@@ -25,12 +25,13 @@ default = []
 faucet = ["dep:reqwest"]
 # Alpha/experimental APIs. Items behind this feature are not covered by
 # the crate's semver guarantees and may change or be removed at any time.
-unstable = ["sui-sdk-types/unstable"]
+unstable = ["sui-sdk-types/unstable", "dep:sui-crypto"]
 
 [dependencies]
 bcs = "0.1.6"
 serde = { version = "1.0.228" }
 sui-sdk-types = { version = "0.3.0", path = "../sui-sdk-types", default-features = false, features = ["serde", "hash"] }
+sui-crypto = { version = "0.3.0", path = "../sui-crypto", default-features = false, features = ["bls12381"], optional = true }
 
 # dependencies for the protobuf and gRPC definitions
 bytes = "1.10"
