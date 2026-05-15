@@ -30,6 +30,8 @@ use crate::proto::sui::rpc::v2::signature_verification_service_client::Signature
 use crate::proto::sui::rpc::v2::state_service_client::StateServiceClient;
 use crate::proto::sui::rpc::v2::subscription_service_client::SubscriptionServiceClient;
 use crate::proto::sui::rpc::v2::transaction_execution_service_client::TransactionExecutionServiceClient;
+#[cfg(feature = "unstable")]
+use crate::proto::sui::rpc::v2alpha::proof_service_client::ProofServiceClient;
 
 type Result<T, E = tonic::Status> = std::result::Result<T, E>;
 type BoxError = Box<dyn std::error::Error + Send + Sync + 'static>;
@@ -291,6 +293,22 @@ impl Client {
 
     pub fn subscription_client(&mut self) -> SubscriptionServiceClient<BoxedChannel> {
         SubscriptionServiceClient::new(self.channel())
+            .accept_compressed(CompressionEncoding::Zstd)
+            .pipe(|client| {
+                if let Some(limit) = self.max_decoding_message_size {
+                    client.max_decoding_message_size(limit)
+                } else {
+                    client
+                }
+            })
+    }
+
+    /// Returns a client for the unstable alpha `ProofService`, which serves
+    /// Object Checkpoint State (OCS) inclusion proofs.
+    #[cfg(feature = "unstable")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "unstable")))]
+    pub fn proof_client(&mut self) -> ProofServiceClient<BoxedChannel> {
+        ProofServiceClient::new(self.channel())
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
                 if let Some(limit) = self.max_decoding_message_size {
