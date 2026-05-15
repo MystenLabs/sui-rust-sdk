@@ -26,6 +26,7 @@ default = []
 serde = ["dep:serde", "dep:serde_derive", "dep:serde_with", "dep:bcs", "dep:serde_json", "roaring/std", "dep:itertools"]
 rand = ["dep:rand_core"]
 hash = ["dep:blake2"]
+merkle = ["hash", "serde"]
 proptest = ["dep:proptest", "dep:test-strategy", "serde"]
 
 [dependencies]
