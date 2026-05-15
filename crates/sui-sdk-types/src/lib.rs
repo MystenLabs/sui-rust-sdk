@@ -18,6 +18,9 @@
 //!   library.
 //! - `hash`: Enables support for hashing, which is required for deriving addresses and calculating
 //!   digests for various types.
+//! - `merkle`: Enables a Blake2b256 Merkle tree implementation in the [`merkle`] module, used to
+//!   construct and verify the inclusion/non-inclusion proofs the Sui network produces. Implies
+//!   the `hash` and `serde` features.
 //! - `proptest`: Enables support for the [proptest] library by providing implementations of
 //!   [proptest::arbitrary::Arbitrary] for many types.
 //!
@@ -111,6 +114,9 @@ mod gas;
 #[cfg(feature = "hash")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "hash")))]
 pub mod hash;
+#[cfg(feature = "merkle")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "merkle")))]
+pub mod merkle;
 mod object;
 mod transaction;
 mod type_tag;
