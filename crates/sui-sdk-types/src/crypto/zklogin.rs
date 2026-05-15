@@ -597,7 +597,7 @@ impl std::fmt::Display for Bn254FieldElement {
 }
 
 #[derive(Debug)]
-pub struct Bn254FieldElementParseError(bnum::errors::ParseIntError);
+pub struct Bn254FieldElementParseError(crate::U256ParseError);
 
 impl std::fmt::Display for Bn254FieldElementParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
