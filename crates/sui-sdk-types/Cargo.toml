@@ -27,6 +27,7 @@ serde = ["dep:serde", "dep:serde_derive", "dep:serde_with", "dep:bcs", "dep:serd
 rand = ["dep:rand_core"]
 hash = ["dep:blake2"]
 merkle = ["hash", "serde"]
+proof = ["merkle"]
 proptest = ["dep:proptest", "dep:test-strategy", "serde"]
 
 [dependencies]
