@@ -21,6 +21,9 @@
 //! - `merkle`: Enables a Blake2b256 Merkle tree implementation in the [`merkle`] module, used to
 //!   construct and verify the inclusion/non-inclusion proofs the Sui network produces. Implies
 //!   the `hash` and `serde` features.
+//! - `proof`: Enables the OCS (Object Checkpoint State) proof verifier types in the [`proof`]
+//!   module, which authenticate an object reference against a trusted checkpoint summary's
+//!   `CheckpointArtifacts` commitment. Implies the `merkle` feature.
 //! - `proptest`: Enables support for the [proptest] library by providing implementations of
 //!   [proptest::arbitrary::Arbitrary] for many types.
 //!
@@ -118,6 +121,9 @@ pub mod hash;
 #[cfg_attr(doc_cfg, doc(cfg(feature = "merkle")))]
 pub mod merkle;
 mod object;
+#[cfg(feature = "proof")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "proof")))]
+pub mod proof;
 mod transaction;
 mod type_tag;
 mod u256;
