@@ -121,30 +121,46 @@ impl MerkleProof {
         &self.path
     }
 
-    /// Verify that `leaf` at position `leaf_index` is included in the tree
-    /// whose root is `root`.
-    pub fn verify_proof(
+    /// Verify that the leaf identified by the given canonical bytes at
+    /// position `leaf_index` is included in the tree whose root is `root`.
+    ///
+    /// `leaf_bytes` must be the same byte representation that was hashed
+    /// into the tree when it was built — for trees built via
+    /// [`MerkleTree::build_from_unserialized`] that is the leaf's BCS
+    /// encoding. Most callers that already have the leaf in its structured
+    /// form should use [`verify_proof`] instead, which performs that BCS
+    /// step internally.
+    ///
+    /// [`verify_proof`]: MerkleProof::verify_proof
+    pub fn verify_proof_with_leaf_bytes(
         &self,
         root: &Node,
-        leaf: &[u8],
+        leaf_bytes: &[u8],
         leaf_index: usize,
     ) -> Result<(), MerkleError> {
-        match self.compute_root(leaf, leaf_index) {
+        match self.compute_root(leaf_bytes, leaf_index) {
             Some(computed) if &computed == root => Ok(()),
             _ => Err(MerkleError::InvalidProof),
         }
     }
 
-    /// BCS-serialize `leaf` first, then verify inclusion. Useful when the
-    /// leaf type is a structured value rather than already a byte string.
-    pub fn verify_proof_with_unserialized_leaf<L: Serialize>(
+    /// Verify that `leaf` at position `leaf_index` is included in the tree
+    /// whose root is `root`.
+    ///
+    /// The leaf is BCS-encoded internally to obtain the canonical byte
+    /// representation that the tree commits to. Use
+    /// [`verify_proof_with_leaf_bytes`] when the caller already has those
+    /// bytes.
+    ///
+    /// [`verify_proof_with_leaf_bytes`]: MerkleProof::verify_proof_with_leaf_bytes
+    pub fn verify_proof<L: Serialize>(
         &self,
         root: &Node,
         leaf: &L,
         leaf_index: usize,
     ) -> Result<(), MerkleError> {
         let bytes = bcs::to_bytes(leaf).map_err(|_| MerkleError::InvalidInput)?;
-        self.verify_proof(root, &bytes, leaf_index)
+        self.verify_proof_with_leaf_bytes(root, &bytes, leaf_index)
     }
 
     /// Recompute the root from the proof and `leaf` at `leaf_index`.
@@ -435,7 +451,7 @@ where
         let left_leaf_with_index = self.left_leaf.as_ref().zip(self.index.checked_sub(1));
 
         if let Some(((left_leaf, left_proof), left_leaf_index)) = left_leaf_with_index {
-            left_proof.verify_proof_with_unserialized_leaf(root, left_leaf, left_leaf_index)?;
+            left_proof.verify_proof(root, left_leaf, left_leaf_index)?;
             if left_leaf >= target {
                 return Err(MerkleError::InvalidProof);
             }
@@ -447,7 +463,7 @@ where
         }
 
         if let Some((right_leaf, right_proof)) = &self.right_leaf {
-            right_proof.verify_proof_with_unserialized_leaf(root, right_leaf, right_leaf_index)?;
+            right_proof.verify_proof(root, right_leaf, right_leaf_index)?;
             if right_leaf <= target {
                 return Err(MerkleError::InvalidProof);
             }
@@ -563,7 +579,9 @@ mod tests {
             let tree = MerkleTree::build_from_serialized(&TEST_INPUT[..i]);
             for (index, leaf) in TEST_INPUT[..i].iter().enumerate() {
                 let proof = tree.get_proof(index).unwrap();
-                proof.verify_proof(&tree.root(), leaf, index).unwrap();
+                proof
+                    .verify_proof_with_leaf_bytes(&tree.root(), leaf, index)
+                    .unwrap();
             }
         }
     }
@@ -575,7 +593,7 @@ mod tests {
             for (index, leaf) in TEST_INPUT[..i].iter().enumerate() {
                 let proof = tree.get_proof(index).unwrap();
                 assert_eq!(
-                    proof.verify_proof(&tree.root(), leaf, index + 1),
+                    proof.verify_proof_with_leaf_bytes(&tree.root(), leaf, index + 1),
                     Err(MerkleError::InvalidProof),
                 );
             }
@@ -588,7 +606,7 @@ mod tests {
         let proof = tree.get_proof(3).unwrap();
         let tampered = b"not-the-real-leaf";
         assert_eq!(
-            proof.verify_proof(&tree.root(), tampered, 3),
+            proof.verify_proof_with_leaf_bytes(&tree.root(), tampered, 3),
             Err(MerkleError::InvalidProof),
         );
     }
@@ -599,7 +617,7 @@ mod tests {
         let proof = tree.get_proof(2).unwrap();
         let wrong_root = Node::Digest([0xab; DIGEST_LEN]);
         assert_eq!(
-            proof.verify_proof(&wrong_root, TEST_INPUT[2], 2),
+            proof.verify_proof_with_leaf_bytes(&wrong_root, TEST_INPUT[2], 2),
             Err(MerkleError::InvalidProof),
         );
     }
