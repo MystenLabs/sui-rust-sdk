@@ -178,6 +178,7 @@ pub use effects::AccumulatorWrite;
 pub use effects::ChangedObject;
 pub use effects::IdOperation;
 pub use effects::ModifiedAtVersion;
+pub use effects::ObjectChange;
 pub use effects::ObjectIn;
 pub use effects::ObjectOut;
 pub use effects::ObjectReferenceWithOwner;
