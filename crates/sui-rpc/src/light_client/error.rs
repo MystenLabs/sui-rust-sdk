@@ -1,4 +1,5 @@
 use sui_sdk_types::Address;
+use sui_sdk_types::ObjectReference;
 use sui_sdk_types::proof::ProofError;
 
 use crate::proto::TryFromProtoError;
@@ -79,6 +80,30 @@ pub enum LightClientError {
         /// The object id on the returned object reference.
         returned: Address,
     },
+
+    /// The `object_data` bytes the server returned did not BCS-decode to
+    /// an [`Object`] whose `(id, version, digest)` match the
+    /// authenticated `ObjectReference`. Without this check, a server
+    /// could pass the proof verification step while still returning
+    /// arbitrary bytes for the object's contents.
+    ///
+    /// Boxed because `ObjectReference` carries a 32-byte digest and a
+    /// 32-byte address; keeping two of them inline would inflate every
+    /// `Result<_, LightClientError>` slot by ~144 bytes for a case
+    /// that's exceedingly rare in practice.
+    ///
+    /// [`Object`]: sui_sdk_types::Object
+    ObjectDataMismatch(Box<ObjectDataMismatch>),
+}
+
+/// Payload for [`LightClientError::ObjectDataMismatch`].
+#[derive(Debug)]
+pub struct ObjectDataMismatch {
+    /// The authenticated reference from the verified inclusion proof.
+    pub expected: ObjectReference,
+    /// The reference reconstructed from the returned `object_data`
+    /// bytes.
+    pub returned: ObjectReference,
 }
 
 impl std::fmt::Display for LightClientError {
@@ -124,6 +149,17 @@ impl std::fmt::Display for LightClientError {
                 f,
                 "proof was returned for object {returned} but caller requested object {requested}"
             ),
+            Self::ObjectDataMismatch(boxed) => {
+                let ObjectDataMismatch { expected, returned } = boxed.as_ref();
+                write!(
+                    f,
+                    "object_data bytes hash to {} version {} but the verified leaf attests to {} version {}",
+                    returned.digest(),
+                    returned.version(),
+                    expected.digest(),
+                    expected.version(),
+                )
+            }
         }
     }
 }

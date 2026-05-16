@@ -3,6 +3,7 @@
 use sui_crypto::bls12381::ValidatorCommitteeSignatureVerifier;
 use sui_sdk_types::Address;
 use sui_sdk_types::Digest;
+use sui_sdk_types::Object;
 use sui_sdk_types::ObjectReference;
 use sui_sdk_types::SignedCheckpointSummary;
 use sui_sdk_types::ValidatorCommittee;
@@ -14,6 +15,7 @@ use crate::proto::sui::rpc::v2alpha::GetOcsInclusionProofRequest;
 
 use super::EpochCache;
 use super::error::LightClientError;
+use super::error::ObjectDataMismatch;
 use super::ratchet::ratchet_to_checkpoint;
 
 /// A light client that authenticates state against a trusted validator
@@ -56,7 +58,7 @@ impl LightClient {
 
     /// Verify that `object_id` was written in the checkpoint with
     /// `checkpoint_seq`, returning the authenticated [`ObjectReference`]
-    /// on success.
+    /// and the BCS-decoded [`Object`] data on success.
     ///
     /// The full chain of trust:
     ///
@@ -73,15 +75,21 @@ impl LightClient {
     ///    matches the requested `object_id`.
     /// 5. Verify the OCS inclusion proof against the trusted summary
     ///    using the proof verifier in `sui_sdk_types::proof`.
+    /// 6. BCS-decode the response's `object_data` into an [`Object`] and
+    ///    check that its `(object_id, version, digest)` matches the
+    ///    authenticated `ObjectReference`. This pins the object's
+    ///    contents to the verified leaf rather than trusting the server
+    ///    to send the right bytes.
     ///
-    /// On success the returned `ObjectReference` is authenticated
-    /// end-to-end: its version and digest are the values the network
-    /// committed to at the requested checkpoint.
+    /// On success the returned `ObjectReference` and `Object` are
+    /// authenticated end-to-end: the reference's version and digest are
+    /// the values the network committed to at the requested checkpoint,
+    /// and the object's BCS bytes hash to that same digest.
     pub async fn verify_object_at_checkpoint(
         &mut self,
         object_id: &Address,
         checkpoint_seq: u64,
-    ) -> Result<ObjectReference, LightClientError> {
+    ) -> Result<(ObjectReference, Object), LightClientError> {
         // 1. Fetch the proof from the alpha ProofService.
         let request = GetOcsInclusionProofRequest::default()
             .with_object_id(object_id.to_string())
@@ -102,6 +110,9 @@ impl LightClient {
         let summary_bytes = response
             .checkpoint_summary
             .ok_or_else(|| TryFromProtoError::missing("checkpoint_summary"))?;
+        let object_data_bytes = response
+            .object_data
+            .ok_or_else(|| TryFromProtoError::missing("object_data"))?;
 
         // 2. Convert proto types into the SDK types.
         let object_ref: ObjectReference = (&object_ref_proto).try_into()?;
@@ -167,6 +178,25 @@ impl LightClient {
         };
         inclusion_proof.verify(&signed_summary.checkpoint, &object_ref)?;
 
-        Ok(object_ref)
+        // 6. BCS-decode the returned object data and confirm it matches
+        //    the now-trusted object reference. A misbehaving server
+        //    that wanted to lie about the object's contents would have
+        //    to either send bytes whose `(id, version, digest)` differ
+        //    from the leaf (caught here) or whose `Object::digest()`
+        //    no longer matches the bytes themselves (caught by the
+        //    digest equality check).
+        let object: Object = bcs::from_bytes(&object_data_bytes)?;
+        let returned_ref =
+            ObjectReference::new(object.object_id(), object.version(), object.digest());
+        if returned_ref != object_ref {
+            return Err(LightClientError::ObjectDataMismatch(Box::new(
+                ObjectDataMismatch {
+                    expected: object_ref,
+                    returned: returned_ref,
+                },
+            )));
+        }
+
+        Ok((object_ref, object))
     }
 }
