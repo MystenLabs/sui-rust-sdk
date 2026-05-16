@@ -26,7 +26,9 @@ default = []
 serde = ["dep:serde", "dep:serde_derive", "dep:serde_with", "dep:bcs", "dep:serde_json", "roaring/std", "dep:itertools"]
 rand = ["dep:rand_core"]
 hash = ["dep:blake2"]
-proof = ["hash", "serde"]
+# Alpha/experimental APIs. Items behind this feature are not covered by
+# the crate's semver guarantees and may change or be removed at any time.
+unstable = ["hash", "serde"]
 proptest = ["dep:proptest", "dep:test-strategy", "serde"]
 
 [dependencies]

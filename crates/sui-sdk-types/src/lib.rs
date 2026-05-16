@@ -18,10 +18,12 @@
 //!   library.
 //! - `hash`: Enables support for hashing, which is required for deriving addresses and calculating
 //!   digests for various types.
-//! - `proof`: Enables the proof verification primitives needed to authenticate state against a
-//!   trusted checkpoint summary. This includes the Blake2b256 Merkle tree implementation in the
-//!   [`merkle`] module and the OCS (Object Checkpoint State) proof verifier types in the
-//!   [`proof`] module. Implies the `hash` and `serde` features.
+//! - `unstable`: Alpha/experimental APIs. Items behind this feature are not covered by the
+//!   crate's semver guarantees and may change or be removed at any time. Currently this gates
+//!   the proof verification primitives needed to authenticate state against a trusted checkpoint
+//!   summary, including the Blake2b256 Merkle tree implementation in the [`merkle`] module and
+//!   the OCS (Object Checkpoint State) proof verifier types in the [`proof`] module. Implies
+//!   the `hash` and `serde` features.
 //! - `proptest`: Enables support for the [proptest] library by providing implementations of
 //!   [proptest::arbitrary::Arbitrary] for many types.
 //!
@@ -115,12 +117,12 @@ mod gas;
 #[cfg(feature = "hash")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "hash")))]
 pub mod hash;
-#[cfg(feature = "proof")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "proof")))]
+#[cfg(feature = "unstable")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "unstable")))]
 pub mod merkle;
 mod object;
-#[cfg(feature = "proof")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "proof")))]
+#[cfg(feature = "unstable")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "unstable")))]
 pub mod proof;
 mod transaction;
 mod type_tag;
