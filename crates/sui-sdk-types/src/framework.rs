@@ -128,7 +128,8 @@ impl Ord for EventCommitment {
 /// The framework maintains one of these per event stream as a dynamic field
 /// on the accumulator root object (`0xacc`), keyed by
 /// `accumulator::Key<accumulator_settlement::EventStreamHead> { owner:
-/// stream_id }`.
+/// stream_id }`. Use [`derive_event_stream_head_object_id`] to compute the
+/// dynamic field's object id from the stream id.
 ///
 /// Each settlement transaction that processes events for the stream folds a
 /// per-checkpoint merkle tree root into the MMR using carry-propagation. The
@@ -161,6 +162,67 @@ pub struct EventStreamHead {
     pub checkpoint_seq: u64,
     /// Total number of events ever folded into the MMR.
     pub num_events: u64,
+}
+
+/// Compute the object id of the [`EventStreamHead`] dynamic field for a
+/// given stream.
+///
+/// The framework stores each stream's head as a dynamic field on the
+/// accumulator root object (`0xacc`). The field is keyed by
+/// `sui::accumulator::Key<sui::accumulator_settlement::EventStreamHead>`,
+/// with the `owner` field of `Key` set to the stream id. This helper
+/// reproduces that derivation so a client can fetch the head via an OCS
+/// inclusion proof anchored to a verified checkpoint.
+///
+/// The BCS encoding of `Key { owner: stream_id }` is identical to that of
+/// the bare 32-byte address, since `Key` is a single-field struct over the
+/// owner.
+///
+/// ```
+/// use sui_sdk_types::Address;
+/// use sui_sdk_types::framework::derive_event_stream_head_object_id;
+///
+/// // Pinned interop vector cross-verified against
+/// // `sui_types::accumulator_root::derive_event_stream_head_object_id`.
+/// let stream_id = Address::ZERO;
+/// let object_id = derive_event_stream_head_object_id(stream_id);
+/// assert_eq!(
+///     object_id,
+///     Address::from_static("0x9461a724d957b41485e094fdced6c668bd388070108dbfbdc12277ad68a2717f"),
+/// );
+/// ```
+#[cfg(feature = "unstable")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "unstable")))]
+pub fn derive_event_stream_head_object_id(stream_id: Address) -> Address {
+    use super::Identifier;
+    use super::StructTag;
+
+    // Parent: the accumulator root object at `0xacc`.
+    let accumulator_root = const { Address::from_static("0xacc") };
+
+    // Value type: `sui::accumulator_settlement::EventStreamHead`. Captured
+    // inline rather than via a dedicated constant since this is the only
+    // call site that needs it.
+    let value_type = StructTag::new(
+        Address::TWO,
+        Identifier::from_static("accumulator_settlement"),
+        Identifier::from_static("EventStreamHead"),
+        vec![],
+    );
+
+    // Key type: `sui::accumulator::Key<EventStreamHead>`.
+    let key_type_tag: TypeTag = StructTag::new(
+        Address::TWO,
+        Identifier::from_static("accumulator"),
+        Identifier::from_static("Key"),
+        vec![value_type.into()],
+    )
+    .into();
+
+    // Key bytes: BCS of `AccumulatorKey { owner: stream_id }` reduces to
+    // the 32 raw address bytes because BCS encodes a single-field struct
+    // identically to the bare field.
+    accumulator_root.derive_dynamic_child_id(&key_type_tag, stream_id.as_ref())
 }
 
 #[cfg(test)]
@@ -257,5 +319,50 @@ mod test {
         assert!(head.mmr.is_empty());
         assert_eq!(head.checkpoint_seq, 0);
         assert_eq!(head.num_events, 0);
+    }
+
+    // Cross-implementation pin: each `(stream_id, object_id)` pair was
+    // captured by running upstream's
+    // `sui_types::accumulator_root::derive_event_stream_head_object_id`
+    // directly on the listed stream id. The derivation composes
+    // `Address::derive_dynamic_child_id` (validated against the Move-side
+    // snapshot test) with a fixed `StructTag`, so a regression here would
+    // most likely indicate an unintended change to either the type tag or
+    // the parent accumulator root address.
+    #[test]
+    fn derive_event_stream_head_object_id_pinned_vectors() {
+        let cases: &[(Address, Address)] = &[
+            (
+                Address::ZERO,
+                Address::from_static(
+                    "0x9461a724d957b41485e094fdced6c668bd388070108dbfbdc12277ad68a2717f",
+                ),
+            ),
+            (
+                Address::TWO,
+                Address::from_static(
+                    "0x1b877f5c7664df8957f127a95d1b2c8c1c239fd49566f9f69205df44133fc37f",
+                ),
+            ),
+            (
+                Address::from_static("0xacc"),
+                Address::from_static(
+                    "0x452652326e8df295af20a4e0744acac9a74f87d93ba976dd97d3e93e1a542e37",
+                ),
+            ),
+            (
+                Address::from_static("0x42424242"),
+                Address::from_static(
+                    "0xdbe2cd3f24c357c434991a4348e6ceb43bcb7d22696eb6797a6739e5351cb149",
+                ),
+            ),
+        ];
+        for (stream_id, expected) in cases {
+            assert_eq!(
+                derive_event_stream_head_object_id(*stream_id),
+                *expected,
+                "mismatch for stream id {stream_id}",
+            );
+        }
     }
 }
