@@ -10,7 +10,10 @@ use sui_sdk_types::ValidatorCommittee;
 use sui_sdk_types::proof::OcsInclusionProof;
 
 use crate::Client;
+use crate::field::FieldMask;
+use crate::field::FieldMaskUtil;
 use crate::proto::TryFromProtoError;
+use crate::proto::sui::rpc::v2::GetCheckpointRequest;
 use crate::proto::sui::rpc::v2alpha::GetOcsInclusionProofRequest;
 
 use super::EpochCache;
@@ -54,6 +57,31 @@ impl LightClient {
     /// want to issue additional gRPC requests through the same channel.
     pub fn rpc(&mut self) -> &mut Client {
         &mut self.rpc
+    }
+
+    /// Return the sequence number of the network's most recent
+    /// checkpoint, as reported by `LedgerService.GetCheckpoint(latest)`.
+    ///
+    /// The result is **not** trust-anchored — it's a single read from
+    /// the server with no signature verification. Streaming clients use
+    /// it as a starting cursor (e.g., "begin reading events from the
+    /// checkpoint after this one"); any subsequent claim about an
+    /// object's state at this checkpoint must still flow through
+    /// [`Self::verify_object_at_checkpoint`] for cryptographic
+    /// authentication.
+    pub async fn latest_checkpoint_seq(&mut self) -> Result<u64, LightClientError> {
+        let request = GetCheckpointRequest::latest()
+            .with_read_mask(FieldMask::from_paths(["sequence_number"]));
+        let response = self
+            .rpc
+            .ledger_client()
+            .get_checkpoint(request)
+            .await?
+            .into_inner();
+        response
+            .checkpoint
+            .and_then(|c| c.sequence_number)
+            .ok_or_else(|| TryFromProtoError::missing("checkpoint.sequence_number").into())
     }
 
     /// Verify that `object_id` was written in the checkpoint with
