@@ -1,3 +1,4 @@
+use sui_sdk_types::Address;
 use sui_sdk_types::proof::ProofError;
 
 use crate::proto::TryFromProtoError;
@@ -50,6 +51,34 @@ pub enum LightClientError {
         /// payload.
         checkpoint: u64,
     },
+
+    /// The server returned a proof anchored at a different checkpoint
+    /// than the one the caller requested.
+    CheckpointMismatch {
+        /// The checkpoint sequence number the caller asked for.
+        requested: u64,
+        /// The checkpoint sequence number on the returned summary.
+        returned: u64,
+    },
+
+    /// After ratcheting forward, the cache still did not have a
+    /// committee on file for the relevant checkpoint. This should not
+    /// happen in practice and indicates either a bug or a malicious
+    /// server response.
+    NoCommitteeForCheckpoint {
+        /// The checkpoint sequence number that has no committee on
+        /// file.
+        checkpoint: u64,
+    },
+
+    /// The server returned an inclusion proof for a different object
+    /// id than the caller asked about.
+    ObjectIdMismatch {
+        /// The object id the caller asked about.
+        requested: Address,
+        /// The object id on the returned object reference.
+        returned: Address,
+    },
 }
 
 impl std::fmt::Display for LightClientError {
@@ -76,6 +105,24 @@ impl std::fmt::Display for LightClientError {
             Self::MissingEndOfEpochData { checkpoint } => write!(
                 f,
                 "checkpoint {checkpoint} was advertised as end-of-epoch but its summary has no `end_of_epoch_data` payload"
+            ),
+            Self::CheckpointMismatch {
+                requested,
+                returned,
+            } => write!(
+                f,
+                "proof was returned for checkpoint {returned} but caller requested checkpoint {requested}"
+            ),
+            Self::NoCommitteeForCheckpoint { checkpoint } => write!(
+                f,
+                "no validator committee on file for checkpoint {checkpoint} after ratchet"
+            ),
+            Self::ObjectIdMismatch {
+                requested,
+                returned,
+            } => write!(
+                f,
+                "proof was returned for object {returned} but caller requested object {requested}"
             ),
         }
     }
