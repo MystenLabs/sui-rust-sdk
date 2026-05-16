@@ -426,6 +426,26 @@ mod type_digest {
         }
     }
 
+    impl crate::Event {
+        /// Per-event digest used as the leaf input for authenticated event
+        /// stream commitments.
+        ///
+        /// Unlike the [`TransactionEvents`] digest above, this is **not**
+        /// salted with the type name: the framework computes it as the bare
+        /// `BLAKE2b-256` over the BCS-encoded `Event`. Two events with
+        /// identical contents share a digest; their merkle leaves remain
+        /// distinct because the surrounding `EventCommitment` also pins each
+        /// event to its `(checkpoint_seq, transaction_idx, event_idx)`
+        /// position.
+        ///
+        /// [`TransactionEvents`]: crate::TransactionEvents
+        pub fn digest(&self) -> Digest {
+            let mut hasher = Hasher::new();
+            bcs::serialize_into(&mut hasher, self).unwrap();
+            hasher.finalize()
+        }
+    }
+
     fn type_digest<T: serde::Serialize>(salt: &str, ty: &T) -> Digest {
         let mut hasher = Hasher::new();
         hasher.update(salt);
@@ -595,6 +615,35 @@ mod test {
     #[proptest]
     fn roundtrip_hashing_intent(intent: HashingIntent) {
         assert_eq!(Ok(intent), HashingIntent::from_byte(intent as u8));
+    }
+
+    // `Event::digest` must hash the bare BCS encoding without a salt — the
+    // framework relies on the unsalted digest as the leaf input for
+    // authenticated event stream commitments. If anyone reaches for the
+    // salted `type_digest` helper later by mistake, this test catches it.
+    #[test]
+    #[cfg(feature = "serde")]
+    fn event_digest_is_unsalted() {
+        use crate::Event;
+        use crate::Identifier;
+        use crate::StructTag;
+        use crate::hash::Hasher;
+
+        let event = Event {
+            package_id: Address::TWO,
+            module: Identifier::from_static("clock"),
+            sender: Address::TWO,
+            type_: StructTag::new(
+                Address::TWO,
+                Identifier::from_static("clock"),
+                Identifier::from_static("Tick"),
+                vec![],
+            ),
+            contents: vec![0xde, 0xad, 0xbe, 0xef],
+        };
+
+        let expected = Hasher::digest(bcs::to_bytes(&event).unwrap());
+        assert_eq!(event.digest(), expected);
     }
 
     // Snapshot tests that match the on-chain `derive_address` logic.
