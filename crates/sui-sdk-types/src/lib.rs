@@ -208,12 +208,6 @@ pub use execution_status::ExecutionStatus;
 pub use execution_status::MoveLocation;
 pub use execution_status::PackageUpgradeError;
 pub use execution_status::TypeArgumentError;
-#[cfg(feature = "unstable")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "unstable")))]
-pub use framework::EventCommitment;
-#[cfg(feature = "unstable")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "unstable")))]
-pub use framework::EventStreamHead;
 pub use gas::GasCostSummary;
 pub use object::GenesisObject;
 pub use object::MovePackage;
