@@ -225,6 +225,38 @@ pub fn derive_event_stream_head_object_id(stream_id: Address) -> Address {
     accumulator_root.derive_dynamic_child_id(&key_type_tag, stream_id.as_ref())
 }
 
+/// Build the per-checkpoint merkle root over an ordered slice of event
+/// commitments.
+///
+/// Each leaf is the BCS encoding of an [`EventCommitment`], hashed through
+/// the standard Blake2b256 leaf/inner-prefix scheme defined in
+/// [`crate::merkle`]. The output matches the root the framework computes
+/// when sealing a per-checkpoint event tree.
+///
+/// Callers must provide `commitments` pre-sorted by
+/// `(checkpoint_seq, transaction_idx, event_idx)`. The framework folds the
+/// sorted sequence into its MMR, so an out-of-order input would yield a
+/// root that fails reconciliation. Debug builds verify the ordering with a
+/// `debug_assert!`; in release builds, ordering is the caller's
+/// responsibility.
+///
+/// An empty input yields the all-zero "empty" root from [`crate::merkle`].
+/// This is a degenerate case the framework never produces — there is no
+/// merkle tree to fold when a checkpoint has no events for a stream — but
+/// the function itself is defined for any input length so it can be used
+/// as a primitive elsewhere.
+#[cfg(feature = "unstable")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "unstable")))]
+pub fn build_event_merkle_root(commitments: &[EventCommitment]) -> Digest {
+    debug_assert!(
+        commitments.windows(2).all(|w| w[0] <= w[1]),
+        "EventCommitments must be sorted by (checkpoint_seq, transaction_idx, event_idx)",
+    );
+    let tree = crate::merkle::MerkleTree::build_from_unserialized(commitments.iter())
+        .expect("EventCommitment BCS encoding is infallible");
+    Digest::new(tree.root().bytes())
+}
+
 #[cfg(test)]
 #[cfg(feature = "unstable")]
 mod test {
@@ -319,6 +351,53 @@ mod test {
         assert!(head.mmr.is_empty());
         assert_eq!(head.checkpoint_seq, 0);
         assert_eq!(head.num_events, 0);
+    }
+
+    // Cross-implementation pin: the expected merkle root was captured by
+    // running `sui_types::accumulator_root::build_event_merkle_root`
+    // upstream on the same three commitments. A regression in either the
+    // `EventCommitment` BCS shape or the underlying merkle tree
+    // construction (leaf/inner prefix, padding, hash function) would shift
+    // this digest. The `merkle` module's root construction and
+    // `event_commitment_bcs_shape` above already pin those pieces against
+    // their respective upstream sources, so this test seals the
+    // composition end-to-end.
+    #[test]
+    fn build_event_merkle_root_pinned_vector() {
+        let commitments = vec![
+            EventCommitment {
+                checkpoint_seq: 1,
+                transaction_idx: 0,
+                event_idx: 0,
+                digest: Digest::new([0x11; 32]),
+            },
+            EventCommitment {
+                checkpoint_seq: 1,
+                transaction_idx: 0,
+                event_idx: 1,
+                digest: Digest::new([0x22; 32]),
+            },
+            EventCommitment {
+                checkpoint_seq: 1,
+                transaction_idx: 1,
+                event_idx: 0,
+                digest: Digest::new([0x33; 32]),
+            },
+        ];
+        const EXPECTED: [u8; 32] = [
+            254, 183, 87, 247, 72, 14, 90, 116, 221, 195, 244, 87, 250, 236, 226, 161, 99, 106,
+            199, 246, 85, 138, 180, 110, 112, 50, 103, 77, 160, 104, 239, 61,
+        ];
+        assert_eq!(build_event_merkle_root(&commitments).into_inner(), EXPECTED);
+    }
+
+    #[test]
+    fn build_event_merkle_root_empty_input_is_empty_node() {
+        // Documented degenerate case: the merkle tree over zero leaves is the
+        // all-zero "empty" node. `apply_stream_updates` rejects this so a
+        // verifier would never reach it via the normal path, but the helper
+        // is defined for arbitrary input and should not panic.
+        assert_eq!(build_event_merkle_root(&[]).into_inner(), [0u8; 32]);
     }
 
     // Cross-implementation pin: each `(stream_id, object_id)` pair was
