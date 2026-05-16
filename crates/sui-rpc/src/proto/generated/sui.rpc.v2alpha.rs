@@ -394,6 +394,12 @@ pub struct EventItem {
     /// The event data.
     #[prost(message, optional, tag = "5")]
     pub event: ::core::option::Option<super::v2::Event>,
+    /// 0-based index of the emitting transaction within its containing
+    /// checkpoint. Required for clients verifying authenticated event
+    /// streams: this index is part of the BCS-encoded `EventCommitment`
+    /// leaf used to construct the per-checkpoint merkle root.
+    #[prost(uint64, optional, tag = "6")]
+    pub transaction_index: ::core::option::Option<u64>,
 }
 /// Response message for LedgerService.ListEvents.
 #[non_exhaustive]

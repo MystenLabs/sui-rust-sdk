@@ -1145,6 +1145,12 @@ pub(crate) mod _field_impls {
             number: 5i32,
             message_fields: Some(Event::FIELDS),
         };
+        pub const TRANSACTION_INDEX_FIELD: &'static MessageField = &MessageField {
+            name: "transaction_index",
+            json_name: "transactionIndex",
+            number: 6i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for EventItem {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -1153,6 +1159,7 @@ pub(crate) mod _field_impls {
             Self::EVENT_INDEX_FIELD,
             Self::TRANSACTION_DIGEST_FIELD,
             Self::EVENT_FIELD,
+            Self::TRANSACTION_INDEX_FIELD,
         ];
     }
     impl EventItem {
@@ -1194,6 +1201,10 @@ pub(crate) mod _field_impls {
         pub fn event(mut self) -> EventFieldPathBuilder {
             self.path.push(EventItem::EVENT_FIELD.name);
             EventFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn transaction_index(mut self) -> String {
+            self.path.push(EventItem::TRANSACTION_INDEX_FIELD.name);
+            self.finish()
         }
     }
     impl ListEventsResponse {
