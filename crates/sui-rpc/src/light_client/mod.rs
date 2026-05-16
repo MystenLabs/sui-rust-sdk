@@ -20,9 +20,11 @@
 mod client;
 mod epoch_cache;
 mod error;
+pub mod events;
 mod ratchet;
 
 pub use client::LightClient;
 pub use epoch_cache::EpochCache;
 pub use error::LightClientError;
+pub use events::AuthenticatedEvent;
 pub use ratchet::ratchet_to_checkpoint;
