@@ -1,5 +1,6 @@
 use sui_sdk_types::Address;
 use sui_sdk_types::ObjectReference;
+use sui_sdk_types::framework::EventStreamHead;
 use sui_sdk_types::proof::ProofError;
 
 use crate::proto::TryFromProtoError;
@@ -94,6 +95,19 @@ pub enum LightClientError {
     ///
     /// [`Object`]: sui_sdk_types::Object
     ObjectDataMismatch(Box<ObjectDataMismatch>),
+
+    /// The locally-replayed [`EventStreamHead`] disagreed with the
+    /// authenticated head fetched from chain at the given checkpoint.
+    /// This is the streaming client's terminal failure mode — once the
+    /// MMRs diverge, every subsequent event would compound the
+    /// divergence, so the stream is aborted with this error.
+    ///
+    /// Boxed because `EventStreamHead` carries a `Vec<U256>` (each
+    /// `U256` is 32 bytes) and grows unbounded with checkpoint count;
+    /// keeping two of them inline would inflate every
+    /// `Result<_, LightClientError>` slot returned from the streaming
+    /// task.
+    MmrMismatch(Box<MmrMismatch>),
 }
 
 /// Payload for [`LightClientError::ObjectDataMismatch`].
@@ -104,6 +118,19 @@ pub struct ObjectDataMismatch {
     /// The reference reconstructed from the returned `object_data`
     /// bytes.
     pub returned: ObjectReference,
+}
+
+/// Payload for [`LightClientError::MmrMismatch`].
+#[derive(Debug)]
+pub struct MmrMismatch {
+    /// The checkpoint at which the reconciliation was attempted.
+    pub checkpoint: u64,
+    /// The head fetched from chain via an OCS inclusion proof — the
+    /// truth against which the local replay was compared.
+    pub expected: EventStreamHead,
+    /// The head the streaming client computed by folding received
+    /// events into its local MMR.
+    pub actual: EventStreamHead,
 }
 
 impl std::fmt::Display for LightClientError {
@@ -158,6 +185,23 @@ impl std::fmt::Display for LightClientError {
                     returned.version(),
                     expected.digest(),
                     expected.version(),
+                )
+            }
+            Self::MmrMismatch(boxed) => {
+                let MmrMismatch {
+                    checkpoint,
+                    expected,
+                    actual,
+                } = boxed.as_ref();
+                write!(
+                    f,
+                    "local MMR diverged from on-chain EventStreamHead at checkpoint {checkpoint}: \
+                     locally replayed {} events to checkpoint {}, chain attests to {} events at \
+                     checkpoint {}",
+                    actual.num_events,
+                    actual.checkpoint_seq,
+                    expected.num_events,
+                    expected.checkpoint_seq,
                 )
             }
         }
