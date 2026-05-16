@@ -904,25 +904,17 @@ impl Merge<sui_sdk_types::UserSignature> for UserSignature {
         }
 
         match source {
-            Simple(simple) => {
-                if mask.contains(Self::SIMPLE_FIELD.name) {
-                    self.signature = Some(Signature::Simple(simple.into()));
-                }
+            Simple(simple) if mask.contains(Self::SIMPLE_FIELD.name) => {
+                self.signature = Some(Signature::Simple(simple.into()));
             }
-            Multisig(ref multisig) => {
-                if mask.contains(Self::MULTISIG_FIELD.name) {
-                    self.signature = Some(Signature::Multisig(multisig.into()));
-                }
+            Multisig(ref multisig) if mask.contains(Self::MULTISIG_FIELD.name) => {
+                self.signature = Some(Signature::Multisig(multisig.into()));
             }
-            ZkLogin(zklogin) => {
-                if mask.contains(Self::ZKLOGIN_FIELD.name) {
-                    self.signature = Some(Signature::Zklogin((*zklogin).into()));
-                }
+            ZkLogin(zklogin) if mask.contains(Self::ZKLOGIN_FIELD.name) => {
+                self.signature = Some(Signature::Zklogin((*zklogin).into()));
             }
-            Passkey(passkey) => {
-                if mask.contains(Self::PASSKEY_FIELD.name) {
-                    self.signature = Some(Signature::Passkey(passkey.into()));
-                }
+            Passkey(passkey) if mask.contains(Self::PASSKEY_FIELD.name) => {
+                self.signature = Some(Signature::Passkey(passkey.into()));
             }
             _ => {}
         }
