@@ -19,6 +19,8 @@
 
 mod epoch_cache;
 mod error;
+mod ratchet;
 
 pub use epoch_cache::EpochCache;
 pub use error::LightClientError;
+pub use ratchet::ratchet_to_checkpoint;
