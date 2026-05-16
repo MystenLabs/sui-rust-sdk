@@ -257,6 +257,201 @@ pub fn build_event_merkle_root(commitments: &[EventCommitment]) -> Digest {
     Digest::new(tree.root().bytes())
 }
 
+/// A non-empty group of event commitments folded into an [`EventStreamHead`]
+/// as a single MMR update.
+///
+/// The framework guarantees at most one accumulator settlement per
+/// `(checkpoint, stream)` pair, so callers grouping incoming events by
+/// `checkpoint_seq` reproduce the on-chain batching exactly. Within a
+/// batch, every commitment's `checkpoint_seq` must equal the batch's, and
+/// commitments must be sorted by their positional tuple
+/// `(checkpoint_seq, transaction_idx, event_idx)`.
+#[cfg(feature = "unstable")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "unstable")))]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct EventBatch {
+    /// The checkpoint sequence number that produced these commitments.
+    pub checkpoint_seq: u64,
+    /// Commitments to fold, sorted by their positional tuple. Must be
+    /// non-empty and every commitment's `checkpoint_seq` must equal
+    /// [`Self::checkpoint_seq`].
+    pub commitments: Vec<EventCommitment>,
+}
+
+/// Reasons [`apply_stream_updates`] can reject a batch.
+#[cfg(feature = "unstable")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "unstable")))]
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum ApplyStreamError {
+    /// A batch contained no commitments. The framework never folds an
+    /// empty batch into the MMR, so a verifier should not produce one.
+    EmptyBatch {
+        /// Index into the `batches` slice where the empty batch was found.
+        batch_index: usize,
+    },
+
+    /// A commitment's `checkpoint_seq` field disagreed with the enclosing
+    /// batch's `checkpoint_seq`. A batch corresponds to a single settlement
+    /// transaction; all of its commitments share the settlement's
+    /// checkpoint.
+    CommitmentCheckpointMismatch {
+        /// Index into the `batches` slice.
+        batch_index: usize,
+        /// Index into the offending batch's `commitments` vector.
+        commitment_index: usize,
+        /// The batch's authoritative checkpoint sequence number.
+        batch_checkpoint_seq: u64,
+        /// The commitment's contradictory checkpoint sequence number.
+        commitment_checkpoint_seq: u64,
+    },
+
+    /// A batch's `checkpoint_seq` was strictly less than the head's last
+    /// folded checkpoint. Batches must be applied in monotonic order.
+    NonMonotonicCheckpoint {
+        /// Index into the `batches` slice.
+        batch_index: usize,
+        /// The head's `checkpoint_seq` before this batch was attempted.
+        previous_checkpoint_seq: u64,
+        /// The offending batch's `checkpoint_seq`.
+        batch_checkpoint_seq: u64,
+    },
+}
+
+#[cfg(feature = "unstable")]
+impl std::fmt::Display for ApplyStreamError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::EmptyBatch { batch_index } => {
+                write!(f, "batch {batch_index} is empty")
+            }
+            Self::CommitmentCheckpointMismatch {
+                batch_index,
+                commitment_index,
+                batch_checkpoint_seq,
+                commitment_checkpoint_seq,
+            } => write!(
+                f,
+                "batch {batch_index} declares checkpoint {batch_checkpoint_seq} \
+                 but commitment {commitment_index} carries checkpoint \
+                 {commitment_checkpoint_seq}",
+            ),
+            Self::NonMonotonicCheckpoint {
+                batch_index,
+                previous_checkpoint_seq,
+                batch_checkpoint_seq,
+            } => write!(
+                f,
+                "batch {batch_index} at checkpoint {batch_checkpoint_seq} would \
+                 regress the head's checkpoint {previous_checkpoint_seq}",
+            ),
+        }
+    }
+}
+
+#[cfg(feature = "unstable")]
+impl std::error::Error for ApplyStreamError {}
+
+/// Fold a sequence of `batches` into `head`, returning the updated head.
+///
+/// For each batch in order, this:
+///
+/// 1. Computes the merkle root over the batch's commitments via
+///    [`build_event_merkle_root`].
+/// 2. Reinterprets the 32-byte root as a [`U256`] in little-endian.
+/// 3. Folds the result into `head.mmr` using BLAKE2b-256
+///    carry-propagation: while the lowest empty slot is occupied, hash
+///    that peak with the carry and try the next slot up; otherwise drop
+///    the carry into the slot. If the carry propagates past the highest
+///    occupied level, push a new slot.
+/// 4. Advances `head.checkpoint_seq` to the batch's checkpoint and
+///    increments `head.num_events` by the number of commitments folded.
+///
+/// The MMR fold matches the on-chain Move implementation byte-for-byte —
+/// see `test_mmr_digest_compat_with_rust` under
+/// `sui-framework/sources/accumulator_settlement.move`. Any divergence
+/// here breaks reconciliation against fetched [`EventStreamHead`]
+/// objects.
+#[cfg(feature = "unstable")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "unstable")))]
+pub fn apply_stream_updates(
+    head: EventStreamHead,
+    batches: &[EventBatch],
+) -> Result<EventStreamHead, ApplyStreamError> {
+    let mut head = head;
+    for (batch_index, batch) in batches.iter().enumerate() {
+        if batch.commitments.is_empty() {
+            return Err(ApplyStreamError::EmptyBatch { batch_index });
+        }
+        for (commitment_index, commitment) in batch.commitments.iter().enumerate() {
+            if commitment.checkpoint_seq != batch.checkpoint_seq {
+                return Err(ApplyStreamError::CommitmentCheckpointMismatch {
+                    batch_index,
+                    commitment_index,
+                    batch_checkpoint_seq: batch.checkpoint_seq,
+                    commitment_checkpoint_seq: commitment.checkpoint_seq,
+                });
+            }
+        }
+        // The head has not been folded into yet when `num_events == 0`, so
+        // any starting checkpoint is acceptable; only subsequent batches
+        // must be monotonic relative to the prior fold.
+        if head.num_events != 0 && batch.checkpoint_seq < head.checkpoint_seq {
+            return Err(ApplyStreamError::NonMonotonicCheckpoint {
+                batch_index,
+                previous_checkpoint_seq: head.checkpoint_seq,
+                batch_checkpoint_seq: batch.checkpoint_seq,
+            });
+        }
+
+        let root_digest = build_event_merkle_root(&batch.commitments);
+        let merkle_root = U256::from_digits(root_digest.into_inner());
+        fold_into_mmr(&mut head.mmr, merkle_root);
+        head.num_events += batch.commitments.len() as u64;
+        head.checkpoint_seq = batch.checkpoint_seq;
+    }
+    Ok(head)
+}
+
+/// MMR carry-propagation fold.
+///
+/// Walks `mmr` from the lowest level upward. If a slot is empty
+/// (`U256::ZERO`), drop the carry into it and stop. Otherwise hash the
+/// existing peak together with the carry, clear the slot, and continue
+/// with the result as the new carry at the next level up. If the carry
+/// propagates past the highest occupied slot, append a new one.
+#[cfg(feature = "unstable")]
+fn fold_into_mmr(mmr: &mut Vec<U256>, mut carry: U256) {
+    let mut i = 0;
+    while i < mmr.len() {
+        if mmr[i] == U256::ZERO {
+            mmr[i] = carry;
+            return;
+        }
+        carry = hash_two_to_one(mmr[i], carry);
+        mmr[i] = U256::ZERO;
+        i += 1;
+    }
+    mmr.push(carry);
+}
+
+/// Compute `BLAKE2b-256(bcs(left) || bcs(right))` and reinterpret the
+/// 32-byte digest as a `U256` in little-endian.
+///
+/// `U256`'s BCS encoding is its 32 little-endian bytes verbatim (see
+/// [`U256`]'s `Serialize` impl), so `digits()` is byte-equivalent to
+/// `bcs::to_bytes(&u256)` and we avoid two throwaway allocations per
+/// fold by hashing the digit slices directly.
+#[cfg(feature = "unstable")]
+fn hash_two_to_one(left: U256, right: U256) -> U256 {
+    use super::hash::Hasher;
+
+    let mut hasher = Hasher::new();
+    hasher.update(left.digits());
+    hasher.update(right.digits());
+    U256::from_digits(hasher.finalize().into_inner())
+}
+
 #[cfg(test)]
 #[cfg(feature = "unstable")]
 mod test {
@@ -443,5 +638,280 @@ mod test {
                 "mismatch for stream id {stream_id}",
             );
         }
+    }
+
+    fn u256_from_decimal(s: &str) -> U256 {
+        s.parse().expect("decimal U256 literal must parse")
+    }
+
+    fn single_event_batch(checkpoint_seq: u64, digest_byte: u8) -> EventBatch {
+        EventBatch {
+            checkpoint_seq,
+            commitments: vec![EventCommitment {
+                checkpoint_seq,
+                transaction_idx: 0,
+                event_idx: 0,
+                digest: Digest::new([digest_byte; 32]),
+            }],
+        }
+    }
+
+    // Load-bearing interop pin against the Move test
+    // `test_mmr_digest_compat_with_rust` in
+    // `sui-framework/sources/accumulator_settlement.move`. Inserting
+    // `U256::from(50..58)` as eight successive carries must collapse to a
+    // single peak at level 3 with the exact decimal value below; the lower
+    // three slots are zeroed. Any divergence in the carry-propagation
+    // loop or the `BLAKE2b-256(bcs(left) || bcs(right))` two-to-one step
+    // breaks reconciliation against on-chain `EventStreamHead` objects.
+    #[test]
+    fn fold_into_mmr_matches_move_compat_fixture() {
+        let mut mmr = Vec::new();
+        for value in 50u64..58 {
+            fold_into_mmr(&mut mmr, U256::from(value));
+        }
+        assert_eq!(mmr.len(), 4);
+        assert_eq!(mmr[0], U256::ZERO);
+        assert_eq!(mmr[1], U256::ZERO);
+        assert_eq!(mmr[2], U256::ZERO);
+        assert_eq!(
+            mmr[3],
+            u256_from_decimal(
+                "69725770072863840208899320192042305265295220676851872214494910464384102654361",
+            ),
+        );
+    }
+
+    // Two carries collapse into one peak at level 1, leaving level 0
+    // empty. Stand-alone sanity check that the carry propagation is wired
+    // correctly even for tiny inputs.
+    #[test]
+    fn fold_into_mmr_two_inserts_collapse_to_level_one() {
+        let mut mmr = Vec::new();
+        fold_into_mmr(&mut mmr, U256::from(7u64));
+        assert_eq!(mmr, vec![U256::from(7u64)]);
+
+        fold_into_mmr(&mut mmr, U256::from(11u64));
+        assert_eq!(mmr.len(), 2);
+        assert_eq!(mmr[0], U256::ZERO);
+        assert_eq!(mmr[1], hash_two_to_one(U256::from(7u64), U256::from(11u64)));
+    }
+
+    // End-to-end interop pin: feed a 3-commitment batch through
+    // `apply_stream_updates` starting from an empty head and compare to
+    // the `EventStreamHead` produced by
+    // `sui_light_client::authenticated_events::mmr::apply_stream_updates`
+    // upstream on the identical input.
+    #[test]
+    fn apply_stream_updates_single_batch_matches_upstream() {
+        let batch = EventBatch {
+            checkpoint_seq: 1,
+            commitments: vec![
+                EventCommitment {
+                    checkpoint_seq: 1,
+                    transaction_idx: 0,
+                    event_idx: 0,
+                    digest: Digest::new([0x11; 32]),
+                },
+                EventCommitment {
+                    checkpoint_seq: 1,
+                    transaction_idx: 0,
+                    event_idx: 1,
+                    digest: Digest::new([0x22; 32]),
+                },
+                EventCommitment {
+                    checkpoint_seq: 1,
+                    transaction_idx: 1,
+                    event_idx: 0,
+                    digest: Digest::new([0x33; 32]),
+                },
+            ],
+        };
+        let head = apply_stream_updates(EventStreamHead::default(), &[batch]).unwrap();
+        assert_eq!(head.checkpoint_seq, 1);
+        assert_eq!(head.num_events, 3);
+        assert_eq!(
+            head.mmr,
+            vec![u256_from_decimal(
+                "28014082315424315761761458464083312323394111104237010481447392654866601457662",
+            )],
+        );
+    }
+
+    // End-to-end interop pin across two sequential batches at different
+    // checkpoints. The merkle root from batch 2 carries up through level 0
+    // and lands at level 1, vacating slot 0.
+    #[test]
+    fn apply_stream_updates_two_batches_match_upstream() {
+        let batch_1 = EventBatch {
+            checkpoint_seq: 1,
+            commitments: vec![
+                EventCommitment {
+                    checkpoint_seq: 1,
+                    transaction_idx: 0,
+                    event_idx: 0,
+                    digest: Digest::new([0x11; 32]),
+                },
+                EventCommitment {
+                    checkpoint_seq: 1,
+                    transaction_idx: 0,
+                    event_idx: 1,
+                    digest: Digest::new([0x22; 32]),
+                },
+                EventCommitment {
+                    checkpoint_seq: 1,
+                    transaction_idx: 1,
+                    event_idx: 0,
+                    digest: Digest::new([0x33; 32]),
+                },
+            ],
+        };
+        let batch_2 = EventBatch {
+            checkpoint_seq: 2,
+            commitments: vec![
+                EventCommitment {
+                    checkpoint_seq: 2,
+                    transaction_idx: 0,
+                    event_idx: 0,
+                    digest: Digest::new([0x44; 32]),
+                },
+                EventCommitment {
+                    checkpoint_seq: 2,
+                    transaction_idx: 0,
+                    event_idx: 1,
+                    digest: Digest::new([0x55; 32]),
+                },
+            ],
+        };
+        let head = apply_stream_updates(EventStreamHead::default(), &[batch_1, batch_2]).unwrap();
+        assert_eq!(head.checkpoint_seq, 2);
+        assert_eq!(head.num_events, 5);
+        assert_eq!(head.mmr.len(), 2);
+        assert_eq!(head.mmr[0], U256::ZERO);
+        assert_eq!(
+            head.mmr[1],
+            u256_from_decimal(
+                "80180905428222716273420959625814881301112107405105460786291242224918309625423",
+            ),
+        );
+    }
+
+    // Four single-event batches drive the carry up through two levels,
+    // leaving levels 0 and 1 empty and one peak at level 2. End-to-end pin
+    // against upstream.
+    #[test]
+    fn apply_stream_updates_four_single_batches_match_upstream() {
+        let batches: Vec<EventBatch> = (1u64..=4)
+            .map(|cp| single_event_batch(cp, cp as u8))
+            .collect();
+        let head = apply_stream_updates(EventStreamHead::default(), &batches).unwrap();
+        assert_eq!(head.checkpoint_seq, 4);
+        assert_eq!(head.num_events, 4);
+        assert_eq!(head.mmr.len(), 3);
+        assert_eq!(head.mmr[0], U256::ZERO);
+        assert_eq!(head.mmr[1], U256::ZERO);
+        assert_eq!(
+            head.mmr[2],
+            u256_from_decimal(
+                "43434128249102587327404298804800250101556402749045331898264216785541514599480",
+            ),
+        );
+    }
+
+    // Folding zero batches into an arbitrary head must return the head
+    // unchanged.
+    #[test]
+    fn apply_stream_updates_no_batches_is_identity() {
+        let head = EventStreamHead {
+            mmr: vec![U256::ONE, U256::ZERO, U256::from(42u64)],
+            checkpoint_seq: 17,
+            num_events: 9,
+        };
+        let out = apply_stream_updates(head.clone(), &[]).unwrap();
+        assert_eq!(out, head);
+    }
+
+    // Same-checkpoint re-application is permitted (a stream can produce
+    // multiple settlement transactions in one checkpoint in unrelated
+    // accumulator object spaces, although per-stream the framework
+    // guarantees only one — the SDK helper still allows equal
+    // `checkpoint_seq` to keep the contract symmetric with strict less-than
+    // being the violation).
+    #[test]
+    fn apply_stream_updates_equal_checkpoint_seq_is_allowed() {
+        let head = apply_stream_updates(
+            EventStreamHead::default(),
+            &[single_event_batch(5, 0x01), single_event_batch(5, 0x02)],
+        )
+        .unwrap();
+        assert_eq!(head.checkpoint_seq, 5);
+        assert_eq!(head.num_events, 2);
+    }
+
+    #[test]
+    fn apply_stream_updates_rejects_empty_batch() {
+        let err = apply_stream_updates(
+            EventStreamHead::default(),
+            &[
+                single_event_batch(1, 0x01),
+                EventBatch {
+                    checkpoint_seq: 2,
+                    commitments: vec![],
+                },
+            ],
+        )
+        .unwrap_err();
+        assert_eq!(err, ApplyStreamError::EmptyBatch { batch_index: 1 });
+    }
+
+    #[test]
+    fn apply_stream_updates_rejects_commitment_checkpoint_mismatch() {
+        let err = apply_stream_updates(
+            EventStreamHead::default(),
+            &[EventBatch {
+                checkpoint_seq: 5,
+                commitments: vec![
+                    EventCommitment {
+                        checkpoint_seq: 5,
+                        transaction_idx: 0,
+                        event_idx: 0,
+                        digest: Digest::new([0x01; 32]),
+                    },
+                    EventCommitment {
+                        checkpoint_seq: 6, // wrong
+                        transaction_idx: 0,
+                        event_idx: 1,
+                        digest: Digest::new([0x02; 32]),
+                    },
+                ],
+            }],
+        )
+        .unwrap_err();
+        assert_eq!(
+            err,
+            ApplyStreamError::CommitmentCheckpointMismatch {
+                batch_index: 0,
+                commitment_index: 1,
+                batch_checkpoint_seq: 5,
+                commitment_checkpoint_seq: 6,
+            },
+        );
+    }
+
+    #[test]
+    fn apply_stream_updates_rejects_non_monotonic_checkpoint() {
+        let err = apply_stream_updates(
+            EventStreamHead::default(),
+            &[single_event_batch(10, 0x01), single_event_batch(9, 0x02)],
+        )
+        .unwrap_err();
+        assert_eq!(
+            err,
+            ApplyStreamError::NonMonotonicCheckpoint {
+                batch_index: 1,
+                previous_checkpoint_seq: 10,
+                batch_checkpoint_seq: 9,
+            },
+        );
     }
 }
