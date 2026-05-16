@@ -195,6 +195,7 @@ mod _accessor_impls {
                 event_index: None,
                 transaction_digest: None,
                 event: None,
+                transaction_index: None,
             }
         }
         #[doc(hidden)]
@@ -308,6 +309,28 @@ mod _accessor_impls {
         ///Sets `event` with the provided value.
         pub fn with_event<T: Into<super::super::v2::Event>>(mut self, field: T) -> Self {
             self.set_event(field.into());
+            self
+        }
+        ///If `transaction_index` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn transaction_index_opt_mut(&mut self) -> Option<&mut u64> {
+            self.transaction_index.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `transaction_index`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn transaction_index_mut(&mut self) -> &mut u64 {
+            self.transaction_index.get_or_insert_default()
+        }
+        ///If `transaction_index` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn transaction_index_opt(&self) -> Option<u64> {
+            self.transaction_index.as_ref().map(|field| *field)
+        }
+        ///Sets `transaction_index` with the provided value.
+        pub fn set_transaction_index(&mut self, field: u64) {
+            self.transaction_index = Some(field);
+        }
+        ///Sets `transaction_index` with the provided value.
+        pub fn with_transaction_index(mut self, field: u64) -> Self {
+            self.set_transaction_index(field);
             self
         }
     }
