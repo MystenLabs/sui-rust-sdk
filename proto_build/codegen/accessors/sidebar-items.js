@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["generate_accessors","generate_accessors_for_message","generate_accessors_functions","generate_accessors_functions_for_field","generate_const_default_functions","is_ref_return","ref_return_type","resolve_rust_type_path","type_default","use_into_for_setter"]};
