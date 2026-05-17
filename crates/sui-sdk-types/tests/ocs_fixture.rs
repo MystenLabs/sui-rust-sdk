@@ -246,7 +246,7 @@ fn fixture_non_inclusion_proof_verifies_for_absent_object() {
             tree_root,
         };
         proof
-            .verify(summary, &target)
+            .verify(summary, target.object_id())
             .unwrap_or_else(|e| panic!("absent id {raw} should verify but got {e:?}"));
         verified += 1;
     }
@@ -286,7 +286,7 @@ fn fixture_non_inclusion_proof_rejects_present_leaf() {
         non_inclusion_proof: non_inclusion,
         tree_root,
     };
-    let err = proof.verify(summary, &leaves[1]).unwrap_err();
+    let err = proof.verify(summary, leaves[1].object_id()).unwrap_err();
     assert_eq!(
         format!("{err}"),
         "invalid merkle proof",
