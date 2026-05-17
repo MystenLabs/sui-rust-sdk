@@ -25,6 +25,7 @@ pub mod events;
 mod ratchet;
 mod retry;
 
+pub use client::CheckpointObjectProof;
 pub use client::LightClient;
 pub use config::RatchetConfig;
 pub use epoch_cache::EpochCache;
