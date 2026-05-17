@@ -2,23 +2,29 @@
 //!
 //! [`ratchet_to_checkpoint`] is the entry point. Given a [`Client`] and an
 //! [`EpochCache`], it advances the cache forward until the cache covers the
-//! requested target checkpoint sequence number — by:
+//! requested target checkpoint sequence number — in three phases:
 //!
-//! 1. Asking the server when the cache's current epoch ends via the v2
-//!    `LedgerService.GetEpoch` RPC (reading just the `last_checkpoint`
-//!    field).
-//! 2. If the current epoch has already ended on the network and the
-//!    target falls past it, fetching the epoch's last checkpoint summary
-//!    + signature via `LedgerService.GetCheckpoint`.
-//! 3. BLS-verifying that summary's aggregate signature against the
-//!    cache's current committee.
-//! 4. Extracting `next_epoch_committee` from the summary's
-//!    `end_of_epoch_data` and applying it as a ratchet update.
-//! 5. Looping until the target is covered.
+//! 1. **Discover** the set of epochs the cache needs to advance through by
+//!    walking `LedgerService.GetEpoch` calls sequentially. The discovery
+//!    phase reads only `["last_checkpoint"]` (no signature verification)
+//!    and terminates as soon as it finds an epoch that either is still
+//!    ongoing on the server side or whose last checkpoint covers the
+//!    target.
+//! 2. **Fetch** the end-of-epoch checkpoint summaries for the discovered
+//!    epochs in parallel via `LedgerService.GetCheckpoint`. The
+//!    concurrency is capped by [`RatchetConfig::concurrency`]. Each
+//!    summary comes back with its aggregate signature.
+//! 3. **Apply** each fetched summary sequentially: BLS-verify the
+//!    signature against the cache's current committee, extract the next
+//!    epoch's committee from the summary's `end_of_epoch_data`, and apply
+//!    the ratchet update. Sequencing here is load-bearing — each summary
+//!    is verified against the committee that the *previous* summary just
+//!    installed.
 //!
-//! Each iteration is one round-trip pair plus one BLS verification. The
-//! cache rejects out-of-order or non-consecutive ratchet updates, so a
-//! malicious server cannot rewind history or skip an epoch.
+//! Splitting discovery from fetch lets a fresh ratchet across N epochs
+//! incur roughly `N + N/concurrency` round trips of latency rather than
+//! `2N` serial round trips. Discovery stays cheap; the heavy
+//! summary-fetch round trips are pipelined.
 
 use sui_crypto::bls12381::ValidatorCommitteeSignatureVerifier;
 use sui_sdk_types::CheckpointSummary;
@@ -32,22 +38,70 @@ use crate::proto::sui::rpc::v2::GetCheckpointRequest;
 use crate::proto::sui::rpc::v2::GetEpochRequest;
 
 use super::EpochCache;
+use super::RatchetConfig;
 use super::error::LightClientError;
 
-/// Advance `cache` forward so that it covers `target_seq`.
-///
-/// On return, the cache holds the committee for the epoch that
-/// contains `target_seq` (subject to the server returning truthful
-/// epoch boundaries; the cache independently BLS-verifies each
-/// end-of-epoch summary it accepts).
+/// Advance `cache` forward so that it covers `target_seq`, with the
+/// default [`RatchetConfig`].
 pub async fn ratchet_to_checkpoint(
     client: &mut Client,
     cache: &mut EpochCache,
     target_seq: u64,
 ) -> Result<(), LightClientError> {
+    ratchet_to_checkpoint_with_config(client, cache, target_seq, &RatchetConfig::default()).await
+}
+
+/// Advance `cache` forward so that it covers `target_seq`, applying the
+/// concurrency knobs in `config` to the parallel summary fetch.
+///
+/// On return, the cache holds the committee for the epoch that contains
+/// `target_seq` (subject to the server returning truthful epoch
+/// boundaries; the cache independently BLS-verifies each end-of-epoch
+/// summary it accepts).
+pub async fn ratchet_to_checkpoint_with_config(
+    client: &mut Client,
+    cache: &mut EpochCache,
+    target_seq: u64,
+    config: &RatchetConfig,
+) -> Result<(), LightClientError> {
+    let to_advance = discover_epochs_to_advance(client, cache.current_epoch(), target_seq).await?;
+    if to_advance.is_empty() {
+        return Ok(());
+    }
+
+    let fetched = fetch_end_of_epoch_summaries(client, &to_advance, config.concurrency).await?;
+
+    for (end_seq, summary, signature) in fetched {
+        apply_verified_end_of_epoch(cache, end_seq, &summary, &signature)?;
+    }
+    Ok(())
+}
+
+/// One discovered epoch to ratchet through: the epoch's index, and the
+/// sequence number of its last checkpoint (the one whose summary needs
+/// fetching to install the next epoch's committee).
+#[derive(Debug, Clone, Copy)]
+struct EpochToAdvance {
+    epoch: u64,
+    end_of_epoch_seq: u64,
+}
+
+/// Walk `GetEpoch` calls forward from `start_epoch` to determine which
+/// epochs need ratcheting through to cover `target_seq`.
+///
+/// Returns the discovered epochs in ascending order. An empty result
+/// means the cache's current epoch already covers `target_seq` (either
+/// because it is still ongoing on the server side, or because it has
+/// already ended at a checkpoint at or after `target_seq`).
+async fn discover_epochs_to_advance(
+    client: &mut Client,
+    start_epoch: u64,
+    target_seq: u64,
+) -> Result<Vec<EpochToAdvance>, LightClientError> {
+    let mut to_advance = Vec::new();
+    let mut epoch_number = start_epoch;
     loop {
-        // Ask the server where the current cached epoch ends.
-        let request = GetEpochRequest::new(cache.current_epoch())
+        let request = GetEpochRequest::new(epoch_number)
             .with_read_mask(FieldMask::from_paths(["last_checkpoint"]));
         let response = client
             .ledger_client()
@@ -59,64 +113,87 @@ pub async fn ratchet_to_checkpoint(
         })?;
 
         let Some(last_of_epoch) = epoch.last_checkpoint else {
-            // The epoch is still ongoing on the server side; the current
-            // committee covers `target_seq`.
-            return Ok(());
+            // Epoch is still ongoing on the server side; everything
+            // beyond it is unreachable.
+            break;
         };
 
         if last_of_epoch >= target_seq {
-            // Target falls within the current epoch; no advance needed.
-            return Ok(());
+            // This epoch covers the target; no further advance needed.
+            break;
         }
 
-        // Need to ratchet forward. Fetch the end-of-epoch summary +
-        // signature, verify, and advance.
-        advance_one_epoch(client, cache, last_of_epoch).await?;
+        to_advance.push(EpochToAdvance {
+            epoch: epoch_number,
+            end_of_epoch_seq: last_of_epoch,
+        });
+        epoch_number += 1;
     }
+    Ok(to_advance)
 }
 
-/// Fetch the end-of-epoch summary for `end_of_epoch_seq`, BLS-verify its
-/// aggregate signature against `cache`'s current committee, extract the
-/// next epoch's committee from `end_of_epoch_data`, and apply the
-/// ratchet update.
+/// Fetch the end-of-epoch checkpoint summaries for `to_advance` in
+/// parallel, returning them in ascending epoch order.
 ///
-/// The field mask requests the raw BCS bytes of the summary (rather than
-/// the proto-shaped representation) so we can `bcs::from_bytes` directly
-/// into the SDK type. This avoids the proto-to-SDK conversion layer for
-/// a field whose canonical form is BCS anyway: the layer is one more
-/// place where schema drift could silently corrupt the verification, and
-/// the BCS payload is smaller on the wire than the proto shape.
-async fn advance_one_epoch(
+/// Each future fetches `["summary.bcs", "signature"]` and BCS-decodes
+/// the summary directly, skipping the proto-to-SDK conversion layer.
+async fn fetch_end_of_epoch_summaries(
     client: &mut Client,
-    cache: &mut EpochCache,
-    end_of_epoch_seq: u64,
-) -> Result<(), LightClientError> {
-    let request = GetCheckpointRequest::by_sequence_number(end_of_epoch_seq)
-        .with_read_mask(FieldMask::from_paths(["summary.bcs", "signature"]));
-    let response = client
-        .ledger_client()
-        .get_checkpoint(request)
-        .await?
-        .into_inner();
+    to_advance: &[EpochToAdvance],
+    concurrency: usize,
+) -> Result<Vec<(u64, CheckpointSummary, ValidatorAggregatedSignature)>, LightClientError> {
+    use futures::stream::StreamExt;
+    use futures::stream::TryStreamExt;
 
-    let checkpoint = response.checkpoint.ok_or_else(|| {
-        LightClientError::Proto(crate::proto::TryFromProtoError::missing("checkpoint"))
-    })?;
-    let summary_bcs = checkpoint
-        .summary
-        .as_ref()
-        .and_then(|s| s.bcs.as_ref())
-        .ok_or_else(|| {
-            LightClientError::Proto(crate::proto::TryFromProtoError::missing("summary.bcs"))
-        })?;
-    let signature_proto = checkpoint.signature.as_ref().ok_or_else(|| {
-        LightClientError::Proto(crate::proto::TryFromProtoError::missing("signature"))
-    })?;
+    // Build a per-task `LedgerServiceClient` so the futures can run
+    // concurrently without borrowing `client` mutably across awaits.
+    let ledger_clients: Vec<_> = (0..to_advance.len())
+        .map(|_| client.ledger_client())
+        .collect();
 
-    let summary: CheckpointSummary = summary_bcs.deserialize()?;
-    let signature: ValidatorAggregatedSignature = signature_proto.try_into()?;
+    let concurrency = concurrency.max(1);
+    let futures =
+        to_advance
+            .iter()
+            .copied()
+            .zip(ledger_clients)
+            .map(|(item, mut ledger)| async move {
+                let request = GetCheckpointRequest::by_sequence_number(item.end_of_epoch_seq)
+                    .with_read_mask(FieldMask::from_paths(["summary.bcs", "signature"]));
+                let response = ledger.get_checkpoint(request).await?.into_inner();
+                let checkpoint = response.checkpoint.ok_or_else(|| {
+                    LightClientError::Proto(crate::proto::TryFromProtoError::missing("checkpoint"))
+                })?;
+                let summary_bcs = checkpoint
+                    .summary
+                    .as_ref()
+                    .and_then(|s| s.bcs.as_ref())
+                    .ok_or_else(|| {
+                        LightClientError::Proto(crate::proto::TryFromProtoError::missing(
+                            "summary.bcs",
+                        ))
+                    })?;
+                let signature_proto = checkpoint.signature.as_ref().ok_or_else(|| {
+                    LightClientError::Proto(crate::proto::TryFromProtoError::missing("signature"))
+                })?;
+                let summary: CheckpointSummary = summary_bcs.deserialize()?;
+                let signature: ValidatorAggregatedSignature = signature_proto.try_into()?;
+                Ok::<_, LightClientError>((item.epoch, item.end_of_epoch_seq, summary, signature))
+            });
 
-    apply_verified_end_of_epoch(cache, end_of_epoch_seq, &summary, &signature)
+    let mut fetched: Vec<_> = futures::stream::iter(futures)
+        .buffer_unordered(concurrency)
+        .try_collect()
+        .await?;
+
+    // `buffer_unordered` may return results out of order; the apply
+    // phase requires ascending epoch order to feed the state machine
+    // correctly.
+    fetched.sort_by_key(|(epoch, _, _, _)| *epoch);
+    Ok(fetched
+        .into_iter()
+        .map(|(_, end_seq, summary, signature)| (end_seq, summary, signature))
+        .collect())
 }
 
 /// Verify `summary`'s BLS aggregate signature against `cache`'s current

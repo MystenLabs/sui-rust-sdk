@@ -18,13 +18,16 @@
 //! The whole module is gated on the crate's `unstable` feature.
 
 mod client;
+mod config;
 mod epoch_cache;
 mod error;
 pub mod events;
 mod ratchet;
 
 pub use client::LightClient;
+pub use config::RatchetConfig;
 pub use epoch_cache::EpochCache;
 pub use error::LightClientError;
 pub use events::AuthenticatedEvent;
 pub use ratchet::ratchet_to_checkpoint;
+pub use ratchet::ratchet_to_checkpoint_with_config;
