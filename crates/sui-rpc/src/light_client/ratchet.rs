@@ -40,6 +40,7 @@ use crate::proto::sui::rpc::v2::GetEpochRequest;
 use super::EpochCache;
 use super::RatchetConfig;
 use super::error::LightClientError;
+use super::retry;
 
 /// Advance `cache` forward so that it covers `target_seq`, with the
 /// default [`RatchetConfig`].
@@ -64,18 +65,13 @@ pub async fn ratchet_to_checkpoint_with_config(
     target_seq: u64,
     config: &RatchetConfig,
 ) -> Result<(), LightClientError> {
-    let to_advance = discover_epochs_to_advance(
-        client,
-        cache.current_epoch(),
-        target_seq,
-        config.max_ratchet_gap,
-    )
-    .await?;
+    let to_advance =
+        discover_epochs_to_advance(client, cache.current_epoch(), target_seq, config).await?;
     if to_advance.is_empty() {
         return Ok(());
     }
 
-    let fetched = fetch_end_of_epoch_summaries(client, &to_advance, config.concurrency).await?;
+    let fetched = fetch_end_of_epoch_summaries(client, &to_advance, config).await?;
 
     for (end_seq, summary, signature) in fetched {
         apply_verified_end_of_epoch(cache, end_seq, &summary, &signature)?;
@@ -111,26 +107,33 @@ async fn discover_epochs_to_advance(
     client: &mut Client,
     start_epoch: u64,
     target_seq: u64,
-    max_gap: u64,
+    config: &RatchetConfig,
 ) -> Result<Vec<EpochToAdvance>, LightClientError> {
     let mut to_advance = Vec::new();
     let mut epoch_number = start_epoch;
     loop {
-        if to_advance.len() as u64 >= max_gap {
+        if to_advance.len() as u64 >= config.max_ratchet_gap {
             return Err(LightClientError::RatchetGapTooLarge {
                 current: start_epoch,
                 target: epoch_number,
-                max: max_gap,
+                max: config.max_ratchet_gap,
             });
         }
 
-        let request = GetEpochRequest::new(epoch_number)
-            .with_read_mask(FieldMask::from_paths(["last_checkpoint"]));
-        let response = client
-            .ledger_client()
-            .get_epoch(request)
-            .await?
-            .into_inner();
+        let response = {
+            let mut attempt: u32 = 0;
+            loop {
+                let request = GetEpochRequest::new(epoch_number)
+                    .with_read_mask(FieldMask::from_paths(["last_checkpoint"]));
+                match client.ledger_client().get_epoch(request).await {
+                    Ok(resp) => break resp.into_inner(),
+                    Err(status) => {
+                        retry::step(config, LightClientError::Rpc(status), &mut attempt).await?;
+                    }
+                }
+            }
+        };
+
         let epoch = response.epoch.ok_or_else(|| {
             LightClientError::Proto(crate::proto::TryFromProtoError::missing("epoch"))
         })?;
@@ -163,7 +166,7 @@ async fn discover_epochs_to_advance(
 async fn fetch_end_of_epoch_summaries(
     client: &mut Client,
     to_advance: &[EpochToAdvance],
-    concurrency: usize,
+    config: &RatchetConfig,
 ) -> Result<Vec<(u64, CheckpointSummary, ValidatorAggregatedSignature)>, LightClientError> {
     use futures::stream::StreamExt;
     use futures::stream::TryStreamExt;
@@ -174,16 +177,36 @@ async fn fetch_end_of_epoch_summaries(
         .map(|_| client.ledger_client())
         .collect();
 
-    let concurrency = concurrency.max(1);
+    let concurrency = config.concurrency.max(1);
     let futures =
         to_advance
             .iter()
             .copied()
             .zip(ledger_clients)
             .map(|(item, mut ledger)| async move {
-                let request = GetCheckpointRequest::by_sequence_number(item.end_of_epoch_seq)
-                    .with_read_mask(FieldMask::from_paths(["summary.bcs", "signature"]));
-                let response = ledger.get_checkpoint(request).await?.into_inner();
+                // Inline manual retry: `LedgerServiceClient<BoxedChannel>`
+                // isn't `Clone` (its `BoxService` backend isn't), so we
+                // can't drop it into a `FnMut`-callable closure for
+                // `with_backoff`. Each future owns its own ledger and
+                // retries against it sequentially.
+                let response = {
+                    let mut attempt: u32 = 0;
+                    loop {
+                        let request =
+                            GetCheckpointRequest::by_sequence_number(item.end_of_epoch_seq)
+                                .with_read_mask(FieldMask::from_paths([
+                                    "summary.bcs",
+                                    "signature",
+                                ]));
+                        match ledger.get_checkpoint(request).await {
+                            Ok(resp) => break resp.into_inner(),
+                            Err(status) => {
+                                retry::step(config, LightClientError::Rpc(status), &mut attempt)
+                                    .await?;
+                            }
+                        }
+                    }
+                };
                 let checkpoint = response.checkpoint.ok_or_else(|| {
                     LightClientError::Proto(crate::proto::TryFromProtoError::missing("checkpoint"))
                 })?;

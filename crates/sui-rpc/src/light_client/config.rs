@@ -1,5 +1,7 @@
 //! Tunables for the light-client ratchet driver.
 
+use std::time::Duration;
+
 /// Configuration for the committee ratchet driver.
 ///
 /// Constructed with [`Default`] and adjusted via the public fields, or
@@ -33,6 +35,26 @@ pub struct RatchetConfig {
     /// [`crate::light_client::LightClientError::RatchetGapTooLarge`]
     /// rather than continuing to issue `GetEpoch` calls.
     pub max_ratchet_gap: u64,
+
+    /// Number of times the ratchet driver will retry a single
+    /// transient RPC failure before giving up. Set to 0 to disable
+    /// retry entirely (useful for tests and latency-sensitive
+    /// callers). Default 5.
+    pub max_retries: u32,
+
+    /// First retry sleep duration. Subsequent retries double the
+    /// sleep up to `max_retry_delay`. Default 250 ms.
+    pub base_retry_delay: Duration,
+
+    /// Upper bound on the exponentially-growing retry sleep. Default
+    /// 4 s.
+    pub max_retry_delay: Duration,
+
+    /// Maximum extra jitter added to each retry sleep. Jitter is
+    /// deterministic per attempt (no `rand` dependency); the point is
+    /// to avoid lockstep retries across concurrent ratchet futures,
+    /// not cryptographic randomness. Default 500 ms.
+    pub retry_jitter: Duration,
 }
 
 impl Default for RatchetConfig {
@@ -40,6 +62,10 @@ impl Default for RatchetConfig {
         Self {
             concurrency: 4,
             max_ratchet_gap: 10_000,
+            max_retries: 5,
+            base_retry_delay: Duration::from_millis(250),
+            max_retry_delay: Duration::from_secs(4),
+            retry_jitter: Duration::from_millis(500),
         }
     }
 }
