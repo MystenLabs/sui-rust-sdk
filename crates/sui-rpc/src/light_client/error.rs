@@ -37,15 +37,6 @@ pub enum LightClientError {
         provided: u64,
     },
 
-    /// The cache was asked to apply a ratchet update whose end-of-epoch
-    /// checkpoint sits before the start of the current epoch.
-    InvalidCheckpointRange {
-        /// The first checkpoint of the cache's current epoch.
-        current_epoch_start: u64,
-        /// The end-of-epoch checkpoint sequence number that was supplied.
-        end_of_epoch_checkpoint: u64,
-    },
-
     /// A checkpoint summary advertised as the last of an epoch had no
     /// `end_of_epoch_data` payload — the next epoch's committee cannot
     /// be extracted.
@@ -65,13 +56,12 @@ pub enum LightClientError {
     },
 
     /// After ratcheting forward, the cache still did not have a
-    /// committee on file for the relevant checkpoint. This should not
+    /// committee on file for the relevant epoch. This should not
     /// happen in practice and indicates either a bug or a malicious
     /// server response.
-    NoCommitteeForCheckpoint {
-        /// The checkpoint sequence number that has no committee on
-        /// file.
-        checkpoint: u64,
+    NoCommitteeForEpoch {
+        /// The epoch number that has no committee on file.
+        epoch: u64,
     },
 
     /// The server returned an inclusion proof for a different object
@@ -168,13 +158,6 @@ impl std::fmt::Display for LightClientError {
                 f,
                 "cannot advance epoch cache: current epoch is {current}, but provided committee is for epoch {provided}"
             ),
-            Self::InvalidCheckpointRange {
-                current_epoch_start,
-                end_of_epoch_checkpoint,
-            } => write!(
-                f,
-                "end-of-epoch checkpoint {end_of_epoch_checkpoint} is before the current epoch's start checkpoint {current_epoch_start}"
-            ),
             Self::MissingEndOfEpochData { checkpoint } => write!(
                 f,
                 "checkpoint {checkpoint} was advertised as end-of-epoch but its summary has no `end_of_epoch_data` payload"
@@ -186,9 +169,9 @@ impl std::fmt::Display for LightClientError {
                 f,
                 "proof was returned for checkpoint {returned} but caller requested checkpoint {requested}"
             ),
-            Self::NoCommitteeForCheckpoint { checkpoint } => write!(
+            Self::NoCommitteeForEpoch { epoch } => write!(
                 f,
-                "no validator committee on file for checkpoint {checkpoint} after ratchet"
+                "no validator committee on file for epoch {epoch} after ratchet"
             ),
             Self::ObjectIdMismatch {
                 requested,
