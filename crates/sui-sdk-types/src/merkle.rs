@@ -438,10 +438,34 @@ impl<L> MerkleNonInclusionProof<L> {
 
 impl<L> MerkleNonInclusionProof<L>
 where
-    L: Ord + Serialize,
+    L: Serialize,
 {
-    /// Verify that `target` is not in the tree whose root is `root`.
-    pub fn verify_proof(&self, root: &Node, target: &L) -> Result<(), MerkleError> {
+    /// Verify that no leaf whose projected key equals `target_key` appears
+    /// in the tree whose root is `root`, where each leaf is projected to
+    /// its comparison key via `key_of`.
+    ///
+    /// The bracketing inequalities are evaluated on `key_of(leaf)` instead
+    /// of on the whole leaf, which is useful when the tree's leaves carry
+    /// more than just the field that the caller wants to prove absent
+    /// (e.g. an `ObjectReference` tree where the natural question is "is
+    /// any leaf with this object id present?").
+    ///
+    /// Soundness depends on the tree being sorted by an order whose
+    /// projection through `key_of` is monotonic — that is, all leaves
+    /// sharing the same key must be contiguous in the sorted leaf list.
+    /// This is the analogue of the sorted-leaf invariant on
+    /// [`verify_proof`](Self::verify_proof); the caller is responsible
+    /// for it, since the verifier cannot inspect the rest of the tree.
+    pub fn verify_proof_by_key<K, F>(
+        &self,
+        root: &Node,
+        target_key: &K,
+        key_of: F,
+    ) -> Result<(), MerkleError>
+    where
+        K: Ord + ?Sized,
+        F: Fn(&L) -> &K,
+    {
         // An empty tree contains nothing, so non-inclusion is trivial.
         if root.as_ref() == EMPTY_NODE.as_ref() {
             return Ok(());
@@ -452,7 +476,7 @@ where
 
         if let Some(((left_leaf, left_proof), left_leaf_index)) = left_leaf_with_index {
             left_proof.verify_proof(root, left_leaf, left_leaf_index)?;
-            if left_leaf >= target {
+            if key_of(left_leaf) >= target_key {
                 return Err(MerkleError::InvalidProof);
             }
         } else if right_leaf_index != 0 || self.right_leaf.is_none() {
@@ -464,7 +488,7 @@ where
 
         if let Some((right_leaf, right_proof)) = &self.right_leaf {
             right_proof.verify_proof(root, right_leaf, right_leaf_index)?;
-            if right_leaf <= target {
+            if key_of(right_leaf) <= target_key {
                 return Err(MerkleError::InvalidProof);
             }
         } else if let Some(((_, left_proof), left_leaf_index)) = left_leaf_with_index {
@@ -478,6 +502,19 @@ where
         }
 
         Ok(())
+    }
+}
+
+impl<L> MerkleNonInclusionProof<L>
+where
+    L: Ord + Serialize,
+{
+    /// Verify that `target` is not in the tree whose root is `root`.
+    ///
+    /// Thin wrapper over [`verify_proof_by_key`](Self::verify_proof_by_key)
+    /// with the identity projection — the leaf itself is its own key.
+    pub fn verify_proof(&self, root: &Node, target: &L) -> Result<(), MerkleError> {
+        self.verify_proof_by_key(root, target, |leaf| leaf)
     }
 }
 

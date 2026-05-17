@@ -13,8 +13,9 @@
 //!
 //! - [`OcsInclusionProof`] proves that a specific [`ObjectReference`]
 //!   appears in the tree.
-//! - [`OcsNonInclusionProof`] proves that a specific [`ObjectReference`]
-//!   does not appear in the tree.
+//! - [`OcsNonInclusionProof`] proves that no leaf with a given object
+//!   id appears in the tree (the OCS is keyed by object id, so this is
+//!   the natural notion of "the checkpoint did not modify this object").
 //! - [`OcsProof`] tags one of the two.
 //!
 //! Verification only checks the data-relation half of the proof: it
@@ -25,6 +26,7 @@
 //! validator committee) is a separate step performed by the caller, e.g.
 //! via `sui-crypto`'s `ValidatorCommitteeSignatureVerifier`.
 
+use crate::Address;
 use crate::CheckpointCommitment;
 use crate::CheckpointSummary;
 use crate::Digest;
@@ -112,63 +114,70 @@ impl OcsInclusionProof {
 
 /// An OCS non-inclusion proof.
 ///
-/// Proves that a specific [`ObjectReference`] does *not* appear in the
+/// Proves that no leaf with a given object id appears in the
 /// modified-objects Merkle tree whose root is `tree_root` — for a tree
 /// built over `ObjectReference`s in sorted order — and that `tree_root`
 /// is committed to by a [`CheckpointSummary`]'s `CheckpointArtifacts`
 /// commitment.
+///
+/// Object-id non-inclusion is strictly stronger than reference
+/// non-inclusion: the OCS keys leaves by `(object_id, version, digest)`
+/// triples, and verifying that one specific triple is absent leaves
+/// open the possibility that a different triple with the same object id
+/// is in the tree. The bracketing check enforces that the left and
+/// right neighbour leaves have object ids that strictly flank the
+/// target id, which combined with the neighbours being at adjacent
+/// indices in the sorted tree proves that no leaf under the target id
+/// can be in the tree.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OcsNonInclusionProof {
-    /// The Merkle non-inclusion proof, holding inclusion proofs for the
-    /// target's two sort-order neighbours.
+    /// The Merkle non-inclusion proof, holding inclusion proofs for
+    /// the bracketing neighbours of the target object id.
     pub non_inclusion_proof: MerkleNonInclusionProof<ObjectReference>,
     /// The 32-byte Merkle root of the modified-objects tree.
     pub tree_root: Digest,
 }
 
 impl OcsNonInclusionProof {
-    /// Verify that `object_ref` was *not* written in the checkpoint
-    /// described by `summary`.
+    /// Verify that no leaf with `object_id` appears in the OCS Merkle
+    /// tree committed to by `summary`.
     ///
     /// As with [`OcsInclusionProof::verify`], the caller is responsible
     /// for ensuring `summary` itself is trusted.
+    ///
+    /// Stronger than verifying that a single `(object_id, version,
+    /// digest)` triple is absent: the bracketing neighbours' object ids
+    /// must strictly flank `object_id`, which combined with the
+    /// neighbours being at adjacent indices in the sorted tree proves
+    /// that no leaf with any version or digest under `object_id` is in
+    /// the tree.
     pub fn verify(
         &self,
         summary: &CheckpointSummary,
-        object_ref: &ObjectReference,
+        object_id: &Address,
     ) -> Result<(), ProofError> {
         let tree_root_node = Node::Digest(*self.tree_root.inner());
-        self.non_inclusion_proof
-            .verify_proof(&tree_root_node, object_ref)?;
+        self.non_inclusion_proof.verify_proof_by_key(
+            &tree_root_node,
+            object_id,
+            ObjectReference::object_id,
+        )?;
         check_summary_commits_to_tree_root(summary, &self.tree_root)?;
         Ok(())
     }
 }
 
 /// An OCS proof — either an inclusion proof or a non-inclusion proof.
+///
+/// The two variants have different verification inputs: inclusion
+/// authenticates a specific [`ObjectReference`], while non-inclusion
+/// authenticates an [`Address`] (object id). Callers that need to
+/// dispatch on the variant should match on it directly.
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum OcsProof {
     Inclusion(OcsInclusionProof),
     NonInclusion(OcsNonInclusionProof),
-}
-
-impl OcsProof {
-    /// Verify the proof against a trusted checkpoint summary.
-    ///
-    /// For an [`OcsProof::Inclusion`], asserts that `object_ref` was
-    /// written in the checkpoint. For an [`OcsProof::NonInclusion`],
-    /// asserts that `object_ref` was *not* written in the checkpoint.
-    pub fn verify(
-        &self,
-        summary: &CheckpointSummary,
-        object_ref: &ObjectReference,
-    ) -> Result<(), ProofError> {
-        match self {
-            Self::Inclusion(p) => p.verify(summary, object_ref),
-            Self::NonInclusion(p) => p.verify(summary, object_ref),
-        }
-    }
 }
 
 /// Locate the `CheckpointArtifacts` commitment on `summary`, reconstruct
@@ -275,11 +284,6 @@ mod tests {
                 tree_root,
             };
             inclusion.verify(&summary, object_ref).unwrap();
-
-            // Verifying through the outer enum gives the same result.
-            OcsProof::Inclusion(inclusion)
-                .verify(&summary, object_ref)
-                .unwrap();
         }
     }
 
@@ -358,60 +362,113 @@ mod tests {
         );
     }
 
-    /// Non-inclusion happy path: ask for a proof of a ref that is not in
-    /// the (sorted) tree, verify it.
+    /// Synthesize an address whose 32nd byte is `byte`, mirroring the
+    /// id layout used by [`synthetic_refs`].
+    fn id(byte: u8) -> Address {
+        let mut addr = [0u8; 32];
+        addr[31] = byte;
+        Address::new(addr)
+    }
+
+    /// Non-inclusion happy path: ask for a proof of an id that is not
+    /// in the (sorted) tree, verify it.
     #[test]
     fn non_inclusion_proof_verifies_against_consistent_summary() {
+        // refs have ids 0x00..0x04; pick a target between two of them.
         let refs = synthetic_refs(5);
         let tree = MerkleTree::build_from_unserialized(&refs).unwrap();
         let tree_root = Digest::new(tree.root().bytes());
         let artifacts_digest = compute_checkpoint_artifacts_digest(&[tree_root]);
         let summary = summary_committing_to(artifacts_digest);
 
-        // A reference whose `object_id` sorts between two tree entries.
-        let missing = {
+        // An `ObjectReference` carrying the missing id, used to drive
+        // the underlying sorted-leaf bracketing computation. The
+        // verifier only inspects the neighbours' ids, so the version
+        // and digest on this synthetic ref don't matter.
+        let missing_id = {
             let mut addr = [0u8; 32];
-            addr[31] = 0x02;
-            // Tweak version so the full Ord comparison is unambiguous.
-            ObjectReference::new(Address::new(addr), 10, Digest::new([0xaa; 32]))
+            addr[31] = 0x80;
+            Address::new(addr)
         };
-        assert!(!refs.contains(&missing));
+        let probe = ObjectReference::new(missing_id, 0, Digest::new([0u8; 32]));
+        assert!(refs.iter().all(|r| r.object_id() != &missing_id));
 
-        let non_inclusion_proof = tree.compute_non_inclusion_proof(&refs, &missing).unwrap();
+        let non_inclusion_proof = tree.compute_non_inclusion_proof(&refs, &probe).unwrap();
         let proof = OcsNonInclusionProof {
             non_inclusion_proof,
             tree_root,
         };
-        proof.verify(&summary, &missing).unwrap();
-
-        OcsProof::NonInclusion(proof)
-            .verify(&summary, &missing)
-            .unwrap();
+        proof.verify(&summary, &missing_id).unwrap();
     }
 
-    /// Non-inclusion fails when applied to a target that *is* in the tree.
+    /// Non-inclusion fails when applied to an id that *is* in the
+    /// tree: the bracketing neighbours can't strictly flank it.
     #[test]
-    fn non_inclusion_proof_rejects_present_leaf() {
+    fn non_inclusion_proof_rejects_present_id() {
         let refs = synthetic_refs(5);
         let tree = MerkleTree::build_from_unserialized(&refs).unwrap();
         let tree_root = Digest::new(tree.root().bytes());
         let artifacts_digest = compute_checkpoint_artifacts_digest(&[tree_root]);
         let summary = summary_committing_to(artifacts_digest);
 
-        // Pick a target adjacent to refs[1] and build a non-inclusion proof
-        // for it, then attempt to reuse that proof against refs[1] itself.
-        let neighbour = {
-            let mut addr = [0u8; 32];
-            addr[31] = 0x01;
-            ObjectReference::new(Address::new(addr), 99, Digest::new([0xcc; 32]))
-        };
-        let non_inclusion_proof = tree.compute_non_inclusion_proof(&refs, &neighbour).unwrap();
+        // Build a non-inclusion proof against a target adjacent (in
+        // full-reference sort order) to refs[1] but sharing no id with
+        // any leaf, then attempt to reuse the proof against refs[1]'s
+        // id itself.
+        let neighbour_probe = ObjectReference::new(id(0x80), 0, Digest::new([0u8; 32]));
+        let non_inclusion_proof = tree
+            .compute_non_inclusion_proof(&refs, &neighbour_probe)
+            .unwrap();
         let proof = OcsNonInclusionProof {
             non_inclusion_proof,
             tree_root,
         };
         assert_eq!(
-            proof.verify(&summary, &refs[1]),
+            proof.verify(&summary, refs[1].object_id()),
+            Err(ProofError::InvalidMerkleProof),
+        );
+    }
+
+    /// A non-inclusion proof whose bracketing neighbours admit the
+    /// target's id (even though they admit some other version/digest
+    /// with the same id) is rejected. This is the strictly-stronger
+    /// guarantee that id-level non-inclusion provides over
+    /// reference-level non-inclusion: a tree containing
+    /// `(target_id, v, d)` cannot produce a non-inclusion proof for
+    /// `target_id`, even if a synthetic reference with that id and a
+    /// smaller version would sort-bracket cleanly.
+    #[test]
+    fn non_inclusion_rejects_id_strict_bracketing_violation() {
+        // Construct a tree whose three leaves include one with the
+        // target id at a specific version. Sorted by (id, version,
+        // digest), that leaf is the only leaf with the target id.
+        let target_id = id(0x42);
+        let mut refs = vec![
+            ObjectReference::new(id(0x00), 1, Digest::new([0x11; 32])),
+            ObjectReference::new(target_id, 5, Digest::new([0x22; 32])),
+            ObjectReference::new(id(0x80), 9, Digest::new([0x33; 32])),
+        ];
+        refs.sort();
+        let tree = MerkleTree::build_from_unserialized(&refs).unwrap();
+        let tree_root = Digest::new(tree.root().bytes());
+        let artifacts_digest = compute_checkpoint_artifacts_digest(&[tree_root]);
+        let summary = summary_committing_to(artifacts_digest);
+
+        // A reference that shares `target_id` but with a smaller
+        // version would sort *before* the present `(target_id, 5, _)`
+        // leaf, so the underlying merkle bracketing would succeed.
+        // The id-level check must catch this.
+        let synthetic_lower = ObjectReference::new(target_id, 0, Digest::new([0u8; 32]));
+        let non_inclusion_proof = tree
+            .compute_non_inclusion_proof(&refs, &synthetic_lower)
+            .unwrap();
+
+        let proof = OcsNonInclusionProof {
+            non_inclusion_proof,
+            tree_root,
+        };
+        assert_eq!(
+            proof.verify(&summary, &target_id),
             Err(ProofError::InvalidMerkleProof),
         );
     }
@@ -574,7 +631,7 @@ mod tests {
                 non_inclusion_proof: non_inclusion,
                 tree_root,
             };
-            proof.verify(&summary, &target).unwrap();
+            proof.verify(&summary, target.object_id()).unwrap();
         }
     }
 }
