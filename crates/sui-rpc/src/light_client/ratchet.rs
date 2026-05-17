@@ -79,13 +79,20 @@ pub async fn ratchet_to_checkpoint(
 /// aggregate signature against `cache`'s current committee, extract the
 /// next epoch's committee from `end_of_epoch_data`, and apply the
 /// ratchet update.
+///
+/// The field mask requests the raw BCS bytes of the summary (rather than
+/// the proto-shaped representation) so we can `bcs::from_bytes` directly
+/// into the SDK type. This avoids the proto-to-SDK conversion layer for
+/// a field whose canonical form is BCS anyway: the layer is one more
+/// place where schema drift could silently corrupt the verification, and
+/// the BCS payload is smaller on the wire than the proto shape.
 async fn advance_one_epoch(
     client: &mut Client,
     cache: &mut EpochCache,
     end_of_epoch_seq: u64,
 ) -> Result<(), LightClientError> {
     let request = GetCheckpointRequest::by_sequence_number(end_of_epoch_seq)
-        .with_read_mask(FieldMask::from_paths(["summary", "signature"]));
+        .with_read_mask(FieldMask::from_paths(["summary.bcs", "signature"]));
     let response = client
         .ledger_client()
         .get_checkpoint(request)
@@ -95,14 +102,18 @@ async fn advance_one_epoch(
     let checkpoint = response.checkpoint.ok_or_else(|| {
         LightClientError::Proto(crate::proto::TryFromProtoError::missing("checkpoint"))
     })?;
-    let summary_proto = checkpoint.summary.as_ref().ok_or_else(|| {
-        LightClientError::Proto(crate::proto::TryFromProtoError::missing("summary"))
-    })?;
+    let summary_bcs = checkpoint
+        .summary
+        .as_ref()
+        .and_then(|s| s.bcs.as_ref())
+        .ok_or_else(|| {
+            LightClientError::Proto(crate::proto::TryFromProtoError::missing("summary.bcs"))
+        })?;
     let signature_proto = checkpoint.signature.as_ref().ok_or_else(|| {
         LightClientError::Proto(crate::proto::TryFromProtoError::missing("signature"))
     })?;
 
-    let summary: CheckpointSummary = summary_proto.try_into()?;
+    let summary: CheckpointSummary = summary_bcs.deserialize()?;
     let signature: ValidatorAggregatedSignature = signature_proto.try_into()?;
 
     apply_verified_end_of_epoch(cache, end_of_epoch_seq, &summary, &signature)
