@@ -25,7 +25,7 @@ use super::ratchet::ratchet_to_checkpoint;
 /// committee.
 ///
 /// `LightClient` owns a [`Client`] for talking to a Sui gRPC endpoint and
-/// an [`EpochCache`] seeded with the genesis committee. Each verification
+/// an [`EpochCache`] seeded with a starting committee. Each verification
 /// call advances the cache forward as far as needed (BLS-verifying each
 /// epoch transition along the way), verifies the response's checkpoint
 /// summary against the now-cached committee, and finally verifies the
@@ -36,15 +36,18 @@ pub struct LightClient {
 }
 
 impl LightClient {
-    /// Build a new `LightClient` seeded with `genesis_committee`.
+    /// Build a new `LightClient` seeded with `starting_committee`.
     ///
-    /// The genesis committee must be obtained out of band (e.g. baked
-    /// into the application, or read from a trusted source). The cache
-    /// will advance forward from there as verification calls are made.
-    pub fn new(rpc: Client, genesis_committee: ValidatorCommittee) -> Self {
+    /// The starting committee must be obtained out of band (e.g. baked
+    /// into the application, or read from a trusted source). It need
+    /// not be the genesis committee — a client that only cares about
+    /// recent state can seed the cache with a known-trusted committee
+    /// at a later epoch (see the `bundled-trust-anchors` feature) and
+    /// skip ratcheting through every prior epoch.
+    pub fn new(rpc: Client, starting_committee: ValidatorCommittee) -> Self {
         Self {
             rpc,
-            cache: EpochCache::new(genesis_committee),
+            cache: EpochCache::new(starting_committee),
         }
     }
 
