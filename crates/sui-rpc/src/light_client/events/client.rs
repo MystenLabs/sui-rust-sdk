@@ -15,6 +15,7 @@ use super::state::StreamState;
 use super::state::extract_event_stream_head;
 use super::state::process_response_batch;
 use super::state::reconcile_local_head;
+use crate::light_client::CheckpointObjectProof;
 use crate::light_client::LightClient;
 use crate::light_client::error::LightClientError;
 use crate::proto::sui::rpc::v2alpha::EventFilter;
@@ -209,6 +210,18 @@ struct InitialState {
 /// *before* the head so that if an event lands in between, the head
 /// fetch observes it and we resume from `head.checkpoint + 1` rather
 /// than the now-stale tip.
+///
+/// Known limitation: an `EventStreamHead` object that exists on chain
+/// but was *not modified* in the checkpoint we query produces an
+/// authenticated `NonInclusion` result, which this function treats the
+/// same as "no head yet" — it falls back to the tip. The OCS-per-
+/// checkpoint commitment scheme attests only to objects modified at a
+/// given checkpoint, not to the contents of unmodified objects, so we
+/// cannot distinguish the two cases through this API alone. In
+/// practice this is rarely an issue because new events on a stream
+/// modify its head, so a head that hasn't been touched at the tip
+/// means the stream has been quiet — and starting from the tip is the
+/// correct resume point in both cases.
 async fn initial_state(
     light: &mut LightClient,
     config: &AuthenticatedEventsConfig,
@@ -216,27 +229,32 @@ async fn initial_state(
     let latest_tip = light.latest_checkpoint_seq().await?;
     let stream_head_object_id = derive_event_stream_head_object_id(config.stream_id);
 
-    // Attempt to fetch and authenticate the current head at the tip.
-    // If the object doesn't exist yet (no events ever folded into this
-    // stream), fall back to the tip as the resume point.
-    let head_result = light
-        .verify_object_at_checkpoint(&stream_head_object_id, latest_tip)
-        .await;
+    let proof = light
+        .prove_object_at_checkpoint(&stream_head_object_id, latest_tip)
+        .await?;
 
-    let (initial_head, start_checkpoint) = match head_result {
-        Ok((_object_ref, object)) => {
+    let (initial_head, start_checkpoint) = match proof {
+        CheckpointObjectProof::Inclusion {
+            object: Some(object),
+            ..
+        } => {
             let head = extract_event_stream_head(&object)?;
             let cp = head.checkpoint_seq;
             (head, cp)
         }
-        // If the proof RPC reports NotFound, treat that as "no head
-        // yet" and start from the tip. Any other error is a real
-        // failure that the caller should see.
-        Err(LightClientError::Rpc(status)) if status.code() == tonic::Code::NotFound => (
+        CheckpointObjectProof::Inclusion { object: None, .. } => {
+            // The head object was deleted or wrapped at the tip.
+            // For an authenticated event stream this is unrecoverable
+            // — the on-chain anchor is gone, so no future reconciliation
+            // can succeed.
+            return Err(LightClientError::UnexpectedObjectShape {
+                reason: "event stream head was deleted or wrapped at the initial tip",
+            });
+        }
+        CheckpointObjectProof::NonInclusion => (
             EventStreamHead::default(),
             config.start_checkpoint.unwrap_or(latest_tip),
         ),
-        Err(e) => return Err(e),
     };
 
     let start_checkpoint = config.start_checkpoint.unwrap_or(start_checkpoint);
@@ -296,11 +314,36 @@ async fn reconcile_once(
     stream_head_object_id: &sui_sdk_types::Address,
 ) -> Result<Vec<AuthenticatedEvent>, LightClientError> {
     let tip = light.latest_checkpoint_seq().await?;
-    let (_object_ref, object) = light
-        .verify_object_at_checkpoint(stream_head_object_id, tip)
+    let proof = light
+        .prove_object_at_checkpoint(stream_head_object_id, tip)
         .await?;
-    let chain_head = extract_event_stream_head(&object)?;
-    reconcile_local_head(state, chain_head)
+    match proof {
+        CheckpointObjectProof::Inclusion {
+            object: Some(object),
+            ..
+        } => {
+            let chain_head = extract_event_stream_head(&object)?;
+            reconcile_local_head(state, chain_head)
+        }
+        CheckpointObjectProof::Inclusion { object: None, .. } => {
+            // The on-chain head was deleted or wrapped at the tip.
+            // The local replay cannot be reconciled against a missing
+            // head; this is terminal for the stream.
+            Err(LightClientError::UnexpectedObjectShape {
+                reason: "event stream head was deleted or wrapped at the reconciliation tip",
+            })
+        }
+        // The head wasn't modified at the tip: there is no fresh
+        // on-chain head to reconcile against, so we can't confirm any
+        // additional events here. Pending events stay pending; the
+        // next reconciliation tick will retry.
+        //
+        // This is the success-path equivalent of the old code's
+        // `NotFound` error at reconcile time: today the stream would
+        // have terminated; now we let it idle until a checkpoint
+        // actually touches the head.
+        CheckpointObjectProof::NonInclusion => Ok(Vec::new()),
+    }
 }
 
 fn build_filter(stream_id_hex: &str) -> EventFilter {

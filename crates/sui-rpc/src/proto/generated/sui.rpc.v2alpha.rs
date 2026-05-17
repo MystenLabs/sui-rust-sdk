@@ -955,6 +955,45 @@ pub struct MerkleProof {
     #[prost(message, repeated, tag = "1")]
     pub path: ::prost::alloc::vec::Vec<MerkleNode>,
 }
+/// A non-inclusion proof for a Blake2b256 Merkle tree built over leaves
+/// in sorted order.
+///
+/// The proof carries the absent leaf's would-be position in sort order
+/// plus inclusion proofs for the leaves immediately before and after it.
+/// A verifier checks that the two neighbours strictly bracket the
+/// target's sort key and that they sit at adjacent indices in the tree.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MerkleNonInclusionProof {
+    /// The 0-based index the target would occupy in sort order if it
+    /// were present. `left_leaf` is unset iff `index == 0` (the target
+    /// would be the very first leaf); `right_leaf` is unset iff the
+    /// target would be appended past the last leaf, in which case
+    /// `left_leaf.merkle_proof` must identify the tree's right-most leaf.
+    #[prost(uint64, optional, tag = "1")]
+    pub index: ::core::option::Option<u64>,
+    /// Sort-order neighbour with sort key strictly less than the target,
+    /// accompanied by its inclusion proof at position `index - 1`.
+    #[prost(message, optional, tag = "2")]
+    pub left_leaf: ::core::option::Option<MerkleNeighbourLeaf>,
+    /// Sort-order neighbour with sort key strictly greater than the
+    /// target, accompanied by its inclusion proof at position `index`.
+    #[prost(message, optional, tag = "3")]
+    pub right_leaf: ::core::option::Option<MerkleNeighbourLeaf>,
+}
+/// A neighbour leaf in a `MerkleNonInclusionProof`: an object reference
+/// at a specific sorted position in the OCS tree, plus the inclusion
+/// proof that authenticates it against the tree root.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MerkleNeighbourLeaf {
+    /// The object reference stored at this leaf.
+    #[prost(message, optional, tag = "1")]
+    pub leaf: ::core::option::Option<super::v2::ObjectReference>,
+    /// Inclusion proof for `leaf` at its position in the tree.
+    #[prost(message, optional, tag = "2")]
+    pub merkle_proof: ::core::option::Option<MerkleProof>,
+}
 /// An Object Checkpoint State (OCS) inclusion proof.
 ///
 /// The OCS is a Blake2b256 Merkle tree built by each checkpoint over the
@@ -972,47 +1011,90 @@ pub struct MerkleProof {
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct OcsInclusionProof {
-    /// Merkle inclusion proof for the leaf.
+    /// Object reference being proven: (object_id, version, digest).
+    /// For a deletion or wrap, `digest` is a framework sentinel value
+    /// and `object_data` is absent. Consumers that only care whether
+    /// the object is live after the change can check `object_data`
+    /// presence instead of inspecting the digest.
     #[prost(message, optional, tag = "1")]
+    pub object_ref: ::core::option::Option<super::v2::ObjectReference>,
+    /// Merkle inclusion proof for the leaf.
+    #[prost(message, optional, tag = "2")]
     pub merkle_proof: ::core::option::Option<MerkleProof>,
     /// Position of the leaf in the modified-objects tree.
-    #[prost(uint64, optional, tag = "2")]
+    #[prost(uint64, optional, tag = "3")]
     pub leaf_index: ::core::option::Option<u64>,
     /// 32-byte Merkle root of the modified-objects tree.
-    #[prost(bytes = "bytes", optional, tag = "3")]
+    #[prost(bytes = "bytes", optional, tag = "4")]
+    pub tree_root: ::core::option::Option<::prost::bytes::Bytes>,
+    /// BCS-encoded `Object` data at the version committed by this
+    /// checkpoint. Present iff the modification left the object live
+    /// (created, mutated, or unwrapped). Absent if the modification was
+    /// a deletion or wrap.
+    #[prost(bytes = "bytes", optional, tag = "5")]
+    pub object_data: ::core::option::Option<::prost::bytes::Bytes>,
+}
+/// An Object Checkpoint State (OCS) non-inclusion proof.
+///
+/// Proves that no leaf with a given object id appears in the OCS Merkle
+/// tree -- i.e. that the checkpoint did not modify the object id at all.
+/// The proof's bracketing neighbours must have object ids strictly
+/// flanking the target id, which combined with the neighbours being at
+/// adjacent indices in the sorted tree proves that no leaf with any
+/// version or digest under the target id can be in the tree.
+///
+/// As with `OcsInclusionProof`, this is anchored at the containing
+/// `CheckpointSummary`'s `CheckpointArtifacts` commitment.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct OcsNonInclusionProof {
+    /// Merkle non-inclusion proof over the OCS tree.
+    #[prost(message, optional, tag = "1")]
+    pub non_inclusion_proof: ::core::option::Option<MerkleNonInclusionProof>,
+    /// 32-byte Merkle root of the modified-objects tree.
+    #[prost(bytes = "bytes", optional, tag = "2")]
     pub tree_root: ::core::option::Option<::prost::bytes::Bytes>,
 }
-/// Request for an OCS (Object Checkpoint State) inclusion proof at a
-/// specific checkpoint.
+/// Request for a `GetCheckpointObjectProof` call.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct GetOcsInclusionProofRequest {
-    /// Required. The object id to prove inclusion of (hex-encoded address).
+pub struct GetCheckpointObjectProofRequest {
+    /// Required. The object id to prove a checkpoint outcome for
+    /// (hex-encoded address).
     #[prost(string, optional, tag = "1")]
     pub object_id: ::core::option::Option<::prost::alloc::string::String>,
-    /// Required. The checkpoint sequence number at which to prove inclusion.
+    /// Required. The checkpoint sequence number to query.
     #[prost(uint64, optional, tag = "2")]
     pub checkpoint: ::core::option::Option<u64>,
 }
-/// Response containing the OCS inclusion proof and the materials needed to
-/// verify it end-to-end.
+/// Response containing a checkpoint-object proof and the materials needed
+/// to verify it end-to-end.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct GetOcsInclusionProofResponse {
-    /// Object reference being proven (object id, version, digest).
-    #[prost(message, optional, tag = "1")]
-    pub object_ref: ::core::option::Option<super::v2::ObjectReference>,
-    /// Inclusion proof.
-    #[prost(message, optional, tag = "2")]
-    pub inclusion_proof: ::core::option::Option<OcsInclusionProof>,
-    /// BCS-encoded `Object` data for the object being proven.
-    #[prost(bytes = "bytes", optional, tag = "3")]
-    pub object_data: ::core::option::Option<::prost::bytes::Bytes>,
-    /// BCS-encoded `CertifiedCheckpointSummary` carrying the
-    /// `checkpoint_artifacts_digest` that `inclusion_proof.tree_root` must
-    /// reconstruct, along with the BLS aggregate signature attesting to it.
-    #[prost(bytes = "bytes", optional, tag = "4")]
+pub struct GetCheckpointObjectProofResponse {
+    /// BCS-encoded `CertifiedCheckpointSummary` for the requested
+    /// checkpoint, carrying the `checkpoint_artifacts_digest` that the
+    /// proof's `tree_root` must reconstruct, plus the BLS aggregate
+    /// signature attesting to it.
+    #[prost(bytes = "bytes", optional, tag = "1")]
     pub checkpoint_summary: ::core::option::Option<::prost::bytes::Bytes>,
+    /// The proof itself: either an inclusion or a non-inclusion proof.
+    #[prost(oneof = "get_checkpoint_object_proof_response::Proof", tags = "2, 3")]
+    pub proof: ::core::option::Option<get_checkpoint_object_proof_response::Proof>,
+}
+/// Nested message and enum types in `GetCheckpointObjectProofResponse`.
+pub mod get_checkpoint_object_proof_response {
+    /// The proof itself: either an inclusion or a non-inclusion proof.
+    #[non_exhaustive]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum Proof {
+        /// The object id was modified in this checkpoint.
+        #[prost(message, tag = "2")]
+        Inclusion(super::OcsInclusionProof),
+        /// The object id was not modified in this checkpoint.
+        #[prost(message, tag = "3")]
+        NonInclusion(super::OcsNonInclusionProof),
+    }
 }
 /// Generated client implementations.
 pub mod proof_service_client {
@@ -1113,13 +1195,28 @@ pub mod proof_service_client {
             self.inner = self.inner.max_encoding_message_size(limit);
             self
         }
-        /// Returns an OCS inclusion proof showing that a specific object was
-        /// written in a specific checkpoint.
-        pub async fn get_ocs_inclusion_proof(
+        /// Returns a cryptographic proof attesting to what (if anything) a
+        /// specific checkpoint did to a specific object id.
+        ///
+        /// If the object id appears in the checkpoint's set of modified
+        /// objects (the OCS Merkle tree's leaves), the response carries an
+        /// `OcsInclusionProof` and -- when the modification left the object
+        /// live -- the BCS-encoded object data. If the object id does not
+        /// appear in the modified set, the response carries an
+        /// `OcsNonInclusionProof`.
+        ///
+        /// IMPORTANT: a non-inclusion proof attests only that this checkpoint
+        /// did NOT modify the requested object id. It does NOT attest that the
+        /// object doesn't exist on chain: an object that was last modified in
+        /// some earlier checkpoint and remained unchanged here will produce a
+        /// non-inclusion proof. Clients that need the object's state at this
+        /// checkpoint when it wasn't modified here must use a separate query
+        /// (e.g. ratchet back to the most recent modification).
+        pub async fn get_checkpoint_object_proof(
             &mut self,
-            request: impl tonic::IntoRequest<super::GetOcsInclusionProofRequest>,
+            request: impl tonic::IntoRequest<super::GetCheckpointObjectProofRequest>,
         ) -> std::result::Result<
-            tonic::Response<super::GetOcsInclusionProofResponse>,
+            tonic::Response<super::GetCheckpointObjectProofResponse>,
             tonic::Status,
         > {
             self.inner
@@ -1132,14 +1229,14 @@ pub mod proof_service_client {
                 })?;
             let codec = tonic_prost::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/sui.rpc.v2alpha.ProofService/GetOcsInclusionProof",
+                "/sui.rpc.v2alpha.ProofService/GetCheckpointObjectProof",
             );
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(
                     GrpcMethod::new(
                         "sui.rpc.v2alpha.ProofService",
-                        "GetOcsInclusionProof",
+                        "GetCheckpointObjectProof",
                     ),
                 );
             self.inner.unary(req, path, codec).await
@@ -1159,13 +1256,28 @@ pub mod proof_service_server {
     /// Generated trait containing gRPC methods that should be implemented for use with ProofServiceServer.
     #[async_trait]
     pub trait ProofService: std::marker::Send + std::marker::Sync + 'static {
-        /// Returns an OCS inclusion proof showing that a specific object was
-        /// written in a specific checkpoint.
-        async fn get_ocs_inclusion_proof(
+        /// Returns a cryptographic proof attesting to what (if anything) a
+        /// specific checkpoint did to a specific object id.
+        ///
+        /// If the object id appears in the checkpoint's set of modified
+        /// objects (the OCS Merkle tree's leaves), the response carries an
+        /// `OcsInclusionProof` and -- when the modification left the object
+        /// live -- the BCS-encoded object data. If the object id does not
+        /// appear in the modified set, the response carries an
+        /// `OcsNonInclusionProof`.
+        ///
+        /// IMPORTANT: a non-inclusion proof attests only that this checkpoint
+        /// did NOT modify the requested object id. It does NOT attest that the
+        /// object doesn't exist on chain: an object that was last modified in
+        /// some earlier checkpoint and remained unchanged here will produce a
+        /// non-inclusion proof. Clients that need the object's state at this
+        /// checkpoint when it wasn't modified here must use a separate query
+        /// (e.g. ratchet back to the most recent modification).
+        async fn get_checkpoint_object_proof(
             &self,
-            request: tonic::Request<super::GetOcsInclusionProofRequest>,
+            request: tonic::Request<super::GetCheckpointObjectProofRequest>,
         ) -> std::result::Result<
-            tonic::Response<super::GetOcsInclusionProofResponse>,
+            tonic::Response<super::GetCheckpointObjectProofResponse>,
             tonic::Status,
         > {
             Err(tonic::Status::unimplemented("Not yet implemented"))
@@ -1255,25 +1367,27 @@ pub mod proof_service_server {
         }
         fn call(&mut self, req: http::Request<B>) -> Self::Future {
             match req.uri().path() {
-                "/sui.rpc.v2alpha.ProofService/GetOcsInclusionProof" => {
+                "/sui.rpc.v2alpha.ProofService/GetCheckpointObjectProof" => {
                     #[allow(non_camel_case_types)]
-                    struct GetOcsInclusionProofSvc<T: ProofService>(pub Arc<T>);
+                    struct GetCheckpointObjectProofSvc<T: ProofService>(pub Arc<T>);
                     impl<
                         T: ProofService,
-                    > tonic::server::UnaryService<super::GetOcsInclusionProofRequest>
-                    for GetOcsInclusionProofSvc<T> {
-                        type Response = super::GetOcsInclusionProofResponse;
+                    > tonic::server::UnaryService<super::GetCheckpointObjectProofRequest>
+                    for GetCheckpointObjectProofSvc<T> {
+                        type Response = super::GetCheckpointObjectProofResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::GetOcsInclusionProofRequest>,
+                            request: tonic::Request<
+                                super::GetCheckpointObjectProofRequest,
+                            >,
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                <T as ProofService>::get_ocs_inclusion_proof(
+                                <T as ProofService>::get_checkpoint_object_proof(
                                         &inner,
                                         request,
                                     )
@@ -1288,7 +1402,7 @@ pub mod proof_service_server {
                     let max_encoding_message_size = self.max_encoding_message_size;
                     let inner = self.inner.clone();
                     let fut = async move {
-                        let method = GetOcsInclusionProofSvc(inner);
+                        let method = GetCheckpointObjectProofSvc(inner);
                         let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
