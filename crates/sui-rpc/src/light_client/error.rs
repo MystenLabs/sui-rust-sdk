@@ -1,5 +1,6 @@
 use sui_sdk_types::Address;
 use sui_sdk_types::ObjectReference;
+use sui_sdk_types::framework::ApplyStreamError;
 use sui_sdk_types::framework::EventStreamHead;
 use sui_sdk_types::proof::ProofError;
 
@@ -108,6 +109,26 @@ pub enum LightClientError {
     /// `Result<_, LightClientError>` slot returned from the streaming
     /// task.
     MmrMismatch(Box<MmrMismatch>),
+
+    /// Folding a batch of received events into the local MMR violated
+    /// the [`apply_stream_updates`] contract — empty batch, mismatched
+    /// `checkpoint_seq` within a batch, or non-monotonic batch
+    /// ordering. Surfaces a malformed server response that slipped
+    /// past the per-event decode.
+    ///
+    /// [`apply_stream_updates`]: sui_sdk_types::framework::apply_stream_updates
+    InvalidEventBatch(ApplyStreamError),
+
+    /// An object returned by the OCS inclusion proof flow did not
+    /// match the shape the caller expected — for example, an
+    /// `EventStreamHead` fetch returned a package instead of a Move
+    /// struct, or the dynamic-field contents were too short to
+    /// contain the expected value.
+    UnexpectedObjectShape {
+        /// A short, human-readable description of what the caller was
+        /// expecting versus what the object actually was.
+        reason: &'static str,
+    },
 }
 
 /// Payload for [`LightClientError::ObjectDataMismatch`].
@@ -204,6 +225,10 @@ impl std::fmt::Display for LightClientError {
                     expected.checkpoint_seq,
                 )
             }
+            Self::InvalidEventBatch(e) => write!(f, "invalid event batch: {e}"),
+            Self::UnexpectedObjectShape { reason } => {
+                write!(f, "unexpected object shape: {reason}")
+            }
         }
     }
 }
@@ -216,6 +241,7 @@ impl std::error::Error for LightClientError {
             Self::Bcs(e) => Some(e),
             Self::InvalidSignature(e) => Some(e),
             Self::InvalidProof(e) => Some(e),
+            Self::InvalidEventBatch(e) => Some(e),
             _ => None,
         }
     }
@@ -248,5 +274,11 @@ impl From<sui_crypto::SignatureError> for LightClientError {
 impl From<ProofError> for LightClientError {
     fn from(value: ProofError) -> Self {
         Self::InvalidProof(value)
+    }
+}
+
+impl From<ApplyStreamError> for LightClientError {
+    fn from(value: ApplyStreamError) -> Self {
+        Self::InvalidEventBatch(value)
     }
 }
