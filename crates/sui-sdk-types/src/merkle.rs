@@ -761,4 +761,136 @@ mod tests {
         let tree = MerkleTree::build_from_serialized(TEST_INPUT);
         assert_eq!(tree.root().bytes(), EXPECTED_ROOT);
     }
+
+    /// Property-based tests for the proof machinery. Each property covers
+    /// a contract that the hand-written unit tests above only spot-check.
+    ///
+    /// Gated on `feature = "proptest"` to match the rest of the crate's
+    /// proptest surface (see `serialization_proptests.rs`).
+    #[cfg(feature = "proptest")]
+    mod proptests {
+        use super::*;
+
+        use proptest::collection::vec;
+        use proptest::prelude::*;
+        use test_strategy::proptest;
+
+        // Explicit `test` binding so `#[proptest]`'s expansion to
+        // `#[test]` resolves unambiguously: the parent `mod tests` brings
+        // the wasm-bindgen-test alias into scope via `use super::*` here,
+        // which would otherwise conflict with the built-in `#[test]`
+        // attribute. An explicit `use` dominates both the glob and the
+        // outer scope, matching the pattern in `serialization_proptests`.
+        #[cfg(target_arch = "wasm32")]
+        use wasm_bindgen_test::wasm_bindgen_test as test;
+
+        /// Non-empty `Vec<u32>` of length 1..=32. u32 is convenient
+        /// because it is `Ord + Serialize` (so it works for both
+        /// inclusion and non-inclusion trees) and its BCS encoding is a
+        /// fixed 4 bytes per leaf.
+        fn small_leaves() -> impl Strategy<Value = Vec<u32>> {
+            vec(any::<u32>(), 1..=32)
+        }
+
+        /// Sorted, deduplicated `Vec<u32>` of length 0..=32. Required
+        /// shape for `compute_non_inclusion_proof`, whose sorted-leaf
+        /// invariant is what makes neighbour-based non-inclusion sound.
+        fn sorted_unique_leaves() -> impl Strategy<Value = Vec<u32>> {
+            vec(any::<u32>(), 0..=32).prop_map(|mut v| {
+                v.sort();
+                v.dedup();
+                v
+            })
+        }
+
+        /// For any non-empty leaf set, the proof produced by
+        /// [`MerkleTree::get_proof`] verifies for every leaf at its
+        /// reported index.
+        #[proptest]
+        fn inclusion_proof_round_trips(#[strategy(small_leaves())] leaves: Vec<u32>) {
+            let tree = MerkleTree::build_from_unserialized(leaves.iter()).unwrap();
+            let root = tree.root();
+            for (index, leaf) in leaves.iter().enumerate() {
+                let proof = tree.get_proof(index).unwrap();
+                proof
+                    .verify_proof(&root, leaf, index)
+                    .expect("freshly-built proof must verify");
+            }
+        }
+
+        /// Reusing a proof at index `i` to "verify" a different leaf
+        /// value at the same index is rejected. The duplicate-leaves
+        /// edge case (where two indices happen to share the same value
+        /// and the proof actually does verify) is filtered out
+        /// explicitly — that is correct behaviour for a leaf-bytes
+        /// merkle tree, not a regression.
+        #[proptest]
+        fn inclusion_proof_rejects_wrong_leaf(#[strategy(small_leaves())] leaves: Vec<u32>) {
+            prop_assume!(leaves.len() >= 2);
+            let tree = MerkleTree::build_from_unserialized(leaves.iter()).unwrap();
+            let root = tree.root();
+            for (index, leaf) in leaves.iter().enumerate() {
+                let other_index = (index + 1) % leaves.len();
+                if leaves[other_index] == *leaf {
+                    continue;
+                }
+                let proof = tree.get_proof(index).unwrap();
+                prop_assert!(
+                    proof
+                        .verify_proof(&root, &leaves[other_index], index)
+                        .is_err(),
+                    "proof for index {index} must not verify a different leaf at the same index",
+                );
+            }
+        }
+
+        /// For any sorted leaf set and any target that does not appear
+        /// in it, the non-inclusion proof produced for the target
+        /// verifies against the tree's root.
+        #[proptest]
+        fn non_inclusion_proof_round_trips(
+            #[strategy(sorted_unique_leaves())] leaves: Vec<u32>,
+            target: u32,
+        ) {
+            // The target is drawn independently of the leaves; skip the
+            // (rare) cases where it collides with one of them.
+            prop_assume!(leaves.binary_search(&target).is_err());
+            let tree = MerkleTree::build_from_unserialized(leaves.iter()).unwrap();
+            let root = tree.root();
+            let proof = tree.compute_non_inclusion_proof(&leaves, &target).unwrap();
+            proof
+                .verify_proof(&root, &target)
+                .expect("freshly-built non-inclusion proof must verify");
+        }
+
+        /// Constructing a non-inclusion proof for a target that *is* in
+        /// the tree is a caller error.
+        #[proptest]
+        fn non_inclusion_rejects_present_target(
+            #[strategy(sorted_unique_leaves())] leaves: Vec<u32>,
+        ) {
+            prop_assume!(!leaves.is_empty());
+            let tree = MerkleTree::build_from_unserialized(leaves.iter()).unwrap();
+            for present in &leaves {
+                prop_assert_eq!(
+                    tree.compute_non_inclusion_proof(&leaves, present),
+                    Err(MerkleError::InvalidInput),
+                );
+            }
+        }
+
+        /// `is_right_most(j)` holds for exactly the last leaf index of
+        /// the tree, for every other index it does not. This pins the
+        /// behaviour used by [`MerkleNonInclusionProof::verify_proof`]
+        /// when the target sorts past every present leaf.
+        #[proptest]
+        fn is_right_most_only_for_last_leaf(#[strategy(small_leaves())] leaves: Vec<u32>) {
+            let tree = MerkleTree::build_from_unserialized(leaves.iter()).unwrap();
+            let last = leaves.len() - 1;
+            for j in 0..leaves.len() {
+                let proof = tree.get_proof(j).unwrap();
+                prop_assert_eq!(proof.is_right_most(j), j == last);
+            }
+        }
+    }
 }
