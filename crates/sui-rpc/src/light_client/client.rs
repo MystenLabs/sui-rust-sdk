@@ -178,12 +178,13 @@ impl LightClient {
 
         ratchet_to_checkpoint(&mut self.rpc, &mut self.cache, summary_seq).await?;
 
-        let committee = self.cache.committee_for_checkpoint(summary_seq).ok_or(
-            LightClientError::NoCommitteeForCheckpoint {
-                checkpoint: summary_seq,
+        let summary_epoch = signed_summary.checkpoint.epoch;
+        let committee = self.cache.committee_for_epoch(summary_epoch).ok_or(
+            LightClientError::NoCommitteeForEpoch {
+                epoch: summary_epoch,
             },
         )?;
-        let verifier = ValidatorCommitteeSignatureVerifier::new(committee.clone())?;
+        let verifier = ValidatorCommitteeSignatureVerifier::new((*committee).clone())?;
         verifier
             .verify_checkpoint_summary(&signed_summary.checkpoint, &signed_summary.signature)?;
 

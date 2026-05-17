@@ -1,48 +1,51 @@
+use std::sync::Arc;
+
 use sui_sdk_types::ValidatorCommittee;
 
 use super::error::LightClientError;
 
-/// A cache of validator committees indexed by the checkpoint sequence
-/// numbers they cover.
+/// A cache of validator committees indexed by epoch.
 ///
 /// The cache always knows about the *current* committee (the one in
 /// effect at the network's most recently observed epoch) and remembers
-/// each completed epoch as a closed interval
-/// `[start_checkpoint, end_checkpoint]` paired with the committee that
-/// was in effect during it. Lookups via
-/// [`Self::committee_for_checkpoint`] return whichever committee was
-/// active at the given checkpoint sequence number.
+/// each completed epoch's committee. Lookups via
+/// [`Self::committee_for_epoch`] return the committee that was active
+/// during the requested epoch, or `None` if the epoch falls outside
+/// the half-open range `[start_epoch, current_epoch]`.
 ///
 /// The cache is advanced by calling [`Self::apply_ratchet_update`] with
-/// the end-of-epoch checkpoint and the committee that takes effect for
-/// the next epoch. The driver in `super::ratchet` is responsible for
-/// fetching and BLS-verifying the end-of-epoch summaries that feed
-/// these updates.
+/// the committee that takes effect for the next epoch. The driver in
+/// `super::ratchet` is responsible for fetching and BLS-verifying the
+/// end-of-epoch summaries that feed these updates.
+///
+/// Committees are stored behind `Arc` so lookups don't have to clone
+/// the (potentially ~100-member) committee body. Callers receive an
+/// `Arc<ValidatorCommittee>` they can clone cheaply.
 #[derive(Debug, Clone)]
 pub struct EpochCache {
-    /// Closed intervals `(start_checkpoint, end_checkpoint, committee)`
-    /// for each completed epoch, ordered by `start_checkpoint`. Each
-    /// interval immediately precedes the next, so binary search by
-    /// `checkpoint_seq` identifies the right entry uniquely.
-    completed_committees: Vec<(u64, u64, ValidatorCommittee)>,
+    /// Committees for `[start_epoch, current_epoch)`, one entry per
+    /// epoch in ascending order. `completed_committees[i]` covers
+    /// `start_epoch + i`.
+    completed_committees: Vec<Arc<ValidatorCommittee>>,
+
+    /// The epoch number of `completed_committees[0]`, or — if the
+    /// vector is empty — the epoch of `current_committee` (i.e. the
+    /// only committee the cache knows about).
+    start_epoch: u64,
 
     /// The committee in effect for the current (open-ended) epoch.
-    current_committee: ValidatorCommittee,
-
-    /// The first checkpoint sequence number that falls within the
-    /// current epoch.
-    current_epoch_start: u64,
+    current_committee: Arc<ValidatorCommittee>,
 }
 
 impl EpochCache {
-    /// Build a fresh cache seeded with the genesis committee. The genesis
-    /// committee is assumed to be in effect from checkpoint 0 onwards
-    /// until the first ratchet update is applied.
+    /// Build a fresh cache seeded with the genesis committee. The
+    /// genesis committee is assumed to be in effect for epoch 0 until
+    /// the first ratchet update is applied.
     pub fn new(genesis_committee: ValidatorCommittee) -> Self {
         Self {
             completed_committees: Vec::new(),
-            current_committee: genesis_committee,
-            current_epoch_start: 0,
+            start_epoch: 0,
+            current_committee: Arc::new(genesis_committee),
         }
     }
 
@@ -56,54 +59,31 @@ impl EpochCache {
         self.current_committee.epoch
     }
 
-    /// The first checkpoint sequence number that falls within the current
-    /// epoch.
-    pub fn current_epoch_start(&self) -> u64 {
-        self.current_epoch_start
-    }
-
-    /// Look up the validator committee that was in effect at
-    /// `checkpoint_seq`.
+    /// Look up the validator committee that was in effect during
+    /// `epoch`.
     ///
-    /// Returns `None` if `checkpoint_seq` falls before any committee the
-    /// cache knows about (i.e. before checkpoint 0, which shouldn't
-    /// happen for a cache seeded with the genesis committee).
-    pub fn committee_for_checkpoint(&self, checkpoint_seq: u64) -> Option<&ValidatorCommittee> {
-        if checkpoint_seq >= self.current_epoch_start {
-            return Some(&self.current_committee);
+    /// Returns `None` if `epoch` falls outside the range the cache
+    /// knows about — either before `start_epoch` or strictly after
+    /// [`Self::current_epoch`].
+    pub fn committee_for_epoch(&self, epoch: u64) -> Option<Arc<ValidatorCommittee>> {
+        if epoch == self.current_epoch() {
+            return Some(self.current_committee.clone());
         }
-
-        // Binary search the completed intervals. Each entry is a closed
-        // `[start, end]`; treat `checkpoint_seq < start` as "Greater"
-        // and `checkpoint_seq > end` as "Less" so a Found(idx) result
-        // identifies the right entry.
-        self.completed_committees
-            .binary_search_by(|(start, end, _)| {
-                if checkpoint_seq < *start {
-                    std::cmp::Ordering::Greater
-                } else if checkpoint_seq > *end {
-                    std::cmp::Ordering::Less
-                } else {
-                    std::cmp::Ordering::Equal
-                }
-            })
-            .ok()
-            .map(|idx| &self.completed_committees[idx].2)
+        if epoch < self.start_epoch {
+            return None;
+        }
+        let idx = usize::try_from(epoch - self.start_epoch).ok()?;
+        self.completed_committees.get(idx).cloned()
     }
 
-    /// Advance the cache: move the current epoch into `completed_committees`
-    /// and install `new_committee` as the new current epoch.
+    /// Advance the cache: move the current epoch into
+    /// `completed_committees` and install `new_committee` as the new
+    /// current epoch.
     ///
-    /// - `end_of_epoch_checkpoint` is the sequence number of the *last*
-    ///   checkpoint of the epoch being closed. The new epoch is taken to
-    ///   start at `end_of_epoch_checkpoint + 1`.
-    /// - `new_committee.epoch` must be exactly one greater than the
-    ///   cache's current epoch.
-    /// - `end_of_epoch_checkpoint` must be at least `current_epoch_start`
-    ///   (a single-checkpoint epoch is allowed).
+    /// `new_committee.epoch` must be exactly one greater than the
+    /// cache's current epoch.
     pub fn apply_ratchet_update(
         &mut self,
-        end_of_epoch_checkpoint: u64,
         new_committee: ValidatorCommittee,
     ) -> Result<(), LightClientError> {
         let current_epoch = self.current_epoch();
@@ -113,20 +93,9 @@ impl EpochCache {
                 provided: new_committee.epoch,
             });
         }
-        if end_of_epoch_checkpoint < self.current_epoch_start {
-            return Err(LightClientError::InvalidCheckpointRange {
-                current_epoch_start: self.current_epoch_start,
-                end_of_epoch_checkpoint,
-            });
-        }
 
-        let completed_committee = std::mem::replace(&mut self.current_committee, new_committee);
-        self.completed_committees.push((
-            self.current_epoch_start,
-            end_of_epoch_checkpoint,
-            completed_committee,
-        ));
-        self.current_epoch_start = end_of_epoch_checkpoint + 1;
+        let completed = std::mem::replace(&mut self.current_committee, Arc::new(new_committee));
+        self.completed_committees.push(completed);
         Ok(())
     }
 }
@@ -144,85 +113,54 @@ mod tests {
         }
     }
 
-    /// Fresh cache reports the genesis committee for every checkpoint at
-    /// or after 0, and returns it as the current committee.
+    /// Fresh cache reports the genesis committee for epoch 0 and
+    /// nothing else.
     #[test]
-    fn fresh_cache_returns_genesis_for_every_checkpoint() {
+    fn fresh_cache_returns_genesis_only_for_epoch_zero() {
         let cache = EpochCache::new(committee(0));
         assert_eq!(cache.current_epoch(), 0);
-        assert_eq!(cache.current_epoch_start(), 0);
-        for seq in [0u64, 1, 10, 1_000_000] {
-            assert_eq!(
-                cache.committee_for_checkpoint(seq).map(|c| c.epoch),
-                Some(0),
-                "expected epoch 0 committee at checkpoint {seq}"
-            );
-        }
+        assert_eq!(cache.committee_for_epoch(0).map(|c| c.epoch), Some(0));
+        assert!(cache.committee_for_epoch(1).is_none());
+        assert!(cache.committee_for_epoch(1_000_000).is_none());
     }
 
-    /// After one ratchet, the previous committee covers the closed
-    /// interval `[0, end_of_epoch]` and the new committee covers
-    /// `end_of_epoch + 1` onwards.
+    /// After one ratchet update, the previous committee covers its own
+    /// epoch and the new committee covers the next.
     #[test]
-    fn single_ratchet_partitions_the_checkpoint_line() {
+    fn single_ratchet_records_completed_epoch() {
         let mut cache = EpochCache::new(committee(0));
-        cache.apply_ratchet_update(99, committee(1)).unwrap();
+        cache.apply_ratchet_update(committee(1)).unwrap();
 
         assert_eq!(cache.current_epoch(), 1);
-        assert_eq!(cache.current_epoch_start(), 100);
-
-        // Boundary inside epoch 0.
-        assert_eq!(cache.committee_for_checkpoint(0).map(|c| c.epoch), Some(0),);
-        assert_eq!(cache.committee_for_checkpoint(99).map(|c| c.epoch), Some(0),);
-        // First checkpoint of epoch 1.
-        assert_eq!(
-            cache.committee_for_checkpoint(100).map(|c| c.epoch),
-            Some(1),
-        );
-        assert_eq!(
-            cache.committee_for_checkpoint(1_000_000).map(|c| c.epoch),
-            Some(1),
-        );
+        assert_eq!(cache.committee_for_epoch(0).map(|c| c.epoch), Some(0));
+        assert_eq!(cache.committee_for_epoch(1).map(|c| c.epoch), Some(1));
+        assert!(cache.committee_for_epoch(2).is_none());
     }
 
-    /// Binary search finds the right interval across many completed
-    /// epochs.
+    /// Lookups across many completed epochs land on the right entry
+    /// in O(1) time.
     #[test]
-    fn binary_search_picks_correct_completed_interval() {
+    fn lookup_indexes_into_completed_committees() {
         let mut cache = EpochCache::new(committee(0));
-        cache.apply_ratchet_update(9, committee(1)).unwrap();
-        cache.apply_ratchet_update(19, committee(2)).unwrap();
-        cache.apply_ratchet_update(29, committee(3)).unwrap();
-        cache.apply_ratchet_update(39, committee(4)).unwrap();
+        for epoch in 1..=4 {
+            cache.apply_ratchet_update(committee(epoch)).unwrap();
+        }
 
-        // Spot-check each closed range.
-        for (seq, expected_epoch) in [
-            (0, 0),
-            (5, 0),
-            (9, 0),
-            (10, 1),
-            (15, 1),
-            (19, 1),
-            (20, 2),
-            (29, 2),
-            (30, 3),
-            (39, 3),
-            (40, 4),
-            (10_000, 4),
-        ] {
+        for epoch in 0..=4 {
             assert_eq!(
-                cache.committee_for_checkpoint(seq).map(|c| c.epoch),
-                Some(expected_epoch),
-                "checkpoint {seq} should fall in epoch {expected_epoch}"
+                cache.committee_for_epoch(epoch).map(|c| c.epoch),
+                Some(epoch),
+                "epoch {epoch} should be in the cache"
             );
         }
+        assert!(cache.committee_for_epoch(5).is_none());
     }
 
     /// Ratchet updates that skip an epoch are rejected.
     #[test]
     fn rejects_non_consecutive_epoch_advance() {
         let mut cache = EpochCache::new(committee(0));
-        let err = cache.apply_ratchet_update(99, committee(2)).unwrap_err();
+        let err = cache.apply_ratchet_update(committee(2)).unwrap_err();
         assert!(
             matches!(
                 err,
@@ -239,7 +177,7 @@ mod tests {
     #[test]
     fn rejects_repeating_current_epoch() {
         let mut cache = EpochCache::new(committee(7));
-        let err = cache.apply_ratchet_update(99, committee(7)).unwrap_err();
+        let err = cache.apply_ratchet_update(committee(7)).unwrap_err();
         assert!(
             matches!(
                 err,
@@ -250,36 +188,5 @@ mod tests {
             ),
             "got {err:?}"
         );
-    }
-
-    /// Ratchet updates whose end-of-epoch checkpoint sits before the
-    /// current epoch's start are rejected.
-    #[test]
-    fn rejects_end_of_epoch_before_current_start() {
-        let mut cache = EpochCache::new(committee(0));
-        cache.apply_ratchet_update(99, committee(1)).unwrap();
-        // current_epoch_start is now 100.
-        let err = cache.apply_ratchet_update(50, committee(2)).unwrap_err();
-        assert!(
-            matches!(
-                err,
-                LightClientError::InvalidCheckpointRange {
-                    current_epoch_start: 100,
-                    end_of_epoch_checkpoint: 50,
-                }
-            ),
-            "got {err:?}"
-        );
-    }
-
-    /// A single-checkpoint epoch (where the end-of-epoch checkpoint
-    /// equals the current epoch's start) is permitted.
-    #[test]
-    fn single_checkpoint_epoch_is_permitted() {
-        let mut cache = EpochCache::new(committee(0));
-        cache.apply_ratchet_update(0, committee(1)).unwrap();
-        assert_eq!(cache.current_epoch_start(), 1);
-        assert_eq!(cache.committee_for_checkpoint(0).map(|c| c.epoch), Some(0),);
-        assert_eq!(cache.committee_for_checkpoint(1).map(|c| c.epoch), Some(1),);
     }
 }

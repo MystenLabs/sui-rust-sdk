@@ -36,26 +36,16 @@ use super::error::LightClientError;
 
 /// Advance `cache` forward so that it covers `target_seq`.
 ///
-/// On return, `cache.committee_for_checkpoint(target_seq)` is guaranteed
-/// to return the committee that signed the checkpoint at `target_seq`
-/// (subject to the server returning truthful epoch boundaries; the cache
-/// independently BLS-verifies each end-of-epoch summary it accepts).
-///
-/// If `target_seq` already falls within an epoch the cache knows about
-/// (either a completed one or the current one, as far as the network has
-/// progressed) this is a single `GetEpoch` round-trip with no state
-/// change.
+/// On return, the cache holds the committee for the epoch that
+/// contains `target_seq` (subject to the server returning truthful
+/// epoch boundaries; the cache independently BLS-verifies each
+/// end-of-epoch summary it accepts).
 pub async fn ratchet_to_checkpoint(
     client: &mut Client,
     cache: &mut EpochCache,
     target_seq: u64,
 ) -> Result<(), LightClientError> {
     loop {
-        // Targets that fall inside a completed epoch are already covered.
-        if target_seq < cache.current_epoch_start() {
-            return Ok(());
-        }
-
         // Ask the server where the current cached epoch ends.
         let request = GetEpochRequest::new(cache.current_epoch())
             .with_read_mask(FieldMask::from_paths(["last_checkpoint"]));
@@ -133,7 +123,7 @@ pub(crate) fn apply_verified_end_of_epoch(
     verifier.verify_checkpoint_summary(summary, signature)?;
 
     let next_committee = extract_next_epoch_committee(cache, summary, end_of_epoch_seq)?;
-    cache.apply_ratchet_update(end_of_epoch_seq, next_committee)?;
+    cache.apply_ratchet_update(next_committee)?;
     Ok(())
 }
 
