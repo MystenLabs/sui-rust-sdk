@@ -64,6 +64,23 @@ pub enum LightClientError {
         epoch: u64,
     },
 
+    /// The ratchet driver tried to advance through more epochs than
+    /// the configured cap (see
+    /// [`crate::light_client::RatchetConfig::max_ratchet_gap`]) allows
+    /// in a single call. This guard exists to bound the work the
+    /// client will do in response to a server that keeps reporting
+    /// `last_checkpoint < target_seq` for every epoch, never letting
+    /// the discovery walk terminate.
+    RatchetGapTooLarge {
+        /// The cache's current epoch when the ratchet began.
+        current: u64,
+        /// The epoch the discovery walk had reached when the cap was
+        /// hit. The actual target epoch may be even further out.
+        target: u64,
+        /// The configured maximum gap.
+        max: u64,
+    },
+
     /// The server returned an inclusion proof for a different object
     /// id than the caller asked about.
     ObjectIdMismatch {
@@ -172,6 +189,14 @@ impl std::fmt::Display for LightClientError {
             Self::NoCommitteeForEpoch { epoch } => write!(
                 f,
                 "no validator committee on file for epoch {epoch} after ratchet"
+            ),
+            Self::RatchetGapTooLarge {
+                current,
+                target,
+                max,
+            } => write!(
+                f,
+                "ratchet would advance from epoch {current} past epoch {target}, exceeding configured max gap of {max}"
             ),
             Self::ObjectIdMismatch {
                 requested,
