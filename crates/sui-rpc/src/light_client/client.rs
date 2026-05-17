@@ -17,9 +17,10 @@ use crate::proto::sui::rpc::v2::GetCheckpointRequest;
 use crate::proto::sui::rpc::v2alpha::GetOcsInclusionProofRequest;
 
 use super::EpochCache;
+use super::RatchetConfig;
 use super::error::LightClientError;
 use super::error::ObjectDataMismatch;
-use super::ratchet::ratchet_to_checkpoint;
+use super::ratchet::ratchet_to_checkpoint_with_config;
 
 /// A light client that authenticates state against a trusted validator
 /// committee.
@@ -33,6 +34,7 @@ use super::ratchet::ratchet_to_checkpoint;
 pub struct LightClient {
     rpc: Client,
     cache: EpochCache,
+    ratchet_config: RatchetConfig,
 }
 
 impl LightClient {
@@ -48,7 +50,15 @@ impl LightClient {
         Self {
             rpc,
             cache: EpochCache::new(starting_committee),
+            ratchet_config: RatchetConfig::default(),
         }
+    }
+
+    /// Override the [`RatchetConfig`] used when this client advances its
+    /// epoch cache. Defaults to [`RatchetConfig::default`].
+    pub fn with_ratchet_config(mut self, config: RatchetConfig) -> Self {
+        self.ratchet_config = config;
+        self
     }
 
     /// Read-only access to the client's epoch cache, for inspection.
@@ -179,7 +189,13 @@ impl LightClient {
             });
         }
 
-        ratchet_to_checkpoint(&mut self.rpc, &mut self.cache, summary_seq).await?;
+        ratchet_to_checkpoint_with_config(
+            &mut self.rpc,
+            &mut self.cache,
+            summary_seq,
+            &self.ratchet_config,
+        )
+        .await?;
 
         let summary_epoch = signed_summary.checkpoint.epoch;
         let committee = self.cache.committee_for_epoch(summary_epoch).ok_or(
