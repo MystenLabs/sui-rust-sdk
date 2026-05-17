@@ -21,10 +21,25 @@ pub struct RatchetConfig {
     /// fullnode with parallel requests. Set to 1 to fall back to fully
     /// sequential behaviour.
     pub concurrency: usize,
+
+    /// Maximum number of epochs the discovery walk is willing to
+    /// advance through in a single call to the ratchet driver.
+    ///
+    /// Defaults to 10,000 — well past a year of testnet (~600 epochs)
+    /// with significant margin. The guard exists so that a misbehaving
+    /// (or malicious) server that keeps reporting `last_checkpoint <
+    /// target_seq` cannot trap the client in an indefinite discovery
+    /// loop. When the cap is hit the ratchet fails with
+    /// [`crate::light_client::LightClientError::RatchetGapTooLarge`]
+    /// rather than continuing to issue `GetEpoch` calls.
+    pub max_ratchet_gap: u64,
 }
 
 impl Default for RatchetConfig {
     fn default() -> Self {
-        Self { concurrency: 4 }
+        Self {
+            concurrency: 4,
+            max_ratchet_gap: 10_000,
+        }
     }
 }

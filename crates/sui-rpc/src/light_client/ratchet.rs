@@ -64,7 +64,13 @@ pub async fn ratchet_to_checkpoint_with_config(
     target_seq: u64,
     config: &RatchetConfig,
 ) -> Result<(), LightClientError> {
-    let to_advance = discover_epochs_to_advance(client, cache.current_epoch(), target_seq).await?;
+    let to_advance = discover_epochs_to_advance(
+        client,
+        cache.current_epoch(),
+        target_seq,
+        config.max_ratchet_gap,
+    )
+    .await?;
     if to_advance.is_empty() {
         return Ok(());
     }
@@ -93,14 +99,31 @@ struct EpochToAdvance {
 /// means the cache's current epoch already covers `target_seq` (either
 /// because it is still ongoing on the server side, or because it has
 /// already ended at a checkpoint at or after `target_seq`).
+///
+/// The walk is capped at `max_gap` discovered epochs. Hitting the cap
+/// is a strong signal that the server is misbehaving — either it
+/// genuinely thinks the chain is that far ahead of the cache (in
+/// which case the client should bootstrap from a more recent trust
+/// anchor instead of ratcheting forever) or it is malicious. Either
+/// way, returning [`LightClientError::RatchetGapTooLarge`] is more
+/// useful than continuing to issue `GetEpoch` calls.
 async fn discover_epochs_to_advance(
     client: &mut Client,
     start_epoch: u64,
     target_seq: u64,
+    max_gap: u64,
 ) -> Result<Vec<EpochToAdvance>, LightClientError> {
     let mut to_advance = Vec::new();
     let mut epoch_number = start_epoch;
     loop {
+        if to_advance.len() as u64 >= max_gap {
+            return Err(LightClientError::RatchetGapTooLarge {
+                current: start_epoch,
+                target: epoch_number,
+                max: max_gap,
+            });
+        }
+
         let request = GetEpochRequest::new(epoch_number)
             .with_read_mask(FieldMask::from_paths(["last_checkpoint"]));
         let response = client
