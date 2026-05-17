@@ -23,6 +23,7 @@ mod epoch_cache;
 mod error;
 pub mod events;
 mod ratchet;
+mod retry;
 
 pub use client::LightClient;
 pub use config::RatchetConfig;
