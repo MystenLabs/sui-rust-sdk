@@ -444,4 +444,137 @@ mod tests {
         let expected = Digest::from_base58("Hu1Kq6yF9jGgTd5o9Tav3saEFSzTg7ZKehYqa8QvQXGE").unwrap();
         assert_eq!(actual, expected);
     }
+
+    /// Property-based tests for OCS proof verification. These cover the
+    /// composition of [`MerkleTree`] construction,
+    /// [`compute_checkpoint_artifacts_digest`], and the proof envelopes
+    /// over arbitrary leaf sets — complementing the synthetic spot
+    /// checks above and the real-chain fixture tests in
+    /// `tests/ocs_fixture.rs`.
+    #[cfg(feature = "proptest")]
+    mod proptests {
+        use super::*;
+
+        use proptest::collection::vec;
+        use proptest::prelude::*;
+        use test_strategy::proptest;
+
+        // See the matching comment in `merkle::tests::proptests` for why
+        // this explicit binding is needed on wasm.
+        #[cfg(target_arch = "wasm32")]
+        use wasm_bindgen_test::wasm_bindgen_test as test;
+
+        /// Derive an [`ObjectReference`] from a u32 seed. The seed lands
+        /// in the address's last 4 bytes (the high bytes are zero) so
+        /// that sorting by `ObjectReference` agrees with sorting by the
+        /// seed, which keeps the sorted-leaves invariant cheap to
+        /// reason about in the non-inclusion property below.
+        fn synthetic_ref(seed: u32) -> ObjectReference {
+            let mut addr = [0u8; 32];
+            addr[28..32].copy_from_slice(&seed.to_be_bytes());
+            let mut digest = [0u8; 32];
+            digest[..4].copy_from_slice(&seed.to_le_bytes());
+            ObjectReference::new(
+                Address::new(addr),
+                u64::from(seed).max(1),
+                Digest::new(digest),
+            )
+        }
+
+        /// Sorted, deduplicated `Vec<ObjectReference>` of length 1..=32,
+        /// generated from distinct u32 seeds. This is the shape an OCS
+        /// tree is built over.
+        fn sorted_unique_refs() -> impl Strategy<Value = Vec<ObjectReference>> {
+            vec(any::<u32>(), 1..=32).prop_map(|mut seeds| {
+                seeds.sort();
+                seeds.dedup();
+                seeds.into_iter().map(synthetic_ref).collect()
+            })
+        }
+
+        /// For any non-empty leaf set, an [`OcsInclusionProof`]
+        /// constructed by the canonical recipe (build tree, get_proof,
+        /// wrap with `tree_root`) verifies against a summary that
+        /// commits to the matching artifacts digest.
+        #[proptest]
+        fn ocs_inclusion_proof_round_trips(
+            #[strategy(sorted_unique_refs())] refs: Vec<ObjectReference>,
+        ) {
+            let tree = MerkleTree::build_from_unserialized(&refs).unwrap();
+            let tree_root = Digest::new(tree.root().bytes());
+            let artifacts_digest = compute_checkpoint_artifacts_digest(&[tree_root]);
+            let summary = summary_committing_to(artifacts_digest);
+
+            for (index, object_ref) in refs.iter().enumerate() {
+                let proof = OcsInclusionProof {
+                    merkle_proof: tree.get_proof(index).unwrap(),
+                    leaf_index: index as u64,
+                    tree_root,
+                };
+                proof.verify(&summary, object_ref).unwrap();
+            }
+        }
+
+        /// A summary that commits to the wrong artifacts digest is
+        /// always rejected at the digest-comparison step, regardless of
+        /// the proof's merkle correctness. This pins the
+        /// [`ProofError::ArtifactsDigestMismatch`] return path for
+        /// arbitrary inputs.
+        #[proptest]
+        fn ocs_inclusion_proof_rejects_summary_with_wrong_artifacts_digest(
+            #[strategy(sorted_unique_refs())] refs: Vec<ObjectReference>,
+            #[strategy(any::<[u8; 32]>())] bogus_artifacts: [u8; 32],
+        ) {
+            let tree = MerkleTree::build_from_unserialized(&refs).unwrap();
+            let tree_root = Digest::new(tree.root().bytes());
+            let correct_artifacts_digest = compute_checkpoint_artifacts_digest(&[tree_root]);
+            // Skip the (negligible) case where the random bogus digest
+            // happens to equal the correct one — the proof would
+            // then verify, which is the right behaviour but not the
+            // case under test.
+            prop_assume!(bogus_artifacts != correct_artifacts_digest.into_inner());
+
+            let summary = summary_committing_to(Digest::new(bogus_artifacts));
+            let proof = OcsInclusionProof {
+                merkle_proof: tree.get_proof(0).unwrap(),
+                leaf_index: 0,
+                tree_root,
+            };
+            prop_assert_eq!(
+                proof.verify(&summary, &refs[0]),
+                Err(ProofError::ArtifactsDigestMismatch),
+            );
+        }
+
+        /// For any sorted leaf set and any target that does not appear
+        /// in it, an [`OcsNonInclusionProof`] verifies against the
+        /// summary that commits to the matching artifacts digest.
+        #[proptest]
+        fn ocs_non_inclusion_proof_round_trips(
+            #[strategy(sorted_unique_refs())] refs: Vec<ObjectReference>,
+            #[strategy(any::<u32>())] target_seed: u32,
+        ) {
+            // Skip the case where the synthetic target collides with a
+            // seed already in the leaf set — the API would refuse to
+            // build a non-inclusion proof for a present leaf, and the
+            // round-trip we want to test doesn't apply.
+            prop_assume!(
+                refs.iter()
+                    .all(|r| r.object_id().inner()[28..32] != target_seed.to_be_bytes())
+            );
+
+            let tree = MerkleTree::build_from_unserialized(&refs).unwrap();
+            let tree_root = Digest::new(tree.root().bytes());
+            let artifacts_digest = compute_checkpoint_artifacts_digest(&[tree_root]);
+            let summary = summary_committing_to(artifacts_digest);
+
+            let target = synthetic_ref(target_seed);
+            let non_inclusion = tree.compute_non_inclusion_proof(&refs, &target).unwrap();
+            let proof = OcsNonInclusionProof {
+                non_inclusion_proof: non_inclusion,
+                tree_root,
+            };
+            proof.verify(&summary, &target).unwrap();
+        }
+    }
 }

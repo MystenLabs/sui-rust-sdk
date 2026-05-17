@@ -914,4 +914,152 @@ mod test {
             },
         );
     }
+
+    /// Property-based coverage for the MMR fold and the streaming
+    /// `apply_stream_updates` driver. Gated on `feature = "proptest"`
+    /// to match the rest of the crate's proptest surface.
+    #[cfg(feature = "proptest")]
+    mod proptests {
+        use super::*;
+
+        use proptest::collection::vec;
+        use proptest::prelude::*;
+        use test_strategy::proptest;
+
+        // See the matching comment in `merkle::tests::proptests` for why
+        // this explicit binding is needed on wasm.
+        #[cfg(target_arch = "wasm32")]
+        use wasm_bindgen_test::wasm_bindgen_test as test;
+
+        /// Generate a list of monotonically-increasing batches with at
+        /// least one commitment each. Strict monotonicity (delta >= 1)
+        /// keeps every batch on its own checkpoint, matching the
+        /// "one settlement per `(checkpoint, stream)`" rule the
+        /// framework enforces on-chain.
+        fn monotonic_batches() -> impl Strategy<Value = Vec<EventBatch>> {
+            vec((1u64..=10, 1usize..=4), 0..=8).prop_map(|deltas| {
+                let mut seq = 0u64;
+                let mut batches = Vec::with_capacity(deltas.len());
+                for (delta, n_events) in deltas {
+                    seq += delta;
+                    let commitments: Vec<EventCommitment> = (0..n_events)
+                        .map(|i| EventCommitment {
+                            checkpoint_seq: seq,
+                            transaction_idx: 0,
+                            event_idx: i as u64,
+                            // Mix the seq and index into the digest so
+                            // that distinct commitments produce distinct
+                            // leaves (and therefore distinct merkle
+                            // roots), which keeps the fold's hash
+                            // collisions vanishingly improbable.
+                            digest: {
+                                let mut d = [0u8; 32];
+                                d[..8].copy_from_slice(&seq.to_le_bytes());
+                                d[8..16].copy_from_slice(&(i as u64).to_le_bytes());
+                                Digest::new(d)
+                            },
+                        })
+                        .collect();
+                    batches.push(EventBatch {
+                        checkpoint_seq: seq,
+                        commitments,
+                    });
+                }
+                batches
+            })
+        }
+
+        /// After N non-zero carries are folded, the MMR's non-zero
+        /// peaks land at exactly the set-bit positions of N, and its
+        /// length is `floor(log2(N)) + 1`.
+        ///
+        /// Carries are constrained to `1..=u64::MAX` (mapped through
+        /// `U256::from`) so that no slot is accidentally zeroed by an
+        /// empty insert. Hash collisions to `U256::ZERO` are
+        /// possible in principle but require a 2^-256 birthday hit,
+        /// well outside the property's effective probability budget.
+        #[proptest]
+        fn mmr_popcount_invariant(#[strategy(vec(1u64..=u64::MAX, 0..=20))] carries: Vec<u64>) {
+            let mut mmr = Vec::new();
+            for c in &carries {
+                fold_into_mmr(&mut mmr, U256::from(*c));
+            }
+            let n = carries.len() as u64;
+            let expected_len = if n == 0 {
+                0
+            } else {
+                64 - n.leading_zeros() as usize
+            };
+            prop_assert_eq!(
+                mmr.len(),
+                expected_len,
+                "mmr length must match highest set bit"
+            );
+            for (i, slot) in mmr.iter().enumerate() {
+                let bit_set = (n >> i) & 1 == 1;
+                if bit_set {
+                    prop_assert_ne!(
+                        *slot,
+                        U256::ZERO,
+                        "slot {} should be non-zero (bit set in n={})",
+                        i,
+                        n,
+                    );
+                } else {
+                    prop_assert_eq!(
+                        *slot,
+                        U256::ZERO,
+                        "slot {} should be zero (bit unset in n={})",
+                        i,
+                        n,
+                    );
+                }
+            }
+        }
+
+        /// `apply_stream_updates` is associative over the batch slice:
+        /// folding all batches in one call must match folding them
+        /// one at a time, starting from the same `EventStreamHead`.
+        ///
+        /// This is the contract a streaming client relies on when it
+        /// applies batches as they arrive vs. when it replays a
+        /// captured trace in bulk.
+        #[proptest]
+        fn apply_stream_updates_is_associative_over_batches(
+            #[strategy(monotonic_batches())] batches: Vec<EventBatch>,
+        ) {
+            let one_shot = apply_stream_updates(EventStreamHead::default(), &batches).unwrap();
+            let mut step_by_step = EventStreamHead::default();
+            for batch in &batches {
+                step_by_step =
+                    apply_stream_updates(step_by_step, std::slice::from_ref(batch)).unwrap();
+            }
+            prop_assert_eq!(one_shot, step_by_step);
+        }
+
+        /// The head's `num_events` after `apply_stream_updates` equals
+        /// the sum of `commitments.len()` across the input batches
+        /// (starting from a default head, which has `num_events = 0`).
+        #[proptest]
+        fn apply_stream_updates_num_events_is_sum_of_commitments(
+            #[strategy(monotonic_batches())] batches: Vec<EventBatch>,
+        ) {
+            let head = apply_stream_updates(EventStreamHead::default(), &batches).unwrap();
+            let expected: u64 = batches.iter().map(|b| b.commitments.len() as u64).sum();
+            prop_assert_eq!(head.num_events, expected);
+        }
+
+        /// `apply_stream_updates` carries the last batch's
+        /// `checkpoint_seq` into the head verbatim. For an empty input
+        /// the head's checkpoint is left unchanged at its default
+        /// value of zero.
+        #[proptest]
+        fn apply_stream_updates_advances_checkpoint_seq(
+            #[strategy(monotonic_batches())] batches: Vec<EventBatch>,
+        ) {
+            let head = apply_stream_updates(EventStreamHead::default(), &batches).unwrap();
+            let expected = batches.last().map(|b| b.checkpoint_seq).unwrap_or(0);
+            prop_assert_eq!(head.checkpoint_seq, expected);
+        }
+    }
 }
