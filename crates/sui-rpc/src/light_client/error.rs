@@ -81,6 +81,16 @@ pub enum LightClientError {
         max: u64,
     },
 
+    /// The fullnode reported `NotFound` for an epoch the ratchet
+    /// needed to advance through. Distinguished from a generic
+    /// `Rpc(Status)` so callers can differentiate "the network does
+    /// not know about this epoch" (likely a bug or a request for an
+    /// epoch past the chain's tip) from a transport-level failure.
+    EpochNotFound {
+        /// The epoch number that the fullnode could not produce.
+        epoch: u64,
+    },
+
     /// The server returned an inclusion proof for a different object
     /// id than the caller asked about.
     ObjectIdMismatch {
@@ -198,6 +208,9 @@ impl std::fmt::Display for LightClientError {
                 f,
                 "ratchet would advance from epoch {current} past epoch {target}, exceeding configured max gap of {max}"
             ),
+            Self::EpochNotFound { epoch } => {
+                write!(f, "fullnode reported NotFound for epoch {epoch}")
+            }
             Self::ObjectIdMismatch {
                 requested,
                 returned,

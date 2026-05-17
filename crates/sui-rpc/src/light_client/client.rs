@@ -33,6 +33,7 @@ use super::ratchet::ratchet_to_checkpoint_with_config;
 /// returned proof against the trusted summary.
 pub struct LightClient {
     rpc: Client,
+    archive: Option<Client>,
     cache: EpochCache,
     ratchet_config: RatchetConfig,
 }
@@ -49,6 +50,7 @@ impl LightClient {
     pub fn new(rpc: Client, starting_committee: ValidatorCommittee) -> Self {
         Self {
             rpc,
+            archive: None,
             cache: EpochCache::new(starting_committee),
             ratchet_config: RatchetConfig::default(),
         }
@@ -58,6 +60,23 @@ impl LightClient {
     /// epoch cache. Defaults to [`RatchetConfig::default`].
     pub fn with_ratchet_config(mut self, config: RatchetConfig) -> Self {
         self.ratchet_config = config;
+        self
+    }
+
+    /// Attach an archive endpoint. The ratchet driver will prefer the
+    /// archive for historical reads (`GetEpoch` during discovery and
+    /// `GetCheckpoint` for end-of-epoch summaries) and fall back to
+    /// the fullnode on any archive miss or error.
+    ///
+    /// Archives serve historical data with higher availability and
+    /// tighter latency than typical fullnodes; misses (newer
+    /// checkpoints not yet archived) transparently fall back to the
+    /// fullnode. Both clients are used read-only by the ratchet —
+    /// nothing in the cache becomes trustworthy solely because the
+    /// archive served it; every end-of-epoch summary is still
+    /// BLS-verified against the cache's current committee.
+    pub fn with_archive(mut self, archive: Client) -> Self {
+        self.archive = Some(archive);
         self
     }
 
@@ -191,6 +210,7 @@ impl LightClient {
 
         ratchet_to_checkpoint_with_config(
             &mut self.rpc,
+            self.archive.as_mut(),
             &mut self.cache,
             summary_seq,
             &self.ratchet_config,

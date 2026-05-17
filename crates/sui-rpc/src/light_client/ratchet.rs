@@ -43,35 +43,48 @@ use super::error::LightClientError;
 use super::retry;
 
 /// Advance `cache` forward so that it covers `target_seq`, with the
-/// default [`RatchetConfig`].
+/// default [`RatchetConfig`] and no archive endpoint.
 pub async fn ratchet_to_checkpoint(
     client: &mut Client,
     cache: &mut EpochCache,
     target_seq: u64,
 ) -> Result<(), LightClientError> {
-    ratchet_to_checkpoint_with_config(client, cache, target_seq, &RatchetConfig::default()).await
+    ratchet_to_checkpoint_with_config(client, None, cache, target_seq, &RatchetConfig::default())
+        .await
 }
 
-/// Advance `cache` forward so that it covers `target_seq`, applying the
-/// concurrency knobs in `config` to the parallel summary fetch.
+/// Advance `cache` forward so that it covers `target_seq`.
 ///
-/// On return, the cache holds the committee for the epoch that contains
+/// If `archive` is provided the ratchet uses it for historical reads
+/// and falls back to `fullnode` on archive misses or errors. On
+/// return, the cache holds the committee for the epoch that contains
 /// `target_seq` (subject to the server returning truthful epoch
 /// boundaries; the cache independently BLS-verifies each end-of-epoch
 /// summary it accepts).
 pub async fn ratchet_to_checkpoint_with_config(
-    client: &mut Client,
+    fullnode: &mut Client,
+    archive: Option<&mut Client>,
     cache: &mut EpochCache,
     target_seq: u64,
     config: &RatchetConfig,
 ) -> Result<(), LightClientError> {
-    let to_advance =
-        discover_epochs_to_advance(client, cache.current_epoch(), target_seq, config).await?;
+    // The discovery and parallel-fetch helpers both need to consult
+    // the archive on a per-call basis. Take it as `&mut` reborrowed
+    // through `Option::as_deref_mut` so we can split it across phases.
+    let mut archive = archive;
+    let to_advance = discover_epochs_to_advance(
+        fullnode,
+        archive.as_deref_mut(),
+        cache.current_epoch(),
+        target_seq,
+        config,
+    )
+    .await?;
     if to_advance.is_empty() {
         return Ok(());
     }
 
-    let fetched = fetch_end_of_epoch_summaries(client, &to_advance, config).await?;
+    let fetched = fetch_end_of_epoch_summaries(fullnode, archive, &to_advance, config).await?;
 
     for (end_seq, summary, signature) in fetched {
         apply_verified_end_of_epoch(cache, end_seq, &summary, &signature)?;
@@ -104,7 +117,8 @@ struct EpochToAdvance {
 /// way, returning [`LightClientError::RatchetGapTooLarge`] is more
 /// useful than continuing to issue `GetEpoch` calls.
 async fn discover_epochs_to_advance(
-    client: &mut Client,
+    fullnode: &mut Client,
+    mut archive: Option<&mut Client>,
     start_epoch: u64,
     target_seq: u64,
     config: &RatchetConfig,
@@ -120,23 +134,7 @@ async fn discover_epochs_to_advance(
             });
         }
 
-        let response = {
-            let mut attempt: u32 = 0;
-            loop {
-                let request = GetEpochRequest::new(epoch_number)
-                    .with_read_mask(FieldMask::from_paths(["last_checkpoint"]));
-                match client.ledger_client().get_epoch(request).await {
-                    Ok(resp) => break resp.into_inner(),
-                    Err(status) => {
-                        retry::step(config, LightClientError::Rpc(status), &mut attempt).await?;
-                    }
-                }
-            }
-        };
-
-        let epoch = response.epoch.ok_or_else(|| {
-            LightClientError::Proto(crate::proto::TryFromProtoError::missing("epoch"))
-        })?;
+        let epoch = fetch_one_epoch(fullnode, archive.as_deref_mut(), epoch_number, config).await?;
 
         let Some(last_of_epoch) = epoch.last_checkpoint else {
             // Epoch is still ongoing on the server side; everything
@@ -158,74 +156,144 @@ async fn discover_epochs_to_advance(
     Ok(to_advance)
 }
 
+/// Fetch a single `Epoch` proto for `epoch_number` with the
+/// archive-first / fullnode-fallback policy.
+///
+/// The archive is tried with a single attempt — no retry, no
+/// signature checks. Any failure (NotFound, RPC error, or a response
+/// missing `last_checkpoint`) is treated as an archive miss and the
+/// fullnode is consulted. Fullnode failures retry per
+/// [`RatchetConfig::max_retries`]; a sustained `NotFound` from the
+/// fullnode surfaces as [`LightClientError::EpochNotFound`].
+async fn fetch_one_epoch(
+    fullnode: &mut Client,
+    archive: Option<&mut Client>,
+    epoch_number: u64,
+    config: &RatchetConfig,
+) -> Result<crate::proto::sui::rpc::v2::Epoch, LightClientError> {
+    if let Some(archive) = archive {
+        let request = GetEpochRequest::new(epoch_number)
+            .with_read_mask(FieldMask::from_paths(["last_checkpoint"]));
+        if let Ok(resp) = archive.ledger_client().get_epoch(request).await
+            && let Some(epoch) = resp.into_inner().epoch
+            && epoch.last_checkpoint.is_some()
+        {
+            return Ok(epoch);
+        }
+        // Fall through to the fullnode on any archive miss or
+        // missing-data case.
+    }
+
+    let mut attempt: u32 = 0;
+    loop {
+        let request = GetEpochRequest::new(epoch_number)
+            .with_read_mask(FieldMask::from_paths(["last_checkpoint"]));
+        match fullnode.ledger_client().get_epoch(request).await {
+            Ok(resp) => {
+                return resp.into_inner().epoch.ok_or_else(|| {
+                    LightClientError::Proto(crate::proto::TryFromProtoError::missing("epoch"))
+                });
+            }
+            Err(status) if status.code() == tonic::Code::NotFound => {
+                return Err(LightClientError::EpochNotFound {
+                    epoch: epoch_number,
+                });
+            }
+            Err(status) => {
+                retry::step(config, LightClientError::Rpc(status), &mut attempt).await?;
+            }
+        }
+    }
+}
+
 /// Fetch the end-of-epoch checkpoint summaries for `to_advance` in
 /// parallel, returning them in ascending epoch order.
 ///
 /// Each future fetches `["summary.bcs", "signature"]` and BCS-decodes
 /// the summary directly, skipping the proto-to-SDK conversion layer.
+/// When `archive` is provided each future tries it first (single
+/// attempt) before falling back to the fullnode (with retry).
 async fn fetch_end_of_epoch_summaries(
-    client: &mut Client,
+    fullnode: &mut Client,
+    archive: Option<&mut Client>,
     to_advance: &[EpochToAdvance],
     config: &RatchetConfig,
 ) -> Result<Vec<(u64, CheckpointSummary, ValidatorAggregatedSignature)>, LightClientError> {
     use futures::stream::StreamExt;
     use futures::stream::TryStreamExt;
 
-    // Build a per-task `LedgerServiceClient` so the futures can run
-    // concurrently without borrowing `client` mutably across awaits.
-    let ledger_clients: Vec<_> = (0..to_advance.len())
-        .map(|_| client.ledger_client())
+    // Build per-task `LedgerServiceClient`s up front so the futures
+    // can run concurrently without re-borrowing `&mut Client`. Each
+    // future owns its own fullnode ledger and, when an archive is
+    // configured, its own archive ledger.
+    let fullnode_clients: Vec<_> = (0..to_advance.len())
+        .map(|_| fullnode.ledger_client())
         .collect();
+    let archive_clients: Vec<_> = match archive {
+        Some(archive) => (0..to_advance.len())
+            .map(|_| Some(archive.ledger_client()))
+            .collect(),
+        None => (0..to_advance.len()).map(|_| None).collect(),
+    };
 
     let concurrency = config.concurrency.max(1);
-    let futures =
-        to_advance
-            .iter()
-            .copied()
-            .zip(ledger_clients)
-            .map(|(item, mut ledger)| async move {
-                // Inline manual retry: `LedgerServiceClient<BoxedChannel>`
-                // isn't `Clone` (its `BoxService` backend isn't), so we
-                // can't drop it into a `FnMut`-callable closure for
-                // `with_backoff`. Each future owns its own ledger and
-                // retries against it sequentially.
-                let response = {
-                    let mut attempt: u32 = 0;
-                    loop {
-                        let request =
-                            GetCheckpointRequest::by_sequence_number(item.end_of_epoch_seq)
-                                .with_read_mask(FieldMask::from_paths([
-                                    "summary.bcs",
-                                    "signature",
-                                ]));
-                        match ledger.get_checkpoint(request).await {
-                            Ok(resp) => break resp.into_inner(),
-                            Err(status) => {
-                                retry::step(config, LightClientError::Rpc(status), &mut attempt)
-                                    .await?;
-                            }
+    let futures = to_advance
+        .iter()
+        .copied()
+        .zip(fullnode_clients.into_iter().zip(archive_clients))
+        .map(|(item, (mut fullnode_ledger, archive_ledger))| async move {
+            // Archive first: a single attempt, no retry. Any failure
+            // — NotFound, RPC error, or anything else — falls through
+            // to the fullnode.
+            let mut response = None;
+            if let Some(mut archive_ledger) = archive_ledger {
+                let request = GetCheckpointRequest::by_sequence_number(item.end_of_epoch_seq)
+                    .with_read_mask(FieldMask::from_paths(["summary.bcs", "signature"]));
+                if let Ok(resp) = archive_ledger.get_checkpoint(request).await {
+                    response = Some(resp.into_inner());
+                }
+            }
+
+            let response = if let Some(resp) = response {
+                resp
+            } else {
+                // Fullnode with retry. `LedgerServiceClient<BoxedChannel>`
+                // isn't `Clone` (its `BoxService` backend isn't), so
+                // we can't drop the ledger into a `FnMut`-callable
+                // closure; inline the loop.
+                let mut attempt: u32 = 0;
+                loop {
+                    let request = GetCheckpointRequest::by_sequence_number(item.end_of_epoch_seq)
+                        .with_read_mask(FieldMask::from_paths(["summary.bcs", "signature"]));
+                    match fullnode_ledger.get_checkpoint(request).await {
+                        Ok(resp) => break resp.into_inner(),
+                        Err(status) if status.code() == tonic::Code::NotFound => {
+                            return Err(LightClientError::EpochNotFound { epoch: item.epoch });
+                        }
+                        Err(status) => {
+                            retry::step(config, LightClientError::Rpc(status), &mut attempt)
+                                .await?;
                         }
                     }
-                };
-                let checkpoint = response.checkpoint.ok_or_else(|| {
-                    LightClientError::Proto(crate::proto::TryFromProtoError::missing("checkpoint"))
+                }
+            };
+            let checkpoint = response.checkpoint.ok_or_else(|| {
+                LightClientError::Proto(crate::proto::TryFromProtoError::missing("checkpoint"))
+            })?;
+            let summary_bcs = checkpoint
+                .summary
+                .as_ref()
+                .and_then(|s| s.bcs.as_ref())
+                .ok_or_else(|| {
+                    LightClientError::Proto(crate::proto::TryFromProtoError::missing("summary.bcs"))
                 })?;
-                let summary_bcs = checkpoint
-                    .summary
-                    .as_ref()
-                    .and_then(|s| s.bcs.as_ref())
-                    .ok_or_else(|| {
-                        LightClientError::Proto(crate::proto::TryFromProtoError::missing(
-                            "summary.bcs",
-                        ))
-                    })?;
-                let signature_proto = checkpoint.signature.as_ref().ok_or_else(|| {
-                    LightClientError::Proto(crate::proto::TryFromProtoError::missing("signature"))
-                })?;
-                let summary: CheckpointSummary = summary_bcs.deserialize()?;
-                let signature: ValidatorAggregatedSignature = signature_proto.try_into()?;
-                Ok::<_, LightClientError>((item.epoch, item.end_of_epoch_seq, summary, signature))
-            });
+            let signature_proto = checkpoint.signature.as_ref().ok_or_else(|| {
+                LightClientError::Proto(crate::proto::TryFromProtoError::missing("signature"))
+            })?;
+            let summary: CheckpointSummary = summary_bcs.deserialize()?;
+            let signature: ValidatorAggregatedSignature = signature_proto.try_into()?;
+            Ok::<_, LightClientError>((item.epoch, item.end_of_epoch_seq, summary, signature))
+        });
 
     let mut fetched: Vec<_> = futures::stream::iter(futures)
         .buffer_unordered(concurrency)
