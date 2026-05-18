@@ -21805,6 +21805,9 @@ impl serde::Serialize for ProtocolConfig {
         if !self.attributes.is_empty() {
             len += 1;
         }
+        if !self.configs.is_empty() {
+            len += 1;
+        }
         let mut struct_ser = serializer
             .serialize_struct("sui.rpc.v2.ProtocolConfig", len)?;
         if let Some(v) = self.protocol_version.as_ref() {
@@ -21818,6 +21821,14 @@ impl serde::Serialize for ProtocolConfig {
         }
         if !self.attributes.is_empty() {
             struct_ser.serialize_field("attributes", &self.attributes)?;
+        }
+        if !self.configs.is_empty() {
+            let v: std::collections::BTreeMap<_, _> = self
+                .configs
+                .iter()
+                .map(|(k, v)| (k, crate::_serde::ValueSerializer(v)))
+                .collect();
+            struct_ser.serialize_field("configs", &v)?;
         }
         struct_ser.end()
     }
@@ -21834,12 +21845,14 @@ impl<'de> serde::Deserialize<'de> for ProtocolConfig {
             "feature_flags",
             "featureFlags",
             "attributes",
+            "configs",
         ];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             ProtocolVersion,
             FeatureFlags,
             Attributes,
+            Configs,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -21874,6 +21887,7 @@ impl<'de> serde::Deserialize<'de> for ProtocolConfig {
                                 Ok(GeneratedField::FeatureFlags)
                             }
                             "attributes" => Ok(GeneratedField::Attributes),
+                            "configs" => Ok(GeneratedField::Configs),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -21902,6 +21916,7 @@ impl<'de> serde::Deserialize<'de> for ProtocolConfig {
                 let mut protocol_version__ = None;
                 let mut feature_flags__ = None;
                 let mut attributes__ = None;
+                let mut configs__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::ProtocolVersion => {
@@ -21934,6 +21949,23 @@ impl<'de> serde::Deserialize<'de> for ProtocolConfig {
                                 map_.next_value::<std::collections::BTreeMap<_, _>>()?,
                             );
                         }
+                        GeneratedField::Configs => {
+                            if configs__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("configs"));
+                            }
+                            configs__ = Some(
+                                map_
+                                    .next_value::<
+                                        std::collections::BTreeMap<
+                                            _,
+                                            crate::_serde::ValueDeserializer,
+                                        >,
+                                    >()?
+                                    .into_iter()
+                                    .map(|(k, v)| (k, v.0))
+                                    .collect(),
+                            );
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -21943,6 +21975,7 @@ impl<'de> serde::Deserialize<'de> for ProtocolConfig {
                     protocol_version: protocol_version__,
                     feature_flags: feature_flags__.unwrap_or_default(),
                     attributes: attributes__.unwrap_or_default(),
+                    configs: configs__.unwrap_or_default(),
                 })
             }
         }

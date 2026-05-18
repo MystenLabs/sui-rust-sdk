@@ -71,7 +71,6 @@ message ObjectSet {
   repeated Object objects = 1;
 }
 
-
 // A rendered JSON blob based on an on-chain template.
 message Display {
   // Output for all successfully substituted display fields. Unsuccessful

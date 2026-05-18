@@ -269,6 +269,9 @@ fn serialize_variable(
                     | FieldType::Scalar(ScalarType::U64)
                     | FieldType::Scalar(ScalarType::Bytes)
                     | FieldType::Enum(_)
+            ) || matches!(
+                value_type.as_ref(),
+                FieldType::Message(type_name) if well_known_type_serializer(type_name, serde_path).is_some()
             ) =>
         {
             let raw = &variable.raw;
@@ -294,6 +297,13 @@ fn serialize_variable(
                                     .map_err(|_| serde::ser::Error::custom(format!("Invalid variant {}", *v)))?;
                                 Ok((k, v))
                             }).collect::<std::result::Result<_, _>>()?;
+                    }
+                }
+                FieldType::Message(type_name) => {
+                    let wkt_ser = well_known_type_serializer(type_name, serde_path).unwrap();
+                    quote! {
+                        let v: std::collections::BTreeMap<_, _> = #raw.iter()
+                            .map(|(k, v)| (k, #wkt_ser(v))).collect();
                     }
                 }
                 _ => unreachable!(),
@@ -626,6 +636,12 @@ fn deserialize_map_field(
         FieldType::Enum(path) => {
             let enum_type = resolver.rust_type_token(path);
             (quote!(#enum_type), true, quote!(v as i32))
+        }
+        FieldType::Message(type_name)
+            if well_known_type_deserializer(type_name, serde_path).is_some() =>
+        {
+            let wkt_deser = well_known_type_deserializer(type_name, serde_path).unwrap();
+            (wkt_deser, true, quote!(v.0))
         }
         FieldType::Map(_, _) => panic!("protobuf disallows nested maps"),
         _ => (quote!(_), false, quote!(v)),

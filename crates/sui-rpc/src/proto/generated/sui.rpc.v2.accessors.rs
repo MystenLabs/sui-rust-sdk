@@ -12024,6 +12024,7 @@ mod _accessor_impls {
                 protocol_version: None,
                 feature_flags: std::collections::BTreeMap::new(),
                 attributes: std::collections::BTreeMap::new(),
+                configs: std::collections::BTreeMap::new(),
             }
         }
         #[doc(hidden)]
@@ -12103,6 +12104,34 @@ mod _accessor_impls {
             field: ::std::collections::BTreeMap<String, String>,
         ) -> Self {
             self.set_attributes(field);
+            self
+        }
+        ///Returns the value of `configs`, or the default value if `configs` is unset.
+        pub fn configs(
+            &self,
+        ) -> &::std::collections::BTreeMap<String, ::prost_types::Value> {
+            &self.configs
+        }
+        ///Returns a mutable reference to `configs`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn configs_mut(
+            &mut self,
+        ) -> &mut ::std::collections::BTreeMap<String, ::prost_types::Value> {
+            &mut self.configs
+        }
+        ///Sets `configs` with the provided value.
+        pub fn set_configs(
+            &mut self,
+            field: ::std::collections::BTreeMap<String, ::prost_types::Value>,
+        ) {
+            self.configs = field;
+        }
+        ///Sets `configs` with the provided value.
+        pub fn with_configs(
+            mut self,
+            field: ::std::collections::BTreeMap<String, ::prost_types::Value>,
+        ) -> Self {
+            self.set_configs(field);
             self
         }
     }

@@ -4516,15 +4516,22 @@ pub mod owner {
 pub struct ProtocolConfig {
     #[prost(uint64, optional, tag = "1")]
     pub protocol_version: ::core::option::Option<u64>,
+    /// Deprecated in favor of the lossless `configs` field.
     #[prost(btree_map = "string, bool", tag = "2")]
     pub feature_flags: ::prost::alloc::collections::BTreeMap<
         ::prost::alloc::string::String,
         bool,
     >,
+    /// Deprecated in favor of the lossless `configs` field.
     #[prost(btree_map = "string, string", tag = "3")]
     pub attributes: ::prost::alloc::collections::BTreeMap<
         ::prost::alloc::string::String,
         ::prost::alloc::string::String,
+    >,
+    #[prost(btree_map = "string, message", tag = "4")]
+    pub configs: ::prost::alloc::collections::BTreeMap<
+        ::prost::alloc::string::String,
+        ::prost_types::Value,
     >,
 }
 /// A signature from a user.
