@@ -47,8 +47,8 @@ impl TryFrom<&EventItem> for AuthenticatedEvent {
             .checkpoint
             .ok_or_else(|| TryFromProtoError::missing(EventItem::CHECKPOINT_FIELD.name))?;
         let transaction_index = value
-            .transaction_index
-            .ok_or_else(|| TryFromProtoError::missing(EventItem::TRANSACTION_INDEX_FIELD.name))?;
+            .transaction_offset
+            .ok_or_else(|| TryFromProtoError::missing(EventItem::TRANSACTION_OFFSET_FIELD.name))?;
         let event_index = value
             .event_index
             .ok_or_else(|| TryFromProtoError::missing(EventItem::EVENT_INDEX_FIELD.name))?;
@@ -85,7 +85,7 @@ impl From<&AuthenticatedEvent> for EventItem {
             event_index: Some(value.event_index),
             transaction_digest: Some(value.transaction_digest.to_string()),
             event: Some(value.event.clone().into()),
-            transaction_index: Some(value.transaction_index),
+            transaction_offset: Some(value.transaction_index),
         }
     }
 }
@@ -156,11 +156,11 @@ mod tests {
     }
 
     #[test]
-    fn missing_transaction_index_is_rejected() {
+    fn missing_transaction_offset_is_rejected() {
         let mut proto: EventItem = (&sample_authenticated_event()).into();
-        proto.transaction_index = None;
+        proto.transaction_offset = None;
         let err = AuthenticatedEvent::try_from(&proto).unwrap_err();
-        assert_eq!(err.field_violation().field, "transaction_index");
+        assert_eq!(err.field_violation().field, "transaction_offset");
     }
 
     #[test]
