@@ -128,6 +128,11 @@ message TransactionItem {
   // `checkpoint_lo` (whichever matches the request ordering) is the
   // inclusive boundary checkpoint that the scan has fully covered.
   optional Watermark watermark = 2;
+
+  // Zero-based position of this transaction within the checkpoint that
+  // includes it (the checkpoint reported on the embedded
+  // `ExecutedTransaction`).
+  optional uint32 transaction_offset = 3;
 }
 
 // Response message for LedgerService.ListTransactions.

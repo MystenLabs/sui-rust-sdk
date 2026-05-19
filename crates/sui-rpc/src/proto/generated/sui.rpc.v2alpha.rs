@@ -335,6 +335,11 @@ pub struct TransactionItem {
     /// inclusive boundary checkpoint that the scan has fully covered.
     #[prost(message, optional, tag = "2")]
     pub watermark: ::core::option::Option<Watermark>,
+    /// Zero-based position of this transaction within the checkpoint that
+    /// includes it (the checkpoint reported on the embedded
+    /// `ExecutedTransaction`).
+    #[prost(uint32, optional, tag = "3")]
+    pub transaction_offset: ::core::option::Option<u32>,
 }
 /// Response message for LedgerService.ListTransactions.
 #[non_exhaustive]

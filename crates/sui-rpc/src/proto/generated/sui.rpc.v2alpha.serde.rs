@@ -4408,6 +4408,9 @@ impl serde::Serialize for TransactionItem {
         if self.watermark.is_some() {
             len += 1;
         }
+        if self.transaction_offset.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer
             .serialize_struct("sui.rpc.v2alpha.TransactionItem", len)?;
         if let Some(v) = self.transaction.as_ref() {
@@ -4415,6 +4418,9 @@ impl serde::Serialize for TransactionItem {
         }
         if let Some(v) = self.watermark.as_ref() {
             struct_ser.serialize_field("watermark", v)?;
+        }
+        if let Some(v) = self.transaction_offset.as_ref() {
+            struct_ser.serialize_field("transactionOffset", v)?;
         }
         struct_ser.end()
     }
@@ -4425,11 +4431,17 @@ impl<'de> serde::Deserialize<'de> for TransactionItem {
     where
         D: serde::Deserializer<'de>,
     {
-        const FIELDS: &[&str] = &["transaction", "watermark"];
+        const FIELDS: &[&str] = &[
+            "transaction",
+            "watermark",
+            "transaction_offset",
+            "transactionOffset",
+        ];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             Transaction,
             Watermark,
+            TransactionOffset,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -4459,6 +4471,9 @@ impl<'de> serde::Deserialize<'de> for TransactionItem {
                         match value {
                             "transaction" => Ok(GeneratedField::Transaction),
                             "watermark" => Ok(GeneratedField::Watermark),
+                            "transactionOffset" | "transaction_offset" => {
+                                Ok(GeneratedField::TransactionOffset)
+                            }
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -4486,6 +4501,7 @@ impl<'de> serde::Deserialize<'de> for TransactionItem {
             {
                 let mut transaction__ = None;
                 let mut watermark__ = None;
+                let mut transaction_offset__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Transaction => {
@@ -4502,6 +4518,18 @@ impl<'de> serde::Deserialize<'de> for TransactionItem {
                             }
                             watermark__ = map_.next_value()?;
                         }
+                        GeneratedField::TransactionOffset => {
+                            if transaction_offset__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("transactionOffset"),
+                                );
+                            }
+                            transaction_offset__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -4510,6 +4538,7 @@ impl<'de> serde::Deserialize<'de> for TransactionItem {
                 Ok(TransactionItem {
                     transaction: transaction__,
                     watermark: watermark__,
+                    transaction_offset: transaction_offset__,
                 })
             }
         }

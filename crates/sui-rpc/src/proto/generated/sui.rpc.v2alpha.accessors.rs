@@ -2670,6 +2670,7 @@ mod _accessor_impls {
             Self {
                 transaction: None,
                 watermark: None,
+                transaction_offset: None,
             }
         }
         #[doc(hidden)]
@@ -2743,6 +2744,28 @@ mod _accessor_impls {
         ///Sets `watermark` with the provided value.
         pub fn with_watermark<T: Into<super::Watermark>>(mut self, field: T) -> Self {
             self.set_watermark(field.into());
+            self
+        }
+        ///If `transaction_offset` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn transaction_offset_opt_mut(&mut self) -> Option<&mut u32> {
+            self.transaction_offset.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `transaction_offset`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn transaction_offset_mut(&mut self) -> &mut u32 {
+            self.transaction_offset.get_or_insert_default()
+        }
+        ///If `transaction_offset` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn transaction_offset_opt(&self) -> Option<u32> {
+            self.transaction_offset.as_ref().map(|field| *field)
+        }
+        ///Sets `transaction_offset` with the provided value.
+        pub fn set_transaction_offset(&mut self, field: u32) {
+            self.transaction_offset = Some(field);
+        }
+        ///Sets `transaction_offset` with the provided value.
+        pub fn with_transaction_offset(mut self, field: u32) -> Self {
+            self.set_transaction_offset(field);
             self
         }
     }
