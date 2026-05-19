@@ -563,6 +563,9 @@ impl serde::Serialize for EventItem {
     {
         use serde::ser::SerializeStruct;
         let mut len = 0usize;
+        if self.watermark.is_some() {
+            len += 1;
+        }
         if self.checkpoint.is_some() {
             len += 1;
         }
@@ -578,11 +581,11 @@ impl serde::Serialize for EventItem {
         if self.transaction_index.is_some() {
             len += 1;
         }
-        if self.watermark.is_some() {
-            len += 1;
-        }
         let mut struct_ser = serializer
             .serialize_struct("sui.rpc.v2alpha.EventItem", len)?;
+        if let Some(v) = self.watermark.as_ref() {
+            struct_ser.serialize_field("watermark", v)?;
+        }
         if let Some(v) = self.checkpoint.as_ref() {
             #[allow(clippy::needless_borrow)]
             #[allow(clippy::needless_borrows_for_generic_args)]
@@ -603,9 +606,6 @@ impl serde::Serialize for EventItem {
             struct_ser
                 .serialize_field("transactionIndex", ToString::to_string(&v).as_str())?;
         }
-        if let Some(v) = self.watermark.as_ref() {
-            struct_ser.serialize_field("watermark", v)?;
-        }
         struct_ser.end()
     }
 }
@@ -616,6 +616,7 @@ impl<'de> serde::Deserialize<'de> for EventItem {
         D: serde::Deserializer<'de>,
     {
         const FIELDS: &[&str] = &[
+            "watermark",
             "checkpoint",
             "event_index",
             "eventIndex",
@@ -624,16 +625,15 @@ impl<'de> serde::Deserialize<'de> for EventItem {
             "event",
             "transaction_index",
             "transactionIndex",
-            "watermark",
         ];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
+            Watermark,
             Checkpoint,
             EventIndex,
             TransactionDigest,
             Event,
             TransactionIndex,
-            Watermark,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -661,6 +661,7 @@ impl<'de> serde::Deserialize<'de> for EventItem {
                         E: serde::de::Error,
                     {
                         match value {
+                            "watermark" => Ok(GeneratedField::Watermark),
                             "checkpoint" => Ok(GeneratedField::Checkpoint),
                             "eventIndex" | "event_index" => {
                                 Ok(GeneratedField::EventIndex)
@@ -672,7 +673,6 @@ impl<'de> serde::Deserialize<'de> for EventItem {
                             "transactionIndex" | "transaction_index" => {
                                 Ok(GeneratedField::TransactionIndex)
                             }
-                            "watermark" => Ok(GeneratedField::Watermark),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -698,14 +698,20 @@ impl<'de> serde::Deserialize<'de> for EventItem {
             where
                 V: serde::de::MapAccess<'de>,
             {
+                let mut watermark__ = None;
                 let mut checkpoint__ = None;
                 let mut event_index__ = None;
                 let mut transaction_digest__ = None;
                 let mut event__ = None;
                 let mut transaction_index__ = None;
-                let mut watermark__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
+                        GeneratedField::Watermark => {
+                            if watermark__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("watermark"));
+                            }
+                            watermark__ = map_.next_value()?;
+                        }
                         GeneratedField::Checkpoint => {
                             if checkpoint__.is_some() {
                                 return Err(serde::de::Error::duplicate_field("checkpoint"));
@@ -752,24 +758,18 @@ impl<'de> serde::Deserialize<'de> for EventItem {
                                 >()?
                                 .map(|x| x.0);
                         }
-                        GeneratedField::Watermark => {
-                            if watermark__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("watermark"));
-                            }
-                            watermark__ = map_.next_value()?;
-                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
                     }
                 }
                 Ok(EventItem {
+                    watermark: watermark__,
                     checkpoint: checkpoint__,
                     event_index: event_index__,
                     transaction_digest: transaction_digest__,
                     event: event__,
                     transaction_index: transaction_index__,
-                    watermark: watermark__,
                 })
             }
         }

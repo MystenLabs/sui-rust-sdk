@@ -393,30 +393,30 @@ pub struct ListEventsRequest {
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EventItem {
+    /// Progress watermark as of when this item was emitted: its `cursor`
+    /// is the resume point past this item, and `checkpoint_hi` /
+    /// `checkpoint_lo` (whichever matches the request ordering) is the
+    /// inclusive boundary checkpoint that the scan has fully covered.
+    #[prost(message, optional, tag = "1")]
+    pub watermark: ::core::option::Option<Watermark>,
     /// The checkpoint containing the transaction that emitted this event.
-    #[prost(uint64, optional, tag = "1")]
+    #[prost(uint64, optional, tag = "2")]
     pub checkpoint: ::core::option::Option<u64>,
     /// The index of this event within the transaction's event list (0-based).
-    #[prost(uint32, optional, tag = "2")]
+    #[prost(uint32, optional, tag = "3")]
     pub event_index: ::core::option::Option<u32>,
     /// The digest of the transaction that emitted this event.
-    #[prost(string, optional, tag = "3")]
+    #[prost(string, optional, tag = "4")]
     pub transaction_digest: ::core::option::Option<::prost::alloc::string::String>,
     /// The event data.
-    #[prost(message, optional, tag = "4")]
+    #[prost(message, optional, tag = "5")]
     pub event: ::core::option::Option<super::v2::Event>,
     /// 0-based index of the emitting transaction within its containing
     /// checkpoint. Required for clients verifying authenticated event
     /// streams: this index is part of the BCS-encoded `EventCommitment`
     /// leaf used to construct the per-checkpoint merkle root.
-    #[prost(uint64, optional, tag = "5")]
+    #[prost(uint64, optional, tag = "6")]
     pub transaction_index: ::core::option::Option<u64>,
-    /// Progress watermark as of when this item was emitted: its `cursor`
-    /// is the resume point past this item, and `checkpoint_hi` /
-    /// `checkpoint_lo` (whichever matches the request ordering) is the
-    /// inclusive boundary checkpoint that the scan has fully covered.
-    #[prost(message, optional, tag = "6")]
-    pub watermark: ::core::option::Option<Watermark>,
 }
 /// Response message for LedgerService.ListEvents.
 #[non_exhaustive]
@@ -1515,62 +1515,34 @@ pub struct QueryOptions {
     #[prost(enumeration = "Ordering", tag = "4")]
     pub ordering: i32,
 }
-/// Progress markers for a query scan. Carried both on every item (as the
-/// item's resume cursor + the scan's checkpoint progress at the moment
-/// that item was emitted) and as a standalone wire frame between items
-/// (when the underlying scan advances without producing a matching item).
+/// Progress markers for a query scan. Carried both on every item and as
+/// standalone wire frames between items when the underlying scan advances
+/// without producing a matching item.
+///
+/// Exactly one of `checkpoint_hi` / `checkpoint_lo` is set per response
+/// stream — whichever matches the request ordering. The unscanned side is
+/// always unset.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Watermark {
     /// Opaque cursor at this scan position. Use as `options.after`
     /// (ascending) or `options.before` (descending) on the next request to
     /// resume from here. Clients should track the most recently received
-    /// one across both standalone Watermark frames and item-embedded
-    /// watermarks as the safe resume point.
+    /// cursor across both standalone and item-embedded watermarks as the
+    /// safe resume point.
     #[prost(bytes = "bytes", optional, tag = "1")]
     pub cursor: ::core::option::Option<::prost::bytes::Bytes>,
-    /// Set only on ascending scans. Inclusive on the scanned side: every
-    /// matching item in checkpoints \<= checkpoint_hi has been emitted;
-    /// checkpoints strictly greater than checkpoint_hi may still be partial
-    /// (an item delivered alongside this watermark may live in such a
-    /// partial checkpoint). Non-decreasing across the stream. May be unset
-    /// early in a scan that has not yet established a boundary.
+    /// Ascending scans only. Every matching item in checkpoints
+    /// `<= checkpoint_hi` has been emitted; checkpoints strictly greater
+    /// may still hold unscanned matches. Non-decreasing across the stream.
     ///
-    /// The exact relationship to the most recently emitted item depends on
-    /// the method:
-    ///    - ListCheckpoints: `checkpoint_hi == item.checkpoint` (dedup makes
-    ///      the item's own cp fully covered at emission time).
-    ///    - ListTransactions / ListEvents: `checkpoint_hi == item.checkpoint - 1`
-    ///      (the item's own cp may still have unscanned matches at later
-    ///      positions within the same cp).
-    ///
-    /// Both satisfy the contract above; clients reading `checkpoint_hi`
-    /// should not assume it equals the last item's cp.
-    ///
-    /// Exactly one of `checkpoint_hi` / `checkpoint_lo` is ever set in a
-    /// given response stream — whichever matches the request ordering.
+    /// Unset only on frames whose scan position is still at the genesis
+    /// checkpoint (cp 0). Set on every subsequent frame.
     #[prost(uint64, optional, tag = "2")]
     pub checkpoint_hi: ::core::option::Option<u64>,
-    /// Set only on descending scans. Inclusive on the scanned side: every
-    /// matching item in checkpoints >= checkpoint_lo has been emitted;
-    /// checkpoints strictly less than checkpoint_lo have not yet been
-    /// visited (an item delivered alongside this watermark may live in
-    /// such a partial checkpoint). Non-increasing across the stream. May
-    /// be unset early in a scan that has not yet established a boundary.
-    ///
-    /// The exact relationship to the most recently emitted item depends on
-    /// the method:
-    ///    - ListCheckpoints: `checkpoint_lo == item.checkpoint` (dedup makes
-    ///      the item's own cp fully covered at emission time).
-    ///    - ListTransactions / ListEvents: `checkpoint_lo == item.checkpoint + 1`
-    ///      (the item's own cp may still have unscanned matches at earlier
-    ///      positions within the same cp).
-    ///
-    /// Both satisfy the contract above; clients reading `checkpoint_lo`
-    /// should not assume it equals the last item's cp.
-    ///
-    /// Exactly one of `checkpoint_hi` / `checkpoint_lo` is ever set in a
-    /// given response stream — whichever matches the request ordering.
+    /// Descending scans only. Every matching item in checkpoints
+    /// `>= checkpoint_lo` has been emitted; checkpoints strictly less may
+    /// still hold unscanned matches. Non-increasing across the stream.
     #[prost(uint64, optional, tag = "3")]
     pub checkpoint_lo: ::core::option::Option<u64>,
 }

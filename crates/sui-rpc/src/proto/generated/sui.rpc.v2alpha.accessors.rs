@@ -206,18 +206,47 @@ mod _accessor_impls {
     impl super::EventItem {
         pub const fn const_default() -> Self {
             Self {
+                watermark: None,
                 checkpoint: None,
                 event_index: None,
                 transaction_digest: None,
                 event: None,
                 transaction_index: None,
-                watermark: None,
             }
         }
         #[doc(hidden)]
         pub fn default_instance() -> &'static Self {
             static DEFAULT: super::EventItem = super::EventItem::const_default();
             &DEFAULT
+        }
+        ///Returns the value of `watermark`, or the default value if `watermark` is unset.
+        pub fn watermark(&self) -> &super::Watermark {
+            self.watermark
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::Watermark::default_instance() as _)
+        }
+        ///If `watermark` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn watermark_opt_mut(&mut self) -> Option<&mut super::Watermark> {
+            self.watermark.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `watermark`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn watermark_mut(&mut self) -> &mut super::Watermark {
+            self.watermark.get_or_insert_default()
+        }
+        ///If `watermark` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn watermark_opt(&self) -> Option<&super::Watermark> {
+            self.watermark.as_ref().map(|field| field as _)
+        }
+        ///Sets `watermark` with the provided value.
+        pub fn set_watermark<T: Into<super::Watermark>>(&mut self, field: T) {
+            self.watermark = Some(field.into().into());
+        }
+        ///Sets `watermark` with the provided value.
+        pub fn with_watermark<T: Into<super::Watermark>>(mut self, field: T) -> Self {
+            self.set_watermark(field.into());
+            self
         }
         ///If `checkpoint` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
         pub fn checkpoint_opt_mut(&mut self) -> Option<&mut u64> {
@@ -334,35 +363,6 @@ mod _accessor_impls {
         ///Sets `transaction_index` with the provided value.
         pub fn with_transaction_index(mut self, field: u64) -> Self {
             self.set_transaction_index(field);
-            self
-        }
-        ///Returns the value of `watermark`, or the default value if `watermark` is unset.
-        pub fn watermark(&self) -> &super::Watermark {
-            self.watermark
-                .as_ref()
-                .map(|field| field as _)
-                .unwrap_or_else(|| super::Watermark::default_instance() as _)
-        }
-        ///If `watermark` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn watermark_opt_mut(&mut self) -> Option<&mut super::Watermark> {
-            self.watermark.as_mut().map(|field| field as _)
-        }
-        ///Returns a mutable reference to `watermark`.
-        ///If the field is unset, it is first initialized with the default value.
-        pub fn watermark_mut(&mut self) -> &mut super::Watermark {
-            self.watermark.get_or_insert_default()
-        }
-        ///If `watermark` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn watermark_opt(&self) -> Option<&super::Watermark> {
-            self.watermark.as_ref().map(|field| field as _)
-        }
-        ///Sets `watermark` with the provided value.
-        pub fn set_watermark<T: Into<super::Watermark>>(&mut self, field: T) {
-            self.watermark = Some(field.into().into());
-        }
-        ///Sets `watermark` with the provided value.
-        pub fn with_watermark<T: Into<super::Watermark>>(mut self, field: T) -> Self {
-            self.set_watermark(field.into());
             self
         }
     }
