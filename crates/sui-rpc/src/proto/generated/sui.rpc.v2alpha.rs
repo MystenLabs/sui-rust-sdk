@@ -244,11 +244,13 @@ pub struct ListCheckpointsRequest {
     /// all checkpoints in the range are returned.
     #[prost(message, optional, tag = "4")]
     pub filter: ::core::option::Option<TransactionFilter>,
-    /// Optional cursor-bounded query options. If unspecified, reads in ascending order
-    /// with the default item limit. The maximum item limit is 100; values above
-    /// 100 will be coerced to 100. Every successful stream ends with QueryEnd; use
-    /// its cursor as the next `options.after` for ascending reads or
-    /// `options.before` for descending reads.
+    /// Optional cursor-bounded query options. If unspecified, reads in ascending
+    /// order with the default item limit. The server enforces a maximum item
+    /// limit and silently coerces larger values down to it. To paginate, track
+    /// the latest `Watermark.cursor` received — from either a standalone
+    /// `Watermark` frame or the `watermark` field on an item — and pass it as
+    /// `options.after` (ascending) or `options.before` (descending) on the
+    /// next request.
     #[prost(message, optional, tag = "5")]
     pub options: ::core::option::Option<QueryOptions>,
 }
@@ -256,20 +258,21 @@ pub struct ListCheckpointsRequest {
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CheckpointItem {
-    /// Opaque cursor for this item. It may be sent as `options.after` or
-    /// `options.before` with compatible request parameters to resume or bound
-    /// a later query.
-    #[prost(bytes = "bytes", optional, tag = "1")]
-    pub cursor: ::core::option::Option<::prost::bytes::Bytes>,
     /// One matching checkpoint.
-    #[prost(message, optional, tag = "2")]
+    #[prost(message, optional, tag = "1")]
     pub checkpoint: ::core::option::Option<super::v2::Checkpoint>,
+    /// Progress watermark as of when this item was emitted: its `cursor`
+    /// is the resume point past this item, and `checkpoint_hi` /
+    /// `checkpoint_lo` (whichever matches the request ordering) is the
+    /// inclusive boundary checkpoint that the scan has fully covered.
+    #[prost(message, optional, tag = "2")]
+    pub watermark: ::core::option::Option<Watermark>,
 }
 /// Response message for LedgerService.ListCheckpoints.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListCheckpointsResponse {
-    #[prost(oneof = "list_checkpoints_response::Response", tags = "1, 2")]
+    #[prost(oneof = "list_checkpoints_response::Response", tags = "1, 2, 3")]
     pub response: ::core::option::Option<list_checkpoints_response::Response>,
 }
 /// Nested message and enum types in `ListCheckpointsResponse`.
@@ -280,8 +283,12 @@ pub mod list_checkpoints_response {
         /// One matching checkpoint.
         #[prost(message, tag = "1")]
         Item(super::CheckpointItem),
-        /// Final frame for this successful query stream.
+        /// Standalone scan-progress watermark emitted between items when the
+        /// underlying scan advances without producing a matching item.
         #[prost(message, tag = "2")]
+        Watermark(super::Watermark),
+        /// Final frame for this successful query stream.
+        #[prost(message, tag = "3")]
         End(super::QueryEnd),
     }
 }
@@ -305,11 +312,13 @@ pub struct ListTransactionsRequest {
     /// If absent, all transactions in the range are returned.
     #[prost(message, optional, tag = "4")]
     pub filter: ::core::option::Option<TransactionFilter>,
-    /// Optional cursor-bounded query options. If unspecified, reads in ascending order
-    /// with the default item limit. The maximum item limit is 500; values above
-    /// 500 will be coerced to 500. Every successful stream ends with QueryEnd; use
-    /// its cursor as the next `options.after` for ascending reads or
-    /// `options.before` for descending reads.
+    /// Optional cursor-bounded query options. If unspecified, reads in ascending
+    /// order with the default item limit. The server enforces a maximum item
+    /// limit and silently coerces larger values down to it. To paginate, track
+    /// the latest `Watermark.cursor` received — from either a standalone
+    /// `Watermark` frame or the `watermark` field on an item — and pass it as
+    /// `options.after` (ascending) or `options.before` (descending) on the
+    /// next request.
     #[prost(message, optional, tag = "5")]
     pub options: ::core::option::Option<QueryOptions>,
 }
@@ -317,20 +326,21 @@ pub struct ListTransactionsRequest {
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct TransactionItem {
-    /// Opaque cursor for this item. It may be sent as `options.after` or
-    /// `options.before` with compatible request parameters to resume or bound
-    /// a later query.
-    #[prost(bytes = "bytes", optional, tag = "1")]
-    pub cursor: ::core::option::Option<::prost::bytes::Bytes>,
     /// One matching transaction.
-    #[prost(message, optional, tag = "2")]
+    #[prost(message, optional, tag = "1")]
     pub transaction: ::core::option::Option<super::v2::ExecutedTransaction>,
+    /// Progress watermark as of when this item was emitted: its `cursor`
+    /// is the resume point past this item, and `checkpoint_hi` /
+    /// `checkpoint_lo` (whichever matches the request ordering) is the
+    /// inclusive boundary checkpoint that the scan has fully covered.
+    #[prost(message, optional, tag = "2")]
+    pub watermark: ::core::option::Option<Watermark>,
 }
 /// Response message for LedgerService.ListTransactions.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListTransactionsResponse {
-    #[prost(oneof = "list_transactions_response::Response", tags = "1, 2")]
+    #[prost(oneof = "list_transactions_response::Response", tags = "1, 2, 3")]
     pub response: ::core::option::Option<list_transactions_response::Response>,
 }
 /// Nested message and enum types in `ListTransactionsResponse`.
@@ -341,8 +351,12 @@ pub mod list_transactions_response {
         /// One matching transaction.
         #[prost(message, tag = "1")]
         Item(super::TransactionItem),
-        /// Final frame for this successful query stream.
+        /// Standalone scan-progress watermark emitted between items when the
+        /// underlying scan advances without producing a matching item.
         #[prost(message, tag = "2")]
+        Watermark(super::Watermark),
+        /// Final frame for this successful query stream.
+        #[prost(message, tag = "3")]
         End(super::QueryEnd),
     }
 }
@@ -365,11 +379,13 @@ pub struct ListEventsRequest {
     /// If absent, all events in the range are returned.
     #[prost(message, optional, tag = "4")]
     pub filter: ::core::option::Option<EventFilter>,
-    /// Optional cursor-bounded query options. If unspecified, reads in ascending order
-    /// with the default item limit. The maximum item limit is 1000; values above
-    /// 1000 will be coerced to 1000. Every successful stream ends with QueryEnd; use
-    /// its cursor as the next `options.after` for ascending reads or
-    /// `options.before` for descending reads.
+    /// Optional cursor-bounded query options. If unspecified, reads in ascending
+    /// order with the default item limit. The server enforces a maximum item
+    /// limit and silently coerces larger values down to it. To paginate, track
+    /// the latest `Watermark.cursor` received — from either a standalone
+    /// `Watermark` frame or the `watermark` field on an item — and pass it as
+    /// `options.after` (ascending) or `options.before` (descending) on the
+    /// next request.
     #[prost(message, optional, tag = "5")]
     pub options: ::core::option::Option<QueryOptions>,
 }
@@ -377,35 +393,36 @@ pub struct ListEventsRequest {
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EventItem {
-    /// Opaque cursor for this item. It may be sent as `options.after` or
-    /// `options.before` with compatible request parameters to resume or bound
-    /// a later query.
-    #[prost(bytes = "bytes", optional, tag = "1")]
-    pub cursor: ::core::option::Option<::prost::bytes::Bytes>,
     /// The checkpoint containing the transaction that emitted this event.
-    #[prost(uint64, optional, tag = "2")]
+    #[prost(uint64, optional, tag = "1")]
     pub checkpoint: ::core::option::Option<u64>,
     /// The index of this event within the transaction's event list (0-based).
-    #[prost(uint32, optional, tag = "3")]
+    #[prost(uint32, optional, tag = "2")]
     pub event_index: ::core::option::Option<u32>,
     /// The digest of the transaction that emitted this event.
-    #[prost(string, optional, tag = "4")]
+    #[prost(string, optional, tag = "3")]
     pub transaction_digest: ::core::option::Option<::prost::alloc::string::String>,
     /// The event data.
-    #[prost(message, optional, tag = "5")]
+    #[prost(message, optional, tag = "4")]
     pub event: ::core::option::Option<super::v2::Event>,
     /// 0-based index of the emitting transaction within its containing
     /// checkpoint. Required for clients verifying authenticated event
     /// streams: this index is part of the BCS-encoded `EventCommitment`
     /// leaf used to construct the per-checkpoint merkle root.
-    #[prost(uint64, optional, tag = "6")]
+    #[prost(uint64, optional, tag = "5")]
     pub transaction_index: ::core::option::Option<u64>,
+    /// Progress watermark as of when this item was emitted: its `cursor`
+    /// is the resume point past this item, and `checkpoint_hi` /
+    /// `checkpoint_lo` (whichever matches the request ordering) is the
+    /// inclusive boundary checkpoint that the scan has fully covered.
+    #[prost(message, optional, tag = "6")]
+    pub watermark: ::core::option::Option<Watermark>,
 }
 /// Response message for LedgerService.ListEvents.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListEventsResponse {
-    #[prost(oneof = "list_events_response::Response", tags = "1, 2")]
+    #[prost(oneof = "list_events_response::Response", tags = "1, 2, 3")]
     pub response: ::core::option::Option<list_events_response::Response>,
 }
 /// Nested message and enum types in `ListEventsResponse`.
@@ -416,8 +433,12 @@ pub mod list_events_response {
         /// One matching event.
         #[prost(message, tag = "1")]
         Item(super::EventItem),
-        /// Final frame for this successful query stream.
+        /// Standalone scan-progress watermark emitted between items when the
+        /// underlying scan advances without producing a matching item.
         #[prost(message, tag = "2")]
+        Watermark(super::Watermark),
+        /// Final frame for this successful query stream.
+        #[prost(message, tag = "3")]
         End(super::QueryEnd),
     }
 }
@@ -1469,8 +1490,9 @@ pub mod proof_service_server {
 /// `limit_items = N`, the response contains up to N matching items in descending
 /// order from the interval `(A, B)`. If the response ends with
 /// `QUERY_END_REASON_ITEM_LIMIT`, resume by keeping `after = A` and setting
-/// `before` to the returned `QueryEnd.cursor`. That cursor is the lowest item
-/// returned in ledger order, so it becomes the next exclusive upper bound.
+/// `before` to the last `Watermark.cursor` (or last item cursor) received. That
+/// cursor is the lowest position reached in ledger order, so it becomes the
+/// next exclusive upper bound.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct QueryOptions {
@@ -1493,21 +1515,79 @@ pub struct QueryOptions {
     #[prost(enumeration = "Ordering", tag = "4")]
     pub ordering: i32,
 }
-/// Final response frame for a successful query stream. Every successful stream
-/// returns exactly one QueryEnd after all item frames. Use `cursor` as
-/// `options.after` for ascending continuation and `options.before` for
-/// descending continuation. If a stream disconnects before QueryEnd, resume from
-/// the last item cursor received.
+/// Progress markers for a query scan. Carried both on every item (as the
+/// item's resume cursor + the scan's checkpoint progress at the moment
+/// that item was emitted) and as a standalone wire frame between items
+/// (when the underlying scan advances without producing a matching item).
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct QueryEnd {
-    /// Opaque continuation cursor. For ITEM_LIMIT this is the last returned item
-    /// cursor. For other reasons it may be a scan-frontier cursor that does not
-    /// correspond to a returned item.
+pub struct Watermark {
+    /// Opaque cursor at this scan position. Use as `options.after`
+    /// (ascending) or `options.before` (descending) on the next request to
+    /// resume from here. Clients should track the most recently received
+    /// one across both standalone Watermark frames and item-embedded
+    /// watermarks as the safe resume point.
     #[prost(bytes = "bytes", optional, tag = "1")]
     pub cursor: ::core::option::Option<::prost::bytes::Bytes>,
+    /// Set only on ascending scans. Inclusive on the scanned side: every
+    /// matching item in checkpoints \<= checkpoint_hi has been emitted;
+    /// checkpoints strictly greater than checkpoint_hi may still be partial
+    /// (an item delivered alongside this watermark may live in such a
+    /// partial checkpoint). Non-decreasing across the stream. May be unset
+    /// early in a scan that has not yet established a boundary.
+    ///
+    /// The exact relationship to the most recently emitted item depends on
+    /// the method:
+    ///    - ListCheckpoints: `checkpoint_hi == item.checkpoint` (dedup makes
+    ///      the item's own cp fully covered at emission time).
+    ///    - ListTransactions / ListEvents: `checkpoint_hi == item.checkpoint - 1`
+    ///      (the item's own cp may still have unscanned matches at later
+    ///      positions within the same cp).
+    ///
+    /// Both satisfy the contract above; clients reading `checkpoint_hi`
+    /// should not assume it equals the last item's cp.
+    ///
+    /// Exactly one of `checkpoint_hi` / `checkpoint_lo` is ever set in a
+    /// given response stream — whichever matches the request ordering.
+    #[prost(uint64, optional, tag = "2")]
+    pub checkpoint_hi: ::core::option::Option<u64>,
+    /// Set only on descending scans. Inclusive on the scanned side: every
+    /// matching item in checkpoints >= checkpoint_lo has been emitted;
+    /// checkpoints strictly less than checkpoint_lo have not yet been
+    /// visited (an item delivered alongside this watermark may live in
+    /// such a partial checkpoint). Non-increasing across the stream. May
+    /// be unset early in a scan that has not yet established a boundary.
+    ///
+    /// The exact relationship to the most recently emitted item depends on
+    /// the method:
+    ///    - ListCheckpoints: `checkpoint_lo == item.checkpoint` (dedup makes
+    ///      the item's own cp fully covered at emission time).
+    ///    - ListTransactions / ListEvents: `checkpoint_lo == item.checkpoint + 1`
+    ///      (the item's own cp may still have unscanned matches at earlier
+    ///      positions within the same cp).
+    ///
+    /// Both satisfy the contract above; clients reading `checkpoint_lo`
+    /// should not assume it equals the last item's cp.
+    ///
+    /// Exactly one of `checkpoint_hi` / `checkpoint_lo` is ever set in a
+    /// given response stream — whichever matches the request ordering.
+    #[prost(uint64, optional, tag = "3")]
+    pub checkpoint_lo: ::core::option::Option<u64>,
+}
+/// Final response frame for a successful query stream. Every successful stream
+/// returns exactly one QueryEnd after all item and watermark frames.
+///
+/// The resume cursor is the last `Watermark.cursor` received during the
+/// stream — either standalone or embedded on the last item. Clients have
+/// to track the latest watermark themselves anyway (to survive mid-stream
+/// disconnects and pre-QueryEnd errors), so QueryEnd carries no cursor of
+/// its own: `reason` is the only thing it adds on top of what the stream
+/// already delivered.
+#[non_exhaustive]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct QueryEnd {
     /// Reason this response stopped.
-    #[prost(enumeration = "QueryEndReason", tag = "2")]
+    #[prost(enumeration = "QueryEndReason", tag = "1")]
     pub reason: i32,
 }
 /// Ordering for the returned result set.
@@ -1547,11 +1627,13 @@ impl Ordering {
 pub enum QueryEndReason {
     /// The stop reason was not specified.
     Unspecified = 0,
-    /// The response reached the requested item limit. Resume from `QueryEnd.cursor`
-    /// to continue reading the same effective interval.
+    /// The response reached the requested item limit. Resume from the last
+    /// `Watermark.cursor` received to continue reading the same effective
+    /// interval.
     ItemLimit = 1,
-    /// The response reached the server's maximum checkpoint scan width before it
-    /// reached the effective interval bound. Resume from `QueryEnd.cursor`.
+    /// The response reached the server's per-request bucket-fetch budget for
+    /// filtered scans before reaching the effective interval bound. Resume from
+    /// the last `Watermark.cursor` received.
     ScanLimit = 2,
     /// The scan reached a requested checkpoint range bound.
     CheckpointBound = 3,

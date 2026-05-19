@@ -156,11 +156,11 @@ async fn run_stream_task(
 
         match fetch_one_page(&mut light, request).await {
             Ok(page) => {
-                consecutive_failures = 0;
                 let PageResult {
                     events,
                     end_cursor,
                     end_reason,
+                    partial_error,
                 } = page;
 
                 if let Err(e) = process_response_batch(&mut state, events) {
@@ -168,15 +168,45 @@ async fn run_stream_task(
                     return;
                 }
 
+                // Mid-stream transport error: commit whatever items we
+                // got into the MMR (done above), advance `next_cursor`
+                // to the latest watermark the server sent, then
+                // backoff-or-give-up the same way a pre-stream error
+                // would. This is the fix for the resumption-on-timeout
+                // case: without it, repeated server-side timeouts would
+                // each lose the cursor accumulated during the failed
+                // page and the loop would replay the same stale
+                // position forever.
+                if let Some(err) = partial_error {
+                    if e_is_retryable(&err) {
+                        next_cursor = end_cursor;
+                        if !backoff_or_give_up(&tx, &config, &mut consecutive_failures, err).await {
+                            return;
+                        }
+                    } else {
+                        let _ = tx.send(Err(err)).await;
+                        return;
+                    }
+                    continue;
+                }
+
+                consecutive_failures = 0;
                 match end_reason {
-                    Some(QueryEndReason::ItemLimit) => {
+                    // The server stopped mid-range with unscanned work
+                    // remaining — resume from the latest in-stream cursor
+                    // (item or watermark) so we don't skip the unscanned
+                    // tail. Same shape as ItemLimit: keep advancing the
+                    // cursor, no checkpoint bump, no backoff sleep.
+                    Some(QueryEndReason::ItemLimit | QueryEndReason::ScanLimit) => {
                         next_cursor = end_cursor;
                     }
-                    _ => {
-                        // Server signalled tip / scan-limit / range bound.
-                        // Reset cursor and bump start checkpoint to one past
-                        // the latest fold so the next page picks up new
-                        // events as they arrive.
+                    Some(_) => {
+                        // Server reached the indexed tip, a requested
+                        // checkpoint range bound, or a cursor bound — no
+                        // more events available in this scan. Reset cursor
+                        // and bump start checkpoint to one past the latest
+                        // fold so the next page picks up new events as
+                        // they arrive.
                         next_cursor = None;
                         next_checkpoint = state
                             .local_head
@@ -184,6 +214,15 @@ async fn run_stream_task(
                             .checked_add(1)
                             .unwrap_or(next_checkpoint);
                         // Sleep briefly so we don't spin when at the tip.
+                        tokio::time::sleep(config.retry_backoff).await;
+                    }
+                    None => {
+                        // Stream ended cleanly (no transport error) but
+                        // without an `End` frame. This shouldn't happen
+                        // in normal operation; preserve the latest
+                        // cursor and back off briefly rather than
+                        // assume the scan finished and skip ahead.
+                        next_cursor = end_cursor;
                         tokio::time::sleep(config.retry_backoff).await;
                     }
                 }
@@ -266,8 +305,20 @@ async fn initial_state(
 
 struct PageResult {
     events: Vec<AuthenticatedEvent>,
+    /// Latest opaque cursor delivered during the page — most recent
+    /// `Watermark.cursor` or per-item cursor, whichever arrived later in
+    /// stream order. This is the safe resume point on any termination:
+    /// the server no longer carries a cursor on `QueryEnd`.
     end_cursor: Option<prost::bytes::Bytes>,
     end_reason: Option<QueryEndReason>,
+    /// Mid-stream transport error that interrupted page accumulation.
+    /// When present, `events` and `end_cursor` reflect what was
+    /// received before the error. The caller advances `next_cursor` to
+    /// `end_cursor` before dispatching retry vs. terminal — without
+    /// this, propagating the error via `?` would discard the cursor
+    /// progress and the retry loop would replay the same stale
+    /// position on every server-side timeout.
+    partial_error: Option<LightClientError>,
 }
 
 async fn fetch_one_page(
@@ -282,18 +333,32 @@ async fn fetch_one_page(
         .into_inner();
 
     let mut events = Vec::new();
-    let mut end_cursor = None;
+    let mut end_cursor: Option<prost::bytes::Bytes> = None;
     let mut end_reason = None;
+    let mut partial_error: Option<LightClientError> = None;
 
     while let Some(frame) = stream.next().await {
-        let frame = frame?;
+        let frame = match frame {
+            Ok(f) => f,
+            Err(status) => {
+                partial_error = Some(status.into());
+                break;
+            }
+        };
         match frame.response {
             Some(list_events_response::Response::Item(item)) => {
+                if let Some(c) = item.watermark.as_ref().and_then(|w| w.cursor.clone()) {
+                    end_cursor = Some(c);
+                }
                 let ev = AuthenticatedEvent::try_from(&item)?;
                 events.push(ev);
             }
+            Some(list_events_response::Response::Watermark(w)) => {
+                if let Some(c) = w.cursor {
+                    end_cursor = Some(c);
+                }
+            }
             Some(list_events_response::Response::End(end)) => {
-                end_cursor = end.cursor;
                 end_reason = QueryEndReason::try_from(end.reason).ok();
                 break;
             }
@@ -305,6 +370,7 @@ async fn fetch_one_page(
         events,
         end_cursor,
         end_reason,
+        partial_error,
     })
 }
 

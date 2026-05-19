@@ -67,27 +67,14 @@ mod _accessor_impls {
     impl super::CheckpointItem {
         pub const fn const_default() -> Self {
             Self {
-                cursor: None,
                 checkpoint: None,
+                watermark: None,
             }
         }
         #[doc(hidden)]
         pub fn default_instance() -> &'static Self {
             static DEFAULT: super::CheckpointItem = super::CheckpointItem::const_default();
             &DEFAULT
-        }
-        ///If `cursor` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn cursor_opt(&self) -> Option<&[u8]> {
-            self.cursor.as_ref().map(|field| field as _)
-        }
-        ///Sets `cursor` with the provided value.
-        pub fn set_cursor<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
-            self.cursor = Some(field.into().into());
-        }
-        ///Sets `cursor` with the provided value.
-        pub fn with_cursor<T: Into<::prost::bytes::Bytes>>(mut self, field: T) -> Self {
-            self.set_cursor(field.into());
-            self
         }
         ///Returns the value of `checkpoint`, or the default value if `checkpoint` is unset.
         pub fn checkpoint(&self) -> &super::super::v2::Checkpoint {
@@ -124,6 +111,35 @@ mod _accessor_impls {
             field: T,
         ) -> Self {
             self.set_checkpoint(field.into());
+            self
+        }
+        ///Returns the value of `watermark`, or the default value if `watermark` is unset.
+        pub fn watermark(&self) -> &super::Watermark {
+            self.watermark
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::Watermark::default_instance() as _)
+        }
+        ///If `watermark` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn watermark_opt_mut(&mut self) -> Option<&mut super::Watermark> {
+            self.watermark.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `watermark`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn watermark_mut(&mut self) -> &mut super::Watermark {
+            self.watermark.get_or_insert_default()
+        }
+        ///If `watermark` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn watermark_opt(&self) -> Option<&super::Watermark> {
+            self.watermark.as_ref().map(|field| field as _)
+        }
+        ///Sets `watermark` with the provided value.
+        pub fn set_watermark<T: Into<super::Watermark>>(&mut self, field: T) {
+            self.watermark = Some(field.into().into());
+        }
+        ///Sets `watermark` with the provided value.
+        pub fn with_watermark<T: Into<super::Watermark>>(mut self, field: T) -> Self {
+            self.set_watermark(field.into());
             self
         }
     }
@@ -190,31 +206,18 @@ mod _accessor_impls {
     impl super::EventItem {
         pub const fn const_default() -> Self {
             Self {
-                cursor: None,
                 checkpoint: None,
                 event_index: None,
                 transaction_digest: None,
                 event: None,
                 transaction_index: None,
+                watermark: None,
             }
         }
         #[doc(hidden)]
         pub fn default_instance() -> &'static Self {
             static DEFAULT: super::EventItem = super::EventItem::const_default();
             &DEFAULT
-        }
-        ///If `cursor` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn cursor_opt(&self) -> Option<&[u8]> {
-            self.cursor.as_ref().map(|field| field as _)
-        }
-        ///Sets `cursor` with the provided value.
-        pub fn set_cursor<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
-            self.cursor = Some(field.into().into());
-        }
-        ///Sets `cursor` with the provided value.
-        pub fn with_cursor<T: Into<::prost::bytes::Bytes>>(mut self, field: T) -> Self {
-            self.set_cursor(field.into());
-            self
         }
         ///If `checkpoint` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
         pub fn checkpoint_opt_mut(&mut self) -> Option<&mut u64> {
@@ -331,6 +334,35 @@ mod _accessor_impls {
         ///Sets `transaction_index` with the provided value.
         pub fn with_transaction_index(mut self, field: u64) -> Self {
             self.set_transaction_index(field);
+            self
+        }
+        ///Returns the value of `watermark`, or the default value if `watermark` is unset.
+        pub fn watermark(&self) -> &super::Watermark {
+            self.watermark
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::Watermark::default_instance() as _)
+        }
+        ///If `watermark` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn watermark_opt_mut(&mut self) -> Option<&mut super::Watermark> {
+            self.watermark.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `watermark`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn watermark_mut(&mut self) -> &mut super::Watermark {
+            self.watermark.get_or_insert_default()
+        }
+        ///If `watermark` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn watermark_opt(&self) -> Option<&super::Watermark> {
+            self.watermark.as_ref().map(|field| field as _)
+        }
+        ///Sets `watermark` with the provided value.
+        pub fn set_watermark<T: Into<super::Watermark>>(&mut self, field: T) {
+            self.watermark = Some(field.into().into());
+        }
+        ///Sets `watermark` with the provided value.
+        pub fn with_watermark<T: Into<super::Watermark>>(mut self, field: T) -> Self {
+            self.set_watermark(field.into());
             self
         }
     }
@@ -1225,6 +1257,64 @@ mod _accessor_impls {
             self.set_item(field.into());
             self
         }
+        ///Returns the value of `watermark`, or the default value if `watermark` is unset.
+        pub fn watermark(&self) -> &super::Watermark {
+            if let Some(super::list_checkpoints_response::Response::Watermark(field)) = &self
+                .response
+            {
+                field as _
+            } else {
+                super::Watermark::default_instance() as _
+            }
+        }
+        ///If `watermark` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn watermark_opt(&self) -> Option<&super::Watermark> {
+            if let Some(super::list_checkpoints_response::Response::Watermark(field)) = &self
+                .response
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///If `watermark` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn watermark_opt_mut(&mut self) -> Option<&mut super::Watermark> {
+            if let Some(super::list_checkpoints_response::Response::Watermark(field)) = &mut self
+                .response
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///Returns a mutable reference to `watermark`.
+        ///If the field is unset, it is first initialized with the default value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn watermark_mut(&mut self) -> &mut super::Watermark {
+            if self.watermark_opt_mut().is_none() {
+                self.response = Some(
+                    super::list_checkpoints_response::Response::Watermark(
+                        super::Watermark::default(),
+                    ),
+                );
+            }
+            self.watermark_opt_mut().unwrap()
+        }
+        ///Sets `watermark` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn set_watermark<T: Into<super::Watermark>>(&mut self, field: T) {
+            self.response = Some(
+                super::list_checkpoints_response::Response::Watermark(
+                    field.into().into(),
+                ),
+            );
+        }
+        ///Sets `watermark` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn with_watermark<T: Into<super::Watermark>>(mut self, field: T) -> Self {
+            self.set_watermark(field.into());
+            self
+        }
         ///Returns the value of `end`, or the default value if `end` is unset.
         pub fn end(&self) -> &super::QueryEnd {
             if let Some(super::list_checkpoints_response::Response::End(field)) = &self
@@ -1488,6 +1578,62 @@ mod _accessor_impls {
         ///If any other oneof field in the same oneof is set, it will be cleared.
         pub fn with_item<T: Into<super::EventItem>>(mut self, field: T) -> Self {
             self.set_item(field.into());
+            self
+        }
+        ///Returns the value of `watermark`, or the default value if `watermark` is unset.
+        pub fn watermark(&self) -> &super::Watermark {
+            if let Some(super::list_events_response::Response::Watermark(field)) = &self
+                .response
+            {
+                field as _
+            } else {
+                super::Watermark::default_instance() as _
+            }
+        }
+        ///If `watermark` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn watermark_opt(&self) -> Option<&super::Watermark> {
+            if let Some(super::list_events_response::Response::Watermark(field)) = &self
+                .response
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///If `watermark` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn watermark_opt_mut(&mut self) -> Option<&mut super::Watermark> {
+            if let Some(super::list_events_response::Response::Watermark(field)) = &mut self
+                .response
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///Returns a mutable reference to `watermark`.
+        ///If the field is unset, it is first initialized with the default value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn watermark_mut(&mut self) -> &mut super::Watermark {
+            if self.watermark_opt_mut().is_none() {
+                self.response = Some(
+                    super::list_events_response::Response::Watermark(
+                        super::Watermark::default(),
+                    ),
+                );
+            }
+            self.watermark_opt_mut().unwrap()
+        }
+        ///Sets `watermark` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn set_watermark<T: Into<super::Watermark>>(&mut self, field: T) {
+            self.response = Some(
+                super::list_events_response::Response::Watermark(field.into().into()),
+            );
+        }
+        ///Sets `watermark` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn with_watermark<T: Into<super::Watermark>>(mut self, field: T) -> Self {
+            self.set_watermark(field.into());
             self
         }
         ///Returns the value of `end`, or the default value if `end` is unset.
@@ -1756,6 +1902,64 @@ mod _accessor_impls {
         ///If any other oneof field in the same oneof is set, it will be cleared.
         pub fn with_item<T: Into<super::TransactionItem>>(mut self, field: T) -> Self {
             self.set_item(field.into());
+            self
+        }
+        ///Returns the value of `watermark`, or the default value if `watermark` is unset.
+        pub fn watermark(&self) -> &super::Watermark {
+            if let Some(super::list_transactions_response::Response::Watermark(field)) = &self
+                .response
+            {
+                field as _
+            } else {
+                super::Watermark::default_instance() as _
+            }
+        }
+        ///If `watermark` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn watermark_opt(&self) -> Option<&super::Watermark> {
+            if let Some(super::list_transactions_response::Response::Watermark(field)) = &self
+                .response
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///If `watermark` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn watermark_opt_mut(&mut self) -> Option<&mut super::Watermark> {
+            if let Some(super::list_transactions_response::Response::Watermark(field)) = &mut self
+                .response
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///Returns a mutable reference to `watermark`.
+        ///If the field is unset, it is first initialized with the default value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn watermark_mut(&mut self) -> &mut super::Watermark {
+            if self.watermark_opt_mut().is_none() {
+                self.response = Some(
+                    super::list_transactions_response::Response::Watermark(
+                        super::Watermark::default(),
+                    ),
+                );
+            }
+            self.watermark_opt_mut().unwrap()
+        }
+        ///Sets `watermark` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn set_watermark<T: Into<super::Watermark>>(&mut self, field: T) {
+            self.response = Some(
+                super::list_transactions_response::Response::Watermark(
+                    field.into().into(),
+                ),
+            );
+        }
+        ///Sets `watermark` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn with_watermark<T: Into<super::Watermark>>(mut self, field: T) -> Self {
+            self.set_watermark(field.into());
             self
         }
         ///Returns the value of `end`, or the default value if `end` is unset.
@@ -2330,25 +2534,12 @@ mod _accessor_impls {
     }
     impl super::QueryEnd {
         pub const fn const_default() -> Self {
-            Self { cursor: None, reason: 0 }
+            Self { reason: 0 }
         }
         #[doc(hidden)]
         pub fn default_instance() -> &'static Self {
             static DEFAULT: super::QueryEnd = super::QueryEnd::const_default();
             &DEFAULT
-        }
-        ///If `cursor` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn cursor_opt(&self) -> Option<&[u8]> {
-            self.cursor.as_ref().map(|field| field as _)
-        }
-        ///Sets `cursor` with the provided value.
-        pub fn set_cursor<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
-            self.cursor = Some(field.into().into());
-        }
-        ///Sets `cursor` with the provided value.
-        pub fn with_cursor<T: Into<::prost::bytes::Bytes>>(mut self, field: T) -> Self {
-            self.set_cursor(field.into());
-            self
         }
     }
     impl super::QueryOptions {
@@ -2477,27 +2668,14 @@ mod _accessor_impls {
     impl super::TransactionItem {
         pub const fn const_default() -> Self {
             Self {
-                cursor: None,
                 transaction: None,
+                watermark: None,
             }
         }
         #[doc(hidden)]
         pub fn default_instance() -> &'static Self {
             static DEFAULT: super::TransactionItem = super::TransactionItem::const_default();
             &DEFAULT
-        }
-        ///If `cursor` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn cursor_opt(&self) -> Option<&[u8]> {
-            self.cursor.as_ref().map(|field| field as _)
-        }
-        ///Sets `cursor` with the provided value.
-        pub fn set_cursor<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
-            self.cursor = Some(field.into().into());
-        }
-        ///Sets `cursor` with the provided value.
-        pub fn with_cursor<T: Into<::prost::bytes::Bytes>>(mut self, field: T) -> Self {
-            self.set_cursor(field.into());
-            self
         }
         ///Returns the value of `transaction`, or the default value if `transaction` is unset.
         pub fn transaction(&self) -> &super::super::v2::ExecutedTransaction {
@@ -2536,6 +2714,35 @@ mod _accessor_impls {
             field: T,
         ) -> Self {
             self.set_transaction(field.into());
+            self
+        }
+        ///Returns the value of `watermark`, or the default value if `watermark` is unset.
+        pub fn watermark(&self) -> &super::Watermark {
+            self.watermark
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::Watermark::default_instance() as _)
+        }
+        ///If `watermark` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn watermark_opt_mut(&mut self) -> Option<&mut super::Watermark> {
+            self.watermark.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `watermark`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn watermark_mut(&mut self) -> &mut super::Watermark {
+            self.watermark.get_or_insert_default()
+        }
+        ///If `watermark` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn watermark_opt(&self) -> Option<&super::Watermark> {
+            self.watermark.as_ref().map(|field| field as _)
+        }
+        ///Sets `watermark` with the provided value.
+        pub fn set_watermark<T: Into<super::Watermark>>(&mut self, field: T) {
+            self.watermark = Some(field.into().into());
+        }
+        ///Sets `watermark` with the provided value.
+        pub fn with_watermark<T: Into<super::Watermark>>(mut self, field: T) -> Self {
+            self.set_watermark(field.into());
             self
         }
     }
@@ -3142,6 +3349,77 @@ mod _accessor_impls {
         ///Sets `literals` with the provided value.
         pub fn with_literals(mut self, field: Vec<super::TransactionLiteral>) -> Self {
             self.set_literals(field);
+            self
+        }
+    }
+    impl super::Watermark {
+        pub const fn const_default() -> Self {
+            Self {
+                cursor: None,
+                checkpoint_hi: None,
+                checkpoint_lo: None,
+            }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::Watermark = super::Watermark::const_default();
+            &DEFAULT
+        }
+        ///If `cursor` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn cursor_opt(&self) -> Option<&[u8]> {
+            self.cursor.as_ref().map(|field| field as _)
+        }
+        ///Sets `cursor` with the provided value.
+        pub fn set_cursor<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
+            self.cursor = Some(field.into().into());
+        }
+        ///Sets `cursor` with the provided value.
+        pub fn with_cursor<T: Into<::prost::bytes::Bytes>>(mut self, field: T) -> Self {
+            self.set_cursor(field.into());
+            self
+        }
+        ///If `checkpoint_hi` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn checkpoint_hi_opt_mut(&mut self) -> Option<&mut u64> {
+            self.checkpoint_hi.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `checkpoint_hi`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn checkpoint_hi_mut(&mut self) -> &mut u64 {
+            self.checkpoint_hi.get_or_insert_default()
+        }
+        ///If `checkpoint_hi` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn checkpoint_hi_opt(&self) -> Option<u64> {
+            self.checkpoint_hi.as_ref().map(|field| *field)
+        }
+        ///Sets `checkpoint_hi` with the provided value.
+        pub fn set_checkpoint_hi(&mut self, field: u64) {
+            self.checkpoint_hi = Some(field);
+        }
+        ///Sets `checkpoint_hi` with the provided value.
+        pub fn with_checkpoint_hi(mut self, field: u64) -> Self {
+            self.set_checkpoint_hi(field);
+            self
+        }
+        ///If `checkpoint_lo` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn checkpoint_lo_opt_mut(&mut self) -> Option<&mut u64> {
+            self.checkpoint_lo.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `checkpoint_lo`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn checkpoint_lo_mut(&mut self) -> &mut u64 {
+            self.checkpoint_lo.get_or_insert_default()
+        }
+        ///If `checkpoint_lo` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn checkpoint_lo_opt(&self) -> Option<u64> {
+            self.checkpoint_lo.as_ref().map(|field| *field)
+        }
+        ///Sets `checkpoint_lo` with the provided value.
+        pub fn set_checkpoint_lo(&mut self, field: u64) {
+            self.checkpoint_lo = Some(field);
+        }
+        ///Sets `checkpoint_lo` with the provided value.
+        pub fn with_checkpoint_lo(mut self, field: u64) -> Self {
+            self.set_checkpoint_lo(field);
             self
         }
     }
