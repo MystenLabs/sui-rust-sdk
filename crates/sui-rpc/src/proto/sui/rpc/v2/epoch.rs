@@ -62,6 +62,7 @@ impl Merge<&ProtocolConfig> for ProtocolConfig {
             protocol_version,
             feature_flags,
             attributes,
+            configs,
         } = source;
 
         if mask.contains(Self::PROTOCOL_VERSION_FIELD.name) {
@@ -75,6 +76,10 @@ impl Merge<&ProtocolConfig> for ProtocolConfig {
         if mask.contains(Self::ATTRIBUTES_FIELD.name) {
             self.attributes = attributes.to_owned();
         }
+
+        if mask.contains(Self::CONFIGS_FIELD.name) {
+            self.configs = configs.to_owned();
+        }
     }
 }
 
@@ -84,6 +89,7 @@ impl Merge<ProtocolConfig> for ProtocolConfig {
             protocol_version,
             feature_flags,
             attributes,
+            configs,
         } = source;
 
         if mask.contains(Self::PROTOCOL_VERSION_FIELD.name) {
@@ -96,6 +102,10 @@ impl Merge<ProtocolConfig> for ProtocolConfig {
 
         if mask.contains(Self::ATTRIBUTES_FIELD.name) {
             self.attributes = attributes;
+        }
+
+        if mask.contains(Self::CONFIGS_FIELD.name) {
+            self.configs = configs;
         }
     }
 }

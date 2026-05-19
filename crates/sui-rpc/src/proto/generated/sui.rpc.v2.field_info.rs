@@ -5561,12 +5561,19 @@ pub(crate) mod _field_impls {
             number: 3i32,
             message_fields: None,
         };
+        pub const CONFIGS_FIELD: &'static MessageField = &MessageField {
+            name: "configs",
+            json_name: "configs",
+            number: 4i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for ProtocolConfig {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::PROTOCOL_VERSION_FIELD,
             Self::FEATURE_FLAGS_FIELD,
             Self::ATTRIBUTES_FIELD,
+            Self::CONFIGS_FIELD,
         ];
     }
     impl ProtocolConfig {
@@ -5599,6 +5606,10 @@ pub(crate) mod _field_impls {
         }
         pub fn attributes(mut self) -> String {
             self.path.push(ProtocolConfig::ATTRIBUTES_FIELD.name);
+            self.finish()
+        }
+        pub fn configs(mut self) -> String {
+            self.path.push(ProtocolConfig::CONFIGS_FIELD.name);
             self.finish()
         }
     }

@@ -5,8 +5,13 @@ syntax = "proto3";
 
 package sui.rpc.v2;
 
+import "google/protobuf/struct.proto";
+
 message ProtocolConfig {
   optional uint64 protocol_version = 1;
-  map<string, bool> feature_flags = 2;
-  map<string, string> attributes = 3;
+  // Deprecated in favor of the lossless `configs` field.
+  map<string, bool> feature_flags = 2 [deprecated = true];
+  // Deprecated in favor of the lossless `configs` field.
+  map<string, string> attributes = 3 [deprecated = true];
+  map<string, google.protobuf.Value> configs = 4;
 }
