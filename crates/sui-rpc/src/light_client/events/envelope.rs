@@ -78,8 +78,9 @@ impl TryFrom<&EventItem> for AuthenticatedEvent {
 impl From<&AuthenticatedEvent> for EventItem {
     fn from(value: &AuthenticatedEvent) -> Self {
         Self {
-            // `cursor` is server-assigned; leave unset on the way out.
-            cursor: None,
+            // `watermark` is server-assigned (cursor + checkpoint_hi);
+            // leave unset on the way out.
+            watermark: None,
             checkpoint: Some(value.checkpoint),
             event_index: Some(value.event_index),
             transaction_digest: Some(value.transaction_digest.to_string()),
@@ -138,9 +139,12 @@ mod tests {
     }
 
     #[test]
-    fn outbound_conversion_leaves_cursor_unset() {
+    fn outbound_conversion_leaves_watermark_unset() {
         let proto: EventItem = (&sample_authenticated_event()).into();
-        assert!(proto.cursor.is_none(), "cursor must be server-assigned");
+        assert!(
+            proto.watermark.is_none(),
+            "watermark (cursor + checkpoint_hi) must be server-assigned"
+        );
     }
 
     #[test]

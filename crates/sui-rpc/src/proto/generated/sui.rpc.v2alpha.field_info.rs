@@ -755,23 +755,23 @@ pub(crate) mod _field_impls {
         }
     }
     impl CheckpointItem {
-        pub const CURSOR_FIELD: &'static MessageField = &MessageField {
-            name: "cursor",
-            json_name: "cursor",
-            number: 1i32,
-            message_fields: None,
-        };
         pub const CHECKPOINT_FIELD: &'static MessageField = &MessageField {
             name: "checkpoint",
             json_name: "checkpoint",
-            number: 2i32,
+            number: 1i32,
             message_fields: Some(Checkpoint::FIELDS),
+        };
+        pub const WATERMARK_FIELD: &'static MessageField = &MessageField {
+            name: "watermark",
+            json_name: "watermark",
+            number: 2i32,
+            message_fields: Some(Watermark::FIELDS),
         };
     }
     impl MessageFields for CheckpointItem {
         const FIELDS: &'static [&'static MessageField] = &[
-            Self::CURSOR_FIELD,
             Self::CHECKPOINT_FIELD,
+            Self::WATERMARK_FIELD,
         ];
     }
     impl CheckpointItem {
@@ -794,13 +794,13 @@ pub(crate) mod _field_impls {
         pub fn finish(self) -> String {
             self.path.join(".")
         }
-        pub fn cursor(mut self) -> String {
-            self.path.push(CheckpointItem::CURSOR_FIELD.name);
-            self.finish()
-        }
         pub fn checkpoint(mut self) -> CheckpointFieldPathBuilder {
             self.path.push(CheckpointItem::CHECKPOINT_FIELD.name);
             CheckpointFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn watermark(mut self) -> WatermarkFieldPathBuilder {
+            self.path.push(CheckpointItem::WATERMARK_FIELD.name);
+            WatermarkFieldPathBuilder::new_with_base(self.path)
         }
     }
     impl ListCheckpointsResponse {
@@ -810,16 +810,23 @@ pub(crate) mod _field_impls {
             number: 1i32,
             message_fields: Some(CheckpointItem::FIELDS),
         };
+        pub const WATERMARK_FIELD: &'static MessageField = &MessageField {
+            name: "watermark",
+            json_name: "watermark",
+            number: 2i32,
+            message_fields: Some(Watermark::FIELDS),
+        };
         pub const END_FIELD: &'static MessageField = &MessageField {
             name: "end",
             json_name: "end",
-            number: 2i32,
+            number: 3i32,
             message_fields: Some(QueryEnd::FIELDS),
         };
     }
     impl MessageFields for ListCheckpointsResponse {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::ITEM_FIELD,
+            Self::WATERMARK_FIELD,
             Self::END_FIELD,
         ];
     }
@@ -846,6 +853,10 @@ pub(crate) mod _field_impls {
         pub fn item(mut self) -> CheckpointItemFieldPathBuilder {
             self.path.push(ListCheckpointsResponse::ITEM_FIELD.name);
             CheckpointItemFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn watermark(mut self) -> WatermarkFieldPathBuilder {
+            self.path.push(ListCheckpointsResponse::WATERMARK_FIELD.name);
+            WatermarkFieldPathBuilder::new_with_base(self.path)
         }
         pub fn end(mut self) -> QueryEndFieldPathBuilder {
             self.path.push(ListCheckpointsResponse::END_FIELD.name);
@@ -935,23 +946,23 @@ pub(crate) mod _field_impls {
         }
     }
     impl TransactionItem {
-        pub const CURSOR_FIELD: &'static MessageField = &MessageField {
-            name: "cursor",
-            json_name: "cursor",
-            number: 1i32,
-            message_fields: None,
-        };
         pub const TRANSACTION_FIELD: &'static MessageField = &MessageField {
             name: "transaction",
             json_name: "transaction",
-            number: 2i32,
+            number: 1i32,
             message_fields: Some(ExecutedTransaction::FIELDS),
+        };
+        pub const WATERMARK_FIELD: &'static MessageField = &MessageField {
+            name: "watermark",
+            json_name: "watermark",
+            number: 2i32,
+            message_fields: Some(Watermark::FIELDS),
         };
     }
     impl MessageFields for TransactionItem {
         const FIELDS: &'static [&'static MessageField] = &[
-            Self::CURSOR_FIELD,
             Self::TRANSACTION_FIELD,
+            Self::WATERMARK_FIELD,
         ];
     }
     impl TransactionItem {
@@ -974,13 +985,13 @@ pub(crate) mod _field_impls {
         pub fn finish(self) -> String {
             self.path.join(".")
         }
-        pub fn cursor(mut self) -> String {
-            self.path.push(TransactionItem::CURSOR_FIELD.name);
-            self.finish()
-        }
         pub fn transaction(mut self) -> ExecutedTransactionFieldPathBuilder {
             self.path.push(TransactionItem::TRANSACTION_FIELD.name);
             ExecutedTransactionFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn watermark(mut self) -> WatermarkFieldPathBuilder {
+            self.path.push(TransactionItem::WATERMARK_FIELD.name);
+            WatermarkFieldPathBuilder::new_with_base(self.path)
         }
     }
     impl ListTransactionsResponse {
@@ -990,16 +1001,23 @@ pub(crate) mod _field_impls {
             number: 1i32,
             message_fields: Some(TransactionItem::FIELDS),
         };
+        pub const WATERMARK_FIELD: &'static MessageField = &MessageField {
+            name: "watermark",
+            json_name: "watermark",
+            number: 2i32,
+            message_fields: Some(Watermark::FIELDS),
+        };
         pub const END_FIELD: &'static MessageField = &MessageField {
             name: "end",
             json_name: "end",
-            number: 2i32,
+            number: 3i32,
             message_fields: Some(QueryEnd::FIELDS),
         };
     }
     impl MessageFields for ListTransactionsResponse {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::ITEM_FIELD,
+            Self::WATERMARK_FIELD,
             Self::END_FIELD,
         ];
     }
@@ -1026,6 +1044,10 @@ pub(crate) mod _field_impls {
         pub fn item(mut self) -> TransactionItemFieldPathBuilder {
             self.path.push(ListTransactionsResponse::ITEM_FIELD.name);
             TransactionItemFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn watermark(mut self) -> WatermarkFieldPathBuilder {
+            self.path.push(ListTransactionsResponse::WATERMARK_FIELD.name);
+            WatermarkFieldPathBuilder::new_with_base(self.path)
         }
         pub fn end(mut self) -> QueryEndFieldPathBuilder {
             self.path.push(ListTransactionsResponse::END_FIELD.name);
@@ -1115,11 +1137,11 @@ pub(crate) mod _field_impls {
         }
     }
     impl EventItem {
-        pub const CURSOR_FIELD: &'static MessageField = &MessageField {
-            name: "cursor",
-            json_name: "cursor",
+        pub const WATERMARK_FIELD: &'static MessageField = &MessageField {
+            name: "watermark",
+            json_name: "watermark",
             number: 1i32,
-            message_fields: None,
+            message_fields: Some(Watermark::FIELDS),
         };
         pub const CHECKPOINT_FIELD: &'static MessageField = &MessageField {
             name: "checkpoint",
@@ -1154,7 +1176,7 @@ pub(crate) mod _field_impls {
     }
     impl MessageFields for EventItem {
         const FIELDS: &'static [&'static MessageField] = &[
-            Self::CURSOR_FIELD,
+            Self::WATERMARK_FIELD,
             Self::CHECKPOINT_FIELD,
             Self::EVENT_INDEX_FIELD,
             Self::TRANSACTION_DIGEST_FIELD,
@@ -1182,9 +1204,9 @@ pub(crate) mod _field_impls {
         pub fn finish(self) -> String {
             self.path.join(".")
         }
-        pub fn cursor(mut self) -> String {
-            self.path.push(EventItem::CURSOR_FIELD.name);
-            self.finish()
+        pub fn watermark(mut self) -> WatermarkFieldPathBuilder {
+            self.path.push(EventItem::WATERMARK_FIELD.name);
+            WatermarkFieldPathBuilder::new_with_base(self.path)
         }
         pub fn checkpoint(mut self) -> String {
             self.path.push(EventItem::CHECKPOINT_FIELD.name);
@@ -1214,16 +1236,23 @@ pub(crate) mod _field_impls {
             number: 1i32,
             message_fields: Some(EventItem::FIELDS),
         };
+        pub const WATERMARK_FIELD: &'static MessageField = &MessageField {
+            name: "watermark",
+            json_name: "watermark",
+            number: 2i32,
+            message_fields: Some(Watermark::FIELDS),
+        };
         pub const END_FIELD: &'static MessageField = &MessageField {
             name: "end",
             json_name: "end",
-            number: 2i32,
+            number: 3i32,
             message_fields: Some(QueryEnd::FIELDS),
         };
     }
     impl MessageFields for ListEventsResponse {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::ITEM_FIELD,
+            Self::WATERMARK_FIELD,
             Self::END_FIELD,
         ];
     }
@@ -1250,6 +1279,10 @@ pub(crate) mod _field_impls {
         pub fn item(mut self) -> EventItemFieldPathBuilder {
             self.path.push(ListEventsResponse::ITEM_FIELD.name);
             EventItemFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn watermark(mut self) -> WatermarkFieldPathBuilder {
+            self.path.push(ListEventsResponse::WATERMARK_FIELD.name);
+            WatermarkFieldPathBuilder::new_with_base(self.path)
         }
         pub fn end(mut self) -> QueryEndFieldPathBuilder {
             self.path.push(ListEventsResponse::END_FIELD.name);
@@ -1762,25 +1795,76 @@ pub(crate) mod _field_impls {
             self.finish()
         }
     }
-    impl QueryEnd {
+    impl Watermark {
         pub const CURSOR_FIELD: &'static MessageField = &MessageField {
             name: "cursor",
             json_name: "cursor",
             number: 1i32,
             message_fields: None,
         };
+        pub const CHECKPOINT_HI_FIELD: &'static MessageField = &MessageField {
+            name: "checkpoint_hi",
+            json_name: "checkpointHi",
+            number: 2i32,
+            message_fields: None,
+        };
+        pub const CHECKPOINT_LO_FIELD: &'static MessageField = &MessageField {
+            name: "checkpoint_lo",
+            json_name: "checkpointLo",
+            number: 3i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for Watermark {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::CURSOR_FIELD,
+            Self::CHECKPOINT_HI_FIELD,
+            Self::CHECKPOINT_LO_FIELD,
+        ];
+    }
+    impl Watermark {
+        pub fn path_builder() -> WatermarkFieldPathBuilder {
+            WatermarkFieldPathBuilder::new()
+        }
+    }
+    pub struct WatermarkFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl WatermarkFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn cursor(mut self) -> String {
+            self.path.push(Watermark::CURSOR_FIELD.name);
+            self.finish()
+        }
+        pub fn checkpoint_hi(mut self) -> String {
+            self.path.push(Watermark::CHECKPOINT_HI_FIELD.name);
+            self.finish()
+        }
+        pub fn checkpoint_lo(mut self) -> String {
+            self.path.push(Watermark::CHECKPOINT_LO_FIELD.name);
+            self.finish()
+        }
+    }
+    impl QueryEnd {
         pub const REASON_FIELD: &'static MessageField = &MessageField {
             name: "reason",
             json_name: "reason",
-            number: 2i32,
+            number: 1i32,
             message_fields: None,
         };
     }
     impl MessageFields for QueryEnd {
-        const FIELDS: &'static [&'static MessageField] = &[
-            Self::CURSOR_FIELD,
-            Self::REASON_FIELD,
-        ];
+        const FIELDS: &'static [&'static MessageField] = &[Self::REASON_FIELD];
     }
     impl QueryEnd {
         pub fn path_builder() -> QueryEndFieldPathBuilder {
@@ -1801,10 +1885,6 @@ pub(crate) mod _field_impls {
         }
         pub fn finish(self) -> String {
             self.path.join(".")
-        }
-        pub fn cursor(mut self) -> String {
-            self.path.push(QueryEnd::CURSOR_FIELD.name);
-            self.finish()
         }
         pub fn reason(mut self) -> String {
             self.path.push(QueryEnd::REASON_FIELD.name);
