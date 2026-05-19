@@ -335,6 +335,11 @@ pub struct TransactionItem {
     /// inclusive boundary checkpoint that the scan has fully covered.
     #[prost(message, optional, tag = "2")]
     pub watermark: ::core::option::Option<Watermark>,
+    /// Zero-based position of this transaction within the checkpoint that
+    /// includes it (the checkpoint reported on the embedded
+    /// `ExecutedTransaction`).
+    #[prost(uint64, optional, tag = "3")]
+    pub transaction_offset: ::core::option::Option<u64>,
 }
 /// Response message for LedgerService.ListTransactions.
 #[non_exhaustive]
@@ -416,7 +421,7 @@ pub struct EventItem {
     /// streams: this index is part of the BCS-encoded `EventCommitment`
     /// leaf used to construct the per-checkpoint merkle root.
     #[prost(uint64, optional, tag = "6")]
-    pub transaction_index: ::core::option::Option<u64>,
+    pub transaction_offset: ::core::option::Option<u64>,
 }
 /// Response message for LedgerService.ListEvents.
 #[non_exhaustive]

@@ -958,11 +958,18 @@ pub(crate) mod _field_impls {
             number: 2i32,
             message_fields: Some(Watermark::FIELDS),
         };
+        pub const TRANSACTION_OFFSET_FIELD: &'static MessageField = &MessageField {
+            name: "transaction_offset",
+            json_name: "transactionOffset",
+            number: 3i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for TransactionItem {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::TRANSACTION_FIELD,
             Self::WATERMARK_FIELD,
+            Self::TRANSACTION_OFFSET_FIELD,
         ];
     }
     impl TransactionItem {
@@ -992,6 +999,10 @@ pub(crate) mod _field_impls {
         pub fn watermark(mut self) -> WatermarkFieldPathBuilder {
             self.path.push(TransactionItem::WATERMARK_FIELD.name);
             WatermarkFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn transaction_offset(mut self) -> String {
+            self.path.push(TransactionItem::TRANSACTION_OFFSET_FIELD.name);
+            self.finish()
         }
     }
     impl ListTransactionsResponse {
@@ -1167,9 +1178,9 @@ pub(crate) mod _field_impls {
             number: 5i32,
             message_fields: Some(Event::FIELDS),
         };
-        pub const TRANSACTION_INDEX_FIELD: &'static MessageField = &MessageField {
-            name: "transaction_index",
-            json_name: "transactionIndex",
+        pub const TRANSACTION_OFFSET_FIELD: &'static MessageField = &MessageField {
+            name: "transaction_offset",
+            json_name: "transactionOffset",
             number: 6i32,
             message_fields: None,
         };
@@ -1181,7 +1192,7 @@ pub(crate) mod _field_impls {
             Self::EVENT_INDEX_FIELD,
             Self::TRANSACTION_DIGEST_FIELD,
             Self::EVENT_FIELD,
-            Self::TRANSACTION_INDEX_FIELD,
+            Self::TRANSACTION_OFFSET_FIELD,
         ];
     }
     impl EventItem {
@@ -1224,8 +1235,8 @@ pub(crate) mod _field_impls {
             self.path.push(EventItem::EVENT_FIELD.name);
             EventFieldPathBuilder::new_with_base(self.path)
         }
-        pub fn transaction_index(mut self) -> String {
-            self.path.push(EventItem::TRANSACTION_INDEX_FIELD.name);
+        pub fn transaction_offset(mut self) -> String {
+            self.path.push(EventItem::TRANSACTION_OFFSET_FIELD.name);
             self.finish()
         }
     }

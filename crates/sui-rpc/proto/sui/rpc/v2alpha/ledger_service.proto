@@ -128,6 +128,11 @@ message TransactionItem {
   // `checkpoint_lo` (whichever matches the request ordering) is the
   // inclusive boundary checkpoint that the scan has fully covered.
   optional Watermark watermark = 2;
+
+  // Zero-based position of this transaction within the checkpoint that
+  // includes it (the checkpoint reported on the embedded
+  // `ExecutedTransaction`).
+  optional uint64 transaction_offset = 3;
 }
 
 // Response message for LedgerService.ListTransactions.
@@ -196,7 +201,7 @@ message EventItem {
   // checkpoint. Required for clients verifying authenticated event
   // streams: this index is part of the BCS-encoded `EventCommitment`
   // leaf used to construct the per-checkpoint merkle root.
-  optional uint64 transaction_index = 6;
+  optional uint64 transaction_offset = 6;
 }
 
 // Response message for LedgerService.ListEvents.

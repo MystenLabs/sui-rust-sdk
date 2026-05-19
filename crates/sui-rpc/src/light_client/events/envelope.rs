@@ -10,7 +10,7 @@ use crate::proto::sui::rpc::v2alpha::EventItem;
 /// A single authenticated event paired with the positional metadata a
 /// verifier needs to reconstruct its `EventCommitment` leaf.
 ///
-/// The tuple `(checkpoint, transaction_index, event_index)` identifies
+/// The tuple `(checkpoint, transaction_offset, event_index)` identifies
 /// the event's position in the ledger; combined with the per-event
 /// digest derived from `event`, those four pieces form the BCS-encoded
 /// merkle leaf the framework folds into the stream's MMR — see
@@ -30,7 +30,7 @@ pub struct AuthenticatedEvent {
     pub checkpoint: u64,
     /// 0-based index of the emitting transaction within its containing
     /// checkpoint.
-    pub transaction_index: u64,
+    pub transaction_offset: u64,
     /// 0-based index of this event within its transaction's event list.
     pub event_index: u32,
     /// The digest of the emitting transaction.
@@ -46,9 +46,9 @@ impl TryFrom<&EventItem> for AuthenticatedEvent {
         let checkpoint = value
             .checkpoint
             .ok_or_else(|| TryFromProtoError::missing(EventItem::CHECKPOINT_FIELD.name))?;
-        let transaction_index = value
-            .transaction_index
-            .ok_or_else(|| TryFromProtoError::missing(EventItem::TRANSACTION_INDEX_FIELD.name))?;
+        let transaction_offset = value
+            .transaction_offset
+            .ok_or_else(|| TryFromProtoError::missing(EventItem::TRANSACTION_OFFSET_FIELD.name))?;
         let event_index = value
             .event_index
             .ok_or_else(|| TryFromProtoError::missing(EventItem::EVENT_INDEX_FIELD.name))?;
@@ -67,7 +67,7 @@ impl TryFrom<&EventItem> for AuthenticatedEvent {
 
         Ok(Self {
             checkpoint,
-            transaction_index,
+            transaction_offset,
             event_index,
             transaction_digest,
             event,
@@ -85,7 +85,7 @@ impl From<&AuthenticatedEvent> for EventItem {
             event_index: Some(value.event_index),
             transaction_digest: Some(value.transaction_digest.to_string()),
             event: Some(value.event.clone().into()),
-            transaction_index: Some(value.transaction_index),
+            transaction_offset: Some(value.transaction_offset),
         }
     }
 }
@@ -123,7 +123,7 @@ mod tests {
     fn sample_authenticated_event() -> AuthenticatedEvent {
         AuthenticatedEvent {
             checkpoint: 42,
-            transaction_index: 3,
+            transaction_offset: 3,
             event_index: 7,
             transaction_digest: Digest::new([0xaa; 32]),
             event: sample_event(),
@@ -156,11 +156,11 @@ mod tests {
     }
 
     #[test]
-    fn missing_transaction_index_is_rejected() {
+    fn missing_transaction_offset_is_rejected() {
         let mut proto: EventItem = (&sample_authenticated_event()).into();
-        proto.transaction_index = None;
+        proto.transaction_offset = None;
         let err = AuthenticatedEvent::try_from(&proto).unwrap_err();
-        assert_eq!(err.field_violation().field, "transaction_index");
+        assert_eq!(err.field_violation().field, "transaction_offset");
     }
 
     #[test]

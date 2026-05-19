@@ -54,7 +54,7 @@ impl StreamState {
 /// onto `state.pending` in receipt order.
 ///
 /// `events` must be in ascending
-/// `(checkpoint, transaction_index, event_index)` order with respect
+/// `(checkpoint, transaction_offset, event_index)` order with respect
 /// to each other and to `state.local_head.checkpoint_seq`. The server
 /// guarantees this for `ListEvents` responses; the function is
 /// strict about it so a malformed server response is caught at the
@@ -75,7 +75,7 @@ pub(super) fn process_response_batch(
     for event in &events {
         let commitment = EventCommitment {
             checkpoint_seq: event.checkpoint,
-            transaction_idx: event.transaction_index,
+            transaction_idx: event.transaction_offset,
             event_idx: event.event_index as u64,
             digest: event.event.digest(),
         };
@@ -188,7 +188,7 @@ mod tests {
     fn sample_event(checkpoint: u64, tx_idx: u64, event_idx: u32) -> AuthenticatedEvent {
         AuthenticatedEvent {
             checkpoint,
-            transaction_index: tx_idx,
+            transaction_offset: tx_idx,
             event_index: event_idx,
             transaction_digest: Digest::new([0xaa; 32]),
             event: Event {

@@ -211,7 +211,7 @@ mod _accessor_impls {
                 event_index: None,
                 transaction_digest: None,
                 event: None,
-                transaction_index: None,
+                transaction_offset: None,
             }
         }
         #[doc(hidden)]
@@ -343,26 +343,26 @@ mod _accessor_impls {
             self.set_event(field.into());
             self
         }
-        ///If `transaction_index` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn transaction_index_opt_mut(&mut self) -> Option<&mut u64> {
-            self.transaction_index.as_mut().map(|field| field as _)
+        ///If `transaction_offset` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn transaction_offset_opt_mut(&mut self) -> Option<&mut u64> {
+            self.transaction_offset.as_mut().map(|field| field as _)
         }
-        ///Returns a mutable reference to `transaction_index`.
+        ///Returns a mutable reference to `transaction_offset`.
         ///If the field is unset, it is first initialized with the default value.
-        pub fn transaction_index_mut(&mut self) -> &mut u64 {
-            self.transaction_index.get_or_insert_default()
+        pub fn transaction_offset_mut(&mut self) -> &mut u64 {
+            self.transaction_offset.get_or_insert_default()
         }
-        ///If `transaction_index` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn transaction_index_opt(&self) -> Option<u64> {
-            self.transaction_index.as_ref().map(|field| *field)
+        ///If `transaction_offset` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn transaction_offset_opt(&self) -> Option<u64> {
+            self.transaction_offset.as_ref().map(|field| *field)
         }
-        ///Sets `transaction_index` with the provided value.
-        pub fn set_transaction_index(&mut self, field: u64) {
-            self.transaction_index = Some(field);
+        ///Sets `transaction_offset` with the provided value.
+        pub fn set_transaction_offset(&mut self, field: u64) {
+            self.transaction_offset = Some(field);
         }
-        ///Sets `transaction_index` with the provided value.
-        pub fn with_transaction_index(mut self, field: u64) -> Self {
-            self.set_transaction_index(field);
+        ///Sets `transaction_offset` with the provided value.
+        pub fn with_transaction_offset(mut self, field: u64) -> Self {
+            self.set_transaction_offset(field);
             self
         }
     }
@@ -2670,6 +2670,7 @@ mod _accessor_impls {
             Self {
                 transaction: None,
                 watermark: None,
+                transaction_offset: None,
             }
         }
         #[doc(hidden)]
@@ -2743,6 +2744,28 @@ mod _accessor_impls {
         ///Sets `watermark` with the provided value.
         pub fn with_watermark<T: Into<super::Watermark>>(mut self, field: T) -> Self {
             self.set_watermark(field.into());
+            self
+        }
+        ///If `transaction_offset` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn transaction_offset_opt_mut(&mut self) -> Option<&mut u64> {
+            self.transaction_offset.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `transaction_offset`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn transaction_offset_mut(&mut self) -> &mut u64 {
+            self.transaction_offset.get_or_insert_default()
+        }
+        ///If `transaction_offset` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn transaction_offset_opt(&self) -> Option<u64> {
+            self.transaction_offset.as_ref().map(|field| *field)
+        }
+        ///Sets `transaction_offset` with the provided value.
+        pub fn set_transaction_offset(&mut self, field: u64) {
+            self.transaction_offset = Some(field);
+        }
+        ///Sets `transaction_offset` with the provided value.
+        pub fn with_transaction_offset(mut self, field: u64) -> Self {
+            self.set_transaction_offset(field);
             self
         }
     }
