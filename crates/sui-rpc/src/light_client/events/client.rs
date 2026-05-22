@@ -12,23 +12,32 @@ use tokio::sync::mpsc;
 use super::config::AuthenticatedEventsConfig;
 use super::envelope::AuthenticatedEvent;
 use super::state::StreamState;
+use super::state::buffer_response_batch;
 use super::state::extract_event_stream_head;
-use super::state::process_response_batch;
-use super::state::reconcile_local_head;
+use super::state::fold_and_reconcile;
 use crate::light_client::CheckpointObjectProof;
 use crate::light_client::LightClient;
 use crate::light_client::error::LightClientError;
+use crate::proto::sui::rpc::v2alpha::AffectedObjectFilter;
 use crate::proto::sui::rpc::v2alpha::EventFilter;
 use crate::proto::sui::rpc::v2alpha::EventLiteral;
 use crate::proto::sui::rpc::v2alpha::EventPredicate;
 use crate::proto::sui::rpc::v2alpha::EventStreamHeadFilter;
 use crate::proto::sui::rpc::v2alpha::EventTerm;
 use crate::proto::sui::rpc::v2alpha::ListEventsRequest;
+use crate::proto::sui::rpc::v2alpha::ListTransactionsRequest;
 use crate::proto::sui::rpc::v2alpha::QueryEndReason;
 use crate::proto::sui::rpc::v2alpha::QueryOptions;
+use crate::proto::sui::rpc::v2alpha::TransactionFilter;
+use crate::proto::sui::rpc::v2alpha::TransactionLiteral;
+use crate::proto::sui::rpc::v2alpha::TransactionPredicate;
+use crate::proto::sui::rpc::v2alpha::TransactionTerm;
 use crate::proto::sui::rpc::v2alpha::event_literal;
 use crate::proto::sui::rpc::v2alpha::event_predicate;
 use crate::proto::sui::rpc::v2alpha::list_events_response;
+use crate::proto::sui::rpc::v2alpha::list_transactions_response;
+use crate::proto::sui::rpc::v2alpha::transaction_literal;
+use crate::proto::sui::rpc::v2alpha::transaction_predicate;
 
 /// A streaming verifier for a single authenticated event stream.
 ///
@@ -77,11 +86,14 @@ impl AuthenticatedEventsClient {
 /// `latest_checkpoint + 1`. Either way the floor ensures no event can
 /// land in the interval without being picked up by the head check.
 ///
-/// Steady state: page through `ListEvents`, fold each page into the
-/// local MMR, and at each [`AuthenticatedEventsConfig::head_check_interval`]
-/// tick fetch the on-chain head and reconcile. On match, drain the
-/// confirmed events through the channel. On mismatch, send the error
-/// and exit.
+/// Steady state: page through `ListEvents` and buffer the items, then at
+/// each [`AuthenticatedEventsConfig::head_check_interval`] tick fetch
+/// the settlement boundaries for the unconfirmed range via
+/// `ListTransactions(affected_object = event_stream_head)`, fold the
+/// buffered events into the local MMR partitioned by settlement, and
+/// reconcile the resulting head against the on-chain head proven at the
+/// last settled checkpoint. On match, drain the confirmed events
+/// through the channel. On mismatch, send the error and exit.
 async fn run_stream_task(
     mut light: LightClient,
     config: AuthenticatedEventsConfig,
@@ -111,13 +123,18 @@ async fn run_stream_task(
 
     loop {
         // Decide whether to fetch the next page or reconcile.
+        //
+        // The "idle" condition (non-empty buffer, no cursor, drained
+        // through the next checkpoint) lets us reconcile as soon as
+        // we've drawn level with the indexed tip rather than waiting
+        // out the full interval.
         let should_reconcile = last_head_check.elapsed() >= config.head_check_interval
-            || !state.pending.is_empty()
+            || !state.buffer.is_empty()
                 && next_cursor.is_none()
                 && page_drain_done(&state, next_checkpoint);
 
         if should_reconcile {
-            match reconcile_once(&mut light, &mut state, &stream_head_object_id).await {
+            match reconcile_once(&mut light, &mut state, &stream_head_object_id, &config).await {
                 Ok(released) => {
                     consecutive_failures = 0;
                     last_head_check = std::time::Instant::now();
@@ -160,23 +177,21 @@ async fn run_stream_task(
                     events,
                     end_cursor,
                     end_reason,
+                    watermark_hi,
                     partial_error,
                 } = page;
 
-                if let Err(e) = process_response_batch(&mut state, events) {
-                    let _ = tx.send(Err(e)).await;
-                    return;
-                }
+                buffer_response_batch(&mut state, events, watermark_hi);
 
                 // Mid-stream transport error: commit whatever items we
-                // got into the MMR (done above), advance `next_cursor`
-                // to the latest watermark the server sent, then
-                // backoff-or-give-up the same way a pre-stream error
-                // would. This is the fix for the resumption-on-timeout
-                // case: without it, repeated server-side timeouts would
-                // each lose the cursor accumulated during the failed
-                // page and the loop would replay the same stale
-                // position forever.
+                // got into the buffer (done above), advance
+                // `next_cursor` to the latest watermark the server
+                // sent, then backoff-or-give-up the same way a
+                // pre-stream error would. This is the fix for the
+                // resumption-on-timeout case: without it, repeated
+                // server-side timeouts would each lose the cursor
+                // accumulated during the failed page and the loop
+                // would replay the same stale position forever.
                 if let Some(err) = partial_error {
                     if e_is_retryable(&err) {
                         next_cursor = end_cursor;
@@ -193,26 +208,31 @@ async fn run_stream_task(
                 consecutive_failures = 0;
                 match end_reason {
                     // The server stopped mid-range with unscanned work
-                    // remaining — resume from the latest in-stream cursor
-                    // (item or watermark) so we don't skip the unscanned
-                    // tail. Same shape as ItemLimit: keep advancing the
-                    // cursor, no checkpoint bump, no backoff sleep.
+                    // remaining — resume from the latest in-stream
+                    // cursor (item or watermark) so we don't skip the
+                    // unscanned tail. Same shape as ItemLimit: keep
+                    // advancing the cursor, no checkpoint bump, no
+                    // backoff sleep.
                     Some(QueryEndReason::ItemLimit | QueryEndReason::ScanLimit) => {
                         next_cursor = end_cursor;
                     }
                     Some(_) => {
                         // Server reached the indexed tip, a requested
-                        // checkpoint range bound, or a cursor bound — no
-                        // more events available in this scan. Reset cursor
-                        // and bump start checkpoint to one past the latest
-                        // fold so the next page picks up new events as
-                        // they arrive.
+                        // checkpoint range bound, or a cursor bound —
+                        // no more events available in this scan. Reset
+                        // cursor and bump start checkpoint to one past
+                        // the watermark / last buffered event so the
+                        // next page picks up new events as they
+                        // arrive. We can't use `local_head.checkpoint_seq`
+                        // here because folding is deferred to
+                        // reconciliation — it can lag the scan by an
+                        // entire interval.
                         next_cursor = None;
                         next_checkpoint = state
-                            .local_head
-                            .checkpoint_seq
+                            .events_scanned_through
                             .checked_add(1)
-                            .unwrap_or(next_checkpoint);
+                            .unwrap_or(next_checkpoint)
+                            .max(next_checkpoint);
                         // Sleep briefly so we don't spin when at the tip.
                         tokio::time::sleep(config.retry_backoff).await;
                     }
@@ -311,6 +331,11 @@ struct PageResult {
     /// the server no longer carries a cursor on `QueryEnd`.
     end_cursor: Option<prost::bytes::Bytes>,
     end_reason: Option<QueryEndReason>,
+    /// Most recent `Watermark.checkpoint_hi` observed in this page,
+    /// across both standalone watermarks and per-item watermarks. The
+    /// streaming state uses this as the "events scanned through" floor
+    /// when picking the settlement-fetch range.
+    watermark_hi: Option<u64>,
     /// Mid-stream transport error that interrupted page accumulation.
     /// When present, `events` and `end_cursor` reflect what was
     /// received before the error. The caller advances `next_cursor` to
@@ -335,6 +360,7 @@ async fn fetch_one_page(
     let mut events = Vec::new();
     let mut end_cursor: Option<prost::bytes::Bytes> = None;
     let mut end_reason = None;
+    let mut watermark_hi: Option<u64> = None;
     let mut partial_error: Option<LightClientError> = None;
 
     while let Some(frame) = stream.next().await {
@@ -347,8 +373,13 @@ async fn fetch_one_page(
         };
         match frame.response {
             Some(list_events_response::Response::Item(item)) => {
-                if let Some(c) = item.watermark.as_ref().and_then(|w| w.cursor.clone()) {
-                    end_cursor = Some(c);
+                if let Some(w) = item.watermark.as_ref() {
+                    if let Some(c) = w.cursor.clone() {
+                        end_cursor = Some(c);
+                    }
+                    if let Some(hi) = w.checkpoint_hi {
+                        watermark_hi = Some(watermark_hi.map_or(hi, |prev| prev.max(hi)));
+                    }
                 }
                 let ev = AuthenticatedEvent::try_from(&item)?;
                 events.push(ev);
@@ -356,6 +387,9 @@ async fn fetch_one_page(
             Some(list_events_response::Response::Watermark(w)) => {
                 if let Some(c) = w.cursor {
                     end_cursor = Some(c);
+                }
+                if let Some(hi) = w.checkpoint_hi {
+                    watermark_hi = Some(watermark_hi.map_or(hi, |prev| prev.max(hi)));
                 }
             }
             Some(list_events_response::Response::End(end)) => {
@@ -370,46 +404,206 @@ async fn fetch_one_page(
         events,
         end_cursor,
         end_reason,
+        watermark_hi,
         partial_error,
     })
 }
 
+/// Drive one reconciliation tick: fetch settlements for the unconfirmed
+/// range, fold the buffered events through the latest settled
+/// checkpoint into the local MMR, prove the on-chain head at that
+/// checkpoint, and release the folded events on a match.
+///
+/// Returns the released events on success. Returns `Ok(Vec::new())`
+/// when there's nothing to reconcile yet (the head wasn't modified
+/// anywhere in the unconfirmed range, so there's no chain anchor to
+/// compare against).
 async fn reconcile_once(
     light: &mut LightClient,
     state: &mut StreamState,
     stream_head_object_id: &sui_sdk_types::Address,
+    config: &AuthenticatedEventsConfig,
 ) -> Result<Vec<AuthenticatedEvent>, LightClientError> {
-    let tip = light.latest_checkpoint_seq().await?;
+    // Settlements only happen up through events we've fully scanned —
+    // querying past `events_scanned_through` risks partitioning into a
+    // settlement bucket whose events haven't all been buffered yet.
+    let settlement_upper_inclusive = state.events_scanned_through;
+    if settlement_upper_inclusive <= state.confirmed_through {
+        return Ok(Vec::new());
+    }
+
+    let settlements = fetch_settlements_for_range(
+        light,
+        stream_head_object_id,
+        state.confirmed_through.saturating_add(1),
+        settlement_upper_inclusive.saturating_add(1),
+        config.page_size,
+    )
+    .await?;
+
+    let Some((reconcile_cp, _)) = settlements.last().copied() else {
+        // No settlement in the unconfirmed range — the head wasn't
+        // modified, so there's no anchor to reconcile against. Pending
+        // events stay buffered; the next reconciliation tick will
+        // retry once a settlement lands.
+        return Ok(Vec::new());
+    };
+
     let proof = light
-        .prove_object_at_checkpoint(stream_head_object_id, tip)
+        .prove_object_at_checkpoint(stream_head_object_id, reconcile_cp)
         .await?;
-    match proof {
+    let chain_head = match proof {
         CheckpointObjectProof::Inclusion {
             object: Some(object),
             ..
-        } => {
-            let chain_head = extract_event_stream_head(&object)?;
-            reconcile_local_head(state, chain_head)
-        }
+        } => extract_event_stream_head(&object)?,
         CheckpointObjectProof::Inclusion { object: None, .. } => {
-            // The on-chain head was deleted or wrapped at the tip.
-            // The local replay cannot be reconciled against a missing
-            // head; this is terminal for the stream.
-            Err(LightClientError::UnexpectedObjectShape {
+            // The on-chain head was deleted or wrapped at the
+            // settlement checkpoint. The local replay cannot be
+            // reconciled against a missing head; this is terminal for
+            // the stream.
+            return Err(LightClientError::UnexpectedObjectShape {
                 reason: "event stream head was deleted or wrapped at the reconciliation tip",
-            })
+            });
         }
-        // The head wasn't modified at the tip: there is no fresh
-        // on-chain head to reconcile against, so we can't confirm any
-        // additional events here. Pending events stay pending; the
-        // next reconciliation tick will retry.
-        //
-        // This is the success-path equivalent of the old code's
-        // `NotFound` error at reconcile time: today the stream would
-        // have terminated; now we let it idle until a checkpoint
-        // actually touches the head.
-        CheckpointObjectProof::NonInclusion => Ok(Vec::new()),
+        CheckpointObjectProof::NonInclusion => {
+            // `ListTransactions(affected_object)` placed a settlement
+            // at this checkpoint, but the OCS proof says the head
+            // wasn't modified there — the two indexes are
+            // inconsistent.
+            return Err(LightClientError::UnexpectedObjectShape {
+                reason: "settlement transaction listed at checkpoint but OCS proof reports \
+                         the event stream head was not modified",
+            });
+        }
+    };
+
+    fold_and_reconcile(state, &settlements, chain_head, reconcile_cp)
+}
+
+/// Page through `ListTransactions` filtered on `affected_object =
+/// stream_head_object_id` and return the ascending `(checkpoint,
+/// transaction_offset)` settlement boundaries for `[start, end)`.
+///
+/// Each `settle_events` transaction mutates the stream's head object,
+/// so this filter returns exactly the per-stream settlement boundaries.
+/// `start` is inclusive and `end` is exclusive — matching the proto
+/// `start_checkpoint` / `end_checkpoint` semantics — so the caller
+/// passes `confirmed_through + 1` and `events_scanned_through + 1`.
+async fn fetch_settlements_for_range(
+    light: &mut LightClient,
+    stream_head_object_id: &sui_sdk_types::Address,
+    start_checkpoint: u64,
+    end_checkpoint_exclusive: u64,
+    page_size: u32,
+) -> Result<Vec<(u64, u64)>, LightClientError> {
+    if end_checkpoint_exclusive <= start_checkpoint {
+        return Ok(Vec::new());
     }
+
+    let filter = build_affected_object_filter(stream_head_object_id);
+    let mut settlements: Vec<(u64, u64)> = Vec::new();
+    let mut cursor: Option<prost::bytes::Bytes> = None;
+
+    loop {
+        let request = ListTransactionsRequest {
+            read_mask: None,
+            start_checkpoint: Some(start_checkpoint),
+            end_checkpoint: Some(end_checkpoint_exclusive),
+            filter: Some(filter.clone()),
+            options: Some(QueryOptions {
+                limit_items: Some(page_size),
+                after: cursor.clone(),
+                before: None,
+                ordering: 0, // ascending
+            }),
+        };
+
+        let page = fetch_settlements_page(light, request).await?;
+        settlements.extend(page.entries);
+
+        match page.end_reason {
+            // Server hit its per-request bound but the range may have
+            // more — keep paging from the latest cursor it gave us.
+            Some(QueryEndReason::ItemLimit | QueryEndReason::ScanLimit) => {
+                if page.end_cursor.is_none() {
+                    // Defensive: no cursor advance means we'd loop
+                    // forever. Treat as done; the next reconciliation
+                    // tick will retry with a fresh window.
+                    break;
+                }
+                cursor = page.end_cursor;
+            }
+            // Range fully scanned (CheckpointBound / CursorBound /
+            // LedgerTip / Unspecified) or end frame missing: nothing
+            // more to fetch in this window.
+            _ => break,
+        }
+    }
+
+    Ok(settlements)
+}
+
+struct SettlementsPage {
+    entries: Vec<(u64, u64)>,
+    end_cursor: Option<prost::bytes::Bytes>,
+    end_reason: Option<QueryEndReason>,
+}
+
+async fn fetch_settlements_page(
+    light: &mut LightClient,
+    request: ListTransactionsRequest,
+) -> Result<SettlementsPage, LightClientError> {
+    let mut stream = light
+        .rpc()
+        .ledger_client_alpha()
+        .list_transactions(request)
+        .await?
+        .into_inner();
+
+    let mut entries = Vec::new();
+    let mut end_cursor: Option<prost::bytes::Bytes> = None;
+    let mut end_reason = None;
+
+    while let Some(frame) = stream.next().await {
+        let frame = frame?;
+        match frame.response {
+            Some(list_transactions_response::Response::Item(item)) => {
+                if let Some(c) = item.watermark.as_ref().and_then(|w| w.cursor.clone()) {
+                    end_cursor = Some(c);
+                }
+                let checkpoint = item
+                    .transaction
+                    .as_ref()
+                    .and_then(|tx| tx.checkpoint)
+                    .ok_or(LightClientError::UnexpectedObjectShape {
+                        reason: "settlement transaction missing checkpoint",
+                    })?;
+                let tx_offset =
+                    item.transaction_offset
+                        .ok_or(LightClientError::UnexpectedObjectShape {
+                            reason: "settlement transaction missing transaction_offset",
+                        })?;
+                entries.push((checkpoint, tx_offset));
+            }
+            Some(list_transactions_response::Response::Watermark(w)) => {
+                if let Some(c) = w.cursor {
+                    end_cursor = Some(c);
+                }
+            }
+            Some(list_transactions_response::Response::End(end)) => {
+                end_reason = QueryEndReason::try_from(end.reason).ok();
+                break;
+            }
+            None => break,
+        }
+    }
+
+    Ok(SettlementsPage {
+        entries,
+        end_cursor,
+        end_reason,
+    })
 }
 
 fn build_filter(stream_id_hex: &str) -> EventFilter {
@@ -428,10 +622,28 @@ fn build_filter(stream_id_hex: &str) -> EventFilter {
     }
 }
 
-/// True if pending events were already drained up through the last
-/// folded checkpoint, so we're idle and may as well reconcile sooner.
+fn build_affected_object_filter(object_id: &sui_sdk_types::Address) -> TransactionFilter {
+    TransactionFilter {
+        terms: vec![TransactionTerm {
+            literals: vec![TransactionLiteral {
+                polarity: Some(transaction_literal::Polarity::Include(
+                    TransactionPredicate {
+                        predicate: Some(transaction_predicate::Predicate::AffectedObject(
+                            AffectedObjectFilter {
+                                object_id: Some(object_id.to_string()),
+                            },
+                        )),
+                    },
+                )),
+            }],
+        }],
+    }
+}
+
+/// True if buffered events were already scanned up through `next_checkpoint`,
+/// so the page-fetch loop is idle and may as well reconcile sooner.
 fn page_drain_done(state: &StreamState, next_checkpoint: u64) -> bool {
-    state.local_head.checkpoint_seq < next_checkpoint
+    state.events_scanned_through.saturating_add(1) >= next_checkpoint
 }
 
 fn e_is_retryable(err: &LightClientError) -> bool {
