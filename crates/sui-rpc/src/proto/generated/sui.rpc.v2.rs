@@ -903,6 +903,12 @@ pub struct ExecutionError {
     pub command: ::core::option::Option<u64>,
     #[prost(enumeration = "execution_error::ExecutionErrorKind", optional, tag = "3")]
     pub kind: ::core::option::Option<i32>,
+    /// Additional non-consensus metadata associated with this execution error.
+    ///
+    /// This metadata is produced by the executing node and is not part of the
+    /// certified transaction effects.
+    #[prost(message, optional, tag = "100")]
+    pub metadata: ::core::option::Option<ExecutionErrorMetadata>,
     #[prost(
         oneof = "execution_error::ErrorDetails",
         tags = "4, 5, 6, 7, 8, 9, 10, 11, 12"
@@ -1188,6 +1194,12 @@ pub mod execution_error {
         #[prost(message, tag = "12")]
         CongestedObjects(super::CongestedObjects),
     }
+}
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ExecutionErrorMetadata {
+    #[prost(string, optional, tag = "1")]
+    pub message: ::core::option::Option<::prost::alloc::string::String>,
 }
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]

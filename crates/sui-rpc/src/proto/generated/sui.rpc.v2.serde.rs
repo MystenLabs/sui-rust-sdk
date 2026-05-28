@@ -9850,6 +9850,9 @@ impl serde::Serialize for ExecutionError {
         if self.kind.is_some() {
             len += 1;
         }
+        if self.metadata.is_some() {
+            len += 1;
+        }
         if self.error_details.is_some() {
             len += 1;
         }
@@ -9869,6 +9872,9 @@ impl serde::Serialize for ExecutionError {
                     format!("Invalid variant {}", * v),
                 ))?;
             struct_ser.serialize_field("kind", &v)?;
+        }
+        if let Some(v) = self.metadata.as_ref() {
+            struct_ser.serialize_field("metadata", v)?;
         }
         if let Some(v) = self.error_details.as_ref() {
             match v {
@@ -9914,6 +9920,7 @@ impl<'de> serde::Deserialize<'de> for ExecutionError {
             "description",
             "command",
             "kind",
+            "metadata",
             "abort",
             "size_error",
             "sizeError",
@@ -9937,6 +9944,7 @@ impl<'de> serde::Deserialize<'de> for ExecutionError {
             Description,
             Command,
             Kind,
+            Metadata,
             Abort,
             SizeError,
             CommandArgumentError,
@@ -9976,6 +9984,7 @@ impl<'de> serde::Deserialize<'de> for ExecutionError {
                             "description" => Ok(GeneratedField::Description),
                             "command" => Ok(GeneratedField::Command),
                             "kind" => Ok(GeneratedField::Kind),
+                            "metadata" => Ok(GeneratedField::Metadata),
                             "abort" => Ok(GeneratedField::Abort),
                             "sizeError" | "size_error" => Ok(GeneratedField::SizeError),
                             "commandArgumentError" | "command_argument_error" => {
@@ -10025,6 +10034,7 @@ impl<'de> serde::Deserialize<'de> for ExecutionError {
                 let mut description__ = None;
                 let mut command__ = None;
                 let mut kind__ = None;
+                let mut metadata__ = None;
                 let mut error_details__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
@@ -10055,6 +10065,12 @@ impl<'de> serde::Deserialize<'de> for ExecutionError {
                                     ::std::option::Option<execution_error::ExecutionErrorKind>,
                                 >()?
                                 .map(|x| x as i32);
+                        }
+                        GeneratedField::Metadata => {
+                            if metadata__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("metadata"));
+                            }
+                            metadata__ = map_.next_value()?;
                         }
                         GeneratedField::Abort => {
                             if error_details__.is_some() {
@@ -10147,6 +10163,7 @@ impl<'de> serde::Deserialize<'de> for ExecutionError {
                     description: description__,
                     command: command__,
                     kind: kind__,
+                    metadata: metadata__,
                     error_details: error_details__,
                 })
             }
@@ -10472,6 +10489,115 @@ impl<'de> serde::Deserialize<'de> for execution_error::ExecutionErrorKind {
             }
         }
         deserializer.deserialize_any(GeneratedVisitor)
+    }
+}
+impl serde::Serialize for ExecutionErrorMetadata {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0usize;
+        if self.message.is_some() {
+            len += 1;
+        }
+        let mut struct_ser = serializer
+            .serialize_struct("sui.rpc.v2.ExecutionErrorMetadata", len)?;
+        if let Some(v) = self.message.as_ref() {
+            struct_ser.serialize_field("message", v)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for ExecutionErrorMetadata {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &["message"];
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Message,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(
+                deserializer: D,
+            ) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+                    fn expecting(
+                        &self,
+                        formatter: &mut std::fmt::Formatter<'_>,
+                    ) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", & FIELDS)
+                    }
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(
+                        self,
+                        value: &str,
+                    ) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "message" => Ok(GeneratedField::Message),
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = ExecutionErrorMetadata;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2.ExecutionErrorMetadata")
+            }
+            fn visit_map<V>(
+                self,
+                mut map_: V,
+            ) -> std::result::Result<ExecutionErrorMetadata, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                let mut message__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Message => {
+                            if message__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("message"));
+                            }
+                            message__ = map_.next_value()?;
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(ExecutionErrorMetadata {
+                    message: message__,
+                })
+            }
+        }
+        deserializer
+            .deserialize_struct(
+                "sui.rpc.v2.ExecutionErrorMetadata",
+                FIELDS,
+                GeneratedVisitor,
+            )
     }
 }
 impl serde::Serialize for ExecutionStatus {
