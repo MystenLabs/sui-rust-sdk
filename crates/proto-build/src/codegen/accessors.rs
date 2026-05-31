@@ -11,7 +11,7 @@ use crate::message_graph::Field;
 use crate::message_graph::Message;
 use crate::message_graph::OneofField;
 
-pub(crate) fn generate_accessors(context: &Context, out_dir: &Path) {
+pub fn generate_accessors(context: &Context, out_dir: &Path) {
     for package in context.graph().packages.iter() {
         let mut stream = TokenStream::new();
 

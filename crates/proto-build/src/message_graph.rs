@@ -37,7 +37,7 @@ pub struct DescriptorGraph {
 }
 
 impl DescriptorGraph {
-    pub(crate) fn new<'a>(files: impl Iterator<Item = &'a FileDescriptorProto>) -> DescriptorGraph {
+    pub fn new<'a>(files: impl Iterator<Item = &'a FileDescriptorProto>) -> DescriptorGraph {
         let mut graph = DescriptorGraph {
             index: BTreeMap::new(),
             graph: Graph::new(),

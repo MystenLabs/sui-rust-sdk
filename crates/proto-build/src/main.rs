@@ -3,14 +3,10 @@ use protox::prost::Message as _;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use crate::message_graph::DescriptorGraph;
-
-mod codegen;
-mod comments;
-mod context;
-mod generate_fields;
-mod ident;
-mod message_graph;
+use proto_build::codegen;
+use proto_build::context;
+use proto_build::generate_fields;
+use proto_build::message_graph::DescriptorGraph;
 
 fn main() {
     let root_dir = PathBuf::from(std::env!("CARGO_MANIFEST_DIR"));
