@@ -8,7 +8,7 @@ This repository contains a collection of libraries for integrating with the Sui 
 
 A few of the project's high-level goals are as follows:
 
-* **Be modular** - user's should only need to pay the cost (in terms of dependencies/compilation time) for the features that they use.
+* **Be modular** - users should only need to pay the cost (in terms of dependencies/compilation time) for the features that they use.
 * **Be light** - strive to have a minimal dependency footprint.
 * **Support developers** - provide all needed types, abstractions and APIs to enable developers to build robust applications on Sui.
 * **Support wasm** - where possible, libraries should be usable in wasm environments.
