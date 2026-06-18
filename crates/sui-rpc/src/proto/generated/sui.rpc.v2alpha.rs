@@ -227,12 +227,7 @@ pub struct EventStreamHeadFilter {
     #[prost(string, optional, tag = "1")]
     pub stream_id: ::core::option::Option<::prost::alloc::string::String>,
 }
-/// Match transactions that wrote a Move package, publish or upgrade alike.
-///
-/// This is a value-less marker: there is nothing to specify, since the
-/// dimension records every package write chain-wide rather than keying on a
-/// particular package id. Its presence in a term matches any package-writing
-/// transaction.
+/// Match transactions that wrote a Move package.
 #[non_exhaustive]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct PackageWriteFilter {}
