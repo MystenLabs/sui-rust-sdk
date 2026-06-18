@@ -42,7 +42,7 @@ pub mod transaction_literal {
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct TransactionPredicate {
-    #[prost(oneof = "transaction_predicate::Predicate", tags = "1, 2, 3, 4, 5, 6, 7")]
+    #[prost(oneof = "transaction_predicate::Predicate", tags = "1, 2, 3, 4, 5, 6, 7, 8")]
     pub predicate: ::core::option::Option<transaction_predicate::Predicate>,
 }
 /// Nested message and enum types in `TransactionPredicate`.
@@ -78,6 +78,10 @@ pub mod transaction_predicate {
         /// stream head.
         #[prost(message, tag = "7")]
         EventStreamHead(super::EventStreamHeadFilter),
+        /// Match transactions that wrote a Move package — a first publish or an
+        /// upgrade, of any package.
+        #[prost(message, tag = "8")]
+        PackageWrite(super::PackageWriteFilter),
     }
 }
 /// DNF filter for events: any term may match, and each term is an AND of
@@ -223,6 +227,15 @@ pub struct EventStreamHeadFilter {
     #[prost(string, optional, tag = "1")]
     pub stream_id: ::core::option::Option<::prost::alloc::string::String>,
 }
+/// Match transactions that wrote a Move package, publish or upgrade alike.
+///
+/// This is a value-less marker: there is nothing to specify, since the
+/// dimension records every package write chain-wide rather than keying on a
+/// particular package id. Its presence in a term matches any package-writing
+/// transaction.
+#[non_exhaustive]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct PackageWriteFilter {}
 /// Request message for LedgerService.ListCheckpoints.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]

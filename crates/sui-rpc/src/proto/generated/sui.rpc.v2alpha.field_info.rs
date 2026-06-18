@@ -167,6 +167,12 @@ pub(crate) mod _field_impls {
             number: 7i32,
             message_fields: Some(EventStreamHeadFilter::FIELDS),
         };
+        pub const PACKAGE_WRITE_FIELD: &'static MessageField = &MessageField {
+            name: "package_write",
+            json_name: "packageWrite",
+            number: 8i32,
+            message_fields: Some(PackageWriteFilter::FIELDS),
+        };
     }
     impl MessageFields for TransactionPredicate {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -177,6 +183,7 @@ pub(crate) mod _field_impls {
             Self::EMIT_MODULE_FIELD,
             Self::EVENT_TYPE_FIELD,
             Self::EVENT_STREAM_HEAD_FIELD,
+            Self::PACKAGE_WRITE_FIELD,
         ];
     }
     impl TransactionPredicate {
@@ -226,6 +233,10 @@ pub(crate) mod _field_impls {
         pub fn event_stream_head(mut self) -> EventStreamHeadFilterFieldPathBuilder {
             self.path.push(TransactionPredicate::EVENT_STREAM_HEAD_FIELD.name);
             EventStreamHeadFilterFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn package_write(mut self) -> PackageWriteFilterFieldPathBuilder {
+            self.path.push(TransactionPredicate::PACKAGE_WRITE_FIELD.name);
+            PackageWriteFilterFieldPathBuilder::new_with_base(self.path)
         }
     }
     impl EventFilter {
@@ -670,6 +681,31 @@ pub(crate) mod _field_impls {
         pub fn stream_id(mut self) -> String {
             self.path.push(EventStreamHeadFilter::STREAM_ID_FIELD.name);
             self.finish()
+        }
+    }
+    impl PackageWriteFilter {}
+    impl MessageFields for PackageWriteFilter {
+        const FIELDS: &'static [&'static MessageField] = &[];
+    }
+    impl PackageWriteFilter {
+        pub fn path_builder() -> PackageWriteFilterFieldPathBuilder {
+            PackageWriteFilterFieldPathBuilder::new()
+        }
+    }
+    pub struct PackageWriteFilterFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl PackageWriteFilterFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
         }
     }
     impl ListCheckpointsRequest {

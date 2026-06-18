@@ -61,6 +61,10 @@ message TransactionPredicate {
     // Match transactions that wrote to the specified authenticated event
     // stream head.
     EventStreamHeadFilter event_stream_head = 7;
+
+    // Match transactions that wrote a Move package — a first publish or an
+    // upgrade, of any package.
+    PackageWriteFilter package_write = 8;
   }
 }
 
@@ -170,3 +174,6 @@ message EventStreamHeadFilter {
   // The stream id address (hex-encoded).
   optional string stream_id = 1;
 }
+
+// Match transactions that wrote a Move package.
+message PackageWriteFilter {}

@@ -2532,6 +2532,16 @@ mod _accessor_impls {
             self
         }
     }
+    impl super::PackageWriteFilter {
+        pub const fn const_default() -> Self {
+            Self {}
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::PackageWriteFilter = super::PackageWriteFilter::const_default();
+            &DEFAULT
+        }
+    }
     impl super::QueryEnd {
         pub const fn const_default() -> Self {
             Self { reason: 0 }
@@ -3344,6 +3354,72 @@ mod _accessor_impls {
             field: T,
         ) -> Self {
             self.set_event_stream_head(field.into());
+            self
+        }
+        ///Returns the value of `package_write`, or the default value if `package_write` is unset.
+        pub fn package_write(&self) -> &super::PackageWriteFilter {
+            if let Some(super::transaction_predicate::Predicate::PackageWrite(field)) = &self
+                .predicate
+            {
+                field as _
+            } else {
+                super::PackageWriteFilter::default_instance() as _
+            }
+        }
+        ///If `package_write` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn package_write_opt(&self) -> Option<&super::PackageWriteFilter> {
+            if let Some(super::transaction_predicate::Predicate::PackageWrite(field)) = &self
+                .predicate
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///If `package_write` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn package_write_opt_mut(
+            &mut self,
+        ) -> Option<&mut super::PackageWriteFilter> {
+            if let Some(super::transaction_predicate::Predicate::PackageWrite(field)) = &mut self
+                .predicate
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///Returns a mutable reference to `package_write`.
+        ///If the field is unset, it is first initialized with the default value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn package_write_mut(&mut self) -> &mut super::PackageWriteFilter {
+            if self.package_write_opt_mut().is_none() {
+                self.predicate = Some(
+                    super::transaction_predicate::Predicate::PackageWrite(
+                        super::PackageWriteFilter::default(),
+                    ),
+                );
+            }
+            self.package_write_opt_mut().unwrap()
+        }
+        ///Sets `package_write` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn set_package_write<T: Into<super::PackageWriteFilter>>(
+            &mut self,
+            field: T,
+        ) {
+            self.predicate = Some(
+                super::transaction_predicate::Predicate::PackageWrite(
+                    field.into().into(),
+                ),
+            );
+        }
+        ///Sets `package_write` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn with_package_write<T: Into<super::PackageWriteFilter>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_package_write(field.into());
             self
         }
     }
