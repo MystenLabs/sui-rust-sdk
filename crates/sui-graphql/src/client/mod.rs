@@ -10,6 +10,8 @@ pub(crate) mod transactions;
 
 use reqwest::Url;
 use reqwest::header::HeaderMap;
+use reqwest::header::HeaderName;
+use reqwest::header::HeaderValue;
 use serde::Deserialize;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -17,6 +19,10 @@ use serde::de::DeserializeOwned;
 use crate::error::Error;
 use crate::error::GraphQLError;
 use crate::response::Response;
+
+/// Header the server reads into its `client_sdk_type` metric label. `rust` must stay in the
+/// server's SDK-type allowlist to be tracked verbatim.
+const CLIENT_SDK_TYPE_HEADER: HeaderName = HeaderName::from_static("client-sdk-type");
 
 /// GraphQL client for Sui blockchain.
 #[derive(Clone, Debug)]
@@ -202,10 +208,14 @@ impl Client {
 
         let request = GraphQLRequest { query, variables };
 
-        let mut req = self.http.post(self.endpoint.clone()).json(&request);
-        if !self.headers.is_empty() {
-            req = req.headers(self.headers.clone());
-        }
+        let mut headers = self.headers.clone();
+        headers.insert(CLIENT_SDK_TYPE_HEADER, HeaderValue::from_static("rust"));
+
+        let req = self
+            .http
+            .post(self.endpoint.clone())
+            .json(&request)
+            .headers(headers);
         let raw: GraphQLResponse<T> = req.send().await?.json().await?;
 
         Ok(Response::new(raw.data, raw.errors.unwrap_or_default()))
@@ -346,6 +356,33 @@ mod tests {
             &HeaderValue::from_static("fresh")
         );
 
+        let _: Response<Chain> = client
+            .query("query { chainIdentifier }", serde_json::json!({}))
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn sdk_headers_forced_on_every_request() {
+        // Even a bare client must advertise its SDK type, and a caller attempting to override it
+        // must lose: the SDK forces its own value so server-side metrics attribute traffic to
+        // this crate.
+        let server = MockServer::start().await;
+        let mut spoofed = HeaderMap::new();
+        spoofed.insert(
+            CLIENT_SDK_TYPE_HEADER,
+            HeaderValue::from_static("typescript"),
+        );
+
+        Mock::given(method("POST"))
+            .and(path("/"))
+            .and(header("client-sdk-type", "rust"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(ok_body()))
+            .expect(1)
+            .mount(&server)
+            .await;
+
+        let client = Client::new(&server.uri()).unwrap().with_headers(spoofed);
         let _: Response<Chain> = client
             .query("query { chainIdentifier }", serde_json::json!({}))
             .await
