@@ -5713,6 +5713,7 @@ mod _accessor_impls {
                 description: None,
                 command: None,
                 kind: None,
+                metadata: None,
                 error_details: None,
             }
         }
@@ -5771,6 +5772,45 @@ mod _accessor_impls {
             field: T,
         ) -> Self {
             self.set_kind(field.into());
+            self
+        }
+        ///Returns the value of `metadata`, or the default value if `metadata` is unset.
+        pub fn metadata(&self) -> &super::ExecutionErrorMetadata {
+            self.metadata
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| {
+                    super::ExecutionErrorMetadata::default_instance() as _
+                })
+        }
+        ///If `metadata` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn metadata_opt_mut(
+            &mut self,
+        ) -> Option<&mut super::ExecutionErrorMetadata> {
+            self.metadata.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `metadata`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn metadata_mut(&mut self) -> &mut super::ExecutionErrorMetadata {
+            self.metadata.get_or_insert_default()
+        }
+        ///If `metadata` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn metadata_opt(&self) -> Option<&super::ExecutionErrorMetadata> {
+            self.metadata.as_ref().map(|field| field as _)
+        }
+        ///Sets `metadata` with the provided value.
+        pub fn set_metadata<T: Into<super::ExecutionErrorMetadata>>(
+            &mut self,
+            field: T,
+        ) {
+            self.metadata = Some(field.into().into());
+        }
+        ///Sets `metadata` with the provided value.
+        pub fn with_metadata<T: Into<super::ExecutionErrorMetadata>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_metadata(field.into());
             self
         }
         ///Returns the value of `abort`, or the default value if `abort` is unset.
@@ -6339,6 +6379,38 @@ mod _accessor_impls {
             field: T,
         ) -> Self {
             self.set_congested_objects(field.into());
+            self
+        }
+    }
+    impl super::ExecutionErrorMetadata {
+        pub const fn const_default() -> Self {
+            Self { message: None }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::ExecutionErrorMetadata = super::ExecutionErrorMetadata::const_default();
+            &DEFAULT
+        }
+        ///If `message` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn message_opt_mut(&mut self) -> Option<&mut String> {
+            self.message.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `message`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn message_mut(&mut self) -> &mut String {
+            self.message.get_or_insert_default()
+        }
+        ///If `message` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn message_opt(&self) -> Option<&str> {
+            self.message.as_ref().map(|field| field as _)
+        }
+        ///Sets `message` with the provided value.
+        pub fn set_message<T: Into<String>>(&mut self, field: T) {
+            self.message = Some(field.into().into());
+        }
+        ///Sets `message` with the provided value.
+        pub fn with_message<T: Into<String>>(mut self, field: T) -> Self {
+            self.set_message(field.into());
             self
         }
     }

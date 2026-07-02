@@ -200,6 +200,16 @@ message ExecutionError {
     // Set of objects that were congested, leading to the transaction's cancellation.
     CongestedObjects congested_objects = 12;
   }
+
+  // Additional non-consensus metadata associated with this execution error.
+  //
+  // This metadata is produced by the executing node and is not part of the
+  // certified transaction effects.
+  optional ExecutionErrorMetadata metadata = 100;
+}
+
+message ExecutionErrorMetadata {
+  optional string message = 1;
 }
 
 message MoveAbort {

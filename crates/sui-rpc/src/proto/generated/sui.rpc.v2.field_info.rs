@@ -1858,6 +1858,12 @@ pub(crate) mod _field_impls {
             number: 12i32,
             message_fields: Some(CongestedObjects::FIELDS),
         };
+        pub const METADATA_FIELD: &'static MessageField = &MessageField {
+            name: "metadata",
+            json_name: "metadata",
+            number: 100i32,
+            message_fields: Some(ExecutionErrorMetadata::FIELDS),
+        };
     }
     impl MessageFields for ExecutionError {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -1873,6 +1879,7 @@ pub(crate) mod _field_impls {
             Self::OBJECT_ID_FIELD,
             Self::COIN_DENY_LIST_ERROR_FIELD,
             Self::CONGESTED_OBJECTS_FIELD,
+            Self::METADATA_FIELD,
         ];
     }
     impl ExecutionError {
@@ -1942,6 +1949,46 @@ pub(crate) mod _field_impls {
         pub fn congested_objects(mut self) -> CongestedObjectsFieldPathBuilder {
             self.path.push(ExecutionError::CONGESTED_OBJECTS_FIELD.name);
             CongestedObjectsFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn metadata(mut self) -> ExecutionErrorMetadataFieldPathBuilder {
+            self.path.push(ExecutionError::METADATA_FIELD.name);
+            ExecutionErrorMetadataFieldPathBuilder::new_with_base(self.path)
+        }
+    }
+    impl ExecutionErrorMetadata {
+        pub const MESSAGE_FIELD: &'static MessageField = &MessageField {
+            name: "message",
+            json_name: "message",
+            number: 1i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for ExecutionErrorMetadata {
+        const FIELDS: &'static [&'static MessageField] = &[Self::MESSAGE_FIELD];
+    }
+    impl ExecutionErrorMetadata {
+        pub fn path_builder() -> ExecutionErrorMetadataFieldPathBuilder {
+            ExecutionErrorMetadataFieldPathBuilder::new()
+        }
+    }
+    pub struct ExecutionErrorMetadataFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ExecutionErrorMetadataFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn message(mut self) -> String {
+            self.path.push(ExecutionErrorMetadata::MESSAGE_FIELD.name);
+            self.finish()
         }
     }
     impl MoveAbort {
