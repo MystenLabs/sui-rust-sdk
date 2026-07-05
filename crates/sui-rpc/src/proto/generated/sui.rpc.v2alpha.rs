@@ -1600,3 +1600,685 @@ impl QueryEndReason {
         }
     }
 }
+/// Request message for SubscriptionService.SubscribeCheckpoints.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SubscribeCheckpointsRequest {
+    /// Optional. Mask for specifying which parts of the Checkpoint should be
+    /// returned (e.g. summary, contents, signatures).
+    #[prost(message, optional, tag = "1")]
+    pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
+    /// Optional. DNF filter over indexed transaction dimensions. A checkpoint
+    /// matches if any transaction it contains satisfies the filter. If absent,
+    /// every checkpoint is streamed.
+    #[prost(message, optional, tag = "2")]
+    pub filter: ::core::option::Option<TransactionFilter>,
+}
+/// Response message for SubscriptionService.SubscribeCheckpoints.
+///
+/// Mirrors ListCheckpointsResponse, except there is no `end` frame: a
+/// subscription stream has no successful end.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SubscribeCheckpointsResponse {
+    #[prost(oneof = "subscribe_checkpoints_response::Response", tags = "1, 2")]
+    pub response: ::core::option::Option<subscribe_checkpoints_response::Response>,
+}
+/// Nested message and enum types in `SubscribeCheckpointsResponse`.
+pub mod subscribe_checkpoints_response {
+    #[non_exhaustive]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum Response {
+        /// One matching checkpoint.
+        #[prost(message, tag = "1")]
+        Item(super::CheckpointItem),
+        /// Standalone progress watermark emitted intermittently when the stream
+        /// advances without producing a matching item.
+        #[prost(message, tag = "2")]
+        Watermark(super::Watermark),
+    }
+}
+/// Request message for SubscriptionService.SubscribeTransactions.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SubscribeTransactionsRequest {
+    /// Optional. Mask for specifying which parts of the ExecutedTransaction
+    /// should be returned.
+    #[prost(message, optional, tag = "1")]
+    pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
+    /// Optional. DNF filter over indexed dimensions. If absent, every
+    /// transaction is streamed.
+    #[prost(message, optional, tag = "2")]
+    pub filter: ::core::option::Option<TransactionFilter>,
+}
+/// Response message for SubscriptionService.SubscribeTransactions.
+///
+/// Mirrors ListTransactionsResponse, except there is no `end` frame: a
+/// subscription stream has no successful end.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SubscribeTransactionsResponse {
+    #[prost(oneof = "subscribe_transactions_response::Response", tags = "1, 2")]
+    pub response: ::core::option::Option<subscribe_transactions_response::Response>,
+}
+/// Nested message and enum types in `SubscribeTransactionsResponse`.
+pub mod subscribe_transactions_response {
+    #[non_exhaustive]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum Response {
+        /// One matching transaction.
+        #[prost(message, tag = "1")]
+        Item(super::TransactionItem),
+        /// Standalone progress watermark emitted intermittently when the stream
+        /// advances without producing a matching item.
+        #[prost(message, tag = "2")]
+        Watermark(super::Watermark),
+    }
+}
+/// Request message for SubscriptionService.SubscribeEvents.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SubscribeEventsRequest {
+    /// Optional. Mask for specifying which parts of the Event should be
+    /// returned.
+    #[prost(message, optional, tag = "1")]
+    pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
+    /// Optional. DNF filter over indexed dimensions. If absent, every event is
+    /// streamed.
+    #[prost(message, optional, tag = "2")]
+    pub filter: ::core::option::Option<EventFilter>,
+}
+/// Response message for SubscriptionService.SubscribeEvents.
+///
+/// Mirrors ListEventsResponse, except there is no `end` frame: a subscription
+/// stream has no successful end.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SubscribeEventsResponse {
+    #[prost(oneof = "subscribe_events_response::Response", tags = "1, 2")]
+    pub response: ::core::option::Option<subscribe_events_response::Response>,
+}
+/// Nested message and enum types in `SubscribeEventsResponse`.
+pub mod subscribe_events_response {
+    #[non_exhaustive]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum Response {
+        /// One matching event.
+        #[prost(message, tag = "1")]
+        Item(super::EventItem),
+        /// Standalone progress watermark emitted intermittently when the stream
+        /// advances without producing a matching item.
+        #[prost(message, tag = "2")]
+        Watermark(super::Watermark),
+    }
+}
+/// Generated client implementations.
+pub mod subscription_service_client {
+    #![allow(
+        unused_variables,
+        dead_code,
+        missing_docs,
+        clippy::wildcard_imports,
+        clippy::let_unit_value,
+    )]
+    use tonic::codegen::*;
+    use tonic::codegen::http::Uri;
+    /// SubscriptionService provides filtered, real-time streams of checkpoints,
+    /// transactions, and events.
+    ///
+    /// Each Subscribe API pairs with the LedgerService List API of the same name:
+    /// requests take the same filter message, and responses carry the same item
+    /// and Watermark types, with identical cursor semantics.
+    ///
+    /// Subscriptions do not support resumption. A new subscription always begins
+    /// at the current tip of the chain as seen by the server (the latest executed
+    /// checkpoint). To recover data missed between subscriptions, replay the gap
+    /// with the paired List API: pass the last received `Watermark.cursor` as
+    /// `options.after` on the List request.
+    ///
+    /// A subscription behaves like an unbounded ascending scan: watermarks advance
+    /// the inclusive `checkpoint` boundary as checkpoints are fully covered. A
+    /// watermark is carried on every emitted item, and standalone `Watermark` frames
+    /// are additionally sent intermittently when the stream advances without
+    /// producing a matching item, so subscribers with sparse filters always know
+    /// their resume point.
+    ///
+    /// Subscription streams have no successful end: they run until cancelled by
+    /// the client or terminated by the server with a gRPC status.
+    #[derive(Debug, Clone)]
+    pub struct SubscriptionServiceClient<T> {
+        inner: tonic::client::Grpc<T>,
+    }
+    impl SubscriptionServiceClient<tonic::transport::Channel> {
+        /// Attempt to create a new client by connecting to a given endpoint.
+        pub async fn connect<D>(dst: D) -> Result<Self, tonic::transport::Error>
+        where
+            D: TryInto<tonic::transport::Endpoint>,
+            D::Error: Into<StdError>,
+        {
+            let conn = tonic::transport::Endpoint::new(dst)?.connect().await?;
+            Ok(Self::new(conn))
+        }
+    }
+    impl<T> SubscriptionServiceClient<T>
+    where
+        T: tonic::client::GrpcService<tonic::body::Body>,
+        T::Error: Into<StdError>,
+        T::ResponseBody: Body<Data = Bytes> + std::marker::Send + 'static,
+        <T::ResponseBody as Body>::Error: Into<StdError> + std::marker::Send,
+    {
+        pub fn new(inner: T) -> Self {
+            let inner = tonic::client::Grpc::new(inner);
+            Self { inner }
+        }
+        pub fn with_origin(inner: T, origin: Uri) -> Self {
+            let inner = tonic::client::Grpc::with_origin(inner, origin);
+            Self { inner }
+        }
+        pub fn with_interceptor<F>(
+            inner: T,
+            interceptor: F,
+        ) -> SubscriptionServiceClient<InterceptedService<T, F>>
+        where
+            F: tonic::service::Interceptor,
+            T::ResponseBody: Default,
+            T: tonic::codegen::Service<
+                http::Request<tonic::body::Body>,
+                Response = http::Response<
+                    <T as tonic::client::GrpcService<tonic::body::Body>>::ResponseBody,
+                >,
+            >,
+            <T as tonic::codegen::Service<
+                http::Request<tonic::body::Body>,
+            >>::Error: Into<StdError> + std::marker::Send + std::marker::Sync,
+        {
+            SubscriptionServiceClient::new(InterceptedService::new(inner, interceptor))
+        }
+        /// Compress requests with the given encoding.
+        ///
+        /// This requires the server to support it otherwise it might respond with an
+        /// error.
+        #[must_use]
+        pub fn send_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.inner = self.inner.send_compressed(encoding);
+            self
+        }
+        /// Enable decompressing responses.
+        #[must_use]
+        pub fn accept_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.inner = self.inner.accept_compressed(encoding);
+            self
+        }
+        /// Limits the maximum size of a decoded message.
+        ///
+        /// Default: `4MB`
+        #[must_use]
+        pub fn max_decoding_message_size(mut self, limit: usize) -> Self {
+            self.inner = self.inner.max_decoding_message_size(limit);
+            self
+        }
+        /// Limits the maximum size of an encoded message.
+        ///
+        /// Default: `usize::MAX`
+        #[must_use]
+        pub fn max_encoding_message_size(mut self, limit: usize) -> Self {
+            self.inner = self.inner.max_encoding_message_size(limit);
+            self
+        }
+        /// Subscribe to the stream of checkpoints.
+        ///
+        /// The stream begins at the latest executed checkpoint as seen by the
+        /// server and yields checkpoints matching the filter as they are executed.
+        /// A checkpoint matches if any transaction it contains satisfies the
+        /// filter.
+        pub async fn subscribe_checkpoints(
+            &mut self,
+            request: impl tonic::IntoRequest<super::SubscribeCheckpointsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<
+                tonic::codec::Streaming<super::SubscribeCheckpointsResponse>,
+            >,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/sui.rpc.v2alpha.SubscriptionService/SubscribeCheckpoints",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "sui.rpc.v2alpha.SubscriptionService",
+                        "SubscribeCheckpoints",
+                    ),
+                );
+            self.inner.server_streaming(req, path, codec).await
+        }
+        /// Subscribe to the stream of transactions.
+        ///
+        /// The stream begins at the latest executed checkpoint as seen by the
+        /// server and yields transactions matching the filter as they are executed.
+        pub async fn subscribe_transactions(
+            &mut self,
+            request: impl tonic::IntoRequest<super::SubscribeTransactionsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<
+                tonic::codec::Streaming<super::SubscribeTransactionsResponse>,
+            >,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/sui.rpc.v2alpha.SubscriptionService/SubscribeTransactions",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "sui.rpc.v2alpha.SubscriptionService",
+                        "SubscribeTransactions",
+                    ),
+                );
+            self.inner.server_streaming(req, path, codec).await
+        }
+        /// Subscribe to the stream of events.
+        ///
+        /// The stream begins at the latest executed checkpoint as seen by the
+        /// server and yields events matching the filter as they are emitted.
+        pub async fn subscribe_events(
+            &mut self,
+            request: impl tonic::IntoRequest<super::SubscribeEventsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<tonic::codec::Streaming<super::SubscribeEventsResponse>>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/sui.rpc.v2alpha.SubscriptionService/SubscribeEvents",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "sui.rpc.v2alpha.SubscriptionService",
+                        "SubscribeEvents",
+                    ),
+                );
+            self.inner.server_streaming(req, path, codec).await
+        }
+    }
+}
+/// Generated server implementations.
+pub mod subscription_service_server {
+    #![allow(
+        unused_variables,
+        dead_code,
+        missing_docs,
+        clippy::wildcard_imports,
+        clippy::let_unit_value,
+    )]
+    use tonic::codegen::*;
+    /// Generated trait containing gRPC methods that should be implemented for use with SubscriptionServiceServer.
+    #[async_trait]
+    pub trait SubscriptionService: std::marker::Send + std::marker::Sync + 'static {
+        /// Subscribe to the stream of checkpoints.
+        ///
+        /// The stream begins at the latest executed checkpoint as seen by the
+        /// server and yields checkpoints matching the filter as they are executed.
+        /// A checkpoint matches if any transaction it contains satisfies the
+        /// filter.
+        async fn subscribe_checkpoints(
+            &self,
+            request: tonic::Request<super::SubscribeCheckpointsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<BoxStream<super::SubscribeCheckpointsResponse>>,
+            tonic::Status,
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
+        /// Subscribe to the stream of transactions.
+        ///
+        /// The stream begins at the latest executed checkpoint as seen by the
+        /// server and yields transactions matching the filter as they are executed.
+        async fn subscribe_transactions(
+            &self,
+            request: tonic::Request<super::SubscribeTransactionsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<BoxStream<super::SubscribeTransactionsResponse>>,
+            tonic::Status,
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
+        /// Subscribe to the stream of events.
+        ///
+        /// The stream begins at the latest executed checkpoint as seen by the
+        /// server and yields events matching the filter as they are emitted.
+        async fn subscribe_events(
+            &self,
+            request: tonic::Request<super::SubscribeEventsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<BoxStream<super::SubscribeEventsResponse>>,
+            tonic::Status,
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
+    }
+    /// SubscriptionService provides filtered, real-time streams of checkpoints,
+    /// transactions, and events.
+    ///
+    /// Each Subscribe API pairs with the LedgerService List API of the same name:
+    /// requests take the same filter message, and responses carry the same item
+    /// and Watermark types, with identical cursor semantics.
+    ///
+    /// Subscriptions do not support resumption. A new subscription always begins
+    /// at the current tip of the chain as seen by the server (the latest executed
+    /// checkpoint). To recover data missed between subscriptions, replay the gap
+    /// with the paired List API: pass the last received `Watermark.cursor` as
+    /// `options.after` on the List request.
+    ///
+    /// A subscription behaves like an unbounded ascending scan: watermarks advance
+    /// the inclusive `checkpoint` boundary as checkpoints are fully covered. A
+    /// watermark is carried on every emitted item, and standalone `Watermark` frames
+    /// are additionally sent intermittently when the stream advances without
+    /// producing a matching item, so subscribers with sparse filters always know
+    /// their resume point.
+    ///
+    /// Subscription streams have no successful end: they run until cancelled by
+    /// the client or terminated by the server with a gRPC status.
+    #[derive(Debug)]
+    pub struct SubscriptionServiceServer<T> {
+        inner: Arc<T>,
+        accept_compression_encodings: EnabledCompressionEncodings,
+        send_compression_encodings: EnabledCompressionEncodings,
+        max_decoding_message_size: Option<usize>,
+        max_encoding_message_size: Option<usize>,
+    }
+    impl<T> SubscriptionServiceServer<T> {
+        pub fn new(inner: T) -> Self {
+            Self::from_arc(Arc::new(inner))
+        }
+        pub fn from_arc(inner: Arc<T>) -> Self {
+            Self {
+                inner,
+                accept_compression_encodings: Default::default(),
+                send_compression_encodings: Default::default(),
+                max_decoding_message_size: None,
+                max_encoding_message_size: None,
+            }
+        }
+        pub fn with_interceptor<F>(
+            inner: T,
+            interceptor: F,
+        ) -> InterceptedService<Self, F>
+        where
+            F: tonic::service::Interceptor,
+        {
+            InterceptedService::new(Self::new(inner), interceptor)
+        }
+        /// Enable decompressing requests with the given encoding.
+        #[must_use]
+        pub fn accept_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.accept_compression_encodings.enable(encoding);
+            self
+        }
+        /// Compress responses with the given encoding, if the client supports it.
+        #[must_use]
+        pub fn send_compressed(mut self, encoding: CompressionEncoding) -> Self {
+            self.send_compression_encodings.enable(encoding);
+            self
+        }
+        /// Limits the maximum size of a decoded message.
+        ///
+        /// Default: `4MB`
+        #[must_use]
+        pub fn max_decoding_message_size(mut self, limit: usize) -> Self {
+            self.max_decoding_message_size = Some(limit);
+            self
+        }
+        /// Limits the maximum size of an encoded message.
+        ///
+        /// Default: `usize::MAX`
+        #[must_use]
+        pub fn max_encoding_message_size(mut self, limit: usize) -> Self {
+            self.max_encoding_message_size = Some(limit);
+            self
+        }
+    }
+    impl<T, B> tonic::codegen::Service<http::Request<B>> for SubscriptionServiceServer<T>
+    where
+        T: SubscriptionService,
+        B: Body + std::marker::Send + 'static,
+        B::Error: Into<StdError> + std::marker::Send + 'static,
+    {
+        type Response = http::Response<tonic::body::Body>;
+        type Error = std::convert::Infallible;
+        type Future = BoxFuture<Self::Response, Self::Error>;
+        fn poll_ready(
+            &mut self,
+            _cx: &mut Context<'_>,
+        ) -> Poll<std::result::Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
+        }
+        fn call(&mut self, req: http::Request<B>) -> Self::Future {
+            match req.uri().path() {
+                "/sui.rpc.v2alpha.SubscriptionService/SubscribeCheckpoints" => {
+                    #[allow(non_camel_case_types)]
+                    struct SubscribeCheckpointsSvc<T: SubscriptionService>(pub Arc<T>);
+                    impl<
+                        T: SubscriptionService,
+                    > tonic::server::ServerStreamingService<
+                        super::SubscribeCheckpointsRequest,
+                    > for SubscribeCheckpointsSvc<T> {
+                        type Response = super::SubscribeCheckpointsResponse;
+                        type ResponseStream = BoxStream<
+                            super::SubscribeCheckpointsResponse,
+                        >;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::ResponseStream>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::SubscribeCheckpointsRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as SubscriptionService>::subscribe_checkpoints(
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = SubscribeCheckpointsSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.server_streaming(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/sui.rpc.v2alpha.SubscriptionService/SubscribeTransactions" => {
+                    #[allow(non_camel_case_types)]
+                    struct SubscribeTransactionsSvc<T: SubscriptionService>(pub Arc<T>);
+                    impl<
+                        T: SubscriptionService,
+                    > tonic::server::ServerStreamingService<
+                        super::SubscribeTransactionsRequest,
+                    > for SubscribeTransactionsSvc<T> {
+                        type Response = super::SubscribeTransactionsResponse;
+                        type ResponseStream = BoxStream<
+                            super::SubscribeTransactionsResponse,
+                        >;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::ResponseStream>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::SubscribeTransactionsRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as SubscriptionService>::subscribe_transactions(
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = SubscribeTransactionsSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.server_streaming(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/sui.rpc.v2alpha.SubscriptionService/SubscribeEvents" => {
+                    #[allow(non_camel_case_types)]
+                    struct SubscribeEventsSvc<T: SubscriptionService>(pub Arc<T>);
+                    impl<
+                        T: SubscriptionService,
+                    > tonic::server::ServerStreamingService<
+                        super::SubscribeEventsRequest,
+                    > for SubscribeEventsSvc<T> {
+                        type Response = super::SubscribeEventsResponse;
+                        type ResponseStream = BoxStream<super::SubscribeEventsResponse>;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::ResponseStream>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::SubscribeEventsRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as SubscriptionService>::subscribe_events(
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = SubscribeEventsSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.server_streaming(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                _ => {
+                    Box::pin(async move {
+                        let mut response = http::Response::new(
+                            tonic::body::Body::default(),
+                        );
+                        let headers = response.headers_mut();
+                        headers
+                            .insert(
+                                tonic::Status::GRPC_STATUS,
+                                (tonic::Code::Unimplemented as i32).into(),
+                            );
+                        headers
+                            .insert(
+                                http::header::CONTENT_TYPE,
+                                tonic::metadata::GRPC_CONTENT_TYPE,
+                            );
+                        Ok(response)
+                    })
+                }
+            }
+        }
+    }
+    impl<T> Clone for SubscriptionServiceServer<T> {
+        fn clone(&self) -> Self {
+            let inner = self.inner.clone();
+            Self {
+                inner,
+                accept_compression_encodings: self.accept_compression_encodings,
+                send_compression_encodings: self.send_compression_encodings,
+                max_decoding_message_size: self.max_decoding_message_size,
+                max_encoding_message_size: self.max_encoding_message_size,
+            }
+        }
+    }
+    /// Generated gRPC service name
+    pub const SERVICE_NAME: &str = "sui.rpc.v2alpha.SubscriptionService";
+    impl<T> tonic::server::NamedService for SubscriptionServiceServer<T> {
+        const NAME: &'static str = SERVICE_NAME;
+    }
+}

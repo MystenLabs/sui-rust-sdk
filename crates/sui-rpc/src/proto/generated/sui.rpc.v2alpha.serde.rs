@@ -4155,6 +4155,783 @@ impl<'de> serde::Deserialize<'de> for SenderFilter {
             .deserialize_struct("sui.rpc.v2alpha.SenderFilter", FIELDS, GeneratedVisitor)
     }
 }
+impl serde::Serialize for SubscribeCheckpointsRequest {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0usize;
+        if self.read_mask.is_some() {
+            len += 1;
+        }
+        if self.filter.is_some() {
+            len += 1;
+        }
+        let mut struct_ser = serializer
+            .serialize_struct("sui.rpc.v2alpha.SubscribeCheckpointsRequest", len)?;
+        if let Some(v) = self.read_mask.as_ref() {
+            struct_ser
+                .serialize_field("readMask", &crate::_serde::FieldMaskSerializer(v))?;
+        }
+        if let Some(v) = self.filter.as_ref() {
+            struct_ser.serialize_field("filter", v)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for SubscribeCheckpointsRequest {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &["read_mask", "readMask", "filter"];
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            ReadMask,
+            Filter,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(
+                deserializer: D,
+            ) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+                    fn expecting(
+                        &self,
+                        formatter: &mut std::fmt::Formatter<'_>,
+                    ) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", & FIELDS)
+                    }
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(
+                        self,
+                        value: &str,
+                    ) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "readMask" | "read_mask" => Ok(GeneratedField::ReadMask),
+                            "filter" => Ok(GeneratedField::Filter),
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = SubscribeCheckpointsRequest;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2alpha.SubscribeCheckpointsRequest")
+            }
+            fn visit_map<V>(
+                self,
+                mut map_: V,
+            ) -> std::result::Result<SubscribeCheckpointsRequest, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                let mut read_mask__ = None;
+                let mut filter__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::ReadMask => {
+                            if read_mask__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("readMask"));
+                            }
+                            read_mask__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::FieldMaskDeserializer>,
+                                >()?
+                                .map(|x| x.0.into());
+                        }
+                        GeneratedField::Filter => {
+                            if filter__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("filter"));
+                            }
+                            filter__ = map_.next_value()?;
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(SubscribeCheckpointsRequest {
+                    read_mask: read_mask__,
+                    filter: filter__,
+                })
+            }
+        }
+        deserializer
+            .deserialize_struct(
+                "sui.rpc.v2alpha.SubscribeCheckpointsRequest",
+                FIELDS,
+                GeneratedVisitor,
+            )
+    }
+}
+impl serde::Serialize for SubscribeCheckpointsResponse {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0usize;
+        if self.response.is_some() {
+            len += 1;
+        }
+        let mut struct_ser = serializer
+            .serialize_struct("sui.rpc.v2alpha.SubscribeCheckpointsResponse", len)?;
+        if let Some(v) = self.response.as_ref() {
+            match v {
+                subscribe_checkpoints_response::Response::Item(v) => {
+                    struct_ser.serialize_field("item", v)?;
+                }
+                subscribe_checkpoints_response::Response::Watermark(v) => {
+                    struct_ser.serialize_field("watermark", v)?;
+                }
+            }
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for SubscribeCheckpointsResponse {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &["item", "watermark"];
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Item,
+            Watermark,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(
+                deserializer: D,
+            ) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+                    fn expecting(
+                        &self,
+                        formatter: &mut std::fmt::Formatter<'_>,
+                    ) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", & FIELDS)
+                    }
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(
+                        self,
+                        value: &str,
+                    ) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "item" => Ok(GeneratedField::Item),
+                            "watermark" => Ok(GeneratedField::Watermark),
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = SubscribeCheckpointsResponse;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                formatter
+                    .write_str("struct sui.rpc.v2alpha.SubscribeCheckpointsResponse")
+            }
+            fn visit_map<V>(
+                self,
+                mut map_: V,
+            ) -> std::result::Result<SubscribeCheckpointsResponse, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                let mut response__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Item => {
+                            if response__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("item"));
+                            }
+                            response__ = map_
+                                .next_value::<::std::option::Option<_>>()?
+                                .map(subscribe_checkpoints_response::Response::Item);
+                        }
+                        GeneratedField::Watermark => {
+                            if response__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("watermark"));
+                            }
+                            response__ = map_
+                                .next_value::<::std::option::Option<_>>()?
+                                .map(subscribe_checkpoints_response::Response::Watermark);
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(SubscribeCheckpointsResponse {
+                    response: response__,
+                })
+            }
+        }
+        deserializer
+            .deserialize_struct(
+                "sui.rpc.v2alpha.SubscribeCheckpointsResponse",
+                FIELDS,
+                GeneratedVisitor,
+            )
+    }
+}
+impl serde::Serialize for SubscribeEventsRequest {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0usize;
+        if self.read_mask.is_some() {
+            len += 1;
+        }
+        if self.filter.is_some() {
+            len += 1;
+        }
+        let mut struct_ser = serializer
+            .serialize_struct("sui.rpc.v2alpha.SubscribeEventsRequest", len)?;
+        if let Some(v) = self.read_mask.as_ref() {
+            struct_ser
+                .serialize_field("readMask", &crate::_serde::FieldMaskSerializer(v))?;
+        }
+        if let Some(v) = self.filter.as_ref() {
+            struct_ser.serialize_field("filter", v)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for SubscribeEventsRequest {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &["read_mask", "readMask", "filter"];
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            ReadMask,
+            Filter,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(
+                deserializer: D,
+            ) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+                    fn expecting(
+                        &self,
+                        formatter: &mut std::fmt::Formatter<'_>,
+                    ) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", & FIELDS)
+                    }
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(
+                        self,
+                        value: &str,
+                    ) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "readMask" | "read_mask" => Ok(GeneratedField::ReadMask),
+                            "filter" => Ok(GeneratedField::Filter),
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = SubscribeEventsRequest;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2alpha.SubscribeEventsRequest")
+            }
+            fn visit_map<V>(
+                self,
+                mut map_: V,
+            ) -> std::result::Result<SubscribeEventsRequest, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                let mut read_mask__ = None;
+                let mut filter__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::ReadMask => {
+                            if read_mask__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("readMask"));
+                            }
+                            read_mask__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::FieldMaskDeserializer>,
+                                >()?
+                                .map(|x| x.0.into());
+                        }
+                        GeneratedField::Filter => {
+                            if filter__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("filter"));
+                            }
+                            filter__ = map_.next_value()?;
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(SubscribeEventsRequest {
+                    read_mask: read_mask__,
+                    filter: filter__,
+                })
+            }
+        }
+        deserializer
+            .deserialize_struct(
+                "sui.rpc.v2alpha.SubscribeEventsRequest",
+                FIELDS,
+                GeneratedVisitor,
+            )
+    }
+}
+impl serde::Serialize for SubscribeEventsResponse {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0usize;
+        if self.response.is_some() {
+            len += 1;
+        }
+        let mut struct_ser = serializer
+            .serialize_struct("sui.rpc.v2alpha.SubscribeEventsResponse", len)?;
+        if let Some(v) = self.response.as_ref() {
+            match v {
+                subscribe_events_response::Response::Item(v) => {
+                    struct_ser.serialize_field("item", v)?;
+                }
+                subscribe_events_response::Response::Watermark(v) => {
+                    struct_ser.serialize_field("watermark", v)?;
+                }
+            }
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for SubscribeEventsResponse {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &["item", "watermark"];
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Item,
+            Watermark,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(
+                deserializer: D,
+            ) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+                    fn expecting(
+                        &self,
+                        formatter: &mut std::fmt::Formatter<'_>,
+                    ) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", & FIELDS)
+                    }
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(
+                        self,
+                        value: &str,
+                    ) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "item" => Ok(GeneratedField::Item),
+                            "watermark" => Ok(GeneratedField::Watermark),
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = SubscribeEventsResponse;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2alpha.SubscribeEventsResponse")
+            }
+            fn visit_map<V>(
+                self,
+                mut map_: V,
+            ) -> std::result::Result<SubscribeEventsResponse, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                let mut response__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Item => {
+                            if response__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("item"));
+                            }
+                            response__ = map_
+                                .next_value::<::std::option::Option<_>>()?
+                                .map(subscribe_events_response::Response::Item);
+                        }
+                        GeneratedField::Watermark => {
+                            if response__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("watermark"));
+                            }
+                            response__ = map_
+                                .next_value::<::std::option::Option<_>>()?
+                                .map(subscribe_events_response::Response::Watermark);
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(SubscribeEventsResponse {
+                    response: response__,
+                })
+            }
+        }
+        deserializer
+            .deserialize_struct(
+                "sui.rpc.v2alpha.SubscribeEventsResponse",
+                FIELDS,
+                GeneratedVisitor,
+            )
+    }
+}
+impl serde::Serialize for SubscribeTransactionsRequest {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0usize;
+        if self.read_mask.is_some() {
+            len += 1;
+        }
+        if self.filter.is_some() {
+            len += 1;
+        }
+        let mut struct_ser = serializer
+            .serialize_struct("sui.rpc.v2alpha.SubscribeTransactionsRequest", len)?;
+        if let Some(v) = self.read_mask.as_ref() {
+            struct_ser
+                .serialize_field("readMask", &crate::_serde::FieldMaskSerializer(v))?;
+        }
+        if let Some(v) = self.filter.as_ref() {
+            struct_ser.serialize_field("filter", v)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for SubscribeTransactionsRequest {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &["read_mask", "readMask", "filter"];
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            ReadMask,
+            Filter,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(
+                deserializer: D,
+            ) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+                    fn expecting(
+                        &self,
+                        formatter: &mut std::fmt::Formatter<'_>,
+                    ) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", & FIELDS)
+                    }
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(
+                        self,
+                        value: &str,
+                    ) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "readMask" | "read_mask" => Ok(GeneratedField::ReadMask),
+                            "filter" => Ok(GeneratedField::Filter),
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = SubscribeTransactionsRequest;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                formatter
+                    .write_str("struct sui.rpc.v2alpha.SubscribeTransactionsRequest")
+            }
+            fn visit_map<V>(
+                self,
+                mut map_: V,
+            ) -> std::result::Result<SubscribeTransactionsRequest, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                let mut read_mask__ = None;
+                let mut filter__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::ReadMask => {
+                            if read_mask__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("readMask"));
+                            }
+                            read_mask__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::FieldMaskDeserializer>,
+                                >()?
+                                .map(|x| x.0.into());
+                        }
+                        GeneratedField::Filter => {
+                            if filter__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("filter"));
+                            }
+                            filter__ = map_.next_value()?;
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(SubscribeTransactionsRequest {
+                    read_mask: read_mask__,
+                    filter: filter__,
+                })
+            }
+        }
+        deserializer
+            .deserialize_struct(
+                "sui.rpc.v2alpha.SubscribeTransactionsRequest",
+                FIELDS,
+                GeneratedVisitor,
+            )
+    }
+}
+impl serde::Serialize for SubscribeTransactionsResponse {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0usize;
+        if self.response.is_some() {
+            len += 1;
+        }
+        let mut struct_ser = serializer
+            .serialize_struct("sui.rpc.v2alpha.SubscribeTransactionsResponse", len)?;
+        if let Some(v) = self.response.as_ref() {
+            match v {
+                subscribe_transactions_response::Response::Item(v) => {
+                    struct_ser.serialize_field("item", v)?;
+                }
+                subscribe_transactions_response::Response::Watermark(v) => {
+                    struct_ser.serialize_field("watermark", v)?;
+                }
+            }
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for SubscribeTransactionsResponse {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &["item", "watermark"];
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Item,
+            Watermark,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(
+                deserializer: D,
+            ) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+                    fn expecting(
+                        &self,
+                        formatter: &mut std::fmt::Formatter<'_>,
+                    ) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", & FIELDS)
+                    }
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(
+                        self,
+                        value: &str,
+                    ) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "item" => Ok(GeneratedField::Item),
+                            "watermark" => Ok(GeneratedField::Watermark),
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = SubscribeTransactionsResponse;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                formatter
+                    .write_str("struct sui.rpc.v2alpha.SubscribeTransactionsResponse")
+            }
+            fn visit_map<V>(
+                self,
+                mut map_: V,
+            ) -> std::result::Result<SubscribeTransactionsResponse, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                let mut response__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Item => {
+                            if response__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("item"));
+                            }
+                            response__ = map_
+                                .next_value::<::std::option::Option<_>>()?
+                                .map(subscribe_transactions_response::Response::Item);
+                        }
+                        GeneratedField::Watermark => {
+                            if response__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("watermark"));
+                            }
+                            response__ = map_
+                                .next_value::<::std::option::Option<_>>()?
+                                .map(subscribe_transactions_response::Response::Watermark);
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(SubscribeTransactionsResponse {
+                    response: response__,
+                })
+            }
+        }
+        deserializer
+            .deserialize_struct(
+                "sui.rpc.v2alpha.SubscribeTransactionsResponse",
+                FIELDS,
+                GeneratedVisitor,
+            )
+    }
+}
 impl serde::Serialize for TransactionFilter {
     #[allow(deprecated)]
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>

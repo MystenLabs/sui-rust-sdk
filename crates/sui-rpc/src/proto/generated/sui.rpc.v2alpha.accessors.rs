@@ -2462,6 +2462,595 @@ mod _accessor_impls {
             self
         }
     }
+    impl super::SubscribeCheckpointsRequest {
+        pub const fn const_default() -> Self {
+            Self {
+                read_mask: None,
+                filter: None,
+            }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::SubscribeCheckpointsRequest = super::SubscribeCheckpointsRequest::const_default();
+            &DEFAULT
+        }
+        ///If `read_mask` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn read_mask_opt_mut(&mut self) -> Option<&mut ::prost_types::FieldMask> {
+            self.read_mask.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `read_mask`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn read_mask_mut(&mut self) -> &mut ::prost_types::FieldMask {
+            self.read_mask.get_or_insert_default()
+        }
+        ///If `read_mask` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn read_mask_opt(&self) -> Option<&::prost_types::FieldMask> {
+            self.read_mask.as_ref().map(|field| field as _)
+        }
+        ///Sets `read_mask` with the provided value.
+        pub fn set_read_mask<T: Into<::prost_types::FieldMask>>(&mut self, field: T) {
+            self.read_mask = Some(field.into().into());
+        }
+        ///Sets `read_mask` with the provided value.
+        pub fn with_read_mask<T: Into<::prost_types::FieldMask>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_read_mask(field.into());
+            self
+        }
+        ///Returns the value of `filter`, or the default value if `filter` is unset.
+        pub fn filter(&self) -> &super::TransactionFilter {
+            self.filter
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::TransactionFilter::default_instance() as _)
+        }
+        ///If `filter` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn filter_opt_mut(&mut self) -> Option<&mut super::TransactionFilter> {
+            self.filter.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `filter`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn filter_mut(&mut self) -> &mut super::TransactionFilter {
+            self.filter.get_or_insert_default()
+        }
+        ///If `filter` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn filter_opt(&self) -> Option<&super::TransactionFilter> {
+            self.filter.as_ref().map(|field| field as _)
+        }
+        ///Sets `filter` with the provided value.
+        pub fn set_filter<T: Into<super::TransactionFilter>>(&mut self, field: T) {
+            self.filter = Some(field.into().into());
+        }
+        ///Sets `filter` with the provided value.
+        pub fn with_filter<T: Into<super::TransactionFilter>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_filter(field.into());
+            self
+        }
+    }
+    impl super::SubscribeCheckpointsResponse {
+        pub const fn const_default() -> Self {
+            Self { response: None }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::SubscribeCheckpointsResponse = super::SubscribeCheckpointsResponse::const_default();
+            &DEFAULT
+        }
+        ///Returns the value of `item`, or the default value if `item` is unset.
+        pub fn item(&self) -> &super::CheckpointItem {
+            if let Some(super::subscribe_checkpoints_response::Response::Item(field)) = &self
+                .response
+            {
+                field as _
+            } else {
+                super::CheckpointItem::default_instance() as _
+            }
+        }
+        ///If `item` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn item_opt(&self) -> Option<&super::CheckpointItem> {
+            if let Some(super::subscribe_checkpoints_response::Response::Item(field)) = &self
+                .response
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///If `item` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn item_opt_mut(&mut self) -> Option<&mut super::CheckpointItem> {
+            if let Some(super::subscribe_checkpoints_response::Response::Item(field)) = &mut self
+                .response
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///Returns a mutable reference to `item`.
+        ///If the field is unset, it is first initialized with the default value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn item_mut(&mut self) -> &mut super::CheckpointItem {
+            if self.item_opt_mut().is_none() {
+                self.response = Some(
+                    super::subscribe_checkpoints_response::Response::Item(
+                        super::CheckpointItem::default(),
+                    ),
+                );
+            }
+            self.item_opt_mut().unwrap()
+        }
+        ///Sets `item` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn set_item<T: Into<super::CheckpointItem>>(&mut self, field: T) {
+            self.response = Some(
+                super::subscribe_checkpoints_response::Response::Item(
+                    field.into().into(),
+                ),
+            );
+        }
+        ///Sets `item` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn with_item<T: Into<super::CheckpointItem>>(mut self, field: T) -> Self {
+            self.set_item(field.into());
+            self
+        }
+        ///Returns the value of `watermark`, or the default value if `watermark` is unset.
+        pub fn watermark(&self) -> &super::Watermark {
+            if let Some(
+                super::subscribe_checkpoints_response::Response::Watermark(field),
+            ) = &self.response
+            {
+                field as _
+            } else {
+                super::Watermark::default_instance() as _
+            }
+        }
+        ///If `watermark` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn watermark_opt(&self) -> Option<&super::Watermark> {
+            if let Some(
+                super::subscribe_checkpoints_response::Response::Watermark(field),
+            ) = &self.response
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///If `watermark` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn watermark_opt_mut(&mut self) -> Option<&mut super::Watermark> {
+            if let Some(
+                super::subscribe_checkpoints_response::Response::Watermark(field),
+            ) = &mut self.response
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///Returns a mutable reference to `watermark`.
+        ///If the field is unset, it is first initialized with the default value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn watermark_mut(&mut self) -> &mut super::Watermark {
+            if self.watermark_opt_mut().is_none() {
+                self.response = Some(
+                    super::subscribe_checkpoints_response::Response::Watermark(
+                        super::Watermark::default(),
+                    ),
+                );
+            }
+            self.watermark_opt_mut().unwrap()
+        }
+        ///Sets `watermark` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn set_watermark<T: Into<super::Watermark>>(&mut self, field: T) {
+            self.response = Some(
+                super::subscribe_checkpoints_response::Response::Watermark(
+                    field.into().into(),
+                ),
+            );
+        }
+        ///Sets `watermark` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn with_watermark<T: Into<super::Watermark>>(mut self, field: T) -> Self {
+            self.set_watermark(field.into());
+            self
+        }
+    }
+    impl super::SubscribeEventsRequest {
+        pub const fn const_default() -> Self {
+            Self {
+                read_mask: None,
+                filter: None,
+            }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::SubscribeEventsRequest = super::SubscribeEventsRequest::const_default();
+            &DEFAULT
+        }
+        ///If `read_mask` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn read_mask_opt_mut(&mut self) -> Option<&mut ::prost_types::FieldMask> {
+            self.read_mask.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `read_mask`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn read_mask_mut(&mut self) -> &mut ::prost_types::FieldMask {
+            self.read_mask.get_or_insert_default()
+        }
+        ///If `read_mask` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn read_mask_opt(&self) -> Option<&::prost_types::FieldMask> {
+            self.read_mask.as_ref().map(|field| field as _)
+        }
+        ///Sets `read_mask` with the provided value.
+        pub fn set_read_mask<T: Into<::prost_types::FieldMask>>(&mut self, field: T) {
+            self.read_mask = Some(field.into().into());
+        }
+        ///Sets `read_mask` with the provided value.
+        pub fn with_read_mask<T: Into<::prost_types::FieldMask>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_read_mask(field.into());
+            self
+        }
+        ///Returns the value of `filter`, or the default value if `filter` is unset.
+        pub fn filter(&self) -> &super::EventFilter {
+            self.filter
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::EventFilter::default_instance() as _)
+        }
+        ///If `filter` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn filter_opt_mut(&mut self) -> Option<&mut super::EventFilter> {
+            self.filter.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `filter`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn filter_mut(&mut self) -> &mut super::EventFilter {
+            self.filter.get_or_insert_default()
+        }
+        ///If `filter` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn filter_opt(&self) -> Option<&super::EventFilter> {
+            self.filter.as_ref().map(|field| field as _)
+        }
+        ///Sets `filter` with the provided value.
+        pub fn set_filter<T: Into<super::EventFilter>>(&mut self, field: T) {
+            self.filter = Some(field.into().into());
+        }
+        ///Sets `filter` with the provided value.
+        pub fn with_filter<T: Into<super::EventFilter>>(mut self, field: T) -> Self {
+            self.set_filter(field.into());
+            self
+        }
+    }
+    impl super::SubscribeEventsResponse {
+        pub const fn const_default() -> Self {
+            Self { response: None }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::SubscribeEventsResponse = super::SubscribeEventsResponse::const_default();
+            &DEFAULT
+        }
+        ///Returns the value of `item`, or the default value if `item` is unset.
+        pub fn item(&self) -> &super::EventItem {
+            if let Some(super::subscribe_events_response::Response::Item(field)) = &self
+                .response
+            {
+                field as _
+            } else {
+                super::EventItem::default_instance() as _
+            }
+        }
+        ///If `item` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn item_opt(&self) -> Option<&super::EventItem> {
+            if let Some(super::subscribe_events_response::Response::Item(field)) = &self
+                .response
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///If `item` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn item_opt_mut(&mut self) -> Option<&mut super::EventItem> {
+            if let Some(super::subscribe_events_response::Response::Item(field)) = &mut self
+                .response
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///Returns a mutable reference to `item`.
+        ///If the field is unset, it is first initialized with the default value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn item_mut(&mut self) -> &mut super::EventItem {
+            if self.item_opt_mut().is_none() {
+                self.response = Some(
+                    super::subscribe_events_response::Response::Item(
+                        super::EventItem::default(),
+                    ),
+                );
+            }
+            self.item_opt_mut().unwrap()
+        }
+        ///Sets `item` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn set_item<T: Into<super::EventItem>>(&mut self, field: T) {
+            self.response = Some(
+                super::subscribe_events_response::Response::Item(field.into().into()),
+            );
+        }
+        ///Sets `item` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn with_item<T: Into<super::EventItem>>(mut self, field: T) -> Self {
+            self.set_item(field.into());
+            self
+        }
+        ///Returns the value of `watermark`, or the default value if `watermark` is unset.
+        pub fn watermark(&self) -> &super::Watermark {
+            if let Some(super::subscribe_events_response::Response::Watermark(field)) = &self
+                .response
+            {
+                field as _
+            } else {
+                super::Watermark::default_instance() as _
+            }
+        }
+        ///If `watermark` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn watermark_opt(&self) -> Option<&super::Watermark> {
+            if let Some(super::subscribe_events_response::Response::Watermark(field)) = &self
+                .response
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///If `watermark` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn watermark_opt_mut(&mut self) -> Option<&mut super::Watermark> {
+            if let Some(super::subscribe_events_response::Response::Watermark(field)) = &mut self
+                .response
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///Returns a mutable reference to `watermark`.
+        ///If the field is unset, it is first initialized with the default value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn watermark_mut(&mut self) -> &mut super::Watermark {
+            if self.watermark_opt_mut().is_none() {
+                self.response = Some(
+                    super::subscribe_events_response::Response::Watermark(
+                        super::Watermark::default(),
+                    ),
+                );
+            }
+            self.watermark_opt_mut().unwrap()
+        }
+        ///Sets `watermark` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn set_watermark<T: Into<super::Watermark>>(&mut self, field: T) {
+            self.response = Some(
+                super::subscribe_events_response::Response::Watermark(
+                    field.into().into(),
+                ),
+            );
+        }
+        ///Sets `watermark` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn with_watermark<T: Into<super::Watermark>>(mut self, field: T) -> Self {
+            self.set_watermark(field.into());
+            self
+        }
+    }
+    impl super::SubscribeTransactionsRequest {
+        pub const fn const_default() -> Self {
+            Self {
+                read_mask: None,
+                filter: None,
+            }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::SubscribeTransactionsRequest = super::SubscribeTransactionsRequest::const_default();
+            &DEFAULT
+        }
+        ///If `read_mask` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn read_mask_opt_mut(&mut self) -> Option<&mut ::prost_types::FieldMask> {
+            self.read_mask.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `read_mask`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn read_mask_mut(&mut self) -> &mut ::prost_types::FieldMask {
+            self.read_mask.get_or_insert_default()
+        }
+        ///If `read_mask` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn read_mask_opt(&self) -> Option<&::prost_types::FieldMask> {
+            self.read_mask.as_ref().map(|field| field as _)
+        }
+        ///Sets `read_mask` with the provided value.
+        pub fn set_read_mask<T: Into<::prost_types::FieldMask>>(&mut self, field: T) {
+            self.read_mask = Some(field.into().into());
+        }
+        ///Sets `read_mask` with the provided value.
+        pub fn with_read_mask<T: Into<::prost_types::FieldMask>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_read_mask(field.into());
+            self
+        }
+        ///Returns the value of `filter`, or the default value if `filter` is unset.
+        pub fn filter(&self) -> &super::TransactionFilter {
+            self.filter
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::TransactionFilter::default_instance() as _)
+        }
+        ///If `filter` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn filter_opt_mut(&mut self) -> Option<&mut super::TransactionFilter> {
+            self.filter.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `filter`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn filter_mut(&mut self) -> &mut super::TransactionFilter {
+            self.filter.get_or_insert_default()
+        }
+        ///If `filter` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn filter_opt(&self) -> Option<&super::TransactionFilter> {
+            self.filter.as_ref().map(|field| field as _)
+        }
+        ///Sets `filter` with the provided value.
+        pub fn set_filter<T: Into<super::TransactionFilter>>(&mut self, field: T) {
+            self.filter = Some(field.into().into());
+        }
+        ///Sets `filter` with the provided value.
+        pub fn with_filter<T: Into<super::TransactionFilter>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_filter(field.into());
+            self
+        }
+    }
+    impl super::SubscribeTransactionsResponse {
+        pub const fn const_default() -> Self {
+            Self { response: None }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::SubscribeTransactionsResponse = super::SubscribeTransactionsResponse::const_default();
+            &DEFAULT
+        }
+        ///Returns the value of `item`, or the default value if `item` is unset.
+        pub fn item(&self) -> &super::TransactionItem {
+            if let Some(super::subscribe_transactions_response::Response::Item(field)) = &self
+                .response
+            {
+                field as _
+            } else {
+                super::TransactionItem::default_instance() as _
+            }
+        }
+        ///If `item` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn item_opt(&self) -> Option<&super::TransactionItem> {
+            if let Some(super::subscribe_transactions_response::Response::Item(field)) = &self
+                .response
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///If `item` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn item_opt_mut(&mut self) -> Option<&mut super::TransactionItem> {
+            if let Some(super::subscribe_transactions_response::Response::Item(field)) = &mut self
+                .response
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///Returns a mutable reference to `item`.
+        ///If the field is unset, it is first initialized with the default value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn item_mut(&mut self) -> &mut super::TransactionItem {
+            if self.item_opt_mut().is_none() {
+                self.response = Some(
+                    super::subscribe_transactions_response::Response::Item(
+                        super::TransactionItem::default(),
+                    ),
+                );
+            }
+            self.item_opt_mut().unwrap()
+        }
+        ///Sets `item` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn set_item<T: Into<super::TransactionItem>>(&mut self, field: T) {
+            self.response = Some(
+                super::subscribe_transactions_response::Response::Item(
+                    field.into().into(),
+                ),
+            );
+        }
+        ///Sets `item` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn with_item<T: Into<super::TransactionItem>>(mut self, field: T) -> Self {
+            self.set_item(field.into());
+            self
+        }
+        ///Returns the value of `watermark`, or the default value if `watermark` is unset.
+        pub fn watermark(&self) -> &super::Watermark {
+            if let Some(
+                super::subscribe_transactions_response::Response::Watermark(field),
+            ) = &self.response
+            {
+                field as _
+            } else {
+                super::Watermark::default_instance() as _
+            }
+        }
+        ///If `watermark` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn watermark_opt(&self) -> Option<&super::Watermark> {
+            if let Some(
+                super::subscribe_transactions_response::Response::Watermark(field),
+            ) = &self.response
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///If `watermark` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn watermark_opt_mut(&mut self) -> Option<&mut super::Watermark> {
+            if let Some(
+                super::subscribe_transactions_response::Response::Watermark(field),
+            ) = &mut self.response
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///Returns a mutable reference to `watermark`.
+        ///If the field is unset, it is first initialized with the default value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn watermark_mut(&mut self) -> &mut super::Watermark {
+            if self.watermark_opt_mut().is_none() {
+                self.response = Some(
+                    super::subscribe_transactions_response::Response::Watermark(
+                        super::Watermark::default(),
+                    ),
+                );
+            }
+            self.watermark_opt_mut().unwrap()
+        }
+        ///Sets `watermark` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn set_watermark<T: Into<super::Watermark>>(&mut self, field: T) {
+            self.response = Some(
+                super::subscribe_transactions_response::Response::Watermark(
+                    field.into().into(),
+                ),
+            );
+        }
+        ///Sets `watermark` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn with_watermark<T: Into<super::Watermark>>(mut self, field: T) -> Self {
+            self.set_watermark(field.into());
+            self
+        }
+    }
     impl super::TransactionFilter {
         pub const fn const_default() -> Self {
             Self { terms: Vec::new() }

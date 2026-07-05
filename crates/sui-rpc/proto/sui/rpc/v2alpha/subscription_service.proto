@@ -1,0 +1,134 @@
+// Copyright (c) Mysten Labs, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package sui.rpc.v2alpha;
+
+import "google/protobuf/field_mask.proto";
+import "sui/rpc/v2alpha/filter.proto";
+import "sui/rpc/v2alpha/ledger_service.proto";
+import "sui/rpc/v2alpha/query_options.proto";
+
+// SubscriptionService provides filtered, real-time streams of checkpoints,
+// transactions, and events.
+//
+// Each Subscribe API pairs with the LedgerService List API of the same name:
+// requests take the same filter message, and responses carry the same item
+// and Watermark types, with identical cursor semantics.
+//
+// Subscriptions do not support resumption. A new subscription always begins
+// at the current tip of the chain as seen by the server (the latest executed
+// checkpoint). To recover data missed between subscriptions, replay the gap
+// with the paired List API: pass the last received `Watermark.cursor` as
+// `options.after` on the List request.
+//
+// A subscription behaves like an unbounded ascending scan: watermarks advance
+// the inclusive `checkpoint` boundary as checkpoints are fully covered. A
+// watermark is carried on every emitted item, and standalone `Watermark` frames
+// are additionally sent intermittently when the stream advances without
+// producing a matching item, so subscribers with sparse filters always know
+// their resume point.
+//
+// Subscription streams have no successful end: they run until cancelled by
+// the client or terminated by the server with a gRPC status.
+service SubscriptionService {
+  // Subscribe to the stream of checkpoints.
+  //
+  // The stream begins at the latest executed checkpoint as seen by the
+  // server and yields checkpoints matching the filter as they are executed.
+  // A checkpoint matches if any transaction it contains satisfies the
+  // filter.
+  rpc SubscribeCheckpoints(SubscribeCheckpointsRequest) returns (stream SubscribeCheckpointsResponse);
+
+  // Subscribe to the stream of transactions.
+  //
+  // The stream begins at the latest executed checkpoint as seen by the
+  // server and yields transactions matching the filter as they are executed.
+  rpc SubscribeTransactions(SubscribeTransactionsRequest) returns (stream SubscribeTransactionsResponse);
+
+  // Subscribe to the stream of events.
+  //
+  // The stream begins at the latest executed checkpoint as seen by the
+  // server and yields events matching the filter as they are emitted.
+  rpc SubscribeEvents(SubscribeEventsRequest) returns (stream SubscribeEventsResponse);
+}
+
+// Request message for SubscriptionService.SubscribeCheckpoints.
+message SubscribeCheckpointsRequest {
+  // Optional. Mask for specifying which parts of the Checkpoint should be
+  // returned (e.g. summary, contents, signatures).
+  optional google.protobuf.FieldMask read_mask = 1;
+
+  // Optional. DNF filter over indexed transaction dimensions. A checkpoint
+  // matches if any transaction it contains satisfies the filter. If absent,
+  // every checkpoint is streamed.
+  optional TransactionFilter filter = 2;
+}
+
+// Response message for SubscriptionService.SubscribeCheckpoints.
+//
+// Mirrors ListCheckpointsResponse, except there is no `end` frame: a
+// subscription stream has no successful end.
+message SubscribeCheckpointsResponse {
+  oneof response {
+    // One matching checkpoint.
+    CheckpointItem item = 1;
+
+    // Standalone progress watermark emitted intermittently when the stream
+    // advances without producing a matching item.
+    Watermark watermark = 2;
+  }
+}
+
+// Request message for SubscriptionService.SubscribeTransactions.
+message SubscribeTransactionsRequest {
+  // Optional. Mask for specifying which parts of the ExecutedTransaction
+  // should be returned.
+  optional google.protobuf.FieldMask read_mask = 1;
+
+  // Optional. DNF filter over indexed dimensions. If absent, every
+  // transaction is streamed.
+  optional TransactionFilter filter = 2;
+}
+
+// Response message for SubscriptionService.SubscribeTransactions.
+//
+// Mirrors ListTransactionsResponse, except there is no `end` frame: a
+// subscription stream has no successful end.
+message SubscribeTransactionsResponse {
+  oneof response {
+    // One matching transaction.
+    TransactionItem item = 1;
+
+    // Standalone progress watermark emitted intermittently when the stream
+    // advances without producing a matching item.
+    Watermark watermark = 2;
+  }
+}
+
+// Request message for SubscriptionService.SubscribeEvents.
+message SubscribeEventsRequest {
+  // Optional. Mask for specifying which parts of the Event should be
+  // returned.
+  optional google.protobuf.FieldMask read_mask = 1;
+
+  // Optional. DNF filter over indexed dimensions. If absent, every event is
+  // streamed.
+  optional EventFilter filter = 2;
+}
+
+// Response message for SubscriptionService.SubscribeEvents.
+//
+// Mirrors ListEventsResponse, except there is no `end` frame: a subscription
+// stream has no successful end.
+message SubscribeEventsResponse {
+  oneof response {
+    // One matching event.
+    EventItem item = 1;
+
+    // Standalone progress watermark emitted intermittently when the stream
+    // advances without producing a matching item.
+    Watermark watermark = 2;
+  }
+}
