@@ -2,7 +2,7 @@
 /// DNF filter for transactions: any term may match, and each term is an AND
 /// of signed literals.
 /// An absent filter matches everything. A present filter must have at least one
-/// term, and every term must have at least one included literal.
+/// term.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct TransactionFilter {
@@ -88,8 +88,7 @@ pub mod transaction_predicate {
 /// signed literals. Sender predicates match all events from matching
 /// transactions; emit-module, event-type, and event-stream-head predicates match
 /// individual event-space dimensions. An absent filter matches everything. A
-/// present filter must have at least one term, and every term must have at least
-/// one included literal.
+/// present filter must have at least one term.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EventFilter {
