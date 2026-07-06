@@ -612,15 +612,15 @@ pub(crate) mod _field_impls {
         }
     }
     impl EventTypeFilter {
-        pub const TYPE_FIELD: &'static MessageField = &MessageField {
-            name: "type",
-            json_name: "type",
+        pub const EVENT_TYPE_FIELD: &'static MessageField = &MessageField {
+            name: "event_type",
+            json_name: "eventType",
             number: 1i32,
             message_fields: None,
         };
     }
     impl MessageFields for EventTypeFilter {
-        const FIELDS: &'static [&'static MessageField] = &[Self::TYPE_FIELD];
+        const FIELDS: &'static [&'static MessageField] = &[Self::EVENT_TYPE_FIELD];
     }
     impl EventTypeFilter {
         pub fn path_builder() -> EventTypeFilterFieldPathBuilder {
@@ -642,8 +642,8 @@ pub(crate) mod _field_impls {
         pub fn finish(self) -> String {
             self.path.join(".")
         }
-        pub fn r#type(mut self) -> String {
-            self.path.push(EventTypeFilter::TYPE_FIELD.name);
+        pub fn event_type(mut self) -> String {
+            self.path.push(EventTypeFilter::EVENT_TYPE_FIELD.name);
             self.finish()
         }
     }

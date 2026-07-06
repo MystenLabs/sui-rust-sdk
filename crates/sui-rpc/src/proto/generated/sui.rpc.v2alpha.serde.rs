@@ -1190,13 +1190,13 @@ impl serde::Serialize for EventTypeFilter {
     {
         use serde::ser::SerializeStruct;
         let mut len = 0usize;
-        if self.r#type.is_some() {
+        if self.event_type.is_some() {
             len += 1;
         }
         let mut struct_ser = serializer
             .serialize_struct("sui.rpc.v2alpha.EventTypeFilter", len)?;
-        if let Some(v) = self.r#type.as_ref() {
-            struct_ser.serialize_field("type", v)?;
+        if let Some(v) = self.event_type.as_ref() {
+            struct_ser.serialize_field("eventType", v)?;
         }
         struct_ser.end()
     }
@@ -1207,10 +1207,10 @@ impl<'de> serde::Deserialize<'de> for EventTypeFilter {
     where
         D: serde::Deserializer<'de>,
     {
-        const FIELDS: &[&str] = &["type"];
+        const FIELDS: &[&str] = &["event_type", "eventType"];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
-            Type,
+            EventType,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -1238,7 +1238,7 @@ impl<'de> serde::Deserialize<'de> for EventTypeFilter {
                         E: serde::de::Error,
                     {
                         match value {
-                            "type" => Ok(GeneratedField::Type),
+                            "eventType" | "event_type" => Ok(GeneratedField::EventType),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -1264,21 +1264,23 @@ impl<'de> serde::Deserialize<'de> for EventTypeFilter {
             where
                 V: serde::de::MapAccess<'de>,
             {
-                let mut type__ = None;
+                let mut event_type__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
-                        GeneratedField::Type => {
-                            if type__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("type"));
+                        GeneratedField::EventType => {
+                            if event_type__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("eventType"));
                             }
-                            type__ = map_.next_value()?;
+                            event_type__ = map_.next_value()?;
                         }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
                     }
                 }
-                Ok(EventTypeFilter { r#type: type__ })
+                Ok(EventTypeFilter {
+                    event_type: event_type__,
+                })
             }
         }
         deserializer
@@ -3798,15 +3800,15 @@ impl serde::Serialize for QueryEnd {
     {
         use serde::ser::SerializeStruct;
         let mut len = 0usize;
-        if self.reason != 0 {
+        if self.reason.is_some() {
             len += 1;
         }
         let mut struct_ser = serializer
             .serialize_struct("sui.rpc.v2alpha.QueryEnd", len)?;
-        if self.reason != 0 {
-            let v = QueryEndReason::try_from(self.reason)
+        if let Some(v) = self.reason.as_ref() {
+            let v = QueryEndReason::try_from(*v)
                 .map_err(|_| serde::ser::Error::custom(
-                    format!("Invalid variant {}", self.reason),
+                    format!("Invalid variant {}", * v),
                 ))?;
             struct_ser.serialize_field("reason", &v)?;
         }
@@ -3880,16 +3882,16 @@ impl<'de> serde::Deserialize<'de> for QueryEnd {
                             if reason__.is_some() {
                                 return Err(serde::de::Error::duplicate_field("reason"));
                             }
-                            reason__ = Some(map_.next_value::<QueryEndReason>()? as i32);
+                            reason__ = map_
+                                .next_value::<::std::option::Option<QueryEndReason>>()?
+                                .map(|x| x as i32);
                         }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
                     }
                 }
-                Ok(QueryEnd {
-                    reason: reason__.unwrap_or_default(),
-                })
+                Ok(QueryEnd { reason: reason__ })
             }
         }
         deserializer

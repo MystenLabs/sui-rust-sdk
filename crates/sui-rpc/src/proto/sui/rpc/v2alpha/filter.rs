@@ -182,26 +182,26 @@ impl From<(Address, Identifier)> for EmitModuleFilter {
 }
 
 impl From<String> for EventTypeFilter {
-    fn from(r#type: String) -> Self {
-        Self::default().with_type(r#type)
+    fn from(event_type: String) -> Self {
+        Self::default().with_event_type(event_type)
     }
 }
 
 impl From<&str> for EventTypeFilter {
-    fn from(r#type: &str) -> Self {
-        Self::from(r#type.to_owned())
+    fn from(event_type: &str) -> Self {
+        Self::from(event_type.to_owned())
     }
 }
 
 impl From<StructTag> for EventTypeFilter {
-    fn from(r#type: StructTag) -> Self {
-        Self::from(r#type.to_string())
+    fn from(event_type: StructTag) -> Self {
+        Self::from(event_type.to_string())
     }
 }
 
 impl From<TypeTag> for EventTypeFilter {
-    fn from(r#type: TypeTag) -> Self {
-        Self::from(r#type.to_string())
+    fn from(event_type: TypeTag) -> Self {
+        Self::from(event_type.to_string())
     }
 }
 
@@ -362,8 +362,8 @@ pub mod transaction {
     /// Match transactions that emitted an event whose type matches the
     /// specified Move type. Accepts a canonical type string, a `StructTag`, or
     /// a `TypeTag`.
-    pub fn event_type(r#type: impl Into<EventTypeFilter>) -> TransactionPredicate {
-        TransactionPredicate::default().with_event_type(r#type)
+    pub fn event_type(event_type: impl Into<EventTypeFilter>) -> TransactionPredicate {
+        TransactionPredicate::default().with_event_type(event_type)
     }
 
     /// Match transactions that wrote to the specified authenticated event
@@ -399,8 +399,8 @@ pub mod event {
 
     /// Match events whose type matches the specified Move type. Accepts a
     /// canonical type string, a `StructTag`, or a `TypeTag`.
-    pub fn event_type(r#type: impl Into<EventTypeFilter>) -> EventPredicate {
-        EventPredicate::default().with_event_type(r#type)
+    pub fn event_type(event_type: impl Into<EventTypeFilter>) -> EventPredicate {
+        EventPredicate::default().with_event_type(event_type)
     }
 
     /// Match events committed to the specified authenticated event stream head.
@@ -515,7 +515,7 @@ mod tests {
             panic!("expected an event_type predicate");
         };
 
-        assert_eq!(filter.r#type.as_deref(), Some(expected.as_str()));
+        assert_eq!(filter.event_type.as_deref(), Some(expected.as_str()));
     }
 
     #[test]

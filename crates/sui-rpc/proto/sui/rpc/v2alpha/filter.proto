@@ -165,7 +165,7 @@ message EmitModuleFilter {
 message EventTypeFilter {
   // Required. Move type string of the form
   // `address[::module[::Name[<type_params>]]]`.
-  optional string type = 1;
+  optional string event_type = 1;
 }
 
 // Match by authenticated event stream head.
