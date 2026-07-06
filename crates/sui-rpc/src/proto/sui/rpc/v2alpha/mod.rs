@@ -19,6 +19,7 @@ include!("../../../generated/sui.rpc.v2alpha.field_info.rs");
 include!("../../../generated/sui.rpc.v2alpha.serde.rs");
 include!("../../../generated/sui.rpc.v2alpha.accessors.rs");
 
+pub mod filter;
 mod proof_service;
 
 pub use descriptor::FILE_DESCRIPTOR_SET;

@@ -18,26 +18,16 @@ use super::state::fold_and_reconcile;
 use crate::light_client::CheckpointObjectProof;
 use crate::light_client::LightClient;
 use crate::light_client::error::LightClientError;
-use crate::proto::sui::rpc::v2alpha::AffectedObjectFilter;
 use crate::proto::sui::rpc::v2alpha::EventFilter;
-use crate::proto::sui::rpc::v2alpha::EventLiteral;
-use crate::proto::sui::rpc::v2alpha::EventPredicate;
-use crate::proto::sui::rpc::v2alpha::EventStreamHeadFilter;
-use crate::proto::sui::rpc::v2alpha::EventTerm;
 use crate::proto::sui::rpc::v2alpha::ListEventsRequest;
 use crate::proto::sui::rpc::v2alpha::ListTransactionsRequest;
 use crate::proto::sui::rpc::v2alpha::QueryEndReason;
 use crate::proto::sui::rpc::v2alpha::QueryOptions;
 use crate::proto::sui::rpc::v2alpha::TransactionFilter;
-use crate::proto::sui::rpc::v2alpha::TransactionLiteral;
-use crate::proto::sui::rpc::v2alpha::TransactionPredicate;
-use crate::proto::sui::rpc::v2alpha::TransactionTerm;
-use crate::proto::sui::rpc::v2alpha::event_literal;
-use crate::proto::sui::rpc::v2alpha::event_predicate;
+use crate::proto::sui::rpc::v2alpha::filter::event;
+use crate::proto::sui::rpc::v2alpha::filter::transaction;
 use crate::proto::sui::rpc::v2alpha::list_events_response;
 use crate::proto::sui::rpc::v2alpha::list_transactions_response;
-use crate::proto::sui::rpc::v2alpha::transaction_literal;
-use crate::proto::sui::rpc::v2alpha::transaction_predicate;
 
 /// A streaming verifier for a single authenticated event stream.
 ///
@@ -119,7 +109,7 @@ async fn run_stream_task(
     let mut last_head_check = std::time::Instant::now();
 
     let stream_head_object_id = derive_event_stream_head_object_id(config.stream_id);
-    let filter = build_filter(&config.stream_id.to_string());
+    let filter = build_filter(config.stream_id);
 
     loop {
         // Decide whether to fetch the next page or reconcile.
@@ -606,38 +596,12 @@ async fn fetch_settlements_page(
     })
 }
 
-fn build_filter(stream_id_hex: &str) -> EventFilter {
-    EventFilter {
-        terms: vec![EventTerm {
-            literals: vec![EventLiteral {
-                polarity: Some(event_literal::Polarity::Include(EventPredicate {
-                    predicate: Some(event_predicate::Predicate::EventStreamHead(
-                        EventStreamHeadFilter {
-                            stream_id: Some(stream_id_hex.to_string()),
-                        },
-                    )),
-                })),
-            }],
-        }],
-    }
+fn build_filter(stream_id: sui_sdk_types::Address) -> EventFilter {
+    EventFilter::matching(event::event_stream_head(stream_id))
 }
 
 fn build_affected_object_filter(object_id: &sui_sdk_types::Address) -> TransactionFilter {
-    TransactionFilter {
-        terms: vec![TransactionTerm {
-            literals: vec![TransactionLiteral {
-                polarity: Some(transaction_literal::Polarity::Include(
-                    TransactionPredicate {
-                        predicate: Some(transaction_predicate::Predicate::AffectedObject(
-                            AffectedObjectFilter {
-                                object_id: Some(object_id.to_string()),
-                            },
-                        )),
-                    },
-                )),
-            }],
-        }],
-    }
+    TransactionFilter::matching(transaction::affected_object(*object_id))
 }
 
 /// True if buffered events were already scanned up through `next_checkpoint`,
