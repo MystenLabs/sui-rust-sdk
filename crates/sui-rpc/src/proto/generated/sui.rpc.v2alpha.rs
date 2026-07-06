@@ -332,7 +332,8 @@ pub struct ListTransactionsRequest {
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct TransactionItem {
-    /// One matching transaction.
+    /// One matching transaction. Its position within the containing checkpoint
+    /// is reported by `ExecutedTransaction.transaction_index`.
     #[prost(message, optional, tag = "1")]
     pub transaction: ::core::option::Option<super::v2::ExecutedTransaction>,
     /// Progress watermark as of when this item was emitted: its `cursor`
@@ -340,11 +341,6 @@ pub struct TransactionItem {
     /// boundary checkpoint that the scan has fully covered.
     #[prost(message, optional, tag = "2")]
     pub watermark: ::core::option::Option<Watermark>,
-    /// Zero-based position of this transaction within the checkpoint that
-    /// includes it (the checkpoint reported on the embedded
-    /// `ExecutedTransaction`).
-    #[prost(uint64, optional, tag = "3")]
-    pub transaction_offset: ::core::option::Option<u64>,
 }
 /// Response message for LedgerService.ListTransactions.
 #[non_exhaustive]
@@ -403,29 +399,17 @@ pub struct ListEventsRequest {
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EventItem {
+    /// One matching event. Its ledger position -- containing checkpoint,
+    /// emitting transaction digest and offset, and index within that
+    /// transaction's event list -- is reported by the corresponding fields on
+    /// `Event`.
+    #[prost(message, optional, tag = "1")]
+    pub event: ::core::option::Option<super::v2::Event>,
     /// Progress watermark as of when this item was emitted: its `cursor`
     /// is the resume point past this item, and `checkpoint` is the inclusive
     /// boundary checkpoint that the scan has fully covered.
-    #[prost(message, optional, tag = "1")]
+    #[prost(message, optional, tag = "2")]
     pub watermark: ::core::option::Option<Watermark>,
-    /// The checkpoint containing the transaction that emitted this event.
-    #[prost(uint64, optional, tag = "2")]
-    pub checkpoint: ::core::option::Option<u64>,
-    /// The index of this event within the transaction's event list (0-based).
-    #[prost(uint32, optional, tag = "3")]
-    pub event_index: ::core::option::Option<u32>,
-    /// The digest of the transaction that emitted this event.
-    #[prost(string, optional, tag = "4")]
-    pub transaction_digest: ::core::option::Option<::prost::alloc::string::String>,
-    /// The event data.
-    #[prost(message, optional, tag = "5")]
-    pub event: ::core::option::Option<super::v2::Event>,
-    /// 0-based index of the emitting transaction within its containing
-    /// checkpoint. Required for clients verifying authenticated event
-    /// streams: this index is part of the BCS-encoded `EventCommitment`
-    /// leaf used to construct the per-checkpoint merkle root.
-    #[prost(uint64, optional, tag = "6")]
-    pub transaction_offset: ::core::option::Option<u64>,
 }
 /// Response message for LedgerService.ListEvents.
 #[non_exhaustive]

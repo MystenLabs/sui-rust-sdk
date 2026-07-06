@@ -1554,6 +1554,30 @@ pub(crate) mod _field_impls {
             number: 6i32,
             message_fields: None,
         };
+        pub const CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "checkpoint",
+            json_name: "checkpoint",
+            number: 7i32,
+            message_fields: None,
+        };
+        pub const TRANSACTION_DIGEST_FIELD: &'static MessageField = &MessageField {
+            name: "transaction_digest",
+            json_name: "transactionDigest",
+            number: 8i32,
+            message_fields: None,
+        };
+        pub const TRANSACTION_INDEX_FIELD: &'static MessageField = &MessageField {
+            name: "transaction_index",
+            json_name: "transactionIndex",
+            number: 9i32,
+            message_fields: None,
+        };
+        pub const EVENT_INDEX_FIELD: &'static MessageField = &MessageField {
+            name: "event_index",
+            json_name: "eventIndex",
+            number: 10i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for Event {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -1563,6 +1587,10 @@ pub(crate) mod _field_impls {
             Self::EVENT_TYPE_FIELD,
             Self::CONTENTS_FIELD,
             Self::JSON_FIELD,
+            Self::CHECKPOINT_FIELD,
+            Self::TRANSACTION_DIGEST_FIELD,
+            Self::TRANSACTION_INDEX_FIELD,
+            Self::EVENT_INDEX_FIELD,
         ];
     }
     impl Event {
@@ -1607,6 +1635,22 @@ pub(crate) mod _field_impls {
         }
         pub fn json(mut self) -> String {
             self.path.push(Event::JSON_FIELD.name);
+            self.finish()
+        }
+        pub fn checkpoint(mut self) -> String {
+            self.path.push(Event::CHECKPOINT_FIELD.name);
+            self.finish()
+        }
+        pub fn transaction_digest(mut self) -> String {
+            self.path.push(Event::TRANSACTION_DIGEST_FIELD.name);
+            self.finish()
+        }
+        pub fn transaction_index(mut self) -> String {
+            self.path.push(Event::TRANSACTION_INDEX_FIELD.name);
+            self.finish()
+        }
+        pub fn event_index(mut self) -> String {
+            self.path.push(Event::EVENT_INDEX_FIELD.name);
             self.finish()
         }
     }
@@ -1665,6 +1709,12 @@ pub(crate) mod _field_impls {
             number: 9i32,
             message_fields: Some(ObjectSet::FIELDS),
         };
+        pub const TRANSACTION_INDEX_FIELD: &'static MessageField = &MessageField {
+            name: "transaction_index",
+            json_name: "transactionIndex",
+            number: 10i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for ExecutedTransaction {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -1677,6 +1727,7 @@ pub(crate) mod _field_impls {
             Self::TIMESTAMP_FIELD,
             Self::BALANCE_CHANGES_FIELD,
             Self::OBJECTS_FIELD,
+            Self::TRANSACTION_INDEX_FIELD,
         ];
     }
     impl ExecutedTransaction {
@@ -1734,6 +1785,10 @@ pub(crate) mod _field_impls {
         pub fn objects(mut self) -> ObjectSetFieldPathBuilder {
             self.path.push(ExecutedTransaction::OBJECTS_FIELD.name);
             ObjectSetFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn transaction_index(mut self) -> String {
+            self.path.push(ExecutedTransaction::TRANSACTION_INDEX_FIELD.name);
+            self.finish()
         }
     }
     impl ExecutionStatus {

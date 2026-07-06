@@ -473,7 +473,7 @@ async fn reconcile_once(
 
 /// Page through `ListTransactions` filtered on `affected_object =
 /// stream_head_object_id` and return the ascending `(checkpoint,
-/// transaction_offset)` settlement boundaries for `[start, end)`.
+/// transaction_index)` settlement boundaries for `[start, end)`.
 ///
 /// Each `settle_events` transaction mutates the stream's head object,
 /// so this filter returns exactly the per-stream settlement boundaries.
@@ -562,18 +562,23 @@ async fn fetch_settlements_page(
                 if let Some(c) = item.watermark.as_ref().and_then(|w| w.cursor.clone()) {
                     end_cursor = Some(c);
                 }
-                let checkpoint = item
-                    .transaction
-                    .as_ref()
-                    .and_then(|tx| tx.checkpoint)
-                    .ok_or(LightClientError::UnexpectedObjectShape {
-                        reason: "settlement transaction missing checkpoint",
-                    })?;
-                let tx_offset =
-                    item.transaction_offset
+                let transaction =
+                    item.transaction
+                        .as_ref()
                         .ok_or(LightClientError::UnexpectedObjectShape {
-                            reason: "settlement transaction missing transaction_offset",
+                            reason: "settlement item missing transaction",
                         })?;
+                let checkpoint =
+                    transaction
+                        .checkpoint
+                        .ok_or(LightClientError::UnexpectedObjectShape {
+                            reason: "settlement transaction missing checkpoint",
+                        })?;
+                let tx_offset = transaction.transaction_index.ok_or(
+                    LightClientError::UnexpectedObjectShape {
+                        reason: "settlement transaction missing transaction_index",
+                    },
+                )?;
                 entries.push((checkpoint, tx_offset));
             }
             Some(list_transactions_response::Response::Watermark(w)) => {

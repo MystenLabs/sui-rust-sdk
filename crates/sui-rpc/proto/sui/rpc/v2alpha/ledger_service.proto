@@ -119,18 +119,14 @@ message ListTransactionsRequest {
 
 // One transaction item.
 message TransactionItem {
-  // One matching transaction.
+  // One matching transaction. Its position within the containing checkpoint
+  // is reported by `ExecutedTransaction.transaction_index`.
   optional sui.rpc.v2.ExecutedTransaction transaction = 1;
 
   // Progress watermark as of when this item was emitted: its `cursor`
   // is the resume point past this item, and `checkpoint` is the inclusive
   // boundary checkpoint that the scan has fully covered.
   optional Watermark watermark = 2;
-
-  // Zero-based position of this transaction within the checkpoint that
-  // includes it (the checkpoint reported on the embedded
-  // `ExecutedTransaction`).
-  optional uint64 transaction_offset = 3;
 }
 
 // Response message for LedgerService.ListTransactions.
@@ -177,28 +173,16 @@ message ListEventsRequest {
 
 // One event item.
 message EventItem {
+  // One matching event. Its ledger position -- containing checkpoint,
+  // emitting transaction digest and offset, and index within that
+  // transaction's event list -- is reported by the corresponding fields on
+  // `Event`.
+  optional sui.rpc.v2.Event event = 1;
+
   // Progress watermark as of when this item was emitted: its `cursor`
   // is the resume point past this item, and `checkpoint` is the inclusive
   // boundary checkpoint that the scan has fully covered.
-  optional Watermark watermark = 1;
-
-  // The checkpoint containing the transaction that emitted this event.
-  optional uint64 checkpoint = 2;
-
-  // The index of this event within the transaction's event list (0-based).
-  optional uint32 event_index = 3;
-
-  // The digest of the transaction that emitted this event.
-  optional string transaction_digest = 4;
-
-  // The event data.
-  optional sui.rpc.v2.Event event = 5;
-
-  // 0-based index of the emitting transaction within its containing
-  // checkpoint. Required for clients verifying authenticated event
-  // streams: this index is part of the BCS-encoded `EventCommitment`
-  // leaf used to construct the per-checkpoint merkle root.
-  optional uint64 transaction_offset = 6;
+  optional Watermark watermark = 2;
 }
 
 // Response message for LedgerService.ListEvents.

@@ -5,12 +5,13 @@ use sui_sdk_types::Digest;
 use sui_sdk_types::Event;
 
 use crate::proto::TryFromProtoError;
+use crate::proto::sui::rpc::v2::Event as ProtoEvent;
 use crate::proto::sui::rpc::v2alpha::EventItem;
 
 /// A single authenticated event paired with the positional metadata a
 /// verifier needs to reconstruct its `EventCommitment` leaf.
 ///
-/// The tuple `(checkpoint, transaction_offset, event_index)` identifies
+/// The tuple `(checkpoint, transaction_index, event_index)` identifies
 /// the event's position in the ledger; combined with the per-event
 /// digest derived from `event`, those four pieces form the BCS-encoded
 /// merkle leaf the framework folds into the stream's MMR — see
@@ -30,7 +31,7 @@ pub struct AuthenticatedEvent {
     pub checkpoint: u64,
     /// 0-based index of the emitting transaction within its containing
     /// checkpoint.
-    pub transaction_offset: u64,
+    pub transaction_index: u64,
     /// 0-based index of this event within its transaction's event list.
     pub event_index: u32,
     /// The digest of the emitting transaction.
@@ -43,31 +44,42 @@ impl TryFrom<&EventItem> for AuthenticatedEvent {
     type Error = TryFromProtoError;
 
     fn try_from(value: &EventItem) -> Result<Self, Self::Error> {
-        let checkpoint = value
-            .checkpoint
-            .ok_or_else(|| TryFromProtoError::missing(EventItem::CHECKPOINT_FIELD.name))?;
-        let transaction_offset = value
-            .transaction_offset
-            .ok_or_else(|| TryFromProtoError::missing(EventItem::TRANSACTION_OFFSET_FIELD.name))?;
-        let event_index = value
-            .event_index
-            .ok_or_else(|| TryFromProtoError::missing(EventItem::EVENT_INDEX_FIELD.name))?;
-        let transaction_digest = value
-            .transaction_digest
-            .as_ref()
-            .ok_or_else(|| TryFromProtoError::missing(EventItem::TRANSACTION_DIGEST_FIELD.name))?
-            .parse()
-            .map_err(|e| TryFromProtoError::invalid(EventItem::TRANSACTION_DIGEST_FIELD, e))?;
         let event_proto = value
             .event
             .as_ref()
             .ok_or_else(|| TryFromProtoError::missing(EventItem::EVENT_FIELD.name))?;
+
+        // The locating fields now live on the embedded `Event`; nest their
+        // violations under the `event` slot so the reported path points at
+        // the containing field.
+        let missing = |field: &'static str| {
+            TryFromProtoError::missing(field).nested(EventItem::EVENT_FIELD.name)
+        };
+
+        let checkpoint = event_proto
+            .checkpoint
+            .ok_or_else(|| missing(ProtoEvent::CHECKPOINT_FIELD.name))?;
+        let transaction_index = event_proto
+            .transaction_index
+            .ok_or_else(|| missing(ProtoEvent::TRANSACTION_INDEX_FIELD.name))?;
+        let event_index = event_proto
+            .event_index
+            .ok_or_else(|| missing(ProtoEvent::EVENT_INDEX_FIELD.name))?;
+        let transaction_digest = event_proto
+            .transaction_digest
+            .as_ref()
+            .ok_or_else(|| missing(ProtoEvent::TRANSACTION_DIGEST_FIELD.name))?
+            .parse()
+            .map_err(|e| {
+                TryFromProtoError::invalid(ProtoEvent::TRANSACTION_DIGEST_FIELD, e)
+                    .nested(EventItem::EVENT_FIELD.name)
+            })?;
         let event =
             Event::try_from(event_proto).map_err(|e| e.nested(EventItem::EVENT_FIELD.name))?;
 
         Ok(Self {
             checkpoint,
-            transaction_offset,
+            transaction_index,
             event_index,
             transaction_digest,
             event,
@@ -77,15 +89,16 @@ impl TryFrom<&EventItem> for AuthenticatedEvent {
 
 impl From<&AuthenticatedEvent> for EventItem {
     fn from(value: &AuthenticatedEvent) -> Self {
+        let event = ProtoEvent::from(value.event.clone())
+            .with_checkpoint(value.checkpoint)
+            .with_transaction_digest(value.transaction_digest.to_string())
+            .with_transaction_index(value.transaction_index)
+            .with_event_index(value.event_index);
         Self {
+            event: Some(event),
             // `watermark` is server-assigned (cursor + checkpoint);
             // leave unset on the way out.
             watermark: None,
-            checkpoint: Some(value.checkpoint),
-            event_index: Some(value.event_index),
-            transaction_digest: Some(value.transaction_digest.to_string()),
-            event: Some(value.event.clone().into()),
-            transaction_offset: Some(value.transaction_offset),
         }
     }
 }
@@ -99,8 +112,6 @@ impl From<AuthenticatedEvent> for EventItem {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::proto::sui::rpc::v2::Bcs;
-    use crate::proto::sui::rpc::v2::Event as ProtoEvent;
     use sui_sdk_types::Address;
     use sui_sdk_types::Identifier;
     use sui_sdk_types::StructTag;
@@ -123,7 +134,7 @@ mod tests {
     fn sample_authenticated_event() -> AuthenticatedEvent {
         AuthenticatedEvent {
             checkpoint: 42,
-            transaction_offset: 3,
+            transaction_index: 3,
             event_index: 7,
             transaction_digest: Digest::new([0xaa; 32]),
             event: sample_event(),
@@ -150,33 +161,33 @@ mod tests {
     #[test]
     fn missing_checkpoint_is_rejected() {
         let mut proto: EventItem = (&sample_authenticated_event()).into();
-        proto.checkpoint = None;
+        proto.event.as_mut().unwrap().checkpoint = None;
         let err = AuthenticatedEvent::try_from(&proto).unwrap_err();
-        assert_eq!(err.field_violation().field, "checkpoint");
+        assert_eq!(err.field_violation().field, "event.checkpoint");
     }
 
     #[test]
-    fn missing_transaction_offset_is_rejected() {
+    fn missing_transaction_index_is_rejected() {
         let mut proto: EventItem = (&sample_authenticated_event()).into();
-        proto.transaction_offset = None;
+        proto.event.as_mut().unwrap().transaction_index = None;
         let err = AuthenticatedEvent::try_from(&proto).unwrap_err();
-        assert_eq!(err.field_violation().field, "transaction_offset");
+        assert_eq!(err.field_violation().field, "event.transaction_index");
     }
 
     #[test]
     fn missing_event_index_is_rejected() {
         let mut proto: EventItem = (&sample_authenticated_event()).into();
-        proto.event_index = None;
+        proto.event.as_mut().unwrap().event_index = None;
         let err = AuthenticatedEvent::try_from(&proto).unwrap_err();
-        assert_eq!(err.field_violation().field, "event_index");
+        assert_eq!(err.field_violation().field, "event.event_index");
     }
 
     #[test]
     fn missing_transaction_digest_is_rejected() {
         let mut proto: EventItem = (&sample_authenticated_event()).into();
-        proto.transaction_digest = None;
+        proto.event.as_mut().unwrap().transaction_digest = None;
         let err = AuthenticatedEvent::try_from(&proto).unwrap_err();
-        assert_eq!(err.field_violation().field, "transaction_digest");
+        assert_eq!(err.field_violation().field, "event.transaction_digest");
     }
 
     #[test]
@@ -194,14 +205,7 @@ mod tests {
     fn malformed_inner_event_reports_nested_field_path() {
         let mut proto: EventItem = (&sample_authenticated_event()).into();
         // Strip the inner event's required `package_id`.
-        proto.event = Some(ProtoEvent {
-            package_id: None,
-            module: Some("clock".into()),
-            sender: Some(Address::TWO.to_string()),
-            event_type: Some("0x2::clock::Tick".into()),
-            contents: Some(Bcs::from(prost::bytes::Bytes::from_static(&[0x00]))),
-            json: None,
-        });
+        proto.event.as_mut().unwrap().package_id = None;
         let err = AuthenticatedEvent::try_from(&proto).unwrap_err();
         let path = &err.field_violation().field;
         assert!(
@@ -211,12 +215,12 @@ mod tests {
     }
 
     /// A malformed `transaction_digest` (base58-undecodable) reports the
-    /// `transaction_digest` field with a parse-error source.
+    /// `event.transaction_digest` field with a parse-error source.
     #[test]
     fn malformed_transaction_digest_is_rejected() {
         let mut proto: EventItem = (&sample_authenticated_event()).into();
-        proto.transaction_digest = Some("not-a-real-digest!".into());
+        proto.event.as_mut().unwrap().transaction_digest = Some("not-a-real-digest!".into());
         let err = AuthenticatedEvent::try_from(&proto).unwrap_err();
-        assert_eq!(err.field_violation().field, "transaction_digest");
+        assert_eq!(err.field_violation().field, "event.transaction_digest");
     }
 }

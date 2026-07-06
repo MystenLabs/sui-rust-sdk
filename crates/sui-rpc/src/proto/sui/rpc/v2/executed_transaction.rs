@@ -14,6 +14,7 @@ impl Merge<&ExecutedTransaction> for ExecutedTransaction {
             timestamp,
             balance_changes,
             objects,
+            transaction_index,
         } = source;
 
         if mask.contains(Self::DIGEST_FIELD.name) {
@@ -61,6 +62,10 @@ impl Merge<&ExecutedTransaction> for ExecutedTransaction {
             self.objects = objects
                 .as_ref()
                 .map(|objects| ObjectSet::merge_from(objects, &submask));
+        }
+
+        if mask.contains(Self::TRANSACTION_INDEX_FIELD.name) {
+            self.transaction_index = *transaction_index;
         }
     }
 }

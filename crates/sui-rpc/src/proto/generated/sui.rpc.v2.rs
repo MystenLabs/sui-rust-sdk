@@ -842,6 +842,25 @@ pub struct Event {
     /// JSON rendering of the event.
     #[prost(message, optional, boxed, tag = "6")]
     pub json: ::core::option::Option<::prost::alloc::boxed::Box<::prost_types::Value>>,
+    /// The sequence number of the checkpoint that includes the transaction
+    /// that emitted this event. Populated when the event is delivered on its
+    /// own (for example via `LedgerService.ListEvents`); left unset when the
+    /// event is carried inside its transaction's `events` list, where the
+    /// enclosing `ExecutedTransaction` already provides this context.
+    #[prost(uint64, optional, tag = "7")]
+    pub checkpoint: ::core::option::Option<u64>,
+    /// The digest of the transaction that emitted this event.
+    #[prost(string, optional, tag = "8")]
+    pub transaction_digest: ::core::option::Option<::prost::alloc::string::String>,
+    /// Zero-based position of the emitting transaction within its containing
+    /// checkpoint. For clients verifying authenticated event streams this
+    /// index is part of the BCS-encoded `EventCommitment` leaf used to
+    /// construct the per-checkpoint merkle root.
+    #[prost(uint64, optional, tag = "9")]
+    pub transaction_index: ::core::option::Option<u64>,
+    /// Zero-based index of this event within its transaction's event list.
+    #[prost(uint32, optional, tag = "10")]
+    pub event_index: ::core::option::Option<u32>,
 }
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -879,6 +898,10 @@ pub struct ExecutedTransaction {
     /// outputs from this Transaction.
     #[prost(message, optional, tag = "9")]
     pub objects: ::core::option::Option<ObjectSet>,
+    /// Zero-based position of this transaction within the checkpoint that
+    /// includes it.
+    #[prost(uint64, optional, tag = "10")]
+    pub transaction_index: ::core::option::Option<u64>,
 }
 /// The status of an executed transaction.
 #[non_exhaustive]

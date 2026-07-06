@@ -49,6 +49,10 @@ impl Merge<&Event> for Event {
             event_type,
             contents,
             json,
+            checkpoint,
+            transaction_digest,
+            transaction_index,
+            event_index,
         } = source;
 
         if mask.contains(Self::PACKAGE_ID_FIELD.name) {
@@ -73,6 +77,22 @@ impl Merge<&Event> for Event {
 
         if mask.contains(Self::JSON_FIELD.name) {
             self.json = json.clone();
+        }
+
+        if mask.contains(Self::CHECKPOINT_FIELD.name) {
+            self.checkpoint = *checkpoint;
+        }
+
+        if mask.contains(Self::TRANSACTION_DIGEST_FIELD.name) {
+            self.transaction_digest = transaction_digest.clone();
+        }
+
+        if mask.contains(Self::TRANSACTION_INDEX_FIELD.name) {
+            self.transaction_index = *transaction_index;
+        }
+
+        if mask.contains(Self::EVENT_INDEX_FIELD.name) {
+            self.event_index = *event_index;
         }
     }
 }

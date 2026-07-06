@@ -39,7 +39,7 @@ pub(super) struct StreamState {
     /// queue.
     ///
     /// Items are stored in receipt order — which matches strictly
-    /// ascending `(checkpoint, transaction_offset, event_index)` per the
+    /// ascending `(checkpoint, transaction_index, event_index)` per the
     /// v2alpha contract.
     pub buffer: VecDeque<AuthenticatedEvent>,
 
@@ -80,7 +80,7 @@ impl StreamState {
 /// either is greater than the current value.
 ///
 /// `events` must be in strictly ascending
-/// `(checkpoint, transaction_offset, event_index)` order with respect to
+/// `(checkpoint, transaction_index, event_index)` order with respect to
 /// each other and to whatever's already at the back of `state.buffer` —
 /// the v2alpha contract guarantees this for `ListEvents` responses, and
 /// the fold-time partitioner relies on it. Empty input is a no-op.
@@ -115,7 +115,7 @@ pub(super) fn buffer_response_batch(
 /// checkpoint.
 ///
 /// `settlements` is the ascending sequence of `(checkpoint,
-/// transaction_offset)` pairs from `ListTransactions(affected_object =
+/// transaction_index)` pairs from `ListTransactions(affected_object =
 /// event_stream_head)`, covering `(state.confirmed_through,
 /// reconcile_checkpoint]`. `reconcile_checkpoint` is the checkpoint at
 /// which `chain_head` was authenticated — by construction the
@@ -224,7 +224,7 @@ where
         while settlement_idx < settlements.len()
             && (settlements[settlement_idx].0 < event.checkpoint
                 || (settlements[settlement_idx].0 == event.checkpoint
-                    && settlements[settlement_idx].1 < event.transaction_offset))
+                    && settlements[settlement_idx].1 < event.transaction_index))
         {
             settlement_idx += 1;
         }
@@ -243,7 +243,7 @@ where
         let settlement_key = settlements[settlement_idx];
         let commitment = EventCommitment {
             checkpoint_seq: event.checkpoint,
-            transaction_idx: event.transaction_offset,
+            transaction_idx: event.transaction_index,
             event_idx: event.event_index as u64,
             digest: event.event.digest(),
         };
@@ -323,7 +323,7 @@ mod tests {
     fn sample_event(checkpoint: u64, tx_idx: u64, event_idx: u32) -> AuthenticatedEvent {
         AuthenticatedEvent {
             checkpoint,
-            transaction_offset: tx_idx,
+            transaction_index: tx_idx,
             event_index: event_idx,
             transaction_digest: Digest::new([0xaa; 32]),
             event: Event {
@@ -450,7 +450,7 @@ mod tests {
                     .iter()
                     .map(|e| EventCommitment {
                         checkpoint_seq: e.checkpoint,
-                        transaction_idx: e.transaction_offset,
+                        transaction_idx: e.transaction_index,
                         event_idx: e.event_index as u64,
                         digest: e.event.digest(),
                     })

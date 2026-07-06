@@ -994,18 +994,11 @@ pub(crate) mod _field_impls {
             number: 2i32,
             message_fields: Some(Watermark::FIELDS),
         };
-        pub const TRANSACTION_OFFSET_FIELD: &'static MessageField = &MessageField {
-            name: "transaction_offset",
-            json_name: "transactionOffset",
-            number: 3i32,
-            message_fields: None,
-        };
     }
     impl MessageFields for TransactionItem {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::TRANSACTION_FIELD,
             Self::WATERMARK_FIELD,
-            Self::TRANSACTION_OFFSET_FIELD,
         ];
     }
     impl TransactionItem {
@@ -1035,10 +1028,6 @@ pub(crate) mod _field_impls {
         pub fn watermark(mut self) -> WatermarkFieldPathBuilder {
             self.path.push(TransactionItem::WATERMARK_FIELD.name);
             WatermarkFieldPathBuilder::new_with_base(self.path)
-        }
-        pub fn transaction_offset(mut self) -> String {
-            self.path.push(TransactionItem::TRANSACTION_OFFSET_FIELD.name);
-            self.finish()
         }
     }
     impl ListTransactionsResponse {
@@ -1184,51 +1173,23 @@ pub(crate) mod _field_impls {
         }
     }
     impl EventItem {
-        pub const WATERMARK_FIELD: &'static MessageField = &MessageField {
-            name: "watermark",
-            json_name: "watermark",
-            number: 1i32,
-            message_fields: Some(Watermark::FIELDS),
-        };
-        pub const CHECKPOINT_FIELD: &'static MessageField = &MessageField {
-            name: "checkpoint",
-            json_name: "checkpoint",
-            number: 2i32,
-            message_fields: None,
-        };
-        pub const EVENT_INDEX_FIELD: &'static MessageField = &MessageField {
-            name: "event_index",
-            json_name: "eventIndex",
-            number: 3i32,
-            message_fields: None,
-        };
-        pub const TRANSACTION_DIGEST_FIELD: &'static MessageField = &MessageField {
-            name: "transaction_digest",
-            json_name: "transactionDigest",
-            number: 4i32,
-            message_fields: None,
-        };
         pub const EVENT_FIELD: &'static MessageField = &MessageField {
             name: "event",
             json_name: "event",
-            number: 5i32,
+            number: 1i32,
             message_fields: Some(Event::FIELDS),
         };
-        pub const TRANSACTION_OFFSET_FIELD: &'static MessageField = &MessageField {
-            name: "transaction_offset",
-            json_name: "transactionOffset",
-            number: 6i32,
-            message_fields: None,
+        pub const WATERMARK_FIELD: &'static MessageField = &MessageField {
+            name: "watermark",
+            json_name: "watermark",
+            number: 2i32,
+            message_fields: Some(Watermark::FIELDS),
         };
     }
     impl MessageFields for EventItem {
         const FIELDS: &'static [&'static MessageField] = &[
-            Self::WATERMARK_FIELD,
-            Self::CHECKPOINT_FIELD,
-            Self::EVENT_INDEX_FIELD,
-            Self::TRANSACTION_DIGEST_FIELD,
             Self::EVENT_FIELD,
-            Self::TRANSACTION_OFFSET_FIELD,
+            Self::WATERMARK_FIELD,
         ];
     }
     impl EventItem {
@@ -1251,29 +1212,13 @@ pub(crate) mod _field_impls {
         pub fn finish(self) -> String {
             self.path.join(".")
         }
-        pub fn watermark(mut self) -> WatermarkFieldPathBuilder {
-            self.path.push(EventItem::WATERMARK_FIELD.name);
-            WatermarkFieldPathBuilder::new_with_base(self.path)
-        }
-        pub fn checkpoint(mut self) -> String {
-            self.path.push(EventItem::CHECKPOINT_FIELD.name);
-            self.finish()
-        }
-        pub fn event_index(mut self) -> String {
-            self.path.push(EventItem::EVENT_INDEX_FIELD.name);
-            self.finish()
-        }
-        pub fn transaction_digest(mut self) -> String {
-            self.path.push(EventItem::TRANSACTION_DIGEST_FIELD.name);
-            self.finish()
-        }
         pub fn event(mut self) -> EventFieldPathBuilder {
             self.path.push(EventItem::EVENT_FIELD.name);
             EventFieldPathBuilder::new_with_base(self.path)
         }
-        pub fn transaction_offset(mut self) -> String {
-            self.path.push(EventItem::TRANSACTION_OFFSET_FIELD.name);
-            self.finish()
+        pub fn watermark(mut self) -> WatermarkFieldPathBuilder {
+            self.path.push(EventItem::WATERMARK_FIELD.name);
+            WatermarkFieldPathBuilder::new_with_base(self.path)
         }
     }
     impl ListEventsResponse {
