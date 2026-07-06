@@ -54,7 +54,7 @@ pub(super) struct StreamState {
     pub confirmed_through: u64,
 
     /// Highest checkpoint number whose events `ListEvents` has fully
-    /// emitted to us, derived from the latest `Watermark.checkpoint_hi`
+    /// emitted to us, derived from the latest `Watermark.checkpoint`
     /// across both standalone watermarks and per-item watermarks.
     ///
     /// Reconciliation uses this as the upper bound when fetching
@@ -85,7 +85,7 @@ impl StreamState {
 /// the v2alpha contract guarantees this for `ListEvents` responses, and
 /// the fold-time partitioner relies on it. Empty input is a no-op.
 ///
-/// `watermark_hi` is the most recent `Watermark.checkpoint_hi` observed
+/// `watermark_hi` is the most recent `Watermark.checkpoint` observed
 /// during this page, including the watermark embedded on the last item.
 /// Pass `None` when the page produced neither a standalone watermark nor
 /// an item-embedded one (e.g., an immediate `End` frame at genesis).

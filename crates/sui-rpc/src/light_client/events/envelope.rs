@@ -78,7 +78,7 @@ impl TryFrom<&EventItem> for AuthenticatedEvent {
 impl From<&AuthenticatedEvent> for EventItem {
     fn from(value: &AuthenticatedEvent) -> Self {
         Self {
-            // `watermark` is server-assigned (cursor + checkpoint_hi);
+            // `watermark` is server-assigned (cursor + checkpoint);
             // leave unset on the way out.
             watermark: None,
             checkpoint: Some(value.checkpoint),
@@ -143,7 +143,7 @@ mod tests {
         let proto: EventItem = (&sample_authenticated_event()).into();
         assert!(
             proto.watermark.is_none(),
-            "watermark (cursor + checkpoint_hi) must be server-assigned"
+            "watermark (cursor + checkpoint) must be server-assigned"
         );
     }
 

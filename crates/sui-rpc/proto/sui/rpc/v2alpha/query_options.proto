@@ -22,7 +22,7 @@ enum Ordering {
 // only controls the order of returned items within the resulting open interval.
 //
 // For example, with `after = A`, `before = B`, `ordering = DESCENDING`, and
-// `limit_items = N`, the response contains up to N matching items in descending
+// `limit = N`, the response contains up to N matching items in descending
 // order from the interval `(A, B)`. If the response ends with
 // `QUERY_END_REASON_ITEM_LIMIT`, resume by keeping `after = A` and setting
 // `before` to the last `Watermark.cursor` (or last item cursor) received. That
@@ -31,7 +31,7 @@ enum Ordering {
 message QueryOptions {
   // The maximum number of items to return. Each method applies its own default
   // and maximum. QueryEnd does not count against this limit.
-  optional uint32 limit_items = 1;
+  optional uint32 limit = 1;
 
   // Opaque exclusive lower bound. Results must be strictly after this cursor in
   // canonical ledger order.
@@ -45,7 +45,7 @@ message QueryOptions {
   //
   // Ordering only controls the order of results within the bounded interval;
   // cursor bounds keep the same meaning for ascending and descending reads.
-  Ordering ordering = 4;
+  optional Ordering ordering = 4;
 }
 
 // Reason the server stopped this query response.
@@ -76,10 +76,6 @@ enum QueryEndReason {
 // Progress markers for a query scan. Carried both on every item and as
 // standalone wire frames between items when the underlying scan advances
 // without producing a matching item.
-//
-// Exactly one of `checkpoint_hi` / `checkpoint_lo` is set per response
-// stream — whichever matches the request ordering. The unscanned side is
-// always unset.
 message Watermark {
   // Opaque cursor at this scan position. Use as `options.after`
   // (ascending) or `options.before` (descending) on the next request to
@@ -88,18 +84,16 @@ message Watermark {
   // safe resume point.
   optional bytes cursor = 1;
 
-  // Ascending scans only. Every matching item in checkpoints
-  // `<= checkpoint_hi` has been emitted; checkpoints strictly greater
-  // may still hold unscanned matches. Non-decreasing across the stream.
+  // For history based queries this is the inclusive boundary checkpoint the
+  // scan has fully covered, in the request's ordering direction: an ascending
+  // scan has emitted every matching item in checkpoints `<= checkpoint`
+  // (strictly greater ones may still hold matches); a descending scan has
+  // emitted every matching item in checkpoints `>= checkpoint`. Advances
+  // monotonically in the scan direction.
   //
-  // Unset only on frames whose scan position is still at the genesis
-  // checkpoint (cp 0). Set on every subsequent frame.
-  optional uint64 checkpoint_hi = 2;
-
-  // Descending scans only. Every matching item in checkpoints
-  // `>= checkpoint_lo` has been emitted; checkpoints strictly less may
-  // still hold unscanned matches. Non-increasing across the stream.
-  optional uint64 checkpoint_lo = 3;
+  // For ascending scans this will be unset until the genesis checkpoint (cp 0)
+  // is fully scanned.
+  optional uint64 checkpoint = 2;
 }
 
 // Final response frame for a successful query stream. Every successful stream
