@@ -2555,10 +2555,10 @@ mod _accessor_impls {
     impl super::QueryOptions {
         pub const fn const_default() -> Self {
             Self {
-                limit_items: None,
+                limit: None,
                 after: None,
                 before: None,
-                ordering: 0,
+                ordering: None,
             }
         }
         #[doc(hidden)]
@@ -2566,26 +2566,26 @@ mod _accessor_impls {
             static DEFAULT: super::QueryOptions = super::QueryOptions::const_default();
             &DEFAULT
         }
-        ///If `limit_items` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn limit_items_opt_mut(&mut self) -> Option<&mut u32> {
-            self.limit_items.as_mut().map(|field| field as _)
+        ///If `limit` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn limit_opt_mut(&mut self) -> Option<&mut u32> {
+            self.limit.as_mut().map(|field| field as _)
         }
-        ///Returns a mutable reference to `limit_items`.
+        ///Returns a mutable reference to `limit`.
         ///If the field is unset, it is first initialized with the default value.
-        pub fn limit_items_mut(&mut self) -> &mut u32 {
-            self.limit_items.get_or_insert_default()
+        pub fn limit_mut(&mut self) -> &mut u32 {
+            self.limit.get_or_insert_default()
         }
-        ///If `limit_items` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn limit_items_opt(&self) -> Option<u32> {
-            self.limit_items.as_ref().map(|field| *field)
+        ///If `limit` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn limit_opt(&self) -> Option<u32> {
+            self.limit.as_ref().map(|field| *field)
         }
-        ///Sets `limit_items` with the provided value.
-        pub fn set_limit_items(&mut self, field: u32) {
-            self.limit_items = Some(field);
+        ///Sets `limit` with the provided value.
+        pub fn set_limit(&mut self, field: u32) {
+            self.limit = Some(field);
         }
-        ///Sets `limit_items` with the provided value.
-        pub fn with_limit_items(mut self, field: u32) -> Self {
-            self.set_limit_items(field);
+        ///Sets `limit` with the provided value.
+        pub fn with_limit(mut self, field: u32) -> Self {
+            self.set_limit(field);
             self
         }
         ///If `after` is set, returns [`Some`] with the value; otherwise returns [`None`].
@@ -2612,6 +2612,11 @@ mod _accessor_impls {
         ///Sets `before` with the provided value.
         pub fn with_before<T: Into<::prost::bytes::Bytes>>(mut self, field: T) -> Self {
             self.set_before(field.into());
+            self
+        }
+        ///Sets `ordering` with the provided value.
+        pub fn with_ordering<T: Into<super::Ordering>>(mut self, field: T) -> Self {
+            self.set_ordering(field.into());
             self
         }
     }
@@ -3455,8 +3460,7 @@ mod _accessor_impls {
         pub const fn const_default() -> Self {
             Self {
                 cursor: None,
-                checkpoint_hi: None,
-                checkpoint_lo: None,
+                checkpoint: None,
             }
         }
         #[doc(hidden)]
@@ -3477,48 +3481,26 @@ mod _accessor_impls {
             self.set_cursor(field.into());
             self
         }
-        ///If `checkpoint_hi` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn checkpoint_hi_opt_mut(&mut self) -> Option<&mut u64> {
-            self.checkpoint_hi.as_mut().map(|field| field as _)
+        ///If `checkpoint` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn checkpoint_opt_mut(&mut self) -> Option<&mut u64> {
+            self.checkpoint.as_mut().map(|field| field as _)
         }
-        ///Returns a mutable reference to `checkpoint_hi`.
+        ///Returns a mutable reference to `checkpoint`.
         ///If the field is unset, it is first initialized with the default value.
-        pub fn checkpoint_hi_mut(&mut self) -> &mut u64 {
-            self.checkpoint_hi.get_or_insert_default()
+        pub fn checkpoint_mut(&mut self) -> &mut u64 {
+            self.checkpoint.get_or_insert_default()
         }
-        ///If `checkpoint_hi` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn checkpoint_hi_opt(&self) -> Option<u64> {
-            self.checkpoint_hi.as_ref().map(|field| *field)
+        ///If `checkpoint` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn checkpoint_opt(&self) -> Option<u64> {
+            self.checkpoint.as_ref().map(|field| *field)
         }
-        ///Sets `checkpoint_hi` with the provided value.
-        pub fn set_checkpoint_hi(&mut self, field: u64) {
-            self.checkpoint_hi = Some(field);
+        ///Sets `checkpoint` with the provided value.
+        pub fn set_checkpoint(&mut self, field: u64) {
+            self.checkpoint = Some(field);
         }
-        ///Sets `checkpoint_hi` with the provided value.
-        pub fn with_checkpoint_hi(mut self, field: u64) -> Self {
-            self.set_checkpoint_hi(field);
-            self
-        }
-        ///If `checkpoint_lo` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn checkpoint_lo_opt_mut(&mut self) -> Option<&mut u64> {
-            self.checkpoint_lo.as_mut().map(|field| field as _)
-        }
-        ///Returns a mutable reference to `checkpoint_lo`.
-        ///If the field is unset, it is first initialized with the default value.
-        pub fn checkpoint_lo_mut(&mut self) -> &mut u64 {
-            self.checkpoint_lo.get_or_insert_default()
-        }
-        ///If `checkpoint_lo` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn checkpoint_lo_opt(&self) -> Option<u64> {
-            self.checkpoint_lo.as_ref().map(|field| *field)
-        }
-        ///Sets `checkpoint_lo` with the provided value.
-        pub fn set_checkpoint_lo(&mut self, field: u64) {
-            self.checkpoint_lo = Some(field);
-        }
-        ///Sets `checkpoint_lo` with the provided value.
-        pub fn with_checkpoint_lo(mut self, field: u64) -> Self {
-            self.set_checkpoint_lo(field);
+        ///Sets `checkpoint` with the provided value.
+        pub fn with_checkpoint(mut self, field: u64) -> Self {
+            self.set_checkpoint(field);
             self
         }
     }

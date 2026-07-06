@@ -1772,9 +1772,9 @@ pub(crate) mod _field_impls {
         }
     }
     impl QueryOptions {
-        pub const LIMIT_ITEMS_FIELD: &'static MessageField = &MessageField {
-            name: "limit_items",
-            json_name: "limitItems",
+        pub const LIMIT_FIELD: &'static MessageField = &MessageField {
+            name: "limit",
+            json_name: "limit",
             number: 1i32,
             message_fields: None,
         };
@@ -1799,7 +1799,7 @@ pub(crate) mod _field_impls {
     }
     impl MessageFields for QueryOptions {
         const FIELDS: &'static [&'static MessageField] = &[
-            Self::LIMIT_ITEMS_FIELD,
+            Self::LIMIT_FIELD,
             Self::AFTER_FIELD,
             Self::BEFORE_FIELD,
             Self::ORDERING_FIELD,
@@ -1825,8 +1825,8 @@ pub(crate) mod _field_impls {
         pub fn finish(self) -> String {
             self.path.join(".")
         }
-        pub fn limit_items(mut self) -> String {
-            self.path.push(QueryOptions::LIMIT_ITEMS_FIELD.name);
+        pub fn limit(mut self) -> String {
+            self.path.push(QueryOptions::LIMIT_FIELD.name);
             self.finish()
         }
         pub fn after(mut self) -> String {
@@ -1849,24 +1849,17 @@ pub(crate) mod _field_impls {
             number: 1i32,
             message_fields: None,
         };
-        pub const CHECKPOINT_HI_FIELD: &'static MessageField = &MessageField {
-            name: "checkpoint_hi",
-            json_name: "checkpointHi",
+        pub const CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "checkpoint",
+            json_name: "checkpoint",
             number: 2i32,
-            message_fields: None,
-        };
-        pub const CHECKPOINT_LO_FIELD: &'static MessageField = &MessageField {
-            name: "checkpoint_lo",
-            json_name: "checkpointLo",
-            number: 3i32,
             message_fields: None,
         };
     }
     impl MessageFields for Watermark {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::CURSOR_FIELD,
-            Self::CHECKPOINT_HI_FIELD,
-            Self::CHECKPOINT_LO_FIELD,
+            Self::CHECKPOINT_FIELD,
         ];
     }
     impl Watermark {
@@ -1893,12 +1886,8 @@ pub(crate) mod _field_impls {
             self.path.push(Watermark::CURSOR_FIELD.name);
             self.finish()
         }
-        pub fn checkpoint_hi(mut self) -> String {
-            self.path.push(Watermark::CHECKPOINT_HI_FIELD.name);
-            self.finish()
-        }
-        pub fn checkpoint_lo(mut self) -> String {
-            self.path.push(Watermark::CHECKPOINT_LO_FIELD.name);
+        pub fn checkpoint(mut self) -> String {
+            self.path.push(Watermark::CHECKPOINT_FIELD.name);
             self.finish()
         }
     }

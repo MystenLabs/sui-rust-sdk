@@ -154,10 +154,10 @@ async fn run_stream_task(
             end_checkpoint: None,
             filter: Some(filter.clone()),
             options: Some(QueryOptions {
-                limit_items: Some(config.page_size),
+                limit: Some(config.page_size),
                 after: next_cursor.clone(),
                 before: None,
-                ordering: 0, // ascending (default)
+                ordering: None, // ascending (default)
             }),
         };
 
@@ -167,11 +167,11 @@ async fn run_stream_task(
                     events,
                     end_cursor,
                     end_reason,
-                    watermark_hi,
+                    watermark,
                     partial_error,
                 } = page;
 
-                buffer_response_batch(&mut state, events, watermark_hi);
+                buffer_response_batch(&mut state, events, watermark);
 
                 // Mid-stream transport error: commit whatever items we
                 // got into the buffer (done above), advance
@@ -321,11 +321,11 @@ struct PageResult {
     /// the server no longer carries a cursor on `QueryEnd`.
     end_cursor: Option<prost::bytes::Bytes>,
     end_reason: Option<QueryEndReason>,
-    /// Most recent `Watermark.checkpoint_hi` observed in this page,
+    /// Most recent `Watermark.checkpoint` observed in this page,
     /// across both standalone watermarks and per-item watermarks. The
     /// streaming state uses this as the "events scanned through" floor
     /// when picking the settlement-fetch range.
-    watermark_hi: Option<u64>,
+    watermark: Option<u64>,
     /// Mid-stream transport error that interrupted page accumulation.
     /// When present, `events` and `end_cursor` reflect what was
     /// received before the error. The caller advances `next_cursor` to
@@ -350,7 +350,7 @@ async fn fetch_one_page(
     let mut events = Vec::new();
     let mut end_cursor: Option<prost::bytes::Bytes> = None;
     let mut end_reason = None;
-    let mut watermark_hi: Option<u64> = None;
+    let mut watermark: Option<u64> = None;
     let mut partial_error: Option<LightClientError> = None;
 
     while let Some(frame) = stream.next().await {
@@ -367,8 +367,8 @@ async fn fetch_one_page(
                     if let Some(c) = w.cursor.clone() {
                         end_cursor = Some(c);
                     }
-                    if let Some(hi) = w.checkpoint_hi {
-                        watermark_hi = Some(watermark_hi.map_or(hi, |prev| prev.max(hi)));
+                    if let Some(hi) = w.checkpoint {
+                        watermark = Some(watermark.map_or(hi, |prev| prev.max(hi)));
                     }
                 }
                 let ev = AuthenticatedEvent::try_from(&item)?;
@@ -378,8 +378,8 @@ async fn fetch_one_page(
                 if let Some(c) = w.cursor {
                     end_cursor = Some(c);
                 }
-                if let Some(hi) = w.checkpoint_hi {
-                    watermark_hi = Some(watermark_hi.map_or(hi, |prev| prev.max(hi)));
+                if let Some(hi) = w.checkpoint {
+                    watermark = Some(watermark.map_or(hi, |prev| prev.max(hi)));
                 }
             }
             Some(list_events_response::Response::End(end)) => {
@@ -394,7 +394,7 @@ async fn fetch_one_page(
         events,
         end_cursor,
         end_reason,
-        watermark_hi,
+        watermark,
         partial_error,
     })
 }
@@ -502,10 +502,10 @@ async fn fetch_settlements_for_range(
             end_checkpoint: Some(end_checkpoint_exclusive),
             filter: Some(filter.clone()),
             options: Some(QueryOptions {
-                limit_items: Some(page_size),
+                limit: Some(page_size),
                 after: cursor.clone(),
                 before: None,
-                ordering: 0, // ascending
+                ordering: None, // ascending
             }),
         };
 

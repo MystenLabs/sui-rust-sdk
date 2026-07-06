@@ -69,9 +69,8 @@ message CheckpointItem {
   optional sui.rpc.v2.Checkpoint checkpoint = 1;
 
   // Progress watermark as of when this item was emitted: its `cursor`
-  // is the resume point past this item, and `checkpoint_hi` /
-  // `checkpoint_lo` (whichever matches the request ordering) is the
-  // inclusive boundary checkpoint that the scan has fully covered.
+  // is the resume point past this item, and `checkpoint` is the inclusive
+  // boundary checkpoint that the scan has fully covered.
   optional Watermark watermark = 2;
 }
 
@@ -124,9 +123,8 @@ message TransactionItem {
   optional sui.rpc.v2.ExecutedTransaction transaction = 1;
 
   // Progress watermark as of when this item was emitted: its `cursor`
-  // is the resume point past this item, and `checkpoint_hi` /
-  // `checkpoint_lo` (whichever matches the request ordering) is the
-  // inclusive boundary checkpoint that the scan has fully covered.
+  // is the resume point past this item, and `checkpoint` is the inclusive
+  // boundary checkpoint that the scan has fully covered.
   optional Watermark watermark = 2;
 
   // Zero-based position of this transaction within the checkpoint that
@@ -180,9 +178,8 @@ message ListEventsRequest {
 // One event item.
 message EventItem {
   // Progress watermark as of when this item was emitted: its `cursor`
-  // is the resume point past this item, and `checkpoint_hi` /
-  // `checkpoint_lo` (whichever matches the request ordering) is the
-  // inclusive boundary checkpoint that the scan has fully covered.
+  // is the resume point past this item, and `checkpoint` is the inclusive
+  // boundary checkpoint that the scan has fully covered.
   optional Watermark watermark = 1;
 
   // The checkpoint containing the transaction that emitted this event.
