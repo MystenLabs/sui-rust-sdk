@@ -383,7 +383,7 @@ async fn fetch_one_page(
                 }
             }
             Some(list_events_response::Response::End(end)) => {
-                end_reason = QueryEndReason::try_from(end.reason).ok();
+                end_reason = end.reason.and_then(|r| QueryEndReason::try_from(r).ok());
                 break;
             }
             None => break,
@@ -587,7 +587,7 @@ async fn fetch_settlements_page(
                 }
             }
             Some(list_transactions_response::Response::End(end)) => {
-                end_reason = QueryEndReason::try_from(end.reason).ok();
+                end_reason = end.reason.and_then(|r| QueryEndReason::try_from(r).ok());
                 break;
             }
             None => break,

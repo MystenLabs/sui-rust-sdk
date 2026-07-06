@@ -216,7 +216,7 @@ pub struct EventTypeFilter {
     /// Required. Move type string of the form
     /// `address\[::module[::Name[<type_params>]\]]`.
     #[prost(string, optional, tag = "1")]
-    pub r#type: ::core::option::Option<::prost::alloc::string::String>,
+    pub event_type: ::core::option::Option<::prost::alloc::string::String>,
 }
 /// Match by authenticated event stream head.
 #[non_exhaustive]
@@ -1546,8 +1546,8 @@ pub struct Watermark {
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct QueryEnd {
     /// Reason this response stopped.
-    #[prost(enumeration = "QueryEndReason", tag = "1")]
-    pub reason: i32,
+    #[prost(enumeration = "QueryEndReason", optional, tag = "1")]
+    pub reason: ::core::option::Option<i32>,
 }
 /// Ordering for the returned result set.
 #[non_exhaustive]

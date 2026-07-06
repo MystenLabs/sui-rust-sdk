@@ -107,5 +107,5 @@ message Watermark {
 // already delivered.
 message QueryEnd {
   // Reason this response stopped.
-  QueryEndReason reason = 1;
+  optional QueryEndReason reason = 1;
 }

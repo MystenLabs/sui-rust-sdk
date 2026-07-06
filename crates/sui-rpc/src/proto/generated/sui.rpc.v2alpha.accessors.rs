@@ -702,33 +702,33 @@ mod _accessor_impls {
     }
     impl super::EventTypeFilter {
         pub const fn const_default() -> Self {
-            Self { r#type: None }
+            Self { event_type: None }
         }
         #[doc(hidden)]
         pub fn default_instance() -> &'static Self {
             static DEFAULT: super::EventTypeFilter = super::EventTypeFilter::const_default();
             &DEFAULT
         }
-        ///If `r#type` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn type_opt_mut(&mut self) -> Option<&mut String> {
-            self.r#type.as_mut().map(|field| field as _)
+        ///If `event_type` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn event_type_opt_mut(&mut self) -> Option<&mut String> {
+            self.event_type.as_mut().map(|field| field as _)
         }
-        ///Returns a mutable reference to `r#type`.
+        ///Returns a mutable reference to `event_type`.
         ///If the field is unset, it is first initialized with the default value.
-        pub fn type_mut(&mut self) -> &mut String {
-            self.r#type.get_or_insert_default()
+        pub fn event_type_mut(&mut self) -> &mut String {
+            self.event_type.get_or_insert_default()
         }
-        ///If `r#type` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn type_opt(&self) -> Option<&str> {
-            self.r#type.as_ref().map(|field| field as _)
+        ///If `event_type` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn event_type_opt(&self) -> Option<&str> {
+            self.event_type.as_ref().map(|field| field as _)
         }
-        ///Sets `r#type` with the provided value.
-        pub fn set_type<T: Into<String>>(&mut self, field: T) {
-            self.r#type = Some(field.into().into());
+        ///Sets `event_type` with the provided value.
+        pub fn set_event_type<T: Into<String>>(&mut self, field: T) {
+            self.event_type = Some(field.into().into());
         }
-        ///Sets `r#type` with the provided value.
-        pub fn with_type<T: Into<String>>(mut self, field: T) -> Self {
-            self.set_type(field.into());
+        ///Sets `event_type` with the provided value.
+        pub fn with_event_type<T: Into<String>>(mut self, field: T) -> Self {
+            self.set_event_type(field.into());
             self
         }
     }
@@ -2452,12 +2452,17 @@ mod _accessor_impls {
     }
     impl super::QueryEnd {
         pub const fn const_default() -> Self {
-            Self { reason: 0 }
+            Self { reason: None }
         }
         #[doc(hidden)]
         pub fn default_instance() -> &'static Self {
             static DEFAULT: super::QueryEnd = super::QueryEnd::const_default();
             &DEFAULT
+        }
+        ///Sets `reason` with the provided value.
+        pub fn with_reason<T: Into<super::QueryEndReason>>(mut self, field: T) -> Self {
+            self.set_reason(field.into());
+            self
         }
     }
     impl super::QueryOptions {
