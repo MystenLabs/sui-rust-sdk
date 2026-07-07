@@ -18,69 +18,55 @@ pub struct TransactionTerm {
     #[prost(message, repeated, tag = "1")]
     pub literals: ::prost::alloc::vec::Vec<TransactionLiteral>,
 }
-/// One signed transaction predicate literal.
+/// One signed transaction predicate literal: a predicate, optionally negated.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct TransactionLiteral {
-    #[prost(oneof = "transaction_literal::Polarity", tags = "1, 2")]
-    pub polarity: ::core::option::Option<transaction_literal::Polarity>,
+    /// When true, the literal matches transactions that the predicate does *not*
+    /// match.
+    #[prost(bool, tag = "1")]
+    pub negated: bool,
+    /// The transaction-index predicate to match.
+    #[prost(oneof = "transaction_literal::Predicate", tags = "2, 3, 4, 5, 6, 7, 8, 9")]
+    pub predicate: ::core::option::Option<transaction_literal::Predicate>,
 }
 /// Nested message and enum types in `TransactionLiteral`.
 pub mod transaction_literal {
-    #[non_exhaustive]
-    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
-    pub enum Polarity {
-        /// The predicate must match.
-        #[prost(message, tag = "1")]
-        Include(super::TransactionPredicate),
-        /// The predicate must not match.
-        #[prost(message, tag = "2")]
-        Exclude(super::TransactionPredicate),
-    }
-}
-/// One transaction-index predicate.
-#[non_exhaustive]
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct TransactionPredicate {
-    #[prost(oneof = "transaction_predicate::Predicate", tags = "1, 2, 3, 4, 5, 6, 7, 8")]
-    pub predicate: ::core::option::Option<transaction_predicate::Predicate>,
-}
-/// Nested message and enum types in `TransactionPredicate`.
-pub mod transaction_predicate {
+    /// The transaction-index predicate to match.
     #[non_exhaustive]
     #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
     pub enum Predicate {
         /// Match transactions sent by the specified address.
-        #[prost(message, tag = "1")]
+        #[prost(message, tag = "2")]
         Sender(super::SenderFilter),
         /// Match transactions where the specified address's state moved as a side
         /// effect: it owns an object after the txn, owned an object before the
         /// txn that was mutated/transferred away/deleted/wrapped, or its
         /// address-balance changed via an accumulator event.
-        #[prost(message, tag = "2")]
+        #[prost(message, tag = "3")]
         AffectedAddress(super::AffectedAddressFilter),
         /// Match transactions whose effects include a change for the specified
         /// object.
-        #[prost(message, tag = "3")]
+        #[prost(message, tag = "4")]
         AffectedObject(super::AffectedObjectFilter),
         /// Match transactions that made a Move call matching the specified filter.
-        #[prost(message, tag = "4")]
+        #[prost(message, tag = "5")]
         MoveCall(super::MoveCallFilter),
         /// Match transactions that emitted an event whose package/module fields
         /// match the specified filter.
-        #[prost(message, tag = "5")]
+        #[prost(message, tag = "6")]
         EmitModule(super::EmitModuleFilter),
         /// Match transactions that emitted an event with a type matching the
         /// specified filter.
-        #[prost(message, tag = "6")]
+        #[prost(message, tag = "7")]
         EventType(super::EventTypeFilter),
         /// Match transactions that wrote to the specified authenticated event
         /// stream head.
-        #[prost(message, tag = "7")]
+        #[prost(message, tag = "8")]
         EventStreamHead(super::EventStreamHeadFilter),
         /// Match transactions that wrote a Move package — a first publish or an
         /// upgrade, of any package.
-        #[prost(message, tag = "8")]
+        #[prost(message, tag = "9")]
         PackageWrite(super::PackageWriteFilter),
     }
 }
@@ -104,49 +90,34 @@ pub struct EventTerm {
     #[prost(message, repeated, tag = "1")]
     pub literals: ::prost::alloc::vec::Vec<EventLiteral>,
 }
-/// One signed event predicate literal.
+/// One signed event predicate literal: a predicate, optionally negated.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct EventLiteral {
-    #[prost(oneof = "event_literal::Polarity", tags = "1, 2")]
-    pub polarity: ::core::option::Option<event_literal::Polarity>,
+    /// When true, the literal matches events that the predicate does *not* match.
+    #[prost(bool, tag = "1")]
+    pub negated: bool,
+    /// The event-index predicate to match.
+    #[prost(oneof = "event_literal::Predicate", tags = "2, 3, 4, 5")]
+    pub predicate: ::core::option::Option<event_literal::Predicate>,
 }
 /// Nested message and enum types in `EventLiteral`.
 pub mod event_literal {
-    #[non_exhaustive]
-    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
-    pub enum Polarity {
-        /// The predicate must match.
-        #[prost(message, tag = "1")]
-        Include(super::EventPredicate),
-        /// The predicate must not match.
-        #[prost(message, tag = "2")]
-        Exclude(super::EventPredicate),
-    }
-}
-/// One event-index predicate.
-#[non_exhaustive]
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct EventPredicate {
-    #[prost(oneof = "event_predicate::Predicate", tags = "1, 2, 3, 4")]
-    pub predicate: ::core::option::Option<event_predicate::Predicate>,
-}
-/// Nested message and enum types in `EventPredicate`.
-pub mod event_predicate {
+    /// The event-index predicate to match.
     #[non_exhaustive]
     #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
     pub enum Predicate {
         /// Match events from transactions sent by the specified address.
-        #[prost(message, tag = "1")]
+        #[prost(message, tag = "2")]
         Sender(super::SenderFilter),
         /// Match events whose package/module fields match the specified filter.
-        #[prost(message, tag = "2")]
+        #[prost(message, tag = "3")]
         EmitModule(super::EmitModuleFilter),
         /// Match events whose type matches the specified filter.
-        #[prost(message, tag = "3")]
+        #[prost(message, tag = "4")]
         EventType(super::EventTypeFilter),
         /// Match events committed to the specified authenticated event stream head.
-        #[prost(message, tag = "4")]
+        #[prost(message, tag = "5")]
         EventStreamHead(super::EventStreamHeadFilter),
     }
 }

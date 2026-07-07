@@ -276,135 +276,33 @@ mod _accessor_impls {
     }
     impl super::EventLiteral {
         pub const fn const_default() -> Self {
-            Self { polarity: None }
+            Self {
+                negated: false,
+                predicate: None,
+            }
         }
         #[doc(hidden)]
         pub fn default_instance() -> &'static Self {
             static DEFAULT: super::EventLiteral = super::EventLiteral::const_default();
             &DEFAULT
         }
-        ///Returns the value of `include`, or the default value if `include` is unset.
-        pub fn include(&self) -> &super::EventPredicate {
-            if let Some(super::event_literal::Polarity::Include(field)) = &self.polarity
-            {
-                field as _
-            } else {
-                super::EventPredicate::default_instance() as _
-            }
-        }
-        ///If `include` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn include_opt(&self) -> Option<&super::EventPredicate> {
-            if let Some(super::event_literal::Polarity::Include(field)) = &self.polarity
-            {
-                Some(field as _)
-            } else {
-                None
-            }
-        }
-        ///If `include` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn include_opt_mut(&mut self) -> Option<&mut super::EventPredicate> {
-            if let Some(super::event_literal::Polarity::Include(field)) = &mut self
-                .polarity
-            {
-                Some(field as _)
-            } else {
-                None
-            }
-        }
-        ///Returns a mutable reference to `include`.
+        ///Returns a mutable reference to `negated`.
         ///If the field is unset, it is first initialized with the default value.
-        ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn include_mut(&mut self) -> &mut super::EventPredicate {
-            if self.include_opt_mut().is_none() {
-                self.polarity = Some(
-                    super::event_literal::Polarity::Include(
-                        super::EventPredicate::default(),
-                    ),
-                );
-            }
-            self.include_opt_mut().unwrap()
+        pub fn negated_mut(&mut self) -> &mut bool {
+            &mut self.negated
         }
-        ///Sets `include` with the provided value.
-        ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn set_include<T: Into<super::EventPredicate>>(&mut self, field: T) {
-            self.polarity = Some(
-                super::event_literal::Polarity::Include(field.into().into()),
-            );
+        ///Sets `negated` with the provided value.
+        pub fn set_negated(&mut self, field: bool) {
+            self.negated = field;
         }
-        ///Sets `include` with the provided value.
-        ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn with_include<T: Into<super::EventPredicate>>(mut self, field: T) -> Self {
-            self.set_include(field.into());
+        ///Sets `negated` with the provided value.
+        pub fn with_negated(mut self, field: bool) -> Self {
+            self.set_negated(field);
             self
-        }
-        ///Returns the value of `exclude`, or the default value if `exclude` is unset.
-        pub fn exclude(&self) -> &super::EventPredicate {
-            if let Some(super::event_literal::Polarity::Exclude(field)) = &self.polarity
-            {
-                field as _
-            } else {
-                super::EventPredicate::default_instance() as _
-            }
-        }
-        ///If `exclude` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn exclude_opt(&self) -> Option<&super::EventPredicate> {
-            if let Some(super::event_literal::Polarity::Exclude(field)) = &self.polarity
-            {
-                Some(field as _)
-            } else {
-                None
-            }
-        }
-        ///If `exclude` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn exclude_opt_mut(&mut self) -> Option<&mut super::EventPredicate> {
-            if let Some(super::event_literal::Polarity::Exclude(field)) = &mut self
-                .polarity
-            {
-                Some(field as _)
-            } else {
-                None
-            }
-        }
-        ///Returns a mutable reference to `exclude`.
-        ///If the field is unset, it is first initialized with the default value.
-        ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn exclude_mut(&mut self) -> &mut super::EventPredicate {
-            if self.exclude_opt_mut().is_none() {
-                self.polarity = Some(
-                    super::event_literal::Polarity::Exclude(
-                        super::EventPredicate::default(),
-                    ),
-                );
-            }
-            self.exclude_opt_mut().unwrap()
-        }
-        ///Sets `exclude` with the provided value.
-        ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn set_exclude<T: Into<super::EventPredicate>>(&mut self, field: T) {
-            self.polarity = Some(
-                super::event_literal::Polarity::Exclude(field.into().into()),
-            );
-        }
-        ///Sets `exclude` with the provided value.
-        ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn with_exclude<T: Into<super::EventPredicate>>(mut self, field: T) -> Self {
-            self.set_exclude(field.into());
-            self
-        }
-    }
-    impl super::EventPredicate {
-        pub const fn const_default() -> Self {
-            Self { predicate: None }
-        }
-        #[doc(hidden)]
-        pub fn default_instance() -> &'static Self {
-            static DEFAULT: super::EventPredicate = super::EventPredicate::const_default();
-            &DEFAULT
         }
         ///Returns the value of `sender`, or the default value if `sender` is unset.
         pub fn sender(&self) -> &super::SenderFilter {
-            if let Some(super::event_predicate::Predicate::Sender(field)) = &self
-                .predicate
+            if let Some(super::event_literal::Predicate::Sender(field)) = &self.predicate
             {
                 field as _
             } else {
@@ -413,8 +311,7 @@ mod _accessor_impls {
         }
         ///If `sender` is set, returns [`Some`] with the value; otherwise returns [`None`].
         pub fn sender_opt(&self) -> Option<&super::SenderFilter> {
-            if let Some(super::event_predicate::Predicate::Sender(field)) = &self
-                .predicate
+            if let Some(super::event_literal::Predicate::Sender(field)) = &self.predicate
             {
                 Some(field as _)
             } else {
@@ -423,7 +320,7 @@ mod _accessor_impls {
         }
         ///If `sender` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
         pub fn sender_opt_mut(&mut self) -> Option<&mut super::SenderFilter> {
-            if let Some(super::event_predicate::Predicate::Sender(field)) = &mut self
+            if let Some(super::event_literal::Predicate::Sender(field)) = &mut self
                 .predicate
             {
                 Some(field as _)
@@ -437,7 +334,7 @@ mod _accessor_impls {
         pub fn sender_mut(&mut self) -> &mut super::SenderFilter {
             if self.sender_opt_mut().is_none() {
                 self.predicate = Some(
-                    super::event_predicate::Predicate::Sender(
+                    super::event_literal::Predicate::Sender(
                         super::SenderFilter::default(),
                     ),
                 );
@@ -448,7 +345,7 @@ mod _accessor_impls {
         ///If any other oneof field in the same oneof is set, it will be cleared.
         pub fn set_sender<T: Into<super::SenderFilter>>(&mut self, field: T) {
             self.predicate = Some(
-                super::event_predicate::Predicate::Sender(field.into().into()),
+                super::event_literal::Predicate::Sender(field.into().into()),
             );
         }
         ///Sets `sender` with the provided value.
@@ -459,7 +356,7 @@ mod _accessor_impls {
         }
         ///Returns the value of `emit_module`, or the default value if `emit_module` is unset.
         pub fn emit_module(&self) -> &super::EmitModuleFilter {
-            if let Some(super::event_predicate::Predicate::EmitModule(field)) = &self
+            if let Some(super::event_literal::Predicate::EmitModule(field)) = &self
                 .predicate
             {
                 field as _
@@ -469,7 +366,7 @@ mod _accessor_impls {
         }
         ///If `emit_module` is set, returns [`Some`] with the value; otherwise returns [`None`].
         pub fn emit_module_opt(&self) -> Option<&super::EmitModuleFilter> {
-            if let Some(super::event_predicate::Predicate::EmitModule(field)) = &self
+            if let Some(super::event_literal::Predicate::EmitModule(field)) = &self
                 .predicate
             {
                 Some(field as _)
@@ -479,7 +376,7 @@ mod _accessor_impls {
         }
         ///If `emit_module` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
         pub fn emit_module_opt_mut(&mut self) -> Option<&mut super::EmitModuleFilter> {
-            if let Some(super::event_predicate::Predicate::EmitModule(field)) = &mut self
+            if let Some(super::event_literal::Predicate::EmitModule(field)) = &mut self
                 .predicate
             {
                 Some(field as _)
@@ -493,7 +390,7 @@ mod _accessor_impls {
         pub fn emit_module_mut(&mut self) -> &mut super::EmitModuleFilter {
             if self.emit_module_opt_mut().is_none() {
                 self.predicate = Some(
-                    super::event_predicate::Predicate::EmitModule(
+                    super::event_literal::Predicate::EmitModule(
                         super::EmitModuleFilter::default(),
                     ),
                 );
@@ -504,7 +401,7 @@ mod _accessor_impls {
         ///If any other oneof field in the same oneof is set, it will be cleared.
         pub fn set_emit_module<T: Into<super::EmitModuleFilter>>(&mut self, field: T) {
             self.predicate = Some(
-                super::event_predicate::Predicate::EmitModule(field.into().into()),
+                super::event_literal::Predicate::EmitModule(field.into().into()),
             );
         }
         ///Sets `emit_module` with the provided value.
@@ -518,7 +415,7 @@ mod _accessor_impls {
         }
         ///Returns the value of `event_type`, or the default value if `event_type` is unset.
         pub fn event_type(&self) -> &super::EventTypeFilter {
-            if let Some(super::event_predicate::Predicate::EventType(field)) = &self
+            if let Some(super::event_literal::Predicate::EventType(field)) = &self
                 .predicate
             {
                 field as _
@@ -528,7 +425,7 @@ mod _accessor_impls {
         }
         ///If `event_type` is set, returns [`Some`] with the value; otherwise returns [`None`].
         pub fn event_type_opt(&self) -> Option<&super::EventTypeFilter> {
-            if let Some(super::event_predicate::Predicate::EventType(field)) = &self
+            if let Some(super::event_literal::Predicate::EventType(field)) = &self
                 .predicate
             {
                 Some(field as _)
@@ -538,7 +435,7 @@ mod _accessor_impls {
         }
         ///If `event_type` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
         pub fn event_type_opt_mut(&mut self) -> Option<&mut super::EventTypeFilter> {
-            if let Some(super::event_predicate::Predicate::EventType(field)) = &mut self
+            if let Some(super::event_literal::Predicate::EventType(field)) = &mut self
                 .predicate
             {
                 Some(field as _)
@@ -552,7 +449,7 @@ mod _accessor_impls {
         pub fn event_type_mut(&mut self) -> &mut super::EventTypeFilter {
             if self.event_type_opt_mut().is_none() {
                 self.predicate = Some(
-                    super::event_predicate::Predicate::EventType(
+                    super::event_literal::Predicate::EventType(
                         super::EventTypeFilter::default(),
                     ),
                 );
@@ -563,7 +460,7 @@ mod _accessor_impls {
         ///If any other oneof field in the same oneof is set, it will be cleared.
         pub fn set_event_type<T: Into<super::EventTypeFilter>>(&mut self, field: T) {
             self.predicate = Some(
-                super::event_predicate::Predicate::EventType(field.into().into()),
+                super::event_literal::Predicate::EventType(field.into().into()),
             );
         }
         ///Sets `event_type` with the provided value.
@@ -577,7 +474,7 @@ mod _accessor_impls {
         }
         ///Returns the value of `event_stream_head`, or the default value if `event_stream_head` is unset.
         pub fn event_stream_head(&self) -> &super::EventStreamHeadFilter {
-            if let Some(super::event_predicate::Predicate::EventStreamHead(field)) = &self
+            if let Some(super::event_literal::Predicate::EventStreamHead(field)) = &self
                 .predicate
             {
                 field as _
@@ -587,7 +484,7 @@ mod _accessor_impls {
         }
         ///If `event_stream_head` is set, returns [`Some`] with the value; otherwise returns [`None`].
         pub fn event_stream_head_opt(&self) -> Option<&super::EventStreamHeadFilter> {
-            if let Some(super::event_predicate::Predicate::EventStreamHead(field)) = &self
+            if let Some(super::event_literal::Predicate::EventStreamHead(field)) = &self
                 .predicate
             {
                 Some(field as _)
@@ -599,7 +496,7 @@ mod _accessor_impls {
         pub fn event_stream_head_opt_mut(
             &mut self,
         ) -> Option<&mut super::EventStreamHeadFilter> {
-            if let Some(super::event_predicate::Predicate::EventStreamHead(field)) = &mut self
+            if let Some(super::event_literal::Predicate::EventStreamHead(field)) = &mut self
                 .predicate
             {
                 Some(field as _)
@@ -613,7 +510,7 @@ mod _accessor_impls {
         pub fn event_stream_head_mut(&mut self) -> &mut super::EventStreamHeadFilter {
             if self.event_stream_head_opt_mut().is_none() {
                 self.predicate = Some(
-                    super::event_predicate::Predicate::EventStreamHead(
+                    super::event_literal::Predicate::EventStreamHead(
                         super::EventStreamHeadFilter::default(),
                     ),
                 );
@@ -627,7 +524,7 @@ mod _accessor_impls {
             field: T,
         ) {
             self.predicate = Some(
-                super::event_predicate::Predicate::EventStreamHead(field.into().into()),
+                super::event_literal::Predicate::EventStreamHead(field.into().into()),
             );
         }
         ///Sets `event_stream_head` with the provided value.
@@ -2676,144 +2573,33 @@ mod _accessor_impls {
     }
     impl super::TransactionLiteral {
         pub const fn const_default() -> Self {
-            Self { polarity: None }
+            Self {
+                negated: false,
+                predicate: None,
+            }
         }
         #[doc(hidden)]
         pub fn default_instance() -> &'static Self {
             static DEFAULT: super::TransactionLiteral = super::TransactionLiteral::const_default();
             &DEFAULT
         }
-        ///Returns the value of `include`, or the default value if `include` is unset.
-        pub fn include(&self) -> &super::TransactionPredicate {
-            if let Some(super::transaction_literal::Polarity::Include(field)) = &self
-                .polarity
-            {
-                field as _
-            } else {
-                super::TransactionPredicate::default_instance() as _
-            }
-        }
-        ///If `include` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn include_opt(&self) -> Option<&super::TransactionPredicate> {
-            if let Some(super::transaction_literal::Polarity::Include(field)) = &self
-                .polarity
-            {
-                Some(field as _)
-            } else {
-                None
-            }
-        }
-        ///If `include` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn include_opt_mut(&mut self) -> Option<&mut super::TransactionPredicate> {
-            if let Some(super::transaction_literal::Polarity::Include(field)) = &mut self
-                .polarity
-            {
-                Some(field as _)
-            } else {
-                None
-            }
-        }
-        ///Returns a mutable reference to `include`.
+        ///Returns a mutable reference to `negated`.
         ///If the field is unset, it is first initialized with the default value.
-        ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn include_mut(&mut self) -> &mut super::TransactionPredicate {
-            if self.include_opt_mut().is_none() {
-                self.polarity = Some(
-                    super::transaction_literal::Polarity::Include(
-                        super::TransactionPredicate::default(),
-                    ),
-                );
-            }
-            self.include_opt_mut().unwrap()
+        pub fn negated_mut(&mut self) -> &mut bool {
+            &mut self.negated
         }
-        ///Sets `include` with the provided value.
-        ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn set_include<T: Into<super::TransactionPredicate>>(&mut self, field: T) {
-            self.polarity = Some(
-                super::transaction_literal::Polarity::Include(field.into().into()),
-            );
+        ///Sets `negated` with the provided value.
+        pub fn set_negated(&mut self, field: bool) {
+            self.negated = field;
         }
-        ///Sets `include` with the provided value.
-        ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn with_include<T: Into<super::TransactionPredicate>>(
-            mut self,
-            field: T,
-        ) -> Self {
-            self.set_include(field.into());
+        ///Sets `negated` with the provided value.
+        pub fn with_negated(mut self, field: bool) -> Self {
+            self.set_negated(field);
             self
-        }
-        ///Returns the value of `exclude`, or the default value if `exclude` is unset.
-        pub fn exclude(&self) -> &super::TransactionPredicate {
-            if let Some(super::transaction_literal::Polarity::Exclude(field)) = &self
-                .polarity
-            {
-                field as _
-            } else {
-                super::TransactionPredicate::default_instance() as _
-            }
-        }
-        ///If `exclude` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn exclude_opt(&self) -> Option<&super::TransactionPredicate> {
-            if let Some(super::transaction_literal::Polarity::Exclude(field)) = &self
-                .polarity
-            {
-                Some(field as _)
-            } else {
-                None
-            }
-        }
-        ///If `exclude` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn exclude_opt_mut(&mut self) -> Option<&mut super::TransactionPredicate> {
-            if let Some(super::transaction_literal::Polarity::Exclude(field)) = &mut self
-                .polarity
-            {
-                Some(field as _)
-            } else {
-                None
-            }
-        }
-        ///Returns a mutable reference to `exclude`.
-        ///If the field is unset, it is first initialized with the default value.
-        ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn exclude_mut(&mut self) -> &mut super::TransactionPredicate {
-            if self.exclude_opt_mut().is_none() {
-                self.polarity = Some(
-                    super::transaction_literal::Polarity::Exclude(
-                        super::TransactionPredicate::default(),
-                    ),
-                );
-            }
-            self.exclude_opt_mut().unwrap()
-        }
-        ///Sets `exclude` with the provided value.
-        ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn set_exclude<T: Into<super::TransactionPredicate>>(&mut self, field: T) {
-            self.polarity = Some(
-                super::transaction_literal::Polarity::Exclude(field.into().into()),
-            );
-        }
-        ///Sets `exclude` with the provided value.
-        ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn with_exclude<T: Into<super::TransactionPredicate>>(
-            mut self,
-            field: T,
-        ) -> Self {
-            self.set_exclude(field.into());
-            self
-        }
-    }
-    impl super::TransactionPredicate {
-        pub const fn const_default() -> Self {
-            Self { predicate: None }
-        }
-        #[doc(hidden)]
-        pub fn default_instance() -> &'static Self {
-            static DEFAULT: super::TransactionPredicate = super::TransactionPredicate::const_default();
-            &DEFAULT
         }
         ///Returns the value of `sender`, or the default value if `sender` is unset.
         pub fn sender(&self) -> &super::SenderFilter {
-            if let Some(super::transaction_predicate::Predicate::Sender(field)) = &self
+            if let Some(super::transaction_literal::Predicate::Sender(field)) = &self
                 .predicate
             {
                 field as _
@@ -2823,7 +2609,7 @@ mod _accessor_impls {
         }
         ///If `sender` is set, returns [`Some`] with the value; otherwise returns [`None`].
         pub fn sender_opt(&self) -> Option<&super::SenderFilter> {
-            if let Some(super::transaction_predicate::Predicate::Sender(field)) = &self
+            if let Some(super::transaction_literal::Predicate::Sender(field)) = &self
                 .predicate
             {
                 Some(field as _)
@@ -2833,7 +2619,7 @@ mod _accessor_impls {
         }
         ///If `sender` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
         pub fn sender_opt_mut(&mut self) -> Option<&mut super::SenderFilter> {
-            if let Some(super::transaction_predicate::Predicate::Sender(field)) = &mut self
+            if let Some(super::transaction_literal::Predicate::Sender(field)) = &mut self
                 .predicate
             {
                 Some(field as _)
@@ -2847,7 +2633,7 @@ mod _accessor_impls {
         pub fn sender_mut(&mut self) -> &mut super::SenderFilter {
             if self.sender_opt_mut().is_none() {
                 self.predicate = Some(
-                    super::transaction_predicate::Predicate::Sender(
+                    super::transaction_literal::Predicate::Sender(
                         super::SenderFilter::default(),
                     ),
                 );
@@ -2858,7 +2644,7 @@ mod _accessor_impls {
         ///If any other oneof field in the same oneof is set, it will be cleared.
         pub fn set_sender<T: Into<super::SenderFilter>>(&mut self, field: T) {
             self.predicate = Some(
-                super::transaction_predicate::Predicate::Sender(field.into().into()),
+                super::transaction_literal::Predicate::Sender(field.into().into()),
             );
         }
         ///Sets `sender` with the provided value.
@@ -2869,9 +2655,8 @@ mod _accessor_impls {
         }
         ///Returns the value of `affected_address`, or the default value if `affected_address` is unset.
         pub fn affected_address(&self) -> &super::AffectedAddressFilter {
-            if let Some(
-                super::transaction_predicate::Predicate::AffectedAddress(field),
-            ) = &self.predicate
+            if let Some(super::transaction_literal::Predicate::AffectedAddress(field)) = &self
+                .predicate
             {
                 field as _
             } else {
@@ -2880,9 +2665,8 @@ mod _accessor_impls {
         }
         ///If `affected_address` is set, returns [`Some`] with the value; otherwise returns [`None`].
         pub fn affected_address_opt(&self) -> Option<&super::AffectedAddressFilter> {
-            if let Some(
-                super::transaction_predicate::Predicate::AffectedAddress(field),
-            ) = &self.predicate
+            if let Some(super::transaction_literal::Predicate::AffectedAddress(field)) = &self
+                .predicate
             {
                 Some(field as _)
             } else {
@@ -2893,9 +2677,8 @@ mod _accessor_impls {
         pub fn affected_address_opt_mut(
             &mut self,
         ) -> Option<&mut super::AffectedAddressFilter> {
-            if let Some(
-                super::transaction_predicate::Predicate::AffectedAddress(field),
-            ) = &mut self.predicate
+            if let Some(super::transaction_literal::Predicate::AffectedAddress(field)) = &mut self
+                .predicate
             {
                 Some(field as _)
             } else {
@@ -2908,7 +2691,7 @@ mod _accessor_impls {
         pub fn affected_address_mut(&mut self) -> &mut super::AffectedAddressFilter {
             if self.affected_address_opt_mut().is_none() {
                 self.predicate = Some(
-                    super::transaction_predicate::Predicate::AffectedAddress(
+                    super::transaction_literal::Predicate::AffectedAddress(
                         super::AffectedAddressFilter::default(),
                     ),
                 );
@@ -2922,7 +2705,7 @@ mod _accessor_impls {
             field: T,
         ) {
             self.predicate = Some(
-                super::transaction_predicate::Predicate::AffectedAddress(
+                super::transaction_literal::Predicate::AffectedAddress(
                     field.into().into(),
                 ),
             );
@@ -2938,9 +2721,8 @@ mod _accessor_impls {
         }
         ///Returns the value of `affected_object`, or the default value if `affected_object` is unset.
         pub fn affected_object(&self) -> &super::AffectedObjectFilter {
-            if let Some(
-                super::transaction_predicate::Predicate::AffectedObject(field),
-            ) = &self.predicate
+            if let Some(super::transaction_literal::Predicate::AffectedObject(field)) = &self
+                .predicate
             {
                 field as _
             } else {
@@ -2949,9 +2731,8 @@ mod _accessor_impls {
         }
         ///If `affected_object` is set, returns [`Some`] with the value; otherwise returns [`None`].
         pub fn affected_object_opt(&self) -> Option<&super::AffectedObjectFilter> {
-            if let Some(
-                super::transaction_predicate::Predicate::AffectedObject(field),
-            ) = &self.predicate
+            if let Some(super::transaction_literal::Predicate::AffectedObject(field)) = &self
+                .predicate
             {
                 Some(field as _)
             } else {
@@ -2962,9 +2743,8 @@ mod _accessor_impls {
         pub fn affected_object_opt_mut(
             &mut self,
         ) -> Option<&mut super::AffectedObjectFilter> {
-            if let Some(
-                super::transaction_predicate::Predicate::AffectedObject(field),
-            ) = &mut self.predicate
+            if let Some(super::transaction_literal::Predicate::AffectedObject(field)) = &mut self
+                .predicate
             {
                 Some(field as _)
             } else {
@@ -2977,7 +2757,7 @@ mod _accessor_impls {
         pub fn affected_object_mut(&mut self) -> &mut super::AffectedObjectFilter {
             if self.affected_object_opt_mut().is_none() {
                 self.predicate = Some(
-                    super::transaction_predicate::Predicate::AffectedObject(
+                    super::transaction_literal::Predicate::AffectedObject(
                         super::AffectedObjectFilter::default(),
                     ),
                 );
@@ -2991,7 +2771,7 @@ mod _accessor_impls {
             field: T,
         ) {
             self.predicate = Some(
-                super::transaction_predicate::Predicate::AffectedObject(
+                super::transaction_literal::Predicate::AffectedObject(
                     field.into().into(),
                 ),
             );
@@ -3007,7 +2787,7 @@ mod _accessor_impls {
         }
         ///Returns the value of `move_call`, or the default value if `move_call` is unset.
         pub fn move_call(&self) -> &super::MoveCallFilter {
-            if let Some(super::transaction_predicate::Predicate::MoveCall(field)) = &self
+            if let Some(super::transaction_literal::Predicate::MoveCall(field)) = &self
                 .predicate
             {
                 field as _
@@ -3017,7 +2797,7 @@ mod _accessor_impls {
         }
         ///If `move_call` is set, returns [`Some`] with the value; otherwise returns [`None`].
         pub fn move_call_opt(&self) -> Option<&super::MoveCallFilter> {
-            if let Some(super::transaction_predicate::Predicate::MoveCall(field)) = &self
+            if let Some(super::transaction_literal::Predicate::MoveCall(field)) = &self
                 .predicate
             {
                 Some(field as _)
@@ -3027,7 +2807,7 @@ mod _accessor_impls {
         }
         ///If `move_call` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
         pub fn move_call_opt_mut(&mut self) -> Option<&mut super::MoveCallFilter> {
-            if let Some(super::transaction_predicate::Predicate::MoveCall(field)) = &mut self
+            if let Some(super::transaction_literal::Predicate::MoveCall(field)) = &mut self
                 .predicate
             {
                 Some(field as _)
@@ -3041,7 +2821,7 @@ mod _accessor_impls {
         pub fn move_call_mut(&mut self) -> &mut super::MoveCallFilter {
             if self.move_call_opt_mut().is_none() {
                 self.predicate = Some(
-                    super::transaction_predicate::Predicate::MoveCall(
+                    super::transaction_literal::Predicate::MoveCall(
                         super::MoveCallFilter::default(),
                     ),
                 );
@@ -3052,7 +2832,7 @@ mod _accessor_impls {
         ///If any other oneof field in the same oneof is set, it will be cleared.
         pub fn set_move_call<T: Into<super::MoveCallFilter>>(&mut self, field: T) {
             self.predicate = Some(
-                super::transaction_predicate::Predicate::MoveCall(field.into().into()),
+                super::transaction_literal::Predicate::MoveCall(field.into().into()),
             );
         }
         ///Sets `move_call` with the provided value.
@@ -3066,7 +2846,7 @@ mod _accessor_impls {
         }
         ///Returns the value of `emit_module`, or the default value if `emit_module` is unset.
         pub fn emit_module(&self) -> &super::EmitModuleFilter {
-            if let Some(super::transaction_predicate::Predicate::EmitModule(field)) = &self
+            if let Some(super::transaction_literal::Predicate::EmitModule(field)) = &self
                 .predicate
             {
                 field as _
@@ -3076,7 +2856,7 @@ mod _accessor_impls {
         }
         ///If `emit_module` is set, returns [`Some`] with the value; otherwise returns [`None`].
         pub fn emit_module_opt(&self) -> Option<&super::EmitModuleFilter> {
-            if let Some(super::transaction_predicate::Predicate::EmitModule(field)) = &self
+            if let Some(super::transaction_literal::Predicate::EmitModule(field)) = &self
                 .predicate
             {
                 Some(field as _)
@@ -3086,7 +2866,7 @@ mod _accessor_impls {
         }
         ///If `emit_module` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
         pub fn emit_module_opt_mut(&mut self) -> Option<&mut super::EmitModuleFilter> {
-            if let Some(super::transaction_predicate::Predicate::EmitModule(field)) = &mut self
+            if let Some(super::transaction_literal::Predicate::EmitModule(field)) = &mut self
                 .predicate
             {
                 Some(field as _)
@@ -3100,7 +2880,7 @@ mod _accessor_impls {
         pub fn emit_module_mut(&mut self) -> &mut super::EmitModuleFilter {
             if self.emit_module_opt_mut().is_none() {
                 self.predicate = Some(
-                    super::transaction_predicate::Predicate::EmitModule(
+                    super::transaction_literal::Predicate::EmitModule(
                         super::EmitModuleFilter::default(),
                     ),
                 );
@@ -3111,7 +2891,7 @@ mod _accessor_impls {
         ///If any other oneof field in the same oneof is set, it will be cleared.
         pub fn set_emit_module<T: Into<super::EmitModuleFilter>>(&mut self, field: T) {
             self.predicate = Some(
-                super::transaction_predicate::Predicate::EmitModule(field.into().into()),
+                super::transaction_literal::Predicate::EmitModule(field.into().into()),
             );
         }
         ///Sets `emit_module` with the provided value.
@@ -3125,7 +2905,7 @@ mod _accessor_impls {
         }
         ///Returns the value of `event_type`, or the default value if `event_type` is unset.
         pub fn event_type(&self) -> &super::EventTypeFilter {
-            if let Some(super::transaction_predicate::Predicate::EventType(field)) = &self
+            if let Some(super::transaction_literal::Predicate::EventType(field)) = &self
                 .predicate
             {
                 field as _
@@ -3135,7 +2915,7 @@ mod _accessor_impls {
         }
         ///If `event_type` is set, returns [`Some`] with the value; otherwise returns [`None`].
         pub fn event_type_opt(&self) -> Option<&super::EventTypeFilter> {
-            if let Some(super::transaction_predicate::Predicate::EventType(field)) = &self
+            if let Some(super::transaction_literal::Predicate::EventType(field)) = &self
                 .predicate
             {
                 Some(field as _)
@@ -3145,7 +2925,7 @@ mod _accessor_impls {
         }
         ///If `event_type` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
         pub fn event_type_opt_mut(&mut self) -> Option<&mut super::EventTypeFilter> {
-            if let Some(super::transaction_predicate::Predicate::EventType(field)) = &mut self
+            if let Some(super::transaction_literal::Predicate::EventType(field)) = &mut self
                 .predicate
             {
                 Some(field as _)
@@ -3159,7 +2939,7 @@ mod _accessor_impls {
         pub fn event_type_mut(&mut self) -> &mut super::EventTypeFilter {
             if self.event_type_opt_mut().is_none() {
                 self.predicate = Some(
-                    super::transaction_predicate::Predicate::EventType(
+                    super::transaction_literal::Predicate::EventType(
                         super::EventTypeFilter::default(),
                     ),
                 );
@@ -3170,7 +2950,7 @@ mod _accessor_impls {
         ///If any other oneof field in the same oneof is set, it will be cleared.
         pub fn set_event_type<T: Into<super::EventTypeFilter>>(&mut self, field: T) {
             self.predicate = Some(
-                super::transaction_predicate::Predicate::EventType(field.into().into()),
+                super::transaction_literal::Predicate::EventType(field.into().into()),
             );
         }
         ///Sets `event_type` with the provided value.
@@ -3184,9 +2964,8 @@ mod _accessor_impls {
         }
         ///Returns the value of `event_stream_head`, or the default value if `event_stream_head` is unset.
         pub fn event_stream_head(&self) -> &super::EventStreamHeadFilter {
-            if let Some(
-                super::transaction_predicate::Predicate::EventStreamHead(field),
-            ) = &self.predicate
+            if let Some(super::transaction_literal::Predicate::EventStreamHead(field)) = &self
+                .predicate
             {
                 field as _
             } else {
@@ -3195,9 +2974,8 @@ mod _accessor_impls {
         }
         ///If `event_stream_head` is set, returns [`Some`] with the value; otherwise returns [`None`].
         pub fn event_stream_head_opt(&self) -> Option<&super::EventStreamHeadFilter> {
-            if let Some(
-                super::transaction_predicate::Predicate::EventStreamHead(field),
-            ) = &self.predicate
+            if let Some(super::transaction_literal::Predicate::EventStreamHead(field)) = &self
+                .predicate
             {
                 Some(field as _)
             } else {
@@ -3208,9 +2986,8 @@ mod _accessor_impls {
         pub fn event_stream_head_opt_mut(
             &mut self,
         ) -> Option<&mut super::EventStreamHeadFilter> {
-            if let Some(
-                super::transaction_predicate::Predicate::EventStreamHead(field),
-            ) = &mut self.predicate
+            if let Some(super::transaction_literal::Predicate::EventStreamHead(field)) = &mut self
+                .predicate
             {
                 Some(field as _)
             } else {
@@ -3223,7 +3000,7 @@ mod _accessor_impls {
         pub fn event_stream_head_mut(&mut self) -> &mut super::EventStreamHeadFilter {
             if self.event_stream_head_opt_mut().is_none() {
                 self.predicate = Some(
-                    super::transaction_predicate::Predicate::EventStreamHead(
+                    super::transaction_literal::Predicate::EventStreamHead(
                         super::EventStreamHeadFilter::default(),
                     ),
                 );
@@ -3237,7 +3014,7 @@ mod _accessor_impls {
             field: T,
         ) {
             self.predicate = Some(
-                super::transaction_predicate::Predicate::EventStreamHead(
+                super::transaction_literal::Predicate::EventStreamHead(
                     field.into().into(),
                 ),
             );
@@ -3253,7 +3030,7 @@ mod _accessor_impls {
         }
         ///Returns the value of `package_write`, or the default value if `package_write` is unset.
         pub fn package_write(&self) -> &super::PackageWriteFilter {
-            if let Some(super::transaction_predicate::Predicate::PackageWrite(field)) = &self
+            if let Some(super::transaction_literal::Predicate::PackageWrite(field)) = &self
                 .predicate
             {
                 field as _
@@ -3263,7 +3040,7 @@ mod _accessor_impls {
         }
         ///If `package_write` is set, returns [`Some`] with the value; otherwise returns [`None`].
         pub fn package_write_opt(&self) -> Option<&super::PackageWriteFilter> {
-            if let Some(super::transaction_predicate::Predicate::PackageWrite(field)) = &self
+            if let Some(super::transaction_literal::Predicate::PackageWrite(field)) = &self
                 .predicate
             {
                 Some(field as _)
@@ -3275,7 +3052,7 @@ mod _accessor_impls {
         pub fn package_write_opt_mut(
             &mut self,
         ) -> Option<&mut super::PackageWriteFilter> {
-            if let Some(super::transaction_predicate::Predicate::PackageWrite(field)) = &mut self
+            if let Some(super::transaction_literal::Predicate::PackageWrite(field)) = &mut self
                 .predicate
             {
                 Some(field as _)
@@ -3289,7 +3066,7 @@ mod _accessor_impls {
         pub fn package_write_mut(&mut self) -> &mut super::PackageWriteFilter {
             if self.package_write_opt_mut().is_none() {
                 self.predicate = Some(
-                    super::transaction_predicate::Predicate::PackageWrite(
+                    super::transaction_literal::Predicate::PackageWrite(
                         super::PackageWriteFilter::default(),
                     ),
                 );
@@ -3303,9 +3080,7 @@ mod _accessor_impls {
             field: T,
         ) {
             self.predicate = Some(
-                super::transaction_predicate::Predicate::PackageWrite(
-                    field.into().into(),
-                ),
+                super::transaction_literal::Predicate::PackageWrite(field.into().into()),
             );
         }
         ///Sets `package_write` with the provided value.

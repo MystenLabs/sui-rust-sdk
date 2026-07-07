@@ -684,18 +684,30 @@ impl serde::Serialize for EventLiteral {
     {
         use serde::ser::SerializeStruct;
         let mut len = 0usize;
-        if self.polarity.is_some() {
+        if self.negated {
+            len += 1;
+        }
+        if self.predicate.is_some() {
             len += 1;
         }
         let mut struct_ser = serializer
             .serialize_struct("sui.rpc.v2alpha.EventLiteral", len)?;
-        if let Some(v) = self.polarity.as_ref() {
+        if self.negated {
+            struct_ser.serialize_field("negated", &self.negated)?;
+        }
+        if let Some(v) = self.predicate.as_ref() {
             match v {
-                event_literal::Polarity::Include(v) => {
-                    struct_ser.serialize_field("include", v)?;
+                event_literal::Predicate::Sender(v) => {
+                    struct_ser.serialize_field("sender", v)?;
                 }
-                event_literal::Polarity::Exclude(v) => {
-                    struct_ser.serialize_field("exclude", v)?;
+                event_literal::Predicate::EmitModule(v) => {
+                    struct_ser.serialize_field("emitModule", v)?;
+                }
+                event_literal::Predicate::EventType(v) => {
+                    struct_ser.serialize_field("eventType", v)?;
+                }
+                event_literal::Predicate::EventStreamHead(v) => {
+                    struct_ser.serialize_field("eventStreamHead", v)?;
                 }
             }
         }
@@ -708,137 +720,8 @@ impl<'de> serde::Deserialize<'de> for EventLiteral {
     where
         D: serde::Deserializer<'de>,
     {
-        const FIELDS: &[&str] = &["include", "exclude"];
-        #[allow(clippy::enum_variant_names)]
-        enum GeneratedField {
-            Include,
-            Exclude,
-            __SkipField__,
-        }
-        impl<'de> serde::Deserialize<'de> for GeneratedField {
-            fn deserialize<D>(
-                deserializer: D,
-            ) -> std::result::Result<GeneratedField, D::Error>
-            where
-                D: serde::Deserializer<'de>,
-            {
-                struct GeneratedVisitor;
-                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-                    type Value = GeneratedField;
-                    fn expecting(
-                        &self,
-                        formatter: &mut std::fmt::Formatter<'_>,
-                    ) -> std::fmt::Result {
-                        write!(formatter, "expected one of: {:?}", & FIELDS)
-                    }
-                    #[allow(unused_variables)]
-                    fn visit_str<E>(
-                        self,
-                        value: &str,
-                    ) -> std::result::Result<GeneratedField, E>
-                    where
-                        E: serde::de::Error,
-                    {
-                        match value {
-                            "include" => Ok(GeneratedField::Include),
-                            "exclude" => Ok(GeneratedField::Exclude),
-                            _ => Ok(GeneratedField::__SkipField__),
-                        }
-                    }
-                }
-                deserializer.deserialize_identifier(GeneratedVisitor)
-            }
-        }
-        struct GeneratedVisitor;
-        #[allow(clippy::useless_conversion)]
-        #[allow(clippy::unit_arg)]
-        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-            type Value = EventLiteral;
-            fn expecting(
-                &self,
-                formatter: &mut std::fmt::Formatter<'_>,
-            ) -> std::fmt::Result {
-                formatter.write_str("struct sui.rpc.v2alpha.EventLiteral")
-            }
-            fn visit_map<V>(
-                self,
-                mut map_: V,
-            ) -> std::result::Result<EventLiteral, V::Error>
-            where
-                V: serde::de::MapAccess<'de>,
-            {
-                let mut polarity__ = None;
-                while let Some(k) = map_.next_key()? {
-                    match k {
-                        GeneratedField::Include => {
-                            if polarity__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("include"));
-                            }
-                            polarity__ = map_
-                                .next_value::<::std::option::Option<_>>()?
-                                .map(event_literal::Polarity::Include);
-                        }
-                        GeneratedField::Exclude => {
-                            if polarity__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("exclude"));
-                            }
-                            polarity__ = map_
-                                .next_value::<::std::option::Option<_>>()?
-                                .map(event_literal::Polarity::Exclude);
-                        }
-                        GeneratedField::__SkipField__ => {
-                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
-                        }
-                    }
-                }
-                Ok(EventLiteral {
-                    polarity: polarity__,
-                })
-            }
-        }
-        deserializer
-            .deserialize_struct("sui.rpc.v2alpha.EventLiteral", FIELDS, GeneratedVisitor)
-    }
-}
-impl serde::Serialize for EventPredicate {
-    #[allow(deprecated)]
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        use serde::ser::SerializeStruct;
-        let mut len = 0usize;
-        if self.predicate.is_some() {
-            len += 1;
-        }
-        let mut struct_ser = serializer
-            .serialize_struct("sui.rpc.v2alpha.EventPredicate", len)?;
-        if let Some(v) = self.predicate.as_ref() {
-            match v {
-                event_predicate::Predicate::Sender(v) => {
-                    struct_ser.serialize_field("sender", v)?;
-                }
-                event_predicate::Predicate::EmitModule(v) => {
-                    struct_ser.serialize_field("emitModule", v)?;
-                }
-                event_predicate::Predicate::EventType(v) => {
-                    struct_ser.serialize_field("eventType", v)?;
-                }
-                event_predicate::Predicate::EventStreamHead(v) => {
-                    struct_ser.serialize_field("eventStreamHead", v)?;
-                }
-            }
-        }
-        struct_ser.end()
-    }
-}
-impl<'de> serde::Deserialize<'de> for EventPredicate {
-    #[allow(deprecated)]
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
         const FIELDS: &[&str] = &[
+            "negated",
             "sender",
             "emit_module",
             "emitModule",
@@ -849,6 +732,7 @@ impl<'de> serde::Deserialize<'de> for EventPredicate {
         ];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
+            Negated,
             Sender,
             EmitModule,
             EventType,
@@ -880,6 +764,7 @@ impl<'de> serde::Deserialize<'de> for EventPredicate {
                         E: serde::de::Error,
                     {
                         match value {
+                            "negated" => Ok(GeneratedField::Negated),
                             "sender" => Ok(GeneratedField::Sender),
                             "emitModule" | "emit_module" => {
                                 Ok(GeneratedField::EmitModule)
@@ -899,30 +784,37 @@ impl<'de> serde::Deserialize<'de> for EventPredicate {
         #[allow(clippy::useless_conversion)]
         #[allow(clippy::unit_arg)]
         impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-            type Value = EventPredicate;
+            type Value = EventLiteral;
             fn expecting(
                 &self,
                 formatter: &mut std::fmt::Formatter<'_>,
             ) -> std::fmt::Result {
-                formatter.write_str("struct sui.rpc.v2alpha.EventPredicate")
+                formatter.write_str("struct sui.rpc.v2alpha.EventLiteral")
             }
             fn visit_map<V>(
                 self,
                 mut map_: V,
-            ) -> std::result::Result<EventPredicate, V::Error>
+            ) -> std::result::Result<EventLiteral, V::Error>
             where
                 V: serde::de::MapAccess<'de>,
             {
+                let mut negated__ = None;
                 let mut predicate__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
+                        GeneratedField::Negated => {
+                            if negated__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("negated"));
+                            }
+                            negated__ = Some(map_.next_value()?);
+                        }
                         GeneratedField::Sender => {
                             if predicate__.is_some() {
                                 return Err(serde::de::Error::duplicate_field("sender"));
                             }
                             predicate__ = map_
                                 .next_value::<::std::option::Option<_>>()?
-                                .map(event_predicate::Predicate::Sender);
+                                .map(event_literal::Predicate::Sender);
                         }
                         GeneratedField::EmitModule => {
                             if predicate__.is_some() {
@@ -930,7 +822,7 @@ impl<'de> serde::Deserialize<'de> for EventPredicate {
                             }
                             predicate__ = map_
                                 .next_value::<::std::option::Option<_>>()?
-                                .map(event_predicate::Predicate::EmitModule);
+                                .map(event_literal::Predicate::EmitModule);
                         }
                         GeneratedField::EventType => {
                             if predicate__.is_some() {
@@ -938,7 +830,7 @@ impl<'de> serde::Deserialize<'de> for EventPredicate {
                             }
                             predicate__ = map_
                                 .next_value::<::std::option::Option<_>>()?
-                                .map(event_predicate::Predicate::EventType);
+                                .map(event_literal::Predicate::EventType);
                         }
                         GeneratedField::EventStreamHead => {
                             if predicate__.is_some() {
@@ -948,24 +840,21 @@ impl<'de> serde::Deserialize<'de> for EventPredicate {
                             }
                             predicate__ = map_
                                 .next_value::<::std::option::Option<_>>()?
-                                .map(event_predicate::Predicate::EventStreamHead);
+                                .map(event_literal::Predicate::EventStreamHead);
                         }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
                     }
                 }
-                Ok(EventPredicate {
+                Ok(EventLiteral {
+                    negated: negated__.unwrap_or_default(),
                     predicate: predicate__,
                 })
             }
         }
         deserializer
-            .deserialize_struct(
-                "sui.rpc.v2alpha.EventPredicate",
-                FIELDS,
-                GeneratedVisitor,
-            )
+            .deserialize_struct("sui.rpc.v2alpha.EventLiteral", FIELDS, GeneratedVisitor)
     }
 }
 impl serde::Serialize for EventStreamHeadFilter {
@@ -4510,18 +4399,42 @@ impl serde::Serialize for TransactionLiteral {
     {
         use serde::ser::SerializeStruct;
         let mut len = 0usize;
-        if self.polarity.is_some() {
+        if self.negated {
+            len += 1;
+        }
+        if self.predicate.is_some() {
             len += 1;
         }
         let mut struct_ser = serializer
             .serialize_struct("sui.rpc.v2alpha.TransactionLiteral", len)?;
-        if let Some(v) = self.polarity.as_ref() {
+        if self.negated {
+            struct_ser.serialize_field("negated", &self.negated)?;
+        }
+        if let Some(v) = self.predicate.as_ref() {
             match v {
-                transaction_literal::Polarity::Include(v) => {
-                    struct_ser.serialize_field("include", v)?;
+                transaction_literal::Predicate::Sender(v) => {
+                    struct_ser.serialize_field("sender", v)?;
                 }
-                transaction_literal::Polarity::Exclude(v) => {
-                    struct_ser.serialize_field("exclude", v)?;
+                transaction_literal::Predicate::AffectedAddress(v) => {
+                    struct_ser.serialize_field("affectedAddress", v)?;
+                }
+                transaction_literal::Predicate::AffectedObject(v) => {
+                    struct_ser.serialize_field("affectedObject", v)?;
+                }
+                transaction_literal::Predicate::MoveCall(v) => {
+                    struct_ser.serialize_field("moveCall", v)?;
+                }
+                transaction_literal::Predicate::EmitModule(v) => {
+                    struct_ser.serialize_field("emitModule", v)?;
+                }
+                transaction_literal::Predicate::EventType(v) => {
+                    struct_ser.serialize_field("eventType", v)?;
+                }
+                transaction_literal::Predicate::EventStreamHead(v) => {
+                    struct_ser.serialize_field("eventStreamHead", v)?;
+                }
+                transaction_literal::Predicate::PackageWrite(v) => {
+                    struct_ser.serialize_field("packageWrite", v)?;
                 }
             }
         }
@@ -4534,153 +4447,8 @@ impl<'de> serde::Deserialize<'de> for TransactionLiteral {
     where
         D: serde::Deserializer<'de>,
     {
-        const FIELDS: &[&str] = &["include", "exclude"];
-        #[allow(clippy::enum_variant_names)]
-        enum GeneratedField {
-            Include,
-            Exclude,
-            __SkipField__,
-        }
-        impl<'de> serde::Deserialize<'de> for GeneratedField {
-            fn deserialize<D>(
-                deserializer: D,
-            ) -> std::result::Result<GeneratedField, D::Error>
-            where
-                D: serde::Deserializer<'de>,
-            {
-                struct GeneratedVisitor;
-                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-                    type Value = GeneratedField;
-                    fn expecting(
-                        &self,
-                        formatter: &mut std::fmt::Formatter<'_>,
-                    ) -> std::fmt::Result {
-                        write!(formatter, "expected one of: {:?}", & FIELDS)
-                    }
-                    #[allow(unused_variables)]
-                    fn visit_str<E>(
-                        self,
-                        value: &str,
-                    ) -> std::result::Result<GeneratedField, E>
-                    where
-                        E: serde::de::Error,
-                    {
-                        match value {
-                            "include" => Ok(GeneratedField::Include),
-                            "exclude" => Ok(GeneratedField::Exclude),
-                            _ => Ok(GeneratedField::__SkipField__),
-                        }
-                    }
-                }
-                deserializer.deserialize_identifier(GeneratedVisitor)
-            }
-        }
-        struct GeneratedVisitor;
-        #[allow(clippy::useless_conversion)]
-        #[allow(clippy::unit_arg)]
-        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-            type Value = TransactionLiteral;
-            fn expecting(
-                &self,
-                formatter: &mut std::fmt::Formatter<'_>,
-            ) -> std::fmt::Result {
-                formatter.write_str("struct sui.rpc.v2alpha.TransactionLiteral")
-            }
-            fn visit_map<V>(
-                self,
-                mut map_: V,
-            ) -> std::result::Result<TransactionLiteral, V::Error>
-            where
-                V: serde::de::MapAccess<'de>,
-            {
-                let mut polarity__ = None;
-                while let Some(k) = map_.next_key()? {
-                    match k {
-                        GeneratedField::Include => {
-                            if polarity__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("include"));
-                            }
-                            polarity__ = map_
-                                .next_value::<::std::option::Option<_>>()?
-                                .map(transaction_literal::Polarity::Include);
-                        }
-                        GeneratedField::Exclude => {
-                            if polarity__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("exclude"));
-                            }
-                            polarity__ = map_
-                                .next_value::<::std::option::Option<_>>()?
-                                .map(transaction_literal::Polarity::Exclude);
-                        }
-                        GeneratedField::__SkipField__ => {
-                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
-                        }
-                    }
-                }
-                Ok(TransactionLiteral {
-                    polarity: polarity__,
-                })
-            }
-        }
-        deserializer
-            .deserialize_struct(
-                "sui.rpc.v2alpha.TransactionLiteral",
-                FIELDS,
-                GeneratedVisitor,
-            )
-    }
-}
-impl serde::Serialize for TransactionPredicate {
-    #[allow(deprecated)]
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        use serde::ser::SerializeStruct;
-        let mut len = 0usize;
-        if self.predicate.is_some() {
-            len += 1;
-        }
-        let mut struct_ser = serializer
-            .serialize_struct("sui.rpc.v2alpha.TransactionPredicate", len)?;
-        if let Some(v) = self.predicate.as_ref() {
-            match v {
-                transaction_predicate::Predicate::Sender(v) => {
-                    struct_ser.serialize_field("sender", v)?;
-                }
-                transaction_predicate::Predicate::AffectedAddress(v) => {
-                    struct_ser.serialize_field("affectedAddress", v)?;
-                }
-                transaction_predicate::Predicate::AffectedObject(v) => {
-                    struct_ser.serialize_field("affectedObject", v)?;
-                }
-                transaction_predicate::Predicate::MoveCall(v) => {
-                    struct_ser.serialize_field("moveCall", v)?;
-                }
-                transaction_predicate::Predicate::EmitModule(v) => {
-                    struct_ser.serialize_field("emitModule", v)?;
-                }
-                transaction_predicate::Predicate::EventType(v) => {
-                    struct_ser.serialize_field("eventType", v)?;
-                }
-                transaction_predicate::Predicate::EventStreamHead(v) => {
-                    struct_ser.serialize_field("eventStreamHead", v)?;
-                }
-                transaction_predicate::Predicate::PackageWrite(v) => {
-                    struct_ser.serialize_field("packageWrite", v)?;
-                }
-            }
-        }
-        struct_ser.end()
-    }
-}
-impl<'de> serde::Deserialize<'de> for TransactionPredicate {
-    #[allow(deprecated)]
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
         const FIELDS: &[&str] = &[
+            "negated",
             "sender",
             "affected_address",
             "affectedAddress",
@@ -4699,6 +4467,7 @@ impl<'de> serde::Deserialize<'de> for TransactionPredicate {
         ];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
+            Negated,
             Sender,
             AffectedAddress,
             AffectedObject,
@@ -4734,6 +4503,7 @@ impl<'de> serde::Deserialize<'de> for TransactionPredicate {
                         E: serde::de::Error,
                     {
                         match value {
+                            "negated" => Ok(GeneratedField::Negated),
                             "sender" => Ok(GeneratedField::Sender),
                             "affectedAddress" | "affected_address" => {
                                 Ok(GeneratedField::AffectedAddress)
@@ -4763,30 +4533,37 @@ impl<'de> serde::Deserialize<'de> for TransactionPredicate {
         #[allow(clippy::useless_conversion)]
         #[allow(clippy::unit_arg)]
         impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-            type Value = TransactionPredicate;
+            type Value = TransactionLiteral;
             fn expecting(
                 &self,
                 formatter: &mut std::fmt::Formatter<'_>,
             ) -> std::fmt::Result {
-                formatter.write_str("struct sui.rpc.v2alpha.TransactionPredicate")
+                formatter.write_str("struct sui.rpc.v2alpha.TransactionLiteral")
             }
             fn visit_map<V>(
                 self,
                 mut map_: V,
-            ) -> std::result::Result<TransactionPredicate, V::Error>
+            ) -> std::result::Result<TransactionLiteral, V::Error>
             where
                 V: serde::de::MapAccess<'de>,
             {
+                let mut negated__ = None;
                 let mut predicate__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
+                        GeneratedField::Negated => {
+                            if negated__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("negated"));
+                            }
+                            negated__ = Some(map_.next_value()?);
+                        }
                         GeneratedField::Sender => {
                             if predicate__.is_some() {
                                 return Err(serde::de::Error::duplicate_field("sender"));
                             }
                             predicate__ = map_
                                 .next_value::<::std::option::Option<_>>()?
-                                .map(transaction_predicate::Predicate::Sender);
+                                .map(transaction_literal::Predicate::Sender);
                         }
                         GeneratedField::AffectedAddress => {
                             if predicate__.is_some() {
@@ -4796,7 +4573,7 @@ impl<'de> serde::Deserialize<'de> for TransactionPredicate {
                             }
                             predicate__ = map_
                                 .next_value::<::std::option::Option<_>>()?
-                                .map(transaction_predicate::Predicate::AffectedAddress);
+                                .map(transaction_literal::Predicate::AffectedAddress);
                         }
                         GeneratedField::AffectedObject => {
                             if predicate__.is_some() {
@@ -4806,7 +4583,7 @@ impl<'de> serde::Deserialize<'de> for TransactionPredicate {
                             }
                             predicate__ = map_
                                 .next_value::<::std::option::Option<_>>()?
-                                .map(transaction_predicate::Predicate::AffectedObject);
+                                .map(transaction_literal::Predicate::AffectedObject);
                         }
                         GeneratedField::MoveCall => {
                             if predicate__.is_some() {
@@ -4814,7 +4591,7 @@ impl<'de> serde::Deserialize<'de> for TransactionPredicate {
                             }
                             predicate__ = map_
                                 .next_value::<::std::option::Option<_>>()?
-                                .map(transaction_predicate::Predicate::MoveCall);
+                                .map(transaction_literal::Predicate::MoveCall);
                         }
                         GeneratedField::EmitModule => {
                             if predicate__.is_some() {
@@ -4822,7 +4599,7 @@ impl<'de> serde::Deserialize<'de> for TransactionPredicate {
                             }
                             predicate__ = map_
                                 .next_value::<::std::option::Option<_>>()?
-                                .map(transaction_predicate::Predicate::EmitModule);
+                                .map(transaction_literal::Predicate::EmitModule);
                         }
                         GeneratedField::EventType => {
                             if predicate__.is_some() {
@@ -4830,7 +4607,7 @@ impl<'de> serde::Deserialize<'de> for TransactionPredicate {
                             }
                             predicate__ = map_
                                 .next_value::<::std::option::Option<_>>()?
-                                .map(transaction_predicate::Predicate::EventType);
+                                .map(transaction_literal::Predicate::EventType);
                         }
                         GeneratedField::EventStreamHead => {
                             if predicate__.is_some() {
@@ -4840,7 +4617,7 @@ impl<'de> serde::Deserialize<'de> for TransactionPredicate {
                             }
                             predicate__ = map_
                                 .next_value::<::std::option::Option<_>>()?
-                                .map(transaction_predicate::Predicate::EventStreamHead);
+                                .map(transaction_literal::Predicate::EventStreamHead);
                         }
                         GeneratedField::PackageWrite => {
                             if predicate__.is_some() {
@@ -4850,21 +4627,22 @@ impl<'de> serde::Deserialize<'de> for TransactionPredicate {
                             }
                             predicate__ = map_
                                 .next_value::<::std::option::Option<_>>()?
-                                .map(transaction_predicate::Predicate::PackageWrite);
+                                .map(transaction_literal::Predicate::PackageWrite);
                         }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
                     }
                 }
-                Ok(TransactionPredicate {
+                Ok(TransactionLiteral {
+                    negated: negated__.unwrap_or_default(),
                     predicate: predicate__,
                 })
             }
         }
         deserializer
             .deserialize_struct(
-                "sui.rpc.v2alpha.TransactionPredicate",
+                "sui.rpc.v2alpha.TransactionLiteral",
                 FIELDS,
                 GeneratedVisitor,
             )
