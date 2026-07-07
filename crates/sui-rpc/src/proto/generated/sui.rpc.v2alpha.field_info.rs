@@ -76,23 +76,72 @@ pub(crate) mod _field_impls {
         }
     }
     impl TransactionLiteral {
-        pub const INCLUDE_FIELD: &'static MessageField = &MessageField {
-            name: "include",
-            json_name: "include",
+        pub const NEGATED_FIELD: &'static MessageField = &MessageField {
+            name: "negated",
+            json_name: "negated",
             number: 1i32,
-            message_fields: Some(TransactionPredicate::FIELDS),
+            message_fields: None,
         };
-        pub const EXCLUDE_FIELD: &'static MessageField = &MessageField {
-            name: "exclude",
-            json_name: "exclude",
+        pub const SENDER_FIELD: &'static MessageField = &MessageField {
+            name: "sender",
+            json_name: "sender",
             number: 2i32,
-            message_fields: Some(TransactionPredicate::FIELDS),
+            message_fields: Some(SenderFilter::FIELDS),
+        };
+        pub const AFFECTED_ADDRESS_FIELD: &'static MessageField = &MessageField {
+            name: "affected_address",
+            json_name: "affectedAddress",
+            number: 3i32,
+            message_fields: Some(AffectedAddressFilter::FIELDS),
+        };
+        pub const AFFECTED_OBJECT_FIELD: &'static MessageField = &MessageField {
+            name: "affected_object",
+            json_name: "affectedObject",
+            number: 4i32,
+            message_fields: Some(AffectedObjectFilter::FIELDS),
+        };
+        pub const MOVE_CALL_FIELD: &'static MessageField = &MessageField {
+            name: "move_call",
+            json_name: "moveCall",
+            number: 5i32,
+            message_fields: Some(MoveCallFilter::FIELDS),
+        };
+        pub const EMIT_MODULE_FIELD: &'static MessageField = &MessageField {
+            name: "emit_module",
+            json_name: "emitModule",
+            number: 6i32,
+            message_fields: Some(EmitModuleFilter::FIELDS),
+        };
+        pub const EVENT_TYPE_FIELD: &'static MessageField = &MessageField {
+            name: "event_type",
+            json_name: "eventType",
+            number: 7i32,
+            message_fields: Some(EventTypeFilter::FIELDS),
+        };
+        pub const EVENT_STREAM_HEAD_FIELD: &'static MessageField = &MessageField {
+            name: "event_stream_head",
+            json_name: "eventStreamHead",
+            number: 8i32,
+            message_fields: Some(EventStreamHeadFilter::FIELDS),
+        };
+        pub const PACKAGE_WRITE_FIELD: &'static MessageField = &MessageField {
+            name: "package_write",
+            json_name: "packageWrite",
+            number: 9i32,
+            message_fields: Some(PackageWriteFilter::FIELDS),
         };
     }
     impl MessageFields for TransactionLiteral {
         const FIELDS: &'static [&'static MessageField] = &[
-            Self::INCLUDE_FIELD,
-            Self::EXCLUDE_FIELD,
+            Self::NEGATED_FIELD,
+            Self::SENDER_FIELD,
+            Self::AFFECTED_ADDRESS_FIELD,
+            Self::AFFECTED_OBJECT_FIELD,
+            Self::MOVE_CALL_FIELD,
+            Self::EMIT_MODULE_FIELD,
+            Self::EVENT_TYPE_FIELD,
+            Self::EVENT_STREAM_HEAD_FIELD,
+            Self::PACKAGE_WRITE_FIELD,
         ];
     }
     impl TransactionLiteral {
@@ -115,127 +164,40 @@ pub(crate) mod _field_impls {
         pub fn finish(self) -> String {
             self.path.join(".")
         }
-        pub fn include(mut self) -> TransactionPredicateFieldPathBuilder {
-            self.path.push(TransactionLiteral::INCLUDE_FIELD.name);
-            TransactionPredicateFieldPathBuilder::new_with_base(self.path)
-        }
-        pub fn exclude(mut self) -> TransactionPredicateFieldPathBuilder {
-            self.path.push(TransactionLiteral::EXCLUDE_FIELD.name);
-            TransactionPredicateFieldPathBuilder::new_with_base(self.path)
-        }
-    }
-    impl TransactionPredicate {
-        pub const SENDER_FIELD: &'static MessageField = &MessageField {
-            name: "sender",
-            json_name: "sender",
-            number: 1i32,
-            message_fields: Some(SenderFilter::FIELDS),
-        };
-        pub const AFFECTED_ADDRESS_FIELD: &'static MessageField = &MessageField {
-            name: "affected_address",
-            json_name: "affectedAddress",
-            number: 2i32,
-            message_fields: Some(AffectedAddressFilter::FIELDS),
-        };
-        pub const AFFECTED_OBJECT_FIELD: &'static MessageField = &MessageField {
-            name: "affected_object",
-            json_name: "affectedObject",
-            number: 3i32,
-            message_fields: Some(AffectedObjectFilter::FIELDS),
-        };
-        pub const MOVE_CALL_FIELD: &'static MessageField = &MessageField {
-            name: "move_call",
-            json_name: "moveCall",
-            number: 4i32,
-            message_fields: Some(MoveCallFilter::FIELDS),
-        };
-        pub const EMIT_MODULE_FIELD: &'static MessageField = &MessageField {
-            name: "emit_module",
-            json_name: "emitModule",
-            number: 5i32,
-            message_fields: Some(EmitModuleFilter::FIELDS),
-        };
-        pub const EVENT_TYPE_FIELD: &'static MessageField = &MessageField {
-            name: "event_type",
-            json_name: "eventType",
-            number: 6i32,
-            message_fields: Some(EventTypeFilter::FIELDS),
-        };
-        pub const EVENT_STREAM_HEAD_FIELD: &'static MessageField = &MessageField {
-            name: "event_stream_head",
-            json_name: "eventStreamHead",
-            number: 7i32,
-            message_fields: Some(EventStreamHeadFilter::FIELDS),
-        };
-        pub const PACKAGE_WRITE_FIELD: &'static MessageField = &MessageField {
-            name: "package_write",
-            json_name: "packageWrite",
-            number: 8i32,
-            message_fields: Some(PackageWriteFilter::FIELDS),
-        };
-    }
-    impl MessageFields for TransactionPredicate {
-        const FIELDS: &'static [&'static MessageField] = &[
-            Self::SENDER_FIELD,
-            Self::AFFECTED_ADDRESS_FIELD,
-            Self::AFFECTED_OBJECT_FIELD,
-            Self::MOVE_CALL_FIELD,
-            Self::EMIT_MODULE_FIELD,
-            Self::EVENT_TYPE_FIELD,
-            Self::EVENT_STREAM_HEAD_FIELD,
-            Self::PACKAGE_WRITE_FIELD,
-        ];
-    }
-    impl TransactionPredicate {
-        pub fn path_builder() -> TransactionPredicateFieldPathBuilder {
-            TransactionPredicateFieldPathBuilder::new()
-        }
-    }
-    pub struct TransactionPredicateFieldPathBuilder {
-        path: Vec<&'static str>,
-    }
-    impl TransactionPredicateFieldPathBuilder {
-        #[allow(clippy::new_without_default)]
-        pub fn new() -> Self {
-            Self { path: Default::default() }
-        }
-        #[doc(hidden)]
-        pub fn new_with_base(base: Vec<&'static str>) -> Self {
-            Self { path: base }
-        }
-        pub fn finish(self) -> String {
-            self.path.join(".")
+        pub fn negated(mut self) -> String {
+            self.path.push(TransactionLiteral::NEGATED_FIELD.name);
+            self.finish()
         }
         pub fn sender(mut self) -> SenderFilterFieldPathBuilder {
-            self.path.push(TransactionPredicate::SENDER_FIELD.name);
+            self.path.push(TransactionLiteral::SENDER_FIELD.name);
             SenderFilterFieldPathBuilder::new_with_base(self.path)
         }
         pub fn affected_address(mut self) -> AffectedAddressFilterFieldPathBuilder {
-            self.path.push(TransactionPredicate::AFFECTED_ADDRESS_FIELD.name);
+            self.path.push(TransactionLiteral::AFFECTED_ADDRESS_FIELD.name);
             AffectedAddressFilterFieldPathBuilder::new_with_base(self.path)
         }
         pub fn affected_object(mut self) -> AffectedObjectFilterFieldPathBuilder {
-            self.path.push(TransactionPredicate::AFFECTED_OBJECT_FIELD.name);
+            self.path.push(TransactionLiteral::AFFECTED_OBJECT_FIELD.name);
             AffectedObjectFilterFieldPathBuilder::new_with_base(self.path)
         }
         pub fn move_call(mut self) -> MoveCallFilterFieldPathBuilder {
-            self.path.push(TransactionPredicate::MOVE_CALL_FIELD.name);
+            self.path.push(TransactionLiteral::MOVE_CALL_FIELD.name);
             MoveCallFilterFieldPathBuilder::new_with_base(self.path)
         }
         pub fn emit_module(mut self) -> EmitModuleFilterFieldPathBuilder {
-            self.path.push(TransactionPredicate::EMIT_MODULE_FIELD.name);
+            self.path.push(TransactionLiteral::EMIT_MODULE_FIELD.name);
             EmitModuleFilterFieldPathBuilder::new_with_base(self.path)
         }
         pub fn event_type(mut self) -> EventTypeFilterFieldPathBuilder {
-            self.path.push(TransactionPredicate::EVENT_TYPE_FIELD.name);
+            self.path.push(TransactionLiteral::EVENT_TYPE_FIELD.name);
             EventTypeFilterFieldPathBuilder::new_with_base(self.path)
         }
         pub fn event_stream_head(mut self) -> EventStreamHeadFilterFieldPathBuilder {
-            self.path.push(TransactionPredicate::EVENT_STREAM_HEAD_FIELD.name);
+            self.path.push(TransactionLiteral::EVENT_STREAM_HEAD_FIELD.name);
             EventStreamHeadFilterFieldPathBuilder::new_with_base(self.path)
         }
         pub fn package_write(mut self) -> PackageWriteFilterFieldPathBuilder {
-            self.path.push(TransactionPredicate::PACKAGE_WRITE_FIELD.name);
+            self.path.push(TransactionLiteral::PACKAGE_WRITE_FIELD.name);
             PackageWriteFilterFieldPathBuilder::new_with_base(self.path)
         }
     }
@@ -312,23 +274,44 @@ pub(crate) mod _field_impls {
         }
     }
     impl EventLiteral {
-        pub const INCLUDE_FIELD: &'static MessageField = &MessageField {
-            name: "include",
-            json_name: "include",
+        pub const NEGATED_FIELD: &'static MessageField = &MessageField {
+            name: "negated",
+            json_name: "negated",
             number: 1i32,
-            message_fields: Some(EventPredicate::FIELDS),
+            message_fields: None,
         };
-        pub const EXCLUDE_FIELD: &'static MessageField = &MessageField {
-            name: "exclude",
-            json_name: "exclude",
+        pub const SENDER_FIELD: &'static MessageField = &MessageField {
+            name: "sender",
+            json_name: "sender",
             number: 2i32,
-            message_fields: Some(EventPredicate::FIELDS),
+            message_fields: Some(SenderFilter::FIELDS),
+        };
+        pub const EMIT_MODULE_FIELD: &'static MessageField = &MessageField {
+            name: "emit_module",
+            json_name: "emitModule",
+            number: 3i32,
+            message_fields: Some(EmitModuleFilter::FIELDS),
+        };
+        pub const EVENT_TYPE_FIELD: &'static MessageField = &MessageField {
+            name: "event_type",
+            json_name: "eventType",
+            number: 4i32,
+            message_fields: Some(EventTypeFilter::FIELDS),
+        };
+        pub const EVENT_STREAM_HEAD_FIELD: &'static MessageField = &MessageField {
+            name: "event_stream_head",
+            json_name: "eventStreamHead",
+            number: 5i32,
+            message_fields: Some(EventStreamHeadFilter::FIELDS),
         };
     }
     impl MessageFields for EventLiteral {
         const FIELDS: &'static [&'static MessageField] = &[
-            Self::INCLUDE_FIELD,
-            Self::EXCLUDE_FIELD,
+            Self::NEGATED_FIELD,
+            Self::SENDER_FIELD,
+            Self::EMIT_MODULE_FIELD,
+            Self::EVENT_TYPE_FIELD,
+            Self::EVENT_STREAM_HEAD_FIELD,
         ];
     }
     impl EventLiteral {
@@ -351,83 +334,24 @@ pub(crate) mod _field_impls {
         pub fn finish(self) -> String {
             self.path.join(".")
         }
-        pub fn include(mut self) -> EventPredicateFieldPathBuilder {
-            self.path.push(EventLiteral::INCLUDE_FIELD.name);
-            EventPredicateFieldPathBuilder::new_with_base(self.path)
-        }
-        pub fn exclude(mut self) -> EventPredicateFieldPathBuilder {
-            self.path.push(EventLiteral::EXCLUDE_FIELD.name);
-            EventPredicateFieldPathBuilder::new_with_base(self.path)
-        }
-    }
-    impl EventPredicate {
-        pub const SENDER_FIELD: &'static MessageField = &MessageField {
-            name: "sender",
-            json_name: "sender",
-            number: 1i32,
-            message_fields: Some(SenderFilter::FIELDS),
-        };
-        pub const EMIT_MODULE_FIELD: &'static MessageField = &MessageField {
-            name: "emit_module",
-            json_name: "emitModule",
-            number: 2i32,
-            message_fields: Some(EmitModuleFilter::FIELDS),
-        };
-        pub const EVENT_TYPE_FIELD: &'static MessageField = &MessageField {
-            name: "event_type",
-            json_name: "eventType",
-            number: 3i32,
-            message_fields: Some(EventTypeFilter::FIELDS),
-        };
-        pub const EVENT_STREAM_HEAD_FIELD: &'static MessageField = &MessageField {
-            name: "event_stream_head",
-            json_name: "eventStreamHead",
-            number: 4i32,
-            message_fields: Some(EventStreamHeadFilter::FIELDS),
-        };
-    }
-    impl MessageFields for EventPredicate {
-        const FIELDS: &'static [&'static MessageField] = &[
-            Self::SENDER_FIELD,
-            Self::EMIT_MODULE_FIELD,
-            Self::EVENT_TYPE_FIELD,
-            Self::EVENT_STREAM_HEAD_FIELD,
-        ];
-    }
-    impl EventPredicate {
-        pub fn path_builder() -> EventPredicateFieldPathBuilder {
-            EventPredicateFieldPathBuilder::new()
-        }
-    }
-    pub struct EventPredicateFieldPathBuilder {
-        path: Vec<&'static str>,
-    }
-    impl EventPredicateFieldPathBuilder {
-        #[allow(clippy::new_without_default)]
-        pub fn new() -> Self {
-            Self { path: Default::default() }
-        }
-        #[doc(hidden)]
-        pub fn new_with_base(base: Vec<&'static str>) -> Self {
-            Self { path: base }
-        }
-        pub fn finish(self) -> String {
-            self.path.join(".")
+        pub fn negated(mut self) -> String {
+            self.path.push(EventLiteral::NEGATED_FIELD.name);
+            self.finish()
         }
         pub fn sender(mut self) -> SenderFilterFieldPathBuilder {
-            self.path.push(EventPredicate::SENDER_FIELD.name);
+            self.path.push(EventLiteral::SENDER_FIELD.name);
             SenderFilterFieldPathBuilder::new_with_base(self.path)
         }
         pub fn emit_module(mut self) -> EmitModuleFilterFieldPathBuilder {
-            self.path.push(EventPredicate::EMIT_MODULE_FIELD.name);
+            self.path.push(EventLiteral::EMIT_MODULE_FIELD.name);
             EmitModuleFilterFieldPathBuilder::new_with_base(self.path)
         }
         pub fn event_type(mut self) -> EventTypeFilterFieldPathBuilder {
-            self.path.push(EventPredicate::EVENT_TYPE_FIELD.name);
+            self.path.push(EventLiteral::EVENT_TYPE_FIELD.name);
             EventTypeFilterFieldPathBuilder::new_with_base(self.path)
         }
         pub fn event_stream_head(mut self) -> EventStreamHeadFilterFieldPathBuilder {
-            self.path.push(EventPredicate::EVENT_STREAM_HEAD_FIELD.name);
+            self.path.push(EventLiteral::EVENT_STREAM_HEAD_FIELD.name);
             EventStreamHeadFilterFieldPathBuilder::new_with_base(self.path)
         }
     }

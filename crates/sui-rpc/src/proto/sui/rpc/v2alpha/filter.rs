@@ -5,21 +5,18 @@
 //!
 //! The generated [`TransactionFilter`] and [`EventFilter`] messages model a
 //! filter in disjunctive normal form: a filter is an OR of terms, each term is
-//! an AND of literals, and each literal is a signed (included or excluded)
-//! predicate. Building even the simplest filter by hand therefore means nesting
-//! four levels of message plus a single-field predicate wrapper. The helpers in
-//! this module collapse that nesting so the common cases read as one
-//! expression.
+//! an AND of literals, and each literal is a predicate that may be negated.
+//! Building even the simplest filter by hand therefore means nesting three
+//! levels of message plus a single-field predicate wrapper. The helpers in this
+//! module collapse that nesting so the common cases read as one expression.
 //!
 //! The predicate constructors live in the [`transaction`] and [`event`]
 //! submodules (one function per predicate kind) because the generated messages
 //! already expose the natural names -- `sender`, `affected_object`, and so on
-//! -- as field accessors. A predicate converts into an included literal
-//! automatically, so a term whose literals are all included can be written from
-//! bare predicates; mixing included and excluded predicates in one term
-//! requires calling [`TransactionPredicate::include`] /
-//! [`TransactionPredicate::exclude`] (or the event equivalents) to make the
-//! literals explicit.
+//! -- as field accessors. Each constructor returns a plain, un-negated literal,
+//! so a term whose literals are all positive can be written from bare
+//! constructor calls; call [`TransactionLiteral::negate`] (or the event
+//! equivalent) to require instead that a predicate not match.
 //!
 //! # Examples
 //!
@@ -43,7 +40,7 @@
 //!
 //! // Match `(sender = a AND NOT package_write) OR (affected_object = o)`.
 //! let _ = TransactionFilter::any([
-//!     TransactionTerm::all([tx::sender(a).include(), tx::package_write().exclude()]),
+//!     TransactionTerm::all([tx::sender(a), tx::package_write().negate()]),
 //!     TransactionTerm::all([tx::affected_object(o)]),
 //! ]);
 //! ```
@@ -205,33 +202,21 @@ impl From<TypeTag> for EventTypeFilter {
     }
 }
 
-// Layer 3 (transaction): polarity on predicates and the term/filter
-// combinators. A bare predicate converts into an included literal, and an
-// included literal into a single-literal term, so the all-included cases need
-// no explicit wrapping.
+// Layer 3 (transaction): negation on literals and the term/filter combinators.
+// A predicate constructor already yields an un-negated literal, and a literal
+// converts into a single-literal term, so the all-positive cases need no
+// explicit wrapping.
 
-impl TransactionPredicate {
-    /// Wrap this predicate as an included literal: the predicate must match.
-    pub fn include(self) -> TransactionLiteral {
-        TransactionLiteral::default().with_include(self)
-    }
-
-    /// Wrap this predicate as an excluded literal: the predicate must not
-    /// match.
-    pub fn exclude(self) -> TransactionLiteral {
-        TransactionLiteral::default().with_exclude(self)
+impl TransactionLiteral {
+    /// Negate this literal: require that its predicate not match.
+    pub fn negate(self) -> Self {
+        self.with_negated(true)
     }
 }
 
-impl From<TransactionPredicate> for TransactionLiteral {
-    fn from(predicate: TransactionPredicate) -> Self {
-        predicate.include()
-    }
-}
-
-impl From<TransactionPredicate> for TransactionTerm {
-    fn from(predicate: TransactionPredicate) -> Self {
-        Self::all([predicate])
+impl From<TransactionLiteral> for TransactionTerm {
+    fn from(literal: TransactionLiteral) -> Self {
+        Self::all([literal])
     }
 }
 
@@ -264,28 +249,16 @@ impl TransactionFilter {
 
 // Layer 3 (event): the event-side mirror of the transaction combinators.
 
-impl EventPredicate {
-    /// Wrap this predicate as an included literal: the predicate must match.
-    pub fn include(self) -> EventLiteral {
-        EventLiteral::default().with_include(self)
-    }
-
-    /// Wrap this predicate as an excluded literal: the predicate must not
-    /// match.
-    pub fn exclude(self) -> EventLiteral {
-        EventLiteral::default().with_exclude(self)
+impl EventLiteral {
+    /// Negate this literal: require that its predicate not match.
+    pub fn negate(self) -> Self {
+        self.with_negated(true)
     }
 }
 
-impl From<EventPredicate> for EventLiteral {
-    fn from(predicate: EventPredicate) -> Self {
-        predicate.include()
-    }
-}
-
-impl From<EventPredicate> for EventTerm {
-    fn from(predicate: EventPredicate) -> Self {
-        Self::all([predicate])
+impl From<EventLiteral> for EventTerm {
+    fn from(literal: EventLiteral) -> Self {
+        Self::all([literal])
     }
 }
 
@@ -326,20 +299,20 @@ pub mod transaction {
     use sui_sdk_types::Address;
 
     /// Match transactions sent by the specified address.
-    pub fn sender(address: impl Into<Address>) -> TransactionPredicate {
-        TransactionPredicate::default().with_sender(address.into())
+    pub fn sender(address: impl Into<Address>) -> TransactionLiteral {
+        TransactionLiteral::default().with_sender(address.into())
     }
 
     /// Match transactions where the specified address's state moved as a side
     /// effect.
-    pub fn affected_address(address: impl Into<Address>) -> TransactionPredicate {
-        TransactionPredicate::default().with_affected_address(address.into())
+    pub fn affected_address(address: impl Into<Address>) -> TransactionLiteral {
+        TransactionLiteral::default().with_affected_address(address.into())
     }
 
     /// Match transactions whose effects include a change for the specified
     /// object.
-    pub fn affected_object(object_id: impl Into<Address>) -> TransactionPredicate {
-        TransactionPredicate::default().with_affected_object(object_id.into())
+    pub fn affected_object(object_id: impl Into<Address>) -> TransactionLiteral {
+        TransactionLiteral::default().with_affected_object(object_id.into())
     }
 
     /// Match transactions that made a Move call matching the specified
@@ -347,35 +320,35 @@ pub mod transaction {
     /// string, an `Address` (package), an `(Address, Identifier)` package and
     /// module pair, or an `(Address, Identifier, Identifier)` package, module,
     /// and function triple.
-    pub fn move_call(function: impl Into<MoveCallFilter>) -> TransactionPredicate {
-        TransactionPredicate::default().with_move_call(function)
+    pub fn move_call(function: impl Into<MoveCallFilter>) -> TransactionLiteral {
+        TransactionLiteral::default().with_move_call(function)
     }
 
     /// Match transactions that emitted an event whose package/module fields
     /// match the specified `package[::module]` path. Accepts a `::`-delimited
     /// path string, an `Address` (package), or an `(Address, Identifier)`
     /// package and module pair.
-    pub fn emit_module(module: impl Into<EmitModuleFilter>) -> TransactionPredicate {
-        TransactionPredicate::default().with_emit_module(module)
+    pub fn emit_module(module: impl Into<EmitModuleFilter>) -> TransactionLiteral {
+        TransactionLiteral::default().with_emit_module(module)
     }
 
     /// Match transactions that emitted an event whose type matches the
     /// specified Move type. Accepts a canonical type string, a `StructTag`, or
     /// a `TypeTag`.
-    pub fn event_type(event_type: impl Into<EventTypeFilter>) -> TransactionPredicate {
-        TransactionPredicate::default().with_event_type(event_type)
+    pub fn event_type(event_type: impl Into<EventTypeFilter>) -> TransactionLiteral {
+        TransactionLiteral::default().with_event_type(event_type)
     }
 
     /// Match transactions that wrote to the specified authenticated event
     /// stream head.
-    pub fn event_stream_head(stream_id: impl Into<Address>) -> TransactionPredicate {
-        TransactionPredicate::default().with_event_stream_head(stream_id.into())
+    pub fn event_stream_head(stream_id: impl Into<Address>) -> TransactionLiteral {
+        TransactionLiteral::default().with_event_stream_head(stream_id.into())
     }
 
     /// Match transactions that wrote a Move package -- a first publish or an
     /// upgrade of any package.
-    pub fn package_write() -> TransactionPredicate {
-        TransactionPredicate::default().with_package_write(PackageWriteFilter::default())
+    pub fn package_write() -> TransactionLiteral {
+        TransactionLiteral::default().with_package_write(PackageWriteFilter::default())
     }
 }
 
@@ -385,36 +358,34 @@ pub mod event {
     use sui_sdk_types::Address;
 
     /// Match events from transactions sent by the specified address.
-    pub fn sender(address: impl Into<Address>) -> EventPredicate {
-        EventPredicate::default().with_sender(address.into())
+    pub fn sender(address: impl Into<Address>) -> EventLiteral {
+        EventLiteral::default().with_sender(address.into())
     }
 
     /// Match events whose package/module fields match the specified
     /// `package[::module]` path. Accepts a `::`-delimited path string, an
     /// `Address` (package), or an `(Address, Identifier)` package and module
     /// pair.
-    pub fn emit_module(module: impl Into<EmitModuleFilter>) -> EventPredicate {
-        EventPredicate::default().with_emit_module(module)
+    pub fn emit_module(module: impl Into<EmitModuleFilter>) -> EventLiteral {
+        EventLiteral::default().with_emit_module(module)
     }
 
     /// Match events whose type matches the specified Move type. Accepts a
     /// canonical type string, a `StructTag`, or a `TypeTag`.
-    pub fn event_type(event_type: impl Into<EventTypeFilter>) -> EventPredicate {
-        EventPredicate::default().with_event_type(event_type)
+    pub fn event_type(event_type: impl Into<EventTypeFilter>) -> EventLiteral {
+        EventLiteral::default().with_event_type(event_type)
     }
 
     /// Match events committed to the specified authenticated event stream head.
-    pub fn event_stream_head(stream_id: impl Into<Address>) -> EventPredicate {
-        EventPredicate::default().with_event_stream_head(stream_id.into())
+    pub fn event_stream_head(stream_id: impl Into<Address>) -> EventLiteral {
+        EventLiteral::default().with_event_stream_head(stream_id.into())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::super::event_literal;
-    use super::super::event_predicate;
     use super::super::transaction_literal;
-    use super::super::transaction_predicate;
     use super::*;
 
     #[test]
@@ -425,15 +396,10 @@ mod tests {
         let expected = TransactionFilter {
             terms: vec![TransactionTerm {
                 literals: vec![TransactionLiteral {
-                    polarity: Some(transaction_literal::Polarity::Include(
-                        TransactionPredicate {
-                            predicate: Some(transaction_predicate::Predicate::Sender(
-                                SenderFilter {
-                                    address: Some(address.to_string()),
-                                },
-                            )),
-                        },
-                    )),
+                    negated: false,
+                    predicate: Some(transaction_literal::Predicate::Sender(SenderFilter {
+                        address: Some(address.to_string()),
+                    })),
                 }],
             }],
         };
@@ -453,29 +419,28 @@ mod tests {
         assert_eq!(built.terms.len(), 1);
         let literals = &built.terms[0].literals;
         assert_eq!(literals.len(), 2);
-        assert!(literals.iter().all(|literal| matches!(
-            literal.polarity,
-            Some(transaction_literal::Polarity::Include(_))
-        )));
+        assert!(
+            literals
+                .iter()
+                .all(|literal| !literal.negated && literal.predicate.is_some())
+        );
     }
 
     #[test]
-    fn any_ors_terms_and_exclude_negates() {
+    fn any_ors_terms_and_negate_sets_negated() {
         let sender = Address::ZERO;
         let object = Address::TWO;
         let built = TransactionFilter::any([
             TransactionTerm::all([
-                transaction::sender(sender).include(),
-                transaction::package_write().exclude(),
+                transaction::sender(sender),
+                transaction::package_write().negate(),
             ]),
             TransactionTerm::all([transaction::affected_object(object)]),
         ]);
 
         assert_eq!(built.terms.len(), 2);
-        assert!(matches!(
-            built.terms[0].literals[1].polarity,
-            Some(transaction_literal::Polarity::Exclude(_))
-        ));
+        assert!(!built.terms[0].literals[0].negated);
+        assert!(built.terms[0].literals[1].negated);
     }
 
     #[test]
@@ -486,13 +451,12 @@ mod tests {
         let expected = EventFilter {
             terms: vec![EventTerm {
                 literals: vec![EventLiteral {
-                    polarity: Some(event_literal::Polarity::Include(EventPredicate {
-                        predicate: Some(event_predicate::Predicate::EventStreamHead(
-                            EventStreamHeadFilter {
-                                stream_id: Some(stream_id.to_string()),
-                            },
-                        )),
-                    })),
+                    negated: false,
+                    predicate: Some(event_literal::Predicate::EventStreamHead(
+                        EventStreamHeadFilter {
+                            stream_id: Some(stream_id.to_string()),
+                        },
+                    )),
                 }],
             }],
         };
@@ -510,8 +474,8 @@ mod tests {
         );
         let expected = tag.to_string();
 
-        let predicate = event::event_type(tag);
-        let Some(event_predicate::Predicate::EventType(filter)) = predicate.predicate else {
+        let literal = event::event_type(tag);
+        let Some(event_literal::Predicate::EventType(filter)) = literal.predicate else {
             panic!("expected an event_type predicate");
         };
 
@@ -525,8 +489,8 @@ mod tests {
         let function: Identifier = "mint".parse().unwrap();
         let expected = format!("{package}::{module}::{function}");
 
-        let predicate = transaction::move_call((package, module, function));
-        let Some(transaction_predicate::Predicate::MoveCall(filter)) = predicate.predicate else {
+        let literal = transaction::move_call((package, module, function));
+        let Some(transaction_literal::Predicate::MoveCall(filter)) = literal.predicate else {
             panic!("expected a move_call predicate");
         };
 
@@ -538,8 +502,8 @@ mod tests {
         let package = Address::TWO;
         let expected = package.to_string();
 
-        let predicate = event::emit_module(package);
-        let Some(event_predicate::Predicate::EmitModule(filter)) = predicate.predicate else {
+        let literal = event::emit_module(package);
+        let Some(event_literal::Predicate::EmitModule(filter)) = literal.predicate else {
             panic!("expected an emit_module predicate");
         };
 
