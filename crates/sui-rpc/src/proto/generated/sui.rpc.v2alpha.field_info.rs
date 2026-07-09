@@ -1649,4 +1649,298 @@ pub(crate) mod _field_impls {
             self.finish()
         }
     }
+    impl SubscribeCheckpointsRequest {
+        pub const READ_MASK_FIELD: &'static MessageField = &MessageField {
+            name: "read_mask",
+            json_name: "readMask",
+            number: 1i32,
+            message_fields: None,
+        };
+        pub const FILTER_FIELD: &'static MessageField = &MessageField {
+            name: "filter",
+            json_name: "filter",
+            number: 2i32,
+            message_fields: Some(TransactionFilter::FIELDS),
+        };
+    }
+    impl MessageFields for SubscribeCheckpointsRequest {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::READ_MASK_FIELD,
+            Self::FILTER_FIELD,
+        ];
+    }
+    impl SubscribeCheckpointsRequest {
+        pub fn path_builder() -> SubscribeCheckpointsRequestFieldPathBuilder {
+            SubscribeCheckpointsRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct SubscribeCheckpointsRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl SubscribeCheckpointsRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn read_mask(mut self) -> String {
+            self.path.push(SubscribeCheckpointsRequest::READ_MASK_FIELD.name);
+            self.finish()
+        }
+        pub fn filter(mut self) -> TransactionFilterFieldPathBuilder {
+            self.path.push(SubscribeCheckpointsRequest::FILTER_FIELD.name);
+            TransactionFilterFieldPathBuilder::new_with_base(self.path)
+        }
+    }
+    impl SubscribeCheckpointsResponse {
+        pub const CURSOR_FIELD: &'static MessageField = &MessageField {
+            name: "cursor",
+            json_name: "cursor",
+            number: 1i32,
+            message_fields: None,
+        };
+        pub const CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "checkpoint",
+            json_name: "checkpoint",
+            number: 2i32,
+            message_fields: Some(Checkpoint::FIELDS),
+        };
+    }
+    impl MessageFields for SubscribeCheckpointsResponse {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::CURSOR_FIELD,
+            Self::CHECKPOINT_FIELD,
+        ];
+    }
+    impl SubscribeCheckpointsResponse {
+        pub fn path_builder() -> SubscribeCheckpointsResponseFieldPathBuilder {
+            SubscribeCheckpointsResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct SubscribeCheckpointsResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl SubscribeCheckpointsResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn cursor(mut self) -> String {
+            self.path.push(SubscribeCheckpointsResponse::CURSOR_FIELD.name);
+            self.finish()
+        }
+        pub fn checkpoint(mut self) -> CheckpointFieldPathBuilder {
+            self.path.push(SubscribeCheckpointsResponse::CHECKPOINT_FIELD.name);
+            CheckpointFieldPathBuilder::new_with_base(self.path)
+        }
+    }
+    impl SubscribeTransactionsRequest {
+        pub const READ_MASK_FIELD: &'static MessageField = &MessageField {
+            name: "read_mask",
+            json_name: "readMask",
+            number: 1i32,
+            message_fields: None,
+        };
+        pub const FILTER_FIELD: &'static MessageField = &MessageField {
+            name: "filter",
+            json_name: "filter",
+            number: 2i32,
+            message_fields: Some(TransactionFilter::FIELDS),
+        };
+    }
+    impl MessageFields for SubscribeTransactionsRequest {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::READ_MASK_FIELD,
+            Self::FILTER_FIELD,
+        ];
+    }
+    impl SubscribeTransactionsRequest {
+        pub fn path_builder() -> SubscribeTransactionsRequestFieldPathBuilder {
+            SubscribeTransactionsRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct SubscribeTransactionsRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl SubscribeTransactionsRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn read_mask(mut self) -> String {
+            self.path.push(SubscribeTransactionsRequest::READ_MASK_FIELD.name);
+            self.finish()
+        }
+        pub fn filter(mut self) -> TransactionFilterFieldPathBuilder {
+            self.path.push(SubscribeTransactionsRequest::FILTER_FIELD.name);
+            TransactionFilterFieldPathBuilder::new_with_base(self.path)
+        }
+    }
+    impl SubscribeTransactionsResponse {
+        pub const TRANSACTION_FIELD: &'static MessageField = &MessageField {
+            name: "transaction",
+            json_name: "transaction",
+            number: 1i32,
+            message_fields: Some(ExecutedTransaction::FIELDS),
+        };
+        pub const WATERMARK_FIELD: &'static MessageField = &MessageField {
+            name: "watermark",
+            json_name: "watermark",
+            number: 2i32,
+            message_fields: Some(Watermark::FIELDS),
+        };
+    }
+    impl MessageFields for SubscribeTransactionsResponse {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::TRANSACTION_FIELD,
+            Self::WATERMARK_FIELD,
+        ];
+    }
+    impl SubscribeTransactionsResponse {
+        pub fn path_builder() -> SubscribeTransactionsResponseFieldPathBuilder {
+            SubscribeTransactionsResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct SubscribeTransactionsResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl SubscribeTransactionsResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn transaction(mut self) -> ExecutedTransactionFieldPathBuilder {
+            self.path.push(SubscribeTransactionsResponse::TRANSACTION_FIELD.name);
+            ExecutedTransactionFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn watermark(mut self) -> WatermarkFieldPathBuilder {
+            self.path.push(SubscribeTransactionsResponse::WATERMARK_FIELD.name);
+            WatermarkFieldPathBuilder::new_with_base(self.path)
+        }
+    }
+    impl SubscribeEventsRequest {
+        pub const READ_MASK_FIELD: &'static MessageField = &MessageField {
+            name: "read_mask",
+            json_name: "readMask",
+            number: 1i32,
+            message_fields: None,
+        };
+        pub const FILTER_FIELD: &'static MessageField = &MessageField {
+            name: "filter",
+            json_name: "filter",
+            number: 2i32,
+            message_fields: Some(EventFilter::FIELDS),
+        };
+    }
+    impl MessageFields for SubscribeEventsRequest {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::READ_MASK_FIELD,
+            Self::FILTER_FIELD,
+        ];
+    }
+    impl SubscribeEventsRequest {
+        pub fn path_builder() -> SubscribeEventsRequestFieldPathBuilder {
+            SubscribeEventsRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct SubscribeEventsRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl SubscribeEventsRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn read_mask(mut self) -> String {
+            self.path.push(SubscribeEventsRequest::READ_MASK_FIELD.name);
+            self.finish()
+        }
+        pub fn filter(mut self) -> EventFilterFieldPathBuilder {
+            self.path.push(SubscribeEventsRequest::FILTER_FIELD.name);
+            EventFilterFieldPathBuilder::new_with_base(self.path)
+        }
+    }
+    impl SubscribeEventsResponse {
+        pub const EVENT_FIELD: &'static MessageField = &MessageField {
+            name: "event",
+            json_name: "event",
+            number: 1i32,
+            message_fields: Some(Event::FIELDS),
+        };
+        pub const WATERMARK_FIELD: &'static MessageField = &MessageField {
+            name: "watermark",
+            json_name: "watermark",
+            number: 2i32,
+            message_fields: Some(Watermark::FIELDS),
+        };
+    }
+    impl MessageFields for SubscribeEventsResponse {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::EVENT_FIELD,
+            Self::WATERMARK_FIELD,
+        ];
+    }
+    impl SubscribeEventsResponse {
+        pub fn path_builder() -> SubscribeEventsResponseFieldPathBuilder {
+            SubscribeEventsResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct SubscribeEventsResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl SubscribeEventsResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn event(mut self) -> EventFieldPathBuilder {
+            self.path.push(SubscribeEventsResponse::EVENT_FIELD.name);
+            EventFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn watermark(mut self) -> WatermarkFieldPathBuilder {
+            self.path.push(SubscribeEventsResponse::WATERMARK_FIELD.name);
+            WatermarkFieldPathBuilder::new_with_base(self.path)
+        }
+    }
 }
