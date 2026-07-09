@@ -40,7 +40,7 @@ pub(super) struct StreamState {
     ///
     /// Items are stored in receipt order — which matches strictly
     /// ascending `(checkpoint, transaction_index, event_index)` per the
-    /// v2alpha contract.
+    /// v2 List API contract.
     pub buffer: VecDeque<AuthenticatedEvent>,
 
     /// The MMR head we've replayed by folding the settlement-partitioned
@@ -82,7 +82,7 @@ impl StreamState {
 /// `events` must be in strictly ascending
 /// `(checkpoint, transaction_index, event_index)` order with respect to
 /// each other and to whatever's already at the back of `state.buffer` —
-/// the v2alpha contract guarantees this for `ListEvents` responses, and
+/// the v2 List API contract guarantees this for `ListEvents` responses, and
 /// the fold-time partitioner relies on it. Empty input is a no-op.
 ///
 /// `watermark_hi` is the most recent `Watermark.checkpoint` observed

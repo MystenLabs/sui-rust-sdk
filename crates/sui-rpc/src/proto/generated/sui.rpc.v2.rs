@@ -1618,6 +1618,210 @@ pub mod type_argument_error {
         }
     }
 }
+/// DNF filter for transactions: any term may match, and each term is an AND
+/// of signed literals.
+/// An absent filter matches everything. A present filter must have at least one
+/// term.
+#[derive(Eq, Hash)]
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct TransactionFilter {
+    /// Terms are ORed together.
+    #[prost(message, repeated, tag = "1")]
+    pub terms: ::prost::alloc::vec::Vec<TransactionTerm>,
+}
+/// One conjunction in a transaction DNF filter.
+#[derive(Eq, Hash)]
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct TransactionTerm {
+    /// Literals are ANDed together.
+    #[prost(message, repeated, tag = "1")]
+    pub literals: ::prost::alloc::vec::Vec<TransactionLiteral>,
+}
+/// One signed transaction predicate literal: a predicate, optionally negated.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct TransactionLiteral {
+    /// When true, the literal matches transactions that the predicate does *not*
+    /// match.
+    #[prost(bool, tag = "1")]
+    pub negated: bool,
+    /// The transaction-index predicate to match.
+    #[prost(oneof = "transaction_literal::Predicate", tags = "2, 3, 4, 5, 6, 7, 8, 9")]
+    pub predicate: ::core::option::Option<transaction_literal::Predicate>,
+}
+/// Nested message and enum types in `TransactionLiteral`.
+pub mod transaction_literal {
+    /// The transaction-index predicate to match.
+    #[non_exhaustive]
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
+    pub enum Predicate {
+        /// Match transactions sent by the specified address.
+        #[prost(message, tag = "2")]
+        Sender(super::SenderFilter),
+        /// Match transactions where the specified address's state moved as a side
+        /// effect: it owns an object after the txn, owned an object before the
+        /// txn that was mutated/transferred away/deleted/wrapped, or its
+        /// address-balance changed via an accumulator event.
+        #[prost(message, tag = "3")]
+        AffectedAddress(super::AffectedAddressFilter),
+        /// Match transactions whose effects include a change for the specified
+        /// object.
+        #[prost(message, tag = "4")]
+        AffectedObject(super::AffectedObjectFilter),
+        /// Match transactions that made a Move call matching the specified filter.
+        #[prost(message, tag = "5")]
+        MoveCall(super::MoveCallFilter),
+        /// Match transactions that emitted an event whose package/module fields
+        /// match the specified filter.
+        #[prost(message, tag = "6")]
+        EmitModule(super::EmitModuleFilter),
+        /// Match transactions that emitted an event with a type matching the
+        /// specified filter.
+        #[prost(message, tag = "7")]
+        EventType(super::EventTypeFilter),
+        /// Match transactions that wrote to the specified authenticated event
+        /// stream head.
+        #[prost(message, tag = "8")]
+        EventStreamHead(super::EventStreamHeadFilter),
+        /// Match transactions that wrote a Move package — a first publish or an
+        /// upgrade, of any package.
+        #[prost(message, tag = "9")]
+        PackageWrite(super::PackageWriteFilter),
+    }
+}
+/// DNF filter for events: any term may match, and each term is an AND of
+/// signed literals. Sender predicates match all events from matching
+/// transactions; emit-module, event-type, and event-stream-head predicates match
+/// individual event-space dimensions. An absent filter matches everything. A
+/// present filter must have at least one term.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct EventFilter {
+    /// Terms are ORed together.
+    #[prost(message, repeated, tag = "1")]
+    pub terms: ::prost::alloc::vec::Vec<EventTerm>,
+}
+/// One conjunction in an event DNF filter.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct EventTerm {
+    /// Literals are ANDed together.
+    #[prost(message, repeated, tag = "1")]
+    pub literals: ::prost::alloc::vec::Vec<EventLiteral>,
+}
+/// One signed event predicate literal: a predicate, optionally negated.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct EventLiteral {
+    /// When true, the literal matches events that the predicate does *not* match.
+    #[prost(bool, tag = "1")]
+    pub negated: bool,
+    /// The event-index predicate to match.
+    #[prost(oneof = "event_literal::Predicate", tags = "2, 3, 4, 5")]
+    pub predicate: ::core::option::Option<event_literal::Predicate>,
+}
+/// Nested message and enum types in `EventLiteral`.
+pub mod event_literal {
+    /// The event-index predicate to match.
+    #[non_exhaustive]
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
+    pub enum Predicate {
+        /// Match events from transactions sent by the specified address.
+        #[prost(message, tag = "2")]
+        Sender(super::SenderFilter),
+        /// Match events whose package/module fields match the specified filter.
+        #[prost(message, tag = "3")]
+        EmitModule(super::EmitModuleFilter),
+        /// Match events whose type matches the specified filter.
+        #[prost(message, tag = "4")]
+        EventType(super::EventTypeFilter),
+        /// Match events committed to the specified authenticated event stream head.
+        #[prost(message, tag = "5")]
+        EventStreamHead(super::EventStreamHeadFilter),
+    }
+}
+/// Match by transaction sender address.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct SenderFilter {
+    /// The sender address (hex-encoded).
+    #[prost(string, optional, tag = "1")]
+    pub address: ::core::option::Option<::prost::alloc::string::String>,
+}
+/// Match by any address whose state moved as a side effect of the
+/// transaction: object ownership changes (in either direction), prior
+/// owners of removed/wrapped objects, and address-balance changes via
+/// accumulator events.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct AffectedAddressFilter {
+    /// The affected address (hex-encoded).
+    #[prost(string, optional, tag = "1")]
+    pub address: ::core::option::Option<::prost::alloc::string::String>,
+}
+/// Match by changed object ID.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct AffectedObjectFilter {
+    /// The changed object ID (hex-encoded).
+    #[prost(string, optional, tag = "1")]
+    pub object_id: ::core::option::Option<::prost::alloc::string::String>,
+}
+/// Match by Move function call, specified as a `::`-delimited Move path.
+///
+/// Specificity levels:
+/// "0xpkg"                        -> matches any call in the package
+/// "0xpkg::module"                -> matches any call in the module
+/// "0xpkg::module::function"      -> matches calls to the exact function
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct MoveCallFilter {
+    /// Required. Move path of the form `package\[::module[::function]\]`.
+    #[prost(string, optional, tag = "1")]
+    pub function: ::core::option::Option<::prost::alloc::string::String>,
+}
+/// Match by an event's package/module fields, specified as a `::`-delimited
+/// Move path. These identify the top-level Move call that triggered the event.
+///
+/// Specificity levels:
+/// "0xpkg"               -> matches events with this package_id
+/// "0xpkg::module"       -> matches events with this package_id and module
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct EmitModuleFilter {
+    /// Required. Move path of the form `package\[::module\]`.
+    #[prost(string, optional, tag = "1")]
+    pub module: ::core::option::Option<::prost::alloc::string::String>,
+}
+/// Match by event struct type, specified as a Move type string.
+///
+/// Specificity levels:
+/// "0xaddr"                              -> matches events whose type is defined at this address
+/// "0xaddr::module"                      -> matches events whose type is in this module
+/// "0xaddr::module::Name"                -> matches events with this type name (any instantiation)
+/// "0xaddr::module::Name\<T1, T2>"        -> matches events with this exact generic instantiation
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct EventTypeFilter {
+    /// Required. Move type string of the form
+    /// `address\[::module[::Name[<type_params>]\]]`.
+    #[prost(string, optional, tag = "1")]
+    pub event_type: ::core::option::Option<::prost::alloc::string::String>,
+}
+/// Match by authenticated event stream head.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct EventStreamHeadFilter {
+    /// The stream id address (hex-encoded).
+    #[prost(string, optional, tag = "1")]
+    pub stream_id: ::core::option::Option<::prost::alloc::string::String>,
+}
+/// Match transactions that wrote a Move package.
+#[non_exhaustive]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct PackageWriteFilter {}
 /// Summary of gas charges.
 #[non_exhaustive]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
@@ -2059,6 +2263,169 @@ pub struct GetEpochResponse {
     #[prost(message, optional, tag = "1")]
     pub epoch: ::core::option::Option<Epoch>,
 }
+/// Request message for LedgerService.ListCheckpoints.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListCheckpointsRequest {
+    /// Optional. Mask for specifying which parts of the Checkpoint should be
+    /// returned (e.g. summary, contents, signatures).
+    #[prost(message, optional, tag = "1")]
+    pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
+    /// Optional. Start of the checkpoint range to query (inclusive). Defaults to
+    /// genesis.
+    #[prost(uint64, optional, tag = "2")]
+    pub start_checkpoint: ::core::option::Option<u64>,
+    /// Optional. End of the checkpoint range to query (exclusive). Defaults to the
+    /// current indexed ledger tip.
+    #[prost(uint64, optional, tag = "3")]
+    pub end_checkpoint: ::core::option::Option<u64>,
+    /// Optional. DNF filter over indexed transaction dimensions. A checkpoint
+    /// matches if any transaction it contains satisfies the filter. If absent,
+    /// all checkpoints in the range are returned.
+    #[prost(message, optional, tag = "4")]
+    pub filter: ::core::option::Option<TransactionFilter>,
+    /// Optional cursor-bounded query options. If unspecified, reads in ascending
+    /// order with the default item limit. The server enforces a maximum item
+    /// limit and silently coerces larger values down to it. To paginate, pass
+    /// the last received `Watermark.cursor` as `options.after` (ascending) or
+    /// `options.before` (descending) on the next request.
+    #[prost(message, optional, tag = "5")]
+    pub options: ::core::option::Option<QueryOptions>,
+}
+/// Response message for LedgerService.ListCheckpoints.
+///
+/// Every frame carries a `watermark` with a safe resume cursor. A frame
+/// with `checkpoint` set delivers one matching item; a frame without it reports
+/// scan progress or terminal completion. Watermarks never regress in the
+/// requested ordering but may repeat.
+///
+/// `end` is set exactly once, on the final frame of a successful stream. For
+/// `QUERY_END_REASON_ITEM_LIMIT`, that frame also carries the final item. For
+/// every other end reason, the final frame has no `checkpoint` payload.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListCheckpointsResponse {
+    /// One matching checkpoint.
+    #[prost(message, optional, tag = "1")]
+    pub checkpoint: ::core::option::Option<Checkpoint>,
+    /// Progress watermark as of this frame. Present on every frame. A
+    /// ScanLimit terminal watermark may repeat the previous frame's cursor when
+    /// its authoritative scan frontier was already emitted.
+    #[prost(message, optional, tag = "2")]
+    pub watermark: ::core::option::Option<Watermark>,
+    /// Set exactly once, on the final frame of a successful query stream.
+    #[prost(message, optional, tag = "3")]
+    pub end: ::core::option::Option<QueryEnd>,
+}
+/// Request message for LedgerService.ListTransactions.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListTransactionsRequest {
+    /// Optional. Mask for specifying which parts of the ExecutedTransaction
+    /// should be returned.
+    #[prost(message, optional, tag = "1")]
+    pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
+    /// Optional. Start of the checkpoint range to query (inclusive). Defaults to
+    /// genesis.
+    #[prost(uint64, optional, tag = "2")]
+    pub start_checkpoint: ::core::option::Option<u64>,
+    /// Optional. End of the checkpoint range to query (exclusive). Defaults to the
+    /// current indexed ledger tip.
+    #[prost(uint64, optional, tag = "3")]
+    pub end_checkpoint: ::core::option::Option<u64>,
+    /// Optional. DNF filter over indexed dimensions.
+    /// If absent, all transactions in the range are returned.
+    #[prost(message, optional, tag = "4")]
+    pub filter: ::core::option::Option<TransactionFilter>,
+    /// Optional cursor-bounded query options. If unspecified, reads in ascending
+    /// order with the default item limit. The server enforces a maximum item
+    /// limit and silently coerces larger values down to it. To paginate, pass
+    /// the last received `Watermark.cursor` as `options.after` (ascending) or
+    /// `options.before` (descending) on the next request.
+    #[prost(message, optional, tag = "5")]
+    pub options: ::core::option::Option<QueryOptions>,
+}
+/// Response message for LedgerService.ListTransactions.
+///
+/// Every frame carries a `watermark` with a safe resume cursor. A frame
+/// with `transaction` set delivers one matching item; a frame without it reports
+/// scan progress or terminal completion. Watermarks never regress in the
+/// requested ordering but may repeat.
+///
+/// `end` is set exactly once, on the final frame of a successful stream. For
+/// `QUERY_END_REASON_ITEM_LIMIT`, that frame also carries the final item. For
+/// every other end reason, the final frame has no `transaction` payload.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListTransactionsResponse {
+    /// One matching transaction. Its position within the containing checkpoint
+    /// is reported by `ExecutedTransaction.transaction_index`.
+    #[prost(message, optional, tag = "1")]
+    pub transaction: ::core::option::Option<ExecutedTransaction>,
+    /// Progress watermark as of this frame. Present on every frame. A
+    /// ScanLimit terminal watermark may repeat the previous frame's cursor when
+    /// its authoritative scan frontier was already emitted.
+    #[prost(message, optional, tag = "2")]
+    pub watermark: ::core::option::Option<Watermark>,
+    /// Set exactly once, on the final frame of a successful query stream.
+    #[prost(message, optional, tag = "3")]
+    pub end: ::core::option::Option<QueryEnd>,
+}
+/// Request message for LedgerService.ListEvents.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListEventsRequest {
+    /// Optional. Mask for specifying which parts of the Event should be returned.
+    #[prost(message, optional, tag = "1")]
+    pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
+    /// Optional. Start of the checkpoint range to query (inclusive). Defaults to
+    /// genesis.
+    #[prost(uint64, optional, tag = "2")]
+    pub start_checkpoint: ::core::option::Option<u64>,
+    /// Optional. End of the checkpoint range to query (exclusive). Defaults to the
+    /// current indexed ledger tip.
+    #[prost(uint64, optional, tag = "3")]
+    pub end_checkpoint: ::core::option::Option<u64>,
+    /// Optional. DNF filter over indexed dimensions.
+    /// If absent, all events in the range are returned.
+    #[prost(message, optional, tag = "4")]
+    pub filter: ::core::option::Option<EventFilter>,
+    /// Optional cursor-bounded query options. If unspecified, reads in ascending
+    /// order with the default item limit. The server enforces a maximum item
+    /// limit and silently coerces larger values down to it. To paginate, pass
+    /// the last received `Watermark.cursor` as `options.after` (ascending) or
+    /// `options.before` (descending) on the next request.
+    #[prost(message, optional, tag = "5")]
+    pub options: ::core::option::Option<QueryOptions>,
+}
+/// Response message for LedgerService.ListEvents.
+///
+/// Every frame carries a `watermark` with a safe resume cursor. A frame
+/// with `event` set delivers one matching item; a frame without it reports scan
+/// progress or terminal completion. Watermarks never regress in the requested
+/// ordering but may repeat.
+///
+/// `end` is set exactly once, on the final frame of a successful stream. For
+/// `QUERY_END_REASON_ITEM_LIMIT`, that frame also carries the final item. For
+/// every other end reason, the final frame has no `event` payload.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListEventsResponse {
+    /// One matching event. Its ledger position -- containing checkpoint,
+    /// emitting transaction digest and offset, and index within that
+    /// transaction's event list -- is reported by the corresponding fields on
+    /// `Event`.
+    #[prost(message, optional, tag = "1")]
+    pub event: ::core::option::Option<Event>,
+    /// Progress watermark as of this frame. Present on every frame. A
+    /// ScanLimit terminal watermark may repeat the previous frame's cursor when
+    /// its authoritative scan frontier was already emitted.
+    #[prost(message, optional, tag = "2")]
+    pub watermark: ::core::option::Option<Watermark>,
+    /// Set exactly once, on the final frame of a successful query stream.
+    #[prost(message, optional, tag = "3")]
+    pub end: ::core::option::Option<QueryEnd>,
+}
 /// Generated client implementations.
 pub mod ledger_service_client {
     #![allow(
@@ -2321,6 +2688,91 @@ pub mod ledger_service_client {
                 .insert(GrpcMethod::new("sui.rpc.v2.LedgerService", "GetEpoch"));
             self.inner.unary(req, path, codec).await
         }
+        /// List checkpoints matching the provided filters.
+        ///
+        /// Checkpoints are returned in ascending or descending checkpoint sequence
+        /// number order according to the query options ordering.
+        /// A checkpoint matches if any transaction it contains satisfies the filter.
+        pub async fn list_checkpoints(
+            &mut self,
+            request: impl tonic::IntoRequest<super::ListCheckpointsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<tonic::codec::Streaming<super::ListCheckpointsResponse>>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/sui.rpc.v2.LedgerService/ListCheckpoints",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("sui.rpc.v2.LedgerService", "ListCheckpoints"));
+            self.inner.server_streaming(req, path, codec).await
+        }
+        /// List transactions matching the provided filters.
+        ///
+        /// Transactions are returned in ascending or descending transaction sequence
+        /// order according to the query options ordering.
+        pub async fn list_transactions(
+            &mut self,
+            request: impl tonic::IntoRequest<super::ListTransactionsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<tonic::codec::Streaming<super::ListTransactionsResponse>>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/sui.rpc.v2.LedgerService/ListTransactions",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("sui.rpc.v2.LedgerService", "ListTransactions"));
+            self.inner.server_streaming(req, path, codec).await
+        }
+        /// List events matching the provided filters.
+        ///
+        /// Events are returned in ascending or descending packed event sequence order
+        /// according to the query options ordering.
+        pub async fn list_events(
+            &mut self,
+            request: impl tonic::IntoRequest<super::ListEventsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<tonic::codec::Streaming<super::ListEventsResponse>>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/sui.rpc.v2.LedgerService/ListEvents",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("sui.rpc.v2.LedgerService", "ListEvents"));
+            self.inner.server_streaming(req, path, codec).await
+        }
     }
 }
 /// Generated server implementations.
@@ -2396,6 +2848,46 @@ pub mod ledger_service_server {
             request: tonic::Request<super::GetEpochRequest>,
         ) -> std::result::Result<
             tonic::Response<super::GetEpochResponse>,
+            tonic::Status,
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
+        /// List checkpoints matching the provided filters.
+        ///
+        /// Checkpoints are returned in ascending or descending checkpoint sequence
+        /// number order according to the query options ordering.
+        /// A checkpoint matches if any transaction it contains satisfies the filter.
+        async fn list_checkpoints(
+            &self,
+            request: tonic::Request<super::ListCheckpointsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<BoxStream<super::ListCheckpointsResponse>>,
+            tonic::Status,
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
+        /// List transactions matching the provided filters.
+        ///
+        /// Transactions are returned in ascending or descending transaction sequence
+        /// order according to the query options ordering.
+        async fn list_transactions(
+            &self,
+            request: tonic::Request<super::ListTransactionsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<BoxStream<super::ListTransactionsResponse>>,
+            tonic::Status,
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
+        /// List events matching the provided filters.
+        ///
+        /// Events are returned in ascending or descending packed event sequence order
+        /// according to the query options ordering.
+        async fn list_events(
+            &self,
+            request: tonic::Request<super::ListEventsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<BoxStream<super::ListEventsResponse>>,
             tonic::Status,
         > {
             Err(tonic::Status::unimplemented("Not yet implemented"))
@@ -2794,6 +3286,148 @@ pub mod ledger_service_server {
                                 max_encoding_message_size,
                             );
                         let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/sui.rpc.v2.LedgerService/ListCheckpoints" => {
+                    #[allow(non_camel_case_types)]
+                    struct ListCheckpointsSvc<T: LedgerService>(pub Arc<T>);
+                    impl<
+                        T: LedgerService,
+                    > tonic::server::ServerStreamingService<
+                        super::ListCheckpointsRequest,
+                    > for ListCheckpointsSvc<T> {
+                        type Response = super::ListCheckpointsResponse;
+                        type ResponseStream = BoxStream<super::ListCheckpointsResponse>;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::ResponseStream>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::ListCheckpointsRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as LedgerService>::list_checkpoints(&inner, request)
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = ListCheckpointsSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.server_streaming(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/sui.rpc.v2.LedgerService/ListTransactions" => {
+                    #[allow(non_camel_case_types)]
+                    struct ListTransactionsSvc<T: LedgerService>(pub Arc<T>);
+                    impl<
+                        T: LedgerService,
+                    > tonic::server::ServerStreamingService<
+                        super::ListTransactionsRequest,
+                    > for ListTransactionsSvc<T> {
+                        type Response = super::ListTransactionsResponse;
+                        type ResponseStream = BoxStream<super::ListTransactionsResponse>;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::ResponseStream>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::ListTransactionsRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as LedgerService>::list_transactions(&inner, request)
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = ListTransactionsSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.server_streaming(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/sui.rpc.v2.LedgerService/ListEvents" => {
+                    #[allow(non_camel_case_types)]
+                    struct ListEventsSvc<T: LedgerService>(pub Arc<T>);
+                    impl<
+                        T: LedgerService,
+                    > tonic::server::ServerStreamingService<super::ListEventsRequest>
+                    for ListEventsSvc<T> {
+                        type Response = super::ListEventsResponse;
+                        type ResponseStream = BoxStream<super::ListEventsResponse>;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::ResponseStream>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::ListEventsRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as LedgerService>::list_events(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = ListEventsSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.server_streaming(method, req).await;
                         Ok(res)
                     };
                     Box::pin(fut)
@@ -4556,6 +5190,177 @@ pub struct ProtocolConfig {
         ::prost::alloc::string::String,
         ::prost_types::Value,
     >,
+}
+/// Cursor-bounded query options.
+///
+/// `after` and `before` are canonical ledger-position bounds, not
+/// ordering-relative cursors. `after` always excludes items at or below that
+/// cursor, and `before` always excludes items at or above that cursor. Ordering
+/// only controls the order of returned items within the resulting open interval.
+///
+/// When a request also specifies a checkpoint range, cursor bounds and
+/// checkpoint bounds compose by intersection: results come only from ledger
+/// positions inside both. Checkpoint bounds are likewise canonical and
+/// ordering-independent.
+///
+/// For example, with `after = A`, `before = B`, `ordering = DESCENDING`, and
+/// `limit = N`, the response contains up to N matching items in descending
+/// order from the interval `(A, B)`. If the response ends with
+/// `QUERY_END_REASON_ITEM_LIMIT`, resume by keeping `after = A` and setting
+/// `before` to the last `Watermark.cursor` received. That cursor is the
+/// lowest position reached in ledger order, so it becomes the next exclusive
+/// upper bound.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct QueryOptions {
+    /// The maximum number of items to return. Each method applies its own default
+    /// and maximum. QueryEnd does not count against this limit.
+    #[prost(uint32, optional, tag = "1")]
+    pub limit: ::core::option::Option<u32>,
+    /// Opaque exclusive lower bound. Results must be strictly after this cursor in
+    /// canonical ledger order.
+    #[prost(bytes = "bytes", optional, tag = "2")]
+    pub after: ::core::option::Option<::prost::bytes::Bytes>,
+    /// Opaque exclusive upper bound. Results must be strictly before this cursor
+    /// in canonical ledger order.
+    #[prost(bytes = "bytes", optional, tag = "3")]
+    pub before: ::core::option::Option<::prost::bytes::Bytes>,
+    /// Ordering for returned results. Defaults to ASCENDING.
+    ///
+    /// Ordering only controls the order of results within the bounded interval;
+    /// cursor bounds keep the same meaning for ascending and descending reads.
+    #[prost(enumeration = "Ordering", optional, tag = "4")]
+    pub ordering: ::core::option::Option<i32>,
+}
+/// Progress marker for a query scan. Carried on every response frame, whether or
+/// not the frame delivers a matching item. Watermarks never regress in the
+/// requested ordering, but consecutive frames may carry the same watermark when
+/// additional work does not advance the safe resume frontier.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct Watermark {
+    /// Opaque cursor at this scan position. Set on every watermark. Use as
+    /// `options.after` (ascending) or `options.before` (descending) on the next
+    /// request to resume from here. The most recently received cursor is always
+    /// the safe resume point.
+    #[prost(bytes = "bytes", optional, tag = "1")]
+    pub cursor: ::core::option::Option<::prost::bytes::Bytes>,
+    /// The inclusive boundary checkpoint that the scan has fully covered within
+    /// the request's effective interval, in the request's ordering direction: an
+    /// ascending scan has emitted every matching item in the interval at
+    /// checkpoints `<= checkpoint` (strictly greater ones may still hold
+    /// matches); a descending scan has emitted every matching item in the
+    /// interval at checkpoints `>= checkpoint`. This boundary never regresses in
+    /// the scan direction, but it may repeat while the cursor advances.
+    ///
+    /// Unset until the scan's first checkpoint is fully covered. For example, a
+    /// scan resumed from a cursor that lands mid-checkpoint leaves this unset
+    /// until the next checkpoint boundary in the scan direction is fully covered.
+    /// A watermark still has a valid resume cursor while this field is unset.
+    #[prost(uint64, optional, tag = "2")]
+    pub checkpoint: ::core::option::Option<u64>,
+}
+/// Marker for the final frame of a successful query stream. Every successful
+/// stream sets `QueryEnd` on exactly one frame, after which no further frames
+/// are sent. That frame always carries the final watermark. For `ItemLimit`, it
+/// also carries the final matching item; for every other reason it carries no
+/// item. A ScanLimit terminal watermark may repeat the previous frame's cursor
+/// when its authoritative scan frontier was already emitted; this does not
+/// repeat an item.
+///
+/// A stream that fails or is cancelled terminates with a gRPC status and does
+/// not send `QueryEnd`.
+#[non_exhaustive]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct QueryEnd {
+    /// Reason this response stopped.
+    #[prost(enumeration = "QueryEndReason", optional, tag = "1")]
+    pub reason: ::core::option::Option<i32>,
+}
+/// Ordering for the returned result set.
+#[non_exhaustive]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum Ordering {
+    /// Return results in increasing cursor order.
+    Ascending = 0,
+    /// Return results in decreasing cursor order.
+    Descending = 1,
+}
+impl Ordering {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Ascending => "ORDERING_ASCENDING",
+            Self::Descending => "ORDERING_DESCENDING",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "ORDERING_ASCENDING" => Some(Self::Ascending),
+            "ORDERING_DESCENDING" => Some(Self::Descending),
+            _ => None,
+        }
+    }
+}
+/// Reason the server stopped this query response.
+#[non_exhaustive]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum QueryEndReason {
+    /// The stop reason was not specified.
+    Unknown = 0,
+    /// The response reached the requested item limit. The final matching item's
+    /// frame carries `QueryEnd` and the final watermark. Resume from that frame's
+    /// `Watermark.cursor` to continue reading the same effective interval.
+    ItemLimit = 1,
+    /// The response reached the server's per-request bucket-fetch budget for
+    /// filtered scans before reaching the effective interval bound. The terminal
+    /// frame carries no item. Its watermark cursor is the authoritative scan
+    /// frontier from which to resume.
+    ScanLimit = 2,
+    /// The scan reached a requested checkpoint range bound. The terminal frame
+    /// carries no item.
+    CheckpointBound = 3,
+    /// The scan reached an exclusive cursor bound. The terminal frame carries no
+    /// item. Its watermark cursor represents that resolved bound without claiming
+    /// that its containing checkpoint was fully covered.
+    CursorBound = 4,
+    /// The scan reached the currently indexed ledger tip. The terminal frame
+    /// carries no item.
+    LedgerTip = 5,
+}
+impl QueryEndReason {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unknown => "QUERY_END_REASON_UNKNOWN",
+            Self::ItemLimit => "QUERY_END_REASON_ITEM_LIMIT",
+            Self::ScanLimit => "QUERY_END_REASON_SCAN_LIMIT",
+            Self::CheckpointBound => "QUERY_END_REASON_CHECKPOINT_BOUND",
+            Self::CursorBound => "QUERY_END_REASON_CURSOR_BOUND",
+            Self::LedgerTip => "QUERY_END_REASON_LEDGER_TIP",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "QUERY_END_REASON_UNKNOWN" => Some(Self::Unknown),
+            "QUERY_END_REASON_ITEM_LIMIT" => Some(Self::ItemLimit),
+            "QUERY_END_REASON_SCAN_LIMIT" => Some(Self::ScanLimit),
+            "QUERY_END_REASON_CHECKPOINT_BOUND" => Some(Self::CheckpointBound),
+            "QUERY_END_REASON_CURSOR_BOUND" => Some(Self::CursorBound),
+            "QUERY_END_REASON_LEDGER_TIP" => Some(Self::LedgerTip),
+            _ => None,
+        }
+    }
 }
 /// A signature from a user.
 #[non_exhaustive]
@@ -6351,26 +7156,100 @@ pub mod state_service_server {
         const NAME: &'static str = SERVICE_NAME;
     }
 }
-/// Request message for SubscriptionService.SubscribeCheckpoints
+/// Request message for SubscriptionService.SubscribeCheckpoints.
+#[derive(Eq, Hash)]
 #[non_exhaustive]
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SubscribeCheckpointsRequest {
-    /// Optional. Mask for specifying which parts of the
-    /// SubscribeCheckpointsResponse should be returned.
+    /// Optional. Mask for specifying which parts of the Checkpoint should be
+    /// returned (e.g. summary, contents, signatures). `cursor` is always
+    /// populated and is not subject to the mask.
     #[prost(message, optional, tag = "1")]
     pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
+    /// Optional. DNF filter over indexed transaction dimensions. A checkpoint
+    /// matches if any transaction it contains satisfies the filter. If absent,
+    /// every checkpoint is streamed.
+    #[prost(message, optional, tag = "2")]
+    pub filter: ::core::option::Option<TransactionFilter>,
 }
-/// Response message for SubscriptionService.SubscribeCheckpoints
+/// Response message for SubscriptionService.SubscribeCheckpoints.
+///
+/// A checkpoint stream's position is checkpoint-granular, so the `cursor`
+/// sequence number stands in for the `Watermark` message the other
+/// subscription responses carry. Progress-only frames (with `checkpoint`
+/// unset) occur only on filtered streams: on an unfiltered stream every frame
+/// carries both fields, in order and without gaps.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SubscribeCheckpointsResponse {
-    /// Required. The checkpoint sequence number and value of the current cursor
-    /// into the checkpoint stream
+    /// Required. The checkpoint sequence number the stream has fully covered,
+    /// inclusive: every matching checkpoint from the stream's start position
+    /// through `cursor` has been delivered. Present on every frame and
+    /// advances monotonically.
     #[prost(uint64, optional, tag = "1")]
     pub cursor: ::core::option::Option<u64>,
-    /// The requested data for this checkpoint
+    /// The matching checkpoint. Unset when this frame only advances the
+    /// cursor past non-matching checkpoints.
     #[prost(message, optional, tag = "2")]
     pub checkpoint: ::core::option::Option<Checkpoint>,
+}
+/// Request message for SubscriptionService.SubscribeTransactions.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SubscribeTransactionsRequest {
+    /// Optional. Mask for specifying which parts of the ExecutedTransaction
+    /// should be returned.
+    #[prost(message, optional, tag = "1")]
+    pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
+    /// Optional. DNF filter over indexed dimensions. If absent, every
+    /// transaction is streamed.
+    #[prost(message, optional, tag = "2")]
+    pub filter: ::core::option::Option<TransactionFilter>,
+}
+/// Response message for SubscriptionService.SubscribeTransactions.
+///
+/// Mirrors ListTransactionsResponse, except there is no `end` field: a
+/// subscription stream has no successful end.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SubscribeTransactionsResponse {
+    /// One matching transaction. Its position within the containing checkpoint
+    /// is reported by `ExecutedTransaction.transaction_index`.
+    #[prost(message, optional, tag = "1")]
+    pub transaction: ::core::option::Option<ExecutedTransaction>,
+    /// Progress watermark as of this frame. Present on every frame.
+    #[prost(message, optional, tag = "2")]
+    pub watermark: ::core::option::Option<Watermark>,
+}
+/// Request message for SubscriptionService.SubscribeEvents.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SubscribeEventsRequest {
+    /// Optional. Mask for specifying which parts of the Event should be
+    /// returned.
+    #[prost(message, optional, tag = "1")]
+    pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
+    /// Optional. DNF filter over indexed dimensions. If absent, every event is
+    /// streamed.
+    #[prost(message, optional, tag = "2")]
+    pub filter: ::core::option::Option<EventFilter>,
+}
+/// Response message for SubscriptionService.SubscribeEvents.
+///
+/// Mirrors ListEventsResponse, except there is no `end` field: a subscription
+/// stream has no successful end.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SubscribeEventsResponse {
+    /// One matching event. Its ledger position -- containing checkpoint,
+    /// emitting transaction digest and offset, and index within that
+    /// transaction's event list -- is reported by the corresponding fields on
+    /// `Event`.
+    #[prost(message, optional, tag = "1")]
+    pub event: ::core::option::Option<Event>,
+    /// Progress watermark as of this frame. Present on every frame.
+    #[prost(message, optional, tag = "2")]
+    pub watermark: ::core::option::Option<Watermark>,
 }
 /// Generated client implementations.
 pub mod subscription_service_client {
@@ -6383,6 +7262,33 @@ pub mod subscription_service_client {
     )]
     use tonic::codegen::*;
     use tonic::codegen::http::Uri;
+    /// SubscriptionService provides filtered, real-time streams of checkpoints,
+    /// transactions, and events.
+    ///
+    /// Each Subscribe API pairs with the LedgerService List API of the same name:
+    /// requests take the same filter message, and responses carry the same item
+    /// and watermark shapes with identical cursor semantics.
+    ///
+    /// Subscriptions do not support resumption. A new subscription always begins
+    /// at the current tip of the chain as seen by the server (the latest executed
+    /// checkpoint). To recover data missed between subscriptions, replay the gap
+    /// with the paired List API: pass the last received `Watermark.cursor` as
+    /// `options.after` on the List request (for checkpoints, pass the last
+    /// received `cursor + 1` as `start_checkpoint`). The List scan reads from the
+    /// indexed tip, which may trail the subscription's start position; repeat the
+    /// List call as the index advances until the replay reaches the position
+    /// established by the subscription's first frame.
+    ///
+    /// A subscription behaves like an unbounded ascending scan: every frame
+    /// carries the subscriber's resume point, and progress advances as
+    /// checkpoints are fully covered. Two delivery guarantees keep sparse
+    /// filters live: the first frame on a filtered subscription is a
+    /// progress-only frame establishing the stream's start position, and
+    /// progress continues to advance with bounded staleness even when no item
+    /// matches.
+    ///
+    /// Subscription streams have no successful end: they run until cancelled by
+    /// the client or terminated by the server with a gRPC status.
     #[derive(Debug, Clone)]
     pub struct SubscriptionServiceClient<T> {
         inner: tonic::client::Grpc<T>,
@@ -6465,15 +7371,10 @@ pub mod subscription_service_client {
         }
         /// Subscribe to the stream of checkpoints.
         ///
-        /// This API provides a subscription to the checkpoint stream for the Sui
-        /// blockchain. When a subscription is initialized the stream will begin with
-        /// the latest executed checkpoint as seen by the server. Responses are
-        /// guaranteed to return checkpoints in-order and without gaps. This enables
-        /// clients to know exactly the last checkpoint they have processed and in the
-        /// event the subscription terminates (either by the client/server or by the
-        /// connection breaking), clients will be able to reinitialize a subscription
-        /// and then leverage other APIs in order to request data for the checkpoints
-        /// they missed.
+        /// The stream begins at the latest executed checkpoint as seen by the
+        /// server and yields checkpoints matching the filter as they are executed.
+        /// A checkpoint matches if any transaction it contains satisfies the
+        /// filter.
         pub async fn subscribe_checkpoints(
             &mut self,
             request: impl tonic::IntoRequest<super::SubscribeCheckpointsRequest>,
@@ -6505,6 +7406,71 @@ pub mod subscription_service_client {
                 );
             self.inner.server_streaming(req, path, codec).await
         }
+        /// Subscribe to the stream of transactions.
+        ///
+        /// The stream begins at the latest executed checkpoint as seen by the
+        /// server and yields transactions matching the filter as they are executed.
+        pub async fn subscribe_transactions(
+            &mut self,
+            request: impl tonic::IntoRequest<super::SubscribeTransactionsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<
+                tonic::codec::Streaming<super::SubscribeTransactionsResponse>,
+            >,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/sui.rpc.v2.SubscriptionService/SubscribeTransactions",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "sui.rpc.v2.SubscriptionService",
+                        "SubscribeTransactions",
+                    ),
+                );
+            self.inner.server_streaming(req, path, codec).await
+        }
+        /// Subscribe to the stream of events.
+        ///
+        /// The stream begins at the latest executed checkpoint as seen by the
+        /// server and yields events matching the filter as they are emitted.
+        pub async fn subscribe_events(
+            &mut self,
+            request: impl tonic::IntoRequest<super::SubscribeEventsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<tonic::codec::Streaming<super::SubscribeEventsResponse>>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/sui.rpc.v2.SubscriptionService/SubscribeEvents",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new("sui.rpc.v2.SubscriptionService", "SubscribeEvents"),
+                );
+            self.inner.server_streaming(req, path, codec).await
+        }
     }
 }
 /// Generated server implementations.
@@ -6522,15 +7488,10 @@ pub mod subscription_service_server {
     pub trait SubscriptionService: std::marker::Send + std::marker::Sync + 'static {
         /// Subscribe to the stream of checkpoints.
         ///
-        /// This API provides a subscription to the checkpoint stream for the Sui
-        /// blockchain. When a subscription is initialized the stream will begin with
-        /// the latest executed checkpoint as seen by the server. Responses are
-        /// guaranteed to return checkpoints in-order and without gaps. This enables
-        /// clients to know exactly the last checkpoint they have processed and in the
-        /// event the subscription terminates (either by the client/server or by the
-        /// connection breaking), clients will be able to reinitialize a subscription
-        /// and then leverage other APIs in order to request data for the checkpoints
-        /// they missed.
+        /// The stream begins at the latest executed checkpoint as seen by the
+        /// server and yields checkpoints matching the filter as they are executed.
+        /// A checkpoint matches if any transaction it contains satisfies the
+        /// filter.
         async fn subscribe_checkpoints(
             &self,
             request: tonic::Request<super::SubscribeCheckpointsRequest>,
@@ -6540,7 +7501,60 @@ pub mod subscription_service_server {
         > {
             Err(tonic::Status::unimplemented("Not yet implemented"))
         }
+        /// Subscribe to the stream of transactions.
+        ///
+        /// The stream begins at the latest executed checkpoint as seen by the
+        /// server and yields transactions matching the filter as they are executed.
+        async fn subscribe_transactions(
+            &self,
+            request: tonic::Request<super::SubscribeTransactionsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<BoxStream<super::SubscribeTransactionsResponse>>,
+            tonic::Status,
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
+        /// Subscribe to the stream of events.
+        ///
+        /// The stream begins at the latest executed checkpoint as seen by the
+        /// server and yields events matching the filter as they are emitted.
+        async fn subscribe_events(
+            &self,
+            request: tonic::Request<super::SubscribeEventsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<BoxStream<super::SubscribeEventsResponse>>,
+            tonic::Status,
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
     }
+    /// SubscriptionService provides filtered, real-time streams of checkpoints,
+    /// transactions, and events.
+    ///
+    /// Each Subscribe API pairs with the LedgerService List API of the same name:
+    /// requests take the same filter message, and responses carry the same item
+    /// and watermark shapes with identical cursor semantics.
+    ///
+    /// Subscriptions do not support resumption. A new subscription always begins
+    /// at the current tip of the chain as seen by the server (the latest executed
+    /// checkpoint). To recover data missed between subscriptions, replay the gap
+    /// with the paired List API: pass the last received `Watermark.cursor` as
+    /// `options.after` on the List request (for checkpoints, pass the last
+    /// received `cursor + 1` as `start_checkpoint`). The List scan reads from the
+    /// indexed tip, which may trail the subscription's start position; repeat the
+    /// List call as the index advances until the replay reaches the position
+    /// established by the subscription's first frame.
+    ///
+    /// A subscription behaves like an unbounded ascending scan: every frame
+    /// carries the subscriber's resume point, and progress advances as
+    /// checkpoints are fully covered. Two delivery guarantees keep sparse
+    /// filters live: the first frame on a filtered subscription is a
+    /// progress-only frame establishing the stream's start position, and
+    /// progress continues to advance with bounded staleness even when no item
+    /// matches.
+    ///
+    /// Subscription streams have no successful end: they run until cancelled by
+    /// the client or terminated by the server with a gRPC status.
     #[derive(Debug)]
     pub struct SubscriptionServiceServer<T> {
         inner: Arc<T>,
@@ -6655,6 +7669,110 @@ pub mod subscription_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = SubscribeCheckpointsSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.server_streaming(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/sui.rpc.v2.SubscriptionService/SubscribeTransactions" => {
+                    #[allow(non_camel_case_types)]
+                    struct SubscribeTransactionsSvc<T: SubscriptionService>(pub Arc<T>);
+                    impl<
+                        T: SubscriptionService,
+                    > tonic::server::ServerStreamingService<
+                        super::SubscribeTransactionsRequest,
+                    > for SubscribeTransactionsSvc<T> {
+                        type Response = super::SubscribeTransactionsResponse;
+                        type ResponseStream = BoxStream<
+                            super::SubscribeTransactionsResponse,
+                        >;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::ResponseStream>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::SubscribeTransactionsRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as SubscriptionService>::subscribe_transactions(
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = SubscribeTransactionsSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.server_streaming(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/sui.rpc.v2.SubscriptionService/SubscribeEvents" => {
+                    #[allow(non_camel_case_types)]
+                    struct SubscribeEventsSvc<T: SubscriptionService>(pub Arc<T>);
+                    impl<
+                        T: SubscriptionService,
+                    > tonic::server::ServerStreamingService<
+                        super::SubscribeEventsRequest,
+                    > for SubscribeEventsSvc<T> {
+                        type Response = super::SubscribeEventsResponse;
+                        type ResponseStream = BoxStream<super::SubscribeEventsResponse>;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::ResponseStream>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::SubscribeEventsRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as SubscriptionService>::subscribe_events(
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = SubscribeEventsSvc(inner);
                         let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(

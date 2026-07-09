@@ -1,12 +1,6 @@
 #![allow(clippy::uninlined_format_args)]
 
-use super::v2::_field_impls::CheckpointFieldPathBuilder;
-use super::v2::_field_impls::EventFieldPathBuilder;
-use super::v2::_field_impls::ExecutedTransactionFieldPathBuilder;
 use super::v2::_field_impls::ObjectReferenceFieldPathBuilder;
-use super::v2::Checkpoint;
-use super::v2::Event;
-use super::v2::ExecutedTransaction;
 use super::v2::ObjectReference;
 
 // Include the generated proto definitions
@@ -19,7 +13,6 @@ include!("../../../generated/sui.rpc.v2alpha.field_info.rs");
 include!("../../../generated/sui.rpc.v2alpha.serde.rs");
 include!("../../../generated/sui.rpc.v2alpha.accessors.rs");
 
-pub mod filter;
 mod proof_service;
 
 pub use descriptor::FILE_DESCRIPTOR_SET;

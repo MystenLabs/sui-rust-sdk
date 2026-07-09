@@ -31,8 +31,6 @@ use crate::proto::sui::rpc::v2::state_service_client::StateServiceClient;
 use crate::proto::sui::rpc::v2::subscription_service_client::SubscriptionServiceClient;
 use crate::proto::sui::rpc::v2::transaction_execution_service_client::TransactionExecutionServiceClient;
 #[cfg(feature = "unstable")]
-use crate::proto::sui::rpc::v2alpha::ledger_service_client::LedgerServiceClient as LedgerServiceClientAlpha;
-#[cfg(feature = "unstable")]
 use crate::proto::sui::rpc::v2alpha::proof_service_client::ProofServiceClient;
 
 type Result<T, E = tonic::Status> = std::result::Result<T, E>;
@@ -311,24 +309,6 @@ impl Client {
     #[cfg_attr(doc_cfg, doc(cfg(feature = "unstable")))]
     pub fn proof_client(&mut self) -> ProofServiceClient<BoxedChannel> {
         ProofServiceClient::new(self.channel())
-            .accept_compressed(CompressionEncoding::Zstd)
-            .pipe(|client| {
-                if let Some(limit) = self.max_decoding_message_size {
-                    client.max_decoding_message_size(limit)
-                } else {
-                    client
-                }
-            })
-    }
-
-    /// Returns a client for the unstable v2alpha `LedgerService`, which
-    /// exposes the indexed checkpoint / transaction / event listing RPCs
-    /// (`ListCheckpoints`, `ListTransactions`, `ListEvents`) on top of the
-    /// stable v2 surface accessible via [`Self::ledger_client`].
-    #[cfg(feature = "unstable")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "unstable")))]
-    pub fn ledger_client_alpha(&mut self) -> LedgerServiceClientAlpha<BoxedChannel> {
-        LedgerServiceClientAlpha::new(self.channel())
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
                 if let Some(limit) = self.max_decoding_message_size {

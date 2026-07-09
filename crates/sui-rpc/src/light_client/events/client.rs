@@ -18,14 +18,14 @@ use super::state::fold_and_reconcile;
 use crate::light_client::CheckpointObjectProof;
 use crate::light_client::LightClient;
 use crate::light_client::error::LightClientError;
-use crate::proto::sui::rpc::v2alpha::EventFilter;
-use crate::proto::sui::rpc::v2alpha::ListEventsRequest;
-use crate::proto::sui::rpc::v2alpha::ListTransactionsRequest;
-use crate::proto::sui::rpc::v2alpha::QueryEndReason;
-use crate::proto::sui::rpc::v2alpha::QueryOptions;
-use crate::proto::sui::rpc::v2alpha::TransactionFilter;
-use crate::proto::sui::rpc::v2alpha::filter::event;
-use crate::proto::sui::rpc::v2alpha::filter::transaction;
+use crate::proto::sui::rpc::v2::EventFilter;
+use crate::proto::sui::rpc::v2::ListEventsRequest;
+use crate::proto::sui::rpc::v2::ListTransactionsRequest;
+use crate::proto::sui::rpc::v2::QueryEndReason;
+use crate::proto::sui::rpc::v2::QueryOptions;
+use crate::proto::sui::rpc::v2::TransactionFilter;
+use crate::proto::sui::rpc::v2::filter::event;
+use crate::proto::sui::rpc::v2::filter::transaction;
 
 /// A streaming verifier for a single authenticated event stream.
 ///
@@ -338,7 +338,7 @@ async fn fetch_one_page(
 ) -> Result<PageResult, LightClientError> {
     let mut stream = light
         .rpc()
-        .ledger_client_alpha()
+        .ledger_client()
         .list_events(request)
         .await?
         .into_inner();
@@ -531,7 +531,7 @@ async fn fetch_settlements_page(
 ) -> Result<SettlementsPage, LightClientError> {
     let mut stream = light
         .rpc()
-        .ledger_client_alpha()
+        .ledger_client()
         .list_transactions(request)
         .await?
         .into_inner();

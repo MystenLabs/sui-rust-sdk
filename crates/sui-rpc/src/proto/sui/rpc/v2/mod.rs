@@ -37,6 +37,7 @@ mod epoch;
 mod events;
 mod executed_transaction;
 mod execution_status;
+pub mod filter;
 mod ledger_service;
 mod move_package_service;
 mod name_service;
