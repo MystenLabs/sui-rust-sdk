@@ -26,8 +26,6 @@ use crate::proto::sui::rpc::v2alpha::QueryOptions;
 use crate::proto::sui::rpc::v2alpha::TransactionFilter;
 use crate::proto::sui::rpc::v2alpha::filter::event;
 use crate::proto::sui::rpc::v2alpha::filter::transaction;
-use crate::proto::sui::rpc::v2alpha::list_events_response;
-use crate::proto::sui::rpc::v2alpha::list_transactions_response;
 
 /// A streaming verifier for a single authenticated event stream.
 ///
@@ -199,8 +197,8 @@ async fn run_stream_task(
                 match end_reason {
                     // The server stopped mid-range with unscanned work
                     // remaining — resume from the latest in-stream
-                    // cursor (item or watermark) so we don't skip the
-                    // unscanned tail. Same shape as ItemLimit: keep
+                    // cursor so we don't skip the unscanned tail. Same
+                    // shape as ItemLimit: keep
                     // advancing the cursor, no checkpoint bump, no
                     // backoff sleep.
                     Some(QueryEndReason::ItemLimit | QueryEndReason::ScanLimit) => {
@@ -315,14 +313,12 @@ async fn initial_state(
 
 struct PageResult {
     events: Vec<AuthenticatedEvent>,
-    /// Latest opaque cursor delivered during the page — most recent
-    /// `Watermark.cursor` or per-item cursor, whichever arrived later in
-    /// stream order. This is the safe resume point on any termination:
-    /// the server no longer carries a cursor on `QueryEnd`.
+    /// Latest `Watermark.cursor` delivered during the page. Every frame
+    /// carries a watermark, so this is the safe resume point on any
+    /// termination.
     end_cursor: Option<prost::bytes::Bytes>,
     end_reason: Option<QueryEndReason>,
-    /// Most recent `Watermark.checkpoint` observed in this page,
-    /// across both standalone watermarks and per-item watermarks. The
+    /// Most recent `Watermark.checkpoint` observed in this page. The
     /// streaming state uses this as the "events scanned through" floor
     /// when picking the settlement-fetch range.
     watermark: Option<u64>,
@@ -361,32 +357,21 @@ async fn fetch_one_page(
                 break;
             }
         };
-        match frame.response {
-            Some(list_events_response::Response::Item(item)) => {
-                if let Some(w) = item.watermark.as_ref() {
-                    if let Some(c) = w.cursor.clone() {
-                        end_cursor = Some(c);
-                    }
-                    if let Some(hi) = w.checkpoint {
-                        watermark = Some(watermark.map_or(hi, |prev| prev.max(hi)));
-                    }
-                }
-                let ev = AuthenticatedEvent::try_from(&item)?;
-                events.push(ev);
+        if let Some(w) = frame.watermark.as_ref() {
+            if let Some(c) = w.cursor.clone() {
+                end_cursor = Some(c);
             }
-            Some(list_events_response::Response::Watermark(w)) => {
-                if let Some(c) = w.cursor {
-                    end_cursor = Some(c);
-                }
-                if let Some(hi) = w.checkpoint {
-                    watermark = Some(watermark.map_or(hi, |prev| prev.max(hi)));
-                }
+            if let Some(hi) = w.checkpoint {
+                watermark = Some(watermark.map_or(hi, |prev| prev.max(hi)));
             }
-            Some(list_events_response::Response::End(end)) => {
-                end_reason = end.reason.and_then(|r| QueryEndReason::try_from(r).ok());
-                break;
-            }
-            None => break,
+        }
+        if frame.event.is_some() {
+            let ev = AuthenticatedEvent::try_from(&frame)?;
+            events.push(ev);
+        }
+        if let Some(end) = frame.end {
+            end_reason = end.reason.and_then(|r| QueryEndReason::try_from(r).ok());
+            break;
         }
     }
 
@@ -557,40 +542,27 @@ async fn fetch_settlements_page(
 
     while let Some(frame) = stream.next().await {
         let frame = frame?;
-        match frame.response {
-            Some(list_transactions_response::Response::Item(item)) => {
-                if let Some(c) = item.watermark.as_ref().and_then(|w| w.cursor.clone()) {
-                    end_cursor = Some(c);
-                }
-                let transaction =
-                    item.transaction
-                        .as_ref()
-                        .ok_or(LightClientError::UnexpectedObjectShape {
-                            reason: "settlement item missing transaction",
-                        })?;
-                let checkpoint =
-                    transaction
-                        .checkpoint
-                        .ok_or(LightClientError::UnexpectedObjectShape {
-                            reason: "settlement transaction missing checkpoint",
-                        })?;
-                let tx_offset = transaction.transaction_index.ok_or(
-                    LightClientError::UnexpectedObjectShape {
+        if let Some(c) = frame.watermark.as_ref().and_then(|w| w.cursor.clone()) {
+            end_cursor = Some(c);
+        }
+        if let Some(transaction) = frame.transaction.as_ref() {
+            let checkpoint =
+                transaction
+                    .checkpoint
+                    .ok_or(LightClientError::UnexpectedObjectShape {
+                        reason: "settlement transaction missing checkpoint",
+                    })?;
+            let tx_offset =
+                transaction
+                    .transaction_index
+                    .ok_or(LightClientError::UnexpectedObjectShape {
                         reason: "settlement transaction missing transaction_index",
-                    },
-                )?;
-                entries.push((checkpoint, tx_offset));
-            }
-            Some(list_transactions_response::Response::Watermark(w)) => {
-                if let Some(c) = w.cursor {
-                    end_cursor = Some(c);
-                }
-            }
-            Some(list_transactions_response::Response::End(end)) => {
-                end_reason = end.reason.and_then(|r| QueryEndReason::try_from(r).ok());
-                break;
-            }
-            None => break,
+                    })?;
+            entries.push((checkpoint, tx_offset));
+        }
+        if let Some(end) = frame.end {
+            end_reason = end.reason.and_then(|r| QueryEndReason::try_from(r).ok());
+            break;
         }
     }
 

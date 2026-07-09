@@ -714,61 +714,12 @@ pub(crate) mod _field_impls {
             QueryOptionsFieldPathBuilder::new_with_base(self.path)
         }
     }
-    impl CheckpointItem {
+    impl ListCheckpointsResponse {
         pub const CHECKPOINT_FIELD: &'static MessageField = &MessageField {
             name: "checkpoint",
             json_name: "checkpoint",
             number: 1i32,
             message_fields: Some(Checkpoint::FIELDS),
-        };
-        pub const WATERMARK_FIELD: &'static MessageField = &MessageField {
-            name: "watermark",
-            json_name: "watermark",
-            number: 2i32,
-            message_fields: Some(Watermark::FIELDS),
-        };
-    }
-    impl MessageFields for CheckpointItem {
-        const FIELDS: &'static [&'static MessageField] = &[
-            Self::CHECKPOINT_FIELD,
-            Self::WATERMARK_FIELD,
-        ];
-    }
-    impl CheckpointItem {
-        pub fn path_builder() -> CheckpointItemFieldPathBuilder {
-            CheckpointItemFieldPathBuilder::new()
-        }
-    }
-    pub struct CheckpointItemFieldPathBuilder {
-        path: Vec<&'static str>,
-    }
-    impl CheckpointItemFieldPathBuilder {
-        #[allow(clippy::new_without_default)]
-        pub fn new() -> Self {
-            Self { path: Default::default() }
-        }
-        #[doc(hidden)]
-        pub fn new_with_base(base: Vec<&'static str>) -> Self {
-            Self { path: base }
-        }
-        pub fn finish(self) -> String {
-            self.path.join(".")
-        }
-        pub fn checkpoint(mut self) -> CheckpointFieldPathBuilder {
-            self.path.push(CheckpointItem::CHECKPOINT_FIELD.name);
-            CheckpointFieldPathBuilder::new_with_base(self.path)
-        }
-        pub fn watermark(mut self) -> WatermarkFieldPathBuilder {
-            self.path.push(CheckpointItem::WATERMARK_FIELD.name);
-            WatermarkFieldPathBuilder::new_with_base(self.path)
-        }
-    }
-    impl ListCheckpointsResponse {
-        pub const ITEM_FIELD: &'static MessageField = &MessageField {
-            name: "item",
-            json_name: "item",
-            number: 1i32,
-            message_fields: Some(CheckpointItem::FIELDS),
         };
         pub const WATERMARK_FIELD: &'static MessageField = &MessageField {
             name: "watermark",
@@ -785,7 +736,7 @@ pub(crate) mod _field_impls {
     }
     impl MessageFields for ListCheckpointsResponse {
         const FIELDS: &'static [&'static MessageField] = &[
-            Self::ITEM_FIELD,
+            Self::CHECKPOINT_FIELD,
             Self::WATERMARK_FIELD,
             Self::END_FIELD,
         ];
@@ -810,9 +761,9 @@ pub(crate) mod _field_impls {
         pub fn finish(self) -> String {
             self.path.join(".")
         }
-        pub fn item(mut self) -> CheckpointItemFieldPathBuilder {
-            self.path.push(ListCheckpointsResponse::ITEM_FIELD.name);
-            CheckpointItemFieldPathBuilder::new_with_base(self.path)
+        pub fn checkpoint(mut self) -> CheckpointFieldPathBuilder {
+            self.path.push(ListCheckpointsResponse::CHECKPOINT_FIELD.name);
+            CheckpointFieldPathBuilder::new_with_base(self.path)
         }
         pub fn watermark(mut self) -> WatermarkFieldPathBuilder {
             self.path.push(ListCheckpointsResponse::WATERMARK_FIELD.name);
@@ -905,61 +856,12 @@ pub(crate) mod _field_impls {
             QueryOptionsFieldPathBuilder::new_with_base(self.path)
         }
     }
-    impl TransactionItem {
+    impl ListTransactionsResponse {
         pub const TRANSACTION_FIELD: &'static MessageField = &MessageField {
             name: "transaction",
             json_name: "transaction",
             number: 1i32,
             message_fields: Some(ExecutedTransaction::FIELDS),
-        };
-        pub const WATERMARK_FIELD: &'static MessageField = &MessageField {
-            name: "watermark",
-            json_name: "watermark",
-            number: 2i32,
-            message_fields: Some(Watermark::FIELDS),
-        };
-    }
-    impl MessageFields for TransactionItem {
-        const FIELDS: &'static [&'static MessageField] = &[
-            Self::TRANSACTION_FIELD,
-            Self::WATERMARK_FIELD,
-        ];
-    }
-    impl TransactionItem {
-        pub fn path_builder() -> TransactionItemFieldPathBuilder {
-            TransactionItemFieldPathBuilder::new()
-        }
-    }
-    pub struct TransactionItemFieldPathBuilder {
-        path: Vec<&'static str>,
-    }
-    impl TransactionItemFieldPathBuilder {
-        #[allow(clippy::new_without_default)]
-        pub fn new() -> Self {
-            Self { path: Default::default() }
-        }
-        #[doc(hidden)]
-        pub fn new_with_base(base: Vec<&'static str>) -> Self {
-            Self { path: base }
-        }
-        pub fn finish(self) -> String {
-            self.path.join(".")
-        }
-        pub fn transaction(mut self) -> ExecutedTransactionFieldPathBuilder {
-            self.path.push(TransactionItem::TRANSACTION_FIELD.name);
-            ExecutedTransactionFieldPathBuilder::new_with_base(self.path)
-        }
-        pub fn watermark(mut self) -> WatermarkFieldPathBuilder {
-            self.path.push(TransactionItem::WATERMARK_FIELD.name);
-            WatermarkFieldPathBuilder::new_with_base(self.path)
-        }
-    }
-    impl ListTransactionsResponse {
-        pub const ITEM_FIELD: &'static MessageField = &MessageField {
-            name: "item",
-            json_name: "item",
-            number: 1i32,
-            message_fields: Some(TransactionItem::FIELDS),
         };
         pub const WATERMARK_FIELD: &'static MessageField = &MessageField {
             name: "watermark",
@@ -976,7 +878,7 @@ pub(crate) mod _field_impls {
     }
     impl MessageFields for ListTransactionsResponse {
         const FIELDS: &'static [&'static MessageField] = &[
-            Self::ITEM_FIELD,
+            Self::TRANSACTION_FIELD,
             Self::WATERMARK_FIELD,
             Self::END_FIELD,
         ];
@@ -1001,9 +903,9 @@ pub(crate) mod _field_impls {
         pub fn finish(self) -> String {
             self.path.join(".")
         }
-        pub fn item(mut self) -> TransactionItemFieldPathBuilder {
-            self.path.push(ListTransactionsResponse::ITEM_FIELD.name);
-            TransactionItemFieldPathBuilder::new_with_base(self.path)
+        pub fn transaction(mut self) -> ExecutedTransactionFieldPathBuilder {
+            self.path.push(ListTransactionsResponse::TRANSACTION_FIELD.name);
+            ExecutedTransactionFieldPathBuilder::new_with_base(self.path)
         }
         pub fn watermark(mut self) -> WatermarkFieldPathBuilder {
             self.path.push(ListTransactionsResponse::WATERMARK_FIELD.name);
@@ -1096,61 +998,12 @@ pub(crate) mod _field_impls {
             QueryOptionsFieldPathBuilder::new_with_base(self.path)
         }
     }
-    impl EventItem {
+    impl ListEventsResponse {
         pub const EVENT_FIELD: &'static MessageField = &MessageField {
             name: "event",
             json_name: "event",
             number: 1i32,
             message_fields: Some(Event::FIELDS),
-        };
-        pub const WATERMARK_FIELD: &'static MessageField = &MessageField {
-            name: "watermark",
-            json_name: "watermark",
-            number: 2i32,
-            message_fields: Some(Watermark::FIELDS),
-        };
-    }
-    impl MessageFields for EventItem {
-        const FIELDS: &'static [&'static MessageField] = &[
-            Self::EVENT_FIELD,
-            Self::WATERMARK_FIELD,
-        ];
-    }
-    impl EventItem {
-        pub fn path_builder() -> EventItemFieldPathBuilder {
-            EventItemFieldPathBuilder::new()
-        }
-    }
-    pub struct EventItemFieldPathBuilder {
-        path: Vec<&'static str>,
-    }
-    impl EventItemFieldPathBuilder {
-        #[allow(clippy::new_without_default)]
-        pub fn new() -> Self {
-            Self { path: Default::default() }
-        }
-        #[doc(hidden)]
-        pub fn new_with_base(base: Vec<&'static str>) -> Self {
-            Self { path: base }
-        }
-        pub fn finish(self) -> String {
-            self.path.join(".")
-        }
-        pub fn event(mut self) -> EventFieldPathBuilder {
-            self.path.push(EventItem::EVENT_FIELD.name);
-            EventFieldPathBuilder::new_with_base(self.path)
-        }
-        pub fn watermark(mut self) -> WatermarkFieldPathBuilder {
-            self.path.push(EventItem::WATERMARK_FIELD.name);
-            WatermarkFieldPathBuilder::new_with_base(self.path)
-        }
-    }
-    impl ListEventsResponse {
-        pub const ITEM_FIELD: &'static MessageField = &MessageField {
-            name: "item",
-            json_name: "item",
-            number: 1i32,
-            message_fields: Some(EventItem::FIELDS),
         };
         pub const WATERMARK_FIELD: &'static MessageField = &MessageField {
             name: "watermark",
@@ -1167,7 +1020,7 @@ pub(crate) mod _field_impls {
     }
     impl MessageFields for ListEventsResponse {
         const FIELDS: &'static [&'static MessageField] = &[
-            Self::ITEM_FIELD,
+            Self::EVENT_FIELD,
             Self::WATERMARK_FIELD,
             Self::END_FIELD,
         ];
@@ -1192,9 +1045,9 @@ pub(crate) mod _field_impls {
         pub fn finish(self) -> String {
             self.path.join(".")
         }
-        pub fn item(mut self) -> EventItemFieldPathBuilder {
-            self.path.push(ListEventsResponse::ITEM_FIELD.name);
-            EventItemFieldPathBuilder::new_with_base(self.path)
+        pub fn event(mut self) -> EventFieldPathBuilder {
+            self.path.push(ListEventsResponse::EVENT_FIELD.name);
+            EventFieldPathBuilder::new_with_base(self.path)
         }
         pub fn watermark(mut self) -> WatermarkFieldPathBuilder {
             self.path.push(ListEventsResponse::WATERMARK_FIELD.name);

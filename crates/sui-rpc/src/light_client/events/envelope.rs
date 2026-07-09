@@ -6,7 +6,7 @@ use sui_sdk_types::Event;
 
 use crate::proto::TryFromProtoError;
 use crate::proto::sui::rpc::v2::Event as ProtoEvent;
-use crate::proto::sui::rpc::v2alpha::EventItem;
+use crate::proto::sui::rpc::v2alpha::ListEventsResponse;
 
 /// A single authenticated event paired with the positional metadata a
 /// verifier needs to reconstruct its `EventCommitment` leaf.
@@ -40,20 +40,20 @@ pub struct AuthenticatedEvent {
     pub event: Event,
 }
 
-impl TryFrom<&EventItem> for AuthenticatedEvent {
+impl TryFrom<&ListEventsResponse> for AuthenticatedEvent {
     type Error = TryFromProtoError;
 
-    fn try_from(value: &EventItem) -> Result<Self, Self::Error> {
+    fn try_from(value: &ListEventsResponse) -> Result<Self, Self::Error> {
         let event_proto = value
             .event
             .as_ref()
-            .ok_or_else(|| TryFromProtoError::missing(EventItem::EVENT_FIELD.name))?;
+            .ok_or_else(|| TryFromProtoError::missing(ListEventsResponse::EVENT_FIELD.name))?;
 
         // The locating fields now live on the embedded `Event`; nest their
         // violations under the `event` slot so the reported path points at
         // the containing field.
         let missing = |field: &'static str| {
-            TryFromProtoError::missing(field).nested(EventItem::EVENT_FIELD.name)
+            TryFromProtoError::missing(field).nested(ListEventsResponse::EVENT_FIELD.name)
         };
 
         let checkpoint = event_proto
@@ -72,10 +72,10 @@ impl TryFrom<&EventItem> for AuthenticatedEvent {
             .parse()
             .map_err(|e| {
                 TryFromProtoError::invalid(ProtoEvent::TRANSACTION_DIGEST_FIELD, e)
-                    .nested(EventItem::EVENT_FIELD.name)
+                    .nested(ListEventsResponse::EVENT_FIELD.name)
             })?;
-        let event =
-            Event::try_from(event_proto).map_err(|e| e.nested(EventItem::EVENT_FIELD.name))?;
+        let event = Event::try_from(event_proto)
+            .map_err(|e| e.nested(ListEventsResponse::EVENT_FIELD.name))?;
 
         Ok(Self {
             checkpoint,
@@ -87,7 +87,7 @@ impl TryFrom<&EventItem> for AuthenticatedEvent {
     }
 }
 
-impl From<&AuthenticatedEvent> for EventItem {
+impl From<&AuthenticatedEvent> for ListEventsResponse {
     fn from(value: &AuthenticatedEvent) -> Self {
         let event = ProtoEvent::from(value.event.clone())
             .with_checkpoint(value.checkpoint)
@@ -96,14 +96,15 @@ impl From<&AuthenticatedEvent> for EventItem {
             .with_event_index(value.event_index);
         Self {
             event: Some(event),
-            // `watermark` is server-assigned (cursor + checkpoint);
-            // leave unset on the way out.
+            // `watermark` and `end` are server-assigned; leave unset on
+            // the way out.
             watermark: None,
+            end: None,
         }
     }
 }
 
-impl From<AuthenticatedEvent> for EventItem {
+impl From<AuthenticatedEvent> for ListEventsResponse {
     fn from(value: AuthenticatedEvent) -> Self {
         (&value).into()
     }
@@ -144,23 +145,24 @@ mod tests {
     #[test]
     fn round_trip_through_proto_preserves_envelope() {
         let original = sample_authenticated_event();
-        let proto: EventItem = (&original).into();
+        let proto: ListEventsResponse = (&original).into();
         let back = AuthenticatedEvent::try_from(&proto).unwrap();
         assert_eq!(back, original);
     }
 
     #[test]
-    fn outbound_conversion_leaves_watermark_unset() {
-        let proto: EventItem = (&sample_authenticated_event()).into();
+    fn outbound_conversion_leaves_server_fields_unset() {
+        let proto: ListEventsResponse = (&sample_authenticated_event()).into();
         assert!(
             proto.watermark.is_none(),
             "watermark (cursor + checkpoint) must be server-assigned"
         );
+        assert!(proto.end.is_none(), "end must be server-assigned");
     }
 
     #[test]
     fn missing_checkpoint_is_rejected() {
-        let mut proto: EventItem = (&sample_authenticated_event()).into();
+        let mut proto: ListEventsResponse = (&sample_authenticated_event()).into();
         proto.event.as_mut().unwrap().checkpoint = None;
         let err = AuthenticatedEvent::try_from(&proto).unwrap_err();
         assert_eq!(err.field_violation().field, "event.checkpoint");
@@ -168,7 +170,7 @@ mod tests {
 
     #[test]
     fn missing_transaction_index_is_rejected() {
-        let mut proto: EventItem = (&sample_authenticated_event()).into();
+        let mut proto: ListEventsResponse = (&sample_authenticated_event()).into();
         proto.event.as_mut().unwrap().transaction_index = None;
         let err = AuthenticatedEvent::try_from(&proto).unwrap_err();
         assert_eq!(err.field_violation().field, "event.transaction_index");
@@ -176,7 +178,7 @@ mod tests {
 
     #[test]
     fn missing_event_index_is_rejected() {
-        let mut proto: EventItem = (&sample_authenticated_event()).into();
+        let mut proto: ListEventsResponse = (&sample_authenticated_event()).into();
         proto.event.as_mut().unwrap().event_index = None;
         let err = AuthenticatedEvent::try_from(&proto).unwrap_err();
         assert_eq!(err.field_violation().field, "event.event_index");
@@ -184,7 +186,7 @@ mod tests {
 
     #[test]
     fn missing_transaction_digest_is_rejected() {
-        let mut proto: EventItem = (&sample_authenticated_event()).into();
+        let mut proto: ListEventsResponse = (&sample_authenticated_event()).into();
         proto.event.as_mut().unwrap().transaction_digest = None;
         let err = AuthenticatedEvent::try_from(&proto).unwrap_err();
         assert_eq!(err.field_violation().field, "event.transaction_digest");
@@ -192,7 +194,7 @@ mod tests {
 
     #[test]
     fn missing_event_is_rejected() {
-        let mut proto: EventItem = (&sample_authenticated_event()).into();
+        let mut proto: ListEventsResponse = (&sample_authenticated_event()).into();
         proto.event = None;
         let err = AuthenticatedEvent::try_from(&proto).unwrap_err();
         assert_eq!(err.field_violation().field, "event");
@@ -200,10 +202,10 @@ mod tests {
 
     /// A malformed inner `Event` field surfaces with a field path that
     /// names the parent `event` field so the failure points at the
-    /// containing slot in `EventItem`.
+    /// containing slot in `ListEventsResponse`.
     #[test]
     fn malformed_inner_event_reports_nested_field_path() {
-        let mut proto: EventItem = (&sample_authenticated_event()).into();
+        let mut proto: ListEventsResponse = (&sample_authenticated_event()).into();
         // Strip the inner event's required `package_id`.
         proto.event.as_mut().unwrap().package_id = None;
         let err = AuthenticatedEvent::try_from(&proto).unwrap_err();
@@ -218,7 +220,7 @@ mod tests {
     /// `event.transaction_digest` field with a parse-error source.
     #[test]
     fn malformed_transaction_digest_is_rejected() {
-        let mut proto: EventItem = (&sample_authenticated_event()).into();
+        let mut proto: ListEventsResponse = (&sample_authenticated_event()).into();
         proto.event.as_mut().unwrap().transaction_digest = Some("not-a-real-digest!".into());
         let err = AuthenticatedEvent::try_from(&proto).unwrap_err();
         assert_eq!(err.field_violation().field, "event.transaction_digest");

@@ -55,38 +55,27 @@ message ListCheckpointsRequest {
 
   // Optional cursor-bounded query options. If unspecified, reads in ascending
   // order with the default item limit. The server enforces a maximum item
-  // limit and silently coerces larger values down to it. To paginate, track
-  // the latest `Watermark.cursor` received — from either a standalone
-  // `Watermark` frame or the `watermark` field on an item — and pass it as
-  // `options.after` (ascending) or `options.before` (descending) on the
-  // next request.
+  // limit and silently coerces larger values down to it. To paginate, pass
+  // the last received `Watermark.cursor` as `options.after` (ascending) or
+  // `options.before` (descending) on the next request.
   optional QueryOptions options = 5;
 }
 
-// One checkpoint item.
-message CheckpointItem {
+// Response message for LedgerService.ListCheckpoints.
+//
+// Every frame carries a `watermark`. A frame with `checkpoint` set delivers
+// one matching item; a frame without it only advances the watermark. `end`
+// is set on the final frame of a successful stream and may accompany the
+// last item.
+message ListCheckpointsResponse {
   // One matching checkpoint.
   optional sui.rpc.v2.Checkpoint checkpoint = 1;
 
-  // Progress watermark as of when this item was emitted: its `cursor`
-  // is the resume point past this item, and `checkpoint` is the inclusive
-  // boundary checkpoint that the scan has fully covered.
+  // Progress watermark as of this frame. Present on every frame.
   optional Watermark watermark = 2;
-}
 
-// Response message for LedgerService.ListCheckpoints.
-message ListCheckpointsResponse {
-  oneof response {
-    // One matching checkpoint.
-    CheckpointItem item = 1;
-
-    // Standalone scan-progress watermark emitted between items when the
-    // underlying scan advances without producing a matching item.
-    Watermark watermark = 2;
-
-    // Final frame for this successful query stream.
-    QueryEnd end = 3;
-  }
+  // Set on the final frame of a successful query stream.
+  optional QueryEnd end = 3;
 }
 
 // Request message for LedgerService.ListTransactions.
@@ -109,39 +98,28 @@ message ListTransactionsRequest {
 
   // Optional cursor-bounded query options. If unspecified, reads in ascending
   // order with the default item limit. The server enforces a maximum item
-  // limit and silently coerces larger values down to it. To paginate, track
-  // the latest `Watermark.cursor` received — from either a standalone
-  // `Watermark` frame or the `watermark` field on an item — and pass it as
-  // `options.after` (ascending) or `options.before` (descending) on the
-  // next request.
+  // limit and silently coerces larger values down to it. To paginate, pass
+  // the last received `Watermark.cursor` as `options.after` (ascending) or
+  // `options.before` (descending) on the next request.
   optional QueryOptions options = 5;
 }
 
-// One transaction item.
-message TransactionItem {
+// Response message for LedgerService.ListTransactions.
+//
+// Every frame carries a `watermark`. A frame with `transaction` set delivers
+// one matching item; a frame without it only advances the watermark. `end`
+// is set on the final frame of a successful stream and may accompany the
+// last item.
+message ListTransactionsResponse {
   // One matching transaction. Its position within the containing checkpoint
   // is reported by `ExecutedTransaction.transaction_index`.
   optional sui.rpc.v2.ExecutedTransaction transaction = 1;
 
-  // Progress watermark as of when this item was emitted: its `cursor`
-  // is the resume point past this item, and `checkpoint` is the inclusive
-  // boundary checkpoint that the scan has fully covered.
+  // Progress watermark as of this frame. Present on every frame.
   optional Watermark watermark = 2;
-}
 
-// Response message for LedgerService.ListTransactions.
-message ListTransactionsResponse {
-  oneof response {
-    // One matching transaction.
-    TransactionItem item = 1;
-
-    // Standalone scan-progress watermark emitted between items when the
-    // underlying scan advances without producing a matching item.
-    Watermark watermark = 2;
-
-    // Final frame for this successful query stream.
-    QueryEnd end = 3;
-  }
+  // Set on the final frame of a successful query stream.
+  optional QueryEnd end = 3;
 }
 
 // Request message for LedgerService.ListEvents.
@@ -163,39 +141,28 @@ message ListEventsRequest {
 
   // Optional cursor-bounded query options. If unspecified, reads in ascending
   // order with the default item limit. The server enforces a maximum item
-  // limit and silently coerces larger values down to it. To paginate, track
-  // the latest `Watermark.cursor` received — from either a standalone
-  // `Watermark` frame or the `watermark` field on an item — and pass it as
-  // `options.after` (ascending) or `options.before` (descending) on the
-  // next request.
+  // limit and silently coerces larger values down to it. To paginate, pass
+  // the last received `Watermark.cursor` as `options.after` (ascending) or
+  // `options.before` (descending) on the next request.
   optional QueryOptions options = 5;
 }
 
-// One event item.
-message EventItem {
+// Response message for LedgerService.ListEvents.
+//
+// Every frame carries a `watermark`. A frame with `event` set delivers one
+// matching item; a frame without it only advances the watermark. `end` is
+// set on the final frame of a successful stream and may accompany the last
+// item.
+message ListEventsResponse {
   // One matching event. Its ledger position -- containing checkpoint,
   // emitting transaction digest and offset, and index within that
   // transaction's event list -- is reported by the corresponding fields on
   // `Event`.
   optional sui.rpc.v2.Event event = 1;
 
-  // Progress watermark as of when this item was emitted: its `cursor`
-  // is the resume point past this item, and `checkpoint` is the inclusive
-  // boundary checkpoint that the scan has fully covered.
+  // Progress watermark as of this frame. Present on every frame.
   optional Watermark watermark = 2;
-}
 
-// Response message for LedgerService.ListEvents.
-message ListEventsResponse {
-  oneof response {
-    // One matching event.
-    EventItem item = 1;
-
-    // Standalone scan-progress watermark emitted between items when the
-    // underlying scan advances without producing a matching item.
-    Watermark watermark = 2;
-
-    // Final frame for this successful query stream.
-    QueryEnd end = 3;
-  }
+  // Set on the final frame of a successful query stream.
+  optional QueryEnd end = 3;
 }

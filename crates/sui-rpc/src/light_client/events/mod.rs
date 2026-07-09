@@ -10,8 +10,8 @@
 //! authenticated end-to-end.
 //!
 //! [`AuthenticatedEvent`] is the in-memory envelope used both as the
-//! decoded form of an `EventItem` and as the unit of work flowing
-//! through the verifier.
+//! decoded form of a `ListEventsResponse` item and as the unit of work
+//! flowing through the verifier.
 //!
 //! [`EventStreamHead`]: sui_sdk_types::framework::EventStreamHead
 

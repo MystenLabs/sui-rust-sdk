@@ -21,13 +21,18 @@ enum Ordering {
 // cursor, and `before` always excludes items at or above that cursor. Ordering
 // only controls the order of returned items within the resulting open interval.
 //
+// When a request also specifies a checkpoint range, cursor bounds and
+// checkpoint bounds compose by intersection: results come only from ledger
+// positions inside both. Checkpoint bounds are likewise canonical and
+// ordering-independent.
+//
 // For example, with `after = A`, `before = B`, `ordering = DESCENDING`, and
 // `limit = N`, the response contains up to N matching items in descending
 // order from the interval `(A, B)`. If the response ends with
 // `QUERY_END_REASON_ITEM_LIMIT`, resume by keeping `after = A` and setting
-// `before` to the last `Watermark.cursor` (or last item cursor) received. That
-// cursor is the lowest position reached in ledger order, so it becomes the
-// next exclusive upper bound.
+// `before` to the last `Watermark.cursor` received. That cursor is the
+// lowest position reached in ledger order, so it becomes the next exclusive
+// upper bound.
 message QueryOptions {
   // The maximum number of items to return. Each method applies its own default
   // and maximum. QueryEnd does not count against this limit.
@@ -73,38 +78,34 @@ enum QueryEndReason {
   QUERY_END_REASON_LEDGER_TIP = 5;
 }
 
-// Progress markers for a query scan. Carried both on every item and as
-// standalone wire frames between items when the underlying scan advances
-// without producing a matching item.
+// Progress marker for a query scan. Carried on every response frame of a
+// query stream, whether or not the frame delivers a matching item.
 message Watermark {
   // Opaque cursor at this scan position. Use as `options.after`
   // (ascending) or `options.before` (descending) on the next request to
-  // resume from here. Clients should track the most recently received
-  // cursor across both standalone and item-embedded watermarks as the
+  // resume from here. The most recently received cursor is always the
   // safe resume point.
   optional bytes cursor = 1;
 
-  // For history based queries this is the inclusive boundary checkpoint the
-  // scan has fully covered, in the request's ordering direction: an ascending
-  // scan has emitted every matching item in checkpoints `<= checkpoint`
-  // (strictly greater ones may still hold matches); a descending scan has
-  // emitted every matching item in checkpoints `>= checkpoint`. Advances
-  // monotonically in the scan direction.
+  // The inclusive boundary checkpoint that the scan has fully covered
+  // within the request's effective interval, in the request's ordering
+  // direction: an ascending scan has emitted every matching item in the
+  // interval at checkpoints `<= checkpoint` (strictly greater ones may
+  // still hold matches); a descending scan has emitted every matching item
+  // in the interval at checkpoints `>= checkpoint`. Advances monotonically
+  // in the scan direction.
   //
-  // For ascending scans this will be unset until the genesis checkpoint (cp 0)
-  // is fully scanned.
+  // Unset until the scan's first checkpoint is fully covered -- for
+  // example, a scan resumed from a cursor that lands mid-checkpoint leaves
+  // this unset until the next checkpoint boundary in the scan direction is
+  // fully covered.
   optional uint64 checkpoint = 2;
 }
 
-// Final response frame for a successful query stream. Every successful stream
-// returns exactly one QueryEnd after all item and watermark frames.
-//
-// The resume cursor is the last `Watermark.cursor` received during the
-// stream — either standalone or embedded on the last item. Clients have
-// to track the latest watermark themselves anyway (to survive mid-stream
-// disconnects and pre-QueryEnd errors), so QueryEnd carries no cursor of
-// its own: `reason` is the only thing it adds on top of what the stream
-// already delivered.
+// Marker for the final frame of a successful query stream. Every successful
+// stream sets QueryEnd on exactly one frame, after which no further frames
+// are sent. The frame that carries it also carries the final watermark, so
+// that frame's `Watermark.cursor` is the resume point for the query.
 message QueryEnd {
   // Reason this response stopped.
   optional QueryEndReason reason = 1;
