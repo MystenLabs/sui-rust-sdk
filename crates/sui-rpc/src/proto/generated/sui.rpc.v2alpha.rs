@@ -232,20 +232,26 @@ pub struct ListCheckpointsRequest {
 }
 /// Response message for LedgerService.ListCheckpoints.
 ///
-/// Every frame carries a `watermark`. A frame with `checkpoint` set delivers
-/// one matching item; a frame without it only advances the watermark. `end`
-/// is set on the final frame of a successful stream and may accompany the
-/// last item.
+/// Every frame carries a `watermark` with a safe resume cursor. A frame
+/// with `checkpoint` set delivers one matching item; a frame without it reports
+/// scan progress or terminal completion. Watermarks never regress in the
+/// requested ordering but may repeat.
+///
+/// `end` is set exactly once, on the final frame of a successful stream. For
+/// `QUERY_END_REASON_ITEM_LIMIT`, that frame also carries the final item. For
+/// every other end reason, the final frame has no `checkpoint` payload.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListCheckpointsResponse {
     /// One matching checkpoint.
     #[prost(message, optional, tag = "1")]
     pub checkpoint: ::core::option::Option<super::v2::Checkpoint>,
-    /// Progress watermark as of this frame. Present on every frame.
+    /// Progress watermark as of this frame. Present on every frame. A
+    /// ScanLimit terminal watermark may repeat the previous frame's cursor when
+    /// its authoritative scan frontier was already emitted.
     #[prost(message, optional, tag = "2")]
     pub watermark: ::core::option::Option<Watermark>,
-    /// Set on the final frame of a successful query stream.
+    /// Set exactly once, on the final frame of a successful query stream.
     #[prost(message, optional, tag = "3")]
     pub end: ::core::option::Option<QueryEnd>,
 }
@@ -279,10 +285,14 @@ pub struct ListTransactionsRequest {
 }
 /// Response message for LedgerService.ListTransactions.
 ///
-/// Every frame carries a `watermark`. A frame with `transaction` set delivers
-/// one matching item; a frame without it only advances the watermark. `end`
-/// is set on the final frame of a successful stream and may accompany the
-/// last item.
+/// Every frame carries a `watermark` with a safe resume cursor. A frame
+/// with `transaction` set delivers one matching item; a frame without it reports
+/// scan progress or terminal completion. Watermarks never regress in the
+/// requested ordering but may repeat.
+///
+/// `end` is set exactly once, on the final frame of a successful stream. For
+/// `QUERY_END_REASON_ITEM_LIMIT`, that frame also carries the final item. For
+/// every other end reason, the final frame has no `transaction` payload.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListTransactionsResponse {
@@ -290,10 +300,12 @@ pub struct ListTransactionsResponse {
     /// is reported by `ExecutedTransaction.transaction_index`.
     #[prost(message, optional, tag = "1")]
     pub transaction: ::core::option::Option<super::v2::ExecutedTransaction>,
-    /// Progress watermark as of this frame. Present on every frame.
+    /// Progress watermark as of this frame. Present on every frame. A
+    /// ScanLimit terminal watermark may repeat the previous frame's cursor when
+    /// its authoritative scan frontier was already emitted.
     #[prost(message, optional, tag = "2")]
     pub watermark: ::core::option::Option<Watermark>,
-    /// Set on the final frame of a successful query stream.
+    /// Set exactly once, on the final frame of a successful query stream.
     #[prost(message, optional, tag = "3")]
     pub end: ::core::option::Option<QueryEnd>,
 }
@@ -326,10 +338,14 @@ pub struct ListEventsRequest {
 }
 /// Response message for LedgerService.ListEvents.
 ///
-/// Every frame carries a `watermark`. A frame with `event` set delivers one
-/// matching item; a frame without it only advances the watermark. `end` is
-/// set on the final frame of a successful stream and may accompany the last
-/// item.
+/// Every frame carries a `watermark` with a safe resume cursor. A frame
+/// with `event` set delivers one matching item; a frame without it reports scan
+/// progress or terminal completion. Watermarks never regress in the requested
+/// ordering but may repeat.
+///
+/// `end` is set exactly once, on the final frame of a successful stream. For
+/// `QUERY_END_REASON_ITEM_LIMIT`, that frame also carries the final item. For
+/// every other end reason, the final frame has no `event` payload.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListEventsResponse {
@@ -339,10 +355,12 @@ pub struct ListEventsResponse {
     /// `Event`.
     #[prost(message, optional, tag = "1")]
     pub event: ::core::option::Option<super::v2::Event>,
-    /// Progress watermark as of this frame. Present on every frame.
+    /// Progress watermark as of this frame. Present on every frame. A
+    /// ScanLimit terminal watermark may repeat the previous frame's cursor when
+    /// its authoritative scan frontier was already emitted.
     #[prost(message, optional, tag = "2")]
     pub watermark: ::core::option::Option<Watermark>,
-    /// Set on the final frame of a successful query stream.
+    /// Set exactly once, on the final frame of a successful query stream.
     #[prost(message, optional, tag = "3")]
     pub end: ::core::option::Option<QueryEnd>,
 }
@@ -1424,36 +1442,44 @@ pub struct QueryOptions {
     #[prost(enumeration = "Ordering", optional, tag = "4")]
     pub ordering: ::core::option::Option<i32>,
 }
-/// Progress marker for a query scan. Carried on every response frame of a
-/// query stream, whether or not the frame delivers a matching item.
+/// Progress marker for a query scan. Carried on every response frame, whether or
+/// not the frame delivers a matching item. Watermarks never regress in the
+/// requested ordering, but consecutive frames may carry the same watermark when
+/// additional work does not advance the safe resume frontier.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Watermark {
-    /// Opaque cursor at this scan position. Use as `options.after`
-    /// (ascending) or `options.before` (descending) on the next request to
-    /// resume from here. The most recently received cursor is always the
-    /// safe resume point.
+    /// Opaque cursor at this scan position. Set on every watermark. Use as
+    /// `options.after` (ascending) or `options.before` (descending) on the next
+    /// request to resume from here. The most recently received cursor is always
+    /// the safe resume point.
     #[prost(bytes = "bytes", optional, tag = "1")]
     pub cursor: ::core::option::Option<::prost::bytes::Bytes>,
-    /// The inclusive boundary checkpoint that the scan has fully covered
-    /// within the request's effective interval, in the request's ordering
-    /// direction: an ascending scan has emitted every matching item in the
-    /// interval at checkpoints `<= checkpoint` (strictly greater ones may
-    /// still hold matches); a descending scan has emitted every matching item
-    /// in the interval at checkpoints `>= checkpoint`. Advances monotonically
-    /// in the scan direction.
+    /// The inclusive boundary checkpoint that the scan has fully covered within
+    /// the request's effective interval, in the request's ordering direction: an
+    /// ascending scan has emitted every matching item in the interval at
+    /// checkpoints `<= checkpoint` (strictly greater ones may still hold
+    /// matches); a descending scan has emitted every matching item in the
+    /// interval at checkpoints `>= checkpoint`. This boundary never regresses in
+    /// the scan direction, but it may repeat while the cursor advances.
     ///
-    /// Unset until the scan's first checkpoint is fully covered -- for
-    /// example, a scan resumed from a cursor that lands mid-checkpoint leaves
-    /// this unset until the next checkpoint boundary in the scan direction is
-    /// fully covered.
+    /// Unset until the scan's first checkpoint is fully covered. For example, a
+    /// scan resumed from a cursor that lands mid-checkpoint leaves this unset
+    /// until the next checkpoint boundary in the scan direction is fully covered.
+    /// A watermark still has a valid resume cursor while this field is unset.
     #[prost(uint64, optional, tag = "2")]
     pub checkpoint: ::core::option::Option<u64>,
 }
 /// Marker for the final frame of a successful query stream. Every successful
-/// stream sets QueryEnd on exactly one frame, after which no further frames
-/// are sent. The frame that carries it also carries the final watermark, so
-/// that frame's `Watermark.cursor` is the resume point for the query.
+/// stream sets `QueryEnd` on exactly one frame, after which no further frames
+/// are sent. That frame always carries the final watermark. For `ItemLimit`, it
+/// also carries the final matching item; for every other reason it carries no
+/// item. A ScanLimit terminal watermark may repeat the previous frame's cursor
+/// when its authoritative scan frontier was already emitted; this does not
+/// repeat an item.
+///
+/// A stream that fails or is cancelled terminates with a gRPC status and does
+/// not send `QueryEnd`.
 #[non_exhaustive]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct QueryEnd {
@@ -1498,19 +1524,24 @@ impl Ordering {
 pub enum QueryEndReason {
     /// The stop reason was not specified.
     Unspecified = 0,
-    /// The response reached the requested item limit. Resume from the last
-    /// `Watermark.cursor` received to continue reading the same effective
-    /// interval.
+    /// The response reached the requested item limit. The final matching item's
+    /// frame carries `QueryEnd` and the final watermark. Resume from that frame's
+    /// `Watermark.cursor` to continue reading the same effective interval.
     ItemLimit = 1,
     /// The response reached the server's per-request bucket-fetch budget for
-    /// filtered scans before reaching the effective interval bound. Resume from
-    /// the last `Watermark.cursor` received.
+    /// filtered scans before reaching the effective interval bound. The terminal
+    /// frame carries no item. Its watermark cursor is the authoritative scan
+    /// frontier from which to resume.
     ScanLimit = 2,
-    /// The scan reached a requested checkpoint range bound.
+    /// The scan reached a requested checkpoint range bound. The terminal frame
+    /// carries no item.
     CheckpointBound = 3,
-    /// The scan reached an exclusive cursor bound.
+    /// The scan reached an exclusive cursor bound. The terminal frame carries no
+    /// item. Its watermark cursor represents that resolved bound without claiming
+    /// that its containing checkpoint was fully covered.
     CursorBound = 4,
-    /// The scan reached the currently indexed ledger tip.
+    /// The scan reached the currently indexed ledger tip. The terminal frame
+    /// carries no item.
     LedgerTip = 5,
 }
 impl QueryEndReason {
