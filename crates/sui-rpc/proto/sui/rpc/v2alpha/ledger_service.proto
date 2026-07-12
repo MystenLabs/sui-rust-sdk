@@ -63,18 +63,24 @@ message ListCheckpointsRequest {
 
 // Response message for LedgerService.ListCheckpoints.
 //
-// Every frame carries a `watermark`. A frame with `checkpoint` set delivers
-// one matching item; a frame without it only advances the watermark. `end`
-// is set on the final frame of a successful stream and may accompany the
-// last item.
+// Every frame carries a `watermark` with a safe resume cursor. A frame
+// with `checkpoint` set delivers one matching item; a frame without it reports
+// scan progress or terminal completion. Watermarks never regress in the
+// requested ordering but may repeat.
+//
+// `end` is set exactly once, on the final frame of a successful stream. For
+// `QUERY_END_REASON_ITEM_LIMIT`, that frame also carries the final item. For
+// every other end reason, the final frame has no `checkpoint` payload.
 message ListCheckpointsResponse {
   // One matching checkpoint.
   optional sui.rpc.v2.Checkpoint checkpoint = 1;
 
-  // Progress watermark as of this frame. Present on every frame.
+  // Progress watermark as of this frame. Present on every frame. A
+  // ScanLimit terminal watermark may repeat the previous frame's cursor when
+  // its authoritative scan frontier was already emitted.
   optional Watermark watermark = 2;
 
-  // Set on the final frame of a successful query stream.
+  // Set exactly once, on the final frame of a successful query stream.
   optional QueryEnd end = 3;
 }
 
@@ -106,19 +112,25 @@ message ListTransactionsRequest {
 
 // Response message for LedgerService.ListTransactions.
 //
-// Every frame carries a `watermark`. A frame with `transaction` set delivers
-// one matching item; a frame without it only advances the watermark. `end`
-// is set on the final frame of a successful stream and may accompany the
-// last item.
+// Every frame carries a `watermark` with a safe resume cursor. A frame
+// with `transaction` set delivers one matching item; a frame without it reports
+// scan progress or terminal completion. Watermarks never regress in the
+// requested ordering but may repeat.
+//
+// `end` is set exactly once, on the final frame of a successful stream. For
+// `QUERY_END_REASON_ITEM_LIMIT`, that frame also carries the final item. For
+// every other end reason, the final frame has no `transaction` payload.
 message ListTransactionsResponse {
   // One matching transaction. Its position within the containing checkpoint
   // is reported by `ExecutedTransaction.transaction_index`.
   optional sui.rpc.v2.ExecutedTransaction transaction = 1;
 
-  // Progress watermark as of this frame. Present on every frame.
+  // Progress watermark as of this frame. Present on every frame. A
+  // ScanLimit terminal watermark may repeat the previous frame's cursor when
+  // its authoritative scan frontier was already emitted.
   optional Watermark watermark = 2;
 
-  // Set on the final frame of a successful query stream.
+  // Set exactly once, on the final frame of a successful query stream.
   optional QueryEnd end = 3;
 }
 
@@ -149,10 +161,14 @@ message ListEventsRequest {
 
 // Response message for LedgerService.ListEvents.
 //
-// Every frame carries a `watermark`. A frame with `event` set delivers one
-// matching item; a frame without it only advances the watermark. `end` is
-// set on the final frame of a successful stream and may accompany the last
-// item.
+// Every frame carries a `watermark` with a safe resume cursor. A frame
+// with `event` set delivers one matching item; a frame without it reports scan
+// progress or terminal completion. Watermarks never regress in the requested
+// ordering but may repeat.
+//
+// `end` is set exactly once, on the final frame of a successful stream. For
+// `QUERY_END_REASON_ITEM_LIMIT`, that frame also carries the final item. For
+// every other end reason, the final frame has no `event` payload.
 message ListEventsResponse {
   // One matching event. Its ledger position -- containing checkpoint,
   // emitting transaction digest and offset, and index within that
@@ -160,9 +176,11 @@ message ListEventsResponse {
   // `Event`.
   optional sui.rpc.v2.Event event = 1;
 
-  // Progress watermark as of this frame. Present on every frame.
+  // Progress watermark as of this frame. Present on every frame. A
+  // ScanLimit terminal watermark may repeat the previous frame's cursor when
+  // its authoritative scan frontier was already emitted.
   optional Watermark watermark = 2;
 
-  // Set on the final frame of a successful query stream.
+  // Set exactly once, on the final frame of a successful query stream.
   optional QueryEnd end = 3;
 }
