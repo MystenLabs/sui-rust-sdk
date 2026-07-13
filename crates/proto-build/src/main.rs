@@ -68,6 +68,18 @@ fn main() {
         .boxed(".sui.rpc.v2.Object.display")
         .message_attribute(".sui.rpc", "#[non_exhaustive]")
         .enum_attribute(".sui.rpc", "#[non_exhaustive]")
+        // prost-build refuses to derive Eq and Hash for any message with a
+        // repeated message-typed field, even when the element type is
+        // eligible, and its eligibility computation ignores manually added
+        // derives. SubscribeCheckpointsRequest derived both traits before it
+        // gained the filter field, so derive them explicitly (along with the
+        // filter types its derives depend on) to keep its API compatible.
+        .type_attribute(".sui.rpc.v2.TransactionFilter", "#[derive(Eq, Hash)]")
+        .type_attribute(".sui.rpc.v2.TransactionTerm", "#[derive(Eq, Hash)]")
+        .type_attribute(
+            ".sui.rpc.v2.SubscribeCheckpointsRequest",
+            "#[derive(Eq, Hash)]",
+        )
         .btree_map(".")
         .generate_default_stubs(true)
         .out_dir(&out_dir)

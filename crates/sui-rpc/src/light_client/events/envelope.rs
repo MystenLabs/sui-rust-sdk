@@ -1,4 +1,4 @@
-//! SDK-side envelope for authenticated events received via the v2alpha
+//! SDK-side envelope for authenticated events received via the v2
 //! `LedgerService.ListEvents` RPC filtered by `EventStreamHeadFilter`.
 
 use sui_sdk_types::Digest;
@@ -6,7 +6,7 @@ use sui_sdk_types::Event;
 
 use crate::proto::TryFromProtoError;
 use crate::proto::sui::rpc::v2::Event as ProtoEvent;
-use crate::proto::sui::rpc::v2alpha::ListEventsResponse;
+use crate::proto::sui::rpc::v2::ListEventsResponse;
 
 /// A single authenticated event paired with the positional metadata a
 /// verifier needs to reconstruct its `EventCommitment` leaf.

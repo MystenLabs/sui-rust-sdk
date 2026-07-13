@@ -3,7 +3,7 @@
 
 syntax = "proto3";
 
-package sui.rpc.v2alpha;
+package sui.rpc.v2;
 
 // DNF filter for transactions: any term may match, and each term is an AND
 // of signed literals.

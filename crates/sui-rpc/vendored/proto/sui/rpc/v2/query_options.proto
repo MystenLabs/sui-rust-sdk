@@ -3,7 +3,7 @@
 
 syntax = "proto3";
 
-package sui.rpc.v2alpha;
+package sui.rpc.v2;
 
 // Ordering for the returned result set.
 enum Ordering {
@@ -56,7 +56,7 @@ message QueryOptions {
 // Reason the server stopped this query response.
 enum QueryEndReason {
   // The stop reason was not specified.
-  QUERY_END_REASON_UNSPECIFIED = 0;
+  QUERY_END_REASON_UNKNOWN = 0;
 
   // The response reached the requested item limit. The final matching item's
   // frame carries `QueryEnd` and the final watermark. Resume from that frame's

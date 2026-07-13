@@ -1,6 +1,6 @@
 //! Authenticated event stream verification.
 //!
-//! [`AuthenticatedEventsClient`] drives the v2alpha
+//! [`AuthenticatedEventsClient`] drives the v2
 //! `LedgerService.ListEvents` RPC filtered by `EventStreamHeadFilter`,
 //! replays each received event into a local Merkle Mountain Range, and
 //! periodically reconciles that MMR against the on-chain

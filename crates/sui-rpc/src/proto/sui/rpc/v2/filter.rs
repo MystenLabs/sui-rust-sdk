@@ -24,9 +24,9 @@
 //! expression:
 //!
 //! ```
-//! use sui_rpc::proto::sui::rpc::v2alpha::TransactionFilter;
-//! use sui_rpc::proto::sui::rpc::v2alpha::TransactionTerm;
-//! use sui_rpc::proto::sui::rpc::v2alpha::filter::transaction as tx;
+//! use sui_rpc::proto::sui::rpc::v2::TransactionFilter;
+//! use sui_rpc::proto::sui::rpc::v2::TransactionTerm;
+//! use sui_rpc::proto::sui::rpc::v2::filter::transaction as tx;
 //! use sui_sdk_types::Address;
 //!
 //! let a = Address::ZERO;
@@ -48,8 +48,8 @@
 //! Event filters use the [`event`] submodule and the same combinators:
 //!
 //! ```
-//! use sui_rpc::proto::sui::rpc::v2alpha::EventFilter;
-//! use sui_rpc::proto::sui::rpc::v2alpha::filter::event as ev;
+//! use sui_rpc::proto::sui::rpc::v2::EventFilter;
+//! use sui_rpc::proto::sui::rpc::v2::filter::event as ev;
 //! use sui_sdk_types::Address;
 //! use sui_sdk_types::Identifier;
 //!
@@ -65,7 +65,7 @@
 //! so callers never have to hand-format a `::`-delimited path:
 //!
 //! ```
-//! use sui_rpc::proto::sui::rpc::v2alpha::filter::transaction as tx;
+//! use sui_rpc::proto::sui::rpc::v2::filter::transaction as tx;
 //! use sui_sdk_types::Address;
 //! use sui_sdk_types::Identifier;
 //! use sui_sdk_types::StructTag;

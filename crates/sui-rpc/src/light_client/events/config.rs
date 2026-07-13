@@ -18,7 +18,7 @@ pub struct AuthenticatedEventsConfig {
     pub start_checkpoint: Option<u64>,
 
     /// Maximum number of events to request per `ListEvents` page. The
-    /// server clamps to 1000 per the v2alpha contract.
+    /// server clamps to 1000 per the v2 List API contract.
     pub page_size: u32,
 
     /// Buffer capacity of the mpsc channel between the streaming task
