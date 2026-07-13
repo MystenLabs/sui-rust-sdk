@@ -108,6 +108,24 @@ impl Ed25519PrivateKey {
         Self(private_key)
     }
 
+    /// Build a key from the scheme flag and key bytes of a decoded
+    /// `flag || private_key` payload.
+    fn from_flagged_key_bytes(
+        scheme: SignatureScheme,
+        key: Vec<u8>,
+    ) -> Result<Self, SignatureError> {
+        if scheme != SignatureScheme::Ed25519 {
+            return Err(SignatureError::from_source(format!(
+                "private key scheme flag is `{}`, expected `ed25519`",
+                scheme.name(),
+            )));
+        }
+        let bytes: [u8; Self::LENGTH] = key.try_into().map_err(|_: Vec<u8>| {
+            SignatureError::from_source("private key has invalid length for ed25519")
+        })?;
+        Ok(Self::new(bytes))
+    }
+
     #[cfg(feature = "bech32")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "bech32")))]
     /// Decode a Bech32 `suiprivkey` string produced by the Sui CLI.
@@ -117,16 +135,7 @@ impl Ed25519PrivateKey {
     /// Ed25519, or has the wrong number of key bytes.
     pub fn from_suiprivkey(s: &str) -> Result<Self, SignatureError> {
         let (scheme, key) = crate::suipriv::decode(s)?;
-        if scheme != SignatureScheme::Ed25519 {
-            return Err(SignatureError::from_source(format!(
-                "suipriv scheme flag is `{}`, expected `ed25519`",
-                scheme.name(),
-            )));
-        }
-        let bytes: [u8; Self::LENGTH] = key.try_into().map_err(|_: Vec<u8>| {
-            SignatureError::from_source("suipriv key has invalid length for ed25519")
-        })?;
-        Ok(Self::new(bytes))
+        Self::from_flagged_key_bytes(scheme, key)
     }
 
     #[cfg(feature = "bech32")]
@@ -134,6 +143,23 @@ impl Ed25519PrivateKey {
     /// Encode this private key as a Bech32 `suiprivkey` string.
     pub fn to_suiprivkey(&self) -> Result<String, SignatureError> {
         crate::suipriv::encode(SignatureScheme::Ed25519, self.0.to_bytes().as_slice())
+    }
+
+    /// Decode a Base64 `flag || private_key` string, the legacy keystore
+    /// format used for entries of the Sui CLI's `sui.keystore` file.
+    ///
+    /// Returns an error if the string is not valid Base64, has a flag byte
+    /// that is not Ed25519, or has the wrong number of key bytes.
+    pub fn from_base64(s: &str) -> Result<Self, SignatureError> {
+        let (scheme, key) = crate::suipriv::decode_base64(s)?;
+        Self::from_flagged_key_bytes(scheme, key)
+    }
+
+    /// Encode this private key as a Base64 `flag || private_key` string, the
+    /// legacy keystore format used for entries of the Sui CLI's
+    /// `sui.keystore` file.
+    pub fn to_base64(&self) -> String {
+        crate::suipriv::encode_base64(SignatureScheme::Ed25519, self.0.to_bytes().as_slice())
     }
 }
 

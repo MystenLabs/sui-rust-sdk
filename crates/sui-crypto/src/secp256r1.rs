@@ -111,25 +111,40 @@ impl Secp256r1PrivateKey {
         Self(private_key)
     }
 
+    /// Build a key from the scheme flag and key bytes of a decoded
+    /// `flag || private_key` payload.
+    ///
+    /// Unlike [`Self::new`] this does not panic on key bytes that do not
+    /// form a valid secp256r1 scalar, since the payload is untrusted input.
+    fn from_flagged_key_bytes(
+        scheme: SignatureScheme,
+        key: Vec<u8>,
+    ) -> Result<Self, SignatureError> {
+        if scheme != SignatureScheme::Secp256r1 {
+            return Err(SignatureError::from_source(format!(
+                "private key scheme flag is `{}`, expected `secp256r1`",
+                scheme.name(),
+            )));
+        }
+        let bytes: [u8; Self::LENGTH] = key.try_into().map_err(|_: Vec<u8>| {
+            SignatureError::from_source("private key has invalid length for secp256r1")
+        })?;
+        SigningKey::from_bytes(&bytes.into())
+            .map(Self)
+            .map_err(SignatureError::from_source)
+    }
+
     #[cfg(feature = "bech32")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "bech32")))]
     /// Decode a Bech32 `suiprivkey` string produced by the Sui CLI.
     ///
     /// Returns an error if the string does not have the `suiprivkey` HRP, has
     /// an invalid Bech32 (BIP-173) checksum, has a flag byte that is not
-    /// Secp256r1, or has the wrong number of key bytes.
+    /// Secp256r1, has the wrong number of key bytes, or carries bytes that do
+    /// not form a valid secp256r1 scalar.
     pub fn from_suiprivkey(s: &str) -> Result<Self, SignatureError> {
         let (scheme, key) = crate::suipriv::decode(s)?;
-        if scheme != SignatureScheme::Secp256r1 {
-            return Err(SignatureError::from_source(format!(
-                "suipriv scheme flag is `{}`, expected `secp256r1`",
-                scheme.name(),
-            )));
-        }
-        let bytes: [u8; Self::LENGTH] = key.try_into().map_err(|_: Vec<u8>| {
-            SignatureError::from_source("suipriv key has invalid length for secp256r1")
-        })?;
-        Ok(Self::new(bytes))
+        Self::from_flagged_key_bytes(scheme, key)
     }
 
     #[cfg(feature = "bech32")]
@@ -138,6 +153,25 @@ impl Secp256r1PrivateKey {
     pub fn to_suiprivkey(&self) -> Result<String, SignatureError> {
         let bytes = self.0.to_bytes();
         crate::suipriv::encode(SignatureScheme::Secp256r1, &bytes)
+    }
+
+    /// Decode a Base64 `flag || private_key` string, the legacy keystore
+    /// format used for entries of the Sui CLI's `sui.keystore` file.
+    ///
+    /// Returns an error if the string is not valid Base64, has a flag byte
+    /// that is not Secp256r1, has the wrong number of key bytes, or carries
+    /// bytes that do not form a valid secp256r1 scalar.
+    pub fn from_base64(s: &str) -> Result<Self, SignatureError> {
+        let (scheme, key) = crate::suipriv::decode_base64(s)?;
+        Self::from_flagged_key_bytes(scheme, key)
+    }
+
+    /// Encode this private key as a Base64 `flag || private_key` string, the
+    /// legacy keystore format used for entries of the Sui CLI's
+    /// `sui.keystore` file.
+    pub fn to_base64(&self) -> String {
+        let bytes = self.0.to_bytes();
+        crate::suipriv::encode_base64(SignatureScheme::Secp256r1, &bytes)
     }
 }
 
