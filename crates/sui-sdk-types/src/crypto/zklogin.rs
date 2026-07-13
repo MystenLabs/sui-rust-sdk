@@ -195,111 +195,17 @@ impl std::error::Error for InvalidZkLoginAuthenticatorError {}
 #[cfg(feature = "serde")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "serde")))]
 impl ZkLoginClaim {
+    /// Base64-decode `value` at its `index_mod_4` offset within the JWT payload, yielding
+    /// the decoded extended claim string (e.g. `"iss":"https://accounts.google.com",`).
+    pub fn decoded_extended_claim(&self) -> Result<String, InvalidZkLoginAuthenticatorError> {
+        decode_base64_url(&self.value, &self.index_mod_4)
+    }
+
     fn verify_extended_claim(
         &self,
         expected_key: &str,
     ) -> Result<String, InvalidZkLoginAuthenticatorError> {
-        /// Map a base64 string to a bit array by taking each char's index and convert it to binary form with one bit per u8
-        /// element in the output. Returns InvalidZkLoginClaimError if one of the characters is not in the base64 charset.
-        fn base64_to_bitarray(input: &str) -> Result<Vec<u8>, InvalidZkLoginAuthenticatorError> {
-            use itertools::Itertools;
-
-            const BASE64_URL_CHARSET: &str =
-                "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-
-            input
-                .chars()
-                .map(|c| {
-                    BASE64_URL_CHARSET
-                        .find(c)
-                        .map(|index| index as u8)
-                        .map(|index| (0..6).rev().map(move |i| (index >> i) & 1))
-                        .ok_or_else(|| {
-                            InvalidZkLoginAuthenticatorError::new("base64_to_bitarry invalid input")
-                        })
-                })
-                .flatten_ok()
-                .collect()
-        }
-
-        /// Convert a bitarray (each bit is represented by a u8) to a byte array by taking each 8 bits as a
-        /// byte in big-endian format.
-        fn bitarray_to_bytearray(bits: &[u8]) -> Result<Vec<u8>, InvalidZkLoginAuthenticatorError> {
-            #[expect(clippy::manual_is_multiple_of)]
-            if bits.len() % 8 != 0 {
-                return Err(InvalidZkLoginAuthenticatorError::new(
-                    "bitarray_to_bytearray invalid input",
-                ));
-            }
-            Ok(bits
-                .chunks(8)
-                .map(|chunk| {
-                    let mut byte = 0u8;
-                    for (i, bit) in chunk.iter().rev().enumerate() {
-                        byte |= bit << i;
-                    }
-                    byte
-                })
-                .collect())
-        }
-
-        /// Parse the base64 string, add paddings based on offset, and convert to a bytearray.
-        fn decode_base64_url(
-            s: &str,
-            index_mod_4: &u8,
-        ) -> Result<String, InvalidZkLoginAuthenticatorError> {
-            if s.len() < 2 {
-                return Err(InvalidZkLoginAuthenticatorError::new(
-                    "Base64 string smaller than 2",
-                ));
-            }
-            let mut bits = base64_to_bitarray(s)?;
-            match index_mod_4 {
-                0 => {}
-                1 => {
-                    bits.drain(..2);
-                }
-                2 => {
-                    bits.drain(..4);
-                }
-                _ => {
-                    return Err(InvalidZkLoginAuthenticatorError::new(
-                        "Invalid first_char_offset",
-                    ));
-                }
-            }
-
-            // Compute the offset in `usize` so that an `s.len()` past
-            // `u8::MAX` cannot wrap to a small value (or underflow when
-            // combined with the `- 1`). The earlier match has already
-            // narrowed `*index_mod_4` to `0..=2`, and `s.len() >= 2`,
-            // so the unsigned subtraction never underflows here.
-            let last_char_offset = (*index_mod_4 as usize + s.len() - 1) % 4;
-            match last_char_offset {
-                3 => {}
-                2 => {
-                    bits.drain(bits.len() - 2..);
-                }
-                1 => {
-                    bits.drain(bits.len() - 4..);
-                }
-                _ => {
-                    return Err(InvalidZkLoginAuthenticatorError::new(
-                        "Invalid last_char_offset",
-                    ));
-                }
-            }
-
-            if bits.len() % 8 != 0 {
-                return Err(InvalidZkLoginAuthenticatorError::new("Invalid bits length"));
-            }
-
-            Ok(std::str::from_utf8(&bitarray_to_bytearray(&bits)?)
-                .map_err(|_| InvalidZkLoginAuthenticatorError::new("Invalid UTF8 string"))?
-                .to_owned())
-        }
-
-        let extended_claim = decode_base64_url(&self.value, &self.index_mod_4)?;
+        let extended_claim = self.decoded_extended_claim()?;
 
         // Last character of each extracted_claim must be '}' or ','
         if !(extended_claim.ends_with('}') || extended_claim.ends_with(',')) {
@@ -321,6 +227,109 @@ impl ZkLoginClaim {
             })
             .ok_or_else(|| InvalidZkLoginAuthenticatorError::new("invalid extended claim"))
     }
+}
+
+#[cfg(feature = "serde")]
+/// Map a base64 string to a bit array by taking each char's index and convert it to binary form with one bit per u8
+/// element in the output. Returns InvalidZkLoginClaimError if one of the characters is not in the base64 charset.
+fn base64_to_bitarray(input: &str) -> Result<Vec<u8>, InvalidZkLoginAuthenticatorError> {
+    use itertools::Itertools;
+
+    const BASE64_URL_CHARSET: &str =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+
+    input
+        .chars()
+        .map(|c| {
+            BASE64_URL_CHARSET
+                .find(c)
+                .map(|index| index as u8)
+                .map(|index| (0..6).rev().map(move |i| (index >> i) & 1))
+                .ok_or_else(|| {
+                    InvalidZkLoginAuthenticatorError::new("base64_to_bitarry invalid input")
+                })
+        })
+        .flatten_ok()
+        .collect()
+}
+
+#[cfg(feature = "serde")]
+/// Convert a bitarray (each bit is represented by a u8) to a byte array by taking each 8 bits as a
+/// byte in big-endian format.
+fn bitarray_to_bytearray(bits: &[u8]) -> Result<Vec<u8>, InvalidZkLoginAuthenticatorError> {
+    #[expect(clippy::manual_is_multiple_of)]
+    if bits.len() % 8 != 0 {
+        return Err(InvalidZkLoginAuthenticatorError::new(
+            "bitarray_to_bytearray invalid input",
+        ));
+    }
+    Ok(bits
+        .chunks(8)
+        .map(|chunk| {
+            let mut byte = 0u8;
+            for (i, bit) in chunk.iter().rev().enumerate() {
+                byte |= bit << i;
+            }
+            byte
+        })
+        .collect())
+}
+
+#[cfg(feature = "serde")]
+/// Parse the base64 string, add paddings based on offset, and convert to a bytearray.
+fn decode_base64_url(
+    s: &str,
+    index_mod_4: &u8,
+) -> Result<String, InvalidZkLoginAuthenticatorError> {
+    if s.len() < 2 {
+        return Err(InvalidZkLoginAuthenticatorError::new(
+            "Base64 string smaller than 2",
+        ));
+    }
+    let mut bits = base64_to_bitarray(s)?;
+    match index_mod_4 {
+        0 => {}
+        1 => {
+            bits.drain(..2);
+        }
+        2 => {
+            bits.drain(..4);
+        }
+        _ => {
+            return Err(InvalidZkLoginAuthenticatorError::new(
+                "Invalid first_char_offset",
+            ));
+        }
+    }
+
+    // Compute the offset in `usize` so that an `s.len()` past
+    // `u8::MAX` cannot wrap to a small value (or underflow when
+    // combined with the `- 1`). The earlier match has already
+    // narrowed `*index_mod_4` to `0..=2`, and `s.len() >= 2`,
+    // so the unsigned subtraction never underflows here.
+    let last_char_offset = (*index_mod_4 as usize + s.len() - 1) % 4;
+    match last_char_offset {
+        3 => {}
+        2 => {
+            bits.drain(bits.len() - 2..);
+        }
+        1 => {
+            bits.drain(bits.len() - 4..);
+        }
+        _ => {
+            return Err(InvalidZkLoginAuthenticatorError::new(
+                "Invalid last_char_offset",
+            ));
+        }
+    }
+
+    if bits.len() % 8 != 0 {
+        return Err(InvalidZkLoginAuthenticatorError::new("Invalid bits length"));
+    }
+
+    Ok(std::str::from_utf8(&bitarray_to_bytearray(&bits)?)
+        .map_err(|_| InvalidZkLoginAuthenticatorError::new("Invalid UTF8 string"))?
+        .to_owned())
 }
 
 /// Struct that represents a standard JWT header according to

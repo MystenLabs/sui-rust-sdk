@@ -1,4 +1,7 @@
+use std::collections::HashMap;
 use std::str::FromStr;
+use std::sync::LazyLock;
+use std::sync::RwLock;
 
 use crate::SignatureError;
 use ark_bn254::Fq;
@@ -232,17 +235,104 @@ fn dev_verifying_key() -> VerifyingKey {
     VerifyingKey::new(PreparedVerifyingKey::from(vk))
 }
 
+/// V2 verifying key for production.
+///
+/// TODO: Replace with v2 production verifying key from the ceremony.
+fn mainnet_verifying_key_v2() -> VerifyingKey {
+    mainnet_verifying_key()
+}
+
+/// V2 verifying key for test environments, based on zklogin-circuits v2-main branch
+/// artifacts/dev/zkLogin.vkey (finalized v2 circuit). This is based on a local setup and should
+/// not be used in production.
+fn dev_verifying_key_v2() -> VerifyingKey {
+    const CIRCOM_ALPHA_G1: CircomG1 = build_circom_g1([
+        "20491192805390485299153009773594534940189261866228447918068658471970481763042",
+        "9383485363053290200918347156157836566562967994039712273449902621266178545958",
+        "1",
+    ]);
+
+    const CIRCOM_BETA_G2: CircomG2 = build_circom_g2([
+        [
+            "6375614351688725206403948262868962793625744043794305715222011528459656738731",
+            "4252822878758300859123897981450591353533073413197771768651442665752259397132",
+        ],
+        [
+            "10505242626370262277552901082094356697409835680220590971873171140371331206856",
+            "21847035105528745403288232691147584728191162732299865338377159692350059136679",
+        ],
+        ["1", "0"],
+    ]);
+
+    const CIRCOM_GAMMA_G2: CircomG2 = build_circom_g2([
+        [
+            "10857046999023057135944570762232829481370756359578518086990519993285655852781",
+            "11559732032986387107991004021392285783925812861821192530917403151452391805634",
+        ],
+        [
+            "8495653923123431417604973247489272438418190587263600148770280649306958101930",
+            "4082367875863433681332203403145435568316851327593401208105741076214120093531",
+        ],
+        ["1", "0"],
+    ]);
+
+    const CIRCOM_DELTA_G2: CircomG2 = build_circom_g2([
+        [
+            "10857046999023057135944570762232829481370756359578518086990519993285655852781",
+            "11559732032986387107991004021392285783925812861821192530917403151452391805634",
+        ],
+        [
+            "8495653923123431417604973247489272438418190587263600148770280649306958101930",
+            "4082367875863433681332203403145435568316851327593401208105741076214120093531",
+        ],
+        ["1", "0"],
+    ]);
+
+    const CIRCOM_GAMMA_ABC_G1: [CircomG1; 2] = [
+        build_circom_g1([
+            "7494019946711010262111829149650251402606293243816947408234427261113297488209",
+            "15277037309547978131462479061393755632702482465205499508808087107719455935457",
+            "1",
+        ]),
+        build_circom_g1([
+            "11337299590256247592846534480065240790944417381563410255189124427241414159992",
+            "10513214342948426742825684049934611922239382370302051503558098869981509341761",
+            "1",
+        ]),
+    ];
+
+    let vk = ark_groth16::VerifyingKey {
+        alpha_g1: circom_to_arkworks_g1(&CIRCOM_ALPHA_G1).unwrap(),
+        beta_g2: circom_to_arkworks_g2(&CIRCOM_BETA_G2).unwrap(),
+        gamma_g2: circom_to_arkworks_g2(&CIRCOM_GAMMA_G2).unwrap(),
+        delta_g2: circom_to_arkworks_g2(&CIRCOM_DELTA_G2).unwrap(),
+        gamma_abc_g1: CIRCOM_GAMMA_ABC_G1
+            .iter()
+            .map(circom_to_arkworks_g1)
+            .collect::<Result<_, _>>()
+            .unwrap(),
+    };
+
+    VerifyingKey::new(PreparedVerifyingKey::from(vk))
+}
+
 impl VerifyingKey {
     fn new(inner: PreparedVerifyingKey<ark_bn254::Bn254>) -> Self {
         Self { inner }
     }
 
-    pub fn new_mainnet() -> Self {
-        mainnet_verifying_key()
+    pub fn new_mainnet_for(version: CircuitVersion) -> Self {
+        match version {
+            CircuitVersion::V1 => mainnet_verifying_key(),
+            CircuitVersion::V2 => mainnet_verifying_key_v2(),
+        }
     }
 
-    pub fn new_dev() -> Self {
-        dev_verifying_key()
+    pub fn new_dev_for(version: CircuitVersion) -> Self {
+        match version {
+            CircuitVersion::V1 => dev_verifying_key(),
+            CircuitVersion::V2 => dev_verifying_key_v2(),
+        }
     }
 
     pub fn verify_zklogin(
@@ -251,6 +341,7 @@ impl VerifyingKey {
         inputs: &ZkLoginInputs,
         signature: &SimpleSignature,
         max_epoch: u64,
+        circuit_version: CircuitVersion,
     ) -> Result<(), SignatureError> {
         use base64ct::Base64UrlUnpadded;
         use base64ct::Encoding;
@@ -259,7 +350,8 @@ impl VerifyingKey {
             .map_err(|e| SignatureError::from_source(e.to_string()))?;
 
         let proof = zklogin_proof_to_arkworks(inputs.proof_points())?;
-        let input_hash = calculate_all_inputs_hash(inputs, signature, &modulus, max_epoch)?;
+        let input_hash =
+            calculate_all_inputs_hash(inputs, signature, &modulus, max_epoch, circuit_version)?;
 
         self.verify_proof(&proof, &[input_hash])
     }
@@ -330,25 +422,64 @@ fn public_key_to_frs(signature: &SimpleSignature) -> Result<(Fr, Fr), SignatureE
     Ok((eph_public_key_0, eph_public_key_1))
 }
 
-pub(crate) type U2048 = bnum::BUintD8<256>;
+pub(crate) type U8192 = bnum::BUintD8<1024>;
 
-const MAX_HEADER_LEN: u8 = 248;
 const PACK_WIDTH: u8 = 248;
-const MAX_EXT_ISS_LEN: u8 = 165;
-const MAX_ISS_LEN_B64: u8 = 4 * (1 + MAX_EXT_ISS_LEN / 3);
+const V1_MAX_EXT_ISS_LEN: u16 = 165;
+const V2_MAX_EXT_ISS_LEN: u16 = 186;
+
+/// Circuit version, which determines the layout of the `all_inputs_hash` public input.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub enum CircuitVersion {
+    /// V1 circuit: the iss claim is folded in as its *base64* value and `index_mod_4` is folded
+    /// into the hash. There is no `rsa_num_bits` field.
+    V1,
+    /// V2 circuit: the iss claim is folded in as its *decoded* extended claim, `index_mod_4` is
+    /// dropped, and the actual RSA modulus bit length (`rsa_num_bits`) is folded in instead.
+    V2,
+}
+
+/// Circuit-specific parameters, obtained via [`CircuitVersion::config`].
+struct CircuitConfig {
+    /// Maximum header length in base64.
+    max_header_len_b64: u16,
+    /// Maximum length passed to the iss hash. For [`CircuitVersion::V1`] this is the base64
+    /// length of the iss claim; for [`CircuitVersion::V2`] it is the byte length of the *decoded*
+    /// extended iss claim (the circuit's `maxExtIssLength`).
+    max_iss_len: u16,
+    /// Maximum RSA key size in bits. The modulus is padded to this size before hashing.
+    max_rsa_bits: u16,
+}
+
+impl CircuitVersion {
+    fn config(&self) -> CircuitConfig {
+        match self {
+            CircuitVersion::V1 => CircuitConfig {
+                max_header_len_b64: 248,
+                max_iss_len: 4 * (1 + V1_MAX_EXT_ISS_LEN / 3),
+                max_rsa_bits: 2048,
+            },
+            CircuitVersion::V2 => CircuitConfig {
+                max_header_len_b64: 279,
+                max_iss_len: V2_MAX_EXT_ISS_LEN,
+                max_rsa_bits: 8192,
+            },
+        }
+    }
+}
 
 /// Pads a stream of bytes and maps it to a field element
-pub fn hash_ascii_str_to_field(s: &str, max_size: u8) -> Result<Fr, SignatureError> {
+pub fn hash_ascii_str_to_field(s: &str, max_size: u16) -> Result<Fr, SignatureError> {
     let str_padded = str_to_padded_char_codes(s, max_size)?;
     hash_to_field(&str_padded, 8, PACK_WIDTH)
 }
 
-fn str_to_padded_char_codes(s: &str, max_len: u8) -> Result<Vec<U256>, SignatureError> {
+fn str_to_padded_char_codes(s: &str, max_len: u16) -> Result<Vec<U256>, SignatureError> {
     let arr: Vec<U256> = s.bytes().map(U256::from).collect();
     pad_with_zeroes(arr, max_len)
 }
 
-fn pad_with_zeroes(in_arr: Vec<U256>, out_count: u8) -> Result<Vec<U256>, SignatureError> {
+fn pad_with_zeroes(in_arr: Vec<U256>, out_count: u16) -> Result<Vec<U256>, SignatureError> {
     if in_arr.len() > out_count as usize {
         return Err(SignatureError::from_source("in_arr too long"));
     }
@@ -435,7 +566,7 @@ impl ToBits for U256 {
     }
 }
 
-impl ToBits for U2048 {
+impl ToBits for U8192 {
     fn to_bits(&self) -> Vec<u8> {
         self.to_radix_be(2)
     }
@@ -447,8 +578,10 @@ pub fn calculate_all_inputs_hash(
     signature: &SimpleSignature,
     modulus: &[u8],
     max_epoch: u64,
+    version: CircuitVersion,
 ) -> Result<Fr, SignatureError> {
-    if inputs.header_base64().len() > MAX_HEADER_LEN as usize {
+    let config = version.config();
+    if inputs.header_base64().len() > config.max_header_len_b64 as usize {
         return Err(SignatureError::from_source("header too long"));
     }
 
@@ -456,34 +589,105 @@ pub fn calculate_all_inputs_hash(
 
     let address_seed = bn254_to_fr(inputs.address_seed());
     let max_epoch_f = Fr::from_be_bytes_mod_order(U256::from(max_epoch).to_be().digits());
-    let index_mod_4_f = Fr::from_be_bytes_mod_order(
-        U256::from(inputs.iss_base64_details().index_mod_4)
-            .to_be()
-            .digits(),
-    );
+    let header_f = hash_ascii_str_to_field(inputs.header_base64(), config.max_header_len_b64)?;
+    let modulus_f = modulus_to_field(modulus, config.max_rsa_bits)?;
 
-    let iss_base64_f =
-        hash_ascii_str_to_field(&inputs.iss_base64_details().value, MAX_ISS_LEN_B64)?;
-    let header_f = hash_ascii_str_to_field(inputs.header_base64(), MAX_HEADER_LEN)?;
-    let modulus_f = hash_to_field(
-        &[U2048::from_be_slice(modulus)
-            .ok_or_else(|| SignatureError::from_source("JWK modulus too large for U2048"))?],
-        2048,
+    match version {
+        CircuitVersion::V1 => {
+            let index_mod_4_f = Fr::from_be_bytes_mod_order(
+                U256::from(inputs.iss_base64_details().index_mod_4)
+                    .to_be()
+                    .digits(),
+            );
+            let iss_base64_f =
+                hash_ascii_str_to_field(&inputs.iss_base64_details().value, config.max_iss_len)?;
+
+            POSEIDON
+                .hash(&[
+                    first,
+                    second,
+                    address_seed,
+                    max_epoch_f,
+                    iss_base64_f,
+                    index_mod_4_f,
+                    header_f,
+                    modulus_f,
+                ])
+                .map_err(SignatureError::from_source)
+        }
+        CircuitVersion::V2 => {
+            let iss_details = inputs.iss_base64_details();
+            let ext_iss = iss_details
+                .decoded_extended_claim()
+                .map_err(SignatureError::from_source)?;
+            let iss_f = hash_ascii_str_to_field(&ext_iss, config.max_iss_len)?;
+            let rsa_num_bits_f = Fr::from(rsa_num_bits(modulus));
+
+            POSEIDON
+                .hash(&[
+                    first,
+                    second,
+                    address_seed,
+                    max_epoch_f,
+                    iss_f,
+                    header_f,
+                    modulus_f,
+                    rsa_num_bits_f,
+                ])
+                .map_err(SignatureError::from_source)
+        }
+    }
+}
+
+/// Cache of modulus hashes, keyed by the modulus bytes and the bit size it is padded to.
+/// Hashing a modulus is expensive (up to 8192 bits packed and poseidon-hashed) and the set of
+/// active JWKs is small, so hashes are memoized like fastcrypto's `cached_modulus_hash`.
+type ModulusHashKey = (Vec<u8>, u16);
+
+static MODULUS_HASH_CACHE: LazyLock<RwLock<HashMap<ModulusHashKey, Fr>>> =
+    LazyLock::new(|| RwLock::new(HashMap::new()));
+
+/// Maximum number of entries in the modulus hash cache.
+const MODULUS_HASH_CACHE_MAX_SIZE: usize = 100;
+
+/// Hash the modulus padded to `max_rsa_bits` bits to a field element; errors if the modulus
+/// does not fit in `max_rsa_bits` bits.
+///
+/// Equivalent to fastcrypto's `cached_modulus_hash`, with the fixed-width `U8192` in place of
+/// `BigUint` to avoid a num-bigint dependency.
+fn modulus_to_field(modulus: &[u8], max_rsa_bits: u16) -> Result<Fr, SignatureError> {
+    if let Some(f) = MODULUS_HASH_CACHE
+        .read()
+        .ok()
+        .and_then(|cache| cache.get(&(modulus.to_vec(), max_rsa_bits)).copied())
+    {
+        return Ok(f);
+    }
+    let f = hash_to_field(
+        &[U8192::from_be_slice(modulus)
+            .ok_or_else(|| SignatureError::from_source("JWK modulus too large for U8192"))?],
+        max_rsa_bits,
         PACK_WIDTH,
     )?;
+    if let Ok(mut cache) = MODULUS_HASH_CACHE.write() {
+        if cache.len() >= MODULUS_HASH_CACHE_MAX_SIZE {
+            cache.clear();
+        }
+        cache.insert((modulus.to_vec(), max_rsa_bits), f);
+    }
+    Ok(f)
+}
 
-    POSEIDON
-        .hash(&[
-            first,
-            second,
-            address_seed,
-            max_epoch_f,
-            iss_base64_f,
-            index_mod_4_f,
-            header_f,
-            modulus_f,
-        ])
-        .map_err(SignatureError::from_source)
+/// Number of significant bits in the big-endian `modulus` (0 for an all-zero modulus).
+///
+/// Equivalent to fastcrypto's `BigUint::from_bytes_be(modulus).bits()`, computed directly on
+/// the byte slice to avoid a num-bigint dependency.
+fn rsa_num_bits(modulus: &[u8]) -> u64 {
+    let mut iter = modulus.iter().skip_while(|b| **b == 0);
+    match iter.next() {
+        Some(first) => (u8::BITS - first.leading_zeros()) as u64 + iter.count() as u64 * 8,
+        None => 0,
+    }
 }
 
 /// Calculate the Sui address based on address seed and address params.
@@ -502,9 +706,9 @@ fn gen_address_seed(
     gen_address_seed_with_salt_hash(salt_hash, name, value, aud)
 }
 
-const MAX_KEY_CLAIM_NAME_LENGTH: u8 = 32;
-const MAX_KEY_CLAIM_VALUE_LENGTH: u8 = 115;
-const MAX_AUD_VALUE_LENGTH: u8 = 145;
+const MAX_KEY_CLAIM_NAME_LENGTH: u16 = 32;
+const MAX_KEY_CLAIM_VALUE_LENGTH: u16 = 115;
+const MAX_AUD_VALUE_LENGTH: u16 = 145;
 
 /// Same as [`gen_address_seed`] but takes the poseidon hash of the salt as input instead of the salt.
 pub(crate) fn gen_address_seed_with_salt_hash(
@@ -527,7 +731,6 @@ pub(crate) fn gen_address_seed_with_salt_hash(
 #[cfg(test)]
 mod test {
     use super::*;
-    use sui_sdk_types::Ed25519Signature;
 
     #[cfg(test)]
     #[cfg(target_arch = "wasm32")]
@@ -537,14 +740,7 @@ mod test {
     fn test_verify_zklogin_google() {
         let user_salt = "206703048842351542647799591018316385612";
 
-        let pubkey = Ed25519PublicKey::new([
-            185, 198, 238, 22, 48, 239, 62, 113, 17, 68, 166, 72, 219, 6, 187, 178, 40, 79, 114,
-            116, 207, 190, 229, 63, 252, 238, 80, 60, 193, 164, 146, 0,
-        ]);
-        let signature = SimpleSignature::Ed25519 {
-            signature: Ed25519Signature::new([0; 64]),
-            public_key: pubkey,
-        };
+        let signature = crate::zklogin::tests::test_eph_simple_signature();
 
         // Get the address seed.
         let address_seed = gen_address_seed(
@@ -596,21 +792,14 @@ mod test {
             alg: "RS256".to_string(),
         };
 
-        VerifyingKey::new_mainnet()
-            .verify_zklogin(&jwk, &zklogin_inputs, &signature, 10)
+        VerifyingKey::new_mainnet_for(CircuitVersion::V1)
+            .verify_zklogin(&jwk, &zklogin_inputs, &signature, 10, CircuitVersion::V1)
             .unwrap();
     }
 
     #[test]
     fn test_public_key_to_frs() {
-        let pubkey = Ed25519PublicKey::new([
-            185, 198, 238, 22, 48, 239, 62, 113, 17, 68, 166, 72, 219, 6, 187, 178, 40, 79, 114,
-            116, 207, 190, 229, 63, 252, 238, 80, 60, 193, 164, 146, 0,
-        ]);
-        let signature = SimpleSignature::Ed25519 {
-            signature: Ed25519Signature::new([0; 64]),
-            public_key: pubkey,
-        };
+        let signature = crate::zklogin::tests::test_eph_simple_signature();
         let (actual_0, actual_1) = public_key_to_frs(&signature).unwrap();
         let expect_0 = Fr::from(ark_ff::BigInt([
             1244302228903607218,
