@@ -27,7 +27,7 @@ pub enum ZkLoginCircuitMode {
     V2Only,
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ZkloginVerifier {
     proof_verifying_keys: HashMap<CircuitVersion, verify::VerifyingKey>,
     circuit_mode: ZkLoginCircuitMode,
