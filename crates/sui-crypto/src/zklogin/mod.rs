@@ -45,9 +45,8 @@ impl ZkloginVerifier {
 
     pub fn new_mainnet() -> Self {
         Self::new(
-            [CircuitVersion::V1, CircuitVersion::V2]
+            [(CircuitVersion::V1, verify::VerifyingKey::new_mainnet())]
                 .into_iter()
-                .map(|version| (version, verify::VerifyingKey::new_mainnet_for(version)))
                 .collect(),
         )
     }

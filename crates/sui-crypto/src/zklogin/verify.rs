@@ -235,13 +235,6 @@ fn dev_verifying_key() -> VerifyingKey {
     VerifyingKey::new(PreparedVerifyingKey::from(vk))
 }
 
-/// V2 verifying key for production.
-///
-/// TODO: Replace with v2 production verifying key from the ceremony.
-fn mainnet_verifying_key_v2() -> VerifyingKey {
-    mainnet_verifying_key()
-}
-
 /// V2 verifying key for test environments, based on zklogin-circuits v2-main branch
 /// artifacts/dev/zkLogin.vkey (finalized v2 circuit). This is based on a local setup and should
 /// not be used in production.
@@ -321,11 +314,8 @@ impl VerifyingKey {
         Self { inner }
     }
 
-    pub fn new_mainnet_for(version: CircuitVersion) -> Self {
-        match version {
-            CircuitVersion::V1 => mainnet_verifying_key(),
-            CircuitVersion::V2 => mainnet_verifying_key_v2(),
-        }
+    pub fn new_mainnet() -> Self {
+        mainnet_verifying_key()
     }
 
     pub fn new_dev_for(version: CircuitVersion) -> Self {
@@ -792,7 +782,7 @@ mod test {
             alg: "RS256".to_string(),
         };
 
-        VerifyingKey::new_mainnet_for(CircuitVersion::V1)
+        VerifyingKey::new_mainnet()
             .verify_zklogin(&jwk, &zklogin_inputs, &signature, 10, CircuitVersion::V1)
             .unwrap();
     }
