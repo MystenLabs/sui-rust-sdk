@@ -104,7 +104,24 @@ impl Poseidon {
         new_state.clone()
     }
 
+    /// Support up to 64 inputs.
+    ///
+    /// Equivalent to fastcrypto's `poseidon_zk_login` (which is backed by the `neptune` crate;
+    /// this implementation is vendored from `poseidon-ark` instead — both match circomlib's
+    /// Poseidon over BN254).
     pub fn hash(&self, inp: &[Fr]) -> Result<Fr, String> {
+        let max_direct_inputs = self.constants.n_rounds_p.len();
+        if inp.len() > max_direct_inputs * 4 {
+            return Err("Wrong inputs length".to_string());
+        }
+        if inp.len() > max_direct_inputs {
+            let chunks = inp
+                .chunks(max_direct_inputs)
+                .map(|chunk| self.hash(chunk))
+                .collect::<Result<Vec<_>, _>>()?;
+            return self.hash(&chunks);
+        }
+
         let t = inp.len() + 1;
         if inp.is_empty() || inp.len() > self.constants.n_rounds_p.len() {
             return Err("Wrong inputs length".to_string());
@@ -259,15 +276,28 @@ mod tests {
     }
     #[test]
     fn test_wrong_inputs() {
-        let b0: Fr = Fr::from_str("0").unwrap();
-        let b1: Fr = Fr::from_str("1").unwrap();
-        let b2: Fr = Fr::from_str("2").unwrap();
-
         let poseidon = Poseidon::new();
 
-        let big_arr: Vec<Fr> = vec![
-            b1, b2, b0, b0, b0, b0, b0, b0, b0, b0, b0, b0, b0, b0, b0, b0, b0,
-        ];
+        poseidon.hash(&[]).expect_err("Wrong inputs length");
+        let big_arr: Vec<Fr> = vec![Fr::from_str("1").unwrap(); 65];
         poseidon.hash(&big_arr).expect_err("Wrong inputs length");
+    }
+
+    // 17 to 64 inputs are hashed as a 16-ary merkle tree, matching the zkLogin circuit.
+    #[test]
+    fn test_merkle_tree_inputs() {
+        let poseidon = Poseidon::new();
+
+        let arr: Vec<Fr> = (0..34)
+            .map(|i| Fr::from_str(&i.to_string()).unwrap())
+            .collect();
+        let expected = poseidon
+            .hash(&[
+                poseidon.hash(&arr[0..16]).unwrap(),
+                poseidon.hash(&arr[16..32]).unwrap(),
+                poseidon.hash(&arr[32..34]).unwrap(),
+            ])
+            .unwrap();
+        assert_eq!(poseidon.hash(&arr).unwrap(), expected);
     }
 }
