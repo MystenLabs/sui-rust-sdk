@@ -1,3 +1,4 @@
+use futures::future::try_join_all;
 use prost_types::FieldMask;
 use sui_sdk_types::Address;
 
@@ -15,6 +16,10 @@ use crate::proto::sui::rpc::v2::simulate_transaction_request::TransactionChecks;
 
 use super::Client;
 use super::Result;
+
+// Programmable transaction validation requires the command count to be strictly less than the
+// protocol's 1,024-command limit.
+const MAX_REWARDS_PER_PTB: usize = 1023;
 
 #[derive(Debug)]
 pub struct DelegatedStake {
@@ -137,6 +142,18 @@ impl Client {
     }
 
     pub async fn calculate_rewards(
+        &mut self,
+        staked_sui_ids: &[Address],
+    ) -> Result<Vec<(Address, u64)>> {
+        let batches = staked_sui_ids.chunks(MAX_REWARDS_PER_PTB).map(|batch| {
+            let mut client = self.clone();
+            async move { client.calculate_rewards_batch(batch).await }
+        });
+
+        Ok(try_join_all(batches).await?.into_iter().flatten().collect())
+    }
+
+    async fn calculate_rewards_batch(
         &mut self,
         staked_sui_ids: &[Address],
     ) -> Result<Vec<(Address, u64)>> {
