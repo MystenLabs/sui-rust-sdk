@@ -85,6 +85,18 @@ impl Client {
         request: impl tonic::IntoRequest<ExecuteTransactionRequest>,
         timeout: Duration,
     ) -> Result<Response<ExecuteTransactionResponse>, ExecuteAndWaitError> {
+        // Calculate digest from the input transaction to avoid relying on response read mask
+        let request = request.into_request();
+        let transaction = match request.get_ref().transaction_opt() {
+            Some(tx) => tx,
+            None => return Err(ExecuteAndWaitError::MissingTransaction),
+        };
+
+        let executed_txn_digest = match sui_sdk_types::Transaction::try_from(transaction) {
+            Ok(tx) => tx.digest().to_string(),
+            Err(e) => return Err(ExecuteAndWaitError::ProtoConversionError(e)),
+        };
+
         // Subscribe to checkpoint stream before execution to avoid missing the transaction.
         // Uses minimal read mask for efficiency since we only nee digest confirmation.
         // Once server-side filtering is available, we should filter by transaction digest to
@@ -100,56 +112,18 @@ impl Client {
             Err(e) => return Err(ExecuteAndWaitError::RpcError(e)),
         };
 
-        // Calculate digest from the input transaction to avoid relying on response read mask
-        let request = request.into_request();
-        let transaction = match request.get_ref().transaction_opt() {
-            Some(tx) => tx,
-            None => return Err(ExecuteAndWaitError::MissingTransaction),
-        };
-
-        let executed_txn_digest = match sui_sdk_types::Transaction::try_from(transaction) {
-            Ok(tx) => tx.digest().to_string(),
-            Err(e) => return Err(ExecuteAndWaitError::ProtoConversionError(e)),
-        };
-
-        let mut response = match self.execution_client().execute_transaction(request).await {
-            Ok(resp) => resp,
-            Err(e) => return Err(ExecuteAndWaitError::RpcError(e)),
-        };
-
-        // First query the fullnode directly to see if it already has the txn. This is to handle
-        // the case where an already executed transaction is sent multiple times
-        if let Ok(resp) = self
-            .ledger_client()
-            .get_transaction(
-                GetTransactionRequest::default()
-                    .with_digest(&executed_txn_digest)
-                    .with_read_mask(FieldMask::from_str("digest,checkpoint,timestamp")),
-            )
-            .await
-            && resp.get_ref().transaction().checkpoint_opt().is_some()
-        {
-            let checkpoint = resp.get_ref().transaction().checkpoint();
-            let timestamp = resp.get_ref().transaction().timestamp;
-            response
-                .get_mut()
-                .transaction_mut()
-                .set_checkpoint(checkpoint);
-            response.get_mut().transaction_mut().timestamp = timestamp;
-            return Ok(response);
-        }
-
-        // Wait for the transaction to appear in a checkpoint, at which point indexes will have been
-        // updated.
-        let timeout_future = tokio::time::sleep(timeout);
-        let checkpoint_future = async {
+        // Scan the subscription for the transaction's digest. Every RPC on
+        // this client shares one HTTP/2 connection, so this future must be
+        // polled concurrently with the execution phase below: a subscription
+        // parked while another call is awaited pins its flow-control window
+        // (checkpoints keep arriving whether or not anyone reads them) and,
+        // past the idle timeout, gets reset by the client's body watchdog.
+        let scan = async {
             while let Some(response) = checkpoint_stream.try_next().await? {
                 let checkpoint = response.checkpoint();
 
                 for tx in checkpoint.transactions() {
-                    let digest = tx.digest();
-
-                    if digest == executed_txn_digest {
+                    if tx.digest() == executed_txn_digest {
                         return Ok((checkpoint.sequence_number(), checkpoint.summary().timestamp));
                     }
                 }
@@ -158,25 +132,85 @@ impl Client {
                 "checkpoint stream ended unexpectedly",
             ))
         };
+        tokio::pin!(scan);
 
-        tokio::select! {
-            result = checkpoint_future => {
-                match result {
-                    Ok((checkpoint, timestamp)) => {
-                        response
-                            .get_mut()
-                            .transaction_mut()
-                            .set_checkpoint(checkpoint);
-                        response.get_mut().transaction_mut().timestamp = timestamp;
-                        Ok(response)
+        // Execute, then query the fullnode directly to see if it already has
+        // the txn in a checkpoint. This is to handle the case where an
+        // already executed transaction is sent multiple times.
+        let exec_and_check = async {
+            let response = self.execution_client().execute_transaction(request).await?;
+
+            let already_checkpointed = match self
+                .ledger_client()
+                .get_transaction(
+                    GetTransactionRequest::default()
+                        .with_digest(&executed_txn_digest)
+                        .with_read_mask(FieldMask::from_str("digest,checkpoint,timestamp")),
+                )
+                .await
+            {
+                Ok(resp) if resp.get_ref().transaction().checkpoint_opt().is_some() => Some((
+                    resp.get_ref().transaction().checkpoint(),
+                    resp.get_ref().transaction().timestamp,
+                )),
+                _ => None,
+            };
+
+            Ok::<_, tonic::Status>((response, already_checkpointed))
+        };
+        tokio::pin!(exec_and_check);
+
+        // Drive execution and the scan together. The scan can complete first
+        // (for example, when a duplicate of an already executed transaction
+        // lands in a checkpoint mid-execution), so remember its outcome; the
+        // guard keeps a completed scan from being polled again.
+        let mut scan_result = None;
+        let (mut response, already_checkpointed) = loop {
+            tokio::select! {
+                exec = &mut exec_and_check => {
+                    match exec {
+                        Ok(ok) => break ok,
+                        Err(e) => return Err(ExecuteAndWaitError::RpcError(e)),
                     }
-                    Err(e) => Err(ExecuteAndWaitError::CheckpointStreamError { response, error: e })
                 }
-            },
-            _ = timeout_future => {
-                Err(ExecuteAndWaitError::CheckpointTimeout ( response))
+                result = &mut scan, if scan_result.is_none() => {
+                    scan_result = Some(result);
+                }
             }
-        }
+        };
+
+        // Wait for the transaction to appear in a checkpoint, at which point
+        // indexes will have been updated. The direct lookup takes precedence:
+        // when it already places the transaction in a checkpoint there is
+        // nothing to wait for, even if the scan failed in the meantime.
+        let (checkpoint, timestamp) = if let Some(found) = already_checkpointed {
+            found
+        } else {
+            let result = match scan_result {
+                Some(result) => result,
+                None => {
+                    tokio::select! {
+                        result = &mut scan => result,
+                        _ = tokio::time::sleep(timeout) => {
+                            return Err(ExecuteAndWaitError::CheckpointTimeout(response));
+                        }
+                    }
+                }
+            };
+            match result {
+                Ok(found) => found,
+                Err(e) => {
+                    return Err(ExecuteAndWaitError::CheckpointStreamError { response, error: e });
+                }
+            }
+        };
+
+        response
+            .get_mut()
+            .transaction_mut()
+            .set_checkpoint(checkpoint);
+        response.get_mut().transaction_mut().timestamp = timestamp;
+        Ok(response)
     }
 
     /// Retrieves the current reference gas price from the latest epoch information.
