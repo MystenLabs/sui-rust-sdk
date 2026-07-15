@@ -287,21 +287,28 @@ async fn pump(
     idle_timeout: Option<Duration>,
 ) -> Option<Status> {
     loop {
-        // One unit of progress: receive a frame from the transport and hand
-        // it to the consumer. The timer covers both awaits, so it fires both
-        // when the transport delivers nothing (a starved or dead connection)
-        // and when the consumer has parked the response without polling it.
+        // One unit of progress: wait for bridge capacity, then receive a
+        // frame from the transport and hand it over through the permit.
+        // Reserving before polling the body means a frame is only taken from
+        // the transport once it is immediately deliverable: nothing sits in
+        // limbo between the transport and the bridge, and the frame's
+        // receive-window capacity is not released (inviting the server to
+        // send more) until the consumer can actually accept it. The timer
+        // covers both awaits, so it fires both when the consumer has parked
+        // the response without polling it (reserve never resolves) and when
+        // the transport delivers nothing (a starved or dead connection).
         let step = async {
+            let Ok(permit) = tx.reserve().await else {
+                // Consumer dropped the response.
+                return ControlFlow::Break(());
+            };
             match std::future::poll_fn(|cx| Pin::new(&mut body).poll_frame(cx)).await {
                 Some(Ok(frame)) => {
-                    if tx.send(Ok(frame)).await.is_err() {
-                        // Consumer dropped the response.
-                        return ControlFlow::Break(());
-                    }
+                    permit.send(Ok(frame));
                     ControlFlow::Continue(())
                 }
                 Some(Err(status)) => {
-                    let _ = tx.send(Err(status)).await;
+                    permit.send(Err(status));
                     ControlFlow::Break(())
                 }
                 None => ControlFlow::Break(()),
@@ -446,7 +453,8 @@ mod tests {
         assert!(next_frame(&mut watched).await.unwrap().is_ok());
 
         // The transport keeps delivering: one frame sits in the bridge
-        // channel and the pump blocks handing over the next one.
+        // channel and the pump waits for bridge capacity before taking the
+        // next one.
         tx.send(Ok(data_frame(b"buffered"))).unwrap();
         tx.send(Ok(data_frame(b"blocked"))).unwrap();
 
@@ -461,6 +469,63 @@ mod tests {
         // observes the watchdog cut.
         let frame = next_frame(&mut watched).await.unwrap().unwrap();
         assert_eq!(frame.into_data().unwrap(), Bytes::from_static(b"buffered"));
+        let status = next_frame(&mut watched).await.unwrap().unwrap_err();
+        assert_eq!(status.code(), tonic::Code::DeadlineExceeded);
+    }
+
+    /// Reserve-before-pull: the pump takes a frame from the transport only
+    /// once the bridge can accept it, so a parked consumer leaves at most one
+    /// frame buffered in the bridge and everything else in the transport,
+    /// where it remains subject to HTTP/2 flow control.
+    #[tokio::test(start_paused = true)]
+    async fn parked_consumer_does_not_double_buffer() {
+        use std::sync::atomic::AtomicU64;
+
+        struct CountingBody {
+            rx: tokio::sync::mpsc::UnboundedReceiver<Result<Frame<Bytes>, Status>>,
+            pulled: Arc<AtomicU64>,
+        }
+        impl http_body::Body for CountingBody {
+            type Data = Bytes;
+            type Error = Status;
+
+            fn poll_frame(
+                mut self: Pin<&mut Self>,
+                cx: &mut Context<'_>,
+            ) -> Poll<Option<Result<Frame<Bytes>, Status>>> {
+                let poll = self.rx.poll_recv(cx);
+                if matches!(poll, Poll::Ready(Some(_))) {
+                    self.pulled.fetch_add(1, Ordering::SeqCst);
+                }
+                poll
+            }
+        }
+
+        let pulled = Arc::new(AtomicU64::new(0));
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+        let body = Body::new(CountingBody {
+            rx,
+            pulled: pulled.clone(),
+        });
+        let mut watched = WatchdogBody::spawn(body, Some(Duration::from_secs(30)), None);
+
+        // The transport has plenty of frames available.
+        for _ in 0..5 {
+            tx.send(Ok(data_frame(b"tick"))).unwrap();
+        }
+
+        // The consumer takes one frame and parks. The pump may refill the
+        // one-slot bridge, but must not pull frames it cannot deliver.
+        assert!(next_frame(&mut watched).await.unwrap().is_ok());
+        tokio::time::sleep(Duration::from_secs(60)).await;
+        assert_eq!(
+            pulled.load(Ordering::SeqCst),
+            2,
+            "the pump pulled frames from the transport that it could not deliver"
+        );
+
+        // The consumer still sees the buffered frame and then the cut.
+        assert!(next_frame(&mut watched).await.unwrap().is_ok());
         let status = next_frame(&mut watched).await.unwrap().unwrap_err();
         assert_eq!(status.code(), tonic::Code::DeadlineExceeded);
     }
