@@ -250,18 +250,22 @@ impl Client {
 
         let transaction = Transaction::default().with_kind(ptb).with_sender("0x0");
 
-        let resp = self
-            .execution_client()
-            .simulate_transaction(
+        // Boxed because this helper is inlined into the futures of
+        // get_delegated_stake and list_delegated_stake: the simulate call
+        // chain is by far the largest part of their state machines, and
+        // keeping it on the heap keeps those futures small for callers.
+        let mut execution_client = self.execution_client();
+        let simulate = Box::pin(
+            execution_client.simulate_transaction(
                 SimulateTransactionRequest::new(transaction)
                     .with_read_mask(FieldMask::from_paths([
                         "command_outputs.return_values.value",
                         "transaction.effects.status",
                     ]))
                     .with_checks(TransactionChecks::Disabled),
-            )
-            .await?
-            .into_inner();
+            ),
+        );
+        let resp = simulate.await?.into_inner();
 
         if !resp.transaction().effects().status().success() {
             return Err(tonic::Status::from_error(
