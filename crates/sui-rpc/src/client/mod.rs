@@ -15,6 +15,11 @@ pub use response_ext::ResponseExt;
 mod interceptors;
 pub use interceptors::HeadersInterceptor;
 
+mod watchdog;
+pub use watchdog::BodyIdleTimeout;
+use watchdog::DEFAULT_BODY_IDLE_TIMEOUT;
+use watchdog::WatchdogLayer;
+
 mod staking_rewards;
 pub use staking_rewards::DelegatedStake;
 
@@ -71,6 +76,7 @@ pub struct Client {
     channel: tonic::transport::Channel,
     headers: HeadersInterceptor,
     max_decoding_message_size: Option<usize>,
+    body_idle_timeout: Option<Duration>,
 
     /// Layer to apply to all RPC requests
     request_layer: Option<RequestLayer>,
@@ -98,7 +104,9 @@ impl Client {
     /// including the HTTP/2 flow-control windows that protect the shared
     /// connection from starvation by stalled streaming responses. Prefer
     /// [`Client::new`] plus the `with_*` configuration methods unless an
-    /// endpoint setting is needed that the client does not expose.
+    /// endpoint setting is needed that the client does not expose. The
+    /// idle-body watchdog (see [`Client::with_body_idle_timeout`]) is part of
+    /// the client rather than the endpoint and stays enabled.
     ///
     /// In particular, do not rely on
     /// [`http2_adaptive_window`](tonic::transport::Endpoint::http2_adaptive_window)
@@ -115,6 +123,7 @@ impl Client {
             channel,
             headers: Default::default(),
             max_decoding_message_size: None,
+            body_idle_timeout: Some(DEFAULT_BODY_IDLE_TIMEOUT),
             request_layer: None,
         }
     }
@@ -154,8 +163,44 @@ impl Client {
             channel,
             headers: Default::default(),
             max_decoding_message_size: None,
+            body_idle_timeout: Some(DEFAULT_BODY_IDLE_TIMEOUT),
             request_layer: None,
         })
+    }
+
+    /// Set the idle timeout for the client's response-body watchdog.
+    /// Defaults to 30 seconds.
+    ///
+    /// The watchdog bounds the time between response-body progress events: if
+    /// a whole idle period passes without a frame of the response being
+    /// delivered to the caller -- because the connection is starved or dead,
+    /// or because the caller has parked a streaming response without polling
+    /// it -- the watchdog resets the stream, releasing the HTTP/2
+    /// flow-control window it had pinned, and the call observes a
+    /// [`DeadlineExceeded`](tonic::Code::DeadlineExceeded) status on its next
+    /// poll. This is what turns "an RPC on a starved connection hangs
+    /// forever" into a bounded failure, and what keeps an abandoned stream
+    /// from starving the shared connection in the first place.
+    ///
+    /// Streams that are legitimately quiet for longer than the timeout (the
+    /// fullnode's checkpoint subscription is not: it emits watermarks every
+    /// few seconds) should raise or disable the watchdog for that call with a
+    /// [`BodyIdleTimeout`] request extension.
+    pub fn with_body_idle_timeout(mut self, timeout: Duration) -> Self {
+        self.body_idle_timeout = Some(timeout);
+        self
+    }
+
+    /// Disable the client's response-body watchdog (see
+    /// [`with_body_idle_timeout`](Self::with_body_idle_timeout)).
+    ///
+    /// Without it, an RPC whose response can no longer make progress hangs
+    /// indefinitely; only disable the watchdog when every call is bounded by
+    /// the caller. It can be re-enabled for individual requests with a
+    /// [`BodyIdleTimeout`] request extension.
+    pub fn without_body_idle_timeout(mut self) -> Self {
+        self.body_idle_timeout = None;
+        self
     }
 
     /// Set the HTTP/2 per-stream receive window, in bytes.
@@ -278,6 +323,11 @@ impl Client {
                 })
                 .service(self.channel.clone()),
         );
+
+        // Guard every response body with the idle-body watchdog, beneath any
+        // user layers so their view of the response goes through the
+        // watchdog's bridge.
+        let base = BoxService::new(WatchdogLayer::new(self.body_idle_timeout).layer(base));
 
         // Apply the user's outbound request layer if present.
         let layered = if let Some(layer) = &self.request_layer {
