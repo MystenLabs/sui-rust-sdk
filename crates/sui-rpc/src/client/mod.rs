@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::time::Duration;
 use tap::Pipe;
 use tonic::body::Body;
@@ -96,9 +97,19 @@ const DEFAULT_HTTP2_CONNECTION_WINDOW_SIZE: u32 = 64 * 1024 * 1024;
 /// connection fails with `DeadlineExceeded` instead of hanging forever.
 #[derive(Clone)]
 pub struct Client {
+    channel: tonic::transport::Channel,
+
+    // Everything other than the channel is only consulted when building a
+    // per-service client or reconfiguring, so it lives behind an `Arc` to
+    // keep `Client` itself small; it is cloned by value into futures
+    // throughout the SDK. The `Endpoint` alone is over 500 bytes.
+    config: Arc<ClientConfig>,
+}
+
+#[derive(Clone)]
+struct ClientConfig {
     uri: http::Uri,
     endpoint: tonic::transport::Endpoint,
-    channel: tonic::transport::Channel,
     headers: HeadersInterceptor,
     max_decoding_message_size: Option<usize>,
     body_idle_timeout: Option<Duration>,
@@ -143,13 +154,15 @@ impl Client {
         let uri = endpoint.uri().clone();
         let channel = endpoint.connect_lazy();
         Self {
-            uri,
-            endpoint: endpoint.clone(),
             channel,
-            headers: Default::default(),
-            max_decoding_message_size: None,
-            body_idle_timeout: Some(DEFAULT_BODY_IDLE_TIMEOUT),
-            request_layer: None,
+            config: Arc::new(ClientConfig {
+                uri,
+                endpoint: endpoint.clone(),
+                headers: Default::default(),
+                max_decoding_message_size: None,
+                body_idle_timeout: Some(DEFAULT_BODY_IDLE_TIMEOUT),
+                request_layer: None,
+            }),
         }
     }
 
@@ -183,13 +196,15 @@ impl Client {
         let channel = endpoint.connect_lazy();
 
         Ok(Self {
-            uri,
-            endpoint,
             channel,
-            headers: Default::default(),
-            max_decoding_message_size: None,
-            body_idle_timeout: Some(DEFAULT_BODY_IDLE_TIMEOUT),
-            request_layer: None,
+            config: Arc::new(ClientConfig {
+                uri,
+                endpoint,
+                headers: Default::default(),
+                max_decoding_message_size: None,
+                body_idle_timeout: Some(DEFAULT_BODY_IDLE_TIMEOUT),
+                request_layer: None,
+            }),
         })
     }
 
@@ -212,7 +227,7 @@ impl Client {
     /// few seconds) should raise or disable the watchdog for that call with a
     /// [`BodyIdleTimeout`] request extension.
     pub fn with_body_idle_timeout(mut self, timeout: Duration) -> Self {
-        self.body_idle_timeout = Some(timeout);
+        Arc::make_mut(&mut self.config).body_idle_timeout = Some(timeout);
         self
     }
 
@@ -224,7 +239,7 @@ impl Client {
     /// the caller. It can be re-enabled for individual requests with a
     /// [`BodyIdleTimeout`] request extension.
     pub fn without_body_idle_timeout(mut self) -> Self {
-        self.body_idle_timeout = None;
+        Arc::make_mut(&mut self.config).body_idle_timeout = None;
         self
     }
 
@@ -252,8 +267,9 @@ impl Client {
     /// client is used or cloned; earlier clones keep the previous
     /// configuration.
     pub fn with_response_headers_timeout(mut self, timeout: Duration) -> Self {
-        self.endpoint = self.endpoint.timeout(timeout);
-        self.channel = self.endpoint.connect_lazy();
+        let config = Arc::make_mut(&mut self.config);
+        config.endpoint = config.endpoint.clone().timeout(timeout);
+        self.channel = config.endpoint.connect_lazy();
         self
     }
 
@@ -269,8 +285,9 @@ impl Client {
     /// client is used or cloned; earlier clones keep the previous
     /// configuration.
     pub fn with_initial_stream_window_size(mut self, size: u32) -> Self {
-        self.endpoint = self.endpoint.initial_stream_window_size(size);
-        self.channel = self.endpoint.connect_lazy();
+        let config = Arc::make_mut(&mut self.config);
+        config.endpoint = config.endpoint.clone().initial_stream_window_size(size);
+        self.channel = config.endpoint.connect_lazy();
         self
     }
 
@@ -287,13 +304,14 @@ impl Client {
     /// client is used or cloned; earlier clones keep the previous
     /// configuration.
     pub fn with_initial_connection_window_size(mut self, size: u32) -> Self {
-        self.endpoint = self.endpoint.initial_connection_window_size(size);
-        self.channel = self.endpoint.connect_lazy();
+        let config = Arc::make_mut(&mut self.config);
+        config.endpoint = config.endpoint.clone().initial_connection_window_size(size);
+        self.channel = config.endpoint.connect_lazy();
         self
     }
 
     pub fn with_headers(mut self, headers: HeadersInterceptor) -> Self {
-        self.headers = headers;
+        Arc::make_mut(&mut self.config).headers = headers;
         self
     }
 
@@ -347,21 +365,21 @@ impl Client {
                 .map_err(Into::<BoxError>::into)
                 .layer(layer),
         );
-        self.request_layer = Some(layer);
+        Arc::make_mut(&mut self.config).request_layer = Some(layer);
         self
     }
 
     pub fn with_max_decoding_message_size(mut self, limit: usize) -> Self {
-        self.max_decoding_message_size = Some(limit);
+        Arc::make_mut(&mut self.config).max_decoding_message_size = Some(limit);
         self
     }
 
     pub fn uri(&self) -> &http::Uri {
-        &self.uri
+        &self.config.uri
     }
 
     fn channel(&self) -> BoxedChannel {
-        let headers = self.headers.clone();
+        let headers = self.config.headers.clone();
 
         // Build the base service with headers applied at the HTTP level and the
         // transport error mapped to BoxError for compatibility with user layers.
@@ -381,10 +399,10 @@ impl Client {
         // Guard every response body with the idle-body watchdog, beneath any
         // user layers so their view of the response goes through the
         // watchdog's bridge.
-        let base = BoxService::new(WatchdogLayer::new(self.body_idle_timeout).layer(base));
+        let base = BoxService::new(WatchdogLayer::new(self.config.body_idle_timeout).layer(base));
 
         // Apply the user's outbound request layer if present.
-        let layered = if let Some(layer) = &self.request_layer {
+        let layered = if let Some(layer) = &self.config.request_layer {
             layer.layer(base)
         } else {
             base
@@ -404,7 +422,7 @@ impl Client {
         LedgerServiceClient::new(self.channel())
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
-                if let Some(limit) = self.max_decoding_message_size {
+                if let Some(limit) = self.config.max_decoding_message_size {
                     client.max_decoding_message_size(limit)
                 } else {
                     client
@@ -416,7 +434,7 @@ impl Client {
         StateServiceClient::new(self.channel())
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
-                if let Some(limit) = self.max_decoding_message_size {
+                if let Some(limit) = self.config.max_decoding_message_size {
                     client.max_decoding_message_size(limit)
                 } else {
                     client
@@ -428,7 +446,7 @@ impl Client {
         TransactionExecutionServiceClient::new(self.channel())
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
-                if let Some(limit) = self.max_decoding_message_size {
+                if let Some(limit) = self.config.max_decoding_message_size {
                     client.max_decoding_message_size(limit)
                 } else {
                     client
@@ -440,7 +458,7 @@ impl Client {
         MovePackageServiceClient::new(self.channel())
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
-                if let Some(limit) = self.max_decoding_message_size {
+                if let Some(limit) = self.config.max_decoding_message_size {
                     client.max_decoding_message_size(limit)
                 } else {
                     client
@@ -454,7 +472,7 @@ impl Client {
         SignatureVerificationServiceClient::new(self.channel())
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
-                if let Some(limit) = self.max_decoding_message_size {
+                if let Some(limit) = self.config.max_decoding_message_size {
                     client.max_decoding_message_size(limit)
                 } else {
                     client
@@ -466,7 +484,7 @@ impl Client {
         SubscriptionServiceClient::new(self.channel())
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
-                if let Some(limit) = self.max_decoding_message_size {
+                if let Some(limit) = self.config.max_decoding_message_size {
                     client.max_decoding_message_size(limit)
                 } else {
                     client
@@ -482,7 +500,7 @@ impl Client {
         ProofServiceClient::new(self.channel())
             .accept_compressed(CompressionEncoding::Zstd)
             .pipe(|client| {
-                if let Some(limit) = self.max_decoding_message_size {
+                if let Some(limit) = self.config.max_decoding_message_size {
                     client.max_decoding_message_size(limit)
                 } else {
                     client
