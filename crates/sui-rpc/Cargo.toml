@@ -62,7 +62,10 @@ proptest = { version = "1.8.0", default-features = false, features = ["std"] }
 test-strategy = { version = "0.4" }
 sui-sdk-types = { version = "0.3.0", path = "../sui-sdk-types", default-features = false, features = ["proptest", "serde", "hash"] }
 serde_json = { version = "1.0.145" }
-tokio = { version = "1.40", features = ["rt", "macros", "test-util"] }
+tokio = { version = "1.40", features = ["rt", "rt-multi-thread", "macros", "net", "test-util"] }
+# The starvation integration tests host a mock gRPC server built from this
+# crate's own generated server stubs.
+tonic = { version = "0.14.2", default-features = false, features = ["server", "router"] }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(doc_cfg)'] }
