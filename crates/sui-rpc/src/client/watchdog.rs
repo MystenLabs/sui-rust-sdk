@@ -25,6 +25,15 @@
 //! A timer raced against the caller's own polls would not be enough: a parked
 //! stream is never polled, so a poll-driven timer freezes exactly when it is
 //! needed. The spawned task gives the timer its own polling root.
+//!
+//! The watchdog task also enforces the request's `grpc-timeout` deadline (set
+//! with [`tonic::Request::set_timeout`]) across the response body. tonic's
+//! own channel machinery only enforces that header until response headers
+//! arrive, which on a starved connection is precisely the part that still
+//! works -- headers are not flow-controlled -- so without this the deadline
+//! never bounds the actual hang. With it, `set_timeout` is a total per-call
+//! deadline: the same value is enforced locally end to end and communicated
+//! to the server through the standard header.
 
 use std::future::Future;
 use std::ops::ControlFlow;
@@ -128,15 +137,42 @@ where
             Some(BodyIdleTimeout(override_timeout)) => *override_timeout,
             None => self.idle_timeout,
         };
+        // The deadline starts at request time, so the budget the header
+        // communicates to the server is the same one enforced locally.
+        let deadline = parse_grpc_timeout(request.headers())
+            .map(|timeout| tokio::time::Instant::now() + timeout);
 
         let response = self.inner.call(request);
         Box::pin(async move {
             let response = response.await?;
-            let Some(idle_timeout) = idle_timeout else {
+            if idle_timeout.is_none() && deadline.is_none() {
                 return Ok(response);
-            };
-            Ok(response.map(|body| Body::new(WatchdogBody::spawn(body, idle_timeout))))
+            }
+            Ok(response.map(|body| Body::new(WatchdogBody::spawn(body, idle_timeout, deadline))))
         })
+    }
+}
+
+/// Parse the standard `grpc-timeout` request header (1-8 ASCII digits
+/// followed by a unit, per the gRPC-over-HTTP/2 spec). Malformed values are
+/// ignored, matching tonic's own leniency, since failing the call over an
+/// unenforceable header would be worse than not enforcing it.
+fn parse_grpc_timeout(headers: &http::HeaderMap) -> Option<Duration> {
+    let value = headers.get("grpc-timeout")?.to_str().ok()?;
+    let (magnitude, unit) = value.split_at(value.len().checked_sub(1)?);
+    if magnitude.is_empty() || magnitude.len() > 8 || !magnitude.bytes().all(|b| b.is_ascii_digit())
+    {
+        return None;
+    }
+    let magnitude: u64 = magnitude.parse().ok()?;
+    match unit {
+        "H" => Some(Duration::from_secs(magnitude * 60 * 60)),
+        "M" => Some(Duration::from_secs(magnitude * 60)),
+        "S" => Some(Duration::from_secs(magnitude)),
+        "m" => Some(Duration::from_millis(magnitude)),
+        "u" => Some(Duration::from_micros(magnitude)),
+        "n" => Some(Duration::from_nanos(magnitude)),
+        _ => None,
     }
 }
 
@@ -152,12 +188,16 @@ struct WatchdogBody {
 }
 
 impl WatchdogBody {
-    fn spawn(body: Body, idle_timeout: Duration) -> Self {
+    fn spawn(
+        body: Body,
+        idle_timeout: Option<Duration>,
+        deadline: Option<tokio::time::Instant>,
+    ) -> Self {
         // Capacity 1: the bridge only needs to decouple the two polling
         // roots, and the tightest bound keeps the transport's own
         // flow-control backpressure intact.
         let (tx, rx) = tokio::sync::mpsc::channel(1);
-        let task = tokio::spawn(drive(body, tx, idle_timeout));
+        let task = tokio::spawn(drive(body, tx, idle_timeout, deadline));
         Self {
             rx,
             task: Some(task),
@@ -210,16 +250,28 @@ impl http_body::Body for WatchdogBody {
 }
 
 /// The watchdog task: pump frames from the transport to the bridge channel,
-/// bounding each unit of progress with the idle timer. On expiry, drop the
-/// body first (resetting the stream and releasing its pinned flow-control
-/// window in real time), then deliver the terminal status at the consumer's
-/// pace.
+/// bounding each unit of progress with the idle timer and the whole body
+/// with the request deadline. On expiry, drop the body first (resetting the
+/// stream and releasing its pinned flow-control window in real time), then
+/// deliver the terminal status at the consumer's pace.
 async fn drive(
     body: Body,
     tx: tokio::sync::mpsc::Sender<Result<Frame<Bytes>, Status>>,
-    idle_timeout: Duration,
+    idle_timeout: Option<Duration>,
+    deadline: Option<tokio::time::Instant>,
 ) {
-    let cut = pump(body, tx.clone(), idle_timeout).await;
+    let pump = pump(body, tx.clone(), idle_timeout);
+    let cut = match deadline {
+        Some(deadline) => tokio::time::timeout_at(deadline, pump)
+            .await
+            .unwrap_or_else(|_| {
+                Some(Status::deadline_exceeded(
+                    "grpc-timeout deadline exceeded before the response body completed; \
+                     stream reset by the client",
+                ))
+            }),
+        None => pump.await,
+    };
     if let Some(status) = cut {
         let _ = tx.send(Err(status)).await;
     }
@@ -227,11 +279,12 @@ async fn drive(
 
 /// Returns `Some(status)` if the stream was cut by the watchdog, and `None`
 /// on natural end-of-stream, transport error, or consumer hang-up. The inner
-/// body is dropped on return in all cases.
+/// body is dropped on return in all cases -- including cancellation by the
+/// deadline in [`drive`], which drops this future and the body it owns.
 async fn pump(
     mut body: Body,
     tx: tokio::sync::mpsc::Sender<Result<Frame<Bytes>, Status>>,
-    idle_timeout: Duration,
+    idle_timeout: Option<Duration>,
 ) -> Option<Status> {
     loop {
         // One unit of progress: receive a frame from the transport and hand
@@ -255,15 +308,21 @@ async fn pump(
             }
         };
 
-        match tokio::time::timeout(idle_timeout, step).await {
-            Ok(ControlFlow::Continue(())) => {}
-            Ok(ControlFlow::Break(())) => return None,
-            Err(_) => {
-                return Some(Status::deadline_exceeded(format!(
-                    "no response-body progress within {idle_timeout:?}; \
-                     stream reset by the client's idle-body watchdog"
-                )));
-            }
+        let flow = match idle_timeout {
+            Some(idle_timeout) => match tokio::time::timeout(idle_timeout, step).await {
+                Ok(flow) => flow,
+                Err(_) => {
+                    return Some(Status::deadline_exceeded(format!(
+                        "no response-body progress within {idle_timeout:?}; \
+                         stream reset by the client's idle-body watchdog"
+                    )));
+                }
+            },
+            None => step.await,
+        };
+        match flow {
+            ControlFlow::Continue(()) => {}
+            ControlFlow::Break(()) => return None,
         }
     }
 }
@@ -330,7 +389,7 @@ mod tests {
     #[tokio::test(start_paused = true)]
     async fn frames_and_trailers_pass_through() {
         let (tx, _dropped, body) = test_body();
-        let mut watched = WatchdogBody::spawn(body, Duration::from_secs(30));
+        let mut watched = WatchdogBody::spawn(body, Some(Duration::from_secs(30)), None);
 
         tx.send(Ok(data_frame(b"hello"))).unwrap();
         let frame = next_frame(&mut watched).await.unwrap().unwrap();
@@ -349,7 +408,7 @@ mod tests {
     #[tokio::test(start_paused = true)]
     async fn slow_but_live_stream_is_not_cut() {
         let (tx, _dropped, body) = test_body();
-        let mut watched = WatchdogBody::spawn(body, Duration::from_secs(30));
+        let mut watched = WatchdogBody::spawn(body, Some(Duration::from_secs(30)), None);
 
         for _ in 0..5 {
             tokio::time::sleep(Duration::from_secs(20)).await;
@@ -365,7 +424,7 @@ mod tests {
     #[tokio::test(start_paused = true)]
     async fn idle_transport_is_cut_and_body_dropped() {
         let (_tx, dropped, body) = test_body();
-        let mut watched = WatchdogBody::spawn(body, Duration::from_secs(30));
+        let mut watched = WatchdogBody::spawn(body, Some(Duration::from_secs(30)), None);
 
         let status = next_frame(&mut watched).await.unwrap().unwrap_err();
         assert_eq!(status.code(), tonic::Code::DeadlineExceeded);
@@ -380,7 +439,7 @@ mod tests {
     #[tokio::test(start_paused = true)]
     async fn parked_consumer_is_cut_without_being_polled() {
         let (tx, dropped, body) = test_body();
-        let mut watched = WatchdogBody::spawn(body, Duration::from_secs(30));
+        let mut watched = WatchdogBody::spawn(body, Some(Duration::from_secs(30)), None);
 
         // The consumer takes one frame, then parks the response entirely.
         tx.send(Ok(data_frame(b"first"))).unwrap();
@@ -409,7 +468,7 @@ mod tests {
     #[tokio::test(start_paused = true)]
     async fn transport_error_passes_through() {
         let (tx, _dropped, body) = test_body();
-        let mut watched = WatchdogBody::spawn(body, Duration::from_secs(30));
+        let mut watched = WatchdogBody::spawn(body, Some(Duration::from_secs(30)), None);
 
         tx.send(Err(Status::unavailable("connection reset")))
             .unwrap();
@@ -421,7 +480,7 @@ mod tests {
     #[tokio::test(start_paused = true)]
     async fn dropping_response_aborts_task_and_drops_body() {
         let (tx, dropped, body) = test_body();
-        let watched = WatchdogBody::spawn(body, Duration::from_secs(30));
+        let watched = WatchdogBody::spawn(body, Some(Duration::from_secs(30)), None);
         tx.send(Ok(data_frame(b"unread"))).unwrap();
 
         drop(watched);
@@ -455,8 +514,133 @@ mod tests {
             }
         }
 
-        let mut watched = WatchdogBody::spawn(Body::new(PanicBody), Duration::from_secs(30));
+        let mut watched =
+            WatchdogBody::spawn(Body::new(PanicBody), Some(Duration::from_secs(30)), None);
         let status = next_frame(&mut watched).await.unwrap().unwrap_err();
         assert_eq!(status.code(), tonic::Code::Internal);
+    }
+
+    /// The request deadline bounds the whole body even when every individual
+    /// frame arrives well within the idle timeout.
+    #[tokio::test(start_paused = true)]
+    async fn deadline_cuts_a_live_stream() {
+        let (tx, dropped, body) = test_body();
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(30);
+        let mut watched =
+            WatchdogBody::spawn(body, Some(Duration::from_secs(3600)), Some(deadline));
+
+        for _ in 0..4 {
+            tokio::time::sleep(Duration::from_secs(5)).await;
+            tx.send(Ok(data_frame(b"tick"))).unwrap();
+            assert!(next_frame(&mut watched).await.unwrap().is_ok());
+        }
+
+        // Past the deadline the body must be dropped and the consumer must
+        // observe DeadlineExceeded, even though frames kept flowing.
+        tokio::time::sleep(Duration::from_secs(15)).await;
+        assert!(
+            dropped.load(Ordering::SeqCst),
+            "inner body was not dropped at the deadline"
+        );
+        let status = next_frame(&mut watched).await.unwrap().unwrap_err();
+        assert_eq!(status.code(), tonic::Code::DeadlineExceeded);
+    }
+
+    /// The deadline is enforced even when the idle watchdog is disabled.
+    #[tokio::test(start_paused = true)]
+    async fn deadline_applies_without_idle_timeout() {
+        let (_tx, dropped, body) = test_body();
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(30);
+        let mut watched = WatchdogBody::spawn(body, None, Some(deadline));
+
+        let status = next_frame(&mut watched).await.unwrap().unwrap_err();
+        assert_eq!(status.code(), tonic::Code::DeadlineExceeded);
+        assert!(dropped.load(Ordering::SeqCst), "inner body was not dropped");
+    }
+
+    /// End-to-end through the service: the `grpc-timeout` header (what
+    /// `tonic::Request::set_timeout` produces) bounds the response body, and
+    /// a `BodyIdleTimeout::disabled()` extension does not interfere with it.
+    #[tokio::test(start_paused = true)]
+    async fn service_honors_grpc_timeout_header() {
+        let (_tx, dropped, body) = test_body();
+        let mut body = Some(body);
+        let mut service = WatchdogLayer::new(None).layer(tower::service_fn(
+            move |_request: http::Request<Body>| {
+                let body = body.take().unwrap();
+                async move { Ok::<_, Status>(http::Response::new(body)) }
+            },
+        ));
+
+        let mut request = http::Request::new(Body::empty());
+        request
+            .headers_mut()
+            .insert("grpc-timeout", "30S".parse().unwrap());
+        request.extensions_mut().insert(BodyIdleTimeout::disabled());
+
+        let response = service.call(request).await.unwrap();
+        let mut body = response.into_body();
+        let item = std::future::poll_fn(|cx| Pin::new(&mut body).poll_frame(cx)).await;
+        let status = item.unwrap().unwrap_err();
+        assert_eq!(status.code(), tonic::Code::DeadlineExceeded);
+        assert!(dropped.load(Ordering::SeqCst), "inner body was not dropped");
+    }
+
+    /// With neither an idle timeout nor a deadline, the response body must be
+    /// passed through without spawning a bridge.
+    #[tokio::test(start_paused = true)]
+    async fn service_passes_body_through_when_unbounded() {
+        let (tx, _dropped, body) = test_body();
+        let mut body = Some(body);
+        let mut service = WatchdogLayer::new(None).layer(tower::service_fn(
+            move |_request: http::Request<Body>| {
+                let body = body.take().unwrap();
+                async move { Ok::<_, Status>(http::Response::new(body)) }
+            },
+        ));
+
+        let response = service
+            .call(http::Request::new(Body::empty()))
+            .await
+            .unwrap();
+        let mut body = response.into_body();
+
+        // Nothing cuts the stream no matter how long it idles.
+        tokio::time::sleep(Duration::from_secs(3600)).await;
+        tx.send(Ok(data_frame(b"still here"))).unwrap();
+        let item = std::future::poll_fn(|cx| Pin::new(&mut body).poll_frame(cx)).await;
+        assert!(item.unwrap().is_ok());
+    }
+
+    #[test]
+    fn grpc_timeout_parsing() {
+        fn parse(value: &str) -> Option<Duration> {
+            let mut headers = http::HeaderMap::new();
+            headers.insert("grpc-timeout", value.parse().unwrap());
+            parse_grpc_timeout(&headers)
+        }
+
+        assert_eq!(parse("2H"), Some(Duration::from_secs(2 * 60 * 60)));
+        assert_eq!(parse("3M"), Some(Duration::from_secs(180)));
+        assert_eq!(parse("30S"), Some(Duration::from_secs(30)));
+        assert_eq!(parse("500m"), Some(Duration::from_millis(500)));
+        assert_eq!(parse("250u"), Some(Duration::from_micros(250)));
+        assert_eq!(parse("82n"), Some(Duration::from_nanos(82)));
+        assert_eq!(parse("99999999S"), Some(Duration::from_secs(99_999_999)));
+
+        // Malformed values are ignored rather than failing the call.
+        assert_eq!(parse(""), None);
+        assert_eq!(parse("S"), None);
+        assert_eq!(parse("30"), None);
+        assert_eq!(parse("30f"), None);
+        assert_eq!(parse("-30S"), None);
+        assert_eq!(parse("+30S"), None);
+        assert_eq!(parse("3.5S"), None);
+        assert_eq!(parse("123456789S"), None);
+        assert_eq!(
+            parse_grpc_timeout(&http::HeaderMap::new()),
+            None,
+            "absent header"
+        );
     }
 }
