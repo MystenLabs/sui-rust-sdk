@@ -76,13 +76,20 @@ const DEFAULT_HTTP2_CONNECTION_WINDOW_SIZE: u32 = 64 * 1024 * 1024;
 ///
 /// # Timeouts and deadlines
 ///
-/// No default bounds the total duration of a call; a per-call deadline can be
-/// set with [`tonic::Request::set_timeout`]. This attaches the standard
-/// `grpc-timeout` header, so a server that supports it enforces the deadline
-/// too, and the client enforces it locally end to end: tonic bounds the wait
-/// for response headers, and the client's watchdog (see
-/// [`with_body_idle_timeout`](Client::with_body_idle_timeout)) bounds the
-/// response body against the same deadline.
+/// No default bounds the total duration of a call. Two opt-in bounds are
+/// available:
+///
+/// - A per-call deadline set with [`tonic::Request::set_timeout`]. This
+///   attaches the standard `grpc-timeout` header, so a server that supports
+///   it enforces the deadline too, and the client enforces it locally end to
+///   end: tonic bounds the wait for response headers, and the client's
+///   watchdog (see [`with_body_idle_timeout`](Client::with_body_idle_timeout))
+///   bounds the response body against the same deadline.
+/// - A client-wide response-headers timeout set with
+///   [`with_response_headers_timeout`](Client::with_response_headers_timeout).
+///   This is enforced locally only and its timer stops once response headers
+///   arrive, so it bounds every unary call (whose headers are not sent until
+///   the handler completes) without cutting off long-lived streams.
 ///
 /// Independent of any deadline, the watchdog resets RPCs whose response body
 /// makes no progress for 30 seconds (configurable), so a call on a stalled
@@ -155,13 +162,13 @@ impl Client {
         let uri = uri
             .try_into()
             .map_err(Into::into)
-            .map_err(tonic::Status::from_error)?;
+            .map_err(status_from_error)?;
         let mut endpoint = tonic::transport::Endpoint::from(uri.clone());
         if uri.scheme() == Some(&http::uri::Scheme::HTTPS) {
             endpoint = endpoint
                 .tls_config(ClientTlsConfig::new().with_enabled_roots())
                 .map_err(Into::into)
-                .map_err(tonic::Status::from_error)?;
+                .map_err(status_from_error)?;
         }
 
         let endpoint = endpoint
@@ -218,6 +225,35 @@ impl Client {
     /// [`BodyIdleTimeout`] request extension.
     pub fn without_body_idle_timeout(mut self) -> Self {
         self.body_idle_timeout = None;
+        self
+    }
+
+    /// Set a timeout for the response-headers phase of every RPC made
+    /// through this client. Disabled by default.
+    ///
+    /// The timer covers a request from dispatch on the connection until
+    /// response headers arrive and is dropped once they do, so a client-wide
+    /// value does not cut off long-lived streaming responses. Because a
+    /// server does not send response headers for a unary call until the
+    /// handler completes, this effectively bounds the total duration of
+    /// unary calls; the body that follows is bounded by the idle-body
+    /// watchdog (see [`with_body_idle_timeout`](Self::with_body_idle_timeout))
+    /// and, when set, the per-call deadline. Connection establishment is
+    /// bounded separately by the connect timeout.
+    ///
+    /// This timeout is enforced locally only; it is not communicated to the
+    /// server. When a per-call deadline ([`tonic::Request::set_timeout`]) is
+    /// also set, the shorter of the two bounds the headers phase locally, so
+    /// a per-call deadline can tighten this bound but never extend it --
+    /// size the timeout for the slowest expected RPC. Expiry surfaces as
+    /// [`DeadlineExceeded`](tonic::Code::DeadlineExceeded).
+    ///
+    /// This rebuilds the underlying channel, so it must be called before the
+    /// client is used or cloned; earlier clones keep the previous
+    /// configuration.
+    pub fn with_response_headers_timeout(mut self, timeout: Duration) -> Self {
+        self.endpoint = self.endpoint.timeout(timeout);
+        self.channel = self.endpoint.connect_lazy();
         self
     }
 
@@ -359,7 +395,7 @@ impl Client {
         // lifetime-inference issues with async_trait and Box<dyn Error>.
         BoxService::new(
             ServiceBuilder::new()
-                .map_err(tonic::Status::from_error)
+                .map_err(status_from_error)
                 .service(layered),
         )
     }
@@ -453,4 +489,28 @@ impl Client {
                 }
             })
     }
+}
+
+/// Map a transport error to a [`tonic::Status`].
+///
+/// tonic surfaces an expired headers-phase timeout (the client's
+/// response-headers timeout, or a `grpc-timeout` deadline expiring before
+/// response headers arrive) as `Cancelled`. The gRPC code for an expired
+/// deadline is `DeadlineExceeded`, and the watchdog already uses it for
+/// body-phase expiry, so normalize before delegating to tonic's own mapping.
+fn status_from_error(error: BoxError) -> tonic::Status {
+    let mut source: Option<&(dyn std::error::Error + 'static)> = Some(error.as_ref());
+    while let Some(err) = source {
+        // An embedded `Status` takes precedence, as in tonic's own mapping.
+        if err.is::<tonic::Status>() {
+            break;
+        }
+        if err.is::<tonic::TimeoutExpired>() {
+            return tonic::Status::deadline_exceeded(
+                "timeout expired before response headers were received",
+            );
+        }
+        source = err.source();
+    }
+    tonic::Status::from_error(error)
 }
