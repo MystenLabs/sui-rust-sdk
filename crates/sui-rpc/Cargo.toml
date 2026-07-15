@@ -35,6 +35,11 @@ sui-crypto = { version = "0.3.0", path = "../sui-crypto", default-features = fal
 
 # dependencies for the protobuf and gRPC definitions
 bytes = "1.10"
+# Not used directly; this floors hyper at 1.10, whose h2 requirement
+# excludes the h2 versions with stream-cancellation flow-control
+# accounting bugs (hyperium/h2#893, #896, #897, #898, and #913) that can
+# permanently wedge a multiplexed gRPC connection.
+hyper = { version = "1.10", default-features = false }
 tonic = { version = "0.14.2", default-features = false, features = ["channel", "codegen", "tls-ring", "tls-webpki-roots", "zstd"] }
 tonic-prost = "0.14.2"
 prost = "0.14.1"
