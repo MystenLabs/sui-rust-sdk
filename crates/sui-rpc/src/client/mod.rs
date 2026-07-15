@@ -69,6 +69,24 @@ const DEFAULT_HTTP2_KEEP_ALIVE_TIMEOUT: Duration = Duration::from_secs(20);
 const DEFAULT_HTTP2_STREAM_WINDOW_SIZE: u32 = 2 * 1024 * 1024;
 const DEFAULT_HTTP2_CONNECTION_WINDOW_SIZE: u32 = 64 * 1024 * 1024;
 
+/// A gRPC client for the Sui fullnode RPC interface.
+///
+/// All RPCs made through a client and its clones are multiplexed over a
+/// single HTTP/2 connection.
+///
+/// # Timeouts and deadlines
+///
+/// No default bounds the total duration of a call; a per-call deadline can be
+/// set with [`tonic::Request::set_timeout`]. This attaches the standard
+/// `grpc-timeout` header, so a server that supports it enforces the deadline
+/// too, and the client enforces it locally end to end: tonic bounds the wait
+/// for response headers, and the client's watchdog (see
+/// [`with_body_idle_timeout`](Client::with_body_idle_timeout)) bounds the
+/// response body against the same deadline.
+///
+/// Independent of any deadline, the watchdog resets RPCs whose response body
+/// makes no progress for 30 seconds (configurable), so a call on a stalled
+/// connection fails with `DeadlineExceeded` instead of hanging forever.
 #[derive(Clone)]
 pub struct Client {
     uri: http::Uri,
