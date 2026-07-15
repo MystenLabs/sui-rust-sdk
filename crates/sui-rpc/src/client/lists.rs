@@ -37,12 +37,17 @@ impl Client {
                 request,                // request (page_token will be updated as we paginate)
                 client,                 // client for making requests
             ),
-            move |(mut iter, has_next_page, mut request, mut client)| async move {
+            move |(mut iter, mut has_next_page, mut request, mut client)| async move {
                 if let Some(item) = iter.next() {
                     return Some((Ok(item), (iter, has_next_page, request, client)));
                 }
 
-                if has_next_page {
+                // A page may be empty while still carrying a next_page_token
+                // (for example, a filtered scan that hit a server-side
+                // budget), so keep following the token until a page yields an
+                // item or pagination ends. Each response's token reflects
+                // server-side scan progress, so this terminates.
+                while has_next_page {
                     let new_request = tonic::Request::from_parts(
                         request.metadata().clone(),
                         request.extensions().clone(),
@@ -54,21 +59,24 @@ impl Client {
                             let response = response.into_inner();
                             let mut iter = response.objects.into_iter();
 
-                            let has_next_page = response.next_page_token.is_some();
+                            has_next_page = response.next_page_token.is_some();
                             request.get_mut().page_token = response.next_page_token;
 
-                            iter.next()
-                                .map(|item| (Ok(item), (iter, has_next_page, request, client)))
+                            if let Some(item) = iter.next() {
+                                return Some((Ok(item), (iter, has_next_page, request, client)));
+                            }
                         }
                         Err(e) => {
                             // Return error and terminate stream
                             request.get_mut().page_token = None;
-                            Some((Err(e), (Vec::new().into_iter(), false, request, client)))
+                            return Some((
+                                Err(e),
+                                (Vec::new().into_iter(), false, request, client),
+                            ));
                         }
                     }
-                } else {
-                    None
                 }
+                None
             },
         )
     }
@@ -98,12 +106,17 @@ impl Client {
                 request,                // request (page_token will be updated as we paginate)
                 client,                 // client for making requests
             ),
-            move |(mut iter, has_next_page, mut request, mut client)| async move {
+            move |(mut iter, mut has_next_page, mut request, mut client)| async move {
                 if let Some(item) = iter.next() {
                     return Some((Ok(item), (iter, has_next_page, request, client)));
                 }
 
-                if has_next_page {
+                // A page may be empty while still carrying a next_page_token
+                // (for example, a filtered scan that hit a server-side
+                // budget), so keep following the token until a page yields an
+                // item or pagination ends. Each response's token reflects
+                // server-side scan progress, so this terminates.
+                while has_next_page {
                     let new_request = tonic::Request::from_parts(
                         request.metadata().clone(),
                         request.extensions().clone(),
@@ -115,21 +128,24 @@ impl Client {
                             let response = response.into_inner();
                             let mut iter = response.dynamic_fields.into_iter();
 
-                            let has_next_page = response.next_page_token.is_some();
+                            has_next_page = response.next_page_token.is_some();
                             request.get_mut().page_token = response.next_page_token;
 
-                            iter.next()
-                                .map(|item| (Ok(item), (iter, has_next_page, request, client)))
+                            if let Some(item) = iter.next() {
+                                return Some((Ok(item), (iter, has_next_page, request, client)));
+                            }
                         }
                         Err(e) => {
                             // Return error and terminate stream
                             request.get_mut().page_token = None;
-                            Some((Err(e), (Vec::new().into_iter(), false, request, client)))
+                            return Some((
+                                Err(e),
+                                (Vec::new().into_iter(), false, request, client),
+                            ));
                         }
                     }
-                } else {
-                    None
                 }
+                None
             },
         )
     }
@@ -159,12 +175,17 @@ impl Client {
                 request,                // request (page_token will be updated as we paginate)
                 client,                 // client for making requests
             ),
-            move |(mut iter, has_next_page, mut request, mut client)| async move {
+            move |(mut iter, mut has_next_page, mut request, mut client)| async move {
                 if let Some(item) = iter.next() {
                     return Some((Ok(item), (iter, has_next_page, request, client)));
                 }
 
-                if has_next_page {
+                // A page may be empty while still carrying a next_page_token
+                // (for example, a filtered scan that hit a server-side
+                // budget), so keep following the token until a page yields an
+                // item or pagination ends. Each response's token reflects
+                // server-side scan progress, so this terminates.
+                while has_next_page {
                     let new_request = tonic::Request::from_parts(
                         request.metadata().clone(),
                         request.extensions().clone(),
@@ -176,21 +197,24 @@ impl Client {
                             let response = response.into_inner();
                             let mut iter = response.balances.into_iter();
 
-                            let has_next_page = response.next_page_token.is_some();
+                            has_next_page = response.next_page_token.is_some();
                             request.get_mut().page_token = response.next_page_token;
 
-                            iter.next()
-                                .map(|item| (Ok(item), (iter, has_next_page, request, client)))
+                            if let Some(item) = iter.next() {
+                                return Some((Ok(item), (iter, has_next_page, request, client)));
+                            }
                         }
                         Err(e) => {
                             // Return error and terminate stream
                             request.get_mut().page_token = None;
-                            Some((Err(e), (Vec::new().into_iter(), false, request, client)))
+                            return Some((
+                                Err(e),
+                                (Vec::new().into_iter(), false, request, client),
+                            ));
                         }
                     }
-                } else {
-                    None
                 }
+                None
             },
         )
     }
@@ -220,12 +244,17 @@ impl Client {
                 request,                // request (page_token will be updated as we paginate)
                 client,                 // client for making requests
             ),
-            move |(mut iter, has_next_page, mut request, mut client)| async move {
+            move |(mut iter, mut has_next_page, mut request, mut client)| async move {
                 if let Some(item) = iter.next() {
                     return Some((Ok(item), (iter, has_next_page, request, client)));
                 }
 
-                if has_next_page {
+                // A page may be empty while still carrying a next_page_token
+                // (for example, a filtered scan that hit a server-side
+                // budget), so keep following the token until a page yields an
+                // item or pagination ends. Each response's token reflects
+                // server-side scan progress, so this terminates.
+                while has_next_page {
                     let new_request = tonic::Request::from_parts(
                         request.metadata().clone(),
                         request.extensions().clone(),
@@ -241,21 +270,24 @@ impl Client {
                             let response = response.into_inner();
                             let mut iter = response.versions.into_iter();
 
-                            let has_next_page = response.next_page_token.is_some();
+                            has_next_page = response.next_page_token.is_some();
                             request.get_mut().page_token = response.next_page_token;
 
-                            iter.next()
-                                .map(|item| (Ok(item), (iter, has_next_page, request, client)))
+                            if let Some(item) = iter.next() {
+                                return Some((Ok(item), (iter, has_next_page, request, client)));
+                            }
                         }
                         Err(e) => {
                             // Return error and terminate stream
                             request.get_mut().page_token = None;
-                            Some((Err(e), (Vec::new().into_iter(), false, request, client)))
+                            return Some((
+                                Err(e),
+                                (Vec::new().into_iter(), false, request, client),
+                            ));
                         }
                     }
-                } else {
-                    None
                 }
+                None
             },
         )
     }
