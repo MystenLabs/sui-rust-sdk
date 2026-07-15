@@ -118,7 +118,13 @@ impl Client {
         // parked while another call is awaited pins its flow-control window
         // (checkpoints keep arriving whether or not anyone reads them) and,
         // past the idle timeout, gets reset by the client's body watchdog.
-        let scan = async {
+        //
+        // Both this future and the execution future below are boxed: their
+        // combined state (two full tonic call chains alive at once) would
+        // otherwise be inlined into this method's future, making it large
+        // enough to threaten a stack overflow in callers that hold it in
+        // deeply nested or spawned futures.
+        let mut scan = Box::pin(async {
             while let Some(response) = checkpoint_stream.try_next().await? {
                 let checkpoint = response.checkpoint();
 
@@ -131,13 +137,12 @@ impl Client {
             Err(tonic::Status::aborted(
                 "checkpoint stream ended unexpectedly",
             ))
-        };
-        tokio::pin!(scan);
+        });
 
         // Execute, then query the fullnode directly to see if it already has
         // the txn in a checkpoint. This is to handle the case where an
         // already executed transaction is sent multiple times.
-        let exec_and_check = async {
+        let mut exec_and_check = Box::pin(async {
             let response = self.execution_client().execute_transaction(request).await?;
 
             let already_checkpointed = match self
@@ -157,8 +162,7 @@ impl Client {
             };
 
             Ok::<_, tonic::Status>((response, already_checkpointed))
-        };
-        tokio::pin!(exec_and_check);
+        });
 
         // Drive execution and the scan together. The scan can complete first
         // (for example, when a duplicate of an already executed transaction
