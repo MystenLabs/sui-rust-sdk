@@ -9,8 +9,11 @@
 //! client's body watchdog — turning a successful execution into a spurious
 //! `CheckpointStreamError`.
 
+use std::sync::Arc;
+use std::sync::Mutex;
 use std::time::Duration;
 
+use prost_types::FieldMask;
 use proto::ledger_service_server::LedgerService;
 use proto::ledger_service_server::LedgerServiceServer;
 use proto::subscription_service_server::SubscriptionService;
@@ -31,9 +34,34 @@ struct MockServer {
     digest_at_seq: u64,
     /// How long `ExecuteTransaction` takes.
     exec_delay: Duration,
+    /// When set, `ExecuteTransaction` fails with this status after
+    /// `exec_delay`.
+    exec_error: Option<tonic::Status>,
     /// When set, `GetTransaction` reports the transaction as already
     /// included in this checkpoint (the duplicate-submission shortcut).
     shortcut_checkpoint: Option<u64>,
+    /// The 1-based `GetTransaction` call from which `shortcut_checkpoint`
+    /// applies; earlier calls report the transaction as not yet
+    /// checkpointed.
+    shortcut_from_lookup: usize,
+    /// Every `GetTransaction` request received, in order.
+    lookups: Arc<Mutex<Vec<proto::GetTransactionRequest>>>,
+}
+
+impl MockServer {
+    fn new(digest: String) -> Self {
+        Self {
+            digest,
+            // Far enough out that the subscription scan never resolves
+            // within a test's wait timeout.
+            digest_at_seq: 10_000,
+            exec_delay: Duration::ZERO,
+            exec_error: None,
+            shortcut_checkpoint: None,
+            shortcut_from_lookup: 1,
+            lookups: Arc::default(),
+        }
+    }
 }
 
 #[tonic::async_trait]
@@ -43,6 +71,9 @@ impl TransactionExecutionService for MockServer {
         _request: tonic::Request<proto::ExecuteTransactionRequest>,
     ) -> Result<tonic::Response<proto::ExecuteTransactionResponse>, tonic::Status> {
         tokio::time::sleep(self.exec_delay).await;
+        if let Some(status) = &self.exec_error {
+            return Err(status.clone());
+        }
         Ok(tonic::Response::new(
             proto::ExecuteTransactionResponse::default(),
         ))
@@ -53,10 +84,17 @@ impl TransactionExecutionService for MockServer {
 impl LedgerService for MockServer {
     async fn get_transaction(
         &self,
-        _request: tonic::Request<proto::GetTransactionRequest>,
+        request: tonic::Request<proto::GetTransactionRequest>,
     ) -> Result<tonic::Response<proto::GetTransactionResponse>, tonic::Status> {
+        let lookup_count = {
+            let mut lookups = self.lookups.lock().unwrap();
+            lookups.push(request.into_inner());
+            lookups.len()
+        };
         let mut response = proto::GetTransactionResponse::default();
-        if let Some(checkpoint) = self.shortcut_checkpoint {
+        if let Some(checkpoint) = self.shortcut_checkpoint
+            && lookup_count >= self.shortcut_from_lookup
+        {
             let mut transaction = proto::ExecutedTransaction::default();
             transaction.digest = Some(self.digest.clone());
             transaction.checkpoint = Some(checkpoint);
@@ -150,10 +188,9 @@ async fn subscription_survives_slow_execution() {
     let (transaction, digest) = test_transaction();
     let digest_at_seq = 50;
     let addr = spawn_mock_server(MockServer {
-        digest,
         digest_at_seq,
         exec_delay: Duration::from_secs(4),
-        shortcut_checkpoint: None,
+        ..MockServer::new(digest)
     })
     .await;
 
@@ -178,10 +215,8 @@ async fn subscription_survives_slow_execution() {
 async fn already_checkpointed_transaction_short_circuits() {
     let (transaction, digest) = test_transaction();
     let addr = spawn_mock_server(MockServer {
-        digest,
-        digest_at_seq: 10_000,
-        exec_delay: Duration::ZERO,
         shortcut_checkpoint: Some(7),
+        ..MockServer::new(digest)
     })
     .await;
 
@@ -193,6 +228,106 @@ async fn already_checkpointed_transaction_short_circuits() {
         .await
         .expect("execution with an already checkpointed transaction");
     assert_eq!(response.get_ref().transaction().checkpoint(), 7);
+}
+
+/// A resubmission of a transaction that is already in a checkpoint is
+/// answered by the ledger probe that races execution: the call returns long
+/// before the execution RPC completes, and the lookup carries the caller's
+/// read mask plus the fields this method always populates.
+#[tokio::test(flavor = "multi_thread")]
+async fn committed_duplicate_returns_before_execution_finishes() {
+    let (transaction, digest) = test_transaction();
+    let lookups = Arc::new(Mutex::new(Vec::new()));
+    let addr = spawn_mock_server(MockServer {
+        exec_delay: Duration::from_secs(60),
+        shortcut_checkpoint: Some(7),
+        lookups: lookups.clone(),
+        ..MockServer::new(digest.clone())
+    })
+    .await;
+
+    let mut client = Client::new(format!("http://{addr}")).expect("client");
+
+    let request = proto::ExecuteTransactionRequest::default()
+        .with_transaction(transaction)
+        .with_read_mask(FieldMask {
+            paths: vec!["effects.status".to_owned()],
+        });
+    let start = std::time::Instant::now();
+    let response = client
+        .execute_transaction_and_wait_for_checkpoint(request, Duration::from_secs(5))
+        .await
+        .expect("committed duplicate resolved from the ledger probe");
+    assert!(
+        start.elapsed() < Duration::from_secs(30),
+        "the probe must resolve the call without waiting for execution"
+    );
+    assert_eq!(response.get_ref().transaction().checkpoint(), 7);
+    assert_eq!(response.get_ref().transaction().digest(), digest);
+
+    let probe_mask = lookups.lock().unwrap()[0]
+        .read_mask
+        .clone()
+        .expect("probe read mask");
+    for path in ["effects.status", "digest", "checkpoint", "timestamp"] {
+        assert!(
+            probe_mask.paths.iter().any(|p| p == path),
+            "probe read mask is missing `{path}`: {probe_mask:?}"
+        );
+    }
+}
+
+/// An execution error for a transaction that nonetheless committed (for
+/// example a resubmission racing the original submission) is downgraded to
+/// success by a final ledger lookup. The probe still sees the transaction as
+/// not checkpointed here, so only the post-error lookup can resolve the call.
+#[tokio::test(flavor = "multi_thread")]
+async fn execution_error_with_committed_transaction_succeeds() {
+    let (transaction, digest) = test_transaction();
+    let addr = spawn_mock_server(MockServer {
+        exec_delay: Duration::from_millis(500),
+        exec_error: Some(tonic::Status::aborted("transaction already being executed")),
+        shortcut_checkpoint: Some(9),
+        shortcut_from_lookup: 2,
+        ..MockServer::new(digest.clone())
+    })
+    .await;
+
+    let mut client = Client::new(format!("http://{addr}")).expect("client");
+
+    let request = proto::ExecuteTransactionRequest::default().with_transaction(transaction);
+    let response = client
+        .execute_transaction_and_wait_for_checkpoint(request, Duration::from_secs(5))
+        .await
+        .expect("execution error downgraded for a committed transaction");
+    assert_eq!(response.get_ref().transaction().checkpoint(), 9);
+    assert_eq!(response.get_ref().transaction().digest(), digest);
+}
+
+/// An execution error for a transaction the ledger has no checkpoint for
+/// still surfaces as `RpcError`.
+#[tokio::test(flavor = "multi_thread")]
+async fn execution_error_without_commit_surfaces() {
+    let (transaction, digest) = test_transaction();
+    let addr = spawn_mock_server(MockServer {
+        exec_error: Some(tonic::Status::internal("boom")),
+        ..MockServer::new(digest)
+    })
+    .await;
+
+    let mut client = Client::new(format!("http://{addr}")).expect("client");
+
+    let request = proto::ExecuteTransactionRequest::default().with_transaction(transaction);
+    let err = client
+        .execute_transaction_and_wait_for_checkpoint(request, Duration::from_secs(5))
+        .await
+        .expect_err("execution error with no committed transaction");
+    match err {
+        sui_rpc::client::ExecuteAndWaitError::RpcError(status) => {
+            assert_eq!(status.code(), tonic::Code::Internal);
+        }
+        other => panic!("expected RpcError, got {other:?}"),
+    }
 }
 
 /// A request without a transaction fails fast, before any network work.
