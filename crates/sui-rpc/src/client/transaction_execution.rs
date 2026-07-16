@@ -6,6 +6,7 @@ use crate::proto::sui::rpc::v2::ExecuteTransactionResponse;
 use crate::proto::sui::rpc::v2::ExecutionError;
 use crate::proto::sui::rpc::v2::GetEpochRequest;
 use crate::proto::sui::rpc::v2::GetTransactionRequest;
+use crate::proto::sui::rpc::v2::GetTransactionResponse;
 use crate::proto::sui::rpc::v2::SubscribeCheckpointsRequest;
 use futures::TryStreamExt;
 use prost_types::FieldMask;
@@ -80,6 +81,19 @@ impl Client {
     /// A `Result` containing the response if the transaction was executed and checkpoint confirmed,
     /// or an error that may still include the response if execution succeeded but checkpoint
     /// confirmation failed.
+    ///
+    /// # Duplicate submissions
+    /// Submitting a transaction that has already been executed is handled
+    /// gracefully. While the execution RPC is in flight the ledger is probed
+    /// for the transaction, and a transaction that is already in a checkpoint
+    /// is returned without waiting for execution to finish. Likewise, if
+    /// execution fails but the ledger shows the transaction in a checkpoint
+    /// (for example when a resubmission races the original submission), the
+    /// execution error is discarded and the committed transaction is
+    /// returned. In both cases the response is assembled from
+    /// `GetTransaction` using the request's read mask, so it carries the same
+    /// fields an execution response would, with `digest`, `checkpoint`, and
+    /// `timestamp` always populated.
     pub async fn execute_transaction_and_wait_for_checkpoint(
         &mut self,
         request: impl tonic::IntoRequest<ExecuteTransactionRequest>,
@@ -95,6 +109,27 @@ impl Client {
         let executed_txn_digest = match sui_sdk_types::Transaction::try_from(transaction) {
             Ok(tx) => tx.digest().to_string(),
             Err(e) => return Err(ExecuteAndWaitError::ProtoConversionError(e)),
+        };
+
+        // Read mask for answering from GetTransaction when execution cannot
+        // provide the response: a duplicate submission that already
+        // committed, or an execution error after the transaction landed.
+        // Both RPCs' masks select fields of `ExecutedTransaction`, so the
+        // caller's mask passes through unchanged; when the caller didn't set
+        // one, mirror ExecuteTransaction's documented default. `digest`,
+        // `checkpoint`, and `timestamp` are always included since this
+        // method's contract populates them.
+        let lookup_mask = {
+            let caller_paths = match &request.get_ref().read_mask {
+                Some(mask) => mask.paths.clone(),
+                None => vec!["effects.status".to_owned()],
+            };
+            FieldMask::from_paths(caller_paths.iter().map(String::as_str).chain([
+                "digest",
+                "checkpoint",
+                "timestamp",
+            ]))
+            .normalize()
         };
 
         // Subscribe to checkpoint stream before execution to avoid missing the transaction.
@@ -139,14 +174,20 @@ impl Client {
             ))
         });
 
+        // The concurrent futures below each need a service client, and a
+        // single `&mut self` cannot back all of them at once, so give each
+        // its own client over the shared channel.
+        let mut execution_client = self.execution_client();
+        let mut post_exec_lookup_client = self.ledger_client();
+        let mut probe_client = self.ledger_client();
+
         // Execute, then query the fullnode directly to see if it already has
         // the txn in a checkpoint. This is to handle the case where an
         // already executed transaction is sent multiple times.
         let mut exec_and_check = Box::pin(async {
-            let response = self.execution_client().execute_transaction(request).await?;
+            let response = execution_client.execute_transaction(request).await?;
 
-            let already_checkpointed = match self
-                .ledger_client()
+            let already_checkpointed = match post_exec_lookup_client
                 .get_transaction(
                     GetTransactionRequest::default()
                         .with_digest(&executed_txn_digest)
@@ -164,22 +205,66 @@ impl Client {
             Ok::<_, tonic::Status>((response, already_checkpointed))
         });
 
-        // Drive execution and the scan together. The scan can complete first
-        // (for example, when a duplicate of an already executed transaction
-        // lands in a checkpoint mid-execution), so remember its outcome; the
-        // guard keeps a completed scan from being polled again.
+        // Probe the ledger while execution is in flight: a resubmission of a
+        // transaction that already committed can be answered from the ledger
+        // without waiting for, or succeeding at, execution.
+        let mut probe = Box::pin(async {
+            probe_client
+                .get_transaction(
+                    GetTransactionRequest::default()
+                        .with_digest(&executed_txn_digest)
+                        .with_read_mask(lookup_mask.clone()),
+                )
+                .await
+        });
+
+        // Drive execution, the scan, and the probe together. The scan can
+        // complete first (for example, when a duplicate of an already
+        // executed transaction lands in a checkpoint mid-execution), so
+        // remember its outcome; the guards keep completed futures from being
+        // polled again. A probe that finds the transaction in a checkpoint
+        // resolves the call on the spot; any other probe outcome (not found,
+        // not yet checkpointed, or an RPC error) means execution has to
+        // provide the answer.
         let mut scan_result = None;
-        let (mut response, already_checkpointed) = loop {
+        let mut probe_done = false;
+        let exec_result = loop {
             tokio::select! {
-                exec = &mut exec_and_check => {
-                    match exec {
-                        Ok(ok) => break ok,
-                        Err(e) => return Err(ExecuteAndWaitError::RpcError(e)),
-                    }
-                }
+                exec = &mut exec_and_check => break exec,
                 result = &mut scan, if scan_result.is_none() => {
                     scan_result = Some(result);
                 }
+                result = &mut probe, if !probe_done => {
+                    probe_done = true;
+                    if let Ok(lookup) = result
+                        && lookup.get_ref().transaction().checkpoint_opt().is_some()
+                    {
+                        return Ok(lookup_into_execute_response(lookup));
+                    }
+                }
+            }
+        };
+
+        let (mut response, already_checkpointed) = match exec_result {
+            Ok(ok) => ok,
+            Err(error) => {
+                // Execution can fail for a transaction that nonetheless
+                // committed, for example when a resubmission races the
+                // original submission. Consult the ledger before surfacing
+                // the error.
+                drop(probe);
+                if let Ok(lookup) = probe_client
+                    .get_transaction(
+                        GetTransactionRequest::default()
+                            .with_digest(&executed_txn_digest)
+                            .with_read_mask(lookup_mask),
+                    )
+                    .await
+                    && lookup.get_ref().transaction().checkpoint_opt().is_some()
+                {
+                    return Ok(lookup_into_execute_response(lookup));
+                }
+                return Err(ExecuteAndWaitError::RpcError(error));
             }
         };
 
@@ -230,6 +315,16 @@ impl Client {
         let response = self.ledger_client().get_epoch(request).await?.into_inner();
         Ok(response.epoch().reference_gas_price())
     }
+}
+
+/// Builds the response for a transaction answered from the ledger instead of
+/// from execution.
+fn lookup_into_execute_response(
+    response: Response<GetTransactionResponse>,
+) -> Response<ExecuteTransactionResponse> {
+    Response::new(ExecuteTransactionResponse {
+        transaction: response.into_inner().transaction,
+    })
 }
 
 impl fmt::Display for ExecutionError {
