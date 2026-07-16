@@ -1,3 +1,21 @@
+# [0.3.1] - 2026-07-16
+
+## Added
+- [#254] `from_suiprivkey` and `to_suiprivkey` on `SimpleKeypair`,
+  `Ed25519PrivateKey`, `Secp256k1PrivateKey`, and `Secp256r1PrivateKey` for
+  the Sui CLI's `suiprivkey` Bech32 key format, behind the new `bech32`
+  feature
+- [#281] `from_base64` and `to_base64` on the same key types for the legacy
+  Base64 keystore key format (available whenever the corresponding key scheme
+  feature is enabled), plus `SimpleVerifiyingKey::derive_address`
+- [#282] zklogin v2 circuit support: `ZkLoginCircuitMode` and the
+  `circuit_mode`/`set_circuit_mode` accessors on `ZkloginVerifier`; the
+  default mode remains v1-only
+
+[#254]: https://github.com/MystenLabs/sui-rust-sdk/pull/254
+[#281]: https://github.com/MystenLabs/sui-rust-sdk/pull/281
+[#282]: https://github.com/MystenLabs/sui-rust-sdk/pull/282
+
 # [0.3.0] - 2026-03-23
 
 ## Fixed
@@ -80,6 +98,7 @@
 
 Initial release
 
+[0.3.1]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-crypto-0.3.1
 [0.3.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-crypto-0.3.0
 [0.2.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-crypto-0.2.0
 [0.1.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-crypto-0.1.0

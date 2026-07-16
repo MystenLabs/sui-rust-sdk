@@ -1,3 +1,90 @@
+# [0.3.2] - 2026-07-16
+
+## Added
+- [`bcfcd91e`] [`52f51fd0`] [`befe3f54`] add a Blake2b256 Merkle tree in a
+  new `merkle` module, with `MerkleTree`, `MerkleProof`, and
+  `MerkleNonInclusionProof` for inclusion and sorted-leaf non-inclusion
+  proofs, under the `unstable` feature
+- [`6d91aa80`] [`6674ad28`] [`32a2403f`] [`acfe8246`] add OCS proof verifier
+  types in a new `proof` module (`OcsInclusionProof`, `OcsNonInclusionProof`,
+  and `OcsProof`) for authenticating an object's presence in, or an object
+  id's absence from, a checkpoint's modified-objects Merkle tree, under the
+  `unstable` feature
+- [`7588793e`] [`7f44d18e`] [`1aac6205`] [`9c2ba58d`] add authenticated
+  event stream primitives to the `framework` module under the `unstable`
+  feature: `EventCommitment`, `EventStreamHead`, `build_event_merkle_root`,
+  `apply_stream_updates`, and `derive_event_stream_head_object_id`
+- [`7588793e`] add `Event::digest` computing the framework's unsalted
+  per-event digest (`hash` and `serde` features)
+- [`55e4bde0`] add `transaction_digest`, `events_digest`, and an
+  `object_changes` iterator on `TransactionEffects`
+- [`779582ff`] derive `PartialOrd` and `Ord` for `ObjectReference`
+- [`9d9524ea`] expose `U256` as a public newtype matching Move's `u256`
+  primitive, along with `U256ParseError`
+- [#282] add `ZkLoginClaim::decoded_extended_claim` (`serde` feature)
+
+## Changed
+- [#252] document `MultisigCommittee::is_valid` as a caller obligation for
+  consumers that inspect a deserialized committee without verifying
+  signatures
+
+## Fixed
+- [#246] reject truncated `MoveStruct` contents on deserialize instead of
+  panicking on a later `object_id()` call
+- [#248] fix panic when parsing wrong-length base64 strings into key and
+  signature types
+- [#249] reject trailing elements when deserializing
+  `SignedTransactionWithIntentMessage` from formats without a size hint
+- [#250] include `legacy_bitmap` in `MultisigAggregatedSignature` equality
+  so `==` implies BCS byte equality
+- [#251] reject non-canonical BCS encodings of `MoveStructType`
+- [#253] add depth and node-count bounds to `TypeTag` and `StructTag`
+  parsing, enforced uniformly for both string and BCS deserialization
+- [`0014bef5`] clamp `Vec<TypeTag>` preallocation during BCS
+  deserialization by the node-count budget to prevent huge allocation
+  requests from tiny payloads
+- [`f21c30e1`] reject trailing bytes when decoding `Bitmap` from BCS
+- [`ed2256a0`] reject multisig JSON where `bitmap` and `legacy_bitmap`
+  encode different signer sets
+- [`13e7a698`] reject multisig JSON combining a legacy bitmap with zklogin
+  or passkey members, which would panic on the first `to_bytes()` call
+- [`718dbc04`] reject non-canonical `Bn254FieldElement` encodings
+- [`2d718b55`] avoid a `u8` overflow on long claim values in the zklogin
+  base64 helper
+- [#257] reject `Address::from_hex("0x")` as empty input instead of
+  silently parsing it as the zero address
+
+[#246]: https://github.com/MystenLabs/sui-rust-sdk/pull/246
+[#248]: https://github.com/MystenLabs/sui-rust-sdk/pull/248
+[#249]: https://github.com/MystenLabs/sui-rust-sdk/pull/249
+[#250]: https://github.com/MystenLabs/sui-rust-sdk/pull/250
+[#251]: https://github.com/MystenLabs/sui-rust-sdk/pull/251
+[#252]: https://github.com/MystenLabs/sui-rust-sdk/pull/252
+[#253]: https://github.com/MystenLabs/sui-rust-sdk/pull/253
+[#257]: https://github.com/MystenLabs/sui-rust-sdk/pull/257
+[#282]: https://github.com/MystenLabs/sui-rust-sdk/pull/282
+
+[`bcfcd91e`]: https://github.com/mystenlabs/sui-rust-sdk/commit/bcfcd91e
+[`52f51fd0`]: https://github.com/mystenlabs/sui-rust-sdk/commit/52f51fd0
+[`befe3f54`]: https://github.com/mystenlabs/sui-rust-sdk/commit/befe3f54
+[`6d91aa80`]: https://github.com/mystenlabs/sui-rust-sdk/commit/6d91aa80
+[`6674ad28`]: https://github.com/mystenlabs/sui-rust-sdk/commit/6674ad28
+[`32a2403f`]: https://github.com/mystenlabs/sui-rust-sdk/commit/32a2403f
+[`acfe8246`]: https://github.com/mystenlabs/sui-rust-sdk/commit/acfe8246
+[`7588793e`]: https://github.com/mystenlabs/sui-rust-sdk/commit/7588793e
+[`7f44d18e`]: https://github.com/mystenlabs/sui-rust-sdk/commit/7f44d18e
+[`1aac6205`]: https://github.com/mystenlabs/sui-rust-sdk/commit/1aac6205
+[`9c2ba58d`]: https://github.com/mystenlabs/sui-rust-sdk/commit/9c2ba58d
+[`55e4bde0`]: https://github.com/mystenlabs/sui-rust-sdk/commit/55e4bde0
+[`779582ff`]: https://github.com/mystenlabs/sui-rust-sdk/commit/779582ff
+[`9d9524ea`]: https://github.com/mystenlabs/sui-rust-sdk/commit/9d9524ea
+[`0014bef5`]: https://github.com/mystenlabs/sui-rust-sdk/commit/0014bef5
+[`f21c30e1`]: https://github.com/mystenlabs/sui-rust-sdk/commit/f21c30e1
+[`ed2256a0`]: https://github.com/mystenlabs/sui-rust-sdk/commit/ed2256a0
+[`13e7a698`]: https://github.com/mystenlabs/sui-rust-sdk/commit/13e7a698
+[`718dbc04`]: https://github.com/mystenlabs/sui-rust-sdk/commit/718dbc04
+[`2d718b55`]: https://github.com/mystenlabs/sui-rust-sdk/commit/2d718b55
+
 # [0.3.1] - 2026-04-13
 
 ## Added
@@ -213,6 +300,7 @@
 
 Initial release
 
+[0.3.2]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.3.2
 [0.3.1]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.3.1
 [0.3.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.3.0
 [0.2.2]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.2.2

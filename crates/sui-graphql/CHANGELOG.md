@@ -1,3 +1,17 @@
+# [0.3.1] - 2026-07-16
+
+## Added
+- [#244] custom HTTP headers on `Client` via `with_headers` and
+  `extend_headers`, with `bearer_auth` and `basic_auth` helpers; re-exports
+  `reqwest::header` so callers do not need a direct reqwest dependency
+
+## Changed
+- [#273] every request now sends a `client-sdk-type: rust` header for server
+  metrics, overriding any caller-supplied value for that header
+
+[#244]: https://github.com/MystenLabs/sui-rust-sdk/pull/244
+[#273]: https://github.com/MystenLabs/sui-rust-sdk/pull/273
+
 # [0.3.0] - 2026-03-23
 
 Initial published release.
@@ -35,4 +49,5 @@ Initial published release.
 [#222]: https://github.com/MystenLabs/sui-rust-sdk/pull/222
 [#224]: https://github.com/MystenLabs/sui-rust-sdk/pull/224
 
+[0.3.1]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-graphql-0.3.1
 [0.3.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-graphql-0.3.0

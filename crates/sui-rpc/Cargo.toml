@@ -1,6 +1,6 @@
 [package]
 name = "sui-rpc"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["Brandon Williams <brandon@mystenlabs.com>"]
 repository = "https://github.com/mystenlabs/sui-rust-sdk/"
 license = "Apache-2.0"
@@ -30,8 +30,8 @@ unstable = ["sui-sdk-types/unstable", "dep:sui-crypto"]
 [dependencies]
 bcs = "0.1.6"
 serde = { version = "1.0.228" }
-sui-sdk-types = { version = "0.3.0", path = "../sui-sdk-types", default-features = false, features = ["serde", "hash"] }
-sui-crypto = { version = "0.3.0", path = "../sui-crypto", default-features = false, features = ["bls12381"], optional = true }
+sui-sdk-types = { version = "0.3.2", path = "../sui-sdk-types", default-features = false, features = ["serde", "hash"] }
+sui-crypto = { version = "0.3.1", path = "../sui-crypto", default-features = false, features = ["bls12381"], optional = true }
 
 # dependencies for the protobuf and gRPC definitions
 bytes = "1.10"
@@ -60,7 +60,7 @@ rand = "0.8"
 paste = "1.0.15"
 proptest = { version = "1.8.0", default-features = false, features = ["std"] }
 test-strategy = { version = "0.4" }
-sui-sdk-types = { version = "0.3.0", path = "../sui-sdk-types", default-features = false, features = ["proptest", "serde", "hash"] }
+sui-sdk-types = { version = "0.3.2", path = "../sui-sdk-types", default-features = false, features = ["proptest", "serde", "hash"] }
 serde_json = { version = "1.0.145" }
 tokio = { version = "1.40", features = ["rt", "rt-multi-thread", "macros", "net", "test-util"] }
 # The starvation integration tests host a mock gRPC server built from this
