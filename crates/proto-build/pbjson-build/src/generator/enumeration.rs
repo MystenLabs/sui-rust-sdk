@@ -90,7 +90,7 @@ fn generate_deserialize(
             type Value = #rust_type;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                write!(formatter, "expected one of: {:?}", &FIELDS)
+                write!(formatter, "expected one of: {:?}", FIELDS)
             }
 
             fn visit_i64<E>(self, v: i64) -> std::result::Result<Self::Value, E>

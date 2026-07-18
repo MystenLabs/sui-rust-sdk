@@ -153,11 +153,7 @@ impl FieldMaskTree {
 
         let mut node = &self.root;
         for component in path.split(FIELD_SEPARATOR) {
-            if let Some(child) = node.children.get(component) {
-                node = child;
-            } else {
-                return None;
-            }
+            node = node.children.get(component)?;
         }
 
         if std::ptr::eq(node, &self.root) {
