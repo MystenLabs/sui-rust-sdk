@@ -52,7 +52,7 @@ impl<'de> serde::Deserialize<'de> for GetCheckpointObjectProofRequest {
                         &self,
                         formatter: &mut std::fmt::Formatter<'_>,
                     ) -> std::fmt::Result {
-                        write!(formatter, "expected one of: {:?}", & FIELDS)
+                        write!(formatter, "expected one of: {:?}", FIELDS)
                     }
                     #[allow(unused_variables)]
                     fn visit_str<E>(
@@ -202,7 +202,7 @@ impl<'de> serde::Deserialize<'de> for GetCheckpointObjectProofResponse {
                         &self,
                         formatter: &mut std::fmt::Formatter<'_>,
                     ) -> std::fmt::Result {
-                        write!(formatter, "expected one of: {:?}", & FIELDS)
+                        write!(formatter, "expected one of: {:?}", FIELDS)
                     }
                     #[allow(unused_variables)]
                     fn visit_str<E>(
@@ -355,7 +355,7 @@ impl<'de> serde::Deserialize<'de> for MerkleNeighbourLeaf {
                         &self,
                         formatter: &mut std::fmt::Formatter<'_>,
                     ) -> std::fmt::Result {
-                        write!(formatter, "expected one of: {:?}", & FIELDS)
+                        write!(formatter, "expected one of: {:?}", FIELDS)
                     }
                     #[allow(unused_variables)]
                     fn visit_str<E>(
@@ -492,7 +492,7 @@ impl<'de> serde::Deserialize<'de> for MerkleNode {
                         &self,
                         formatter: &mut std::fmt::Formatter<'_>,
                     ) -> std::fmt::Result {
-                        write!(formatter, "expected one of: {:?}", & FIELDS)
+                        write!(formatter, "expected one of: {:?}", FIELDS)
                     }
                     #[allow(unused_variables)]
                     fn visit_str<E>(
@@ -632,7 +632,7 @@ impl<'de> serde::Deserialize<'de> for MerkleNonInclusionProof {
                         &self,
                         formatter: &mut std::fmt::Formatter<'_>,
                     ) -> std::fmt::Result {
-                        write!(formatter, "expected one of: {:?}", & FIELDS)
+                        write!(formatter, "expected one of: {:?}", FIELDS)
                     }
                     #[allow(unused_variables)]
                     fn visit_str<E>(
@@ -763,7 +763,7 @@ impl<'de> serde::Deserialize<'de> for MerkleProof {
                         &self,
                         formatter: &mut std::fmt::Formatter<'_>,
                     ) -> std::fmt::Result {
-                        write!(formatter, "expected one of: {:?}", & FIELDS)
+                        write!(formatter, "expected one of: {:?}", FIELDS)
                     }
                     #[allow(unused_variables)]
                     fn visit_str<E>(
@@ -921,7 +921,7 @@ impl<'de> serde::Deserialize<'de> for OcsInclusionProof {
                         &self,
                         formatter: &mut std::fmt::Formatter<'_>,
                     ) -> std::fmt::Result {
-                        write!(formatter, "expected one of: {:?}", & FIELDS)
+                        write!(formatter, "expected one of: {:?}", FIELDS)
                     }
                     #[allow(unused_variables)]
                     fn visit_str<E>(
@@ -1102,7 +1102,7 @@ impl<'de> serde::Deserialize<'de> for OcsNonInclusionProof {
                         &self,
                         formatter: &mut std::fmt::Formatter<'_>,
                     ) -> std::fmt::Result {
-                        write!(formatter, "expected one of: {:?}", & FIELDS)
+                        write!(formatter, "expected one of: {:?}", FIELDS)
                     }
                     #[allow(unused_variables)]
                     fn visit_str<E>(

@@ -312,6 +312,9 @@ pub enum EndOfEpochTransactionKind {
 
     /// Contains the end-of-epoch-computed storage cost for accumulator objects.
     WriteAccumulatorStorageCost { storage_cost: u64 },
+
+    /// Create and initialize the forwarding address registry object
+    ForwardingAddressRegistryCreate,
 }
 
 /// Set of Execution Time Observations from the committee.
