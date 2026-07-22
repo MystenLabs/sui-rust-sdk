@@ -39,8 +39,8 @@ impl std::error::Error for VerifySignatureError {
 
 impl Client {
     /// Verifies a personal message signature using the fullnode's
-    /// `SignatureVerificationService`. Supports all signature schemes. 
-    /// For zklogin signatures the fullnode validates against the current 
+    /// `SignatureVerificationService`. Supports all signature schemes.
+    /// For zklogin signatures the fullnode validates against the current
     /// epoch and the set of valid JWKs stored onchain.
     pub async fn verify_personal_message_signature(
         &mut self,
@@ -52,10 +52,12 @@ impl Client {
             Bcs::serialize(&message.0).map_err(VerifySignatureError::SerializationError)?;
         message_bcs.name = Some("PersonalMessage".to_owned());
 
-        let mut request = VerifySignatureRequest::default();
-        request.message = Some(message_bcs);
-        request.signature = Some(signature.clone().into());
-        request.address = address.map(|address| address.to_string());
+        let request = VerifySignatureRequest {
+            message: Some(message_bcs),
+            signature: Some(signature.clone().into()),
+            address: address.map(|address| address.to_string()),
+            ..Default::default()
+        };
 
         let response = self
             .signature_verification_client()
