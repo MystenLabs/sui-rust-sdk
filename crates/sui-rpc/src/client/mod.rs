@@ -27,6 +27,9 @@ pub use staking_rewards::DelegatedStake;
 mod coin_selection;
 mod lists;
 
+mod signature_verification;
+pub use signature_verification::VerifySignatureError;
+
 mod transaction_execution;
 pub use transaction_execution::ExecuteAndWaitError;
 
