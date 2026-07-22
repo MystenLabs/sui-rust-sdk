@@ -771,6 +771,93 @@ mod _accessor_impls {
             self
         }
     }
+    impl super::BatchGetCheckpointsRequest {
+        pub const fn const_default() -> Self {
+            Self {
+                requests: Vec::new(),
+                read_mask: None,
+            }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::BatchGetCheckpointsRequest = super::BatchGetCheckpointsRequest::const_default();
+            &DEFAULT
+        }
+        ///Returns the value of `requests`, or the default value if `requests` is unset.
+        pub fn requests(&self) -> &[super::GetCheckpointRequest] {
+            &self.requests
+        }
+        ///Returns a mutable reference to `requests`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn requests_mut(&mut self) -> &mut Vec<super::GetCheckpointRequest> {
+            &mut self.requests
+        }
+        ///Sets `requests` with the provided value.
+        pub fn set_requests(&mut self, field: Vec<super::GetCheckpointRequest>) {
+            self.requests = field;
+        }
+        ///Sets `requests` with the provided value.
+        pub fn with_requests(mut self, field: Vec<super::GetCheckpointRequest>) -> Self {
+            self.set_requests(field);
+            self
+        }
+        ///If `read_mask` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn read_mask_opt_mut(&mut self) -> Option<&mut ::prost_types::FieldMask> {
+            self.read_mask.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `read_mask`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn read_mask_mut(&mut self) -> &mut ::prost_types::FieldMask {
+            self.read_mask.get_or_insert_default()
+        }
+        ///If `read_mask` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn read_mask_opt(&self) -> Option<&::prost_types::FieldMask> {
+            self.read_mask.as_ref().map(|field| field as _)
+        }
+        ///Sets `read_mask` with the provided value.
+        pub fn set_read_mask<T: Into<::prost_types::FieldMask>>(&mut self, field: T) {
+            self.read_mask = Some(field.into().into());
+        }
+        ///Sets `read_mask` with the provided value.
+        pub fn with_read_mask<T: Into<::prost_types::FieldMask>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_read_mask(field.into());
+            self
+        }
+    }
+    impl super::BatchGetCheckpointsResponse {
+        pub const fn const_default() -> Self {
+            Self { checkpoints: Vec::new() }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::BatchGetCheckpointsResponse = super::BatchGetCheckpointsResponse::const_default();
+            &DEFAULT
+        }
+        ///Returns the value of `checkpoints`, or the default value if `checkpoints` is unset.
+        pub fn checkpoints(&self) -> &[super::GetCheckpointResult] {
+            &self.checkpoints
+        }
+        ///Returns a mutable reference to `checkpoints`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn checkpoints_mut(&mut self) -> &mut Vec<super::GetCheckpointResult> {
+            &mut self.checkpoints
+        }
+        ///Sets `checkpoints` with the provided value.
+        pub fn set_checkpoints(&mut self, field: Vec<super::GetCheckpointResult>) {
+            self.checkpoints = field;
+        }
+        ///Sets `checkpoints` with the provided value.
+        pub fn with_checkpoints(
+            mut self,
+            field: Vec<super::GetCheckpointResult>,
+        ) -> Self {
+            self.set_checkpoints(field);
+            self
+        }
+    }
     impl super::BatchGetObjectsRequest {
         pub const fn const_default() -> Self {
             Self {
@@ -7925,6 +8012,140 @@ mod _accessor_impls {
         ///Sets `checkpoint` with the provided value.
         pub fn with_checkpoint<T: Into<super::Checkpoint>>(mut self, field: T) -> Self {
             self.set_checkpoint(field.into());
+            self
+        }
+    }
+    impl super::GetCheckpointResult {
+        pub const fn const_default() -> Self {
+            Self { result: None }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::GetCheckpointResult = super::GetCheckpointResult::const_default();
+            &DEFAULT
+        }
+        ///Returns the value of `checkpoint`, or the default value if `checkpoint` is unset.
+        pub fn checkpoint(&self) -> &super::Checkpoint {
+            if let Some(super::get_checkpoint_result::Result::Checkpoint(field)) = &self
+                .result
+            {
+                field as _
+            } else {
+                super::Checkpoint::default_instance() as _
+            }
+        }
+        ///If `checkpoint` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn checkpoint_opt(&self) -> Option<&super::Checkpoint> {
+            if let Some(super::get_checkpoint_result::Result::Checkpoint(field)) = &self
+                .result
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///If `checkpoint` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn checkpoint_opt_mut(&mut self) -> Option<&mut super::Checkpoint> {
+            if let Some(super::get_checkpoint_result::Result::Checkpoint(field)) = &mut self
+                .result
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///Returns a mutable reference to `checkpoint`.
+        ///If the field is unset, it is first initialized with the default value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn checkpoint_mut(&mut self) -> &mut super::Checkpoint {
+            if self.checkpoint_opt_mut().is_none() {
+                self.result = Some(
+                    super::get_checkpoint_result::Result::Checkpoint(
+                        super::Checkpoint::default(),
+                    ),
+                );
+            }
+            self.checkpoint_opt_mut().unwrap()
+        }
+        ///Sets `checkpoint` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn set_checkpoint<T: Into<super::Checkpoint>>(&mut self, field: T) {
+            self.result = Some(
+                super::get_checkpoint_result::Result::Checkpoint(field.into().into()),
+            );
+        }
+        ///Sets `checkpoint` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn with_checkpoint<T: Into<super::Checkpoint>>(mut self, field: T) -> Self {
+            self.set_checkpoint(field.into());
+            self
+        }
+        ///Returns the value of `error`, or the default value if `error` is unset.
+        pub fn error(&self) -> &super::super::super::super::google::rpc::Status {
+            if let Some(super::get_checkpoint_result::Result::Error(field)) = &self
+                .result
+            {
+                field as _
+            } else {
+                super::super::super::super::google::rpc::Status::default_instance() as _
+            }
+        }
+        ///If `error` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn error_opt(
+            &self,
+        ) -> Option<&super::super::super::super::google::rpc::Status> {
+            if let Some(super::get_checkpoint_result::Result::Error(field)) = &self
+                .result
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///If `error` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn error_opt_mut(
+            &mut self,
+        ) -> Option<&mut super::super::super::super::google::rpc::Status> {
+            if let Some(super::get_checkpoint_result::Result::Error(field)) = &mut self
+                .result
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///Returns a mutable reference to `error`.
+        ///If the field is unset, it is first initialized with the default value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn error_mut(
+            &mut self,
+        ) -> &mut super::super::super::super::google::rpc::Status {
+            if self.error_opt_mut().is_none() {
+                self.result = Some(
+                    super::get_checkpoint_result::Result::Error(
+                        super::super::super::super::google::rpc::Status::default(),
+                    ),
+                );
+            }
+            self.error_opt_mut().unwrap()
+        }
+        ///Sets `error` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn set_error<T: Into<super::super::super::super::google::rpc::Status>>(
+            &mut self,
+            field: T,
+        ) {
+            self.result = Some(
+                super::get_checkpoint_result::Result::Error(field.into().into()),
+            );
+        }
+        ///Sets `error` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn with_error<T: Into<super::super::super::super::google::rpc::Status>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_error(field.into());
             self
         }
     }

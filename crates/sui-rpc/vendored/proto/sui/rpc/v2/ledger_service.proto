@@ -27,6 +27,7 @@ service LedgerService {
   rpc BatchGetTransactions(BatchGetTransactionsRequest) returns (BatchGetTransactionsResponse);
 
   rpc GetCheckpoint(GetCheckpointRequest) returns (GetCheckpointResponse);
+  rpc BatchGetCheckpoints(BatchGetCheckpointsRequest) returns (BatchGetCheckpointsResponse);
 
   rpc GetEpoch(GetEpochRequest) returns (GetEpochResponse);
 
@@ -170,6 +171,27 @@ message GetCheckpointRequest {
 
 message GetCheckpointResponse {
   optional Checkpoint checkpoint = 1;
+}
+
+message BatchGetCheckpointsRequest {
+  // Required. The requested checkpoints. The `read_mask` field of individual
+  // requests is ignored.
+  repeated GetCheckpointRequest requests = 1;
+
+  // Mask specifying which fields to read.
+  // If no mask is specified, defaults to `sequence_number,digest`.
+  optional google.protobuf.FieldMask read_mask = 2;
+}
+
+message BatchGetCheckpointsResponse {
+  repeated GetCheckpointResult checkpoints = 1;
+}
+
+message GetCheckpointResult {
+  oneof result {
+    Checkpoint checkpoint = 1;
+    google.rpc.Status error = 2;
+  }
 }
 
 message GetEpochRequest {

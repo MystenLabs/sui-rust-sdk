@@ -2246,6 +2246,41 @@ pub struct GetCheckpointResponse {
     pub checkpoint: ::core::option::Option<Checkpoint>,
 }
 #[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct BatchGetCheckpointsRequest {
+    /// Required. The requested checkpoints. The `read_mask` field of individual
+    /// requests is ignored.
+    #[prost(message, repeated, tag = "1")]
+    pub requests: ::prost::alloc::vec::Vec<GetCheckpointRequest>,
+    /// Mask specifying which fields to read.
+    /// If no mask is specified, defaults to `sequence_number,digest`.
+    #[prost(message, optional, tag = "2")]
+    pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
+}
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct BatchGetCheckpointsResponse {
+    #[prost(message, repeated, tag = "1")]
+    pub checkpoints: ::prost::alloc::vec::Vec<GetCheckpointResult>,
+}
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetCheckpointResult {
+    #[prost(oneof = "get_checkpoint_result::Result", tags = "1, 2")]
+    pub result: ::core::option::Option<get_checkpoint_result::Result>,
+}
+/// Nested message and enum types in `GetCheckpointResult`.
+pub mod get_checkpoint_result {
+    #[non_exhaustive]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum Result {
+        #[prost(message, tag = "1")]
+        Checkpoint(super::Checkpoint),
+        #[prost(message, tag = "2")]
+        Error(super::super::super::super::google::rpc::Status),
+    }
+}
+#[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetEpochRequest {
     /// The requested epoch.
@@ -2664,6 +2699,32 @@ pub mod ledger_service_client {
                 .insert(GrpcMethod::new("sui.rpc.v2.LedgerService", "GetCheckpoint"));
             self.inner.unary(req, path, codec).await
         }
+        pub async fn batch_get_checkpoints(
+            &mut self,
+            request: impl tonic::IntoRequest<super::BatchGetCheckpointsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::BatchGetCheckpointsResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/sui.rpc.v2.LedgerService/BatchGetCheckpoints",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new("sui.rpc.v2.LedgerService", "BatchGetCheckpoints"),
+                );
+            self.inner.unary(req, path, codec).await
+        }
         pub async fn get_epoch(
             &mut self,
             request: impl tonic::IntoRequest<super::GetEpochRequest>,
@@ -2839,6 +2900,15 @@ pub mod ledger_service_server {
             request: tonic::Request<super::GetCheckpointRequest>,
         ) -> std::result::Result<
             tonic::Response<super::GetCheckpointResponse>,
+            tonic::Status,
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
+        async fn batch_get_checkpoints(
+            &self,
+            request: tonic::Request<super::BatchGetCheckpointsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::BatchGetCheckpointsResponse>,
             tonic::Status,
         > {
             Err(tonic::Status::unimplemented("Not yet implemented"))
@@ -3230,6 +3300,52 @@ pub mod ledger_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetCheckpointSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/sui.rpc.v2.LedgerService/BatchGetCheckpoints" => {
+                    #[allow(non_camel_case_types)]
+                    struct BatchGetCheckpointsSvc<T: LedgerService>(pub Arc<T>);
+                    impl<
+                        T: LedgerService,
+                    > tonic::server::UnaryService<super::BatchGetCheckpointsRequest>
+                    for BatchGetCheckpointsSvc<T> {
+                        type Response = super::BatchGetCheckpointsResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::BatchGetCheckpointsRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as LedgerService>::batch_get_checkpoints(&inner, request)
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = BatchGetCheckpointsSvc(inner);
                         let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
