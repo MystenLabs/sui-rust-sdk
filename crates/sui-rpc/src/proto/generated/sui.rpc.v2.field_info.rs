@@ -4304,6 +4304,140 @@ pub(crate) mod _field_impls {
             CheckpointFieldPathBuilder::new_with_base(self.path)
         }
     }
+    impl BatchGetCheckpointsRequest {
+        pub const REQUESTS_FIELD: &'static MessageField = &MessageField {
+            name: "requests",
+            json_name: "requests",
+            number: 1i32,
+            message_fields: Some(GetCheckpointRequest::FIELDS),
+        };
+        pub const READ_MASK_FIELD: &'static MessageField = &MessageField {
+            name: "read_mask",
+            json_name: "readMask",
+            number: 2i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for BatchGetCheckpointsRequest {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::REQUESTS_FIELD,
+            Self::READ_MASK_FIELD,
+        ];
+    }
+    impl BatchGetCheckpointsRequest {
+        pub fn path_builder() -> BatchGetCheckpointsRequestFieldPathBuilder {
+            BatchGetCheckpointsRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct BatchGetCheckpointsRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl BatchGetCheckpointsRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn requests(mut self) -> GetCheckpointRequestFieldPathBuilder {
+            self.path.push(BatchGetCheckpointsRequest::REQUESTS_FIELD.name);
+            GetCheckpointRequestFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn read_mask(mut self) -> String {
+            self.path.push(BatchGetCheckpointsRequest::READ_MASK_FIELD.name);
+            self.finish()
+        }
+    }
+    impl BatchGetCheckpointsResponse {
+        pub const CHECKPOINTS_FIELD: &'static MessageField = &MessageField {
+            name: "checkpoints",
+            json_name: "checkpoints",
+            number: 1i32,
+            message_fields: Some(GetCheckpointResult::FIELDS),
+        };
+    }
+    impl MessageFields for BatchGetCheckpointsResponse {
+        const FIELDS: &'static [&'static MessageField] = &[Self::CHECKPOINTS_FIELD];
+    }
+    impl BatchGetCheckpointsResponse {
+        pub fn path_builder() -> BatchGetCheckpointsResponseFieldPathBuilder {
+            BatchGetCheckpointsResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct BatchGetCheckpointsResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl BatchGetCheckpointsResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn checkpoints(mut self) -> GetCheckpointResultFieldPathBuilder {
+            self.path.push(BatchGetCheckpointsResponse::CHECKPOINTS_FIELD.name);
+            GetCheckpointResultFieldPathBuilder::new_with_base(self.path)
+        }
+    }
+    impl GetCheckpointResult {
+        pub const CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "checkpoint",
+            json_name: "checkpoint",
+            number: 1i32,
+            message_fields: Some(Checkpoint::FIELDS),
+        };
+        pub const ERROR_FIELD: &'static MessageField = &MessageField {
+            name: "error",
+            json_name: "error",
+            number: 2i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for GetCheckpointResult {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::CHECKPOINT_FIELD,
+            Self::ERROR_FIELD,
+        ];
+    }
+    impl GetCheckpointResult {
+        pub fn path_builder() -> GetCheckpointResultFieldPathBuilder {
+            GetCheckpointResultFieldPathBuilder::new()
+        }
+    }
+    pub struct GetCheckpointResultFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GetCheckpointResultFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn checkpoint(mut self) -> CheckpointFieldPathBuilder {
+            self.path.push(GetCheckpointResult::CHECKPOINT_FIELD.name);
+            CheckpointFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn error(mut self) -> String {
+            self.path.push(GetCheckpointResult::ERROR_FIELD.name);
+            self.finish()
+        }
+    }
     impl GetEpochRequest {
         pub const EPOCH_FIELD: &'static MessageField = &MessageField {
             name: "epoch",

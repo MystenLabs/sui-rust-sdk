@@ -135,6 +135,37 @@ impl GetCheckpointResponse {
     }
 }
 
+impl BatchGetCheckpointsResponse {
+    pub fn new(checkpoints: Vec<GetCheckpointResult>) -> Self {
+        Self { checkpoints }
+    }
+}
+
+impl GetCheckpointResult {
+    pub fn new_checkpoint(checkpoint: Checkpoint) -> Self {
+        Self {
+            result: Some(get_checkpoint_result::Result::Checkpoint(checkpoint)),
+        }
+    }
+
+    pub fn new_error(error: crate::proto::google::rpc::Status) -> Self {
+        Self {
+            result: Some(get_checkpoint_result::Result::Error(error)),
+        }
+    }
+
+    pub fn to_result(self) -> Result<Checkpoint, crate::proto::google::rpc::Status> {
+        match self.result {
+            Some(get_checkpoint_result::Result::Checkpoint(checkpoint)) => Ok(checkpoint),
+            Some(get_checkpoint_result::Result::Error(error)) => Err(error),
+            None => Err(crate::proto::google::rpc::Status {
+                code: tonic::Code::NotFound.into(),
+                ..Default::default()
+            }),
+        }
+    }
+}
+
 impl GetEpochRequest {
     pub fn latest() -> Self {
         Self {
