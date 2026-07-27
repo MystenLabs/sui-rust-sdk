@@ -504,6 +504,9 @@ message EndOfEpochTransactionKind {
 
     // Write the end-of-epoch-computed storage cost for accumulator objects.
     WRITE_ACCUMULATOR_STORAGE_COST = 13;
+
+    // Create and initialize the Forwarding Address Registry object.
+    FORWARDING_ADDRESS_REGISTRY_CREATE = 14;
   }
 
   optional Kind kind = 1;

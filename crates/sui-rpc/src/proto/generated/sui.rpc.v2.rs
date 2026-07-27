@@ -8863,6 +8863,8 @@ pub mod end_of_epoch_transaction_kind {
         AddressAliasStateCreate = 12,
         /// Write the end-of-epoch-computed storage cost for accumulator objects.
         WriteAccumulatorStorageCost = 13,
+        /// Create and initialize the Forwarding Address Registry object.
+        ForwardingAddressRegistryCreate = 14,
     }
     impl Kind {
         /// String value of the enum field names used in the ProtoBuf definition.
@@ -8887,6 +8889,9 @@ pub mod end_of_epoch_transaction_kind {
                 Self::DisplayRegistryCreate => "DISPLAY_REGISTRY_CREATE",
                 Self::AddressAliasStateCreate => "ADDRESS_ALIAS_STATE_CREATE",
                 Self::WriteAccumulatorStorageCost => "WRITE_ACCUMULATOR_STORAGE_COST",
+                Self::ForwardingAddressRegistryCreate => {
+                    "FORWARDING_ADDRESS_REGISTRY_CREATE"
+                }
             }
         }
         /// Creates an enum from field names used in the ProtoBuf definition.
@@ -8909,6 +8914,9 @@ pub mod end_of_epoch_transaction_kind {
                 "ADDRESS_ALIAS_STATE_CREATE" => Some(Self::AddressAliasStateCreate),
                 "WRITE_ACCUMULATOR_STORAGE_COST" => {
                     Some(Self::WriteAccumulatorStorageCost)
+                }
+                "FORWARDING_ADDRESS_REGISTRY_CREATE" => {
+                    Some(Self::ForwardingAddressRegistryCreate)
                 }
                 _ => None,
             }

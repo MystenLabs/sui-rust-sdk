@@ -1211,6 +1211,9 @@ impl From<sui_sdk_types::EndOfEpochTransactionKind> for EndOfEpochTransactionKin
             K::WriteAccumulatorStorageCost { storage_cost } => message
                 .with_kind(Kind::WriteAccumulatorStorageCost)
                 .with_storage_cost(storage_cost),
+            K::ForwardingAddressRegistryCreate => {
+                message.with_kind(Kind::ForwardingAddressRegistryCreate)
+            }
             _ => message,
         }
     }
@@ -1256,6 +1259,7 @@ impl TryFrom<&EndOfEpochTransactionKind> for sui_sdk_types::EndOfEpochTransactio
                     TryFromProtoError::missing(EndOfEpochTransactionKind::STORAGE_COST_FIELD)
                 })?,
             },
+            Kind::ForwardingAddressRegistryCreate => Self::ForwardingAddressRegistryCreate,
         }
         .pipe(Ok)
     }
