@@ -17,6 +17,19 @@ pub enum Error {
     #[error("Invalid URL: {0}")]
     InvalidUrl(#[from] url::ParseError),
 
+    /// The endpoint answered with a non-success HTTP status and a body that is not a GraphQL
+    /// response. Proxies, load balancers and API gateways in front of an endpoint report their
+    /// own failures this way, in HTML, plain text or an unrelated JSON shape.
+    ///
+    /// `body` is truncated to 500 characters.
+    #[error("HTTP status {status}: {body}")]
+    HttpStatus {
+        /// HTTP status code of the response.
+        status: u16,
+        /// Start of the response body.
+        body: String,
+    },
+
     /// Failed to serialize data (e.g., BCS encoding).
     #[error("Serialization error: {0}")]
     Serialization(String),

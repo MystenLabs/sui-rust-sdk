@@ -1,3 +1,16 @@
+# Unreleased
+
+## Added
+- `Error::HttpStatus`, carrying the status code and the start of the response
+  body when an endpoint answers with a non-success status and a body that is
+  not a GraphQL response
+
+## Changed
+- `Client::query` now inspects the HTTP status instead of decoding every
+  response as GraphQL data; a non-success status whose body carries neither
+  `data` nor `errors` returns `Error::HttpStatus` instead of a decode error
+  with the status discarded, or an `Ok` response with no data
+
 # [0.3.1] - 2026-07-16
 
 ## Added

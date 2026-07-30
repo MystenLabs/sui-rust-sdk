@@ -216,10 +216,34 @@ impl Client {
             .post(self.endpoint.clone())
             .json(&request)
             .headers(headers);
-        let raw: GraphQLResponse<T> = req.send().await?.json().await?;
+        let resp = req.send().await?;
+        let status = resp.status();
 
-        Ok(Response::new(raw.data, raw.errors.unwrap_or_default()))
+        if status.is_success() {
+            let raw: GraphQLResponse<T> = resp.json().await?;
+            return Ok(Response::new(raw.data, raw.errors.unwrap_or_default()));
+        }
+
+        // A non-success status carries a GraphQL response only when the body holds GraphQL
+        // content. Anything else came from an intermediary rather than from the GraphQL server,
+        // including JSON that deserializes into an empty response, which would otherwise be
+        // indistinguishable from a query that returned no data.
+        let body = resp.bytes().await?;
+        match serde_json::from_slice::<GraphQLResponse<T>>(&body) {
+            Ok(raw) if raw.data.is_some() || raw.errors.is_some() => {
+                Ok(Response::new(raw.data, raw.errors.unwrap_or_default()))
+            }
+            _ => Err(Error::HttpStatus {
+                status: status.as_u16(),
+                body: body_snippet(&body),
+            }),
+        }
     }
+}
+
+/// The start of a response body, short enough to keep an HTML error page out of a log line.
+fn body_snippet(body: &[u8]) -> String {
+    String::from_utf8_lossy(body).chars().take(500).collect()
 }
 
 #[cfg(test)]
@@ -250,10 +274,24 @@ mod tests {
         serde_json::json!({"data": {"chainIdentifier": "test"}, "errors": null})
     }
 
-    #[derive(Deserialize)]
+    #[derive(Debug, Deserialize)]
     struct Chain {
         #[serde(rename = "chainIdentifier")]
-        _chain: String,
+        chain: String,
+    }
+
+    /// Answer a single query with `template` and hand back whatever the client made of it.
+    async fn query_against(template: ResponseTemplate) -> Result<Response<Chain>, Error> {
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .respond_with(template)
+            .mount(&server)
+            .await;
+
+        Client::new(&server.uri())
+            .unwrap()
+            .query("query { chainIdentifier }", serde_json::json!({}))
+            .await
     }
 
     #[tokio::test]
@@ -408,5 +446,78 @@ mod tests {
             .query("query { chainIdentifier }", serde_json::json!({}))
             .await
             .unwrap();
+    }
+
+    #[tokio::test]
+    async fn success_returns_data() {
+        let response = query_against(ResponseTemplate::new(200).set_body_json(ok_body()))
+            .await
+            .unwrap();
+        assert_eq!(response.data().unwrap().chain, "test");
+    }
+
+    #[tokio::test]
+    async fn gateway_html_reports_status() {
+        let template =
+            ResponseTemplate::new(503).set_body_string("<html>Service Unavailable</html>");
+
+        match query_against(template).await {
+            Err(Error::HttpStatus { status, body }) => {
+                assert_eq!(status, 503);
+                assert!(body.contains("Service Unavailable"), "body: {body}");
+            }
+            other => panic!("expected HttpStatus, got: {other:?}"),
+        }
+    }
+
+    /// An unrelated JSON body deserializes into an empty `GraphQLResponse`, so without the status
+    /// check it is indistinguishable from a query that returned no data.
+    #[tokio::test]
+    async fn unrelated_json_reports_status() {
+        let template = ResponseTemplate::new(401)
+            .set_body_string(r#"{"error":"UNAUTHORIZED","request-id":""}"#);
+
+        match query_against(template).await {
+            Err(Error::HttpStatus { status, body }) => {
+                assert_eq!(status, 401);
+                assert!(body.contains("UNAUTHORIZED"), "body: {body}");
+            }
+            other => panic!("expected HttpStatus, got: {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn empty_body_reports_status() {
+        match query_against(ResponseTemplate::new(502).set_body_string("")).await {
+            Err(Error::HttpStatus { status, .. }) => assert_eq!(status, 502),
+            other => panic!("expected HttpStatus, got: {other:?}"),
+        }
+    }
+
+    /// GraphQL servers may report query-level errors with a non-success status. Those are real
+    /// GraphQL responses and stay available to the caller.
+    #[tokio::test]
+    async fn graphql_errors_survive_non_success_status() {
+        let template = ResponseTemplate::new(400).set_body_string(
+            r#"{"errors":[{"message":"Unknown field \"foo\" on type \"Query\"."}]}"#,
+        );
+
+        let response = query_against(template).await.unwrap();
+        assert!(response.has_errors());
+        assert_eq!(
+            response.errors()[0].message(),
+            "Unknown field \"foo\" on type \"Query\"."
+        );
+    }
+
+    /// Success responses are decoded exactly as before, including how they fail.
+    #[tokio::test]
+    async fn success_with_undecodable_body_stays_a_decode_error() {
+        let template = ResponseTemplate::new(200).set_body_string("not json at all");
+
+        match query_against(template).await {
+            Err(Error::Request(err)) => assert!(err.is_decode(), "err: {err}"),
+            other => panic!("expected a decode error, got: {other:?}"),
+        }
     }
 }
