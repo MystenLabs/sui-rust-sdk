@@ -1214,6 +1214,7 @@ impl From<sui_sdk_types::EndOfEpochTransactionKind> for EndOfEpochTransactionKin
             K::ForwardingAddressRegistryCreate => {
                 message.with_kind(Kind::ForwardingAddressRegistryCreate)
             }
+            K::PackageConfigCreate => message.with_kind(Kind::PackageConfigCreate),
             _ => message,
         }
     }
@@ -1260,6 +1261,7 @@ impl TryFrom<&EndOfEpochTransactionKind> for sui_sdk_types::EndOfEpochTransactio
                 })?,
             },
             Kind::ForwardingAddressRegistryCreate => Self::ForwardingAddressRegistryCreate,
+            Kind::PackageConfigCreate => Self::PackageConfigCreate,
         }
         .pipe(Ok)
     }

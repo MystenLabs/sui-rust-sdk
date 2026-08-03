@@ -8865,6 +8865,8 @@ pub mod end_of_epoch_transaction_kind {
         WriteAccumulatorStorageCost = 13,
         /// Create and initialize the Forwarding Address Registry object.
         ForwardingAddressRegistryCreate = 14,
+        /// Create and initialize the Package Config object.
+        PackageConfigCreate = 15,
     }
     impl Kind {
         /// String value of the enum field names used in the ProtoBuf definition.
@@ -8892,6 +8894,7 @@ pub mod end_of_epoch_transaction_kind {
                 Self::ForwardingAddressRegistryCreate => {
                     "FORWARDING_ADDRESS_REGISTRY_CREATE"
                 }
+                Self::PackageConfigCreate => "PACKAGE_CONFIG_CREATE",
             }
         }
         /// Creates an enum from field names used in the ProtoBuf definition.
@@ -8918,6 +8921,7 @@ pub mod end_of_epoch_transaction_kind {
                 "FORWARDING_ADDRESS_REGISTRY_CREATE" => {
                     Some(Self::ForwardingAddressRegistryCreate)
                 }
+                "PACKAGE_CONFIG_CREATE" => Some(Self::PackageConfigCreate),
                 _ => None,
             }
         }

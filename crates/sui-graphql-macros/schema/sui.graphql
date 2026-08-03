@@ -1205,7 +1205,7 @@ type EndOfEpochTransaction {
 	transactions(first: Int, after: String, last: Int, before: String): EndOfEpochTransactionKindConnection
 }
 
-union EndOfEpochTransactionKind = ChangeEpochTransaction | AuthenticatorStateCreateTransaction | AuthenticatorStateExpireTransaction | RandomnessStateCreateTransaction | CoinDenyListStateCreateTransaction | StoreExecutionTimeObservationsTransaction | BridgeStateCreateTransaction | BridgeCommitteeInitTransaction | AccumulatorRootCreateTransaction | CoinRegistryCreateTransaction | DisplayRegistryCreateTransaction | AddressAliasStateCreateTransaction | WriteAccumulatorStorageCostTransaction | ForwardingAddressRegistryCreateTransaction
+union EndOfEpochTransactionKind = ChangeEpochTransaction | AuthenticatorStateCreateTransaction | AuthenticatorStateExpireTransaction | RandomnessStateCreateTransaction | CoinDenyListStateCreateTransaction | StoreExecutionTimeObservationsTransaction | BridgeStateCreateTransaction | BridgeCommitteeInitTransaction | AccumulatorRootCreateTransaction | CoinRegistryCreateTransaction | DisplayRegistryCreateTransaction | AddressAliasStateCreateTransaction | WriteAccumulatorStorageCostTransaction | ForwardingAddressRegistryCreateTransaction | PackageConfigCreateTransaction
 
 type EndOfEpochTransactionKindConnection {
 	"""
@@ -3352,6 +3352,16 @@ input PackageKey {
 	If specified, tries to fetch the package at this exact version.
 	"""
 	version: UInt53
+}
+
+"""
+System transaction for creating the package configuration state.
+"""
+type PackageConfigCreateTransaction {
+	"""
+	A workaround to define an empty variant of a GraphQL union.
+	"""
+	_: Boolean
 }
 
 """

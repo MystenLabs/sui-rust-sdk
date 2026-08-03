@@ -315,6 +315,9 @@ pub enum EndOfEpochTransactionKind {
 
     /// Create and initialize the forwarding address registry object
     ForwardingAddressRegistryCreate,
+
+    /// Create and initialize the package configuration object
+    PackageConfigCreate,
 }
 
 /// Set of Execution Time Observations from the committee.
