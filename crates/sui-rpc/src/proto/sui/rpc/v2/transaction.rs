@@ -250,7 +250,9 @@ impl From<sui_sdk_types::TransactionExpiration> for TransactionExpiration {
                     seconds: seconds as _,
                     nanos: 0,
                 });
-                message.set_allowed_proposers(AllowedProposers::from(allowed_proposers));
+                if let Some(allowed_proposers) = allowed_proposers {
+                    message.set_allowed_proposers(AllowedProposers::from(allowed_proposers));
+                }
                 TransactionExpirationKind::Validity
             }
             _ => TransactionExpirationKind::Unknown,
@@ -329,10 +331,7 @@ impl TryFrom<&TransactionExpiration> for sui_sdk_types::TransactionExpiration {
                 nonce: value
                     .nonce_opt()
                     .ok_or_else(|| TryFromProtoError::missing("nonce"))?,
-                allowed_proposers: value
-                    .allowed_proposers_opt()
-                    .ok_or_else(|| TryFromProtoError::missing("allowed_proposers"))?
-                    .into(),
+                allowed_proposers: value.allowed_proposers_opt().map(Into::into),
             },
         }
         .pipe(Ok)
