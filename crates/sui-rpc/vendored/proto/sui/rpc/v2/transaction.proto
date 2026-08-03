@@ -507,6 +507,9 @@ message EndOfEpochTransactionKind {
 
     // Create and initialize the Forwarding Address Registry object.
     FORWARDING_ADDRESS_REGISTRY_CREATE = 14;
+
+    // Create and initialize the Package Config object.
+    PACKAGE_CONFIG_CREATE = 15;
   }
 
   optional Kind kind = 1;

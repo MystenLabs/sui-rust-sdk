@@ -8817,6 +8817,7 @@ impl serde::Serialize for end_of_epoch_transaction_kind::Kind {
             Self::AddressAliasStateCreate => "ADDRESS_ALIAS_STATE_CREATE",
             Self::WriteAccumulatorStorageCost => "WRITE_ACCUMULATOR_STORAGE_COST",
             Self::ForwardingAddressRegistryCreate => "FORWARDING_ADDRESS_REGISTRY_CREATE",
+            Self::PackageConfigCreate => "PACKAGE_CONFIG_CREATE",
         };
         serializer.serialize_str(variant)
     }
@@ -8843,6 +8844,7 @@ impl<'de> serde::Deserialize<'de> for end_of_epoch_transaction_kind::Kind {
             "ADDRESS_ALIAS_STATE_CREATE",
             "WRITE_ACCUMULATOR_STORAGE_COST",
             "FORWARDING_ADDRESS_REGISTRY_CREATE",
+            "PACKAGE_CONFIG_CREATE",
         ];
         struct GeneratedVisitor;
         impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
@@ -8934,6 +8936,9 @@ impl<'de> serde::Deserialize<'de> for end_of_epoch_transaction_kind::Kind {
                         Ok(
                             end_of_epoch_transaction_kind::Kind::ForwardingAddressRegistryCreate,
                         )
+                    }
+                    "PACKAGE_CONFIG_CREATE" => {
+                        Ok(end_of_epoch_transaction_kind::Kind::PackageConfigCreate)
                     }
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
