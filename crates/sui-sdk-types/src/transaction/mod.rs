@@ -62,7 +62,7 @@ pub struct SignedTransaction {
 /// transaction-expiration =  %x00      ; none
 ///                        =/ %x01 u64  ; epoch
 /// ```
-#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Default, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
@@ -101,6 +101,50 @@ pub enum TransactionExpiration {
         /// User-provided uniqueness identifier to differentiate otherwise identical transactions
         nonce: u32,
     },
+
+    /// Everything in `ValidDuring`, plus a restriction on which validators may propose the
+    /// transaction in consensus.
+    Validity {
+        /// Transaction invalid before this epoch. Must equal current epoch.
+        min_epoch: Option<EpochId>,
+        /// Transaction expires after this epoch. Must equal current epoch
+        max_epoch: Option<EpochId>,
+        /// Future support for sub-epoch timing (not yet implemented)
+        min_timestamp: Option<u64>,
+        /// Future support for sub-epoch timing (not yet implemented)
+        max_timestamp: Option<u64>,
+        /// Network identifier to prevent cross-chain replay
+        chain: Digest,
+        /// User-provided uniqueness identifier to differentiate otherwise identical transactions
+        nonce: u32,
+        /// The validators allowed to propose this transaction in consensus
+        allowed_proposers: AllowedProposers,
+    },
+}
+
+/// The validators allowed to propose a transaction in consensus
+///
+/// Proposal by any other validator is byzantine behavior and invalidates the whole block.
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// allowed-proposers = u64 (vector u32)  ; epoch, then committee indices
+/// ```
+#[derive(Clone, Default, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+pub struct AllowedProposers {
+    /// The epoch whose committee `proposers` indexes into
+    pub epoch: EpochId,
+    /// Committee indices of the allowed proposers, strictly increasing. An empty list allows
+    /// every validator to propose.
+    pub proposers: Vec<u32>,
 }
 
 /// Payment information for executing a transaction

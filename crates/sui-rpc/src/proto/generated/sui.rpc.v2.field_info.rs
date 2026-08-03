@@ -10900,6 +10900,12 @@ pub(crate) mod _field_impls {
             number: 7i32,
             message_fields: None,
         };
+        pub const ALLOWED_PROPOSERS_FIELD: &'static MessageField = &MessageField {
+            name: "allowed_proposers",
+            json_name: "allowedProposers",
+            number: 8i32,
+            message_fields: Some(AllowedProposers::FIELDS),
+        };
     }
     impl MessageFields for TransactionExpiration {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -10910,6 +10916,7 @@ pub(crate) mod _field_impls {
             Self::MAX_TIMESTAMP_FIELD,
             Self::CHAIN_FIELD,
             Self::NONCE_FIELD,
+            Self::ALLOWED_PROPOSERS_FIELD,
         ];
     }
     impl TransactionExpiration {
@@ -10958,6 +10965,59 @@ pub(crate) mod _field_impls {
         }
         pub fn nonce(mut self) -> String {
             self.path.push(TransactionExpiration::NONCE_FIELD.name);
+            self.finish()
+        }
+        pub fn allowed_proposers(mut self) -> AllowedProposersFieldPathBuilder {
+            self.path.push(TransactionExpiration::ALLOWED_PROPOSERS_FIELD.name);
+            AllowedProposersFieldPathBuilder::new_with_base(self.path)
+        }
+    }
+    impl AllowedProposers {
+        pub const EPOCH_FIELD: &'static MessageField = &MessageField {
+            name: "epoch",
+            json_name: "epoch",
+            number: 1i32,
+            message_fields: None,
+        };
+        pub const PROPOSERS_FIELD: &'static MessageField = &MessageField {
+            name: "proposers",
+            json_name: "proposers",
+            number: 2i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for AllowedProposers {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::EPOCH_FIELD,
+            Self::PROPOSERS_FIELD,
+        ];
+    }
+    impl AllowedProposers {
+        pub fn path_builder() -> AllowedProposersFieldPathBuilder {
+            AllowedProposersFieldPathBuilder::new()
+        }
+    }
+    pub struct AllowedProposersFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl AllowedProposersFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn epoch(mut self) -> String {
+            self.path.push(AllowedProposers::EPOCH_FIELD.name);
+            self.finish()
+        }
+        pub fn proposers(mut self) -> String {
+            self.path.push(AllowedProposers::PROPOSERS_FIELD.name);
             self.finish()
         }
     }
