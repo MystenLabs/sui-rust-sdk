@@ -1055,6 +1055,21 @@ impl FundsWithdrawal {
     }
 }
 
+/// The source of the funds for a [`FundsWithdrawal`].
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// withdraw-from =  withdraw-from-sender
+///               =/ withdraw-from-sponsor
+///               =/ withdraw-from-allowance
+///
+/// withdraw-from-sender    = %x00
+/// withdraw-from-sponsor   = %x01
+/// withdraw-from-allowance = %x02 address address
+/// ```
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 #[cfg_attr(
     feature = "serde",
@@ -1067,6 +1082,16 @@ pub enum WithdrawFrom {
     Sender,
     /// Withdraw from the sponsor of the transaction (gas owner).
     Sponsor,
+    /// Withdraw from `funder`'s balance under the given allowance object.
+    ///
+    /// The funder is declared in the transaction so that the debited account is derivable from
+    /// the transaction alone; signing verifies it against the (immutable) allowance object.
+    Allowance {
+        /// The address whose balance is debited.
+        funder: Address,
+        /// The `ObjectId` of the allowance object authorizing the withdrawal.
+        allowance: Address,
+    },
 }
 
 /// A single command in a programmable transaction.

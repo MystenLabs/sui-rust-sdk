@@ -12521,6 +12521,12 @@ impl serde::Serialize for FundsWithdrawal {
         if self.source.is_some() {
             len += 1;
         }
+        if self.funder.is_some() {
+            len += 1;
+        }
+        if self.allowance.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer
             .serialize_struct("sui.rpc.v2.FundsWithdrawal", len)?;
         if let Some(v) = self.amount.as_ref() {
@@ -12538,6 +12544,12 @@ impl serde::Serialize for FundsWithdrawal {
                 ))?;
             struct_ser.serialize_field("source", &v)?;
         }
+        if let Some(v) = self.funder.as_ref() {
+            struct_ser.serialize_field("funder", v)?;
+        }
+        if let Some(v) = self.allowance.as_ref() {
+            struct_ser.serialize_field("allowance", v)?;
+        }
         struct_ser.end()
     }
 }
@@ -12547,12 +12559,21 @@ impl<'de> serde::Deserialize<'de> for FundsWithdrawal {
     where
         D: serde::Deserializer<'de>,
     {
-        const FIELDS: &[&str] = &["amount", "coin_type", "coinType", "source"];
+        const FIELDS: &[&str] = &[
+            "amount",
+            "coin_type",
+            "coinType",
+            "source",
+            "funder",
+            "allowance",
+        ];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             Amount,
             CoinType,
             Source,
+            Funder,
+            Allowance,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -12583,6 +12604,8 @@ impl<'de> serde::Deserialize<'de> for FundsWithdrawal {
                             "amount" => Ok(GeneratedField::Amount),
                             "coinType" | "coin_type" => Ok(GeneratedField::CoinType),
                             "source" => Ok(GeneratedField::Source),
+                            "funder" => Ok(GeneratedField::Funder),
+                            "allowance" => Ok(GeneratedField::Allowance),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -12611,6 +12634,8 @@ impl<'de> serde::Deserialize<'de> for FundsWithdrawal {
                 let mut amount__ = None;
                 let mut coin_type__ = None;
                 let mut source__ = None;
+                let mut funder__ = None;
+                let mut allowance__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Amount => {
@@ -12639,6 +12664,18 @@ impl<'de> serde::Deserialize<'de> for FundsWithdrawal {
                                 >()?
                                 .map(|x| x as i32);
                         }
+                        GeneratedField::Funder => {
+                            if funder__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("funder"));
+                            }
+                            funder__ = map_.next_value()?;
+                        }
+                        GeneratedField::Allowance => {
+                            if allowance__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("allowance"));
+                            }
+                            allowance__ = map_.next_value()?;
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -12648,6 +12685,8 @@ impl<'de> serde::Deserialize<'de> for FundsWithdrawal {
                     amount: amount__,
                     coin_type: coin_type__,
                     source: source__,
+                    funder: funder__,
+                    allowance: allowance__,
                 })
             }
         }
@@ -12665,6 +12704,7 @@ impl serde::Serialize for funds_withdrawal::Source {
             Self::Unknown => "SOURCE_UNKNOWN",
             Self::Sender => "SENDER",
             Self::Sponsor => "SPONSOR",
+            Self::Allowance => "ALLOWANCE",
         };
         serializer.serialize_str(variant)
     }
@@ -12675,7 +12715,7 @@ impl<'de> serde::Deserialize<'de> for funds_withdrawal::Source {
     where
         D: serde::Deserializer<'de>,
     {
-        const FIELDS: &[&str] = &["SOURCE_UNKNOWN", "SENDER", "SPONSOR"];
+        const FIELDS: &[&str] = &["SOURCE_UNKNOWN", "SENDER", "SPONSOR", "ALLOWANCE"];
         struct GeneratedVisitor;
         impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
             type Value = funds_withdrawal::Source;
@@ -12721,6 +12761,7 @@ impl<'de> serde::Deserialize<'de> for funds_withdrawal::Source {
                     "SOURCE_UNKNOWN" => Ok(funds_withdrawal::Source::Unknown),
                     "SENDER" => Ok(funds_withdrawal::Source::Sender),
                     "SPONSOR" => Ok(funds_withdrawal::Source::Sponsor),
+                    "ALLOWANCE" => Ok(funds_withdrawal::Source::Allowance),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }

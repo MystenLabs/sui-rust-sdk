@@ -1996,6 +1996,13 @@ pub struct FundsWithdrawal {
     pub coin_type: ::core::option::Option<::prost::alloc::string::String>,
     #[prost(enumeration = "funds_withdrawal::Source", optional, tag = "3")]
     pub source: ::core::option::Option<i32>,
+    /// The address whose balance is debited if `source` is `ALLOWANCE`.
+    #[prost(string, optional, tag = "4")]
+    pub funder: ::core::option::Option<::prost::alloc::string::String>,
+    /// `ObjectId` of the allowance object authorizing the withdrawal if `source`
+    /// is `ALLOWANCE`.
+    #[prost(string, optional, tag = "5")]
+    pub allowance: ::core::option::Option<::prost::alloc::string::String>,
 }
 /// Nested message and enum types in `FundsWithdrawal`.
 pub mod funds_withdrawal {
@@ -2016,6 +2023,8 @@ pub mod funds_withdrawal {
         Unknown = 0,
         Sender = 1,
         Sponsor = 2,
+        /// Withdraw from `funder`'s balance, authorized by the `allowance` object.
+        Allowance = 3,
     }
     impl Source {
         /// String value of the enum field names used in the ProtoBuf definition.
@@ -2027,6 +2036,7 @@ pub mod funds_withdrawal {
                 Self::Unknown => "SOURCE_UNKNOWN",
                 Self::Sender => "SENDER",
                 Self::Sponsor => "SPONSOR",
+                Self::Allowance => "ALLOWANCE",
             }
         }
         /// Creates an enum from field names used in the ProtoBuf definition.
@@ -2035,6 +2045,7 @@ pub mod funds_withdrawal {
                 "SOURCE_UNKNOWN" => Some(Self::Unknown),
                 "SENDER" => Some(Self::Sender),
                 "SPONSOR" => Some(Self::Sponsor),
+                "ALLOWANCE" => Some(Self::Allowance),
                 _ => None,
             }
         }
