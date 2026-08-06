@@ -3453,12 +3453,26 @@ pub(crate) mod _field_impls {
             number: 3i32,
             message_fields: None,
         };
+        pub const FUNDER_FIELD: &'static MessageField = &MessageField {
+            name: "funder",
+            json_name: "funder",
+            number: 4i32,
+            message_fields: None,
+        };
+        pub const ALLOWANCE_FIELD: &'static MessageField = &MessageField {
+            name: "allowance",
+            json_name: "allowance",
+            number: 5i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for FundsWithdrawal {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::AMOUNT_FIELD,
             Self::COIN_TYPE_FIELD,
             Self::SOURCE_FIELD,
+            Self::FUNDER_FIELD,
+            Self::ALLOWANCE_FIELD,
         ];
     }
     impl FundsWithdrawal {
@@ -3491,6 +3505,14 @@ pub(crate) mod _field_impls {
         }
         pub fn source(mut self) -> String {
             self.path.push(FundsWithdrawal::SOURCE_FIELD.name);
+            self.finish()
+        }
+        pub fn funder(mut self) -> String {
+            self.path.push(FundsWithdrawal::FUNDER_FIELD.name);
+            self.finish()
+        }
+        pub fn allowance(mut self) -> String {
+            self.path.push(FundsWithdrawal::ALLOWANCE_FIELD.name);
             self.finish()
         }
     }

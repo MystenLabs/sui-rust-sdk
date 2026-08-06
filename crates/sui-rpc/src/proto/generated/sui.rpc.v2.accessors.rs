@@ -7350,6 +7350,8 @@ mod _accessor_impls {
                 amount: None,
                 coin_type: None,
                 source: None,
+                funder: None,
+                allowance: None,
             }
         }
         #[doc(hidden)]
@@ -7407,6 +7409,50 @@ mod _accessor_impls {
             field: T,
         ) -> Self {
             self.set_source(field.into());
+            self
+        }
+        ///If `funder` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn funder_opt_mut(&mut self) -> Option<&mut String> {
+            self.funder.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `funder`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn funder_mut(&mut self) -> &mut String {
+            self.funder.get_or_insert_default()
+        }
+        ///If `funder` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn funder_opt(&self) -> Option<&str> {
+            self.funder.as_ref().map(|field| field as _)
+        }
+        ///Sets `funder` with the provided value.
+        pub fn set_funder<T: Into<String>>(&mut self, field: T) {
+            self.funder = Some(field.into().into());
+        }
+        ///Sets `funder` with the provided value.
+        pub fn with_funder<T: Into<String>>(mut self, field: T) -> Self {
+            self.set_funder(field.into());
+            self
+        }
+        ///If `allowance` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn allowance_opt_mut(&mut self) -> Option<&mut String> {
+            self.allowance.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `allowance`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn allowance_mut(&mut self) -> &mut String {
+            self.allowance.get_or_insert_default()
+        }
+        ///If `allowance` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn allowance_opt(&self) -> Option<&str> {
+            self.allowance.as_ref().map(|field| field as _)
+        }
+        ///Sets `allowance` with the provided value.
+        pub fn set_allowance<T: Into<String>>(&mut self, field: T) {
+            self.allowance = Some(field.into().into());
+        }
+        ///Sets `allowance` with the provided value.
+        pub fn with_allowance<T: Into<String>>(mut self, field: T) -> Self {
+            self.set_allowance(field.into());
             self
         }
     }
