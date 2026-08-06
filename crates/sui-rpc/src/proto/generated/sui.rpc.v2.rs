@@ -8281,7 +8281,7 @@ pub struct TransactionExpiration {
     #[prost(uint32, optional, tag = "7")]
     pub nonce: ::core::option::Option<u32>,
     /// The validators allowed to propose this transaction in consensus. Only set when `kind`
-    /// is `VALIDITY`.
+    /// is `VALIDITY`. Leave unset to let any validator propose the transaction.
     #[prost(message, optional, tag = "8")]
     pub allowed_proposers: ::core::option::Option<AllowedProposers>,
 }
@@ -8355,10 +8355,15 @@ pub mod transaction_expiration {
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct AllowedProposers {
     /// The epoch whose committee `proposers` indexes into.
+    ///
+    /// Committee indices are only meaningful against one committee, so a set recorded for any
+    /// other epoch is ignored and the transaction is treated as naming no proposers.
     #[prost(uint64, optional, tag = "1")]
     pub epoch: ::core::option::Option<u64>,
-    /// Committee indices of the allowed proposers, strictly increasing. An empty list
-    /// allows every validator to propose.
+    /// Committee indices of the allowed proposers, strictly increasing and non-empty.
+    ///
+    /// An empty list names no validator and is rejected; omit `allowed_proposers` entirely to
+    /// let any validator propose the transaction.
     #[prost(uint32, repeated, tag = "2")]
     pub proposers: ::prost::alloc::vec::Vec<u32>,
 }

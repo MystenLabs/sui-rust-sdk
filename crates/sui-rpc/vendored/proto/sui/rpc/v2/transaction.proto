@@ -103,7 +103,7 @@ message TransactionExpiration {
   optional uint32 nonce = 7;
 
   // The validators allowed to propose this transaction in consensus. Only set when `kind`
-  // is `VALIDITY`.
+  // is `VALIDITY`. Leave unset to let any validator propose the transaction.
   optional AllowedProposers allowed_proposers = 8;
 }
 
@@ -112,10 +112,15 @@ message TransactionExpiration {
 // Proposal by any other validator is byzantine behavior and invalidates the whole block.
 message AllowedProposers {
   // The epoch whose committee `proposers` indexes into.
+  //
+  // Committee indices are only meaningful against one committee, so a set recorded for any
+  // other epoch is ignored and the transaction is treated as naming no proposers.
   optional uint64 epoch = 1;
 
-  // Committee indices of the allowed proposers, strictly increasing. An empty list
-  // allows every validator to propose.
+  // Committee indices of the allowed proposers, strictly increasing and non-empty.
+  //
+  // An empty list names no validator and is rejected; omit `allowed_proposers` entirely to
+  // let any validator propose the transaction.
   repeated uint32 proposers = 2;
 }
 
