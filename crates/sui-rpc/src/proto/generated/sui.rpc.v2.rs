@@ -4026,6 +4026,42 @@ pub struct PackageVersion {
     #[prost(uint64, optional, tag = "2")]
     pub version: ::core::option::Option<u64>,
 }
+/// Request message for MovePackageService.ListPackages.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ListPackagesRequest {
+    /// Optional. Start of the checkpoint range to query (inclusive). Defaults to
+    /// genesis.
+    #[prost(uint64, optional, tag = "1")]
+    pub start_checkpoint: ::core::option::Option<u64>,
+    /// Optional. End of the checkpoint range to query (exclusive). Defaults to
+    /// the current indexed ledger tip.
+    #[prost(uint64, optional, tag = "2")]
+    pub end_checkpoint: ::core::option::Option<u64>,
+    /// Optional cursor-bounded query options. If unspecified, reads in ascending
+    /// order with the default item limit. The server enforces a maximum item
+    /// limit and silently coerces larger values down to it. To paginate, pass
+    /// the last received `Watermark.cursor` as `options.after` (ascending) or
+    /// `options.before` (descending).
+    #[prost(message, optional, tag = "3")]
+    pub options: ::core::option::Option<QueryOptions>,
+}
+/// Response message for MovePackageService.ListPackages.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ListPackagesResponse {
+    /// One package write: the written package version.
+    #[prost(message, optional, tag = "1")]
+    pub package: ::core::option::Option<PackageVersion>,
+    /// Progress watermark as of this frame. Present on every frame. A
+    /// ScanLimit terminal watermark may repeat the previous frame's cursor when
+    /// its authoritative scan frontier was already emitted.
+    #[prost(message, optional, tag = "2")]
+    pub watermark: ::core::option::Option<Watermark>,
+    /// Set exactly once, on the final frame of a successful query stream.
+    #[prost(message, optional, tag = "3")]
+    pub end: ::core::option::Option<QueryEnd>,
+}
 /// Generated client implementations.
 pub mod move_package_service_client {
     #![allow(
@@ -4218,6 +4254,35 @@ pub mod move_package_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        /// List package writes (publishes and upgrades) in a checkpoint range,
+        /// ordered by transaction and, within a transaction, by the order the
+        /// writes appear in its effects.
+        pub async fn list_packages(
+            &mut self,
+            request: impl tonic::IntoRequest<super::ListPackagesRequest>,
+        ) -> std::result::Result<
+            tonic::Response<tonic::codec::Streaming<super::ListPackagesResponse>>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/sui.rpc.v2.MovePackageService/ListPackages",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new("sui.rpc.v2.MovePackageService", "ListPackages"),
+                );
+            self.inner.server_streaming(req, path, codec).await
+        }
     }
 }
 /// Generated server implementations.
@@ -4265,6 +4330,18 @@ pub mod move_package_service_server {
             request: tonic::Request<super::ListPackageVersionsRequest>,
         ) -> std::result::Result<
             tonic::Response<super::ListPackageVersionsResponse>,
+            tonic::Status,
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
+        /// List package writes (publishes and upgrades) in a checkpoint range,
+        /// ordered by transaction and, within a transaction, by the order the
+        /// writes appear in its effects.
+        async fn list_packages(
+            &self,
+            request: tonic::Request<super::ListPackagesRequest>,
+        ) -> std::result::Result<
+            tonic::Response<BoxStream<super::ListPackagesResponse>>,
             tonic::Status,
         > {
             Err(tonic::Status::unimplemented("Not yet implemented"))
@@ -4529,6 +4606,53 @@ pub mod move_package_service_server {
                                 max_encoding_message_size,
                             );
                         let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/sui.rpc.v2.MovePackageService/ListPackages" => {
+                    #[allow(non_camel_case_types)]
+                    struct ListPackagesSvc<T: MovePackageService>(pub Arc<T>);
+                    impl<
+                        T: MovePackageService,
+                    > tonic::server::ServerStreamingService<super::ListPackagesRequest>
+                    for ListPackagesSvc<T> {
+                        type Response = super::ListPackagesResponse;
+                        type ResponseStream = BoxStream<super::ListPackagesResponse>;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::ResponseStream>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::ListPackagesRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as MovePackageService>::list_packages(&inner, request)
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = ListPackagesSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.server_streaming(method, req).await;
                         Ok(res)
                     };
                     Box::pin(fut)

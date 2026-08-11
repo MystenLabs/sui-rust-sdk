@@ -19084,6 +19084,316 @@ impl<'de> serde::Deserialize<'de> for ListPackageVersionsResponse {
             )
     }
 }
+impl serde::Serialize for ListPackagesRequest {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0usize;
+        if self.start_checkpoint.is_some() {
+            len += 1;
+        }
+        if self.end_checkpoint.is_some() {
+            len += 1;
+        }
+        if self.options.is_some() {
+            len += 1;
+        }
+        let mut struct_ser = serializer
+            .serialize_struct("sui.rpc.v2.ListPackagesRequest", len)?;
+        if let Some(v) = self.start_checkpoint.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser
+                .serialize_field("startCheckpoint", ToString::to_string(&v).as_str())?;
+        }
+        if let Some(v) = self.end_checkpoint.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser
+                .serialize_field("endCheckpoint", ToString::to_string(&v).as_str())?;
+        }
+        if let Some(v) = self.options.as_ref() {
+            struct_ser.serialize_field("options", v)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for ListPackagesRequest {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "start_checkpoint",
+            "startCheckpoint",
+            "end_checkpoint",
+            "endCheckpoint",
+            "options",
+        ];
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            StartCheckpoint,
+            EndCheckpoint,
+            Options,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(
+                deserializer: D,
+            ) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+                    fn expecting(
+                        &self,
+                        formatter: &mut std::fmt::Formatter<'_>,
+                    ) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", FIELDS)
+                    }
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(
+                        self,
+                        value: &str,
+                    ) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "startCheckpoint" | "start_checkpoint" => {
+                                Ok(GeneratedField::StartCheckpoint)
+                            }
+                            "endCheckpoint" | "end_checkpoint" => {
+                                Ok(GeneratedField::EndCheckpoint)
+                            }
+                            "options" => Ok(GeneratedField::Options),
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = ListPackagesRequest;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2.ListPackagesRequest")
+            }
+            fn visit_map<V>(
+                self,
+                mut map_: V,
+            ) -> std::result::Result<ListPackagesRequest, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                let mut start_checkpoint__ = None;
+                let mut end_checkpoint__ = None;
+                let mut options__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::StartCheckpoint => {
+                            if start_checkpoint__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("startCheckpoint"),
+                                );
+                            }
+                            start_checkpoint__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::EndCheckpoint => {
+                            if end_checkpoint__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("endCheckpoint"),
+                                );
+                            }
+                            end_checkpoint__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::Options => {
+                            if options__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("options"));
+                            }
+                            options__ = map_.next_value()?;
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(ListPackagesRequest {
+                    start_checkpoint: start_checkpoint__,
+                    end_checkpoint: end_checkpoint__,
+                    options: options__,
+                })
+            }
+        }
+        deserializer
+            .deserialize_struct(
+                "sui.rpc.v2.ListPackagesRequest",
+                FIELDS,
+                GeneratedVisitor,
+            )
+    }
+}
+impl serde::Serialize for ListPackagesResponse {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0usize;
+        if self.package.is_some() {
+            len += 1;
+        }
+        if self.watermark.is_some() {
+            len += 1;
+        }
+        if self.end.is_some() {
+            len += 1;
+        }
+        let mut struct_ser = serializer
+            .serialize_struct("sui.rpc.v2.ListPackagesResponse", len)?;
+        if let Some(v) = self.package.as_ref() {
+            struct_ser.serialize_field("package", v)?;
+        }
+        if let Some(v) = self.watermark.as_ref() {
+            struct_ser.serialize_field("watermark", v)?;
+        }
+        if let Some(v) = self.end.as_ref() {
+            struct_ser.serialize_field("end", v)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for ListPackagesResponse {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &["package", "watermark", "end"];
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Package,
+            Watermark,
+            End,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(
+                deserializer: D,
+            ) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+                    fn expecting(
+                        &self,
+                        formatter: &mut std::fmt::Formatter<'_>,
+                    ) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", FIELDS)
+                    }
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(
+                        self,
+                        value: &str,
+                    ) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "package" => Ok(GeneratedField::Package),
+                            "watermark" => Ok(GeneratedField::Watermark),
+                            "end" => Ok(GeneratedField::End),
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = ListPackagesResponse;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2.ListPackagesResponse")
+            }
+            fn visit_map<V>(
+                self,
+                mut map_: V,
+            ) -> std::result::Result<ListPackagesResponse, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                let mut package__ = None;
+                let mut watermark__ = None;
+                let mut end__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Package => {
+                            if package__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("package"));
+                            }
+                            package__ = map_.next_value()?;
+                        }
+                        GeneratedField::Watermark => {
+                            if watermark__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("watermark"));
+                            }
+                            watermark__ = map_.next_value()?;
+                        }
+                        GeneratedField::End => {
+                            if end__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("end"));
+                            }
+                            end__ = map_.next_value()?;
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(ListPackagesResponse {
+                    package: package__,
+                    watermark: watermark__,
+                    end: end__,
+                })
+            }
+        }
+        deserializer
+            .deserialize_struct(
+                "sui.rpc.v2.ListPackagesResponse",
+                FIELDS,
+                GeneratedVisitor,
+            )
+    }
+}
 impl serde::Serialize for ListTransactionsRequest {
     #[allow(deprecated)]
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
