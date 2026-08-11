@@ -6353,6 +6353,7 @@ impl serde::Serialize for command_argument_error::CommandArgumentErrorKind {
             Self::CannotMoveBorrowedValue => "CANNOT_MOVE_BORROWED_VALUE",
             Self::CannotWriteToExtendedReference => "CANNOT_WRITE_TO_EXTENDED_REFERENCE",
             Self::InvalidReferenceArgument => "INVALID_REFERENCE_ARGUMENT",
+            Self::InvalidTxContext => "INVALID_TX_CONTEXT",
         };
         serializer.serialize_str(variant)
     }
@@ -6384,6 +6385,7 @@ impl<'de> serde::Deserialize<'de> for command_argument_error::CommandArgumentErr
             "CANNOT_MOVE_BORROWED_VALUE",
             "CANNOT_WRITE_TO_EXTENDED_REFERENCE",
             "INVALID_REFERENCE_ARGUMENT",
+            "INVALID_TX_CONTEXT",
         ];
         struct GeneratedVisitor;
         impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
@@ -6523,6 +6525,11 @@ impl<'de> serde::Deserialize<'de> for command_argument_error::CommandArgumentErr
                     "INVALID_REFERENCE_ARGUMENT" => {
                         Ok(
                             command_argument_error::CommandArgumentErrorKind::InvalidReferenceArgument,
+                        )
+                    }
+                    "INVALID_TX_CONTEXT" => {
+                        Ok(
+                            command_argument_error::CommandArgumentErrorKind::InvalidTxContext,
                         )
                     }
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),

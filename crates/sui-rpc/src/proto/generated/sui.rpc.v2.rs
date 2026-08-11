@@ -1399,6 +1399,10 @@ pub mod command_argument_error {
         /// argument is a mutable reference and it conflicts with another argument to the call, or the
         /// argument is mutable and another reference extends it and will be used in a later command.
         InvalidReferenceArgument = 19,
+        /// Invalid usage of TxContext in the function signature. TxContext can only be used by
+        /// reference, `&TxContext` or `&mut TxContext`. If used mutably, it must be the only
+        /// TxContext parameter, and TxContext can never be returned from a Move call.
+        InvalidTxContext = 20,
     }
     impl CommandArgumentErrorKind {
         /// String value of the enum field names used in the ProtoBuf definition.
@@ -1435,6 +1439,7 @@ pub mod command_argument_error {
                     "CANNOT_WRITE_TO_EXTENDED_REFERENCE"
                 }
                 Self::InvalidReferenceArgument => "INVALID_REFERENCE_ARGUMENT",
+                Self::InvalidTxContext => "INVALID_TX_CONTEXT",
             }
         }
         /// Creates an enum from field names used in the ProtoBuf definition.
@@ -1470,6 +1475,7 @@ pub mod command_argument_error {
                     Some(Self::CannotWriteToExtendedReference)
                 }
                 "INVALID_REFERENCE_ARGUMENT" => Some(Self::InvalidReferenceArgument),
+                "INVALID_TX_CONTEXT" => Some(Self::InvalidTxContext),
                 _ => None,
             }
         }
