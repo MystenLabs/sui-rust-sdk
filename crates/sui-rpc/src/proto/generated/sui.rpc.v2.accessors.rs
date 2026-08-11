@@ -10794,6 +10794,194 @@ mod _accessor_impls {
             self
         }
     }
+    impl super::ListPackagesRequest {
+        pub const fn const_default() -> Self {
+            Self {
+                start_checkpoint: None,
+                end_checkpoint: None,
+                options: None,
+            }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::ListPackagesRequest = super::ListPackagesRequest::const_default();
+            &DEFAULT
+        }
+        ///If `start_checkpoint` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn start_checkpoint_opt_mut(&mut self) -> Option<&mut u64> {
+            self.start_checkpoint.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `start_checkpoint`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn start_checkpoint_mut(&mut self) -> &mut u64 {
+            self.start_checkpoint.get_or_insert_default()
+        }
+        ///If `start_checkpoint` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn start_checkpoint_opt(&self) -> Option<u64> {
+            self.start_checkpoint.as_ref().map(|field| *field)
+        }
+        ///Sets `start_checkpoint` with the provided value.
+        pub fn set_start_checkpoint(&mut self, field: u64) {
+            self.start_checkpoint = Some(field);
+        }
+        ///Sets `start_checkpoint` with the provided value.
+        pub fn with_start_checkpoint(mut self, field: u64) -> Self {
+            self.set_start_checkpoint(field);
+            self
+        }
+        ///If `end_checkpoint` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn end_checkpoint_opt_mut(&mut self) -> Option<&mut u64> {
+            self.end_checkpoint.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `end_checkpoint`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn end_checkpoint_mut(&mut self) -> &mut u64 {
+            self.end_checkpoint.get_or_insert_default()
+        }
+        ///If `end_checkpoint` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn end_checkpoint_opt(&self) -> Option<u64> {
+            self.end_checkpoint.as_ref().map(|field| *field)
+        }
+        ///Sets `end_checkpoint` with the provided value.
+        pub fn set_end_checkpoint(&mut self, field: u64) {
+            self.end_checkpoint = Some(field);
+        }
+        ///Sets `end_checkpoint` with the provided value.
+        pub fn with_end_checkpoint(mut self, field: u64) -> Self {
+            self.set_end_checkpoint(field);
+            self
+        }
+        ///Returns the value of `options`, or the default value if `options` is unset.
+        pub fn options(&self) -> &super::QueryOptions {
+            self.options
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::QueryOptions::default_instance() as _)
+        }
+        ///If `options` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn options_opt_mut(&mut self) -> Option<&mut super::QueryOptions> {
+            self.options.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `options`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn options_mut(&mut self) -> &mut super::QueryOptions {
+            self.options.get_or_insert_default()
+        }
+        ///If `options` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn options_opt(&self) -> Option<&super::QueryOptions> {
+            self.options.as_ref().map(|field| field as _)
+        }
+        ///Sets `options` with the provided value.
+        pub fn set_options<T: Into<super::QueryOptions>>(&mut self, field: T) {
+            self.options = Some(field.into().into());
+        }
+        ///Sets `options` with the provided value.
+        pub fn with_options<T: Into<super::QueryOptions>>(mut self, field: T) -> Self {
+            self.set_options(field.into());
+            self
+        }
+    }
+    impl super::ListPackagesResponse {
+        pub const fn const_default() -> Self {
+            Self {
+                package: None,
+                watermark: None,
+                end: None,
+            }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::ListPackagesResponse = super::ListPackagesResponse::const_default();
+            &DEFAULT
+        }
+        ///Returns the value of `package`, or the default value if `package` is unset.
+        pub fn package(&self) -> &super::PackageVersion {
+            self.package
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::PackageVersion::default_instance() as _)
+        }
+        ///If `package` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn package_opt_mut(&mut self) -> Option<&mut super::PackageVersion> {
+            self.package.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `package`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn package_mut(&mut self) -> &mut super::PackageVersion {
+            self.package.get_or_insert_default()
+        }
+        ///If `package` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn package_opt(&self) -> Option<&super::PackageVersion> {
+            self.package.as_ref().map(|field| field as _)
+        }
+        ///Sets `package` with the provided value.
+        pub fn set_package<T: Into<super::PackageVersion>>(&mut self, field: T) {
+            self.package = Some(field.into().into());
+        }
+        ///Sets `package` with the provided value.
+        pub fn with_package<T: Into<super::PackageVersion>>(mut self, field: T) -> Self {
+            self.set_package(field.into());
+            self
+        }
+        ///Returns the value of `watermark`, or the default value if `watermark` is unset.
+        pub fn watermark(&self) -> &super::Watermark {
+            self.watermark
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::Watermark::default_instance() as _)
+        }
+        ///If `watermark` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn watermark_opt_mut(&mut self) -> Option<&mut super::Watermark> {
+            self.watermark.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `watermark`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn watermark_mut(&mut self) -> &mut super::Watermark {
+            self.watermark.get_or_insert_default()
+        }
+        ///If `watermark` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn watermark_opt(&self) -> Option<&super::Watermark> {
+            self.watermark.as_ref().map(|field| field as _)
+        }
+        ///Sets `watermark` with the provided value.
+        pub fn set_watermark<T: Into<super::Watermark>>(&mut self, field: T) {
+            self.watermark = Some(field.into().into());
+        }
+        ///Sets `watermark` with the provided value.
+        pub fn with_watermark<T: Into<super::Watermark>>(mut self, field: T) -> Self {
+            self.set_watermark(field.into());
+            self
+        }
+        ///Returns the value of `end`, or the default value if `end` is unset.
+        pub fn end(&self) -> &super::QueryEnd {
+            self.end
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::QueryEnd::default_instance() as _)
+        }
+        ///If `end` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn end_opt_mut(&mut self) -> Option<&mut super::QueryEnd> {
+            self.end.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `end`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn end_mut(&mut self) -> &mut super::QueryEnd {
+            self.end.get_or_insert_default()
+        }
+        ///If `end` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn end_opt(&self) -> Option<&super::QueryEnd> {
+            self.end.as_ref().map(|field| field as _)
+        }
+        ///Sets `end` with the provided value.
+        pub fn set_end<T: Into<super::QueryEnd>>(&mut self, field: T) {
+            self.end = Some(field.into().into());
+        }
+        ///Sets `end` with the provided value.
+        pub fn with_end<T: Into<super::QueryEnd>>(mut self, field: T) -> Self {
+            self.set_end(field.into());
+            self
+        }
+    }
     impl super::ListTransactionsRequest {
         pub const fn const_default() -> Self {
             Self {

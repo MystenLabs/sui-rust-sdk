@@ -6051,6 +6051,126 @@ pub(crate) mod _field_impls {
             self.finish()
         }
     }
+    impl ListPackagesRequest {
+        pub const START_CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "start_checkpoint",
+            json_name: "startCheckpoint",
+            number: 1i32,
+            message_fields: None,
+        };
+        pub const END_CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "end_checkpoint",
+            json_name: "endCheckpoint",
+            number: 2i32,
+            message_fields: None,
+        };
+        pub const OPTIONS_FIELD: &'static MessageField = &MessageField {
+            name: "options",
+            json_name: "options",
+            number: 3i32,
+            message_fields: Some(QueryOptions::FIELDS),
+        };
+    }
+    impl MessageFields for ListPackagesRequest {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::START_CHECKPOINT_FIELD,
+            Self::END_CHECKPOINT_FIELD,
+            Self::OPTIONS_FIELD,
+        ];
+    }
+    impl ListPackagesRequest {
+        pub fn path_builder() -> ListPackagesRequestFieldPathBuilder {
+            ListPackagesRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct ListPackagesRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ListPackagesRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn start_checkpoint(mut self) -> String {
+            self.path.push(ListPackagesRequest::START_CHECKPOINT_FIELD.name);
+            self.finish()
+        }
+        pub fn end_checkpoint(mut self) -> String {
+            self.path.push(ListPackagesRequest::END_CHECKPOINT_FIELD.name);
+            self.finish()
+        }
+        pub fn options(mut self) -> QueryOptionsFieldPathBuilder {
+            self.path.push(ListPackagesRequest::OPTIONS_FIELD.name);
+            QueryOptionsFieldPathBuilder::new_with_base(self.path)
+        }
+    }
+    impl ListPackagesResponse {
+        pub const PACKAGE_FIELD: &'static MessageField = &MessageField {
+            name: "package",
+            json_name: "package",
+            number: 1i32,
+            message_fields: Some(PackageVersion::FIELDS),
+        };
+        pub const WATERMARK_FIELD: &'static MessageField = &MessageField {
+            name: "watermark",
+            json_name: "watermark",
+            number: 2i32,
+            message_fields: Some(Watermark::FIELDS),
+        };
+        pub const END_FIELD: &'static MessageField = &MessageField {
+            name: "end",
+            json_name: "end",
+            number: 3i32,
+            message_fields: Some(QueryEnd::FIELDS),
+        };
+    }
+    impl MessageFields for ListPackagesResponse {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::PACKAGE_FIELD,
+            Self::WATERMARK_FIELD,
+            Self::END_FIELD,
+        ];
+    }
+    impl ListPackagesResponse {
+        pub fn path_builder() -> ListPackagesResponseFieldPathBuilder {
+            ListPackagesResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct ListPackagesResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ListPackagesResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn package(mut self) -> PackageVersionFieldPathBuilder {
+            self.path.push(ListPackagesResponse::PACKAGE_FIELD.name);
+            PackageVersionFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn watermark(mut self) -> WatermarkFieldPathBuilder {
+            self.path.push(ListPackagesResponse::WATERMARK_FIELD.name);
+            WatermarkFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn end(mut self) -> QueryEndFieldPathBuilder {
+            self.path.push(ListPackagesResponse::END_FIELD.name);
+            QueryEndFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl LookupNameRequest {
         pub const NAME_FIELD: &'static MessageField = &MessageField {
             name: "name",

@@ -6,12 +6,18 @@ syntax = "proto3";
 package sui.rpc.v2;
 
 import "sui/rpc/v2/move_package.proto";
+import "sui/rpc/v2/query_options.proto";
 
 service MovePackageService {
   rpc GetPackage(GetPackageRequest) returns (GetPackageResponse);
   rpc GetDatatype(GetDatatypeRequest) returns (GetDatatypeResponse);
   rpc GetFunction(GetFunctionRequest) returns (GetFunctionResponse);
   rpc ListPackageVersions(ListPackageVersionsRequest) returns (ListPackageVersionsResponse);
+
+  // List package writes (publishes and upgrades) in a checkpoint range,
+  // ordered by transaction and, within a transaction, by the order the
+  // writes appear in its effects.
+  rpc ListPackages(ListPackagesRequest) returns (stream ListPackagesResponse);
 }
 
 message GetPackageRequest {
@@ -88,4 +94,36 @@ message PackageVersion {
   optional string package_id = 1;
   // The version number
   optional uint64 version = 2;
+}
+
+// Request message for MovePackageService.ListPackages.
+message ListPackagesRequest {
+  // Optional. Start of the checkpoint range to query (inclusive). Defaults to
+  // genesis.
+  optional uint64 start_checkpoint = 1;
+
+  // Optional. End of the checkpoint range to query (exclusive). Defaults to
+  // the current indexed ledger tip.
+  optional uint64 end_checkpoint = 2;
+
+  // Optional cursor-bounded query options. If unspecified, reads in ascending
+  // order with the default item limit. The server enforces a maximum item
+  // limit and silently coerces larger values down to it. To paginate, pass
+  // the last received `Watermark.cursor` as `options.after` (ascending) or
+  // `options.before` (descending).
+  optional QueryOptions options = 3;
+}
+
+// Response message for MovePackageService.ListPackages.
+message ListPackagesResponse {
+  // One package write: the written package version.
+  optional PackageVersion package = 1;
+
+  // Progress watermark as of this frame. Present on every frame. A
+  // ScanLimit terminal watermark may repeat the previous frame's cursor when
+  // its authoritative scan frontier was already emitted.
+  optional Watermark watermark = 2;
+
+  // Set exactly once, on the final frame of a successful query stream.
+  optional QueryEnd end = 3;
 }
