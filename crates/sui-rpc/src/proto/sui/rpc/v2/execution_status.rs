@@ -574,6 +574,7 @@ impl From<sui_sdk_types::CommandArgumentError> for CommandArgumentError {
                 CommandArgumentErrorKind::CannotWriteToExtendedReference
             }
             E::InvalidReferenceArgument => CommandArgumentErrorKind::InvalidReferenceArgument,
+            E::InvalidTxContext => CommandArgumentErrorKind::InvalidTxContext,
             _ => CommandArgumentErrorKind::Unknown,
         };
 
@@ -646,6 +647,7 @@ impl TryFrom<&CommandArgumentError> for sui_sdk_types::CommandArgumentError {
             K::CannotMoveBorrowedValue => Self::CannotMoveBorrowedValue,
             K::CannotWriteToExtendedReference => Self::CannotWriteToExtendedReference,
             K::InvalidReferenceArgument => Self::InvalidReferenceArgument,
+            K::InvalidTxContext => Self::InvalidTxContext,
         }
         .pipe(Ok)
     }

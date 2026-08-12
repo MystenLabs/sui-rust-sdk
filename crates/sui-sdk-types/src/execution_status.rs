@@ -440,6 +440,11 @@ pub enum CommandArgumentError {
     /// argument is a mutable reference and it conflicts with another argument to the call, or the
     /// argument is mutable and another reference extends it and will be used in a later command.
     InvalidReferenceArgument,
+
+    /// Invalid usage of TxContext in the function signature. TxContext can only be used by
+    /// reference, `&TxContext` or `&mut TxContext`. If used mutably, it must be the only
+    /// TxContext parameter, and TxContext can never be returned from a Move call.
+    InvalidTxContext,
 }
 
 /// An error with a upgrading a package
