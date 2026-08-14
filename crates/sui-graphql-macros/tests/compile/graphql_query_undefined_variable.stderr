@@ -1,4 +1,4 @@
-error: GraphQL [line 2, col 25]: variable `$id` is not defined
+error: GraphQL [line 2, col 25]: Variable $id not defined in anonymous operation
   --> tests/compile/graphql_query_undefined_variable.rs:5:17
    |
  5 |   const Q: &str = graphql_query!(

@@ -1,4 +1,4 @@
-error: GraphQL [line 3, col 9]: type `Query` does not have a field `foo`
+error: GraphQL [line 3, col 9]: Field `foo` does not exist on type `Query`
   --> tests/compile/graphql_query_multiple_errors.rs:7:17
    |
  7 |   const Q: &str = graphql_query!(
@@ -13,7 +13,7 @@ error: GraphQL [line 3, col 9]: type `Query` does not have a field `foo`
    |
    = note: this error originates in the macro `graphql_query` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: GraphQL [line 4, col 9]: type `Query` does not have a field `bar`
+error: GraphQL [line 4, col 9]: Field `bar` does not exist on type `Query`
   --> tests/compile/graphql_query_multiple_errors.rs:7:17
    |
  7 |   const Q: &str = graphql_query!(
