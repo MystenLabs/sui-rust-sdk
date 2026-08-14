@@ -1,4 +1,4 @@
-error: GraphQL [line 1, col 9]: type `Query` does not have a field `chainIdentifierr`
+error: GraphQL [line 1, col 9]: Field `chainIdentifierr` does not exist on type `Query`
  --> tests/compile/graphql_query_unknown_field.rs:5:17
   |
 5 | const Q: &str = graphql_query!("query { chainIdentifierr }");

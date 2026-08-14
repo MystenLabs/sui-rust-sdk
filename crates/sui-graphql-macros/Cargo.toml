@@ -26,7 +26,9 @@ syn = { version = "2.0", features = ["full", "parsing", "extra-traits"] }
 darling = "0.20"
 graphql-parser = "0.4"
 edit-distance = "2.1"
-apollo-compiler = "1.31"
+bluejay-parser = { version = "0.3", features = ["format-errors"] }
+bluejay-printer = "0.3"
+bluejay-validator = { version = "0.3", default-features = false, features = ["one-of-input-objects", "parser-integration"] }
 
 [dev-dependencies]
 serde = { version = "1.0", features = ["derive"] }

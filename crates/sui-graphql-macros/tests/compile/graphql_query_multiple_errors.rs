@@ -1,5 +1,5 @@
 //! trybuild compile-fail: a mix of one valid field and two invalid ones
-//! should produce two separate rustc errors (one per apollo diagnostic), not
+//! should produce two separate rustc errors (one per Bluejay diagnostic), not
 //! a single combined message.
 
 use sui_graphql_macros::graphql_query;
