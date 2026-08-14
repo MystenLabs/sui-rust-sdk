@@ -29,7 +29,8 @@
 //!
 //! The macro validates that `object.address` and `object.version` exist in the schema
 //! and that their types match at compile time. It then generates a
-//! `from_value(serde_json::Value) -> Result<Self, String>` method and a `Deserialize`
+//! `from_value(serde_json::Value) -> Result<Self, String>` method, a borrowed
+//! `extract(&serde_json::Value) -> Result<Self, String>` variant, and a `Deserialize`
 //! implementation, so the struct can be used directly with
 //! `serde_json::from_value` or as a response type in GraphQL client calls.
 //!
@@ -114,6 +115,30 @@
 //! fn main() {}
 //! ```
 //!
+//! ## Flattened Responses
+//!
+//! Use `#[field(flatten)]` to populate a field by passing the complete response value to
+//! that field type's borrowed `extract` method. This allows response types that read from
+//! the same root value to be composed without cloning it or repeating their field paths.
+//! `flatten` cannot be combined with `path`.
+//!
+//! ```no_run
+//! use sui_graphql_macros::Response;
+//!
+//! #[derive(Response)]
+//! struct ChainInfo {
+//!     #[field(path = "chainIdentifier")]
+//!     chain_id: String,
+//! }
+//!
+//! #[derive(Response)]
+//! struct ResponseData {
+//!     #[field(flatten)]
+//!     chain: ChainInfo,
+//! }
+//! fn main() {}
+//! ```
+//!
 //! ## Enums (GraphQL Unions)
 //!
 //! Use `#[response(root_type = "UnionType")]` on enums with newtype variants:
@@ -137,6 +162,7 @@
 //! | `#[response(root_type = "Type")]` | struct/enum | Schema type to validate against (default: `"Query"`) |
 //! | `#[response(schema = "path")]` | struct/enum | Custom schema file (relative to `CARGO_MANIFEST_DIR`) |
 //! | `#[field(path = "...")]` | field | Dot-separated path with optional `?`/`[]`/alias |
+//! | `#[field(flatten)]` | field | Populate by calling the field type's `extract` with the complete response value |
 //! | `#[field(skip_schema_validation)]` | field | Skip compile-time schema checks for this field |
 //! | `#[response(on = "TypeName")]` | variant | GraphQL `__typename` to match (default: variant name) |
 
@@ -149,7 +175,10 @@ mod validation;
 
 use darling::FromDeriveInput;
 use darling::FromField;
+use darling::FromMeta;
 use darling::FromVariant;
+use darling::ast::NestedMeta;
+use darling::util::Flag;
 use darling::util::SpannedValue;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
@@ -174,13 +203,27 @@ struct ResponseInput {
     root_type: Option<SpannedValue<String>>,
 }
 
-/// A struct field (requires `#[field(path = "...")]`).
+/// A struct field (requires either `path = "..."` or `flatten`).
 #[derive(Debug, FromField)]
 #[darling(attributes(field))]
 struct ResponseField {
     ident: Option<syn::Ident>,
     ty: syn::Type,
-    path: SpannedValue<String>,
+    #[darling(flatten)]
+    options: ResponseFieldOptions,
+}
+
+#[derive(Debug)]
+struct ResponseFieldOptions {
+    path: Option<SpannedValue<String>>,
+    flatten: Flag,
+    skip_schema_validation: bool,
+}
+
+#[derive(Debug, FromMeta)]
+struct ParsedResponseFieldOptions {
+    path: Option<SpannedValue<String>>,
+    flatten: Flag,
     #[darling(default)]
     skip_schema_validation: bool,
 }
@@ -203,10 +246,48 @@ struct ResponseVariant {
     on: Option<SpannedValue<String>>,
 }
 
+impl FromMeta for ResponseFieldOptions {
+    fn from_list(items: &[NestedMeta]) -> darling::Result<Self> {
+        // Keep parsing and source validation errors separate so malformed input can still
+        // report a missing `path`, matching Darling's required-field error accumulation.
+        let mut errors = darling::Error::accumulator();
+        let parsed = errors.handle(ParsedResponseFieldOptions::from_list(items));
+
+        let path = items.iter().find_map(|item| match item {
+            NestedMeta::Meta(meta) if meta.path().is_ident("path") => Some(meta),
+            _ => None,
+        });
+
+        let flatten = items.iter().find_map(|item| match item {
+            NestedMeta::Meta(meta) if meta.path().is_ident("flatten") => Some(meta),
+            _ => None,
+        });
+
+        match (path, flatten) {
+            (None, None) => errors.push(darling::Error::missing_field("path")),
+            (Some(_), Some(flatten)) => errors.push(
+                darling::Error::custom("`flatten` cannot be used together with `path`")
+                    .with_span(flatten),
+            ),
+            _ => {}
+        }
+
+        errors.finish()?;
+        let parsed = parsed.expect("parsed options are present when there are no errors");
+        Ok(Self {
+            path: parsed.path,
+            flatten: parsed.flatten,
+            skip_schema_validation: parsed.skip_schema_validation,
+        })
+    }
+}
+
 /// Derive macro for GraphQL response types with nested field extraction.
 ///
 /// Use `#[field(path = "...")]` to specify the JSON path to extract each field.
 /// Paths are dot-separated (e.g., `"object.address"` extracts `json["object"]["address"]`).
+/// Use `#[field(flatten)]` to pass the complete response value to the field type's
+/// borrowed `extract` method instead.
 ///
 /// # Root Type
 ///
@@ -217,6 +298,7 @@ struct ResponseVariant {
 ///
 /// The macro generates:
 /// - `from_value(serde_json::Value) -> Result<Self, String>` method
+/// - `extract(&serde_json::Value) -> Result<Self, String>` borrowed method
 /// - `Deserialize` implementation that uses `from_value`
 ///
 /// # Example
@@ -330,7 +412,7 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
     }
 }
 
-/// Generate `from_value` and `Deserialize` for a struct.
+/// Generate value conversion methods and `Deserialize` for a struct.
 fn generate_struct_impl(
     input: &ResponseInput,
     fields: &[ResponseField],
@@ -349,11 +431,23 @@ fn generate_struct_impl(
             .as_ref()
             .expect("darling ensures named fields only");
 
-        let spanned_path = &field.path;
+        if field.options.flatten.is_present() {
+            let field_ty = &field.ty;
+            field_initializers.push(quote! {
+                #field_ident: <#field_ty>::extract(value)?
+            });
+            continue;
+        }
+
+        let spanned_path = field
+            .options
+            .path
+            .as_ref()
+            .expect("validated: non-flattened fields require a path");
         let parsed_path = path::ParsedPath::parse(spanned_path.as_str())
             .map_err(|e| syn::Error::new(spanned_path.span(), e.to_string()))?;
 
-        let terminal_type = if !field.skip_schema_validation {
+        let terminal_type = if !field.options.skip_schema_validation {
             Some(validation::validate_path_against_schema(
                 schema,
                 root_type,
@@ -367,7 +461,7 @@ fn generate_struct_impl(
         // Skip Vec excess check when schema validation is skipped (user takes full
         // responsibility) or when the terminal type is an object-like scalar (e.g., JSON)
         // whose value can be an array.
-        let skip_vec_excess_check = field.skip_schema_validation
+        let skip_vec_excess_check = field.options.skip_schema_validation
             || terminal_type.is_some_and(validation::is_object_like_scalar);
         validation::validate_type_matches_path(&parsed_path, &field.ty, skip_vec_excess_check)?;
 
@@ -379,14 +473,19 @@ fn generate_struct_impl(
         });
     }
 
-    // Generate both `from_value` and `Deserialize` impl:
+    // Generate both value conversion methods and `Deserialize`:
     //
-    // - `from_value`: Core extraction logic, parses from serde_json::Value
+    // - `from_value`: Owned convenience API retained for compatibility
+    // - `extract`: Core extraction logic that borrows a serde_json::Value
     // - `Deserialize`: Allows direct use with serde (e.g., `serde_json::from_str::<MyStruct>(...)`)
     //   and with the GraphQL client's `query::<T>()` which requires `T: DeserializeOwned`
     Ok(quote! {
         impl #impl_generics #ident #ty_generics #where_clause {
             pub fn from_value(value: serde_json::Value) -> Result<Self, String> {
+                Self::extract(&value)
+            }
+
+            pub fn extract(value: &serde_json::Value) -> Result<Self, String> {
                 Ok(Self {
                     #(#field_initializers),*
                 })
@@ -406,9 +505,9 @@ fn generate_struct_impl(
     })
 }
 
-/// Generate `from_value` and `Deserialize` for an enum (GraphQL union).
+/// Generate value conversion methods and `Deserialize` for an enum (GraphQL union).
 ///
-/// Each variant wraps a type that implements `from_value`. Dispatches on `__typename`.
+/// Each variant wraps a type that implements `extract`. Dispatches on `__typename`.
 fn generate_enum_impl(
     input: &ResponseInput,
     variants: &[ResponseVariant],
@@ -465,12 +564,12 @@ fn generate_enum_impl(
             return Err(err);
         }
 
-        // Newtype variant: delegate to inner type's from_value
+        // Newtype variant: delegate to the inner type's borrowed parser.
         let inner_ty = &variant.fields.fields[0].ty;
         match_arms.push(quote! {
             #graphql_typename => {
                 Ok(Self::#variant_ident(
-                    <#inner_ty>::from_value(value)?
+                    <#inner_ty>::extract(value)?
                 ))
             }
         });
@@ -482,6 +581,10 @@ fn generate_enum_impl(
     Ok(quote! {
         impl #impl_generics #ident #ty_generics #where_clause {
             pub fn from_value(value: serde_json::Value) -> Result<Self, String> {
+                Self::extract(&value)
+            }
+
+            pub fn extract(value: &serde_json::Value) -> Result<Self, String> {
                 let typename = value.get("__typename")
                     .and_then(|v| v.as_str())
                     .ok_or_else(|| format!(
@@ -527,7 +630,7 @@ fn generate_field_extraction(
     let inner = generate_from_segments(full_path, &path.segments, type_structure);
     // The inner expression returns Result<T, String>, so we use ? to unwrap
     quote! {{
-        let current = &value;
+        let current = value;
         #inner?
     }}
 }

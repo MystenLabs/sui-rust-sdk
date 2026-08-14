@@ -19,6 +19,7 @@ fn compile_tests() {
     // Tests that should fail with expected errors
     t.compile_fail("tests/compile/missing_field_path_attr.rs");
     t.compile_fail("tests/compile/missing_field_attr.rs");
+    t.compile_fail("tests/compile/flatten_with_path.rs");
     t.compile_fail("tests/compile/empty_path.rs");
     t.compile_fail("tests/compile/tuple_struct_not_supported.rs");
 
