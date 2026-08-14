@@ -58,6 +58,28 @@ fn test_multiple_fields() {
     assert_eq!(data.digest, "abc123");
 }
 
+#[test]
+fn test_field_named_value_does_not_shadow_response_value() {
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct Data {
+        #[field(path = "chainIdentifier")]
+        value: String,
+        #[field(path = "checkpoint.digest")]
+        digest: String,
+    }
+
+    let json = serde_json::json!({
+        "chainIdentifier": "4c78adac",
+        "checkpoint": {
+            "digest": "abc123"
+        }
+    });
+    let data = Data::from_value(json).unwrap();
+    assert_eq!(data.value, "4c78adac");
+    assert_eq!(data.digest, "abc123");
+}
+
 // === Nullable Array Extraction ===
 // `?` markers control which segments tolerate null. `?[]` makes the array nullable.
 
