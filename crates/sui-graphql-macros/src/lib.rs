@@ -341,8 +341,7 @@ fn generate_struct_impl(
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     // Generate extraction code for each field
-    let mut field_extractions = Vec::new();
-    let mut field_names = Vec::new();
+    let mut field_initializers = vec![];
 
     for field in fields {
         let field_ident = field
@@ -374,9 +373,10 @@ fn generate_struct_impl(
 
         // Generate extraction code using the same parsed path
         let type_structure = validation::analyze_type(&field.ty);
-        let extraction = generate_field_extraction(&parsed_path, &type_structure, field_ident);
-        field_extractions.push(extraction);
-        field_names.push(field_ident);
+        let extraction = generate_field_extraction(&parsed_path, &type_structure);
+        field_initializers.push(quote! {
+            #field_ident: #extraction
+        });
     }
 
     // Generate both `from_value` and `Deserialize` impl:
@@ -387,10 +387,8 @@ fn generate_struct_impl(
     Ok(quote! {
         impl #impl_generics #ident #ty_generics #where_clause {
             pub fn from_value(value: serde_json::Value) -> Result<Self, String> {
-                #(#field_extractions)*
-
                 Ok(Self {
-                    #(#field_names),*
+                    #(#field_initializers),*
                 })
             }
         }
@@ -524,17 +522,14 @@ fn generate_enum_impl(
 fn generate_field_extraction(
     path: &path::ParsedPath,
     type_structure: &validation::TypeStructure,
-    field_ident: &syn::Ident,
 ) -> TokenStream2 {
     let full_path = &path.raw;
     let inner = generate_from_segments(full_path, &path.segments, type_structure);
     // The inner expression returns Result<T, String>, so we use ? to unwrap
-    quote! {
-        let #field_ident = {
-            let current = &value;
-            #inner?
-        };
-    }
+    quote! {{
+        let current = &value;
+        #inner?
+    }}
 }
 
 /// Recursively generate extraction code by traversing path segments.
