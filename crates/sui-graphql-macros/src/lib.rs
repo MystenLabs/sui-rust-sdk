@@ -182,9 +182,12 @@ use darling::util::Flag;
 use darling::util::SpannedValue;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
+use quote::ToTokens;
 use quote::quote;
+use quote::quote_spanned;
 use syn::DeriveInput;
 use syn::parse_macro_input;
+use syn::spanned::Spanned;
 
 // ---------------------------------------------------------------------------
 // Darling input structures — define the "schema" for macro input.
@@ -412,6 +415,81 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
     }
 }
 
+/// The identifiers of a type's generic parameters, used to skip codegen that cannot
+/// reference them.
+fn generic_param_idents(generics: &syn::Generics) -> Vec<String> {
+    generics
+        .params
+        .iter()
+        .filter_map(|p| match p {
+            syn::GenericParam::Type(t) => Some(t.ident.to_string()),
+            syn::GenericParam::Const(c) => Some(c.ident.to_string()),
+            syn::GenericParam::Lifetime(_) => None,
+        })
+        .collect()
+}
+
+/// Emit a compile-time check that `field_ty`'s declared root type is one a projection
+/// may be flattened from into `root_type`.
+///
+/// Returns nothing when `field_ty` mentions a generic parameter: the check is a `const`
+/// item, which cannot name generics.
+fn generate_spread_assertion(
+    schema: &schema::Schema,
+    root_type: &str,
+    field_ident: &syn::Ident,
+    field_ty: &syn::Type,
+    generic_params: &[String],
+) -> TokenStream2 {
+    let mentions_generic = field_ty
+        .to_token_stream()
+        .into_iter()
+        .any(|t| generic_params.iter().any(|p| t.to_string() == *p));
+    if mentions_generic {
+        return quote! {};
+    }
+
+    let targets = schema.spread_targets(root_type);
+    let message = format!(
+        "`{}` cannot be flattened into a response rooted at `{}`: a flattened projection \
+         must declare `root_type` as one of {}",
+        field_ident,
+        root_type,
+        targets.join(", "),
+    );
+
+    // Anchor at the field type so the error points at the offending field.
+    quote_spanned! { field_ty.span() =>
+        const _: () = {
+            const fn name_eq(a: &str, b: &str) -> bool {
+                let (a, b) = (a.as_bytes(), b.as_bytes());
+                if a.len() != b.len() {
+                    return false;
+                }
+                let mut i = 0;
+                while i < a.len() {
+                    if a[i] != b[i] {
+                        return false;
+                    }
+                    i += 1;
+                }
+                true
+            }
+
+            const TARGETS: &[&str] = &[#(#targets),*];
+            let mut i = 0;
+            let mut found = false;
+            while i < TARGETS.len() {
+                if name_eq(TARGETS[i], <#field_ty>::RESPONSE_ROOT_TYPE) {
+                    found = true;
+                }
+                i += 1;
+            }
+            assert!(found, #message);
+        };
+    }
+}
+
 /// Generate value conversion methods and `Deserialize` for a struct.
 fn generate_struct_impl(
     input: &ResponseInput,
@@ -424,6 +502,8 @@ fn generate_struct_impl(
 
     // Generate extraction code for each field
     let mut field_initializers = vec![];
+    let mut flatten_assertions = vec![];
+    let generic_params = generic_param_idents(&input.generics);
 
     for field in fields {
         let field_ident = field
@@ -436,6 +516,15 @@ fn generate_struct_impl(
             field_initializers.push(quote! {
                 #field_ident: <#field_ty>::extract(value)?
             });
+            if !field.options.skip_schema_validation {
+                flatten_assertions.push(generate_spread_assertion(
+                    schema,
+                    root_type,
+                    field_ident,
+                    field_ty,
+                    &generic_params,
+                ));
+            }
             continue;
         }
 
@@ -480,7 +569,12 @@ fn generate_struct_impl(
     // - `Deserialize`: Allows direct use with serde (e.g., `serde_json::from_str::<MyStruct>(...)`)
     //   and with the GraphQL client's `query::<T>()` which requires `T: DeserializeOwned`
     Ok(quote! {
+        #(#flatten_assertions)*
+
         impl #impl_generics #ident #ty_generics #where_clause {
+            /// The schema type this response projection reads its fields from.
+            pub const RESPONSE_ROOT_TYPE: &'static str = #root_type;
+
             pub fn from_value(value: serde_json::Value) -> Result<Self, String> {
                 Self::extract(&value)
             }
@@ -580,6 +674,9 @@ fn generate_enum_impl(
 
     Ok(quote! {
         impl #impl_generics #ident #ty_generics #where_clause {
+            /// The schema type this response projection reads its fields from.
+            pub const RESPONSE_ROOT_TYPE: &'static str = #root_type;
+
             pub fn from_value(value: serde_json::Value) -> Result<Self, String> {
                 Self::extract(&value)
             }

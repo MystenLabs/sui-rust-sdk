@@ -26,6 +26,8 @@ pub struct TypeInfo {
     pub fields: HashMap<String, FieldInfo>,
     /// For union types, the member type names. `None` for non-union types.
     pub union_types: Option<Vec<String>>,
+    /// The names of the interfaces this type declares it implements.
+    pub interfaces: Vec<String>,
 }
 
 /// Information about a field on a type.
@@ -77,6 +79,7 @@ impl Schema {
         match def {
             TypeDefinition::Object(obj) => TypeInfo {
                 name: obj.name.clone(),
+                interfaces: obj.implements_interfaces.clone(),
                 fields: obj
                     .fields
                     .iter()
@@ -97,26 +100,31 @@ impl Schema {
                         (info.name.clone(), info)
                     })
                     .collect(),
+                interfaces: Vec::new(),
                 union_types: None,
             },
             TypeDefinition::Scalar(s) => TypeInfo {
                 name: s.name.clone(),
                 fields: HashMap::new(),
+                interfaces: Vec::new(),
                 union_types: None,
             },
             TypeDefinition::Enum(e) => TypeInfo {
                 name: e.name.clone(),
                 fields: HashMap::new(),
+                interfaces: Vec::new(),
                 union_types: None,
             },
             TypeDefinition::InputObject(io) => TypeInfo {
                 name: io.name.clone(),
                 fields: HashMap::new(),
+                interfaces: Vec::new(),
                 union_types: None,
             },
             TypeDefinition::Union(u) => TypeInfo {
                 name: u.name.clone(),
                 fields: HashMap::new(),
+                interfaces: Vec::new(),
                 union_types: Some(u.types),
             },
         }
@@ -171,6 +179,29 @@ impl Schema {
         self.types
             .get(type_name)
             .is_some_and(|t| t.union_types.is_some())
+    }
+
+    /// The schema types a projection may be flattened from into `type_name`.
+    ///
+    /// A flattened projection is extracted unconditionally, so its root must match for
+    /// every concrete type `type_name` could be: the type itself, any interface it
+    /// implements, and any union it belongs to.
+    pub fn spread_targets(&self, type_name: &str) -> Vec<&str> {
+        let Some(info) = self.types.get(type_name) else {
+            return Vec::new();
+        };
+
+        let mut targets = vec![info.name.as_str()];
+        targets.extend(info.interfaces.iter().map(String::as_str));
+        targets.extend(self.types.values().filter_map(|t| {
+            let members = t.union_types.as_ref()?;
+            members
+                .iter()
+                .any(|m| m == type_name)
+                .then_some(t.name.as_str())
+        }));
+        targets.sort_unstable();
+        targets
     }
 
     /// Get the member type names of a union.

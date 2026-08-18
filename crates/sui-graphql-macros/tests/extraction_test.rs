@@ -122,7 +122,8 @@ fn test_flattened_fields_receive_complete_response() {
         value: ChainInfo,
         #[field(flatten)]
         epoch: EpochInfo,
-        #[field(flatten)]
+        // Hand-written `extract`, so there is no `root_type` to check against.
+        #[field(flatten, skip_schema_validation)]
         extract_only: ExtractOnly,
     }
 
