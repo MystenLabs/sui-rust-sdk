@@ -1,0 +1,5 @@
+error[E0080]: evaluation panicked: `metadata` cannot be flattened into a response rooted at `IObject`: its type must declare `root_type` as one of IObject
+  --> tests/compile/flatten_root_type_reverse.rs:17:15
+   |
+17 |     metadata: ObjectMetadata,
+   |               ^^^^^^^^^^^^^^ evaluation of `_` failed here

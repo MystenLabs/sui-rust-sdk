@@ -139,6 +139,56 @@
 //! fn main() {}
 //! ```
 //!
+//! ### Fragments
+//!
+//! A projection rooted at an interface flattens into any type implementing it, which
+//! mirrors spreading a GraphQL fragment into each of those types:
+//!
+//! ```no_run
+//! use sui_graphql_macros::Response;
+//!
+//! // fragment Metadata on IObject { storageRebate previousTransaction { digest } }
+//! #[derive(Response)]
+//! #[response(root_type = "IObject")]
+//! struct Metadata {
+//!     #[field(path = "storageRebate")]
+//!     storage_rebate: String,
+//!     #[field(path = "previousTransaction.digest")]
+//!     previous_transaction: String,
+//! }
+//!
+//! #[derive(Response)]
+//! #[response(root_type = "Object")]
+//! struct Object {
+//!     #[field(flatten)]
+//!     metadata: Metadata,
+//! }
+//!
+//! #[derive(Response)]
+//! #[response(root_type = "DynamicField")]
+//! struct DynamicField {
+//!     #[field(flatten)]
+//!     metadata: Metadata,
+//! }
+//! fn main() {}
+//! ```
+//!
+//! ### Root Type Compatibility
+//!
+//! A flattened field is populated unconditionally, so the flattened type's `root_type`
+//! must hold for every concrete type the outer `root_type` could be. The accepted roots
+//! are the outer type itself, any interface it implements, and any union it belongs to;
+//! anything else is a compile error. `Object` therefore accepts a projection rooted at
+//! `Object`, `Node`, `IAddressable`, or `IObject`.
+//!
+//! The reverse does not hold: a projection rooted at `Object` cannot be flattened into an
+//! `IObject`-rooted response, because `IObject`'s other implementors do not carry
+//! `Object`'s fields.
+//!
+//! A field type that does not derive `Response` declares no root type, so it may only be
+//! flattened into a `Query`-rooted response. Pair `flatten` with `skip_schema_validation`
+//! to opt out of the check entirely.
+//!
 //! ## Enums (GraphQL Unions)
 //!
 //! Use `#[response(root_type = "UnionType")]` on enums with newtype variants:
@@ -163,6 +213,7 @@
 //! | `#[response(schema = "path")]` | struct/enum | Custom schema file (relative to `CARGO_MANIFEST_DIR`) |
 //! | `#[field(path = "...")]` | field | Dot-separated path with optional `?`/`[]`/alias |
 //! | `#[field(flatten)]` | field | Populate by calling the field type's `extract` with the complete response value |
+//! | `#[field(flatten, skip_schema_validation)]` | field | Also skip the root type compatibility check |
 //! | `#[field(skip_schema_validation)]` | field | Skip compile-time schema checks for this field |
 //! | `#[response(on = "TypeName")]` | variant | GraphQL `__typename` to match (default: variant name) |
 
@@ -182,9 +233,12 @@ use darling::util::Flag;
 use darling::util::SpannedValue;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
+use quote::ToTokens;
 use quote::quote;
+use quote::quote_spanned;
 use syn::DeriveInput;
 use syn::parse_macro_input;
+use syn::spanned::Spanned;
 
 // ---------------------------------------------------------------------------
 // Darling input structures — define the "schema" for macro input.
@@ -412,6 +466,118 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
     }
 }
 
+/// Stands in for the root type of a field type that did not derive `Response`. Not a
+/// valid GraphQL type name, so it can never collide with a declared root.
+const UNDECLARED_ROOT_STR: &str = "";
+const UNDECLARED_ROOT: &[u8] = UNDECLARED_ROOT_STR.as_bytes();
+
+/// The identifiers of a type's generic parameters, used to skip codegen that cannot
+/// reference them.
+fn generic_param_idents(generics: &syn::Generics) -> Vec<String> {
+    generics
+        .params
+        .iter()
+        .filter_map(|p| match p {
+            syn::GenericParam::Type(t) => Some(t.ident.to_string()),
+            syn::GenericParam::Const(c) => Some(c.ident.to_string()),
+            syn::GenericParam::Lifetime(_) => None,
+        })
+        .collect()
+}
+
+/// Emit a compile-time check that `field_ty`'s root type may be flattened into `root_type`.
+///
+/// A type that does not derive `Response` has no declared root type; it is treated as
+/// `Query`, matching the derive's own default.
+///
+/// Returns nothing when `field_ty` mentions a generic parameter: the check is a `const`
+/// item, which cannot name generics.
+fn generate_flatten_root_type_check(
+    schema: &schema::Schema,
+    root_type: &str,
+    field_ident: &syn::Ident,
+    field_ty: &syn::Type,
+    generic_params: &[String],
+) -> TokenStream2 {
+    let mentions_generic = field_ty
+        .to_token_stream()
+        .into_iter()
+        .any(|t| generic_params.iter().any(|p| t.to_string() == *p));
+    if mentions_generic {
+        return quote! {};
+    }
+
+    // Never empty: the caller has already rejected a root type absent from the schema,
+    // and every type is an allowed root for itself.
+    let roots = schema.find_allowed_flatten_roots(root_type);
+    // A type that did not derive `Response` behaves as though rooted at `Query`, so it
+    // is accepted exactly where `Query` is.
+    let undeclared_ok = roots.contains(&"Query");
+
+    // `str` cannot be compared in a const context, so match the name as bytes.
+    let mut allowed: Vec<_> = roots
+        .iter()
+        .map(|root| syn::LitByteStr::new(root.as_bytes(), field_ty.span()))
+        .collect();
+    if undeclared_ok {
+        allowed.push(syn::LitByteStr::new(UNDECLARED_ROOT, field_ty.span()));
+    }
+
+    // Reported when the field's type never derived `Response`. Only reachable where an
+    // undeclared root is not accepted anyway.
+    let undeclared_message = format!(
+        "`{}` cannot be flattened into a response rooted at `{}`: its type must derive \
+         `Response`, since a type without the derive can only be flattened into a \
+         `Query`-rooted response",
+        field_ident, root_type,
+    );
+    let undeclared_check = (!undeclared_ok).then(|| {
+        let sentinel = syn::LitByteStr::new(UNDECLARED_ROOT, field_ty.span());
+        // Spanned in its own right: an interpolated stream keeps the spans it was built
+        // with, so the outer `quote_spanned!` does not reach these tokens.
+        quote_spanned! { field_ty.span() =>
+            assert!(
+                !matches!(<#field_ty>::RESPONSE_ROOT_TYPE.as_bytes(), #sentinel),
+                #undeclared_message
+            );
+        }
+    });
+
+    // The type's own root cannot be named here: it is only known once rustc resolves the
+    // field's type, which is after this message is baked in.
+    let message = format!(
+        "`{}` cannot be flattened into a response rooted at `{}`: its type must declare \
+         `root_type` as one of {}",
+        field_ident,
+        root_type,
+        roots.join(", "),
+    );
+
+    // Anchor at the field type so the error points at the offending field.
+    quote_spanned! { field_ty.span() =>
+        const _: () = {
+            // Marks any field type that did not derive `Response`. An inherent
+            // associated const takes priority over a trait one, so a type that did
+            // resolves to its own declaration, leaving this impl unused.
+            #[allow(dead_code)]
+            trait DefaultRootType {
+                const RESPONSE_ROOT_TYPE: &'static str = #UNDECLARED_ROOT_STR;
+            }
+            impl<T: ?Sized> DefaultRootType for T {}
+
+            #undeclared_check
+
+            assert!(
+                matches!(
+                    <#field_ty>::RESPONSE_ROOT_TYPE.as_bytes(),
+                    #(#allowed)|*
+                ),
+                #message
+            );
+        };
+    }
+}
+
 /// Generate value conversion methods and `Deserialize` for a struct.
 fn generate_struct_impl(
     input: &ResponseInput,
@@ -424,6 +590,8 @@ fn generate_struct_impl(
 
     // Generate extraction code for each field
     let mut field_initializers = vec![];
+    let mut flatten_root_type_checks = vec![];
+    let generic_params = generic_param_idents(&input.generics);
 
     for field in fields {
         let field_ident = field
@@ -433,9 +601,23 @@ fn generate_struct_impl(
 
         if field.options.flatten.is_present() {
             let field_ty = &field.ty;
-            field_initializers.push(quote! {
+            // Anchor at the field type so a missing `extract` is reported there rather
+            // than at the derive.
+            field_initializers.push(quote_spanned! { field_ty.span() =>
                 #field_ident: <#field_ty>::extract(value)?
             });
+            // The flattened type's declared root is only known once rustc resolves
+            // the field's type, so emit a check for the compiler to evaluate rather
+            // than deciding here.
+            if !field.options.skip_schema_validation {
+                flatten_root_type_checks.push(generate_flatten_root_type_check(
+                    schema,
+                    root_type,
+                    field_ident,
+                    field_ty,
+                    &generic_params,
+                ));
+            }
             continue;
         }
 
@@ -480,7 +662,12 @@ fn generate_struct_impl(
     // - `Deserialize`: Allows direct use with serde (e.g., `serde_json::from_str::<MyStruct>(...)`)
     //   and with the GraphQL client's `query::<T>()` which requires `T: DeserializeOwned`
     Ok(quote! {
+        #(#flatten_root_type_checks)*
+
         impl #impl_generics #ident #ty_generics #where_clause {
+            /// The schema type this response projection reads its fields from.
+            pub const RESPONSE_ROOT_TYPE: &'static str = #root_type;
+
             pub fn from_value(value: serde_json::Value) -> Result<Self, String> {
                 Self::extract(&value)
             }
@@ -580,6 +767,9 @@ fn generate_enum_impl(
 
     Ok(quote! {
         impl #impl_generics #ident #ty_generics #where_clause {
+            /// The schema type this response projection reads its fields from.
+            pub const RESPONSE_ROOT_TYPE: &'static str = #root_type;
+
             pub fn from_value(value: serde_json::Value) -> Result<Self, String> {
                 Self::extract(&value)
             }
