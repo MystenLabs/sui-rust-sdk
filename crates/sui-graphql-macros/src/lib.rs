@@ -568,7 +568,9 @@ fn generate_struct_impl(
 
         if field.options.flatten.is_present() {
             let field_ty = &field.ty;
-            field_initializers.push(quote! {
+            // Anchor at the field type so a missing `extract` is reported there rather
+            // than at the derive.
+            field_initializers.push(quote_spanned! { field_ty.span() =>
                 #field_ident: <#field_ty>::extract(value)?
             });
             // The flattened type's declared root is only known once rustc resolves

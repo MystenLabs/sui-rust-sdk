@@ -1,0 +1,14 @@
+error[E0080]: evaluation panicked: `metadata` cannot be flattened into a response rooted at `Object`: a flattened field's type must derive `Response` with `root_type` set to one of IAddressable, IObject, Node, Object. A type that does not derive `Response` counts as `Query`
+  --> tests/compile/flatten_missing_extract_wrong_root.rs:14:15
+   |
+14 |     metadata: NotAResponse,
+   |               ^^^^^^^^^^^^ evaluation of `_` failed here
+
+error[E0599]: no function or associated item named `extract` found for struct `NotAResponse` in the current scope
+  --> tests/compile/flatten_missing_extract_wrong_root.rs:14:15
+   |
+ 6 | struct NotAResponse {
+   | ------------------- function or associated item `extract` not found for this struct
+...
+14 |     metadata: NotAResponse,
+   |               ^^^^^^^^^^^^ function or associated item not found in `NotAResponse`

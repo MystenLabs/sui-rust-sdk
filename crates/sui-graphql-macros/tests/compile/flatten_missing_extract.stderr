@@ -1,0 +1,8 @@
+error[E0599]: no function or associated item named `extract` found for struct `NotAResponse` in the current scope
+  --> tests/compile/flatten_missing_extract.rs:13:15
+   |
+ 6 | struct NotAResponse {
+   | ------------------- function or associated item `extract` not found for this struct
+...
+13 |     metadata: NotAResponse,
+   |               ^^^^^^^^^^^^ function or associated item not found in `NotAResponse`
