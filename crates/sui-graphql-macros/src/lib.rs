@@ -479,15 +479,14 @@ fn generic_param_idents(generics: &syn::Generics) -> Vec<String> {
         .collect()
 }
 
-/// Emit a compile-time check that `field_ty`'s root type may be flattened into
-/// `root_type`.
+/// Emit a compile-time check that `field_ty`'s root type may be flattened into `root_type`.
 ///
 /// A type that does not derive `Response` has no declared root type; it is treated as
 /// `Query`, matching the derive's own default.
 ///
 /// Returns nothing when `field_ty` mentions a generic parameter: the check is a `const`
 /// item, which cannot name generics.
-fn generate_flatten_assertion(
+fn generate_flatten_root_type_check(
     schema: &schema::Schema,
     root_type: &str,
     field_ident: &syn::Ident,
@@ -502,7 +501,7 @@ fn generate_flatten_assertion(
         return quote! {};
     }
 
-    let roots = schema.flatten_roots(root_type);
+    let roots = schema.find_flatten_roots(root_type);
     let message = format!(
         "`{}` cannot be flattened into a response rooted at `{}`: a flattened field's \
          type must declare `root_type` as one of {}",
@@ -564,7 +563,7 @@ fn generate_struct_impl(
 
     // Generate extraction code for each field
     let mut field_initializers = vec![];
-    let mut flatten_assertions = vec![];
+    let mut flatten_root_type_checks = vec![];
     let generic_params = generic_param_idents(&input.generics);
 
     for field in fields {
@@ -578,8 +577,11 @@ fn generate_struct_impl(
             field_initializers.push(quote! {
                 #field_ident: <#field_ty>::extract(value)?
             });
+            // The flattened type's declared root is only known once rustc resolves
+            // the field's type, so emit a check for the compiler to evaluate rather
+            // than deciding here.
             if !field.options.skip_schema_validation {
-                flatten_assertions.push(generate_flatten_assertion(
+                flatten_root_type_checks.push(generate_flatten_root_type_check(
                     schema,
                     root_type,
                     field_ident,
@@ -631,7 +633,7 @@ fn generate_struct_impl(
     // - `Deserialize`: Allows direct use with serde (e.g., `serde_json::from_str::<MyStruct>(...)`)
     //   and with the GraphQL client's `query::<T>()` which requires `T: DeserializeOwned`
     Ok(quote! {
-        #(#flatten_assertions)*
+        #(#flatten_root_type_checks)*
 
         impl #impl_generics #ident #ty_generics #where_clause {
             /// The schema type this response projection reads its fields from.
