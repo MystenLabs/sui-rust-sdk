@@ -501,7 +501,7 @@ fn generate_flatten_root_type_check(
         return quote! {};
     }
 
-    let roots = schema.find_flatten_roots(root_type);
+    let roots = schema.find_allowed_flatten_roots(root_type);
     let message = format!(
         "`{}` cannot be flattened into a response rooted at `{}`: a flattened field's \
          type must declare `root_type` as one of {}",

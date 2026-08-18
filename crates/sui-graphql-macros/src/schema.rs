@@ -181,13 +181,13 @@ impl Schema {
             .is_some_and(|t| t.union_types.is_some())
     }
 
-    /// The root types a projection may declare in order to be flattened into
-    /// `type_name`, sorted and deduplicated.
+    /// The root types allowed on a field flattened into `type_name`, sorted and
+    /// deduplicated.
     ///
-    /// A flattened projection is extracted unconditionally, so its root must hold for
+    /// A flattened field is populated unconditionally, so its type's root must hold for
     /// every concrete type `type_name` could be: the type itself, any interface it
     /// implements, and any union it belongs to.
-    pub fn find_flatten_roots(&self, type_name: &str) -> Vec<&str> {
+    pub fn find_allowed_flatten_roots(&self, type_name: &str) -> Vec<&str> {
         let Some(info) = self.types.get(type_name) else {
             return Vec::new();
         };
@@ -251,18 +251,18 @@ mod tests {
     }
 
     #[test]
-    fn test_find_flatten_roots_object_includes_its_interfaces() {
+    fn test_find_allowed_flatten_roots_object_includes_its_interfaces() {
         let schema = Schema::load().unwrap();
 
         // type Object implements Node & IAddressable & IObject
         assert_eq!(
-            schema.find_flatten_roots("Object"),
+            schema.find_allowed_flatten_roots("Object"),
             vec!["IAddressable", "IObject", "Node", "Object"]
         );
 
         // type DynamicField implements Node & IAddressable & IMoveObject & IObject
         assert_eq!(
-            schema.find_flatten_roots("DynamicField"),
+            schema.find_allowed_flatten_roots("DynamicField"),
             vec![
                 "DynamicField",
                 "IAddressable",
@@ -274,11 +274,11 @@ mod tests {
     }
 
     #[test]
-    fn test_find_flatten_roots_includes_containing_unions() {
+    fn test_find_allowed_flatten_roots_includes_containing_unions() {
         let schema = Schema::load().unwrap();
 
         // union DynamicFieldValue = MoveObject | MoveValue
-        let roots = schema.find_flatten_roots("MoveObject");
+        let roots = schema.find_allowed_flatten_roots("MoveObject");
         assert!(roots.contains(&"DynamicFieldValue"));
         assert!(roots.contains(&"MoveObject"));
         assert!(roots.contains(&"IObject"));
@@ -286,43 +286,46 @@ mod tests {
         // A type in no union has no union roots.
         assert!(
             !schema
-                .find_flatten_roots("Epoch")
+                .find_allowed_flatten_roots("Epoch")
                 .contains(&"DynamicFieldValue")
         );
     }
 
     #[test]
-    fn test_find_flatten_roots_of_root_and_interface_types() {
+    fn test_find_allowed_flatten_roots_of_root_and_interface_types() {
         let schema = Schema::load().unwrap();
 
         // Query implements nothing and belongs to no union.
-        assert_eq!(schema.find_flatten_roots("Query"), vec!["Query"]);
+        assert_eq!(schema.find_allowed_flatten_roots("Query"), vec!["Query"]);
 
         // An interface is only a root for itself: no Sui interface implements another,
         // and a union cannot have an interface as a member.
-        assert_eq!(schema.find_flatten_roots("IObject"), vec!["IObject"]);
+        assert_eq!(
+            schema.find_allowed_flatten_roots("IObject"),
+            vec!["IObject"]
+        );
     }
 
     #[test]
-    fn test_find_flatten_roots_is_sorted_and_deduplicated() {
+    fn test_find_allowed_flatten_roots_is_sorted_and_deduplicated() {
         let schema = Schema::load().unwrap();
 
         for type_name in ["Object", "MoveObject", "DynamicField", "Query"] {
-            let roots = schema.find_flatten_roots(type_name);
+            let roots = schema.find_allowed_flatten_roots(type_name);
             let mut expected = roots.clone();
             expected.sort_unstable();
             expected.dedup();
             assert_eq!(
                 roots, expected,
-                "find_flatten_roots({type_name}) is not normalized"
+                "find_allowed_flatten_roots({type_name}) is not normalized"
             );
         }
     }
 
     #[test]
-    fn test_find_flatten_roots_of_unknown_type_is_empty() {
+    fn test_find_allowed_flatten_roots_of_unknown_type_is_empty() {
         let schema = Schema::load().unwrap();
-        assert!(schema.find_flatten_roots("NonExistent").is_empty());
+        assert!(schema.find_allowed_flatten_roots("NonExistent").is_empty());
     }
 
     #[test]
