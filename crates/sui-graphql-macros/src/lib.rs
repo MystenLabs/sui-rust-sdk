@@ -501,6 +501,8 @@ fn generate_flatten_root_type_check(
         return quote! {};
     }
 
+    // Never empty: the caller has already rejected a root type absent from the schema,
+    // and every type is an allowed root for itself.
     let roots = schema.find_allowed_flatten_roots(root_type);
     let message = format!(
         "`{}` cannot be flattened into a response rooted at `{}`: a flattened field's \
@@ -510,43 +512,32 @@ fn generate_flatten_root_type_check(
         roots.join(", "),
     );
 
+    // `str` cannot be compared in a const context, so match the name as bytes.
+    let allowed: Vec<_> = roots
+        .iter()
+        .map(|root| syn::LitByteStr::new(root.as_bytes(), field_ty.span()))
+        .collect();
+
     // Anchor at the field type so the error points at the offending field.
     quote_spanned! { field_ty.span() =>
         const _: () = {
-            const fn name_eq(a: &str, b: &str) -> bool {
-                let (a, b) = (a.as_bytes(), b.as_bytes());
-                if a.len() != b.len() {
-                    return false;
-                }
-                let mut i = 0;
-                while i < a.len() {
-                    if a[i] != b[i] {
-                        return false;
-                    }
-                    i += 1;
-                }
-                true
-            }
-
-            // An inherent associated const takes priority over a trait one, so a
-            // derived type resolves to its own declaration and anything else falls
-            // back to `Query`. Dead whenever the former applies.
+            // Supplies the derive's default root type to any field type that did not
+            // derive `Response`. An inherent associated const takes priority over a
+            // trait one, so a type that did resolves to its own declaration, leaving
+            // this impl unused.
             #[allow(dead_code)]
             trait DefaultRootType {
                 const RESPONSE_ROOT_TYPE: &'static str = "Query";
             }
             impl<T: ?Sized> DefaultRootType for T {}
 
-            const ROOTS: &[&str] = &[#(#roots),*];
-            let mut i = 0;
-            let mut found = false;
-            while i < ROOTS.len() {
-                if name_eq(ROOTS[i], <#field_ty>::RESPONSE_ROOT_TYPE) {
-                    found = true;
-                }
-                i += 1;
-            }
-            assert!(found, #message);
+            assert!(
+                matches!(
+                    <#field_ty>::RESPONSE_ROOT_TYPE.as_bytes(),
+                    #(#allowed)|*
+                ),
+                #message
+            );
         };
     }
 }
