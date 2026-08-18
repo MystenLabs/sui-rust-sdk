@@ -504,9 +504,12 @@ fn generate_flatten_root_type_check(
     // Never empty: the caller has already rejected a root type absent from the schema,
     // and every type is an allowed root for itself.
     let roots = schema.find_allowed_flatten_roots(root_type);
+    // The failing type's own root cannot be named here: it is only known once rustc
+    // resolves the field's type, which is after this message is baked in.
     let message = format!(
         "`{}` cannot be flattened into a response rooted at `{}`: a flattened field's \
-         type must declare `root_type` as one of {}",
+         type must derive `Response` with `root_type` set to one of {}. A type that \
+         does not derive `Response` counts as `Query`",
         field_ident,
         root_type,
         roots.join(", "),
