@@ -1,4 +1,4 @@
-error[E0080]: evaluation panicked: `metadata` cannot be flattened into a response rooted at `Object`: a flattened field's type must derive `Response` with `root_type` set to one of IAddressable, IObject, Node, Object. A type that does not derive `Response` counts as `Query`
+error[E0080]: evaluation panicked: `metadata` cannot be flattened into a response rooted at `Object`: its type must derive `Response`, since a type without the derive can only be flattened into a `Query`-rooted response
   --> tests/compile/flatten_root_type_undeclared.rs:26:15
    |
 26 |     metadata: HandWritten,

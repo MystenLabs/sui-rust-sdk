@@ -185,8 +185,9 @@
 //! `IObject`-rooted response, because `IObject`'s other implementors do not carry
 //! `Object`'s fields.
 //!
-//! A field type that does not derive `Response` declares no root type and is treated as
-//! `Query`. Pair `flatten` with `skip_schema_validation` to opt out of the check entirely.
+//! A field type that does not derive `Response` declares no root type, so it may only be
+//! flattened into a `Query`-rooted response. Pair `flatten` with `skip_schema_validation`
+//! to opt out of the check entirely.
 //!
 //! ## Enums (GraphQL Unions)
 //!
@@ -465,6 +466,11 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
     }
 }
 
+/// Stands in for the root type of a field type that did not derive `Response`. Not a
+/// valid GraphQL type name, so it can never collide with a declared root.
+const UNDECLARED_ROOT_STR: &str = "";
+const UNDECLARED_ROOT: &[u8] = UNDECLARED_ROOT_STR.as_bytes();
+
 /// The identifiers of a type's generic parameters, used to skip codegen that cannot
 /// reference them.
 fn generic_param_idents(generics: &syn::Generics) -> Vec<String> {
@@ -504,35 +510,62 @@ fn generate_flatten_root_type_check(
     // Never empty: the caller has already rejected a root type absent from the schema,
     // and every type is an allowed root for itself.
     let roots = schema.find_allowed_flatten_roots(root_type);
-    // The failing type's own root cannot be named here: it is only known once rustc
-    // resolves the field's type, which is after this message is baked in.
+    // A type that did not derive `Response` behaves as though rooted at `Query`, so it
+    // is accepted exactly where `Query` is.
+    let undeclared_ok = roots.contains(&"Query");
+
+    // `str` cannot be compared in a const context, so match the name as bytes.
+    let mut allowed: Vec<_> = roots
+        .iter()
+        .map(|root| syn::LitByteStr::new(root.as_bytes(), field_ty.span()))
+        .collect();
+    if undeclared_ok {
+        allowed.push(syn::LitByteStr::new(UNDECLARED_ROOT, field_ty.span()));
+    }
+
+    // Reported when the field's type never derived `Response`. Only reachable where an
+    // undeclared root is not accepted anyway.
+    let undeclared_message = format!(
+        "`{}` cannot be flattened into a response rooted at `{}`: its type must derive \
+         `Response`, since a type without the derive can only be flattened into a \
+         `Query`-rooted response",
+        field_ident, root_type,
+    );
+    let undeclared_check = (!undeclared_ok).then(|| {
+        let sentinel = syn::LitByteStr::new(UNDECLARED_ROOT, field_ty.span());
+        // Spanned in its own right: an interpolated stream keeps the spans it was built
+        // with, so the outer `quote_spanned!` does not reach these tokens.
+        quote_spanned! { field_ty.span() =>
+            assert!(
+                !matches!(<#field_ty>::RESPONSE_ROOT_TYPE.as_bytes(), #sentinel),
+                #undeclared_message
+            );
+        }
+    });
+
+    // The type's own root cannot be named here: it is only known once rustc resolves the
+    // field's type, which is after this message is baked in.
     let message = format!(
-        "`{}` cannot be flattened into a response rooted at `{}`: a flattened field's \
-         type must derive `Response` with `root_type` set to one of {}. A type that \
-         does not derive `Response` counts as `Query`",
+        "`{}` cannot be flattened into a response rooted at `{}`: its type must declare \
+         `root_type` as one of {}",
         field_ident,
         root_type,
         roots.join(", "),
     );
 
-    // `str` cannot be compared in a const context, so match the name as bytes.
-    let allowed: Vec<_> = roots
-        .iter()
-        .map(|root| syn::LitByteStr::new(root.as_bytes(), field_ty.span()))
-        .collect();
-
     // Anchor at the field type so the error points at the offending field.
     quote_spanned! { field_ty.span() =>
         const _: () = {
-            // Supplies the derive's default root type to any field type that did not
-            // derive `Response`. An inherent associated const takes priority over a
-            // trait one, so a type that did resolves to its own declaration, leaving
-            // this impl unused.
+            // Marks any field type that did not derive `Response`. An inherent
+            // associated const takes priority over a trait one, so a type that did
+            // resolves to its own declaration, leaving this impl unused.
             #[allow(dead_code)]
             trait DefaultRootType {
-                const RESPONSE_ROOT_TYPE: &'static str = "Query";
+                const RESPONSE_ROOT_TYPE: &'static str = #UNDECLARED_ROOT_STR;
             }
             impl<T: ?Sized> DefaultRootType for T {}
+
+            #undeclared_check
 
             assert!(
                 matches!(
