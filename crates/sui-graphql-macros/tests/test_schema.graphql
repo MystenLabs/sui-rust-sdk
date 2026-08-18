@@ -70,6 +70,29 @@ type MoveObject {
 
 union DynamicFieldValue = MoveObject | MoveValue
 
+# Types for flattened-projection tests. Kept separate from the types above so
+# their field sets do not appear in unrelated schema-validation diagnostics.
+interface INode {
+    id: SuiAddress
+    label: String
+}
+
+type Leaf implements INode {
+    id: SuiAddress
+    label: String
+    weight: Int
+}
+
+type Branch implements INode {
+    id: SuiAddress
+    label: String
+    detail: LeafDetail
+}
+
+type LeafDetail {
+    note: String
+}
+
 scalar SuiAddress
 scalar Int
 scalar String

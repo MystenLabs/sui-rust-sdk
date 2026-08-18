@@ -181,12 +181,13 @@ impl Schema {
             .is_some_and(|t| t.union_types.is_some())
     }
 
-    /// The schema types a projection may be flattened from into `type_name`.
+    /// The root types a projection may declare in order to be flattened into
+    /// `type_name`, sorted and deduplicated.
     ///
-    /// A flattened projection is extracted unconditionally, so its root must match for
+    /// A flattened projection is extracted unconditionally, so its root must hold for
     /// every concrete type `type_name` could be: the type itself, any interface it
     /// implements, and any union it belongs to.
-    pub fn spread_targets(&self, type_name: &str) -> Vec<&str> {
+    pub fn flatten_roots(&self, type_name: &str) -> Vec<&str> {
         let Some(info) = self.types.get(type_name) else {
             return Vec::new();
         };
@@ -201,6 +202,7 @@ impl Schema {
                 .then_some(t.name.as_str())
         }));
         targets.sort_unstable();
+        targets.dedup();
         targets
     }
 
@@ -246,6 +248,77 @@ mod tests {
     fn test_schema() -> Schema {
         let sdl = include_str!("../tests/test_schema.graphql");
         Schema::from_sdl(sdl).unwrap()
+    }
+
+    #[test]
+    fn test_flatten_roots_object_includes_its_interfaces() {
+        let schema = Schema::load().unwrap();
+
+        // type Object implements Node & IAddressable & IObject
+        assert_eq!(
+            schema.flatten_roots("Object"),
+            vec!["IAddressable", "IObject", "Node", "Object"]
+        );
+
+        // type DynamicField implements Node & IAddressable & IMoveObject & IObject
+        assert_eq!(
+            schema.flatten_roots("DynamicField"),
+            vec![
+                "DynamicField",
+                "IAddressable",
+                "IMoveObject",
+                "IObject",
+                "Node"
+            ]
+        );
+    }
+
+    #[test]
+    fn test_flatten_roots_includes_containing_unions() {
+        let schema = Schema::load().unwrap();
+
+        // union DynamicFieldValue = MoveObject | MoveValue
+        let roots = schema.flatten_roots("MoveObject");
+        assert!(roots.contains(&"DynamicFieldValue"));
+        assert!(roots.contains(&"MoveObject"));
+        assert!(roots.contains(&"IObject"));
+
+        // A type in no union has no union roots.
+        assert!(!schema.flatten_roots("Epoch").contains(&"DynamicFieldValue"));
+    }
+
+    #[test]
+    fn test_flatten_roots_of_root_and_interface_types() {
+        let schema = Schema::load().unwrap();
+
+        // Query implements nothing and belongs to no union.
+        assert_eq!(schema.flatten_roots("Query"), vec!["Query"]);
+
+        // An interface is only a root for itself: no Sui interface implements another,
+        // and a union cannot have an interface as a member.
+        assert_eq!(schema.flatten_roots("IObject"), vec!["IObject"]);
+    }
+
+    #[test]
+    fn test_flatten_roots_is_sorted_and_deduplicated() {
+        let schema = Schema::load().unwrap();
+
+        for type_name in ["Object", "MoveObject", "DynamicField", "Query"] {
+            let roots = schema.flatten_roots(type_name);
+            let mut expected = roots.clone();
+            expected.sort_unstable();
+            expected.dedup();
+            assert_eq!(
+                roots, expected,
+                "flatten_roots({type_name}) is not normalized"
+            );
+        }
+    }
+
+    #[test]
+    fn test_flatten_roots_of_unknown_type_is_empty() {
+        let schema = Schema::load().unwrap();
+        assert!(schema.flatten_roots("NonExistent").is_empty());
     }
 
     #[test]

@@ -139,6 +139,55 @@
 //! fn main() {}
 //! ```
 //!
+//! ### Fragments
+//!
+//! A projection rooted at an interface flattens into any type implementing it, which
+//! mirrors spreading a GraphQL fragment into each of those types:
+//!
+//! ```no_run
+//! use sui_graphql_macros::Response;
+//!
+//! // fragment Metadata on IObject { storageRebate previousTransaction { digest } }
+//! #[derive(Response)]
+//! #[response(root_type = "IObject")]
+//! struct Metadata {
+//!     #[field(path = "storageRebate")]
+//!     storage_rebate: String,
+//!     #[field(path = "previousTransaction.digest")]
+//!     previous_transaction: String,
+//! }
+//!
+//! #[derive(Response)]
+//! #[response(root_type = "Object")]
+//! struct Object {
+//!     #[field(flatten)]
+//!     metadata: Metadata,
+//! }
+//!
+//! #[derive(Response)]
+//! #[response(root_type = "DynamicField")]
+//! struct DynamicField {
+//!     #[field(flatten)]
+//!     metadata: Metadata,
+//! }
+//! fn main() {}
+//! ```
+//!
+//! ### Root Type Compatibility
+//!
+//! A flattened field is populated unconditionally, so the flattened type's `root_type`
+//! must hold for every concrete type the outer `root_type` could be. The accepted roots
+//! are the outer type itself, any interface it implements, and any union it belongs to;
+//! anything else is a compile error. `Object` therefore accepts a projection rooted at
+//! `Object`, `Node`, `IAddressable`, or `IObject`.
+//!
+//! The reverse does not hold: a projection rooted at `Object` cannot be flattened into an
+//! `IObject`-rooted response, because `IObject`'s other implementors do not carry
+//! `Object`'s fields.
+//!
+//! A field type that does not derive `Response` declares no root type and is treated as
+//! `Query`. Pair `flatten` with `skip_schema_validation` to opt out of the check entirely.
+//!
 //! ## Enums (GraphQL Unions)
 //!
 //! Use `#[response(root_type = "UnionType")]` on enums with newtype variants:
@@ -163,6 +212,7 @@
 //! | `#[response(schema = "path")]` | struct/enum | Custom schema file (relative to `CARGO_MANIFEST_DIR`) |
 //! | `#[field(path = "...")]` | field | Dot-separated path with optional `?`/`[]`/alias |
 //! | `#[field(flatten)]` | field | Populate by calling the field type's `extract` with the complete response value |
+//! | `#[field(flatten, skip_schema_validation)]` | field | Also skip the root type compatibility check |
 //! | `#[field(skip_schema_validation)]` | field | Skip compile-time schema checks for this field |
 //! | `#[response(on = "TypeName")]` | variant | GraphQL `__typename` to match (default: variant name) |
 
@@ -429,12 +479,15 @@ fn generic_param_idents(generics: &syn::Generics) -> Vec<String> {
         .collect()
 }
 
-/// Emit a compile-time check that `field_ty`'s declared root type is one a projection
-/// may be flattened from into `root_type`.
+/// Emit a compile-time check that `field_ty`'s root type may be flattened into
+/// `root_type`.
+///
+/// A type that does not derive `Response` has no declared root type; it is treated as
+/// `Query`, matching the derive's own default.
 ///
 /// Returns nothing when `field_ty` mentions a generic parameter: the check is a `const`
 /// item, which cannot name generics.
-fn generate_spread_assertion(
+fn generate_flatten_assertion(
     schema: &schema::Schema,
     root_type: &str,
     field_ident: &syn::Ident,
@@ -449,13 +502,13 @@ fn generate_spread_assertion(
         return quote! {};
     }
 
-    let targets = schema.spread_targets(root_type);
+    let roots = schema.flatten_roots(root_type);
     let message = format!(
-        "`{}` cannot be flattened into a response rooted at `{}`: a flattened projection \
-         must declare `root_type` as one of {}",
+        "`{}` cannot be flattened into a response rooted at `{}`: a flattened field's \
+         type must declare `root_type` as one of {}",
         field_ident,
         root_type,
-        targets.join(", "),
+        roots.join(", "),
     );
 
     // Anchor at the field type so the error points at the offending field.
@@ -476,11 +529,20 @@ fn generate_spread_assertion(
                 true
             }
 
-            const TARGETS: &[&str] = &[#(#targets),*];
+            // An inherent associated const takes priority over a trait one, so a
+            // derived type resolves to its own declaration and anything else falls
+            // back to `Query`. Dead whenever the former applies.
+            #[allow(dead_code)]
+            trait DefaultRootType {
+                const RESPONSE_ROOT_TYPE: &'static str = "Query";
+            }
+            impl<T: ?Sized> DefaultRootType for T {}
+
+            const ROOTS: &[&str] = &[#(#roots),*];
             let mut i = 0;
             let mut found = false;
-            while i < TARGETS.len() {
-                if name_eq(TARGETS[i], <#field_ty>::RESPONSE_ROOT_TYPE) {
+            while i < ROOTS.len() {
+                if name_eq(ROOTS[i], <#field_ty>::RESPONSE_ROOT_TYPE) {
                     found = true;
                 }
                 i += 1;
@@ -517,7 +579,7 @@ fn generate_struct_impl(
                 #field_ident: <#field_ty>::extract(value)?
             });
             if !field.options.skip_schema_validation {
-                flatten_assertions.push(generate_spread_assertion(
+                flatten_assertions.push(generate_flatten_assertion(
                     schema,
                     root_type,
                     field_ident,
