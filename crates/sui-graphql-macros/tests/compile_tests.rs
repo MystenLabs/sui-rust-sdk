@@ -24,6 +24,7 @@ fn compile_tests() {
     t.compile_fail("tests/compile/flatten_root_type_mismatch.rs");
     t.compile_fail("tests/compile/flatten_root_type_reverse.rs");
     t.compile_fail("tests/compile/flatten_root_type_undeclared.rs");
+    t.compile_fail("tests/compile/flatten_root_type_default_query.rs");
     t.compile_fail("tests/compile/flatten_missing_extract.rs");
     t.compile_fail("tests/compile/flatten_missing_extract_wrong_root.rs");
     t.compile_fail("tests/compile/empty_path.rs");
