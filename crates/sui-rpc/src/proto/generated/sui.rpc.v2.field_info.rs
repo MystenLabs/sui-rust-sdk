@@ -5636,9 +5636,25 @@ pub(crate) mod _field_impls {
             number: 1i32,
             message_fields: None,
         };
+        pub const VERSION_FIELD: &'static MessageField = &MessageField {
+            name: "version",
+            json_name: "version",
+            number: 2i32,
+            message_fields: None,
+        };
+        pub const AT_CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "at_checkpoint",
+            json_name: "atCheckpoint",
+            number: 3i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for GetPackageRequest {
-        const FIELDS: &'static [&'static MessageField] = &[Self::PACKAGE_ID_FIELD];
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::PACKAGE_ID_FIELD,
+            Self::VERSION_FIELD,
+            Self::AT_CHECKPOINT_FIELD,
+        ];
     }
     impl GetPackageRequest {
         pub fn path_builder() -> GetPackageRequestFieldPathBuilder {
@@ -5662,6 +5678,14 @@ pub(crate) mod _field_impls {
         }
         pub fn package_id(mut self) -> String {
             self.path.push(GetPackageRequest::PACKAGE_ID_FIELD.name);
+            self.finish()
+        }
+        pub fn version(mut self) -> String {
+            self.path.push(GetPackageRequest::VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn at_checkpoint(mut self) -> String {
+            self.path.push(GetPackageRequest::AT_CHECKPOINT_FIELD.name);
             self.finish()
         }
     }
