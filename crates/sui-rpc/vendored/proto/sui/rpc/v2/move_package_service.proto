@@ -15,8 +15,26 @@ service MovePackageService {
 }
 
 message GetPackageRequest {
-  // Required. The `storage_id` of the requested package.
+  // Required. The `storage_id` of any version of the requested package.
+  //
+  // When neither `version` nor `at_checkpoint` is set, the package stored
+  // at exactly this id is returned. When either is set, `package_id` only
+  // identifies the package's upgrade lineage (via its original id), and the
+  // requested version within that lineage is returned.
   optional string package_id = 1;
+
+  // Optional. Return the package in `package_id`'s upgrade lineage with
+  // exactly this version.
+  //
+  // At most one of `version` and `at_checkpoint` may be set.
+  optional uint64 version = 2;
+
+  // Optional. Return the latest package in `package_id`'s upgrade lineage
+  // that existed at or before this checkpoint. Values above the current
+  // ledger tip resolve to the latest known version.
+  //
+  // At most one of `version` and `at_checkpoint` may be set.
+  optional uint64 at_checkpoint = 3;
 }
 
 message GetPackageResponse {

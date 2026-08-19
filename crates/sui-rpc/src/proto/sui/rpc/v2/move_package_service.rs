@@ -7,6 +7,8 @@ impl GetPackageRequest {
     pub fn new(package_id: &Address) -> Self {
         Self {
             package_id: Some(package_id.to_string()),
+            version: None,
+            at_checkpoint: None,
         }
     }
 }
