@@ -15320,10 +15320,27 @@ impl serde::Serialize for GetPackageRequest {
         if self.package_id.is_some() {
             len += 1;
         }
+        if self.version.is_some() {
+            len += 1;
+        }
+        if self.at_checkpoint.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer
             .serialize_struct("sui.rpc.v2.GetPackageRequest", len)?;
         if let Some(v) = self.package_id.as_ref() {
             struct_ser.serialize_field("packageId", v)?;
+        }
+        if let Some(v) = self.version.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("version", ToString::to_string(&v).as_str())?;
+        }
+        if let Some(v) = self.at_checkpoint.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser
+                .serialize_field("atCheckpoint", ToString::to_string(&v).as_str())?;
         }
         struct_ser.end()
     }
@@ -15334,10 +15351,18 @@ impl<'de> serde::Deserialize<'de> for GetPackageRequest {
     where
         D: serde::Deserializer<'de>,
     {
-        const FIELDS: &[&str] = &["package_id", "packageId"];
+        const FIELDS: &[&str] = &[
+            "package_id",
+            "packageId",
+            "version",
+            "at_checkpoint",
+            "atCheckpoint",
+        ];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             PackageId,
+            Version,
+            AtCheckpoint,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -15366,6 +15391,10 @@ impl<'de> serde::Deserialize<'de> for GetPackageRequest {
                     {
                         match value {
                             "packageId" | "package_id" => Ok(GeneratedField::PackageId),
+                            "version" => Ok(GeneratedField::Version),
+                            "atCheckpoint" | "at_checkpoint" => {
+                                Ok(GeneratedField::AtCheckpoint)
+                            }
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -15392,6 +15421,8 @@ impl<'de> serde::Deserialize<'de> for GetPackageRequest {
                 V: serde::de::MapAccess<'de>,
             {
                 let mut package_id__ = None;
+                let mut version__ = None;
+                let mut at_checkpoint__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::PackageId => {
@@ -15400,6 +15431,28 @@ impl<'de> serde::Deserialize<'de> for GetPackageRequest {
                             }
                             package_id__ = map_.next_value()?;
                         }
+                        GeneratedField::Version => {
+                            if version__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("version"));
+                            }
+                            version__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::AtCheckpoint => {
+                            if at_checkpoint__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("atCheckpoint"),
+                                );
+                            }
+                            at_checkpoint__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -15407,6 +15460,8 @@ impl<'de> serde::Deserialize<'de> for GetPackageRequest {
                 }
                 Ok(GetPackageRequest {
                     package_id: package_id__,
+                    version: version__,
+                    at_checkpoint: at_checkpoint__,
                 })
             }
         }

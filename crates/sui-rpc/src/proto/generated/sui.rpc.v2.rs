@@ -3940,9 +3940,27 @@ impl Ability {
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetPackageRequest {
-    /// Required. The `storage_id` of the requested package.
+    /// Required. The `storage_id` of any version of the requested package.
+    ///
+    /// When neither `version` nor `at_checkpoint` is set, the package stored
+    /// at exactly this id is returned. When either is set, `package_id` only
+    /// identifies the package's upgrade lineage (via its original id), and the
+    /// requested version within that lineage is returned.
     #[prost(string, optional, tag = "1")]
     pub package_id: ::core::option::Option<::prost::alloc::string::String>,
+    /// Optional. Return the package in `package_id`'s upgrade lineage with
+    /// exactly this version.
+    ///
+    /// At most one of `version` and `at_checkpoint` may be set.
+    #[prost(uint64, optional, tag = "2")]
+    pub version: ::core::option::Option<u64>,
+    /// Optional. Return the latest package in `package_id`'s upgrade lineage
+    /// that existed at or before this checkpoint. Values above the current
+    /// ledger tip resolve to the latest known version.
+    ///
+    /// At most one of `version` and `at_checkpoint` may be set.
+    #[prost(uint64, optional, tag = "3")]
+    pub at_checkpoint: ::core::option::Option<u64>,
 }
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
