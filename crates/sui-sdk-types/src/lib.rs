@@ -221,6 +221,7 @@ pub use object::TypeOrigin;
 pub use object::UpgradeInfo;
 pub use object::Version;
 pub use transaction::ActiveJwk;
+pub use transaction::AllowedProposers;
 pub use transaction::Argument;
 pub use transaction::AuthenticatorStateExpire;
 pub use transaction::AuthenticatorStateUpdate;

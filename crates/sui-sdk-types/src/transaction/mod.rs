@@ -62,7 +62,7 @@ pub struct SignedTransaction {
 /// transaction-expiration =  %x00      ; none
 ///                        =/ %x01 u64  ; epoch
 /// ```
-#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Default, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(
     feature = "serde",
     derive(serde_derive::Serialize, serde_derive::Deserialize)
@@ -101,6 +101,73 @@ pub enum TransactionExpiration {
         /// User-provided uniqueness identifier to differentiate otherwise identical transactions
         nonce: u32,
     },
+
+    /// Everything in `ValidDuring`, plus a restriction on which validators may propose the
+    /// transaction in consensus.
+    Validity {
+        /// Transaction invalid before this epoch. Must equal current epoch.
+        min_epoch: Option<EpochId>,
+        /// Transaction expires after this epoch. Must equal current epoch
+        max_epoch: Option<EpochId>,
+        /// Future support for sub-epoch timing (not yet implemented)
+        min_timestamp: Option<u64>,
+        /// Future support for sub-epoch timing (not yet implemented)
+        max_timestamp: Option<u64>,
+        /// Network identifier to prevent cross-chain replay
+        chain: Digest,
+        /// User-provided uniqueness identifier to differentiate otherwise identical transactions
+        nonce: u32,
+        /// The validators allowed to propose this transaction in consensus, if it restricts them
+        allowed_proposers: Option<AllowedProposers>,
+    },
+}
+
+/// The validators allowed to propose a transaction in consensus
+///
+/// Proposal by any other validator is byzantine behavior and invalidates the whole block.
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// allowed-proposers = u64 (vector u32)  ; epoch, then committee indices
+/// ```
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+pub struct AllowedProposers {
+    /// The epoch whose committee `proposers` indexes into
+    ///
+    /// Committee indices are only meaningful against one committee, so a set recorded for any
+    /// other epoch is ignored and the transaction is treated as naming no proposers.
+    pub epoch: EpochId,
+    /// Committee indices of the allowed proposers, strictly increasing and non-empty
+    ///
+    /// An empty set is rejected at deserialization, since it names no validator and would be
+    /// rejected on chain.
+    #[cfg_attr(
+        feature = "proptest",
+        strategy(proptest::collection::vec(proptest::prelude::any::<u32>(), 1..8))
+    )]
+    #[cfg_attr(feature = "serde", serde(deserialize_with = "deserialize_non_empty"))]
+    pub proposers: Vec<u32>,
+}
+
+#[cfg(feature = "serde")]
+fn deserialize_non_empty<'de, D>(deserializer: D) -> Result<Vec<u32>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::Deserialize;
+    let proposers = Vec::<u32>::deserialize(deserializer)?;
+    if proposers.is_empty() {
+        return Err(serde::de::Error::custom("empty vector"));
+    }
+    Ok(proposers)
 }
 
 /// Payment information for executing a transaction

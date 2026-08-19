@@ -70,6 +70,10 @@ message TransactionExpiration {
     // executed digests for the maximum possible expiry range to differentiate
     // retries from unique transactions with otherwise identical inputs.
     VALID_DURING = 3;
+
+    // Everything in VALID_DURING, plus a restriction on which validators may
+    // propose the transaction in consensus.
+    VALIDITY = 4;
   }
 
   optional TransactionExpirationKind kind = 1;
@@ -97,6 +101,27 @@ message TransactionExpiration {
 
   // User-provided uniqueness identifier to differentiate otherwise identical transactions
   optional uint32 nonce = 7;
+
+  // The validators allowed to propose this transaction in consensus. Only set when `kind`
+  // is `VALIDITY`. Leave unset to let any validator propose the transaction.
+  optional AllowedProposers allowed_proposers = 8;
+}
+
+// The validators allowed to propose a transaction in consensus.
+//
+// Proposal by any other validator is byzantine behavior and invalidates the whole block.
+message AllowedProposers {
+  // The epoch whose committee `proposers` indexes into.
+  //
+  // Committee indices are only meaningful against one committee, so a set recorded for any
+  // other epoch is ignored and the transaction is treated as naming no proposers.
+  optional uint64 epoch = 1;
+
+  // Committee indices of the allowed proposers, strictly increasing and non-empty.
+  //
+  // An empty list names no validator and is rejected; omit `allowed_proposers` entirely to
+  // let any validator propose the transaction.
+  repeated uint32 proposers = 2;
 }
 
 // Transaction type.

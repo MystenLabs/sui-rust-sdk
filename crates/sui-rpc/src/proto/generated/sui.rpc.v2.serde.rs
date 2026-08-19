@@ -979,6 +979,139 @@ impl<'de> serde::Deserialize<'de> for AffectedObjectFilter {
             )
     }
 }
+impl serde::Serialize for AllowedProposers {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0usize;
+        if self.epoch.is_some() {
+            len += 1;
+        }
+        if !self.proposers.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer
+            .serialize_struct("sui.rpc.v2.AllowedProposers", len)?;
+        if let Some(v) = self.epoch.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("epoch", ToString::to_string(&v).as_str())?;
+        }
+        if !self.proposers.is_empty() {
+            struct_ser.serialize_field("proposers", &self.proposers)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for AllowedProposers {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &["epoch", "proposers"];
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Epoch,
+            Proposers,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(
+                deserializer: D,
+            ) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+                    fn expecting(
+                        &self,
+                        formatter: &mut std::fmt::Formatter<'_>,
+                    ) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", FIELDS)
+                    }
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(
+                        self,
+                        value: &str,
+                    ) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "epoch" => Ok(GeneratedField::Epoch),
+                            "proposers" => Ok(GeneratedField::Proposers),
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = AllowedProposers;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2.AllowedProposers")
+            }
+            fn visit_map<V>(
+                self,
+                mut map_: V,
+            ) -> std::result::Result<AllowedProposers, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                let mut epoch__ = None;
+                let mut proposers__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Epoch => {
+                            if epoch__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("epoch"));
+                            }
+                            epoch__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::Proposers => {
+                            if proposers__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("proposers"));
+                            }
+                            proposers__ = Some(
+                                map_
+                                    .next_value::<Vec<crate::_serde::NumberDeserialize<_>>>()?
+                                    .into_iter()
+                                    .map(|x| x.0)
+                                    .collect(),
+                            );
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(AllowedProposers {
+                    epoch: epoch__,
+                    proposers: proposers__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer
+            .deserialize_struct("sui.rpc.v2.AllowedProposers", FIELDS, GeneratedVisitor)
+    }
+}
 impl serde::Serialize for Argument {
     #[allow(deprecated)]
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
@@ -30095,6 +30228,9 @@ impl serde::Serialize for TransactionExpiration {
         if self.nonce.is_some() {
             len += 1;
         }
+        if self.allowed_proposers.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer
             .serialize_struct("sui.rpc.v2.TransactionExpiration", len)?;
         if let Some(v) = self.kind.as_ref() {
@@ -30134,6 +30270,9 @@ impl serde::Serialize for TransactionExpiration {
         if let Some(v) = self.nonce.as_ref() {
             struct_ser.serialize_field("nonce", v)?;
         }
+        if let Some(v) = self.allowed_proposers.as_ref() {
+            struct_ser.serialize_field("allowedProposers", v)?;
+        }
         struct_ser.end()
     }
 }
@@ -30154,6 +30293,8 @@ impl<'de> serde::Deserialize<'de> for TransactionExpiration {
             "maxTimestamp",
             "chain",
             "nonce",
+            "allowed_proposers",
+            "allowedProposers",
         ];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
@@ -30164,6 +30305,7 @@ impl<'de> serde::Deserialize<'de> for TransactionExpiration {
             MaxTimestamp,
             Chain,
             Nonce,
+            AllowedProposers,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -30202,6 +30344,9 @@ impl<'de> serde::Deserialize<'de> for TransactionExpiration {
                             }
                             "chain" => Ok(GeneratedField::Chain),
                             "nonce" => Ok(GeneratedField::Nonce),
+                            "allowedProposers" | "allowed_proposers" => {
+                                Ok(GeneratedField::AllowedProposers)
+                            }
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -30234,6 +30379,7 @@ impl<'de> serde::Deserialize<'de> for TransactionExpiration {
                 let mut max_timestamp__ = None;
                 let mut chain__ = None;
                 let mut nonce__ = None;
+                let mut allowed_proposers__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Kind => {
@@ -30308,6 +30454,14 @@ impl<'de> serde::Deserialize<'de> for TransactionExpiration {
                                 >()?
                                 .map(|x| x.0);
                         }
+                        GeneratedField::AllowedProposers => {
+                            if allowed_proposers__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("allowedProposers"),
+                                );
+                            }
+                            allowed_proposers__ = map_.next_value()?;
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -30321,6 +30475,7 @@ impl<'de> serde::Deserialize<'de> for TransactionExpiration {
                     max_timestamp: max_timestamp__,
                     chain: chain__,
                     nonce: nonce__,
+                    allowed_proposers: allowed_proposers__,
                 })
             }
         }
@@ -30343,6 +30498,7 @@ impl serde::Serialize for transaction_expiration::TransactionExpirationKind {
             Self::None => "NONE",
             Self::Epoch => "EPOCH",
             Self::ValidDuring => "VALID_DURING",
+            Self::Validity => "VALIDITY",
         };
         serializer.serialize_str(variant)
     }
@@ -30358,6 +30514,7 @@ impl<'de> serde::Deserialize<'de> for transaction_expiration::TransactionExpirat
             "NONE",
             "EPOCH",
             "VALID_DURING",
+            "VALIDITY",
         ];
         struct GeneratedVisitor;
         impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
@@ -30412,6 +30569,9 @@ impl<'de> serde::Deserialize<'de> for transaction_expiration::TransactionExpirat
                         Ok(
                             transaction_expiration::TransactionExpirationKind::ValidDuring,
                         )
+                    }
+                    "VALIDITY" => {
+                        Ok(transaction_expiration::TransactionExpirationKind::Validity)
                     }
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
