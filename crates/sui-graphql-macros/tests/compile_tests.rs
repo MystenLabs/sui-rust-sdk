@@ -59,6 +59,7 @@ fn compile_tests() {
     t.pass("tests/compile/graphql_query_simple.rs");
     t.pass("tests/compile/graphql_query_with_variables.rs");
     t.pass("tests/compile/graphql_query_mutation.rs");
+    t.pass("tests/compile/graphql_query_multiple_strings.rs");
     t.compile_fail("tests/compile/graphql_query_unknown_field.rs");
     t.compile_fail("tests/compile/graphql_query_undefined_variable.rs");
     t.compile_fail("tests/compile/graphql_query_variable_typo.rs");

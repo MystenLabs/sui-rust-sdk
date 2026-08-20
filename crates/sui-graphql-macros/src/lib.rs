@@ -335,10 +335,27 @@ pub fn derive_query_response(input: TokenStream) -> TokenStream {
 /// Validate a GraphQL query or mutation against the embedded Sui schema at
 /// compile time and return it as a `&'static str`.
 ///
+/// One or more sources can be supplied. An inline source is a string literal;
+/// prefix a path with `@` to load it from a UTF-8 file relative to the Rust
+/// source file containing the macro invocation. Sources are concatenated in
+/// order before the complete document is validated, allowing operations and
+/// fragments to be kept separately:
+///
+/// ```ignore
+/// const QUERY: &str = graphql_query!(
+///     @"queries/get-chain.graphql",
+///     @"queries/chain-fragment.graphql",
+/// );
+/// ```
+///
 /// On a syntactically or semantically invalid input (unknown field, wrong
 /// argument type, undefined variable, etc.) the macro emits one
-/// `compile_error!` per Bluejay diagnostic, so the offending call
-/// site fails to build with the diagnostic text inline.
+/// `compile_error!` per Bluejay diagnostic, so the offending call site fails to
+/// build with the diagnostic text inline.
+///
+/// Inline inputs must be literals. A procedural macro runs before Rust name
+/// resolution and therefore cannot read the value behind a path to a Rust
+/// string constant while retaining compile-time GraphQL validation.
 #[proc_macro]
 pub fn graphql_query(input: TokenStream) -> TokenStream {
     query::expand(input)
