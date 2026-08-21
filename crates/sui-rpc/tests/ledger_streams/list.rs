@@ -13,12 +13,20 @@ use super::support::event_list_frame;
 use super::support::event_positioned_list_frame;
 use super::support::fast_list_config;
 use super::support::observed_client;
+use super::support::service_info;
 use super::support::spawn_server;
 use super::support::transaction_identity_mask;
 use super::support::transaction_list_frame;
+use futures::StreamExt;
 use futures::TryStreamExt;
 use std::time::Duration;
+use sui_rpc::client::CheckpointStreamRequest;
+use sui_rpc::client::CheckpointStreamStart;
+use sui_rpc::client::EventStreamRequest;
+use sui_rpc::client::EventStreamStart;
 use sui_rpc::client::ListConfig;
+use sui_rpc::client::TransactionStreamRequest;
+use sui_rpc::client::TransactionStreamStart;
 use sui_rpc::proto::sui::rpc::v2 as proto;
 use tokio::sync::mpsc;
 
@@ -502,6 +510,199 @@ async fn sparse_bounded_streams_yield_progress_and_the_final_watermark() {
     assert_eq!(
         event_frames.last().unwrap().end.as_ref().unwrap().reason,
         Some(proto::QueryEndReason::CheckpointBound as i32)
+    );
+}
+
+#[tokio::test]
+async fn stream_position_round_trips_through_bytes() {
+    let (server, _calls) = ScriptedStreamServer::new();
+    server.push_service_infos([2, 4, 2, 4, 2, 4].into_iter().map(service_info).map(Ok));
+    server.push_checkpoint_lists([
+        StreamScript::frames([
+            Ok(checkpoint_list_frame(Some(2), 2, None)),
+            Ok(checkpoint_list_frame(
+                None,
+                2,
+                Some(proto::QueryEndReason::CheckpointBound),
+            )),
+        ]),
+        StreamScript::frames([
+            Ok(checkpoint_list_frame(Some(3), 3, None)),
+            Ok(checkpoint_list_frame(Some(4), 4, None)),
+            Ok(checkpoint_list_frame(
+                None,
+                4,
+                Some(proto::QueryEndReason::CheckpointBound),
+            )),
+        ]),
+    ]);
+    server.push_transaction_lists([
+        StreamScript::frames([
+            Ok(transaction_list_frame(Some(2), 2, None)),
+            Ok(transaction_list_frame(
+                None,
+                3,
+                Some(proto::QueryEndReason::CheckpointBound),
+            )),
+        ]),
+        StreamScript::frames([
+            Ok(transaction_list_frame(Some(3), 3, None)),
+            Ok(transaction_list_frame(Some(4), 4, None)),
+            Ok(transaction_list_frame(
+                None,
+                5,
+                Some(proto::QueryEndReason::CheckpointBound),
+            )),
+        ]),
+    ]);
+    server.push_event_lists([
+        StreamScript::frames([
+            Ok(event_list_frame(Some(2), 2, None)),
+            Ok(event_list_frame(
+                None,
+                3,
+                Some(proto::QueryEndReason::CheckpointBound),
+            )),
+        ]),
+        StreamScript::frames([
+            Ok(event_list_frame(Some(3), 3, None)),
+            Ok(event_list_frame(Some(4), 4, None)),
+            Ok(event_list_frame(
+                None,
+                5,
+                Some(proto::QueryEndReason::CheckpointBound),
+            )),
+        ]),
+    ]);
+    let address = spawn_server(server.clone()).await;
+    let (client, _observations) = observed_client(address);
+
+    let checkpoint_request = CheckpointStreamRequest::new()
+        .with_read_mask(checkpoint_identity_mask())
+        .with_start(CheckpointStreamStart::Checkpoint(2));
+    let checkpoint_frames = client
+        .stream_checkpoints(checkpoint_request)
+        .take(1)
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
+    assert_eq!(
+        checkpoint_frames[0]
+            .checkpoint
+            .as_ref()
+            .unwrap()
+            .sequence_number,
+        Some(2)
+    );
+    assert_eq!(checkpoint_frames[0].cursor, 2);
+    assert_eq!(checkpoint_frames.len(), 1);
+
+    let checkpoint_resume = CheckpointStreamRequest::new()
+        .with_read_mask(checkpoint_identity_mask())
+        .with_start(CheckpointStreamStart::Checkpoint(
+            checkpoint_frames[0].cursor.checked_add(1).unwrap(),
+        ));
+    let checkpoints = client
+        .stream_checkpoints(checkpoint_resume)
+        .take(2)
+        .try_filter_map(|frame| async move {
+            Ok(frame
+                .checkpoint
+                .map(|checkpoint| checkpoint.sequence_number.unwrap()))
+        })
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
+    assert_eq!(checkpoints, [3, 4]);
+
+    let transaction_request = TransactionStreamRequest::new()
+        .with_read_mask(transaction_identity_mask())
+        .with_start(TransactionStreamStart::Checkpoint(2));
+    let transaction_frames = client
+        .stream_transactions(transaction_request)
+        .take(1)
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
+    assert_eq!(
+        transaction_frames[0]
+            .transaction
+            .as_ref()
+            .unwrap()
+            .digest
+            .as_deref(),
+        Some("tx-2")
+    );
+    assert_eq!(transaction_frames[0].cursor, bytes(2));
+    assert_eq!(transaction_frames[0].covered_checkpoint, Some(2));
+
+    let persisted = transaction_frames[0].cursor.clone();
+    let transaction_resume = TransactionStreamRequest::new()
+        .with_read_mask(transaction_identity_mask())
+        .with_start(TransactionStreamStart::Resume(persisted));
+    let transactions = client
+        .stream_transactions(transaction_resume)
+        .take(2)
+        .try_filter_map(|frame| async move {
+            Ok(frame
+                .transaction
+                .map(|transaction| transaction.digest.unwrap()))
+        })
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
+    assert_eq!(transactions, ["tx-3", "tx-4"]);
+
+    let event_request = EventStreamRequest::new()
+        .with_read_mask(event_identity_mask())
+        .with_start(EventStreamStart::Checkpoint(2));
+    let event_frames = client
+        .stream_events(event_request)
+        .take(1)
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
+    assert_eq!(
+        event_frames[0]
+            .event
+            .as_ref()
+            .unwrap()
+            .event_type
+            .as_deref(),
+        Some("event-2")
+    );
+    assert_eq!(event_frames[0].cursor, bytes(2));
+    assert_eq!(event_frames[0].covered_checkpoint, Some(2));
+
+    let event_resume = EventStreamRequest::new()
+        .with_read_mask(event_identity_mask())
+        .with_start(EventStreamStart::Resume(event_frames[0].cursor.clone()));
+    let events = client
+        .stream_events(event_resume)
+        .take(2)
+        .try_filter_map(
+            |frame| async move { Ok(frame.event.map(|event| event.event_type.unwrap())) },
+        )
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
+    assert_eq!(events, ["event-3", "event-4"]);
+
+    let state = server.state.lock().unwrap();
+
+    assert_eq!(state.checkpoint_requests[1].body.start_checkpoint, Some(3));
+    assert_eq!(
+        state.transaction_requests[1]
+            .body
+            .options
+            .as_ref()
+            .unwrap()
+            .after,
+        Some(bytes(2))
+    );
+    assert_eq!(
+        state.event_requests[1].body.options.as_ref().unwrap().after,
+        Some(bytes(2))
     );
 }
 

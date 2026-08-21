@@ -7,20 +7,28 @@ use super::adapter::EventAdapter;
 use super::adapter::SubscriptionAdapter;
 use super::adapter::TransactionAdapter;
 use super::list::ListDriver;
+use super::stream::Driver;
+use super::stream::Start;
 use super::types::CheckpointStreamFrame;
 use super::types::CheckpointStreamRequest;
+use super::types::CheckpointStreamStart;
 use super::types::EventStreamFrame;
 use super::types::EventStreamRequest;
+use super::types::EventStreamStart;
 use super::types::LedgerStreamConfig;
 use super::types::ListConfig;
 use super::types::TransactionStreamFrame;
 use super::types::TransactionStreamRequest;
+use super::types::TransactionStreamStart;
 use crate::proto::sui::rpc::v2::ListCheckpointsRequest;
 use crate::proto::sui::rpc::v2::ListCheckpointsResponse;
 use crate::proto::sui::rpc::v2::ListEventsRequest;
 use crate::proto::sui::rpc::v2::ListEventsResponse;
 use crate::proto::sui::rpc::v2::ListTransactionsRequest;
 use crate::proto::sui::rpc::v2::ListTransactionsResponse;
+use crate::proto::sui::rpc::v2::SubscribeCheckpointsRequest;
+use crate::proto::sui::rpc::v2::SubscribeEventsRequest;
+use crate::proto::sui::rpc::v2::SubscribeTransactionsRequest;
 
 impl Client {
     /// Paginates `ListCheckpoints` requests into a stream of raw response pages.
@@ -65,8 +73,29 @@ impl Client {
         request: CheckpointStreamRequest,
         config: LedgerStreamConfig,
     ) -> impl Stream<Item = Result<CheckpointStreamFrame>> + Send + 'static {
-        let _ = (request, config);
-        unimplemented_stream()
+        let subscribe_payload = SubscribeCheckpointsRequest {
+            read_mask: request.read_mask.clone(),
+            filter: request.filter.clone(),
+        };
+        let list_template = ListCheckpointsRequest {
+            read_mask: request.read_mask,
+            filter: request.filter,
+            start_checkpoint: None,
+            end_checkpoint: None,
+            options: None,
+        };
+        let start = match request.start {
+            CheckpointStreamStart::Tip => Start::Tip,
+            CheckpointStreamStart::Checkpoint(checkpoint) => Start::Checkpoint(checkpoint),
+        };
+        resumable_stream(Driver::<CheckpointAdapter>::new_stream(
+            self.clone(),
+            subscribe_payload,
+            list_template,
+            start,
+            request.delivery,
+            config,
+        ))
     }
 
     /// Paginates `ListTransactions` requests into a stream of raw response pages.
@@ -111,8 +140,30 @@ impl Client {
         request: TransactionStreamRequest,
         config: LedgerStreamConfig,
     ) -> impl Stream<Item = Result<TransactionStreamFrame>> + Send + 'static {
-        let _ = (request, config);
-        unimplemented_stream()
+        let subscribe_payload = SubscribeTransactionsRequest {
+            read_mask: request.read_mask.clone(),
+            filter: request.filter.clone(),
+        };
+        let list_template = ListTransactionsRequest {
+            read_mask: request.read_mask,
+            filter: request.filter,
+            start_checkpoint: None,
+            end_checkpoint: None,
+            options: None,
+        };
+        let start = match request.start {
+            TransactionStreamStart::Tip => Start::Tip,
+            TransactionStreamStart::Checkpoint(checkpoint) => Start::Checkpoint(checkpoint),
+            TransactionStreamStart::Resume(cursor) => Start::After(cursor),
+        };
+        resumable_stream(Driver::<TransactionAdapter>::new_stream(
+            self.clone(),
+            subscribe_payload,
+            list_template,
+            start,
+            request.delivery,
+            config,
+        ))
     }
 
     /// Paginates `ListEvents` requests into a stream of raw response pages.
@@ -158,8 +209,30 @@ impl Client {
         request: EventStreamRequest,
         config: LedgerStreamConfig,
     ) -> impl Stream<Item = Result<EventStreamFrame>> + Send + 'static {
-        let _ = (request, config);
-        unimplemented_stream()
+        let subscribe_payload = SubscribeEventsRequest {
+            read_mask: request.read_mask.clone(),
+            filter: request.filter.clone(),
+        };
+        let list_template = ListEventsRequest {
+            read_mask: request.read_mask,
+            filter: request.filter,
+            start_checkpoint: None,
+            end_checkpoint: None,
+            options: None,
+        };
+        let start = match request.start {
+            EventStreamStart::Tip => Start::Tip,
+            EventStreamStart::Checkpoint(checkpoint) => Start::Checkpoint(checkpoint),
+            EventStreamStart::Resume(cursor) => Start::After(cursor),
+        };
+        resumable_stream(Driver::<EventAdapter>::new_stream(
+            self.clone(),
+            subscribe_payload,
+            list_template,
+            start,
+            request.delivery,
+            config,
+        ))
     }
 }
 
@@ -171,6 +244,10 @@ fn list_stream<A: SubscriptionAdapter>(
     })
 }
 
-fn unimplemented_stream<T>() -> futures::stream::Empty<Result<T>> {
-    unimplemented!()
+fn resumable_stream<A: SubscriptionAdapter>(
+    driver: Driver<A>,
+) -> impl Stream<Item = Result<A::Output>> + Send + 'static {
+    futures::stream::unfold(driver, |mut driver| async move {
+        driver.next().await.map(|item| (item, driver))
+    })
 }

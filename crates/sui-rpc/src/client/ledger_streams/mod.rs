@@ -1,10 +1,16 @@
-//! Finite ledger List facades, with shared family adapters, validation, pagination, and retry.
+//! Resumable checkpoint, transaction, and event facades.
+//!
+//! `facade` exposes the APIs; `list` validates and paginates List responses; `stream` drives
+//! historical replay plus Poll or Subscribe tails; and `subscription` buffers live frames during
+//! gap repair. Adapters, retry, observability, and types provide shared protocol support.
 
 mod adapter;
 mod facade;
 mod list;
 mod observability;
 mod retry;
+mod stream;
+mod subscription;
 mod types;
 
 pub use observability::LedgerStreamEvent;

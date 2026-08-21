@@ -10,6 +10,9 @@ use proto::ledger_service_server::LedgerServiceServer;
 use proto::subscription_service_server::SubscriptionService;
 use proto::subscription_service_server::SubscriptionServiceServer;
 use sui_rpc::Client;
+use sui_rpc::client::EventStreamRequest;
+use sui_rpc::client::LedgerStreamConfig;
+use sui_rpc::client::LedgerStreamEvent;
 use sui_rpc::client::ListConfig;
 use sui_rpc::proto::sui::rpc::v2 as proto;
 use tokio::sync::mpsc;
@@ -78,6 +81,17 @@ impl ScriptedStreamServer {
         )
     }
 
+    pub(crate) fn set_response_delay(&self, response_delay: Duration) {
+        self.state.lock().unwrap().response_delay = response_delay;
+    }
+
+    pub(crate) fn push_service_infos(
+        &self,
+        scripts: impl IntoIterator<Item = Result<proto::GetServiceInfoResponse, tonic::Status>>,
+    ) {
+        self.state.lock().unwrap().service_infos.extend(scripts);
+    }
+
     pub(crate) fn push_checkpoint_lists(
         &self,
         scripts: impl IntoIterator<Item = StreamScript<proto::ListCheckpointsResponse>>,
@@ -97,6 +111,35 @@ impl ScriptedStreamServer {
         scripts: impl IntoIterator<Item = StreamScript<proto::ListEventsResponse>>,
     ) {
         self.state.lock().unwrap().list_events.extend(scripts);
+    }
+
+    pub(crate) fn push_checkpoint_subscriptions(
+        &self,
+        scripts: impl IntoIterator<Item = StreamScript<proto::SubscribeCheckpointsResponse>>,
+    ) {
+        self.state
+            .lock()
+            .unwrap()
+            .subscribe_checkpoints
+            .extend(scripts);
+    }
+
+    pub(crate) fn push_transaction_subscriptions(
+        &self,
+        scripts: impl IntoIterator<Item = StreamScript<proto::SubscribeTransactionsResponse>>,
+    ) {
+        self.state
+            .lock()
+            .unwrap()
+            .subscribe_transactions
+            .extend(scripts);
+    }
+
+    pub(crate) fn push_event_subscriptions(
+        &self,
+        scripts: impl IntoIterator<Item = StreamScript<proto::SubscribeEventsResponse>>,
+    ) {
+        self.state.lock().unwrap().subscribe_events.extend(scripts);
     }
 }
 
@@ -303,6 +346,22 @@ pub(crate) async fn spawn_server(server: ScriptedStreamServer) -> std::net::Sock
     address
 }
 
+pub(crate) async fn spawn_ledger_only_server(server: ScriptedStreamServer) -> std::net::SocketAddr {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind scripted server listener");
+    let address = listener.local_addr().expect("scripted server address");
+    tokio::spawn(async move {
+        tonic::transport::Server::builder()
+            .add_service(LedgerServiceServer::new(server))
+            .serve_with_incoming(tonic::transport::server::TcpIncoming::from(listener))
+            .await
+            .expect("scripted server failed");
+    });
+    tokio::task::yield_now().await;
+    address
+}
+
 pub(crate) fn observed_client(
     address: std::net::SocketAddr,
 ) -> (Client, Arc<Mutex<Vec<HttpObservation>>>) {
@@ -320,6 +379,19 @@ pub(crate) fn observed_client(
     (client, observations)
 }
 
+pub(crate) fn recording_config(
+    config: LedgerStreamConfig,
+) -> (
+    LedgerStreamConfig,
+    mpsc::UnboundedReceiver<LedgerStreamEvent>,
+) {
+    let (event_tx, event_rx) = mpsc::unbounded_channel();
+    let config = config.with_observer(move |event| {
+        let _ = event_tx.send(event);
+    });
+    (config, event_rx)
+}
+
 pub(crate) async fn next_scripted_call(
     calls: &mut mpsc::UnboundedReceiver<&'static str>,
 ) -> &'static str {
@@ -327,6 +399,12 @@ pub(crate) async fn next_scripted_call(
         .await
         .expect("timed out waiting for scripted RPC call")
         .expect("scripted RPC call channel closed")
+}
+
+pub(crate) fn service_info(checkpoint_height: u64) -> proto::GetServiceInfoResponse {
+    let mut response = proto::GetServiceInfoResponse::default();
+    response.checkpoint_height = Some(checkpoint_height);
+    response
 }
 
 pub(crate) fn bytes(value: u64) -> Bytes {
@@ -373,6 +451,32 @@ pub(crate) fn event(value: u64) -> proto::Event {
     event.event_index = Some(0);
     event
 }
+pub(crate) fn transaction_at(
+    checkpoint: u64,
+    transaction_index: u64,
+    digest: &str,
+) -> proto::ExecutedTransaction {
+    let mut transaction = proto::ExecutedTransaction::default();
+    transaction.digest = Some(digest.to_owned());
+    transaction.checkpoint = Some(checkpoint);
+    transaction.transaction_index = Some(transaction_index);
+    transaction
+}
+
+pub(crate) fn event_at(
+    checkpoint: u64,
+    transaction_index: u64,
+    event_index: u32,
+    event_type: &str,
+) -> proto::Event {
+    let mut event = proto::Event::default();
+    event.event_type = Some(event_type.to_owned());
+    event.checkpoint = Some(checkpoint);
+    event.transaction_index = Some(transaction_index);
+    event.event_index = Some(event_index);
+    event
+}
+
 pub(crate) fn checkpoint_list_frame(
     item: Option<u64>,
     cursor: u64,
@@ -409,6 +513,45 @@ pub(crate) fn event_list_frame(
     response
 }
 
+pub(crate) fn checkpoint_live_frame(
+    item: Option<u64>,
+    cursor: u64,
+) -> proto::SubscribeCheckpointsResponse {
+    let mut response = proto::SubscribeCheckpointsResponse::default();
+    response.cursor = Some(cursor);
+    response.checkpoint = item.map(checkpoint);
+    response
+}
+
+pub(crate) fn transaction_live_frame(
+    item: Option<u64>,
+    cursor: u64,
+) -> proto::SubscribeTransactionsResponse {
+    let mut response = proto::SubscribeTransactionsResponse::default();
+    response.transaction = item.map(transaction);
+    response.watermark = Some(watermark(cursor));
+    response
+}
+
+pub(crate) fn event_live_frame(item: Option<u64>, cursor: u64) -> proto::SubscribeEventsResponse {
+    let mut response = proto::SubscribeEventsResponse::default();
+    response.event = item.map(event);
+    response.watermark = Some(watermark(cursor));
+    response
+}
+pub(crate) fn transaction_positioned_list_frame(
+    item: Option<proto::ExecutedTransaction>,
+    cursor: u64,
+    checkpoint: u64,
+    reason: Option<proto::QueryEndReason>,
+) -> proto::ListTransactionsResponse {
+    let mut response = proto::ListTransactionsResponse::default();
+    response.transaction = item;
+    response.watermark = Some(watermark_at(cursor, checkpoint));
+    response.end = reason.map(query_end);
+    response
+}
+
 pub(crate) fn event_positioned_list_frame(
     item: Option<proto::Event>,
     cursor: u64,
@@ -421,6 +564,29 @@ pub(crate) fn event_positioned_list_frame(
     response.end = reason.map(query_end);
     response
 }
+
+pub(crate) fn transaction_positioned_live_frame(
+    item: Option<proto::ExecutedTransaction>,
+    cursor: u64,
+    checkpoint: u64,
+) -> proto::SubscribeTransactionsResponse {
+    let mut response = proto::SubscribeTransactionsResponse::default();
+    response.transaction = item;
+    response.watermark = Some(watermark_at(cursor, checkpoint));
+    response
+}
+
+pub(crate) fn event_positioned_live_frame(
+    item: Option<proto::Event>,
+    cursor: u64,
+    checkpoint: u64,
+) -> proto::SubscribeEventsResponse {
+    let mut response = proto::SubscribeEventsResponse::default();
+    response.event = item;
+    response.watermark = Some(watermark_at(cursor, checkpoint));
+    response
+}
+
 pub(crate) fn bounded_checkpoint_scripts() -> Vec<StreamScript<proto::ListCheckpointsResponse>> {
     vec![
         StreamScript::frames([
@@ -511,6 +677,14 @@ pub(crate) fn event_identity_mask() -> prost_types::FieldMask {
     }
 }
 
+pub(crate) fn fast_config() -> LedgerStreamConfig {
+    let mut config = LedgerStreamConfig::default();
+    config.base_retry_delay = Duration::ZERO;
+    config.max_retry_delay = Duration::ZERO;
+    config.retry_jitter = Duration::ZERO;
+    config
+}
+
 pub(crate) fn fast_list_config() -> ListConfig {
     let mut config = ListConfig::default();
     config.base_retry_delay = Duration::ZERO;
@@ -524,6 +698,27 @@ pub(crate) fn bounded_event_request() -> proto::ListEventsRequest {
         .with_read_mask(event_identity_mask())
         .with_end_checkpoint(10)
 }
+pub(crate) async fn first_event_error(
+    client: &Client,
+    request_body: EventStreamRequest,
+    config: LedgerStreamConfig,
+) -> tonic::Status {
+    let stream = client.stream_events_with_config(request_body, config);
+    futures::pin_mut!(stream);
+    let status = tokio::time::timeout(Duration::from_secs(2), stream.next())
+        .await
+        .expect("timed out waiting for terminal stream error")
+        .unwrap()
+        .unwrap_err();
+    assert!(
+        tokio::time::timeout(Duration::from_secs(2), stream.next())
+            .await
+            .expect("timed out waiting for stream termination")
+            .is_none()
+    );
+    status
+}
+
 pub(crate) async fn first_list_event_error(
     client: &Client,
     request_body: proto::ListEventsRequest,
