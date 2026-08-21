@@ -1,7 +1,8 @@
-use futures::StreamExt;
-use prost::bytes::Bytes;
 use std::pin::Pin;
 use std::time::Duration;
+
+use futures::StreamExt;
+use prost::bytes::Bytes;
 use tonic::Request;
 use tonic::Status;
 use tonic::codegen::BoxStream;
@@ -9,8 +10,10 @@ use tonic::codegen::BoxStream;
 use super::super::Client;
 use super::super::Result;
 use super::adapter::CursorDomain;
+use super::adapter::CursorGapUpper;
 use super::adapter::ListScanDirection;
 use super::adapter::Progress;
+use super::adapter::RecoveryGap;
 use super::adapter::RpcFuture;
 use super::adapter::SubscriptionAdapter;
 use super::observability::LedgerStreamEvent;
@@ -19,6 +22,7 @@ use super::observability::LedgerStreamOperation;
 use super::observability::LedgerStreamStage;
 use super::retry::FailurePhase;
 use super::retry::RetryState;
+use super::retry::backoff_delay;
 use super::types::LedgerStreamConfig;
 use crate::proto::sui::rpc::v2::QueryEnd;
 use crate::proto::sui::rpc::v2::QueryEndReason;
@@ -32,7 +36,17 @@ pub(super) struct ExpectedEnd {
     checkpoint_without_prior_progress: bool,
     cursor_without_prior_progress: bool,
 }
+
 impl ExpectedEnd {
+    fn from_bounds(checkpoint: bool, cursor: bool) -> Self {
+        Self {
+            checkpoint_after_progress: checkpoint,
+            cursor_after_progress: cursor,
+            checkpoint_without_prior_progress: checkpoint,
+            cursor_without_prior_progress: cursor,
+        }
+    }
+
     fn accepts(
         self,
         reason: QueryEndReason,
@@ -62,6 +76,112 @@ fn validate_query_end_item(reason: QueryEndReason, item_present: bool) -> Result
         ))
     } else {
         Ok(())
+    }
+}
+
+fn to_exclusive_end_bound(checkpoint_height: u64) -> Result<u64> {
+    checkpoint_height.checked_add(1).ok_or_else(|| {
+        Status::out_of_range("checkpoint height cannot be converted to an exclusive end bound")
+    })
+}
+
+/// Sets the page size on an internal request; caller-built `list_*` requests bypass this path.
+fn apply_internal_list_page_limit<A: SubscriptionAdapter>(
+    request: &mut A::ListRequest,
+    list_page_limit: Option<u32>,
+) {
+    A::options_mut(request).limit = list_page_limit;
+}
+
+pub(super) fn build_initial_list_request<A: SubscriptionAdapter>(
+    template: &A::ListRequest,
+    checkpoint_height: u64,
+    list_page_limit: Option<u32>,
+) -> Result<(A::ListRequest, ExpectedEnd)> {
+    let mut request = template.clone();
+    apply_internal_list_page_limit::<A>(&mut request, list_page_limit);
+    A::set_end_checkpoint(
+        &mut request,
+        Some(to_exclusive_end_bound(checkpoint_height)?),
+    );
+    Ok((request, ExpectedEnd::from_bounds(true, false)))
+}
+
+/// Queries a single tip checkpoint to establish baseline watermark progress (used when starting in
+/// Poll mode, or recovering baseline progress after an initial Subscribe connection failure).
+pub(super) fn build_live_tip_baseline_list_request<A: SubscriptionAdapter>(
+    template: &A::ListRequest,
+    checkpoint_height: u64,
+    list_page_limit: Option<u32>,
+) -> Result<(A::ListRequest, ExpectedEnd)> {
+    let mut request = template.clone();
+    apply_internal_list_page_limit::<A>(&mut request, list_page_limit);
+    A::set_start_checkpoint(&mut request, Some(checkpoint_height));
+    A::set_end_checkpoint(
+        &mut request,
+        Some(to_exclusive_end_bound(checkpoint_height)?),
+    );
+    let options = A::options_mut(&mut request);
+    options.after = None;
+    options.before = None;
+    Ok((request, ExpectedEnd::from_bounds(true, false)))
+}
+
+pub(super) fn build_polling_list_request<A: SubscriptionAdapter>(
+    template: &A::ListRequest,
+    committed_progress: &Progress<A::Cursor>,
+    checkpoint_height: u64,
+    list_page_limit: Option<u32>,
+) -> Result<(A::ListRequest, ExpectedEnd)> {
+    let mut request = template.clone();
+    apply_internal_list_page_limit::<A>(&mut request, list_page_limit);
+    A::set_ascending_resume(&mut request, committed_progress)?;
+    A::options_mut(&mut request).before = None;
+    A::set_end_checkpoint(
+        &mut request,
+        Some(to_exclusive_end_bound(checkpoint_height)?),
+    );
+    Ok((request, ExpectedEnd::from_bounds(true, false)))
+}
+
+pub(super) fn build_recovery_list_request<A: SubscriptionAdapter>(
+    template: A::ListRequest,
+    gap: &RecoveryGap,
+    list_page_limit: Option<u32>,
+) -> Result<(A::ListRequest, ExpectedEnd)> {
+    let mut request = template;
+    apply_internal_list_page_limit::<A>(&mut request, list_page_limit);
+    match gap {
+        RecoveryGap::Checkpoints {
+            start_checkpoint,
+            end_checkpoint,
+        } => {
+            A::set_start_checkpoint(&mut request, Some(*start_checkpoint));
+            A::set_end_checkpoint(&mut request, Some(*end_checkpoint));
+            let options = A::options_mut(&mut request);
+            options.after = None;
+            options.before = None;
+            Ok((request, ExpectedEnd::from_bounds(true, false)))
+        }
+        RecoveryGap::Cursors {
+            after,
+            upper: CursorGapUpper::Before(before),
+        } => {
+            let options = A::options_mut(&mut request);
+            options.after = Some(after.clone());
+            options.before = Some(before.clone());
+            Ok((request, ExpectedEnd::from_bounds(false, true)))
+        }
+        RecoveryGap::Cursors {
+            after,
+            upper: CursorGapUpper::EndOfCheckpoint(checkpoint),
+        } => {
+            let options = A::options_mut(&mut request);
+            options.after = Some(after.clone());
+            options.before = None;
+            A::set_end_checkpoint(&mut request, Some(to_exclusive_end_bound(*checkpoint)?));
+            Ok((request, ExpectedEnd::from_bounds(true, false)))
+        }
     }
 }
 
@@ -119,10 +239,23 @@ pub(super) enum RpcEvent<R> {
 }
 
 /// Driver action returned by [`ListMachine::process_event`].
-pub(super) enum ListAction<R> {
-    Frame { response: R, complete: bool },
+pub(super) enum ListAction<R, P> {
+    Frame {
+        response: R,
+        progress: Option<P>,
+        complete: bool,
+    },
     Continue,
     Terminal(Status),
+}
+
+/// How an ascending scan handles `LedgerTip` before its requested bound.
+#[derive(Clone, Copy)]
+pub(super) enum LedgerTipPolicy {
+    /// Complete at the indexed tip.
+    Complete,
+    /// Retry from the served frontier until the fixed bound is indexed.
+    WaitForExpectedBound,
 }
 
 pub(super) struct ListMachine<A: SubscriptionAdapter> {
@@ -130,6 +263,7 @@ pub(super) struct ListMachine<A: SubscriptionAdapter> {
     payload: A::ListRequest,
     expected_end: ExpectedEnd,
     direction: ListScanDirection,
+    ledger_tip_policy: LedgerTipPolicy,
     rpc_state: RpcState<A>,
     /// Snapshot of the starting bound sent in the active request, used to detect bound violations.
     request_start_resume_bound: Option<Bytes>,
@@ -137,11 +271,12 @@ pub(super) struct ListMachine<A: SubscriptionAdapter> {
     latest_cursor: Option<Bytes>,
     /// Most recent progress metadata, used to validate monotonic checkpoint coverage.
     latest_progress: Option<Progress<A::Cursor>>,
+    polling_attempt: u32,
     received_frame_in_request: bool,
     request_has_checkpoint_coverage: bool,
     received_any_frame: bool,
     retry: RetryState,
-    observability: LedgerStreamObservability,
+    pub(super) observability: LedgerStreamObservability,
     stage: LedgerStreamStage,
 }
 
@@ -151,6 +286,7 @@ impl<A: SubscriptionAdapter> ListMachine<A> {
         payload: A::ListRequest,
         expected_end: ExpectedEnd,
         direction: ListScanDirection,
+        ledger_tip_policy: LedgerTipPolicy,
         observability: LedgerStreamObservability,
         stage: LedgerStreamStage,
     ) -> Self {
@@ -159,10 +295,12 @@ impl<A: SubscriptionAdapter> ListMachine<A> {
             payload,
             expected_end,
             direction,
+            ledger_tip_policy,
             rpc_state: RpcState::Idle,
             request_start_resume_bound: None,
             latest_cursor: None,
             latest_progress: None,
+            polling_attempt: 0,
             received_frame_in_request: false,
             request_has_checkpoint_coverage: false,
             received_any_frame: false,
@@ -248,7 +386,7 @@ impl<A: SubscriptionAdapter> ListMachine<A> {
         &mut self,
         event: RpcEvent<A::ListResponse>,
         config: &LedgerStreamConfig,
-    ) -> ListAction<A::ListResponse> {
+    ) -> ListAction<A::ListResponse, Progress<A::Cursor>> {
         match event {
             RpcEvent::Wake => {
                 self.start_dispatch();
@@ -265,7 +403,11 @@ impl<A: SubscriptionAdapter> ListMachine<A> {
             RpcEvent::Frame(response) => {
                 let (item_present, watermark, end) = A::extract_metadata(&response);
                 match self.process_frame_metadata(item_present, watermark, end, config) {
-                    Ok((_progress, complete)) => ListAction::Frame { response, complete },
+                    Ok((progress, complete)) => ListAction::Frame {
+                        response,
+                        progress,
+                        complete,
+                    },
                     Err(status) => ListAction::Terminal(status),
                 }
             }
@@ -297,7 +439,7 @@ impl<A: SubscriptionAdapter> ListMachine<A> {
         item_present: bool,
         watermark: Option<&Watermark>,
         end: Option<&QueryEnd>,
-        _config: &LedgerStreamConfig,
+        config: &LedgerStreamConfig,
     ) -> Result<(Option<Progress<A::Cursor>>, bool)> {
         let watermark =
             watermark.ok_or_else(|| Status::data_loss("List frame is missing its watermark"))?;
@@ -345,6 +487,7 @@ impl<A: SubscriptionAdapter> ListMachine<A> {
         }
         if cursor_changed {
             self.latest_cursor = Some(cursor.clone());
+            self.polling_attempt = 0;
             self.retry.reset(&self.observability);
         }
         if let Some(progress) = &frame_progress {
@@ -414,9 +557,18 @@ impl<A: SubscriptionAdapter> ListMachine<A> {
                             "descending List reached LedgerTip after prior scan progress",
                         ));
                     }
-                    QueryEndReason::LedgerTip => {
+                    QueryEndReason::LedgerTip
+                        if matches!(self.ledger_tip_policy, LedgerTipPolicy::Complete) =>
+                    {
                         self.rpc_state = RpcState::Idle;
                         true
+                    }
+                    QueryEndReason::LedgerTip => {
+                        set_resume_bound::<A>(self.direction, &mut self.payload, cursor.clone());
+                        let delay = backoff_delay(config, self.polling_attempt);
+                        self.polling_attempt = self.polling_attempt.saturating_add(1);
+                        self.sleep(delay);
+                        false
                     }
                     QueryEndReason::Unknown => {
                         return Err(Status::data_loss("List QueryEnd has an unknown reason"));
@@ -451,6 +603,7 @@ impl<A: SubscriptionAdapter> ListDriver<A> {
                 payload,
                 expected_end,
                 direction,
+                LedgerTipPolicy::Complete,
                 observability.clone(),
                 LedgerStreamStage::List,
             )
