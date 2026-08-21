@@ -1,0 +1,189 @@
+use prost::bytes::Bytes;
+use tonic::Request;
+use tonic::Status;
+use tonic::codegen::BoxStream;
+
+use super::super::super::Client;
+use super::super::super::Result;
+use super::super::observability::LedgerStreamFamily;
+use super::super::types::EventStreamFrame;
+use super::ListResponseParts;
+use super::ListScanDirection;
+use super::LiveFrame;
+use super::PositionedItem;
+use super::Progress;
+use super::RpcFuture;
+use super::SubscriptionAdapter;
+use super::parse_opaque_live_frame;
+use crate::proto::sui::rpc::v2::Event;
+use crate::proto::sui::rpc::v2::ListEventsRequest;
+use crate::proto::sui::rpc::v2::ListEventsResponse;
+use crate::proto::sui::rpc::v2::QueryEnd;
+use crate::proto::sui::rpc::v2::QueryOptions;
+use crate::proto::sui::rpc::v2::SubscribeEventsRequest;
+use crate::proto::sui::rpc::v2::SubscribeEventsResponse;
+use crate::proto::sui::rpc::v2::Watermark;
+
+pub(in crate::client::ledger_streams) struct EventAdapter;
+
+impl SubscriptionAdapter for EventAdapter {
+    const FAMILY: LedgerStreamFamily = LedgerStreamFamily::Event;
+    const REQUIRED_READ_MASK_FIELDS: &'static [&'static str] =
+        &["checkpoint", "transaction_index", "event_index"];
+    const READ_MASK_REQUIREMENT: &'static str = "read_mask must include \"checkpoint\", \"transaction_index\", and \"event_index\" or \"*\"";
+
+    type Item = PositionedItem<Event, (u64, u64, u32)>;
+    type ItemPosition = (u64, u64, u32);
+    type Cursor = Bytes;
+    type Output = EventStreamFrame;
+    type ListRequest = ListEventsRequest;
+    type ListResponse = ListEventsResponse;
+    type SubscribeRequest = SubscribeEventsRequest;
+    type SubscribeResponse = SubscribeEventsResponse;
+
+    fn list_read_mask(request: &Self::ListRequest) -> Option<&prost_types::FieldMask> {
+        request.read_mask.as_ref()
+    }
+
+    fn list_request_from_subscribe(request: &Self::SubscribeRequest) -> Self::ListRequest {
+        ListEventsRequest {
+            read_mask: request.read_mask.clone(),
+            filter: request.filter.clone(),
+            start_checkpoint: None,
+            end_checkpoint: None,
+            options: None,
+        }
+    }
+
+    fn options(request: &Self::ListRequest) -> Option<&QueryOptions> {
+        request.options.as_ref()
+    }
+
+    fn options_mut(request: &mut Self::ListRequest) -> &mut QueryOptions {
+        request.options.get_or_insert_with(QueryOptions::default)
+    }
+
+    fn start_checkpoint(request: &Self::ListRequest) -> Option<u64> {
+        request.start_checkpoint
+    }
+
+    fn set_start_checkpoint(request: &mut Self::ListRequest, checkpoint: Option<u64>) {
+        request.start_checkpoint = checkpoint;
+    }
+
+    fn end_checkpoint(request: &Self::ListRequest) -> Option<u64> {
+        request.end_checkpoint
+    }
+
+    fn set_end_checkpoint(request: &mut Self::ListRequest, checkpoint: Option<u64>) {
+        request.end_checkpoint = checkpoint;
+    }
+
+    fn set_ascending_resume(
+        request: &mut Self::ListRequest,
+        progress: &Progress<Self::Cursor>,
+    ) -> Result<()> {
+        Self::options_mut(request).after = Some(progress.cursor.clone());
+        Ok(())
+    }
+
+    fn request_resume_position(request: &Self::ListRequest) -> Option<Progress<Self::Cursor>> {
+        request
+            .options
+            .as_ref()
+            .and_then(|options| options.after.clone())
+            .map(|cursor| Progress {
+                cursor,
+                checkpoint: None,
+            })
+    }
+    fn validate_checkpoint_bound(
+        _request: &Self::ListRequest,
+        _direction: ListScanDirection,
+        _checkpoint: Option<u64>,
+    ) -> Result<()> {
+        Ok(())
+    }
+    fn item_position(item: &Self::Item) -> &Self::ItemPosition {
+        item.position()
+    }
+
+    fn extract_metadata(
+        response: &Self::ListResponse,
+    ) -> (bool, Option<&Watermark>, Option<&QueryEnd>) {
+        (
+            response.event.is_some(),
+            response.watermark.as_ref(),
+            response.end.as_ref(),
+        )
+    }
+
+    fn split_list(response: Self::ListResponse) -> Result<ListResponseParts<Self>> {
+        let item = response.event.map(position_event).transpose()?;
+        Ok(ListResponseParts {
+            item,
+            watermark: response.watermark,
+        })
+    }
+
+    fn parse_live(
+        response: Self::SubscribeResponse,
+        _item_required: bool,
+    ) -> Result<LiveFrame<Self::Item, Progress<Self::Cursor>>> {
+        let item = response.event.map(position_event).transpose()?;
+        parse_opaque_live_frame(item, response.watermark)
+    }
+
+    fn into_output(item: Option<Self::Item>, progress: Progress<Self::Cursor>) -> Self::Output {
+        let event = item.map(PositionedItem::into_payload);
+        EventStreamFrame {
+            event,
+            cursor: progress.cursor,
+            covered_checkpoint: progress.checkpoint,
+        }
+    }
+
+    fn dispatch_list(
+        mut client: Client,
+        request: Request<Self::ListRequest>,
+    ) -> RpcFuture<Self::ListResponse> {
+        Box::pin(async move {
+            let stream = client
+                .ledger_client()
+                .list_events(request)
+                .await?
+                .into_inner();
+            Ok(Box::pin(stream) as BoxStream<Self::ListResponse>)
+        })
+    }
+
+    fn dispatch_subscribe(
+        mut client: Client,
+        request: Request<Self::SubscribeRequest>,
+    ) -> RpcFuture<Self::SubscribeResponse> {
+        Box::pin(async move {
+            let stream = client
+                .subscription_client()
+                .subscribe_events(request)
+                .await?
+                .into_inner();
+            Ok(Box::pin(stream) as BoxStream<Self::SubscribeResponse>)
+        })
+    }
+}
+
+fn position_event(event: Event) -> Result<PositionedItem<Event, (u64, u64, u32)>> {
+    let checkpoint = event
+        .checkpoint
+        .ok_or_else(|| Status::data_loss("event item is missing its checkpoint"))?;
+    let transaction_index = event
+        .transaction_index
+        .ok_or_else(|| Status::data_loss("event item is missing its transaction index"))?;
+    let event_index = event
+        .event_index
+        .ok_or_else(|| Status::data_loss("event item is missing its event index"))?;
+    Ok(PositionedItem::new(
+        event,
+        (checkpoint, transaction_index, event_index),
+    ))
+}

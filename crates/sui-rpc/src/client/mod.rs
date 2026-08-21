@@ -25,7 +25,25 @@ mod staking_rewards;
 pub use staking_rewards::DelegatedStake;
 
 mod coin_selection;
+mod ledger_streams;
 mod lists;
+pub use ledger_streams::CheckpointStreamFrame;
+pub use ledger_streams::CheckpointStreamRequest;
+pub use ledger_streams::CheckpointStreamStart;
+pub use ledger_streams::Delivery;
+pub use ledger_streams::EventStreamFrame;
+pub use ledger_streams::EventStreamRequest;
+pub use ledger_streams::EventStreamStart;
+pub use ledger_streams::LedgerStreamConfig;
+pub use ledger_streams::LedgerStreamEvent;
+pub use ledger_streams::LedgerStreamFamily;
+pub use ledger_streams::LedgerStreamOperation;
+pub use ledger_streams::LedgerStreamStage;
+pub use ledger_streams::ListConfig;
+pub use ledger_streams::ListEvent;
+pub use ledger_streams::TransactionStreamFrame;
+pub use ledger_streams::TransactionStreamRequest;
+pub use ledger_streams::TransactionStreamStart;
 
 mod transaction_execution;
 pub use transaction_execution::ExecuteAndWaitError;
@@ -75,6 +93,65 @@ const DEFAULT_HTTP2_CONNECTION_WINDOW_SIZE: u32 = 64 * 1024 * 1024;
 /// All RPCs made through a client and its clones are multiplexed over a
 /// single HTTP/2 connection.
 ///
+/// # Ledger streams
+///
+/// `Client` provides two styles of stream operations for checkpoints, transactions, and events:
+///
+/// - `list_*` ([`list_checkpoints`](Client::list_checkpoints), [`list_transactions`](Client::list_transactions), [`list_events`](Client::list_events)):
+///   Finite pagination streams yielding raw response pages until reaching an end bound or the ledger tip.
+/// - `stream_*` ([`stream_checkpoints`](Client::stream_checkpoints), [`stream_transactions`](Client::stream_transactions), [`stream_events`](Client::stream_events)):
+///   Resumable, infinite streams starting from any position (`Tip`, `Checkpoint`, or `Resume` cursor)
+///   that automatically handle backfill replay, live subscription or polling, and transient error retries.
+///
+/// Stream read masks must include `sequence_number` for checkpoints; `checkpoint` and
+/// `transaction_index` for transactions; and `checkpoint`, `transaction_index`, and `event_index`
+/// for events (`"*"` satisfies all three).
+///
+/// Process a payload before persisting its restart position. To resume after a checkpoint, pass
+/// `cursor + 1` to [`CheckpointStreamStart::Checkpoint`]. To resume transactions or events, pass
+/// `frame.cursor` to [`TransactionStreamStart::Resume`] or [`EventStreamStart::Resume`].
+///
+/// ## Example
+///
+/// ```no_run
+/// # use futures::StreamExt;
+/// # use sui_rpc::field::{FieldMask, FieldMaskUtil};
+/// # use sui_rpc::proto::sui::rpc::v2::ExecutedTransaction;
+/// # use sui_rpc::Client;
+/// # use sui_rpc::client::{TransactionStreamRequest, TransactionStreamStart};
+/// #
+/// # async fn process_transaction(_: &ExecutedTransaction) {}
+/// # async fn persist_position(_: &[u8]) {}
+/// # async fn run() -> Result<(), Box<dyn std::error::Error>> {
+/// let client = Client::new(Client::MAINNET_FULLNODE)?;
+/// let read_mask = FieldMask::from_paths(["checkpoint", "transaction_index", "digest"]);
+/// let request = TransactionStreamRequest::new().with_read_mask(read_mask.clone());
+///
+/// let mut stream = Box::pin(client.stream_transactions(request));
+/// let persisted = loop {
+///     let Some(frame) = stream.next().await else {
+///         return Ok(());
+///     };
+///     let frame = frame?;
+///
+///     if let Some(transaction) = &frame.transaction {
+///         process_transaction(transaction).await;
+///     }
+///     let persisted = frame.cursor.clone();
+///     persist_position(&persisted).await;
+///     break persisted;
+/// };
+/// drop(stream);
+///
+/// let restart_request = TransactionStreamRequest::new()
+///     .with_read_mask(read_mask)
+///     .with_start(TransactionStreamStart::Resume(persisted));
+/// let mut resumed = Box::pin(client.stream_transactions(restart_request));
+/// let _ = resumed.next().await;
+/// # Ok(())
+/// # }
+/// ```
+///
 /// # Timeouts and deadlines
 ///
 /// No default bounds the total duration of a call. Two opt-in bounds are
@@ -86,6 +163,13 @@ const DEFAULT_HTTP2_CONNECTION_WINDOW_SIZE: u32 = 64 * 1024 * 1024;
 ///   end: tonic bounds the wait for response headers, and the client's
 ///   watchdog (see [`with_body_idle_timeout`](Client::with_body_idle_timeout))
 ///   bounds the response body against the same deadline.
+///   The ledger-stream `list_*` and `stream_*` methods do not accept
+///   `tonic::Request`. One logical operation may issue several RPCs, so per-RPC
+///   authentication, common headers, tracing, and timeouts belong on the
+///   client: static headers on [`Client::with_headers`], dynamic per-RPC auth
+///   or tracing on [`Client::request_layer`]. Configuring a [`Clone`]d client
+///   affects only that clone and shares the underlying connection, so a single
+///   stream gets dedicated headers by receiving a configured clone.
 /// - A client-wide response-headers timeout set with
 ///   [`with_response_headers_timeout`](Client::with_response_headers_timeout).
 ///   This is enforced locally only and its timer stops once response headers
