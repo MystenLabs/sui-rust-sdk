@@ -2,6 +2,11 @@ use futures::Stream;
 
 use super::super::Client;
 use super::super::Result;
+use super::adapter::CheckpointAdapter;
+use super::adapter::EventAdapter;
+use super::adapter::SubscriptionAdapter;
+use super::adapter::TransactionAdapter;
+use super::list::ListDriver;
 use super::types::CheckpointStreamFrame;
 use super::types::CheckpointStreamRequest;
 use super::types::EventStreamFrame;
@@ -34,8 +39,11 @@ impl Client {
         request: ListCheckpointsRequest,
         config: ListConfig,
     ) -> impl Stream<Item = Result<ListCheckpointsResponse>> + Send + 'static {
-        let _ = (request, config);
-        unimplemented_stream()
+        list_stream(ListDriver::<CheckpointAdapter>::new(
+            self.clone(),
+            request,
+            config.into_stream_config(),
+        ))
     }
 
     /// Streams checkpoints indefinitely, automatically retrying transient errors.
@@ -77,8 +85,11 @@ impl Client {
         request: ListTransactionsRequest,
         config: ListConfig,
     ) -> impl Stream<Item = Result<ListTransactionsResponse>> + Send + 'static {
-        let _ = (request, config);
-        unimplemented_stream()
+        list_stream(ListDriver::<TransactionAdapter>::new(
+            self.clone(),
+            request,
+            config.into_stream_config(),
+        ))
     }
 
     /// Streams transactions indefinitely, automatically retrying transient errors.
@@ -120,8 +131,11 @@ impl Client {
         request: ListEventsRequest,
         config: ListConfig,
     ) -> impl Stream<Item = Result<ListEventsResponse>> + Send + 'static {
-        let _ = (request, config);
-        unimplemented_stream()
+        list_stream(ListDriver::<EventAdapter>::new(
+            self.clone(),
+            request,
+            config.into_stream_config(),
+        ))
     }
 
     /// Streams events indefinitely, automatically retrying transient errors.
@@ -147,6 +161,14 @@ impl Client {
         let _ = (request, config);
         unimplemented_stream()
     }
+}
+
+fn list_stream<A: SubscriptionAdapter>(
+    driver: ListDriver<A>,
+) -> impl Stream<Item = Result<A::ListResponse>> + Send + 'static {
+    futures::stream::unfold(driver, |mut driver| async move {
+        driver.next().await.map(|item| (item, driver))
+    })
 }
 
 fn unimplemented_stream<T>() -> futures::stream::Empty<Result<T>> {

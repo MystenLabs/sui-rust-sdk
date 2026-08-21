@@ -1,7 +1,10 @@
-//! Resumable checkpoint, transaction, and event stream vocabulary for the Sui RPC client.
+//! Finite ledger List facades, with shared family adapters, validation, pagination, and retry.
 
+mod adapter;
 mod facade;
+mod list;
 mod observability;
+mod retry;
 mod types;
 
 pub use observability::LedgerStreamEvent;
