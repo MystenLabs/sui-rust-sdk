@@ -283,11 +283,10 @@ mod tests {
         assert!(roots.contains(&"MoveObject"));
         assert!(roots.contains(&"IObject"));
 
-        // A type in no union has no union roots.
-        assert!(
-            !schema
-                .find_allowed_flatten_roots("Epoch")
-                .contains(&"DynamicFieldValue")
+        // A type belonging to no union contributes only itself and its interfaces.
+        assert_eq!(
+            schema.find_allowed_flatten_roots("Epoch"),
+            vec!["Epoch", "Node"]
         );
     }
 

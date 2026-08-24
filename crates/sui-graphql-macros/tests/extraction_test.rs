@@ -104,6 +104,8 @@ fn test_flattened_fields_receive_complete_response() {
     }
 
     impl ExtractOnly {
+        const RESPONSE_ROOT_TYPE: &'static str = "Query";
+
         fn extract(value: &serde_json::Value) -> Result<Self, String> {
             let chain_id = value
                 .get("chainIdentifier")

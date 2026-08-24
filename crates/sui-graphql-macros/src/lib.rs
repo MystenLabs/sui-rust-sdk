@@ -185,9 +185,10 @@
 //! `IObject`-rooted response, because `IObject`'s other implementors do not carry
 //! `Object`'s fields.
 //!
-//! A field type that does not derive `Response` declares no root type, so it may only be
-//! flattened into a `Query`-rooted response. Pair `flatten` with `skip_schema_validation`
-//! to opt out of the check entirely.
+//! A flattened field's type must name the schema type it reads from. Deriving `Response`
+//! does this; a hand-written type can instead declare a `RESPONSE_ROOT_TYPE` associated
+//! constant alongside its `extract`, and is then accepted at whatever root it names. Pair
+//! `flatten` with `skip_schema_validation` to opt out of the check entirely.
 //!
 //! ## Enums (GraphQL Unions)
 //!
@@ -233,7 +234,6 @@ use darling::util::Flag;
 use darling::util::SpannedValue;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
-use quote::ToTokens;
 use quote::quote;
 use quote::quote_spanned;
 use syn::DeriveInput;
@@ -471,101 +471,64 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
 const UNDECLARED_ROOT_STR: &str = "";
 const UNDECLARED_ROOT: &[u8] = UNDECLARED_ROOT_STR.as_bytes();
 
-/// The identifiers of a type's generic parameters, used to skip codegen that cannot
-/// reference them.
-fn generic_param_idents(generics: &syn::Generics) -> Vec<String> {
-    generics
-        .params
-        .iter()
-        .filter_map(|p| match p {
-            syn::GenericParam::Type(t) => Some(t.ident.to_string()),
-            syn::GenericParam::Const(c) => Some(c.ident.to_string()),
-            syn::GenericParam::Lifetime(_) => None,
-        })
-        .collect()
-}
-
-/// Emit a compile-time check that `field_ty`'s root type may be flattened into `root_type`.
+/// Emit a compile-time check that `field_ty` may be flattened into `root_type`.
 ///
-/// A type that does not derive `Response` has no declared root type; it is treated as
-/// `Query`, matching the derive's own default.
-///
-/// Returns nothing when `field_ty` mentions a generic parameter: the check is a `const`
-/// item, which cannot name generics.
+/// A flattened field's type must name the schema type it reads from, either by deriving
+/// `Response` or by declaring `RESPONSE_ROOT_TYPE` itself, and that root must be one
+/// `root_type` accepts.
 fn generate_flatten_root_type_check(
     schema: &schema::Schema,
     root_type: &str,
     field_ident: &syn::Ident,
     field_ty: &syn::Type,
-    generic_params: &[String],
 ) -> TokenStream2 {
-    let mentions_generic = field_ty
-        .to_token_stream()
-        .into_iter()
-        .any(|t| generic_params.iter().any(|p| t.to_string() == *p));
-    if mentions_generic {
-        return quote! {};
-    }
-
     // Never empty: the caller has already rejected a root type absent from the schema,
     // and every type is an allowed root for itself.
     let roots = schema.find_allowed_flatten_roots(root_type);
-    // A type that did not derive `Response` behaves as though rooted at `Query`, so it
-    // is accepted exactly where `Query` is.
-    let undeclared_ok = roots.contains(&"Query");
 
     // `str` cannot be compared in a const context, so match the name as bytes.
-    let mut allowed: Vec<_> = roots
+    let allowed: Vec<_> = roots
         .iter()
         .map(|root| syn::LitByteStr::new(root.as_bytes(), field_ty.span()))
         .collect();
-    if undeclared_ok {
-        allowed.push(syn::LitByteStr::new(UNDECLARED_ROOT, field_ty.span()));
-    }
+    let undeclared = syn::LitByteStr::new(UNDECLARED_ROOT, field_ty.span());
 
-    // Reported when the field's type never derived `Response`. Only reachable where an
-    // undeclared root is not accepted anyway.
     let undeclared_message = format!(
-        "`{}` cannot be flattened into a response rooted at `{}`: its type must derive \
-         `Response`, since a type without the derive can only be flattened into a \
-         `Query`-rooted response",
-        field_ident, root_type,
-    );
-    let undeclared_check = (!undeclared_ok).then(|| {
-        let sentinel = syn::LitByteStr::new(UNDECLARED_ROOT, field_ty.span());
-        // Spanned in its own right: an interpolated stream keeps the spans it was built
-        // with, so the outer `quote_spanned!` does not reach these tokens.
-        quote_spanned! { field_ty.span() =>
-            assert!(
-                !matches!(<#field_ty>::RESPONSE_ROOT_TYPE.as_bytes(), #sentinel),
-                #undeclared_message
-            );
-        }
-    });
-
-    // The type's own root cannot be named here: it is only known once rustc resolves the
-    // field's type, which is after this message is baked in.
-    let message = format!(
-        "`{}` cannot be flattened into a response rooted at `{}`: its type must declare \
-         `root_type` as one of {}",
-        field_ident,
-        root_type,
-        roots.join(", "),
+        "`{field_ident}` cannot be flattened into a response rooted at `{root_type}`: its \
+         type must derive `Response`, or declare a `RESPONSE_ROOT_TYPE` associated \
+         constant naming the schema type it reads from, alongside `extract`",
     );
 
-    // Anchor at the field type so the error points at the offending field.
+    // The root the type does declare cannot be named here: it is only known once rustc
+    // resolves the field's type, which is after this message is baked in.
+    let message = match roots.as_slice() {
+        [root] => format!(
+            "`{field_ident}` cannot be flattened into a response rooted at `{root_type}`: \
+             its type must declare `root_type` as `{root}`"
+        ),
+        roots => format!(
+            "`{field_ident}` cannot be flattened into a response rooted at `{root_type}`: \
+             its type must declare `root_type` as one of {}",
+            roots.join(", "),
+        ),
+    };
+
+    // Anchor at the field type so the errors point at the offending field.
     quote_spanned! { field_ty.span() =>
         const _: () = {
-            // Marks any field type that did not derive `Response`. An inherent
-            // associated const takes priority over a trait one, so a type that did
-            // resolves to its own declaration, leaving this impl unused.
+            // Marks a field type that neither derived `Response` nor declared a root of
+            // its own. An inherent associated const takes priority over a trait one, so
+            // a type that did resolves to its own declaration, leaving this impl unused.
             #[allow(dead_code)]
             trait DefaultRootType {
                 const RESPONSE_ROOT_TYPE: &'static str = #UNDECLARED_ROOT_STR;
             }
             impl<T: ?Sized> DefaultRootType for T {}
 
-            #undeclared_check
+            assert!(
+                !matches!(<#field_ty>::RESPONSE_ROOT_TYPE.as_bytes(), #undeclared),
+                #undeclared_message
+            );
 
             assert!(
                 matches!(
@@ -591,7 +554,6 @@ fn generate_struct_impl(
     // Generate extraction code for each field
     let mut field_initializers = vec![];
     let mut flatten_root_type_checks = vec![];
-    let generic_params = generic_param_idents(&input.generics);
 
     for field in fields {
         let field_ident = field
@@ -615,7 +577,6 @@ fn generate_struct_impl(
                     root_type,
                     field_ident,
                     field_ty,
-                    &generic_params,
                 ));
             }
             continue;

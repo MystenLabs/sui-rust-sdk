@@ -16,6 +16,7 @@ fn compile_tests() {
     t.pass("tests/compile/root_type_mutation.rs");
     t.pass("tests/compile/root_type_dynamic_field.rs");
     t.pass("tests/compile/flatten_root_type_ok.rs");
+    t.pass("tests/compile/flatten_hand_written_root.rs");
 
     // Tests that should fail with expected errors
     t.compile_fail("tests/compile/missing_field_path_attr.rs");
