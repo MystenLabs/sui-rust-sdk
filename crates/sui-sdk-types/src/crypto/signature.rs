@@ -160,7 +160,8 @@ impl SimpleSignature {
             SignatureScheme::Multisig
             | SignatureScheme::Bls12381
             | SignatureScheme::ZkLogin
-            | SignatureScheme::Passkey => Err(serde::de::Error::custom("invalid signature scheme")),
+            | SignatureScheme::Passkey
+            | SignatureScheme::MlDsa65 => Err(serde::de::Error::custom("invalid signature scheme")),
         }
     }
 }
@@ -321,7 +322,8 @@ impl<'de> serde::Deserialize<'de> for SimpleSignature {
 ///
 /// ```text
 /// signature-scheme = ed25519-flag / secp256k1-flag / secp256r1-flag /
-///                    multisig-flag / bls-flag / zklogin-flag / passkey-flag
+///                    multisig-flag / bls-flag / zklogin-flag / passkey-flag /
+///                    mldsa65-flag
 /// ed25519-flag     = %x00
 /// secp256k1-flag   = %x01
 /// secp256r1-flag   = %x02
@@ -329,6 +331,7 @@ impl<'de> serde::Deserialize<'de> for SimpleSignature {
 /// bls-flag         = %x04
 /// zklogin-flag     = %x05
 /// passkey-flag     = %x06
+/// mldsa65-flag     = %x07
 /// ```
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
@@ -342,6 +345,7 @@ pub enum SignatureScheme {
     Bls12381 = 0x04, // This is currently not supported for user addresses
     ZkLogin = 0x05,
     Passkey = 0x06,
+    MlDsa65 = 0x07,
 }
 
 impl SignatureScheme {
@@ -355,6 +359,7 @@ impl SignatureScheme {
             SignatureScheme::Bls12381 => "bls12381",
             SignatureScheme::ZkLogin => "zklogin",
             SignatureScheme::Passkey => "passkey",
+            SignatureScheme::MlDsa65 => "mldsa65",
         }
     }
 
@@ -368,6 +373,7 @@ impl SignatureScheme {
             0x04 => Ok(Self::Bls12381),
             0x05 => Ok(Self::ZkLogin),
             0x06 => Ok(Self::Passkey),
+            0x07 => Ok(Self::MlDsa65),
             invalid => Err(InvalidSignatureScheme(invalid)),
         }
     }
@@ -514,6 +520,9 @@ mod serialization {
                     let passkey = PasskeyAuthenticator::from_serialized_bytes(bytes)?;
                     Ok(Self::Passkey(passkey))
                 }
+                SignatureScheme::MlDsa65 => Err(serde::de::Error::custom(
+                    "mldsa65 not yet supported for user signatures",
+                )),
             }
         }
 
@@ -686,6 +695,20 @@ mod serialization {
         #[proptest]
         fn roundtrip_signature_scheme(scheme: SignatureScheme) {
             assert_eq!(Ok(scheme), SignatureScheme::from_byte(scheme.to_u8()));
+        }
+
+        #[test]
+        fn mldsa65_flag_recognized_but_not_yet_parsed() {
+            assert_eq!(
+                Ok(SignatureScheme::MlDsa65),
+                SignatureScheme::from_byte(0x07)
+            );
+            assert_eq!(SignatureScheme::MlDsa65.name(), "mldsa65");
+
+            // 0x07 || payload: the scheme is recognized, the rejection explicit.
+            let bytes = [&[0x07][..], &[0u8; 64][..]].concat();
+            let err = UserSignature::from_bytes(&bytes).unwrap_err();
+            assert!(err.to_string().contains("mldsa65 not yet supported"));
         }
 
         #[test]
