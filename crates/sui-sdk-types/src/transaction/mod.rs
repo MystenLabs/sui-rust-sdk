@@ -1131,11 +1131,11 @@ impl FundsWithdrawal {
 /// ```text
 /// withdraw-from =  withdraw-from-sender
 ///               =/ withdraw-from-sponsor
-///               =/ withdraw-from-allowance
+///               =/ withdraw-from-sender-allowance
 ///
-/// withdraw-from-sender    = %x00
-/// withdraw-from-sponsor   = %x01
-/// withdraw-from-allowance = %x02 address address
+/// withdraw-from-sender           = %x00
+/// withdraw-from-sponsor          = %x01
+/// withdraw-from-sender-allowance = %x02 address address
 /// ```
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 #[cfg_attr(
@@ -1149,11 +1149,8 @@ pub enum WithdrawFrom {
     Sender,
     /// Withdraw from the sponsor of the transaction (gas owner).
     Sponsor,
-    /// Withdraw from `funder`'s balance under the given allowance object.
-    ///
-    /// The funder is declared in the transaction so that the debited account is derivable from
-    /// the transaction alone; signing verifies it against the (immutable) allowance object.
-    Allowance {
+    /// Withdraw from `funder`'s balance under an allowance granted to the sender of the transaction.
+    SenderAllowance {
         /// The address whose balance is debited.
         funder: Address,
         /// The `ObjectId` of the allowance object authorizing the withdrawal.

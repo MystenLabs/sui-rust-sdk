@@ -86,16 +86,17 @@ message FundsWithdrawal {
     SENDER = 1;
     SPONSOR = 2;
 
-    // Withdraw from `funder`'s balance, authorized by the `allowance` object.
-    ALLOWANCE = 3;
+    // Withdraw from `funder`'s balance under the `allowance` object, granted
+    // to the sender of the transaction.
+    SENDER_ALLOWANCE = 3;
   }
 
   optional Source source = 3;
 
-  // The address whose balance is debited if `source` is `ALLOWANCE`.
+  // The address whose balance is debited if `source` is `SENDER_ALLOWANCE`.
   optional string funder = 4;
 
   // `ObjectId` of the allowance object authorizing the withdrawal if `source`
-  // is `ALLOWANCE`.
+  // is `SENDER_ALLOWANCE`.
   optional string allowance = 5;
 }

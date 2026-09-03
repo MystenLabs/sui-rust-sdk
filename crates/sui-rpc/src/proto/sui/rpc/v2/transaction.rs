@@ -1762,7 +1762,7 @@ impl From<sui_sdk_types::FundsWithdrawal> for FundsWithdrawal {
         let mut message = Self::default();
         message.set_coin_type(value.coin_type());
         message.set_source(value.source().into());
-        if let sui_sdk_types::WithdrawFrom::Allowance { funder, allowance } = value.source() {
+        if let sui_sdk_types::WithdrawFrom::SenderAllowance { funder, allowance } = value.source() {
             message.set_funder(funder.to_string());
             message.set_allowance(allowance.to_string());
         }
@@ -1789,7 +1789,7 @@ impl TryFrom<&FundsWithdrawal> for sui_sdk_types::FundsWithdrawal {
             Source::Unknown => return Err(TryFromProtoError::invalid("source", "unknown source")),
             Source::Sender => sui_sdk_types::WithdrawFrom::Sender,
             Source::Sponsor => sui_sdk_types::WithdrawFrom::Sponsor,
-            Source::Allowance => {
+            Source::SenderAllowance => {
                 let funder = value
                     .funder_opt()
                     .ok_or_else(|| TryFromProtoError::missing("funder"))?
@@ -1800,7 +1800,7 @@ impl TryFrom<&FundsWithdrawal> for sui_sdk_types::FundsWithdrawal {
                     .ok_or_else(|| TryFromProtoError::missing("allowance"))?
                     .parse()
                     .map_err(|e| TryFromProtoError::invalid(FundsWithdrawal::ALLOWANCE_FIELD, e))?;
-                sui_sdk_types::WithdrawFrom::Allowance { funder, allowance }
+                sui_sdk_types::WithdrawFrom::SenderAllowance { funder, allowance }
             }
         };
 
@@ -1813,7 +1813,7 @@ impl From<sui_sdk_types::WithdrawFrom> for funds_withdrawal::Source {
         match value {
             sui_sdk_types::WithdrawFrom::Sender => Self::Sender,
             sui_sdk_types::WithdrawFrom::Sponsor => Self::Sponsor,
-            sui_sdk_types::WithdrawFrom::Allowance { .. } => Self::Allowance,
+            sui_sdk_types::WithdrawFrom::SenderAllowance { .. } => Self::SenderAllowance,
             _ => Self::Unknown,
         }
     }
