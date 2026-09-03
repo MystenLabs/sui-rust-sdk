@@ -466,10 +466,10 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
     }
 }
 
-/// Stands in for the root type of a field type that did not derive `Response`. Not a
-/// valid GraphQL type name, so it can never collide with a declared root.
-const UNDECLARED_ROOT_STR: &str = "";
-const UNDECLARED_ROOT: &[u8] = UNDECLARED_ROOT_STR.as_bytes();
+/// Stands in for the root type of a field type that declared none. Not a valid GraphQL
+/// type name, so it can never collide with a declared root, and it names itself in the
+/// generated code.
+const UNDECLARED_ROOT: &str = "<no root type declared>";
 
 /// Emit a compile-time check that `field_ty` may be flattened into `root_type`.
 ///
@@ -491,7 +491,7 @@ fn generate_flatten_root_type_check(
         .iter()
         .map(|root| syn::LitByteStr::new(root.as_bytes(), field_ty.span()))
         .collect();
-    let undeclared = syn::LitByteStr::new(UNDECLARED_ROOT, field_ty.span());
+    let undeclared = syn::LitByteStr::new(UNDECLARED_ROOT.as_bytes(), field_ty.span());
 
     let undeclared_message = format!(
         "`{field_ident}` cannot be flattened into a response rooted at `{root_type}`: its \
@@ -521,7 +521,7 @@ fn generate_flatten_root_type_check(
             // a type that did resolves to its own declaration, leaving this impl unused.
             #[allow(dead_code)]
             trait DefaultRootType {
-                const RESPONSE_ROOT_TYPE: &'static str = #UNDECLARED_ROOT_STR;
+                const RESPONSE_ROOT_TYPE: &'static str = #UNDECLARED_ROOT;
             }
             impl<T: ?Sized> DefaultRootType for T {}
 
