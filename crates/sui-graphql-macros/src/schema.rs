@@ -277,16 +277,18 @@ mod tests {
     fn test_find_allowed_flatten_roots_includes_containing_unions() {
         let schema = Schema::load().unwrap();
 
+        // type MoveObject implements Node & IAddressable & IMoveObject & IObject
         // union DynamicFieldValue = MoveObject | MoveValue
-        let roots = schema.find_allowed_flatten_roots("MoveObject");
-        assert!(roots.contains(&"DynamicFieldValue"));
-        assert!(roots.contains(&"MoveObject"));
-        assert!(roots.contains(&"IObject"));
-
-        // A type belonging to no union contributes only itself and its interfaces.
         assert_eq!(
-            schema.find_allowed_flatten_roots("Epoch"),
-            vec!["Epoch", "Node"]
+            schema.find_allowed_flatten_roots("MoveObject"),
+            vec![
+                "DynamicFieldValue",
+                "IAddressable",
+                "IMoveObject",
+                "IObject",
+                "MoveObject",
+                "Node"
+            ]
         );
     }
 
