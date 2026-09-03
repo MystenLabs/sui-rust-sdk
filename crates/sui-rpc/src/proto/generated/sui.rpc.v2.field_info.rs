@@ -3465,6 +3465,12 @@ pub(crate) mod _field_impls {
             number: 5i32,
             message_fields: None,
         };
+        pub const SPENDER_FIELD: &'static MessageField = &MessageField {
+            name: "spender",
+            json_name: "spender",
+            number: 6i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for FundsWithdrawal {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -3473,6 +3479,7 @@ pub(crate) mod _field_impls {
             Self::SOURCE_FIELD,
             Self::FUNDER_FIELD,
             Self::ALLOWANCE_FIELD,
+            Self::SPENDER_FIELD,
         ];
     }
     impl FundsWithdrawal {
@@ -3513,6 +3520,10 @@ pub(crate) mod _field_impls {
         }
         pub fn allowance(mut self) -> String {
             self.path.push(FundsWithdrawal::ALLOWANCE_FIELD.name);
+            self.finish()
+        }
+        pub fn spender(mut self) -> String {
+            self.path.push(FundsWithdrawal::SPENDER_FIELD.name);
             self.finish()
         }
     }

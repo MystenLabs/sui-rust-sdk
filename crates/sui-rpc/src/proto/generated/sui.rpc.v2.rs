@@ -2009,6 +2009,10 @@ pub struct FundsWithdrawal {
     /// is `ALLOWANCE`.
     #[prost(string, optional, tag = "5")]
     pub allowance: ::core::option::Option<::prost::alloc::string::String>,
+    /// The party the transaction claims as the allowance's spender if `source` is
+    /// `ALLOWANCE`.
+    #[prost(enumeration = "funds_withdrawal::AllowanceSpender", optional, tag = "6")]
+    pub spender: ::core::option::Option<i32>,
 }
 /// Nested message and enum types in `FundsWithdrawal`.
 pub mod funds_withdrawal {
@@ -2052,6 +2056,44 @@ pub mod funds_withdrawal {
                 "SENDER" => Some(Self::Sender),
                 "SPONSOR" => Some(Self::Sponsor),
                 "ALLOWANCE" => Some(Self::Allowance),
+                _ => None,
+            }
+        }
+    }
+    #[non_exhaustive]
+    #[derive(
+        Clone,
+        Copy,
+        Debug,
+        PartialEq,
+        Eq,
+        Hash,
+        PartialOrd,
+        Ord,
+        ::prost::Enumeration
+    )]
+    #[repr(i32)]
+    pub enum AllowanceSpender {
+        Unknown = 0,
+        /// The sender of the transaction spends.
+        Sender = 1,
+    }
+    impl AllowanceSpender {
+        /// String value of the enum field names used in the ProtoBuf definition.
+        ///
+        /// The values are not transformed in any way and thus are considered stable
+        /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+        pub fn as_str_name(&self) -> &'static str {
+            match self {
+                Self::Unknown => "ALLOWANCE_SPENDER_UNKNOWN",
+                Self::Sender => "ALLOWANCE_SPENDER_SENDER",
+            }
+        }
+        /// Creates an enum from field names used in the ProtoBuf definition.
+        pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+            match value {
+                "ALLOWANCE_SPENDER_UNKNOWN" => Some(Self::Unknown),
+                "ALLOWANCE_SPENDER_SENDER" => Some(Self::Sender),
                 _ => None,
             }
         }

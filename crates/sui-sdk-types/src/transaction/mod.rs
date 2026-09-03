@@ -1068,7 +1068,7 @@ impl FundsWithdrawal {
 ///
 /// withdraw-from-sender    = %x00
 /// withdraw-from-sponsor   = %x01
-/// withdraw-from-allowance = %x02 address address
+/// withdraw-from-allowance = %x02 address address allowance-spender
 /// ```
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 #[cfg_attr(
@@ -1083,15 +1083,40 @@ pub enum WithdrawFrom {
     /// Withdraw from the sponsor of the transaction (gas owner).
     Sponsor,
     /// Withdraw from `funder`'s balance under the given allowance object.
-    ///
-    /// The funder is declared in the transaction so that the debited account is derivable from
-    /// the transaction alone; signing verifies it against the (immutable) allowance object.
     Allowance {
         /// The address whose balance is debited.
         funder: Address,
         /// The `ObjectId` of the allowance object authorizing the withdrawal.
         allowance: Address,
+        /// The party the transaction claims as the allowance's spender.
+        spender: AllowanceSpender,
     },
+}
+
+/// The party a [`WithdrawFrom::Allowance`] claims as the allowance's spender.
+///
+/// Signing checks the claim against the allowance object. Future variants may name parties other
+/// than the sender, such as the transaction's sponsor.
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// allowance-spender = allowance-spender-sender
+///
+/// allowance-spender-sender = %x00
+/// ```
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[non_exhaustive]
+pub enum AllowanceSpender {
+    /// The sender of the transaction spends.
+    Sender,
 }
 
 /// A single command in a programmable transaction.

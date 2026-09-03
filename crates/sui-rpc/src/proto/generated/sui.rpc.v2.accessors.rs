@@ -7352,6 +7352,7 @@ mod _accessor_impls {
                 source: None,
                 funder: None,
                 allowance: None,
+                spender: None,
             }
         }
         #[doc(hidden)]
@@ -7453,6 +7454,14 @@ mod _accessor_impls {
         ///Sets `allowance` with the provided value.
         pub fn with_allowance<T: Into<String>>(mut self, field: T) -> Self {
             self.set_allowance(field.into());
+            self
+        }
+        ///Sets `spender` with the provided value.
+        pub fn with_spender<T: Into<super::funds_withdrawal::AllowanceSpender>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_spender(field.into());
             self
         }
     }

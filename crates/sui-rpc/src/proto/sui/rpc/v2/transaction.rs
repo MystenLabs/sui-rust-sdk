@@ -1699,9 +1699,15 @@ impl From<sui_sdk_types::FundsWithdrawal> for FundsWithdrawal {
         let mut message = Self::default();
         message.set_coin_type(value.coin_type());
         message.set_source(value.source().into());
-        if let sui_sdk_types::WithdrawFrom::Allowance { funder, allowance } = value.source() {
+        if let sui_sdk_types::WithdrawFrom::Allowance {
+            funder,
+            allowance,
+            spender,
+        } = value.source()
+        {
             message.set_funder(funder.to_string());
             message.set_allowance(allowance.to_string());
+            message.set_spender(spender.into());
         }
         message.amount = value.amount();
         message
@@ -1712,6 +1718,7 @@ impl TryFrom<&FundsWithdrawal> for sui_sdk_types::FundsWithdrawal {
     type Error = TryFromProtoError;
 
     fn try_from(value: &FundsWithdrawal) -> Result<Self, Self::Error> {
+        use funds_withdrawal::AllowanceSpender;
         use funds_withdrawal::Source;
 
         let amount = value
@@ -1737,7 +1744,20 @@ impl TryFrom<&FundsWithdrawal> for sui_sdk_types::FundsWithdrawal {
                     .ok_or_else(|| TryFromProtoError::missing("allowance"))?
                     .parse()
                     .map_err(|e| TryFromProtoError::invalid(FundsWithdrawal::ALLOWANCE_FIELD, e))?;
-                sui_sdk_types::WithdrawFrom::Allowance { funder, allowance }
+                if value.spender.is_none() {
+                    return Err(TryFromProtoError::missing("spender"));
+                }
+                let spender = match value.spender() {
+                    AllowanceSpender::Unknown => {
+                        return Err(TryFromProtoError::invalid("spender", "unknown spender"));
+                    }
+                    AllowanceSpender::Sender => sui_sdk_types::AllowanceSpender::Sender,
+                };
+                sui_sdk_types::WithdrawFrom::Allowance {
+                    funder,
+                    allowance,
+                    spender,
+                }
             }
         };
 
@@ -1751,6 +1771,15 @@ impl From<sui_sdk_types::WithdrawFrom> for funds_withdrawal::Source {
             sui_sdk_types::WithdrawFrom::Sender => Self::Sender,
             sui_sdk_types::WithdrawFrom::Sponsor => Self::Sponsor,
             sui_sdk_types::WithdrawFrom::Allowance { .. } => Self::Allowance,
+            _ => Self::Unknown,
+        }
+    }
+}
+
+impl From<sui_sdk_types::AllowanceSpender> for funds_withdrawal::AllowanceSpender {
+    fn from(value: sui_sdk_types::AllowanceSpender) -> Self {
+        match value {
+            sui_sdk_types::AllowanceSpender::Sender => Self::Sender,
             _ => Self::Unknown,
         }
     }

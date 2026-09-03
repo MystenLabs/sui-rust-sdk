@@ -98,4 +98,15 @@ message FundsWithdrawal {
   // `ObjectId` of the allowance object authorizing the withdrawal if `source`
   // is `ALLOWANCE`.
   optional string allowance = 5;
+
+  enum AllowanceSpender {
+    ALLOWANCE_SPENDER_UNKNOWN = 0;
+
+    // The sender of the transaction spends.
+    ALLOWANCE_SPENDER_SENDER = 1;
+  }
+
+  // The party the transaction claims as the allowance's spender if `source` is
+  // `ALLOWANCE`.
+  optional AllowanceSpender spender = 6;
 }
