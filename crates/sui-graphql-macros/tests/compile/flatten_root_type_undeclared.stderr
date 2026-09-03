@@ -1,0 +1,5 @@
+error[E0080]: evaluation panicked: `metadata` cannot be flattened into a response rooted at `Query`: its type must derive `Response`, or declare a `RESPONSE_ROOT_TYPE` associated constant naming the schema type it reads from, alongside `extract`
+  --> tests/compile/flatten_root_type_undeclared.rs:28:15
+   |
+28 |     metadata: NotInTheSchema,
+   |               ^^^^^^^^^^^^^^ evaluation of `_` failed here

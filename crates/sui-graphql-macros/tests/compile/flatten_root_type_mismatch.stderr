@@ -1,0 +1,5 @@
+error[E0080]: evaluation panicked: `metadata` cannot be flattened into a response rooted at `Object`: its type must declare `root_type` as one of IAddressable, IObject, Node, Object
+  --> tests/compile/flatten_root_type_mismatch.rs:16:15
+   |
+16 |     metadata: EpochMetadata,
+   |               ^^^^^^^^^^^^^ evaluation of `_` failed here

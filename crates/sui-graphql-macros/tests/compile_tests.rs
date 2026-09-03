@@ -15,11 +15,19 @@ fn compile_tests() {
     t.pass("tests/compile/schema_validation_with_alias.rs");
     t.pass("tests/compile/root_type_mutation.rs");
     t.pass("tests/compile/root_type_dynamic_field.rs");
+    t.pass("tests/compile/flatten_root_type_ok.rs");
+    t.pass("tests/compile/flatten_hand_written_root.rs");
 
     // Tests that should fail with expected errors
     t.compile_fail("tests/compile/missing_field_path_attr.rs");
     t.compile_fail("tests/compile/missing_field_attr.rs");
     t.compile_fail("tests/compile/flatten_with_path.rs");
+    t.compile_fail("tests/compile/flatten_root_type_mismatch.rs");
+    t.compile_fail("tests/compile/flatten_root_type_reverse.rs");
+    t.compile_fail("tests/compile/flatten_member_projection_into_union.rs");
+    t.compile_fail("tests/compile/flatten_root_type_undeclared.rs");
+    t.compile_fail("tests/compile/flatten_root_type_default_query.rs");
+    t.compile_fail("tests/compile/flatten_missing_extract.rs");
     t.compile_fail("tests/compile/empty_path.rs");
     t.compile_fail("tests/compile/tuple_struct_not_supported.rs");
 

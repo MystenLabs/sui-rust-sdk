@@ -104,6 +104,8 @@ fn test_flattened_fields_receive_complete_response() {
     }
 
     impl ExtractOnly {
+        const RESPONSE_ROOT_TYPE: &'static str = "Query";
+
         fn extract(value: &serde_json::Value) -> Result<Self, String> {
             let chain_id = value
                 .get("chainIdentifier")
@@ -147,6 +149,224 @@ fn test_flattened_fields_receive_complete_response() {
             chain_id: "4c78adac".to_string(),
         }
     );
+}
+
+#[test]
+fn test_interface_projection_flattens_into_implementing_types() {
+    #[derive(Debug, PartialEq, Response)]
+    #[response(schema = "tests/test_schema.graphql", root_type = "INode")]
+    struct NodeMetadata {
+        #[field(path = "id")]
+        id: String,
+        #[field(path = "label")]
+        label: String,
+    }
+
+    // type Leaf implements INode
+    #[derive(Debug, PartialEq, Response)]
+    #[response(schema = "tests/test_schema.graphql", root_type = "Leaf")]
+    struct LeafResponse {
+        #[field(flatten)]
+        metadata: NodeMetadata,
+        #[field(path = "weight")]
+        weight: u64,
+    }
+
+    // type Branch implements INode
+    #[derive(Debug, PartialEq, Response)]
+    #[response(schema = "tests/test_schema.graphql", root_type = "Branch")]
+    struct BranchResponse {
+        #[field(flatten)]
+        metadata: NodeMetadata,
+        #[field(path = "detail.note")]
+        note: String,
+    }
+
+    let leaf = LeafResponse::from_value(serde_json::json!({
+        "id": "0x1",
+        "label": "leaf",
+        "weight": 3
+    }))
+    .unwrap();
+    assert_eq!(
+        leaf,
+        LeafResponse {
+            metadata: NodeMetadata {
+                id: "0x1".to_string(),
+                label: "leaf".to_string()
+            },
+            weight: 3,
+        }
+    );
+
+    let branch = BranchResponse::from_value(serde_json::json!({
+        "id": "0x2",
+        "label": "branch",
+        "detail": { "note": "hi" }
+    }))
+    .unwrap();
+    assert_eq!(
+        branch,
+        BranchResponse {
+            metadata: NodeMetadata {
+                id: "0x2".to_string(),
+                label: "branch".to_string()
+            },
+            note: "hi".to_string(),
+        }
+    );
+}
+
+#[test]
+fn test_flatten_composes_with_path_fields_in_any_order() {
+    #[derive(Debug, PartialEq, Response)]
+    #[response(schema = "tests/test_schema.graphql", root_type = "INode")]
+    struct NodeMetadata {
+        #[field(path = "label")]
+        label: String,
+    }
+
+    #[derive(Debug, PartialEq, Response)]
+    #[response(schema = "tests/test_schema.graphql", root_type = "Leaf")]
+    struct Interleaved {
+        #[field(path = "id")]
+        id: String,
+        #[field(flatten)]
+        metadata: NodeMetadata,
+        #[field(path = "weight")]
+        weight: u64,
+    }
+
+    let data = Interleaved::from_value(serde_json::json!({
+        "id": "0x1",
+        "label": "leaf",
+        "weight": 7
+    }))
+    .unwrap();
+    assert_eq!(
+        data,
+        Interleaved {
+            id: "0x1".to_string(),
+            metadata: NodeMetadata {
+                label: "leaf".to_string()
+            },
+            weight: 7,
+        }
+    );
+}
+
+#[test]
+fn test_flatten_nests_through_multiple_levels() {
+    #[derive(Debug, PartialEq, Response)]
+    #[response(schema = "tests/test_schema.graphql", root_type = "INode")]
+    struct Innermost {
+        #[field(path = "label")]
+        label: String,
+    }
+
+    #[derive(Debug, PartialEq, Response)]
+    #[response(schema = "tests/test_schema.graphql", root_type = "INode")]
+    struct Middle {
+        #[field(flatten)]
+        inner: Innermost,
+        #[field(path = "id")]
+        id: String,
+    }
+
+    #[derive(Debug, PartialEq, Response)]
+    #[response(schema = "tests/test_schema.graphql", root_type = "Leaf")]
+    struct Outer {
+        #[field(flatten)]
+        middle: Middle,
+        #[field(path = "weight")]
+        weight: u64,
+    }
+
+    let data = Outer::from_value(serde_json::json!({
+        "id": "0x9",
+        "label": "deep",
+        "weight": 1
+    }))
+    .unwrap();
+    assert_eq!(
+        data,
+        Outer {
+            middle: Middle {
+                inner: Innermost {
+                    label: "deep".to_string()
+                },
+                id: "0x9".to_string(),
+            },
+            weight: 1,
+        }
+    );
+}
+
+#[test]
+fn test_union_projection_flattens_into_a_member_type() {
+    #[derive(Debug, PartialEq, Response)]
+    #[response(schema = "tests/test_schema.graphql", root_type = "MoveObject")]
+    struct MoveObjectValue {
+        #[field(path = "address")]
+        address: String,
+    }
+
+    #[derive(Debug, PartialEq, Response)]
+    #[response(schema = "tests/test_schema.graphql", root_type = "MoveValue")]
+    struct MoveValueValue {
+        #[field(path = "type.repr")]
+        repr: String,
+    }
+
+    // union DynamicFieldValue = MoveObject | MoveValue
+    #[derive(Debug, PartialEq, Response)]
+    #[response(schema = "tests/test_schema.graphql", root_type = "DynamicFieldValue")]
+    enum DynamicFieldValue {
+        MoveObject(MoveObjectValue),
+        MoveValue(MoveValueValue),
+    }
+
+    // `MoveObject` is a member of the union, so the union projection always matches.
+    #[derive(Debug, PartialEq, Response)]
+    #[response(schema = "tests/test_schema.graphql", root_type = "MoveObject")]
+    struct MoveObjectResponse {
+        #[field(flatten)]
+        value: DynamicFieldValue,
+    }
+
+    let data = MoveObjectResponse::from_value(serde_json::json!({
+        "__typename": "MoveObject",
+        "address": "0x5"
+    }))
+    .unwrap();
+    assert_eq!(
+        data,
+        MoveObjectResponse {
+            value: DynamicFieldValue::MoveObject(MoveObjectValue {
+                address: "0x5".to_string()
+            }),
+        }
+    );
+}
+
+#[test]
+fn test_flatten_reports_the_inner_extraction_error() {
+    #[derive(Debug, PartialEq, Response)]
+    #[response(schema = "tests/test_schema.graphql", root_type = "INode")]
+    struct NodeMetadata {
+        #[field(path = "label")]
+        label: String,
+    }
+
+    #[derive(Debug, PartialEq, Response)]
+    #[response(schema = "tests/test_schema.graphql", root_type = "Leaf")]
+    struct LeafResponse {
+        #[field(flatten)]
+        metadata: NodeMetadata,
+    }
+
+    let err = LeafResponse::from_value(serde_json::json!({ "id": "0x1" })).unwrap_err();
+    assert_eq!(err, "null value at 'label' in path 'label'");
 }
 
 // === Nullable Array Extraction ===

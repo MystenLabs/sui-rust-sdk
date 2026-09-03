@@ -1,0 +1,5 @@
+error[E0080]: evaluation panicked: `obj` cannot be flattened into a response rooted at `DynamicFieldValue`: its type must declare `root_type` as `DynamicFieldValue`
+  --> tests/compile/flatten_member_projection_into_union.rs:20:10
+   |
+20 |     obj: MO,
+   |          ^^ evaluation of `_` failed here

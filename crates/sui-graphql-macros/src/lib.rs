@@ -139,6 +139,57 @@
 //! fn main() {}
 //! ```
 //!
+//! ### Fragments
+//!
+//! A projection rooted at an interface flattens into any type implementing it, which
+//! mirrors spreading a GraphQL fragment into each of those types:
+//!
+//! ```no_run
+//! use sui_graphql_macros::Response;
+//!
+//! // fragment Metadata on IObject { storageRebate previousTransaction { digest } }
+//! #[derive(Response)]
+//! #[response(root_type = "IObject")]
+//! struct Metadata {
+//!     #[field(path = "storageRebate")]
+//!     storage_rebate: String,
+//!     #[field(path = "previousTransaction.digest")]
+//!     previous_transaction: String,
+//! }
+//!
+//! #[derive(Response)]
+//! #[response(root_type = "Object")]
+//! struct Object {
+//!     #[field(flatten)]
+//!     metadata: Metadata,
+//! }
+//!
+//! #[derive(Response)]
+//! #[response(root_type = "DynamicField")]
+//! struct DynamicField {
+//!     #[field(flatten)]
+//!     metadata: Metadata,
+//! }
+//! fn main() {}
+//! ```
+//!
+//! ### Root Type Compatibility
+//!
+//! A flattened field is populated unconditionally, so the flattened type's `root_type`
+//! must hold for every concrete type the outer `root_type` could be. The accepted roots
+//! are the outer type itself, any interface it implements, and any union it belongs to;
+//! anything else is a compile error. `Object` therefore accepts a projection rooted at
+//! `Object`, `Node`, `IAddressable`, or `IObject`.
+//!
+//! The reverse does not hold: a projection rooted at `Object` cannot be flattened into an
+//! `IObject`-rooted response, because `IObject`'s other implementors do not carry
+//! `Object`'s fields.
+//!
+//! A flattened field's type must name the schema type it reads from. Deriving `Response`
+//! does this; a hand-written type can instead declare a `RESPONSE_ROOT_TYPE` associated
+//! constant alongside its `extract`, and is then accepted at whatever root it names. Pair
+//! `flatten` with `skip_schema_validation` to opt out of the check entirely.
+//!
 //! ## Enums (GraphQL Unions)
 //!
 //! Use `#[response(root_type = "UnionType")]` on enums with newtype variants:
@@ -163,6 +214,7 @@
 //! | `#[response(schema = "path")]` | struct/enum | Custom schema file (relative to `CARGO_MANIFEST_DIR`) |
 //! | `#[field(path = "...")]` | field | Dot-separated path with optional `?`/`[]`/alias |
 //! | `#[field(flatten)]` | field | Populate by calling the field type's `extract` with the complete response value |
+//! | `#[field(flatten, skip_schema_validation)]` | field | Also skip the root type compatibility check |
 //! | `#[field(skip_schema_validation)]` | field | Skip compile-time schema checks for this field |
 //! | `#[response(on = "TypeName")]` | variant | GraphQL `__typename` to match (default: variant name) |
 
@@ -183,8 +235,10 @@ use darling::util::SpannedValue;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
+use quote::quote_spanned;
 use syn::DeriveInput;
 use syn::parse_macro_input;
+use syn::spanned::Spanned;
 
 // ---------------------------------------------------------------------------
 // Darling input structures — define the "schema" for macro input.
@@ -412,6 +466,81 @@ fn derive_query_response_impl(input: DeriveInput) -> Result<TokenStream2, syn::E
     }
 }
 
+/// Stands in for the root type of a field type that declared none. Not a valid GraphQL
+/// type name, so it can never collide with a declared root, and it names itself in the
+/// generated code.
+const UNDECLARED_ROOT: &str = "<no root type declared>";
+
+/// Emit a compile-time check that `field_ty` may be flattened into `root_type`.
+///
+/// A flattened field's type must name the schema type it reads from, either by deriving
+/// `Response` or by declaring `RESPONSE_ROOT_TYPE` itself, and that root must be one
+/// `root_type` accepts.
+fn generate_flatten_root_type_check(
+    schema: &schema::Schema,
+    root_type: &str,
+    field_ident: &syn::Ident,
+    field_ty: &syn::Type,
+) -> TokenStream2 {
+    // Never empty: the caller has already rejected a root type absent from the schema,
+    // and every type is an allowed root for itself.
+    let roots = schema.find_allowed_flatten_roots(root_type);
+
+    // `str` cannot be compared in a const context, so match the name as bytes.
+    let allowed: Vec<_> = roots
+        .iter()
+        .map(|root| syn::LitByteStr::new(root.as_bytes(), field_ty.span()))
+        .collect();
+    let undeclared = syn::LitByteStr::new(UNDECLARED_ROOT.as_bytes(), field_ty.span());
+
+    let undeclared_message = format!(
+        "`{field_ident}` cannot be flattened into a response rooted at `{root_type}`: its \
+         type must derive `Response`, or declare a `RESPONSE_ROOT_TYPE` associated \
+         constant naming the schema type it reads from, alongside `extract`",
+    );
+
+    // The root the type does declare cannot be named here: it is only known once rustc
+    // resolves the field's type, which is after this message is baked in.
+    let message = match roots.as_slice() {
+        [root] => format!(
+            "`{field_ident}` cannot be flattened into a response rooted at `{root_type}`: \
+             its type must declare `root_type` as `{root}`"
+        ),
+        roots => format!(
+            "`{field_ident}` cannot be flattened into a response rooted at `{root_type}`: \
+             its type must declare `root_type` as one of {}",
+            roots.join(", "),
+        ),
+    };
+
+    // Anchor at the field type so the errors point at the offending field.
+    quote_spanned! { field_ty.span() =>
+        const _: () = {
+            // Marks a field type that neither derived `Response` nor declared a root of
+            // its own. An inherent associated const takes priority over a trait one, so
+            // a type that did resolves to its own declaration, leaving this impl unused.
+            #[allow(dead_code)]
+            trait DefaultRootType {
+                const RESPONSE_ROOT_TYPE: &'static str = #UNDECLARED_ROOT;
+            }
+            impl<T: ?Sized> DefaultRootType for T {}
+
+            assert!(
+                !matches!(<#field_ty>::RESPONSE_ROOT_TYPE.as_bytes(), #undeclared),
+                #undeclared_message
+            );
+
+            assert!(
+                matches!(
+                    <#field_ty>::RESPONSE_ROOT_TYPE.as_bytes(),
+                    #(#allowed)|*
+                ),
+                #message
+            );
+        };
+    }
+}
+
 /// Generate value conversion methods and `Deserialize` for a struct.
 fn generate_struct_impl(
     input: &ResponseInput,
@@ -424,6 +553,7 @@ fn generate_struct_impl(
 
     // Generate extraction code for each field
     let mut field_initializers = vec![];
+    let mut flatten_root_type_checks = vec![];
 
     for field in fields {
         let field_ident = field
@@ -433,9 +563,22 @@ fn generate_struct_impl(
 
         if field.options.flatten.is_present() {
             let field_ty = &field.ty;
-            field_initializers.push(quote! {
+            // Anchor at the field type so a missing `extract` is reported there rather
+            // than at the derive.
+            field_initializers.push(quote_spanned! { field_ty.span() =>
                 #field_ident: <#field_ty>::extract(value)?
             });
+            // The flattened type's declared root is only known once rustc resolves
+            // the field's type, so emit a check for the compiler to evaluate rather
+            // than deciding here.
+            if !field.options.skip_schema_validation {
+                flatten_root_type_checks.push(generate_flatten_root_type_check(
+                    schema,
+                    root_type,
+                    field_ident,
+                    field_ty,
+                ));
+            }
             continue;
         }
 
@@ -480,7 +623,12 @@ fn generate_struct_impl(
     // - `Deserialize`: Allows direct use with serde (e.g., `serde_json::from_str::<MyStruct>(...)`)
     //   and with the GraphQL client's `query::<T>()` which requires `T: DeserializeOwned`
     Ok(quote! {
+        #(#flatten_root_type_checks)*
+
         impl #impl_generics #ident #ty_generics #where_clause {
+            /// The schema type this response projection reads its fields from.
+            pub const RESPONSE_ROOT_TYPE: &'static str = #root_type;
+
             pub fn from_value(value: serde_json::Value) -> Result<Self, String> {
                 Self::extract(&value)
             }
@@ -580,6 +728,9 @@ fn generate_enum_impl(
 
     Ok(quote! {
         impl #impl_generics #ident #ty_generics #where_clause {
+            /// The schema type this response projection reads its fields from.
+            pub const RESPONSE_ROOT_TYPE: &'static str = #root_type;
+
             pub fn from_value(value: serde_json::Value) -> Result<Self, String> {
                 Self::extract(&value)
             }

@@ -26,6 +26,8 @@ pub struct TypeInfo {
     pub fields: HashMap<String, FieldInfo>,
     /// For union types, the member type names. `None` for non-union types.
     pub union_types: Option<Vec<String>>,
+    /// The names of the interfaces this type declares it implements.
+    pub interfaces: Vec<String>,
 }
 
 /// Information about a field on a type.
@@ -77,6 +79,7 @@ impl Schema {
         match def {
             TypeDefinition::Object(obj) => TypeInfo {
                 name: obj.name.clone(),
+                interfaces: obj.implements_interfaces.clone(),
                 fields: obj
                     .fields
                     .iter()
@@ -97,26 +100,31 @@ impl Schema {
                         (info.name.clone(), info)
                     })
                     .collect(),
+                interfaces: Vec::new(),
                 union_types: None,
             },
             TypeDefinition::Scalar(s) => TypeInfo {
                 name: s.name.clone(),
                 fields: HashMap::new(),
+                interfaces: Vec::new(),
                 union_types: None,
             },
             TypeDefinition::Enum(e) => TypeInfo {
                 name: e.name.clone(),
                 fields: HashMap::new(),
+                interfaces: Vec::new(),
                 union_types: None,
             },
             TypeDefinition::InputObject(io) => TypeInfo {
                 name: io.name.clone(),
                 fields: HashMap::new(),
+                interfaces: Vec::new(),
                 union_types: None,
             },
             TypeDefinition::Union(u) => TypeInfo {
                 name: u.name.clone(),
                 fields: HashMap::new(),
+                interfaces: Vec::new(),
                 union_types: Some(u.types),
             },
         }
@@ -173,6 +181,31 @@ impl Schema {
             .is_some_and(|t| t.union_types.is_some())
     }
 
+    /// The root types allowed on a field flattened into `type_name`, sorted and
+    /// deduplicated.
+    ///
+    /// A flattened field is populated unconditionally, so its type's root must hold for
+    /// every concrete type `type_name` could be: the type itself, any interface it
+    /// implements, and any union it belongs to.
+    pub fn find_allowed_flatten_roots(&self, type_name: &str) -> Vec<&str> {
+        let Some(info) = self.types.get(type_name) else {
+            return Vec::new();
+        };
+
+        let mut roots = vec![info.name.as_str()];
+        roots.extend(info.interfaces.iter().map(String::as_str));
+        roots.extend(self.types.values().filter_map(|t| {
+            let members = t.union_types.as_ref()?;
+            members
+                .iter()
+                .any(|m| m == type_name)
+                .then_some(t.name.as_str())
+        }));
+        roots.sort_unstable();
+        roots.dedup();
+        roots
+    }
+
     /// Get the member type names of a union.
     pub fn union_types(&self, type_name: &str) -> Vec<&str> {
         self.types
@@ -215,6 +248,85 @@ mod tests {
     fn test_schema() -> Schema {
         let sdl = include_str!("../tests/test_schema.graphql");
         Schema::from_sdl(sdl).unwrap()
+    }
+
+    #[test]
+    fn test_find_allowed_flatten_roots_object_includes_its_interfaces() {
+        let schema = Schema::load().unwrap();
+
+        // type Object implements Node & IAddressable & IObject
+        assert_eq!(
+            schema.find_allowed_flatten_roots("Object"),
+            vec!["IAddressable", "IObject", "Node", "Object"]
+        );
+
+        // type DynamicField implements Node & IAddressable & IMoveObject & IObject
+        assert_eq!(
+            schema.find_allowed_flatten_roots("DynamicField"),
+            vec![
+                "DynamicField",
+                "IAddressable",
+                "IMoveObject",
+                "IObject",
+                "Node"
+            ]
+        );
+    }
+
+    #[test]
+    fn test_find_allowed_flatten_roots_includes_containing_unions() {
+        let schema = Schema::load().unwrap();
+
+        // type MoveObject implements Node & IAddressable & IMoveObject & IObject
+        // union DynamicFieldValue = MoveObject | MoveValue
+        assert_eq!(
+            schema.find_allowed_flatten_roots("MoveObject"),
+            vec![
+                "DynamicFieldValue",
+                "IAddressable",
+                "IMoveObject",
+                "IObject",
+                "MoveObject",
+                "Node"
+            ]
+        );
+    }
+
+    #[test]
+    fn test_find_allowed_flatten_roots_of_root_and_interface_types() {
+        let schema = Schema::load().unwrap();
+
+        // Query implements nothing and belongs to no union.
+        assert_eq!(schema.find_allowed_flatten_roots("Query"), vec!["Query"]);
+
+        // An interface is only a root for itself: no Sui interface implements another,
+        // and a union cannot have an interface as a member.
+        assert_eq!(
+            schema.find_allowed_flatten_roots("IObject"),
+            vec!["IObject"]
+        );
+    }
+
+    #[test]
+    fn test_find_allowed_flatten_roots_is_sorted_and_deduplicated() {
+        let schema = Schema::load().unwrap();
+
+        for type_name in ["Object", "MoveObject", "DynamicField", "Query"] {
+            let roots = schema.find_allowed_flatten_roots(type_name);
+            let mut expected = roots.clone();
+            expected.sort_unstable();
+            expected.dedup();
+            assert_eq!(
+                roots, expected,
+                "find_allowed_flatten_roots({type_name}) is not normalized"
+            );
+        }
+    }
+
+    #[test]
+    fn test_find_allowed_flatten_roots_of_unknown_type_is_empty() {
+        let schema = Schema::load().unwrap();
+        assert!(schema.find_allowed_flatten_roots("NonExistent").is_empty());
     }
 
     #[test]
