@@ -1,29 +1,31 @@
-//! A type that does not derive `Response` declares no root type, so it is treated as
-//! `Query` and cannot be flattened into a response rooted elsewhere.
+//! Providing `extract` is not on its own enough to be a flattened field's type. A type
+//! naming no root could be reading anything at all, fields absent from the schema
+//! included, so it is rejected rather than assumed to share the outer response's root.
 
 use sui_graphql_macros::Response;
 
-struct HandWritten {
-    digest: String,
+struct NotInTheSchema {
+    baz: String,
 }
 
-impl HandWritten {
+impl NotInTheSchema {
     fn extract(value: &serde_json::Value) -> Result<Self, String> {
-        let digest = value
-            .get("digest")
+        let baz = value
+            .get("baz")
             .and_then(serde_json::Value::as_str)
-            .ok_or_else(|| "missing digest".to_string())?;
+            .ok_or_else(|| "missing baz".to_string())?;
         Ok(Self {
-            digest: digest.to_string(),
+            baz: baz.to_string(),
         })
     }
 }
 
+// `root_type` defaults to `Query`, the root a type declaring none would most plausibly
+// be assumed to share.
 #[derive(Response)]
-#[response(root_type = "Object")]
-struct ObjectResponse {
+struct QueryResponse {
     #[field(flatten)]
-    metadata: HandWritten,
+    metadata: NotInTheSchema,
 }
 
 fn main() {}

@@ -1,5 +1,5 @@
-//! A flattened field's type must provide `extract`. Rooted at `Query`, so the root type
-//! check passes and only the missing method is reported.
+//! A flattened field's type must provide `extract`. This one names no root either, so
+//! it is wrong twice over and both are reported.
 
 use sui_graphql_macros::Response;
 
