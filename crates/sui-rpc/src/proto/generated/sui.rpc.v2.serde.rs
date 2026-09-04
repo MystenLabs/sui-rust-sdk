@@ -12844,7 +12844,7 @@ impl serde::Serialize for funds_withdrawal::Source {
             Self::Unknown => "SOURCE_UNKNOWN",
             Self::Sender => "SENDER",
             Self::Sponsor => "SPONSOR",
-            Self::Allowance => "ALLOWANCE",
+            Self::SenderAllowance => "SENDER_ALLOWANCE",
         };
         serializer.serialize_str(variant)
     }
@@ -12855,7 +12855,12 @@ impl<'de> serde::Deserialize<'de> for funds_withdrawal::Source {
     where
         D: serde::Deserializer<'de>,
     {
-        const FIELDS: &[&str] = &["SOURCE_UNKNOWN", "SENDER", "SPONSOR", "ALLOWANCE"];
+        const FIELDS: &[&str] = &[
+            "SOURCE_UNKNOWN",
+            "SENDER",
+            "SPONSOR",
+            "SENDER_ALLOWANCE",
+        ];
         struct GeneratedVisitor;
         impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
             type Value = funds_withdrawal::Source;
@@ -12901,7 +12906,7 @@ impl<'de> serde::Deserialize<'de> for funds_withdrawal::Source {
                     "SOURCE_UNKNOWN" => Ok(funds_withdrawal::Source::Unknown),
                     "SENDER" => Ok(funds_withdrawal::Source::Sender),
                     "SPONSOR" => Ok(funds_withdrawal::Source::Sponsor),
-                    "ALLOWANCE" => Ok(funds_withdrawal::Source::Allowance),
+                    "SENDER_ALLOWANCE" => Ok(funds_withdrawal::Source::SenderAllowance),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }
