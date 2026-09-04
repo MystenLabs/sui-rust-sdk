@@ -56,10 +56,11 @@ const DEFAULT_TCP_KEEPALIVE_INTERVAL: Duration = Duration::from_secs(5);
 const DEFAULT_TCP_KEEPALIVE_RETRIES: u32 = 3;
 const DEFAULT_HTTP2_KEEP_ALIVE_INTERVAL: Duration = Duration::from_secs(5);
 const DEFAULT_HTTP2_KEEP_ALIVE_TIMEOUT: Duration = Duration::from_secs(20);
+const DEFAULT_NUM_CONNECTIONS: usize = 1;
 
-// All RPCs made through a `Client` (and all of its clones) are multiplexed
-// over a single HTTP/2 connection, so the connection-level receive window is
-// shared by every in-flight response. A streaming response that the
+// RPCs made through a `Client` (and all of its clones) are multiplexed over
+// its HTTP/2 connections, so each connection-level receive window is shared
+// by every in-flight response on that connection. A streaming response that the
 // application holds without polling pins up to a full stream window of that
 // shared budget; once the connection window is exhausted, every RPC on the
 // channel hangs indefinitely while TCP and HTTP/2 keepalives stay healthy.
@@ -72,8 +73,10 @@ const DEFAULT_HTTP2_CONNECTION_WINDOW_SIZE: u32 = 64 * 1024 * 1024;
 
 /// A gRPC client for the Sui fullnode RPC interface.
 ///
-/// All RPCs made through a client and its clones are multiplexed over a
-/// single HTTP/2 connection.
+/// RPCs made through a client and its clones are multiplexed over a single
+/// HTTP/2 connection by default; see
+/// [`with_num_connections`](Client::with_num_connections) to spread them over
+/// several.
 ///
 /// # Timeouts and deadlines
 ///
@@ -113,9 +116,38 @@ struct ClientConfig {
     headers: HeadersInterceptor,
     max_decoding_message_size: Option<usize>,
     body_idle_timeout: Option<Duration>,
+    num_connections: usize,
 
     /// Layer to apply to all RPC requests
     request_layer: Option<RequestLayer>,
+}
+
+/// Open `num_connections` lazy connections to `endpoint`, all sharing its
+/// configuration, and balance requests across them.
+///
+/// Each connection is inserted under its own key, because the balancer
+/// identifies backends by key and the endpoint is the same for all of them.
+/// The change sender is dropped once the set is populated: the set is fixed,
+/// and the balancer retains it after discovery ends.
+fn build_channel(
+    endpoint: &tonic::transport::Endpoint,
+    num_connections: usize,
+) -> tonic::transport::Channel {
+    if num_connections <= 1 {
+        return endpoint.connect_lazy();
+    }
+
+    let (channel, changes) = tonic::transport::Channel::balance_channel::<usize>(num_connections);
+    for key in 0..num_connections {
+        changes
+            .try_send(tonic::transport::channel::Change::Insert(
+                key,
+                endpoint.clone(),
+            ))
+            .expect("change channel has capacity for every connection");
+    }
+
+    channel
 }
 
 impl Client {
@@ -137,8 +169,8 @@ impl Client {
     /// Build a client from a fully custom [`tonic::transport::Endpoint`].
     ///
     /// This bypasses every transport default that [`Client::new`] applies,
-    /// including the HTTP/2 flow-control windows that protect the shared
-    /// connection from starvation by stalled streaming responses. Prefer
+    /// including the HTTP/2 flow-control windows that protect a connection
+    /// from starvation by stalled streaming responses. Prefer
     /// [`Client::new`] plus the `with_*` configuration methods unless an
     /// endpoint setting is needed that the client does not expose. The
     /// idle-body watchdog (see [`Client::with_body_idle_timeout`]) is part of
@@ -152,7 +184,7 @@ impl Client {
     /// starve the whole connection.
     pub fn from_endpoint(endpoint: &tonic::transport::Endpoint) -> Self {
         let uri = endpoint.uri().clone();
-        let channel = endpoint.connect_lazy();
+        let channel = build_channel(endpoint, DEFAULT_NUM_CONNECTIONS);
         Self {
             channel,
             config: Arc::new(ClientConfig {
@@ -161,6 +193,7 @@ impl Client {
                 headers: Default::default(),
                 max_decoding_message_size: None,
                 body_idle_timeout: Some(DEFAULT_BODY_IDLE_TIMEOUT),
+                num_connections: DEFAULT_NUM_CONNECTIONS,
                 request_layer: None,
             }),
         }
@@ -193,7 +226,7 @@ impl Client {
             .keep_alive_timeout(DEFAULT_HTTP2_KEEP_ALIVE_TIMEOUT)
             .initial_stream_window_size(DEFAULT_HTTP2_STREAM_WINDOW_SIZE)
             .initial_connection_window_size(DEFAULT_HTTP2_CONNECTION_WINDOW_SIZE);
-        let channel = endpoint.connect_lazy();
+        let channel = build_channel(&endpoint, DEFAULT_NUM_CONNECTIONS);
 
         Ok(Self {
             channel,
@@ -203,6 +236,7 @@ impl Client {
                 headers: Default::default(),
                 max_decoding_message_size: None,
                 body_idle_timeout: Some(DEFAULT_BODY_IDLE_TIMEOUT),
+                num_connections: DEFAULT_NUM_CONNECTIONS,
                 request_layer: None,
             }),
         })
@@ -269,7 +303,38 @@ impl Client {
     pub fn with_response_headers_timeout(mut self, timeout: Duration) -> Self {
         let config = Arc::make_mut(&mut self.config);
         config.endpoint = config.endpoint.clone().timeout(timeout);
-        self.channel = config.endpoint.connect_lazy();
+        self.channel = build_channel(&config.endpoint, config.num_connections);
+        self
+    }
+
+    /// Set how many HTTP/2 connections the client opens to the endpoint.
+    /// Defaults to 1; a count of 0 is treated as 1.
+    ///
+    /// Requests are distributed across the connections rather than sharing
+    /// one connection's flow-control window and driver task. A single
+    /// connection's throughput is bounded by that window and by the one task
+    /// driving its multiplexed streams, so workloads that keep many streams
+    /// in flight at once (bulk or streaming reads) can be limited by it well
+    /// before the server is. Every connection carries the same endpoint
+    /// configuration, so the window sizes described in
+    /// [`with_initial_connection_window_size`](Self::with_initial_connection_window_size)
+    /// apply to each one, and the client's total window budget scales with
+    /// the count.
+    ///
+    /// Placement is effectively random per request, not a strict rotation, so
+    /// connections carry equal load only on average. Requests held open
+    /// concurrently, such as long-lived streams, can land unevenly.
+    ///
+    /// Connections are established lazily and reconnect independently, and
+    /// one that cannot be established fails only the requests routed to it.
+    ///
+    /// This rebuilds the underlying channel, so it must be called before the
+    /// client is used or cloned; earlier clones keep the previous
+    /// configuration.
+    pub fn with_num_connections(mut self, num_connections: usize) -> Self {
+        let config = Arc::make_mut(&mut self.config);
+        config.num_connections = num_connections.max(1);
+        self.channel = build_channel(&config.endpoint, config.num_connections);
         self
     }
 
@@ -287,18 +352,22 @@ impl Client {
     pub fn with_initial_stream_window_size(mut self, size: u32) -> Self {
         let config = Arc::make_mut(&mut self.config);
         config.endpoint = config.endpoint.clone().initial_stream_window_size(size);
-        self.channel = config.endpoint.connect_lazy();
+        self.channel = build_channel(&config.endpoint, config.num_connections);
         self
     }
 
     /// Set the HTTP/2 connection-level receive window, in bytes.
     ///
-    /// This window is shared by every RPC multiplexed over the client's
-    /// single HTTP/2 connection, including all clones of the client. Response
-    /// data that the application has not yet read counts against it, so it
-    /// determines how many concurrently stalled streaming responses it takes
-    /// to starve the connection and hang every other RPC on it. Defaults to
-    /// 64 MiB (~32 stalled streams at the default 2 MiB stream window).
+    /// This window is shared by every RPC multiplexed over one of the
+    /// client's HTTP/2 connections, including those issued by clones of the
+    /// client. Response data that the application has not yet read counts
+    /// against it, so it determines how many concurrently stalled streaming
+    /// responses it takes to starve a connection and hang every other RPC on
+    /// it. Defaults to 64 MiB (~32 stalled streams at the default 2 MiB
+    /// stream window). The window applies per connection, so a client
+    /// configured with
+    /// [`with_num_connections`](Self::with_num_connections) has this much on
+    /// each.
     ///
     /// This rebuilds the underlying channel, so it must be called before the
     /// client is used or cloned; earlier clones keep the previous
@@ -306,7 +375,7 @@ impl Client {
     pub fn with_initial_connection_window_size(mut self, size: u32) -> Self {
         let config = Arc::make_mut(&mut self.config);
         config.endpoint = config.endpoint.clone().initial_connection_window_size(size);
-        self.channel = config.endpoint.connect_lazy();
+        self.channel = build_channel(&config.endpoint, config.num_connections);
         self
     }
 
