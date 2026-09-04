@@ -1,8 +1,4 @@
 use std::sync::Arc;
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering;
-use std::task::Context;
-use std::task::Poll;
 use std::time::Duration;
 use tap::Pipe;
 use tonic::body::Body;
@@ -104,9 +100,9 @@ const DEFAULT_HTTP2_CONNECTION_WINDOW_SIZE: u32 = 64 * 1024 * 1024;
 /// connection fails with `DeadlineExceeded` instead of hanging forever.
 #[derive(Clone)]
 pub struct Client {
-    transport: Transport,
+    channel: tonic::transport::Channel,
 
-    // Everything other than the transport is only consulted when building a
+    // Everything other than the channel is only consulted when building a
     // per-service client or reconfiguring, so it lives behind an `Arc` to
     // keep `Client` itself small; it is cloned by value into futures
     // throughout the SDK. The `Endpoint` alone is over 500 bytes.
@@ -126,92 +122,32 @@ struct ClientConfig {
     request_layer: Option<RequestLayer>,
 }
 
-/// The transport beneath a [`Client`]: a non-empty set of HTTP/2 connections
-/// to one endpoint, with each request assigned to the next connection in
-/// rotation.
+/// Open `num_connections` lazy connections to `endpoint`, all sharing its
+/// configuration, and balance requests across them.
 ///
-/// A request is bound to a connection by `poll_ready` and dispatched to that
-/// same connection by the `call` that follows, so concurrent RPCs issued
-/// through one service client spread across the set instead of contending for
-/// a single connection's flow-control window and driver task.
-struct Transport {
-    connections: Arc<Vec<tonic::transport::Channel>>,
-
-    /// Shared by every clone, so the rotation advances across the whole
-    /// client rather than restarting per clone.
-    next: Arc<AtomicUsize>,
-
-    /// The connection `poll_ready` bound the next `call` to. It is held as a
-    /// `Channel` rather than an index because a ready channel owns a reserved
-    /// slot in its buffer that the paired `call` consumes, and that
-    /// reservation does not survive being cloned.
-    ready: Option<tonic::transport::Channel>,
-}
-
-impl Transport {
-    /// Open `num_connections` lazy connections to `endpoint`, all sharing its
-    /// configuration. Panics if `num_connections` is zero.
-    fn new(endpoint: &tonic::transport::Endpoint, num_connections: usize) -> Self {
-        assert!(
-            num_connections > 0,
-            "a client needs at least one connection"
-        );
-        Self {
-            connections: Arc::new(
-                (0..num_connections)
-                    .map(|_| endpoint.connect_lazy())
-                    .collect(),
-            ),
-            next: Arc::new(AtomicUsize::new(0)),
-            ready: None,
-        }
-    }
-}
-
-impl Clone for Transport {
-    /// Clones start unbound: a reserved buffer slot belongs to the clone that
-    /// acquired it and does not survive being copied.
-    fn clone(&self) -> Self {
-        Self {
-            connections: self.connections.clone(),
-            next: self.next.clone(),
-            ready: None,
-        }
-    }
-}
-
-impl Service<http::Request<Body>> for Transport {
-    type Response = http::Response<Body>;
-    type Error = tonic::transport::Error;
-    type Future = tonic::transport::channel::ResponseFuture;
-
-    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        if self.ready.is_none() {
-            let index = self.next.fetch_add(1, Ordering::Relaxed) % self.connections.len();
-            self.ready = Some(self.connections[index].clone());
-        }
-
-        let poll = self
-            .ready
-            .as_mut()
-            .expect("a connection was just bound")
-            .poll_ready(cx);
-
-        // Release a failed connection so the next attempt rotates on to a
-        // different one instead of retrying this one forever.
-        if matches!(poll, Poll::Ready(Err(_))) {
-            self.ready = None;
-        }
-
-        poll
+/// Each connection is inserted under its own key, because the balancer
+/// identifies backends by key and the endpoint is the same for all of them.
+/// The change sender is dropped once the set is populated: the set is fixed,
+/// and the balancer retains it after discovery ends.
+fn build_channel(
+    endpoint: &tonic::transport::Endpoint,
+    num_connections: usize,
+) -> tonic::transport::Channel {
+    if num_connections <= 1 {
+        return endpoint.connect_lazy();
     }
 
-    fn call(&mut self, request: http::Request<Body>) -> Self::Future {
-        self.ready
-            .take()
-            .expect("service not ready; poll_ready must be called first")
-            .call(request)
+    let (channel, changes) = tonic::transport::Channel::balance_channel::<usize>(num_connections);
+    for key in 0..num_connections {
+        changes
+            .try_send(tonic::transport::channel::Change::Insert(
+                key,
+                endpoint.clone(),
+            ))
+            .expect("change channel has capacity for every connection");
     }
+
+    channel
 }
 
 impl Client {
@@ -248,9 +184,9 @@ impl Client {
     /// starve the whole connection.
     pub fn from_endpoint(endpoint: &tonic::transport::Endpoint) -> Self {
         let uri = endpoint.uri().clone();
-        let transport = Transport::new(endpoint, DEFAULT_NUM_CONNECTIONS);
+        let channel = build_channel(endpoint, DEFAULT_NUM_CONNECTIONS);
         Self {
-            transport,
+            channel,
             config: Arc::new(ClientConfig {
                 uri,
                 endpoint: endpoint.clone(),
@@ -290,10 +226,10 @@ impl Client {
             .keep_alive_timeout(DEFAULT_HTTP2_KEEP_ALIVE_TIMEOUT)
             .initial_stream_window_size(DEFAULT_HTTP2_STREAM_WINDOW_SIZE)
             .initial_connection_window_size(DEFAULT_HTTP2_CONNECTION_WINDOW_SIZE);
-        let transport = Transport::new(&endpoint, DEFAULT_NUM_CONNECTIONS);
+        let channel = build_channel(&endpoint, DEFAULT_NUM_CONNECTIONS);
 
         Ok(Self {
-            transport,
+            channel,
             config: Arc::new(ClientConfig {
                 uri,
                 endpoint,
@@ -367,27 +303,30 @@ impl Client {
     pub fn with_response_headers_timeout(mut self, timeout: Duration) -> Self {
         let config = Arc::make_mut(&mut self.config);
         config.endpoint = config.endpoint.clone().timeout(timeout);
-        self.transport = Transport::new(&config.endpoint, config.num_connections);
+        self.channel = build_channel(&config.endpoint, config.num_connections);
         self
     }
 
     /// Set how many HTTP/2 connections the client opens to the endpoint.
     /// Defaults to 1; a count of 0 is treated as 1.
     ///
-    /// Each RPC is assigned to the next connection in rotation, so concurrent
-    /// calls are spread evenly rather than sharing one connection's
-    /// flow-control window and driver task. A single connection's throughput
-    /// is bounded by that window and by the one task driving its multiplexed
-    /// streams, so workloads that keep many streams in flight at once (bulk
-    /// or streaming reads) can be limited by it well before the server is.
-    /// Every connection carries the same endpoint configuration, so the
-    /// window sizes described in
+    /// Requests are distributed across the connections rather than sharing
+    /// one connection's flow-control window and driver task. A single
+    /// connection's throughput is bounded by that window and by the one task
+    /// driving its multiplexed streams, so workloads that keep many streams
+    /// in flight at once (bulk or streaming reads) can be limited by it well
+    /// before the server is. Every connection carries the same endpoint
+    /// configuration, so the window sizes described in
     /// [`with_initial_connection_window_size`](Self::with_initial_connection_window_size)
     /// apply to each one, and the client's total window budget scales with
     /// the count.
     ///
-    /// Connections are opened lazily and reconnect independently, and one
-    /// that cannot be established fails only the calls routed to it.
+    /// Placement is effectively random per request, not a strict rotation, so
+    /// connections carry equal load only on average. Requests held open
+    /// concurrently, such as long-lived streams, can land unevenly.
+    ///
+    /// Connections are established lazily and reconnect independently, and
+    /// one that cannot be established fails only the requests routed to it.
     ///
     /// This rebuilds the underlying channel, so it must be called before the
     /// client is used or cloned; earlier clones keep the previous
@@ -395,7 +334,7 @@ impl Client {
     pub fn with_num_connections(mut self, num_connections: usize) -> Self {
         let config = Arc::make_mut(&mut self.config);
         config.num_connections = num_connections.max(1);
-        self.transport = Transport::new(&config.endpoint, config.num_connections);
+        self.channel = build_channel(&config.endpoint, config.num_connections);
         self
     }
 
@@ -413,7 +352,7 @@ impl Client {
     pub fn with_initial_stream_window_size(mut self, size: u32) -> Self {
         let config = Arc::make_mut(&mut self.config);
         config.endpoint = config.endpoint.clone().initial_stream_window_size(size);
-        self.transport = Transport::new(&config.endpoint, config.num_connections);
+        self.channel = build_channel(&config.endpoint, config.num_connections);
         self
     }
 
@@ -436,7 +375,7 @@ impl Client {
     pub fn with_initial_connection_window_size(mut self, size: u32) -> Self {
         let config = Arc::make_mut(&mut self.config);
         config.endpoint = config.endpoint.clone().initial_connection_window_size(size);
-        self.transport = Transport::new(&config.endpoint, config.num_connections);
+        self.channel = build_channel(&config.endpoint, config.num_connections);
         self
     }
 
@@ -523,7 +462,7 @@ impl Client {
                     }
                     req
                 })
-                .service(self.transport.clone()),
+                .service(self.channel.clone()),
         );
 
         // Guard every response body with the idle-body watchdog, beneath any
