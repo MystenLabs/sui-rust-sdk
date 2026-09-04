@@ -3,22 +3,26 @@
 //! A single HTTP/2 connection caps throughput at what its flow-control window
 //! and its one driver task can sustain, so a client can be limited by its own
 //! transport well before the server is. Opening several connections and
-//! rotating requests across them lifts that cap.
+//! balancing requests across them lifts that cap.
 //!
 //! These tests run a mock fullnode over a listener that counts accepted TCP
-//! connections, which is the only way to observe how many connections a client
-//! actually opened, and assert:
+//! connections and a service that records which connection each request
+//! arrived on, since neither is observable from the client side. They assert:
 //!
 //! - the default client still opens exactly one connection, so the pool is
 //!   opt-in and the existing transport behavior is unchanged;
-//! - a pooled client opens one connection per configured slot and rotates
-//!   evenly across them;
-//! - streams held concurrently through a single service client land on
-//!   different connections, which is what separates per-request assignment
-//!   from assigning a whole service client to one connection.
+//! - a pooled client opens one connection per configured slot;
+//! - requests genuinely reach every connection rather than piling onto one.
+//!
+//! Placement is random per request (tonic's balancer reports a constant load,
+//! so its pick-two-choose-least degenerates to a random pick), so the
+//! distribution test asserts coverage over many requests rather than an even
+//! split, which would be flaky.
 
+use std::collections::BTreeMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 
@@ -30,15 +34,23 @@ use proto::subscription_service_server::SubscriptionServiceServer;
 use sui_rpc::Client;
 use sui_rpc::proto::sui::rpc::v2 as proto;
 
+/// Requests seen per client connection, keyed by the client's source port.
+type PerConnection = Arc<Mutex<BTreeMap<u16, usize>>>;
+
 #[derive(Clone)]
-struct MockServer;
+struct MockServer {
+    per_connection: PerConnection,
+}
 
 #[tonic::async_trait]
 impl LedgerService for MockServer {
     async fn get_service_info(
         &self,
-        _request: tonic::Request<proto::GetServiceInfoRequest>,
+        request: tonic::Request<proto::GetServiceInfoRequest>,
     ) -> Result<tonic::Response<proto::GetServiceInfoResponse>, tonic::Status> {
+        let port = request.remote_addr().expect("peer address").port();
+        *self.per_connection.lock().unwrap().entry(port).or_insert(0) += 1;
+
         let mut info = proto::GetServiceInfoResponse::default();
         info.chain_id = Some("mock".to_owned());
         Ok(tonic::Response::new(info))
@@ -64,36 +76,69 @@ impl SubscriptionService for MockServer {
     }
 }
 
-/// Serve the mock fullnode, returning its address and a counter of accepted
-/// TCP connections.
-async fn spawn_counting_mock_server() -> (SocketAddr, Arc<AtomicUsize>) {
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
-        .await
-        .expect("bind mock server listener");
-    let addr = listener.local_addr().expect("mock server local addr");
-    let accepted = Arc::new(AtomicUsize::new(0));
+struct MockFullnode {
+    addr: SocketAddr,
+    accepted: Arc<AtomicUsize>,
+    per_connection: PerConnection,
+}
 
-    let incoming = futures::stream::unfold(
-        (listener, accepted.clone()),
-        |(listener, accepted)| async move {
-            let accept = listener.accept().await.map(|(socket, _)| {
-                accepted.fetch_add(1, Ordering::Relaxed);
-                socket
-            });
-            Some((accept, (listener, accepted)))
-        },
-    );
-
-    tokio::spawn(async move {
-        tonic::transport::Server::builder()
-            .add_service(LedgerServiceServer::new(MockServer))
-            .add_service(SubscriptionServiceServer::new(MockServer))
-            .serve_with_incoming(incoming)
+impl MockFullnode {
+    async fn spawn() -> Self {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
             .await
-            .expect("mock server exited with an error");
-    });
+            .expect("bind mock server listener");
+        let addr = listener.local_addr().expect("mock server local addr");
+        let accepted = Arc::new(AtomicUsize::new(0));
+        let per_connection: PerConnection = Default::default();
 
-    (addr, accepted)
+        let incoming = futures::stream::unfold(
+            (listener, accepted.clone()),
+            |(listener, accepted)| async move {
+                let accept = listener.accept().await.map(|(socket, _)| {
+                    accepted.fetch_add(1, Ordering::Relaxed);
+                    socket
+                });
+                Some((accept, (listener, accepted)))
+            },
+        );
+
+        let server = MockServer {
+            per_connection: per_connection.clone(),
+        };
+        tokio::spawn(async move {
+            tonic::transport::Server::builder()
+                .add_service(LedgerServiceServer::new(server.clone()))
+                .add_service(SubscriptionServiceServer::new(server))
+                .serve_with_incoming(incoming)
+                .await
+                .expect("mock server exited with an error");
+        });
+
+        Self {
+            addr,
+            accepted,
+            per_connection,
+        }
+    }
+
+    fn client(&self) -> Client {
+        Client::new(format!("http://{}", self.addr)).expect("client")
+    }
+
+    fn connections_opened(&self) -> usize {
+        self.accepted.load(Ordering::Relaxed)
+    }
+
+    /// Request counts per connection, one entry per connection that served at
+    /// least one request.
+    fn requests_per_connection(&self) -> Vec<usize> {
+        self.per_connection
+            .lock()
+            .unwrap()
+            .values()
+            .copied()
+            .collect()
+    }
 }
 
 async fn call(client: &mut Client) {
@@ -108,47 +153,59 @@ async fn call(client: &mut Client) {
 /// connection, as it always has.
 #[tokio::test(flavor = "multi_thread")]
 async fn default_client_opens_one_connection() {
-    let (addr, accepted) = spawn_counting_mock_server().await;
-    let mut client = Client::new(format!("http://{addr}")).expect("client");
+    let server = MockFullnode::spawn().await;
+    let mut client = server.client();
 
     for _ in 0..8 {
         call(&mut client).await;
     }
 
-    assert_eq!(accepted.load(Ordering::Relaxed), 1);
+    assert_eq!(server.connections_opened(), 1);
+    assert_eq!(server.requests_per_connection(), vec![8]);
 }
 
-/// Requests rotate across the configured connections, so the pool reaches its
-/// full width and stays evenly loaded rather than leaving connections idle.
+/// A pooled client opens exactly the configured number of connections, and no
+/// more as traffic continues.
 #[tokio::test(flavor = "multi_thread")]
-async fn pooled_client_rotates_across_every_connection() {
-    let (addr, accepted) = spawn_counting_mock_server().await;
-    let mut client = Client::new(format!("http://{addr}"))
-        .expect("client")
-        .with_num_connections(4);
+async fn pooled_client_opens_one_connection_per_slot() {
+    let server = MockFullnode::spawn().await;
+    let mut client = server.client().with_num_connections(4);
 
-    // Connections are lazy, so the fourth is only dialed once the rotation
-    // reaches it; a further four calls must reuse rather than keep dialing.
-    for _ in 0..8 {
+    for _ in 0..16 {
         call(&mut client).await;
     }
 
-    assert_eq!(accepted.load(Ordering::Relaxed), 4);
+    assert_eq!(server.connections_opened(), 4);
 }
 
-/// Assignment happens per request, not per service client: streams opened
-/// through one service client and held concurrently occupy different
-/// connections. This is the bulk-read case the pool exists for.
+/// Requests reach every connection rather than piling onto one, which is the
+/// property the pool exists for. Placement is random per request, so this
+/// asserts coverage over enough requests that missing a connection is
+/// vanishingly unlikely (~4 * 0.75^200) rather than asserting an even split.
 #[tokio::test(flavor = "multi_thread")]
-async fn concurrent_streams_from_one_service_client_spread() {
-    let (addr, accepted) = spawn_counting_mock_server().await;
-    let mut client = Client::new(format!("http://{addr}"))
-        .expect("client")
-        .with_num_connections(4);
+async fn requests_reach_every_connection() {
+    let server = MockFullnode::spawn().await;
+    let mut client = server.client().with_num_connections(4);
+
+    for _ in 0..200 {
+        call(&mut client).await;
+    }
+
+    let per_connection = server.requests_per_connection();
+    assert_eq!(per_connection.len(), 4, "every connection served requests");
+    assert_eq!(per_connection.iter().sum::<usize>(), 200);
+}
+
+/// Streams held open concurrently are spread rather than all landing on the
+/// connection that served the first one.
+#[tokio::test(flavor = "multi_thread")]
+async fn concurrently_held_streams_are_spread() {
+    let server = MockFullnode::spawn().await;
+    let mut client = server.client().with_num_connections(4);
 
     let mut subscriptions = client.subscription_client();
     let mut held = Vec::new();
-    for _ in 0..4 {
+    for _ in 0..32 {
         held.push(
             subscriptions
                 .subscribe_checkpoints(proto::SubscribeCheckpointsRequest::default())
@@ -158,21 +215,19 @@ async fn concurrent_streams_from_one_service_client_spread() {
         );
     }
 
-    assert_eq!(accepted.load(Ordering::Relaxed), 4);
+    assert_eq!(server.connections_opened(), 4);
     drop(held);
 }
 
-/// A count of zero is meaningless for a transport and would make the rotation
-/// modulo divide by zero, so it is clamped to a usable client.
+/// A count of zero is meaningless for a transport, so it is clamped to a
+/// usable client rather than producing an empty pool.
 #[tokio::test(flavor = "multi_thread")]
 async fn zero_connections_is_clamped() {
-    let (addr, accepted) = spawn_counting_mock_server().await;
-    let mut client = Client::new(format!("http://{addr}"))
-        .expect("client")
-        .with_num_connections(0);
+    let server = MockFullnode::spawn().await;
+    let mut client = server.client().with_num_connections(0);
 
     call(&mut client).await;
     call(&mut client).await;
 
-    assert_eq!(accepted.load(Ordering::Relaxed), 1);
+    assert_eq!(server.connections_opened(), 1);
 }
