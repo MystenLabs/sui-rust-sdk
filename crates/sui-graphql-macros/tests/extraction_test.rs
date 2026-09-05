@@ -80,6 +80,75 @@ fn test_field_named_value_does_not_shadow_response_value() {
     assert_eq!(data.digest, "abc123");
 }
 
+// === Flattened Response Extraction ===
+
+#[test]
+fn test_flattened_fields_receive_complete_response() {
+    #[derive(Debug, PartialEq, Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct ChainInfo {
+        #[field(path = "chainIdentifier")]
+        chain_id: String,
+    }
+
+    #[derive(Debug, PartialEq, Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct EpochInfo {
+        #[field(path = "epoch.epochId")]
+        epoch_id: u64,
+    }
+
+    #[derive(Debug, PartialEq)]
+    struct ExtractOnly {
+        chain_id: String,
+    }
+
+    impl ExtractOnly {
+        fn extract(value: &serde_json::Value) -> Result<Self, String> {
+            let chain_id = value
+                .get("chainIdentifier")
+                .and_then(serde_json::Value::as_str)
+                .ok_or_else(|| "missing chainIdentifier".to_string())?;
+            Ok(Self {
+                chain_id: chain_id.to_string(),
+            })
+        }
+    }
+
+    #[derive(Response)]
+    #[response(schema = "tests/test_schema.graphql")]
+    struct ResponseData {
+        #[field(flatten)]
+        value: ChainInfo,
+        #[field(flatten)]
+        epoch: EpochInfo,
+        #[field(flatten)]
+        extract_only: ExtractOnly,
+    }
+
+    let json = serde_json::json!({
+        "chainIdentifier": "4c78adac",
+        "epoch": {
+            "epochId": 42
+        }
+    });
+    let data = ResponseData::from_value(json).unwrap();
+
+    assert_eq!(
+        data.value,
+        ChainInfo {
+            chain_id: "4c78adac".to_string(),
+        }
+    );
+    assert_eq!(data.epoch, EpochInfo { epoch_id: 42 });
+    assert_eq!(
+        data.extract_only,
+        ExtractOnly {
+            chain_id: "4c78adac".to_string(),
+        }
+    );
+}
+
 // === Nullable Array Extraction ===
 // `?` markers control which segments tolerate null. `?[]` makes the array nullable.
 
