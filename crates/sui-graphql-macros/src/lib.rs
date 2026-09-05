@@ -337,7 +337,7 @@ pub fn derive_query_response(input: TokenStream) -> TokenStream {
 ///
 /// On a syntactically or semantically invalid input (unknown field, wrong
 /// argument type, undefined variable, etc.) the macro emits one
-/// `compile_error!` per apollo-compiler diagnostic, so the offending call
+/// `compile_error!` per Bluejay diagnostic, so the offending call
 /// site fails to build with the diagnostic text inline.
 #[proc_macro]
 pub fn graphql_query(input: TokenStream) -> TokenStream {
