@@ -1,6 +1,16 @@
+# Unreleased
+
+## Added
+
+- add finite `Client::list_{checkpoints,transactions,events}` streams that yield generated
+  responses unchanged and automatically continue `ItemLimit` and `ScanLimit` pagination.
+- add resumable `Client::stream_*` frames with `Tip`, `Checkpoint`, and opaque `Resume`
+  starts, plus live-tip `Subscribe` and indexed-tip `Poll` delivery.
+
 # [0.3.2] - 2026-07-16
 
 ## Added
+
 - [#256] [#264] [#265] [#278] add filtered `ListCheckpoints`,
   `ListTransactions`, and `ListEvents` RPCs to the v2 `LedgerService`,
   filtered `SubscribeTransactions` and `SubscribeEvents` RPCs to the v2
@@ -29,6 +39,7 @@
   archive-first historical reads, behind the `unstable` feature
 
 ## Changed
+
 - [`668c7a3c`] [`ab33fca8`] harden the shared HTTP/2 connection against
   flow-control starvation: `Client::new` now sets explicit stream and
   connection receive windows (overridable with
@@ -44,6 +55,7 @@
   in the staking and execute-and-wait helpers
 
 ## Fixed
+
 - [`fb3d25a2`] enforce the deadline set with `tonic::Request::set_timeout`
   across the whole response body, so a per-call deadline now bounds the
   entire call instead of only the response-headers phase
@@ -74,7 +86,6 @@
 [#283]: https://github.com/MystenLabs/sui-rust-sdk/pull/283
 [#286]: https://github.com/MystenLabs/sui-rust-sdk/pull/286
 [#287]: https://github.com/MystenLabs/sui-rust-sdk/pull/287
-
 [`f3673da1`]: https://github.com/mystenlabs/sui-rust-sdk/commit/f3673da1
 [`3ef25b50`]: https://github.com/mystenlabs/sui-rust-sdk/commit/3ef25b50
 [`57343980`]: https://github.com/mystenlabs/sui-rust-sdk/commit/57343980
@@ -101,6 +112,7 @@
 # [0.3.1] - 2026-04-13
 
 ## Added
+
 - [#233] make `Client::calculate_rewards` and
   `Client::get_validator_address_by_pool_id` public
 - [#235] allow constructing a `Client` from a configured tonic `Endpoint`
@@ -109,6 +121,7 @@
   arbitrary `tower::Layer`
 
 ## Changed
+
 - [#236] update the default endpoint configuration
 
 [#233]: https://github.com/MystenLabs/sui-rust-sdk/pull/233
@@ -119,12 +132,14 @@
 # [0.3.0] - 2026-03-23
 
 ## Added
+
 - [#216] add support for `Object.display` and `SimulateTransactionResponse.suggested_gas_price`
 - [#231] add proto support for `AccumulatorValue::EventDigest` and `AccumulatorValue::IntegerTuple`
   for authenticated event streams
 - add `Unimplemented*` default stubs for all generated gRPC service traits
 
 ## Fixed
+
 - [#228] box `FieldViolation` in `TryFromProtoError` to reduce stack size
 - [#212] handle the case where a transaction has already been executed
 - support partial errors in `Object.display`
@@ -137,6 +152,7 @@
 # [0.2.2] - 2026-01-20
 
 ## Added
+
 - [#202] add support for TransactionKind::ProgrammableSystemTransaction
 - [#204] add support for EndOfEpochTransactionKind::WriteAccumulatorStorageCost
 
@@ -146,6 +162,7 @@
 # [0.2.1] - 2026-01-07
 
 ## Added
+
 - [#185] add `address_balance` and `coin_balance` fields to Balance message
 
 [#185]: https://github.com/MystenLabs/sui-rust-sdk/pull/185
@@ -153,6 +170,7 @@
 # [0.2.0] - 2026-01-05
 
 ## Added
+
 - Added support for address balances [#179]
 - Added support for address aliases [#177]
 - Added support for CheckpointContents V2 [#180]
@@ -164,11 +182,13 @@
 # [0.1.1] - 2025-12-11
 
 ## Added
+
 - Added new move vm adapter error variants
 
 # [0.1.0] - 2025-11-07
 
 ## Changed
+
 - Updated to rust 2024 edition [#171]
 - Updated to tonic/prost 0.14 [#168]
 - Removed `Into` requirement for setters of primitive types [`ec1547f1`]
@@ -183,6 +203,7 @@
 # [0.0.8] - 2025-10-03
 
 ## Added
+
 - Support for field path builders for proto messages
 - Support for field accessors and builder methods for proto messages
 - Add `Client::execute_transaction_and_wait_for_checkpoint` method
