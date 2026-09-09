@@ -1,3 +1,8 @@
+# [0.4.0] - 2026-09-09
+
+## Changed
+- update sui-sdk-types to 0.4.0 and sui-rpc to 0.4.0
+
 # [0.3.2] - 2026-07-16
 
 ## Changed
@@ -67,6 +72,7 @@
 
 [#183]: https://github.com/MystenLabs/sui-rust-sdk/pull/183
 
+[0.4.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-transaction-builder-0.4.0
 [0.3.2]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-transaction-builder-0.3.2
 [0.3.1]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-transaction-builder-0.3.1
 [0.3.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-transaction-builder-0.3.0

@@ -1,3 +1,20 @@
+# [0.4.0] - 2026-09-09
+
+## Added
+- `#[field(flatten)]` on the `Response` derive and multi-source
+  `graphql_query!` invocations, via sui-graphql-macros 0.4.0
+
+## Changed
+- [#298] `BigInt` is now generic over its inner integer type,
+  `BigInt<T = u64>`, accepting every primitive integer type and
+  `sui_sdk_types::U256` so that values wider than 64 bits, such as balance
+  changes, can be decoded; a bare `BigInt` still means `BigInt<u64>`, but
+  code that relied on the inner type being inferred as `u64` from an
+  unsuffixed integer literal may now need an annotation
+- update sui-sdk-types, sui-rpc, and sui-graphql-macros to 0.4.0
+
+[#298]: https://github.com/MystenLabs/sui-rust-sdk/pull/298
+
 # [0.3.1] - 2026-07-16
 
 ## Added
@@ -49,5 +66,6 @@ Initial published release.
 [#222]: https://github.com/MystenLabs/sui-rust-sdk/pull/222
 [#224]: https://github.com/MystenLabs/sui-rust-sdk/pull/224
 
+[0.4.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-graphql-0.4.0
 [0.3.1]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-graphql-0.3.1
 [0.3.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-graphql-0.3.0

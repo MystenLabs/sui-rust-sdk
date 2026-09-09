@@ -1,3 +1,31 @@
+# [0.4.0] - 2026-09-09
+
+## Added
+- [#288] add `EndOfEpochTransactionKind::ForwardingAddressRegistryCreate`,
+  the end-of-epoch transaction that creates the forwarding address registry
+  system object
+- [#295] [#310] add `WithdrawFrom::SenderAllowance` for withdrawing from a
+  funder's balance under an allowance object granted to the sender of the
+  transaction
+- [#297] add `CommandArgumentError::InvalidTxContext`, reported when a
+  programmable transaction command violates the adapter's `TxContext`
+  signature restrictions
+- [#293] add `TransactionExpiration::Validity` and the `AllowedProposers`
+  type for restricting which validators may propose a transaction in
+  consensus
+
+## Breaking
+- [#293] `TransactionExpiration` no longer implements `Copy`, since the new
+  `Validity` variant holds a `Vec` of allowed proposers
+- [#295] [#310] `WithdrawFrom` now has a struct variant, so its variants no
+  longer have well-defined discriminants and cannot be cast with `as`
+
+[#288]: https://github.com/MystenLabs/sui-rust-sdk/pull/288
+[#293]: https://github.com/MystenLabs/sui-rust-sdk/pull/293
+[#295]: https://github.com/MystenLabs/sui-rust-sdk/pull/295
+[#297]: https://github.com/MystenLabs/sui-rust-sdk/pull/297
+[#310]: https://github.com/MystenLabs/sui-rust-sdk/pull/310
+
 # [0.3.2] - 2026-07-16
 
 ## Added
@@ -300,6 +328,7 @@
 
 Initial release
 
+[0.4.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.4.0
 [0.3.2]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.3.2
 [0.3.1]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.3.1
 [0.3.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-sdk-types-0.3.0

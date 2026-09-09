@@ -1,3 +1,8 @@
+# [0.4.0] - 2026-09-09
+
+## Changed
+- update sui-sdk-types to 0.4.0
+
 # [0.3.1] - 2026-07-16
 
 ## Added
@@ -98,6 +103,7 @@
 
 Initial release
 
+[0.4.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-crypto-0.4.0
 [0.3.1]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-crypto-0.3.1
 [0.3.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-crypto-0.3.0
 [0.2.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-crypto-0.2.0

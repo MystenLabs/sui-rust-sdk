@@ -1,3 +1,34 @@
+# [0.4.0] - 2026-09-09
+
+## Added
+- [`05ee2e62`] add `#[field(flatten)]` to the `Response` derive for fields
+  that receive the complete response value, so several projections can read
+  different fields from the same response root; the derive now also
+  generates a borrowed `extract(&serde_json::Value)` method alongside the
+  owned `from_value`
+- [`97fd47e7`] allow `graphql_query!` to compose a document from several
+  comma-separated sources, either inline string literals or `@"path"` files
+  resolved relative to the invoking Rust source file, so operations and
+  shared fragments can live apart
+
+## Changed
+- [`838bea4f`] parse and validate GraphQL with `bluejay` instead of
+  `apollo-compiler`, roughly halving the macro's dependency tree; the
+  wording of diagnostics for invalid queries changed
+- [#288] update the embedded Sui GraphQL schema with
+  `ForwardingAddressRegistryCreateTransaction`
+
+## Fixed
+- [`2726dbb1`] a `Response` field named `value` no longer shadows the
+  response input, so fields declared after it extract from the response
+  root instead of from the already extracted value
+
+[#288]: https://github.com/MystenLabs/sui-rust-sdk/pull/288
+[`05ee2e62`]: https://github.com/mystenlabs/sui-rust-sdk/commit/05ee2e62
+[`97fd47e7`]: https://github.com/mystenlabs/sui-rust-sdk/commit/97fd47e7
+[`838bea4f`]: https://github.com/mystenlabs/sui-rust-sdk/commit/838bea4f
+[`2726dbb1`]: https://github.com/mystenlabs/sui-rust-sdk/commit/2726dbb1
+
 # [0.3.1] - 2026-07-16
 
 ## Added
@@ -37,5 +68,6 @@ Initial published release.
 [#224]: https://github.com/MystenLabs/sui-rust-sdk/pull/224
 [#230]: https://github.com/MystenLabs/sui-rust-sdk/pull/230
 
+[0.4.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-graphql-macros-0.4.0
 [0.3.1]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-graphql-macros-0.3.1
 [0.3.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-graphql-macros-0.3.0

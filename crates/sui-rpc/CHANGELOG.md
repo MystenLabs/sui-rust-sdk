@@ -1,11 +1,43 @@
-# Unreleased
+# [0.4.0] - 2026-09-09
 
 ## Added
 
-- add finite `Client::list_{checkpoints,transactions,events}` streams that yield generated
-  responses unchanged and automatically continue `ItemLimit` and `ScanLimit` pagination.
-- add resumable `Client::stream_*` frames with `Tip`, `Checkpoint`, and opaque `Resume`
-  starts, plus live-tip `Subscribe` and indexed-tip `Poll` delivery.
+- [`71ee84e1`] [`5f602785`] [`95a30b33`] add resumable ledger streams to
+  `Client`: finite `list_checkpoints`, `list_transactions`, and
+  `list_events` streams that yield response pages unchanged and continue
+  `ItemLimit` and `ScanLimit` pagination automatically, and infinite
+  `stream_checkpoints`, `stream_transactions`, and `stream_events` streams
+  that start from `Tip`, a `Checkpoint`, or an opaque `Resume` cursor,
+  replay history through the List RPCs, and then follow the ledger with
+  either `Subscribe` (a live subscription with gap repair) or `Poll`
+  delivery while retrying transient failures; tuned with
+  `LedgerStreamConfig` and `ListConfig`, and observable through
+  `LedgerStreamEvent` and `ListEvent` callbacks
+- [`6d52810a`] [`8ef3d800`] add `Client::with_num_connections` to spread
+  RPCs over several HTTP/2 connections instead of multiplexing every call
+  over one, for workloads whose throughput is bounded by a single
+  connection's flow-control window and driver task
+- [#288] add `EndOfEpochTransactionKind.FORWARDING_ADDRESS_REGISTRY_CREATE`
+- [#295] [#310] add the `SENDER_ALLOWANCE` source and the `funder` and
+  `allowance` fields to `FundsWithdrawal`
+- [#297] add `CommandArgumentError.INVALID_TX_CONTEXT`
+- [#293] add the `VALIDITY` expiration kind and the `AllowedProposers`
+  message to `TransactionExpiration`
+
+## Changed
+
+- update sui-sdk-types to 0.4.0 and sui-crypto to 0.4.0
+
+[#288]: https://github.com/MystenLabs/sui-rust-sdk/pull/288
+[#293]: https://github.com/MystenLabs/sui-rust-sdk/pull/293
+[#295]: https://github.com/MystenLabs/sui-rust-sdk/pull/295
+[#297]: https://github.com/MystenLabs/sui-rust-sdk/pull/297
+[#310]: https://github.com/MystenLabs/sui-rust-sdk/pull/310
+[`71ee84e1`]: https://github.com/mystenlabs/sui-rust-sdk/commit/71ee84e1
+[`5f602785`]: https://github.com/mystenlabs/sui-rust-sdk/commit/5f602785
+[`95a30b33`]: https://github.com/mystenlabs/sui-rust-sdk/commit/95a30b33
+[`6d52810a`]: https://github.com/mystenlabs/sui-rust-sdk/commit/6d52810a
+[`8ef3d800`]: https://github.com/mystenlabs/sui-rust-sdk/commit/8ef3d800
 
 # [0.3.2] - 2026-07-16
 
@@ -242,6 +274,7 @@
 
 Initial release
 
+[0.4.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.4.0
 [0.3.2]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.3.2
 [0.3.1]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.3.1
 [0.3.0]: https://github.com/mystenlabs/sui-rust-sdk/releases/tag/sui-rpc-0.3.0
