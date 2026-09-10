@@ -8782,7 +8782,10 @@ mod _accessor_impls {
     }
     impl super::GetPackageRequest {
         pub const fn const_default() -> Self {
-            Self { package_id: None }
+            Self {
+                package_id: None,
+                selector: None,
+            }
         }
         #[doc(hidden)]
         pub fn default_instance() -> &'static Self {
@@ -8809,6 +8812,112 @@ mod _accessor_impls {
         ///Sets `package_id` with the provided value.
         pub fn with_package_id<T: Into<String>>(mut self, field: T) -> Self {
             self.set_package_id(field.into());
+            self
+        }
+        ///Returns the value of `version`, or the default value if `version` is unset.
+        pub fn version(&self) -> u64 {
+            if let Some(super::get_package_request::Selector::Version(field)) = &self
+                .selector
+            {
+                *field
+            } else {
+                0u64
+            }
+        }
+        ///If `version` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn version_opt(&self) -> Option<u64> {
+            if let Some(super::get_package_request::Selector::Version(field)) = &self
+                .selector
+            {
+                Some(*field)
+            } else {
+                None
+            }
+        }
+        ///If `version` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn version_opt_mut(&mut self) -> Option<&mut u64> {
+            if let Some(super::get_package_request::Selector::Version(field)) = &mut self
+                .selector
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///Returns a mutable reference to `version`.
+        ///If the field is unset, it is first initialized with the default value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn version_mut(&mut self) -> &mut u64 {
+            if self.version_opt_mut().is_none() {
+                self.selector = Some(
+                    super::get_package_request::Selector::Version(u64::default()),
+                );
+            }
+            self.version_opt_mut().unwrap()
+        }
+        ///Sets `version` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn set_version(&mut self, field: u64) {
+            self.selector = Some(super::get_package_request::Selector::Version(field));
+        }
+        ///Sets `version` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn with_version(mut self, field: u64) -> Self {
+            self.set_version(field);
+            self
+        }
+        ///Returns the value of `at_checkpoint`, or the default value if `at_checkpoint` is unset.
+        pub fn at_checkpoint(&self) -> u64 {
+            if let Some(super::get_package_request::Selector::AtCheckpoint(field)) = &self
+                .selector
+            {
+                *field
+            } else {
+                0u64
+            }
+        }
+        ///If `at_checkpoint` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn at_checkpoint_opt(&self) -> Option<u64> {
+            if let Some(super::get_package_request::Selector::AtCheckpoint(field)) = &self
+                .selector
+            {
+                Some(*field)
+            } else {
+                None
+            }
+        }
+        ///If `at_checkpoint` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn at_checkpoint_opt_mut(&mut self) -> Option<&mut u64> {
+            if let Some(super::get_package_request::Selector::AtCheckpoint(field)) = &mut self
+                .selector
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///Returns a mutable reference to `at_checkpoint`.
+        ///If the field is unset, it is first initialized with the default value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn at_checkpoint_mut(&mut self) -> &mut u64 {
+            if self.at_checkpoint_opt_mut().is_none() {
+                self.selector = Some(
+                    super::get_package_request::Selector::AtCheckpoint(u64::default()),
+                );
+            }
+            self.at_checkpoint_opt_mut().unwrap()
+        }
+        ///Sets `at_checkpoint` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn set_at_checkpoint(&mut self, field: u64) {
+            self.selector = Some(
+                super::get_package_request::Selector::AtCheckpoint(field),
+            );
+        }
+        ///Sets `at_checkpoint` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn with_at_checkpoint(mut self, field: u64) -> Self {
+            self.set_at_checkpoint(field);
             self
         }
     }

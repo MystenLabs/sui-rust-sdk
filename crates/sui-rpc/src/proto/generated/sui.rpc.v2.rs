@@ -3941,9 +3941,45 @@ impl Ability {
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetPackageRequest {
-    /// Required. The `storage_id` of the requested package.
+    /// Required. The `storage_id` of any version of the requested package.
+    ///
+    /// When `version` is not set, the package stored at exactly this id is
+    /// returned. When `version` is set, `package_id` only identifies the
+    /// package's upgrade lineage (via its original id), and the requested
+    /// version within that lineage is returned.
     #[prost(string, optional, tag = "1")]
     pub package_id: ::core::option::Option<::prost::alloc::string::String>,
+    /// Optional. Return the package in `package_id`'s upgrade lineage that
+    /// matches one of the following:
+    ///
+    /// * `version`: the package with exactly this version.
+    /// * `at_checkpoint`: the latest package that existed at or before this
+    ///   checkpoint. Values above the current ledger tip resolve to the latest
+    ///   known version.
+    ///
+    /// If neither is set, the package stored at `package_id` is returned.
+    #[prost(oneof = "get_package_request::Selector", tags = "2, 3")]
+    pub selector: ::core::option::Option<get_package_request::Selector>,
+}
+/// Nested message and enum types in `GetPackageRequest`.
+pub mod get_package_request {
+    /// Optional. Return the package in `package_id`'s upgrade lineage that
+    /// matches one of the following:
+    ///
+    /// * `version`: the package with exactly this version.
+    /// * `at_checkpoint`: the latest package that existed at or before this
+    ///   checkpoint. Values above the current ledger tip resolve to the latest
+    ///   known version.
+    ///
+    /// If neither is set, the package stored at `package_id` is returned.
+    #[non_exhaustive]
+    #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Oneof)]
+    pub enum Selector {
+        #[prost(uint64, tag = "2")]
+        Version(u64),
+        #[prost(uint64, tag = "3")]
+        AtCheckpoint(u64),
+    }
 }
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
