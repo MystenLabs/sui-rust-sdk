@@ -13,7 +13,6 @@
 //! inside a `ValidatedQuery` constructor, but this proc macro itself has no
 //! dependency on or knowledge of that type.
 
-use std::path::Path;
 use std::path::PathBuf;
 use std::sync::LazyLock;
 
@@ -146,14 +145,15 @@ fn expand_impl(input: TokenStream) -> Result<TokenStream2, syn::Error> {
         ));
     }
 
-    // Concatenate exactly like Rust's `concat!`: callers can split a document
-    // wherever they like, and fragments can live in separate sources. The
-    // complete document is still parsed, validated, and formatted as one unit.
-    let mut source = String::new();
+    // Concatenate inline literals exactly like Rust's `concat!`, so callers
+    // can even split tokens. Terminate file sources with a newline to keep
+    // trailing comments from swallowing the next source. Parse, validate,
+    // and format the complete document as one unit.
+    let mut query = String::new();
     let mut dependencies = Vec::new();
-    for input in sources {
-        match input {
-            Source::Inline(literal) => source.push_str(&literal.value()),
+    for source in sources {
+        match source {
+            Source::Inline(literal) => query.push_str(&literal.value()),
             Source::File(literal) => {
                 let path = source_relative(&literal)?;
                 let contents = std::fs::read_to_string(&path).map_err(|error| {
@@ -166,7 +166,9 @@ fn expand_impl(input: TokenStream) -> Result<TokenStream2, syn::Error> {
                     )
                 })?;
 
-                source.push_str(&contents);
+                query.push_str(&contents);
+                query.push('\n');
+
                 dependencies.push(literal);
             }
         }
@@ -176,8 +178,8 @@ fn expand_impl(input: TokenStream) -> Result<TokenStream2, syn::Error> {
         .as_ref()
         .map_err(|error| syn::Error::new(proc_macro2::Span::call_site(), error.clone()))?;
 
-    let document = ExecutableDocument::parse(source.as_str()).map_err(|errors| {
-        combine_query_errors(source.as_str(), errors).unwrap_or_else(|| {
+    let document = ExecutableDocument::parse(query.as_str()).map_err(|errors| {
+        combine_query_errors(query.as_str(), errors).unwrap_or_else(|| {
             syn::Error::new(
                 proc_macro2::Span::call_site(),
                 "GraphQL parsing failed with no diagnostics",
@@ -187,7 +189,7 @@ fn expand_impl(input: TokenStream) -> Result<TokenStream2, syn::Error> {
 
     let cache = Cache::new(&document, schema);
     if let Some(error) = combine_query_errors(
-        source.as_str(),
+        query.as_str(),
         ExecutableValidator::validate(&document, schema, &cache),
     ) {
         return Err(error);
@@ -217,10 +219,9 @@ where
 
 /// Interpret `path` as a path relative to the source file containing the macro invocation.
 fn source_relative(literal: &LitStr) -> Result<PathBuf, syn::Error> {
-    let value = literal.value();
-    let path = Path::new(&value);
+    let path = PathBuf::from(literal.value());
     if path.is_absolute() {
-        return Ok(path.to_owned());
+        return Ok(path);
     }
 
     let source = literal.span().local_file();

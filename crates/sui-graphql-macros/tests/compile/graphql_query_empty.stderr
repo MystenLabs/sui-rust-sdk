@@ -1,0 +1,7 @@
+error: expected at least one GraphQL source
+ --> tests/compile/graphql_query_empty.rs:5:17
+  |
+5 | const Q: &str = graphql_query!();
+  |                 ^^^^^^^^^^^^^^^^
+  |
+  = note: this error originates in the macro `graphql_query` (in Nightly builds, run with -Z macro-backtrace for more info)
