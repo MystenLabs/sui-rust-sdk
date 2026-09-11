@@ -1,0 +1,4 @@
+fragment ChainIdentifier on Query {
+    chainIdentifier
+}
+# Deliberately no newline at EOF.

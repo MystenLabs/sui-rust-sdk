@@ -338,8 +338,10 @@ pub fn derive_query_response(input: TokenStream) -> TokenStream {
 /// One or more sources can be supplied. An inline source is a string literal;
 /// prefix a path with `@` to load it from a UTF-8 file relative to the Rust
 /// source file containing the macro invocation. Sources are concatenated in
-/// order before the complete document is validated, allowing operations and
-/// fragments to be kept separately:
+/// order before the complete document is validated. File sources are terminated
+/// with a newline so trailing comments cannot consume the next source; inline
+/// literals are concatenated verbatim. This allows operations and fragments to
+/// be kept separately:
 ///
 /// ```ignore
 /// const QUERY: &str = graphql_query!(
