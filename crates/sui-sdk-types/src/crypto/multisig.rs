@@ -455,7 +455,8 @@ mod serialization {
                 SignatureScheme::Multisig
                 | SignatureScheme::Bls12381
                 | SignatureScheme::ZkLogin
-                | SignatureScheme::Passkey => {
+                | SignatureScheme::Passkey
+                | SignatureScheme::MlDsa65 => {
                     Err(serde::de::Error::custom("invalid public key type"))
                 }
             }
