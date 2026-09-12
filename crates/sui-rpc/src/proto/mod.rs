@@ -1,5 +1,7 @@
 #![allow(clippy::large_enum_variant)]
 #![allow(clippy::doc_overindented_list_items)]
+// pbjson-build generated deserializers borrow `FIELDS` in `write!` args
+#![allow(unknown_lints, clippy::useless_borrows_in_formatting)]
 
 use google::rpc::bad_request::FieldViolation;
 use sui::rpc::v2::ErrorReason;
