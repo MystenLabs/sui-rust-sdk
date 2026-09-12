@@ -45,6 +45,9 @@ pub use ledger_streams::TransactionStreamFrame;
 pub use ledger_streams::TransactionStreamRequest;
 pub use ledger_streams::TransactionStreamStart;
 
+mod signature_verification;
+pub use signature_verification::VerifySignatureError;
+
 mod transaction_execution;
 pub use transaction_execution::ExecuteAndWaitError;
 
