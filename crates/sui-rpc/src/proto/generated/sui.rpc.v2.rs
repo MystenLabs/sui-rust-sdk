@@ -5686,6 +5686,7 @@ pub enum SignatureScheme {
     Bls12381 = 4,
     Zklogin = 5,
     Passkey = 6,
+    Mldsa65 = 8,
 }
 impl SignatureScheme {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -5701,6 +5702,7 @@ impl SignatureScheme {
             Self::Bls12381 => "BLS12381",
             Self::Zklogin => "ZKLOGIN",
             Self::Passkey => "PASSKEY",
+            Self::Mldsa65 => "MLDSA65",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -5713,6 +5715,7 @@ impl SignatureScheme {
             "BLS12381" => Some(Self::Bls12381),
             "ZKLOGIN" => Some(Self::Zklogin),
             "PASSKEY" => Some(Self::Passkey),
+            "MLDSA65" => Some(Self::Mldsa65),
             _ => None,
         }
     }

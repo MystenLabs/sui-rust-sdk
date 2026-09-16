@@ -443,6 +443,7 @@ impl TryFrom<&SignatureScheme> for sui_sdk_types::SignatureScheme {
             Bls12381 => Self::Bls12381,
             Zklogin => Self::ZkLogin,
             Passkey => Self::Passkey,
+            Mldsa65 => Self::MlDsa65,
         }
         .pipe(Ok)
     }
@@ -464,6 +465,10 @@ impl From<sui_sdk_types::SimpleSignature> for SimpleSignature {
                 public_key,
             } => (signature.as_bytes(), public_key.as_bytes()),
             sui_sdk_types::SimpleSignature::Secp256r1 {
+                signature,
+                public_key,
+            } => (signature.as_bytes(), public_key.as_bytes()),
+            sui_sdk_types::SimpleSignature::MlDsa65 {
                 signature,
                 public_key,
             } => (signature.as_bytes(), public_key.as_bytes()),
@@ -525,6 +530,18 @@ impl TryFrom<&SimpleSignature> for sui_sdk_types::SimpleSignature {
                 public_key: Secp256r1PublicKey::from_bytes(public_key).map_err(|e| {
                     TryFromProtoError::invalid(SimpleSignature::PUBLIC_KEY_FIELD, e)
                 })?,
+            },
+            SignatureScheme::Mldsa65 => Self::MlDsa65 {
+                signature: Box::new(
+                    sui_sdk_types::MlDsa65Signature::from_bytes(signature).map_err(|e| {
+                        TryFromProtoError::invalid(SimpleSignature::SIGNATURE_FIELD, e)
+                    })?,
+                ),
+                public_key: Box::new(
+                    sui_sdk_types::MlDsa65PublicKey::from_bytes(public_key).map_err(|e| {
+                        TryFromProtoError::invalid(SimpleSignature::PUBLIC_KEY_FIELD, e)
+                    })?,
+                ),
             },
             SignatureScheme::Multisig
             | SignatureScheme::Bls12381
@@ -615,6 +632,10 @@ impl From<&sui_sdk_types::MultisigMemberPublicKey> for MultisigMemberPublicKey {
                 message.public_key = Some(public_key.inner().as_bytes().to_vec().into());
                 SignatureScheme::Passkey
             }
+            MlDsa65(public_key) => {
+                message.public_key = Some(public_key.as_bytes().to_vec().into());
+                SignatureScheme::Mldsa65
+            }
             _ => return Self::default(),
         };
 
@@ -656,6 +677,11 @@ impl TryFrom<&MultisigMemberPublicKey> for sui_sdk_types::MultisigMemberPublicKe
             ),
             SignatureScheme::Passkey => Self::Passkey(sui_sdk_types::PasskeyPublicKey::new(
                 Secp256r1PublicKey::from_bytes(value.public_key()).map_err(|e| {
+                    TryFromProtoError::invalid(MultisigMemberPublicKey::PUBLIC_KEY_FIELD, e)
+                })?,
+            )),
+            SignatureScheme::Mldsa65 => Self::MlDsa65(Box::new(
+                sui_sdk_types::MlDsa65PublicKey::from_bytes(value.public_key()).map_err(|e| {
                     TryFromProtoError::invalid(MultisigMemberPublicKey::PUBLIC_KEY_FIELD, e)
                 })?,
             )),
@@ -765,6 +791,10 @@ impl From<&sui_sdk_types::MultisigMemberSignature> for MultisigMemberSignature {
                 message.passkey = Some(p.clone().into());
                 SignatureScheme::Passkey
             }
+            MlDsa65(signature) => {
+                message.signature = Some(signature.as_bytes().to_vec().into());
+                SignatureScheme::Mldsa65
+            }
             _ => return Self::default(),
         };
 
@@ -811,6 +841,11 @@ impl TryFrom<&MultisigMemberSignature> for sui_sdk_types::MultisigMemberSignatur
                     .ok_or_else(|| TryFromProtoError::missing("passkey"))?
                     .try_into()?,
             ),
+            SignatureScheme::Mldsa65 => Self::MlDsa65(Box::new(
+                sui_sdk_types::MlDsa65Signature::from_bytes(value.signature()).map_err(|e| {
+                    TryFromProtoError::invalid(MultisigMemberSignature::SIGNATURE_FIELD, e)
+                })?,
+            )),
             SignatureScheme::Multisig | SignatureScheme::Bls12381 => {
                 return Err(TryFromProtoError::invalid(
                     MultisigMemberSignature::SCHEME_FIELD,

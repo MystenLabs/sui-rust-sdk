@@ -99,6 +99,16 @@ impl MultisigVerifier {
                 crate::passkey::PasskeyVerifier::default().verify(message, passkey_authenticator)
             }
 
+            #[cfg(not(feature = "mldsa65"))]
+            (MultisigMemberPublicKey::MlDsa65(_), MultisigMemberSignature::MlDsa65(_)) => Err(
+                SignatureError::from_source("support for mldsa65 is not enabled"),
+            ),
+            #[cfg(feature = "mldsa65")]
+            (
+                MultisigMemberPublicKey::MlDsa65(public_key),
+                MultisigMemberSignature::MlDsa65(signature),
+            ) => crate::mldsa65::MlDsa65VerifyingKey::new(public_key)?
+                .verify(message, signature.as_ref()),
             _ => Err(SignatureError::from_source(
                 "member and signature scheme do not match",
             )),
@@ -398,6 +408,13 @@ fn multisig_pubkey_and_signature_from_user_signature(
         }) => Ok((
             MultisigMemberPublicKey::Secp256r1(public_key),
             MultisigMemberSignature::Secp256r1(signature),
+        )),
+        UserSignature::Simple(SimpleSignature::MlDsa65 {
+            signature,
+            public_key,
+        }) => Ok((
+            MultisigMemberPublicKey::MlDsa65(public_key),
+            MultisigMemberSignature::MlDsa65(signature),
         )),
 
         #[cfg(not(feature = "zklogin"))]

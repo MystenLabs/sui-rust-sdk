@@ -233,6 +233,23 @@ impl crate::ZkLoginAuthenticator {
     }
 }
 
+impl crate::MlDsa65PublicKey {
+    /// Derive an `Address` from this Public Key
+    ///
+    /// `hash( 0x08 || 1952-byte ml-dsa-65 public key)`
+    pub fn derive_address(&self) -> Address {
+        let mut hasher = Hasher::new();
+        self.write_into_hasher(&mut hasher);
+        let digest = hasher.finalize();
+        Address::new(digest.into_inner())
+    }
+
+    fn write_into_hasher(&self, hasher: &mut Hasher) {
+        hasher.update([self.scheme().to_u8()]);
+        hasher.update(self.inner());
+    }
+}
+
 impl crate::PasskeyPublicKey {
     /// Derive an `Address` from this Passkey Public Key
     ///
@@ -292,6 +309,7 @@ impl crate::MultisigCommittee {
                 Secp256r1(p) => p.write_into_hasher(&mut hasher),
                 ZkLogin(p) => p.write_into_hasher_padded(&mut hasher),
                 Passkey(p) => p.write_into_hasher(&mut hasher),
+                MlDsa65(p) => p.write_into_hasher(&mut hasher),
             }
 
             hasher.update(member.weight().to_le_bytes());
@@ -314,6 +332,7 @@ impl crate::SimpleSignature {
             crate::SimpleSignature::Ed25519 { public_key, .. } => public_key.derive_address(),
             crate::SimpleSignature::Secp256k1 { public_key, .. } => public_key.derive_address(),
             crate::SimpleSignature::Secp256r1 { public_key, .. } => public_key.derive_address(),
+            crate::SimpleSignature::MlDsa65 { public_key, .. } => public_key.derive_address(),
         }
     }
 }

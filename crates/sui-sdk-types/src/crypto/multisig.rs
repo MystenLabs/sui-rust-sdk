@@ -1,5 +1,7 @@
 use super::Ed25519PublicKey;
 use super::Ed25519Signature;
+use super::MlDsa65PublicKey;
+use super::MlDsa65Signature;
 use super::PasskeyAuthenticator;
 use super::PasskeyPublicKey;
 use super::Secp256k1PublicKey;
@@ -55,6 +57,7 @@ pub enum MultisigMemberPublicKey {
     Secp256r1(Secp256r1PublicKey),
     ZkLogin(ZkLoginPublicIdentifier),
     Passkey(PasskeyPublicKey),
+    MlDsa65(Box<MlDsa65PublicKey>),
 }
 
 /// A member in a multisig committee
@@ -359,6 +362,7 @@ pub enum MultisigMemberSignature {
     Secp256r1(Secp256r1Signature),
     ZkLogin(Box<ZkLoginAuthenticator>),
     Passkey(PasskeyAuthenticator),
+    MlDsa65(Box<MlDsa65Signature>),
 }
 
 #[cfg(feature = "serde")]
@@ -417,6 +421,9 @@ mod serialization {
                 )),
                 MultisigMemberPublicKey::Passkey(_) => Err(serde::ser::Error::custom(
                     "passkey not supported in legacy multisig",
+                )),
+                MultisigMemberPublicKey::MlDsa65(_) => Err(serde::ser::Error::custom(
+                    "mldsa65 not supported in legacy multisig",
                 )),
             }
         }
@@ -635,6 +642,11 @@ mod serialization {
                                     "passkey member is not representable in legacy multisig",
                                 ));
                             }
+                            MultisigMemberPublicKey::MlDsa65(_) => {
+                                return Err(serde::de::Error::custom(
+                                    "mldsa65 member is not representable in legacy multisig",
+                                ));
+                            }
                             MultisigMemberPublicKey::Ed25519(_)
                             | MultisigMemberPublicKey::Secp256k1(_)
                             | MultisigMemberPublicKey::Secp256r1(_) => {}
@@ -725,6 +737,10 @@ mod serialization {
         }
     }
 
+    /// Variant indices must match Sui's `PublicKey` enum, which validators
+    /// hash to derive the committee address. Index 5 is reserved for zkLogin
+    /// v2 so ML-DSA-65 stays at 6 on both sides. `MemberSignature` does not
+    /// shift: zkLogin v2 reuses the v1 `CompressedSignature`.
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
     enum MemberPublicKey {
         Ed25519(Ed25519PublicKey),
@@ -732,6 +748,8 @@ mod serialization {
         Secp256r1(Secp256r1PublicKey),
         ZkLogin(ZkLoginPublicIdentifier),
         Passkey(PasskeyPublicKey),
+        ZkLoginV2(ZkLoginPublicIdentifier),
+        MlDsa65(Box<MlDsa65PublicKey>),
     }
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
@@ -743,6 +761,7 @@ mod serialization {
         Secp256r1 { public_key: Secp256r1PublicKey },
         ZkLogin(ZkLoginPublicIdentifier),
         Passkey { public_key: PasskeyPublicKey },
+        MlDsa65 { public_key: Box<MlDsa65PublicKey> },
     }
 
     impl Serialize for MultisigMemberPublicKey {
@@ -775,6 +794,11 @@ mod serialization {
                             public_key: *public_key,
                         }
                     }
+                    MultisigMemberPublicKey::MlDsa65(public_key) => {
+                        ReadableMemberPublicKey::MlDsa65 {
+                            public_key: public_key.clone(),
+                        }
+                    }
                 };
                 readable.serialize(serializer)
             } else {
@@ -793,6 +817,9 @@ mod serialization {
                     }
                     MultisigMemberPublicKey::Passkey(public_key) => {
                         MemberPublicKey::Passkey(*public_key)
+                    }
+                    MultisigMemberPublicKey::MlDsa65(public_key) => {
+                        MemberPublicKey::MlDsa65(public_key.clone())
                     }
                 };
                 binary.serialize(serializer)
@@ -817,6 +844,7 @@ mod serialization {
                     }
                     ReadableMemberPublicKey::ZkLogin(public_id) => Self::ZkLogin(public_id),
                     ReadableMemberPublicKey::Passkey { public_key } => Self::Passkey(public_key),
+                    ReadableMemberPublicKey::MlDsa65 { public_key } => Self::MlDsa65(public_key),
                 })
             } else {
                 let binary = MemberPublicKey::deserialize(deserializer)?;
@@ -826,6 +854,12 @@ mod serialization {
                     MemberPublicKey::Secp256r1(public_key) => Self::Secp256r1(public_key),
                     MemberPublicKey::ZkLogin(public_id) => Self::ZkLogin(public_id),
                     MemberPublicKey::Passkey(public_key) => Self::Passkey(public_key),
+                    MemberPublicKey::ZkLoginV2(_) => {
+                        return Err(serde::de::Error::custom(
+                            "zklogin v2 multisig members are not supported",
+                        ));
+                    }
+                    MemberPublicKey::MlDsa65(public_key) => Self::MlDsa65(public_key),
                 })
             }
         }
@@ -838,6 +872,7 @@ mod serialization {
         Secp256r1(Secp256r1Signature),
         ZkLogin(Box<ZkLoginAuthenticator>),
         Passkey(PasskeyAuthenticator),
+        MlDsa65(Box<MlDsa65Signature>),
     }
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
@@ -849,6 +884,7 @@ mod serialization {
         Secp256r1 { signature: Secp256r1Signature },
         ZkLogin(Box<ZkLoginAuthenticator>),
         Passkey(PasskeyAuthenticator),
+        MlDsa65 { signature: Box<MlDsa65Signature> },
     }
 
     impl Serialize for MultisigMemberSignature {
@@ -879,6 +915,11 @@ mod serialization {
                     MultisigMemberSignature::Passkey(authenticator) => {
                         ReadableMemberSignature::Passkey(authenticator.clone())
                     }
+                    MultisigMemberSignature::MlDsa65(signature) => {
+                        ReadableMemberSignature::MlDsa65 {
+                            signature: signature.clone(),
+                        }
+                    }
                 };
                 readable.serialize(serializer)
             } else {
@@ -897,6 +938,9 @@ mod serialization {
                     }
                     MultisigMemberSignature::Passkey(authenticator) => {
                         MemberSignature::Passkey(authenticator.clone())
+                    }
+                    MultisigMemberSignature::MlDsa65(signature) => {
+                        MemberSignature::MlDsa65(signature.clone())
                     }
                 };
                 binary.serialize(serializer)
@@ -917,6 +961,7 @@ mod serialization {
                     ReadableMemberSignature::Secp256r1 { signature } => Self::Secp256r1(signature),
                     ReadableMemberSignature::ZkLogin(authenticator) => Self::ZkLogin(authenticator),
                     ReadableMemberSignature::Passkey(authenticator) => Self::Passkey(authenticator),
+                    ReadableMemberSignature::MlDsa65 { signature } => Self::MlDsa65(signature),
                 })
             } else {
                 let binary = MemberSignature::deserialize(deserializer)?;
@@ -926,6 +971,7 @@ mod serialization {
                     MemberSignature::Secp256r1(signature) => Self::Secp256r1(signature),
                     MemberSignature::ZkLogin(authenticator) => Self::ZkLogin(authenticator),
                     MemberSignature::Passkey(authenticator) => Self::Passkey(authenticator),
+                    MemberSignature::MlDsa65(signature) => Self::MlDsa65(signature),
                 })
             }
         }

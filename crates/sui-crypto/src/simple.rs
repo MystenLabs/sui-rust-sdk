@@ -45,6 +45,18 @@ impl Verifier<SimpleSignature> for SimpleVerifier {
             SimpleSignature::Secp256r1 { .. } => Err(SignatureError::from_source(
                 "support for secp256r1 is not enabled",
             )),
+            #[cfg(feature = "mldsa65")]
+            SimpleSignature::MlDsa65 {
+                signature,
+                public_key,
+            } => {
+                let verifying_key = crate::mldsa65::MlDsa65VerifyingKey::new(public_key)?;
+                verifying_key.verify(message, signature.as_ref())
+            }
+            #[cfg(not(feature = "mldsa65"))]
+            SimpleSignature::MlDsa65 { .. } => Err(SignatureError::from_source(
+                "support for mldsa65 is not enabled",
+            )),
             _ => Err(SignatureError::from_source("unknown signature scheme")),
         }
     }
@@ -60,18 +72,38 @@ impl Verifier<UserSignature> for SimpleVerifier {
     }
 }
 
-#[cfg(any(feature = "ed25519", feature = "secp256r1", feature = "secp256k1",))]
+#[cfg(any(
+    feature = "ed25519",
+    feature = "secp256r1",
+    feature = "secp256k1",
+    feature = "mldsa65",
+))]
 #[cfg_attr(
     doc_cfg,
-    doc(cfg(any(feature = "ed25519", feature = "secp256r1", feature = "secp256k1",)))
+    doc(cfg(any(
+        feature = "ed25519",
+        feature = "secp256r1",
+        feature = "secp256k1",
+        feature = "mldsa65",
+    )))
 )]
 #[rustfmt::skip]
 pub use keypair::{SimpleKeypair, SimpleVerifiyingKey};
 
-#[cfg(any(feature = "ed25519", feature = "secp256r1", feature = "secp256k1",))]
+#[cfg(any(
+    feature = "ed25519",
+    feature = "secp256r1",
+    feature = "secp256k1",
+    feature = "mldsa65",
+))]
 #[cfg_attr(
     doc_cfg,
-    doc(cfg(any(feature = "ed25519", feature = "secp256r1", feature = "secp256k1",)))
+    doc(cfg(any(
+        feature = "ed25519",
+        feature = "secp256r1",
+        feature = "secp256k1",
+        feature = "mldsa65",
+    )))
 )]
 mod keypair {
     use crate::SignatureError;
@@ -95,6 +127,8 @@ mod keypair {
         Secp256k1(crate::secp256k1::Secp256k1PrivateKey),
         #[cfg(feature = "secp256r1")]
         Secp256r1(crate::secp256r1::Secp256r1PrivateKey),
+        #[cfg(feature = "mldsa65")]
+        MlDsa65(crate::mldsa65::MlDsa65PrivateKey),
     }
 
     impl SimpleKeypair {
@@ -106,6 +140,8 @@ mod keypair {
                 InnerKeypair::Secp256k1(private_key) => private_key.scheme(),
                 #[cfg(feature = "secp256r1")]
                 InnerKeypair::Secp256r1(private_key) => private_key.scheme(),
+                #[cfg(feature = "mldsa65")]
+                InnerKeypair::MlDsa65(private_key) => private_key.scheme(),
             }
         }
 
@@ -122,6 +158,10 @@ mod keypair {
                 #[cfg(feature = "secp256r1")]
                 InnerKeypair::Secp256r1(private_key) => {
                     InnerVerifyingKey::Secp256r1(private_key.verifying_key())
+                }
+                #[cfg(feature = "mldsa65")]
+                InnerKeypair::MlDsa65(private_key) => {
+                    InnerVerifyingKey::MlDsa65(private_key.verifying_key())
                 }
             };
 
@@ -191,6 +231,10 @@ mod keypair {
                 InnerKeypair::Secp256k1(private_key) => private_key.to_der(),
                 #[cfg(feature = "secp256r1")]
                 InnerKeypair::Secp256r1(private_key) => private_key.to_der(),
+                #[cfg(feature = "mldsa65")]
+                InnerKeypair::MlDsa65(_) => Err(SignatureError::from_source(
+                    "pem encoding is not supported for mldsa65",
+                )),
             }
         }
 
@@ -218,13 +262,17 @@ mod keypair {
                 InnerKeypair::Secp256k1(private_key) => private_key.to_pem(),
                 #[cfg(feature = "secp256r1")]
                 InnerKeypair::Secp256r1(private_key) => private_key.to_pem(),
+                #[cfg(feature = "mldsa65")]
+                InnerKeypair::MlDsa65(_) => Err(SignatureError::from_source(
+                    "pem encoding is not supported for mldsa65",
+                )),
             }
         }
 
         /// Build a keypair from the scheme flag and key bytes of a decoded
         /// `flag || private_key` payload.
         ///
-        /// Only the simple schemes (Ed25519, Secp256k1, Secp256r1) are
+        /// Only the simple schemes (Ed25519, Secp256k1, Secp256r1, ML-DSA-65) are
         /// accepted, matching the upstream `sui-types` parser.
         fn from_flagged_key_bytes(
             scheme: SignatureScheme,
@@ -261,6 +309,16 @@ mod keypair {
                         })?;
                     InnerKeypair::Secp256r1(crate::secp256r1::Secp256r1PrivateKey::new(bytes))
                 }
+                #[cfg(feature = "mldsa65")]
+                SignatureScheme::MlDsa65 => {
+                    let bytes: [u8; crate::mldsa65::MlDsa65PrivateKey::LENGTH] =
+                        key.try_into().map_err(|_: Vec<u8>| {
+                            SignatureError::from_source(
+                                "private key has invalid length for mldsa65",
+                            )
+                        })?;
+                    InnerKeypair::MlDsa65(crate::mldsa65::MlDsa65PrivateKey::new(bytes))
+                }
                 other => {
                     return Err(SignatureError::from_source(format!(
                         "unsupported scheme `{}` in private key encoding",
@@ -294,6 +352,8 @@ mod keypair {
                 InnerKeypair::Secp256k1(private_key) => private_key.to_suiprivkey(),
                 #[cfg(feature = "secp256r1")]
                 InnerKeypair::Secp256r1(private_key) => private_key.to_suiprivkey(),
+                #[cfg(feature = "mldsa65")]
+                InnerKeypair::MlDsa65(private_key) => private_key.to_suiprivkey(),
             }
         }
 
@@ -319,11 +379,21 @@ mod keypair {
                 InnerKeypair::Secp256k1(private_key) => private_key.to_base64(),
                 #[cfg(feature = "secp256r1")]
                 InnerKeypair::Secp256r1(private_key) => private_key.to_base64(),
+                #[cfg(feature = "mldsa65")]
+                InnerKeypair::MlDsa65(private_key) => private_key.to_base64(),
             }
         }
     }
 
     impl Signer<SimpleSignature> for SimpleKeypair {
+        /// Returns an error for ML-DSA-65: it needs per-signature randomness,
+        /// so sign through [`signature::RandomizedSigner`]. Checked at run time
+        /// since `SimpleKeypair` erases the scheme.
+        // Only ML-DSA-65 compiled in: no arm reads `message`.
+        #[cfg_attr(
+            not(any(feature = "ed25519", feature = "secp256k1", feature = "secp256r1")),
+            allow(unused_variables)
+        )]
         fn try_sign(&self, message: &[u8]) -> Result<SimpleSignature, SignatureError> {
             match &self.inner {
                 #[cfg(feature = "ed25519")]
@@ -332,7 +402,51 @@ mod keypair {
                 InnerKeypair::Secp256k1(private_key) => private_key.try_sign(message),
                 #[cfg(feature = "secp256r1")]
                 InnerKeypair::Secp256r1(private_key) => private_key.try_sign(message),
+                #[cfg(feature = "mldsa65")]
+                InnerKeypair::MlDsa65(_) => Err(SignatureError::from_source(
+                    "mldsa65 signing requires randomness; sign with RandomizedSigner",
+                )),
             }
+        }
+    }
+
+    /// Signs with any scheme; the deterministic ones ignore `rng`. Use this
+    /// when the scheme is only known at run time, e.g. a key loaded from
+    /// `suiprivkey`.
+    #[cfg(feature = "mldsa65")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "mldsa65")))]
+    impl signature::RandomizedSigner<SimpleSignature> for SimpleKeypair {
+        fn try_sign_with_rng(
+            &self,
+            rng: &mut impl rand_core::CryptoRngCore,
+            message: &[u8],
+        ) -> Result<SimpleSignature, SignatureError> {
+            match &self.inner {
+                #[cfg(feature = "ed25519")]
+                InnerKeypair::Ed25519(private_key) => private_key.try_sign(message),
+                #[cfg(feature = "secp256k1")]
+                InnerKeypair::Secp256k1(private_key) => private_key.try_sign(message),
+                #[cfg(feature = "secp256r1")]
+                InnerKeypair::Secp256r1(private_key) => private_key.try_sign(message),
+                InnerKeypair::MlDsa65(private_key) => {
+                    signature::RandomizedSigner::try_sign_with_rng(private_key, rng, message)
+                }
+            }
+        }
+    }
+
+    #[cfg(feature = "mldsa65")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "mldsa65")))]
+    impl signature::RandomizedSigner<UserSignature> for SimpleKeypair {
+        fn try_sign_with_rng(
+            &self,
+            rng: &mut impl rand_core::CryptoRngCore,
+            msg: &[u8],
+        ) -> Result<UserSignature, SignatureError> {
+            <Self as signature::RandomizedSigner<SimpleSignature>>::try_sign_with_rng(
+                self, rng, msg,
+            )
+            .map(UserSignature::Simple)
         }
     }
 
@@ -372,6 +486,16 @@ mod keypair {
         }
     }
 
+    #[cfg(feature = "mldsa65")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "mldsa65")))]
+    impl From<crate::mldsa65::MlDsa65PrivateKey> for SimpleKeypair {
+        fn from(private_key: crate::mldsa65::MlDsa65PrivateKey) -> Self {
+            Self {
+                inner: InnerKeypair::MlDsa65(private_key),
+            }
+        }
+    }
+
     #[derive(Debug, Clone, Eq, PartialEq)]
     pub struct SimpleVerifiyingKey {
         inner: InnerVerifyingKey,
@@ -385,6 +509,8 @@ mod keypair {
         Secp256k1(crate::secp256k1::Secp256k1VerifyingKey),
         #[cfg(feature = "secp256r1")]
         Secp256r1(crate::secp256r1::Secp256r1VerifyingKey),
+        #[cfg(feature = "mldsa65")]
+        MlDsa65(crate::mldsa65::MlDsa65VerifyingKey),
     }
 
     impl SimpleVerifiyingKey {
@@ -396,6 +522,8 @@ mod keypair {
                 InnerVerifyingKey::Secp256k1(verifying_key) => verifying_key.public_key().scheme(),
                 #[cfg(feature = "secp256r1")]
                 InnerVerifyingKey::Secp256r1(verifying_key) => verifying_key.public_key().scheme(),
+                #[cfg(feature = "mldsa65")]
+                InnerVerifyingKey::MlDsa65(verifying_key) => verifying_key.public_key().scheme(),
             }
         }
 
@@ -413,6 +541,10 @@ mod keypair {
                 InnerVerifyingKey::Secp256r1(verifying_key) => {
                     MultisigMemberPublicKey::Secp256r1(verifying_key.public_key())
                 }
+                #[cfg(feature = "mldsa65")]
+                InnerVerifyingKey::MlDsa65(verifying_key) => {
+                    MultisigMemberPublicKey::MlDsa65(Box::new(verifying_key.public_key()))
+                }
             }
         }
 
@@ -429,6 +561,10 @@ mod keypair {
                 }
                 #[cfg(feature = "secp256r1")]
                 InnerVerifyingKey::Secp256r1(verifying_key) => {
+                    verifying_key.public_key().derive_address()
+                }
+                #[cfg(feature = "mldsa65")]
+                InnerVerifyingKey::MlDsa65(verifying_key) => {
                     verifying_key.public_key().derive_address()
                 }
             }
@@ -491,6 +627,10 @@ mod keypair {
                 InnerVerifyingKey::Secp256k1(verifying_key) => verifying_key.to_der(),
                 #[cfg(feature = "secp256r1")]
                 InnerVerifyingKey::Secp256r1(verifying_key) => verifying_key.to_der(),
+                #[cfg(feature = "mldsa65")]
+                InnerVerifyingKey::MlDsa65(_) => Err(SignatureError::from_source(
+                    "pem encoding is not supported for mldsa65",
+                )),
             }
         }
 
@@ -517,6 +657,10 @@ mod keypair {
                 InnerVerifyingKey::Secp256k1(verifying_key) => verifying_key.to_pem(),
                 #[cfg(feature = "secp256r1")]
                 InnerVerifyingKey::Secp256r1(verifying_key) => verifying_key.to_pem(),
+                #[cfg(feature = "mldsa65")]
+                InnerVerifyingKey::MlDsa65(_) => Err(SignatureError::from_source(
+                    "pem encoding is not supported for mldsa65",
+                )),
             }
         }
     }
@@ -538,6 +682,10 @@ mod keypair {
                 }
                 #[cfg(feature = "secp256r1")]
                 InnerVerifyingKey::Secp256r1(verifying_key) => {
+                    verifying_key.verify(message, signature)
+                }
+                #[cfg(feature = "mldsa65")]
+                InnerVerifyingKey::MlDsa65(verifying_key) => {
                     verifying_key.verify(message, signature)
                 }
             }
@@ -580,6 +728,16 @@ mod keypair {
         fn from(verifying_key: crate::secp256k1::Secp256k1VerifyingKey) -> Self {
             Self {
                 inner: InnerVerifyingKey::Secp256k1(verifying_key),
+            }
+        }
+    }
+
+    #[cfg(feature = "mldsa65")]
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "mldsa65")))]
+    impl From<crate::mldsa65::MlDsa65VerifyingKey> for SimpleVerifiyingKey {
+        fn from(verifying_key: crate::mldsa65::MlDsa65VerifyingKey) -> Self {
+            Self {
+                inner: InnerVerifyingKey::MlDsa65(verifying_key),
             }
         }
     }

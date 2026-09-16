@@ -1,5 +1,7 @@
 use super::Ed25519PublicKey;
 use super::Ed25519Signature;
+use super::MlDsa65PublicKey;
+use super::MlDsa65Signature;
 use super::MultisigAggregatedSignature;
 use super::PasskeyAuthenticator;
 use super::Secp256k1PublicKey;
@@ -21,7 +23,8 @@ use super::ZkLoginAuthenticator;
 /// simple-signature-bcs = bytes ; where the contents of the bytes are defined by <simple-signature>
 /// simple-signature = (ed25519-flag ed25519-signature ed25519-public-key) /
 ///                    (secp256k1-flag secp256k1-signature secp256k1-public-key) /
-///                    (secp256r1-flag secp256r1-signature secp256r1-public-key)
+///                    (secp256r1-flag secp256r1-signature secp256r1-public-key) /
+///                    (mldsa65-flag mldsa65-signature mldsa65-public-key)
 /// ```
 ///
 /// Note: Due to historical reasons, signatures are serialized slightly different from the majority
@@ -44,6 +47,11 @@ pub enum SimpleSignature {
         signature: Secp256r1Signature,
         public_key: Secp256r1PublicKey,
     },
+    // Boxed: 5,261 bytes would otherwise size every enum carrying a signature.
+    MlDsa65 {
+        signature: Box<MlDsa65Signature>,
+        public_key: Box<MlDsa65PublicKey>,
+    },
 }
 
 impl SimpleSignature {
@@ -53,6 +61,7 @@ impl SimpleSignature {
             SimpleSignature::Ed25519 { .. } => SignatureScheme::Ed25519,
             SimpleSignature::Secp256k1 { .. } => SignatureScheme::Secp256k1,
             SimpleSignature::Secp256r1 { .. } => SignatureScheme::Secp256r1,
+            SimpleSignature::MlDsa65 { .. } => SignatureScheme::MlDsa65,
         }
     }
 }
@@ -86,6 +95,14 @@ impl SimpleSignature {
                 buf.push(SignatureScheme::Secp256r1 as u8);
                 buf.extend_from_slice(signature.as_ref());
                 buf.extend_from_slice(public_key.as_ref());
+            }
+            SimpleSignature::MlDsa65 {
+                signature,
+                public_key,
+            } => {
+                buf.push(SignatureScheme::MlDsa65 as u8);
+                buf.extend_from_slice(signature.as_bytes());
+                buf.extend_from_slice(public_key.as_bytes());
             }
         }
 
@@ -157,11 +174,26 @@ impl SimpleSignature {
                     public_key: Secp256r1PublicKey::new(public_key),
                 })
             }
+            SignatureScheme::MlDsa65 => {
+                let expected_length = 1 + MlDsa65Signature::LENGTH + MlDsa65PublicKey::LENGTH;
+                if bytes.len() != expected_length {
+                    return Err(serde::de::Error::custom("invalid mldsa65 signature"));
+                }
+                let signature =
+                    MlDsa65Signature::from_bytes(&bytes[1..(1 + MlDsa65Signature::LENGTH)])
+                        .map_err(serde::de::Error::custom)?;
+                let public_key =
+                    MlDsa65PublicKey::from_bytes(&bytes[(1 + MlDsa65Signature::LENGTH)..])
+                        .map_err(serde::de::Error::custom)?;
+                Ok(SimpleSignature::MlDsa65 {
+                    signature: Box::new(signature),
+                    public_key: Box::new(public_key),
+                })
+            }
             SignatureScheme::Multisig
             | SignatureScheme::Bls12381
             | SignatureScheme::ZkLogin
-            | SignatureScheme::Passkey
-            | SignatureScheme::MlDsa65 => Err(serde::de::Error::custom("invalid signature scheme")),
+            | SignatureScheme::Passkey => Err(serde::de::Error::custom("invalid signature scheme")),
         }
     }
 }
@@ -189,6 +221,10 @@ impl serde::Serialize for SimpleSignature {
                 signature: &'a Secp256r1Signature,
                 public_key: &'a Secp256r1PublicKey,
             },
+            MlDsa65 {
+                signature: &'a MlDsa65Signature,
+                public_key: &'a MlDsa65PublicKey,
+            },
         }
 
         if serializer.is_human_readable() {
@@ -211,6 +247,13 @@ impl serde::Serialize for SimpleSignature {
                     signature,
                     public_key,
                 } => Sig::Secp256r1 {
+                    signature,
+                    public_key,
+                },
+                SimpleSignature::MlDsa65 {
+                    signature,
+                    public_key,
+                } => Sig::MlDsa65 {
                     signature,
                     public_key,
                 },
@@ -252,6 +295,7 @@ impl serde::Serialize for SimpleSignature {
 
                     serializer.serialize_bytes(&buf)
                 }
+                SimpleSignature::MlDsa65 { .. } => serializer.serialize_bytes(&self.to_bytes()),
             }
         }
     }
@@ -280,6 +324,10 @@ impl<'de> serde::Deserialize<'de> for SimpleSignature {
                 signature: Secp256r1Signature,
                 public_key: Secp256r1PublicKey,
             },
+            MlDsa65 {
+                signature: Box<MlDsa65Signature>,
+                public_key: Box<MlDsa65PublicKey>,
+            },
         }
 
         if deserializer.is_human_readable() {
@@ -303,6 +351,13 @@ impl<'de> serde::Deserialize<'de> for SimpleSignature {
                     signature,
                     public_key,
                 } => SimpleSignature::Secp256r1 {
+                    signature,
+                    public_key,
+                },
+                Sig::MlDsa65 {
+                    signature,
+                    public_key,
+                } => SimpleSignature::MlDsa65 {
                     signature,
                     public_key,
                 },
@@ -331,7 +386,7 @@ impl<'de> serde::Deserialize<'de> for SimpleSignature {
 /// bls-flag         = %x04
 /// zklogin-flag     = %x05
 /// passkey-flag     = %x06
-/// mldsa65-flag     = %x07
+/// mldsa65-flag     = %x08
 /// ```
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
@@ -345,7 +400,7 @@ pub enum SignatureScheme {
     Bls12381 = 0x04, // This is currently not supported for user addresses
     ZkLogin = 0x05,
     Passkey = 0x06,
-    MlDsa65 = 0x07,
+    MlDsa65 = 0x08,
 }
 
 impl SignatureScheme {
@@ -373,7 +428,7 @@ impl SignatureScheme {
             0x04 => Ok(Self::Bls12381),
             0x05 => Ok(Self::ZkLogin),
             0x06 => Ok(Self::Passkey),
-            0x07 => Ok(Self::MlDsa65),
+            0x08 => Ok(Self::MlDsa65),
             invalid => Err(InvalidSignatureScheme(invalid)),
         }
     }
@@ -402,6 +457,13 @@ impl Secp256r1PublicKey {
     /// Return the flag for this signature scheme
     pub fn scheme(&self) -> SignatureScheme {
         SignatureScheme::Secp256r1
+    }
+}
+
+impl MlDsa65PublicKey {
+    /// Return the flag for this signature scheme
+    pub fn scheme(&self) -> SignatureScheme {
+        SignatureScheme::MlDsa65
     }
 }
 
@@ -501,7 +563,8 @@ mod serialization {
             match flag {
                 SignatureScheme::Ed25519
                 | SignatureScheme::Secp256k1
-                | SignatureScheme::Secp256r1 => {
+                | SignatureScheme::Secp256r1
+                | SignatureScheme::MlDsa65 => {
                     let simple = SimpleSignature::from_serialized_bytes(bytes)?;
                     Ok(Self::Simple(simple))
                 }
@@ -520,9 +583,6 @@ mod serialization {
                     let passkey = PasskeyAuthenticator::from_serialized_bytes(bytes)?;
                     Ok(Self::Passkey(passkey))
                 }
-                SignatureScheme::MlDsa65 => Err(serde::de::Error::custom(
-                    "mldsa65 not yet supported for user signatures",
-                )),
             }
         }
 
@@ -554,6 +614,10 @@ mod serialization {
             signature: &'a Secp256r1Signature,
             public_key: &'a Secp256r1PublicKey,
         },
+        MlDsa65 {
+            signature: &'a MlDsa65Signature,
+            public_key: &'a MlDsa65PublicKey,
+        },
         Multisig(&'a MultisigAggregatedSignature),
         ZkLogin(&'a ZkLoginAuthenticator),
         Passkey(&'a PasskeyAuthenticator),
@@ -574,6 +638,10 @@ mod serialization {
         Secp256r1 {
             signature: Secp256r1Signature,
             public_key: Secp256r1PublicKey,
+        },
+        MlDsa65 {
+            signature: Box<MlDsa65Signature>,
+            public_key: Box<MlDsa65PublicKey>,
         },
         Multisig(MultisigAggregatedSignature),
         ZkLogin(Box<ZkLoginAuthenticator>),
@@ -613,6 +681,13 @@ mod serialization {
                     }
                     UserSignature::ZkLogin(zklogin) => ReadableUserSignatureRef::ZkLogin(zklogin),
                     UserSignature::Passkey(passkey) => ReadableUserSignatureRef::Passkey(passkey),
+                    UserSignature::Simple(SimpleSignature::MlDsa65 {
+                        signature,
+                        public_key,
+                    }) => ReadableUserSignatureRef::MlDsa65 {
+                        signature,
+                        public_key,
+                    },
                 };
                 readable.serialize(serializer)
             } else {
@@ -670,6 +745,13 @@ mod serialization {
                         ReadableUserSignature::Multisig(multisig) => Self::Multisig(multisig),
                         ReadableUserSignature::ZkLogin(zklogin) => Self::ZkLogin(zklogin),
                         ReadableUserSignature::Passkey(passkey) => Self::Passkey(passkey),
+                        ReadableUserSignature::MlDsa65 {
+                            signature,
+                            public_key,
+                        } => Self::Simple(SimpleSignature::MlDsa65 {
+                            signature,
+                            public_key,
+                        }),
                     }),
                 }
             } else {
@@ -698,17 +780,32 @@ mod serialization {
         }
 
         #[test]
-        fn mldsa65_flag_recognized_but_not_yet_parsed() {
+        fn mldsa65_fixture() {
+            // Signed by Sui's signer over personal message "hello", seed
+            // [2; 32]; the address is Sui's golden for that seed.
+            const SIGNATURE: &str = include_str!("fixtures/mldsa65-personal-message-signature");
+            let signature = UserSignature::from_base64(SIGNATURE.trim()).unwrap();
+            let UserSignature::Simple(simple @ SimpleSignature::MlDsa65 { .. }) = &signature else {
+                panic!("expected an ML-DSA-65 simple signature: {signature:?}");
+            };
+            assert_eq!(simple.scheme(), SignatureScheme::MlDsa65);
             assert_eq!(
-                Ok(SignatureScheme::MlDsa65),
-                SignatureScheme::from_byte(0x07)
+                simple.derive_address().to_string(),
+                "0x687afa13b5510548e8ab9c57b34544c8ade5507559cfb944db0453fae2a68d4c"
             );
-            assert_eq!(SignatureScheme::MlDsa65.name(), "mldsa65");
+            assert_eq!(signature.to_base64(), SIGNATURE.trim());
 
-            // 0x07 || payload: the scheme is recognized, the rejection explicit.
-            let bytes = [&[0x07][..], &[0u8; 64][..]].concat();
-            let err = UserSignature::from_bytes(&bytes).unwrap_err();
-            assert!(err.to_string().contains("mldsa65 not yet supported"));
+            let json = serde_json::to_string(&signature).unwrap();
+            assert_eq!(signature, serde_json::from_str(&json).unwrap());
+            let bcs = bcs::to_bytes(&signature).unwrap();
+            assert_eq!(signature, bcs::from_bytes(&bcs).unwrap());
+
+            // Truncated or over-long envelopes are rejected.
+            let bytes = signature.to_bytes();
+            assert!(UserSignature::from_bytes(&bytes[..bytes.len() - 1]).is_err());
+            let mut long = bytes.clone();
+            long.push(0);
+            assert!(UserSignature::from_bytes(&long).is_err());
         }
 
         #[test]
