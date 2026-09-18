@@ -1,3 +1,15 @@
+/// SDK implementation sending the request.
+pub const CLIENT_SDK_TYPE: &str = "client-sdk-type";
+
+/// Version of the SDK sending the request.
+pub const CLIENT_SDK_VERSION: &str = "client-sdk-version";
+
+/// Date of the newest Sui RPC schema understood by the client.
+pub const CLIENT_RPC_SCHEMA_DATE: &str = "client-rpc-schema-date";
+
+/// Date of the vendored Sui RPC schema used to generate this crate.
+pub const RPC_SCHEMA_DATE: &str = "2026-09-04";
+
 /// Chain ID of the current chain
 pub const X_SUI_CHAIN_ID: &str = "x-sui-chain-id";
 

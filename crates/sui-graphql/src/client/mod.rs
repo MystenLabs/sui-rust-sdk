@@ -22,7 +22,12 @@ use crate::response::Response;
 
 /// Header the server reads into its `client_sdk_type` metric label. `rust` must stay in the
 /// server's SDK-type allowlist to be tracked verbatim.
-const CLIENT_SDK_TYPE_HEADER: HeaderName = HeaderName::from_static("client-sdk-type");
+const CLIENT_SDK_TYPE_HEADER: HeaderName =
+    HeaderName::from_static(sui_rpc::headers::CLIENT_SDK_TYPE);
+const CLIENT_SDK_VERSION_HEADER: HeaderName =
+    HeaderName::from_static(sui_rpc::headers::CLIENT_SDK_VERSION);
+const CLIENT_RPC_SCHEMA_DATE_HEADER: HeaderName =
+    HeaderName::from_static(sui_rpc::headers::CLIENT_RPC_SCHEMA_DATE);
 
 /// GraphQL client for Sui blockchain.
 #[derive(Clone, Debug)]
@@ -210,6 +215,14 @@ impl Client {
 
         let mut headers = self.headers.clone();
         headers.insert(CLIENT_SDK_TYPE_HEADER, HeaderValue::from_static("rust"));
+        headers.insert(
+            CLIENT_SDK_VERSION_HEADER,
+            HeaderValue::from_static(env!("CARGO_PKG_VERSION")),
+        );
+        headers.insert(
+            CLIENT_RPC_SCHEMA_DATE_HEADER,
+            HeaderValue::from_static(sui_rpc::headers::RPC_SCHEMA_DATE),
+        );
 
         let req = self
             .http
@@ -364,19 +377,28 @@ mod tests {
 
     #[tokio::test]
     async fn sdk_headers_forced_on_every_request() {
-        // Even a bare client must advertise its SDK type, and a caller attempting to override it
-        // must lose: the SDK forces its own value so server-side metrics attribute traffic to
-        // this crate.
+        // Even a bare client must advertise its identity and schema date. A caller attempting to
+        // override them must lose so server-side feature gates see the actual client capabilities.
         let server = MockServer::start().await;
         let mut spoofed = HeaderMap::new();
         spoofed.insert(
             CLIENT_SDK_TYPE_HEADER,
             HeaderValue::from_static("typescript"),
         );
+        spoofed.insert(CLIENT_SDK_VERSION_HEADER, HeaderValue::from_static("0.0.0"));
+        spoofed.insert(
+            CLIENT_RPC_SCHEMA_DATE_HEADER,
+            HeaderValue::from_static("1970-01-01"),
+        );
 
         Mock::given(method("POST"))
             .and(path("/"))
             .and(header("client-sdk-type", "rust"))
+            .and(header("client-sdk-version", env!("CARGO_PKG_VERSION")))
+            .and(header(
+                "client-rpc-schema-date",
+                sui_rpc::headers::RPC_SCHEMA_DATE,
+            ))
             .respond_with(ResponseTemplate::new(200).set_body_json(ok_body()))
             .expect(1)
             .mount(&server)

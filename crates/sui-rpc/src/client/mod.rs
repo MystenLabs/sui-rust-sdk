@@ -206,6 +206,27 @@ struct ClientConfig {
     request_layer: Option<RequestLayer>,
 }
 
+fn insert_sdk_headers(headers: &mut HeadersInterceptor) {
+    headers.headers_mut().insert(
+        crate::headers::CLIENT_SDK_TYPE,
+        tonic::metadata::MetadataValue::from_static("rust"),
+    );
+    headers.headers_mut().insert(
+        crate::headers::CLIENT_SDK_VERSION,
+        tonic::metadata::MetadataValue::from_static(env!("CARGO_PKG_VERSION")),
+    );
+    headers.headers_mut().insert(
+        crate::headers::CLIENT_RPC_SCHEMA_DATE,
+        tonic::metadata::MetadataValue::from_static(crate::headers::RPC_SCHEMA_DATE),
+    );
+}
+
+fn sdk_headers() -> HeadersInterceptor {
+    let mut headers = HeadersInterceptor::new();
+    insert_sdk_headers(&mut headers);
+    headers
+}
+
 /// Open `num_connections` lazy connections to `endpoint`, all sharing its
 /// configuration, and balance requests across them.
 ///
@@ -274,7 +295,7 @@ impl Client {
             config: Arc::new(ClientConfig {
                 uri,
                 endpoint: endpoint.clone(),
-                headers: Default::default(),
+                headers: sdk_headers(),
                 max_decoding_message_size: None,
                 body_idle_timeout: Some(DEFAULT_BODY_IDLE_TIMEOUT),
                 num_connections: DEFAULT_NUM_CONNECTIONS,
@@ -317,7 +338,7 @@ impl Client {
             config: Arc::new(ClientConfig {
                 uri,
                 endpoint,
-                headers: Default::default(),
+                headers: sdk_headers(),
                 max_decoding_message_size: None,
                 body_idle_timeout: Some(DEFAULT_BODY_IDLE_TIMEOUT),
                 num_connections: DEFAULT_NUM_CONNECTIONS,
@@ -464,6 +485,8 @@ impl Client {
     }
 
     pub fn with_headers(mut self, headers: HeadersInterceptor) -> Self {
+        let mut headers = headers;
+        insert_sdk_headers(&mut headers);
         Arc::make_mut(&mut self.config).headers = headers;
         self
     }
@@ -684,4 +707,43 @@ fn status_from_error(error: BoxError) -> tonic::Status {
         source = err.source();
     }
     tonic::Status::from_error(error)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sdk_headers_are_authoritative() {
+        let mut headers = HeadersInterceptor::new();
+        headers.headers_mut().insert(
+            crate::headers::CLIENT_SDK_TYPE,
+            tonic::metadata::MetadataValue::from_static("typescript"),
+        );
+        headers.headers_mut().insert(
+            crate::headers::CLIENT_RPC_SCHEMA_DATE,
+            tonic::metadata::MetadataValue::from_static("1970-01-01"),
+        );
+
+        insert_sdk_headers(&mut headers);
+
+        assert_eq!(
+            headers.headers().get(crate::headers::CLIENT_SDK_TYPE),
+            Some(&tonic::metadata::MetadataValue::from_static("rust"))
+        );
+        assert_eq!(
+            headers.headers().get(crate::headers::CLIENT_SDK_VERSION),
+            Some(&tonic::metadata::MetadataValue::from_static(env!(
+                "CARGO_PKG_VERSION"
+            )))
+        );
+        assert_eq!(
+            headers
+                .headers()
+                .get(crate::headers::CLIENT_RPC_SCHEMA_DATE),
+            Some(&tonic::metadata::MetadataValue::from_static(
+                crate::headers::RPC_SCHEMA_DATE
+            ))
+        );
+    }
 }
