@@ -3943,9 +3943,9 @@ impl Ability {
 pub struct GetPackageRequest {
     /// Required. The `storage_id` of any version of the requested package.
     ///
-    /// When `version` is not set, the package stored at exactly this id is
-    /// returned. When `version` is set, `package_id` only identifies the
-    /// package's upgrade lineage (via its original id), and the requested
+    /// When no `selector` is set, the package stored at exactly this id is
+    /// returned. When a `selector` is set, `package_id` only identifies the
+    /// package's upgrade lineage (via its original id), and the selected
     /// version within that lineage is returned.
     #[prost(string, optional, tag = "1")]
     pub package_id: ::core::option::Option<::prost::alloc::string::String>,
@@ -3954,8 +3954,11 @@ pub struct GetPackageRequest {
     ///
     /// * `version`: the package with exactly this version.
     /// * `at_checkpoint`: the latest package that existed at or before this
-    ///   checkpoint. Values above the current ledger tip resolve to the latest
-    ///   known version.
+    ///   checkpoint. The checkpoint must be at or below the highest checkpoint
+    ///   the server has indexed; larger values fail with `NOT_FOUND` instead of
+    ///   resolving to the latest known version, so a successful response is
+    ///   exact as of `at_checkpoint`. Servers that prune history may also fail
+    ///   with `NOT_FOUND` for checkpoints below their lowest available one.
     ///
     /// If neither is set, the package stored at `package_id` is returned.
     #[prost(oneof = "get_package_request::Selector", tags = "2, 3")]
@@ -3968,8 +3971,11 @@ pub mod get_package_request {
     ///
     /// * `version`: the package with exactly this version.
     /// * `at_checkpoint`: the latest package that existed at or before this
-    ///   checkpoint. Values above the current ledger tip resolve to the latest
-    ///   known version.
+    ///   checkpoint. The checkpoint must be at or below the highest checkpoint
+    ///   the server has indexed; larger values fail with `NOT_FOUND` instead of
+    ///   resolving to the latest known version, so a successful response is
+    ///   exact as of `at_checkpoint`. Servers that prune history may also fail
+    ///   with `NOT_FOUND` for checkpoints below their lowest available one.
     ///
     /// If neither is set, the package stored at `package_id` is returned.
     #[non_exhaustive]
