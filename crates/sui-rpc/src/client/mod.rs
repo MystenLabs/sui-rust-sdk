@@ -540,6 +540,11 @@ impl Client {
             ServiceBuilder::new()
                 .map_err(|e: tonic::transport::Error| -> BoxError { Box::new(e) })
                 .map_request(move |mut req: http::Request<Body>| {
+                    // Inserted before the configured headers so a caller can override it.
+                    req.headers_mut().insert(
+                        crate::headers::X_SUI_CLIENT_PROTOCOL_VERSION,
+                        http::HeaderValue::from(crate::headers::MAX_PROTOCOL_VERSION),
+                    );
                     if !headers.headers().is_empty() {
                         req.headers_mut()
                             .extend(headers.headers().clone().into_headers());
