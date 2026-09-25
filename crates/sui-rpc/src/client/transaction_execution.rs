@@ -94,6 +94,7 @@ impl Client {
     /// `GetTransaction` using the request's read mask, so it carries the same
     /// fields an execution response would, with `digest`, `checkpoint`, and
     /// `timestamp` always populated.
+    #[allow(clippy::result_large_err)]
     pub async fn execute_transaction_and_wait_for_checkpoint(
         &mut self,
         request: impl tonic::IntoRequest<ExecuteTransactionRequest>,

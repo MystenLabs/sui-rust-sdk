@@ -278,7 +278,7 @@ async fn poll_suppresses_baseline_for_all_families() {
         LedgerStreamFamily::Event,
     ];
     assert_eq!(events.len(), families.len() * 4);
-    for (family_events, family) in events.chunks_exact(4).zip(families) {
+    for (family_events, family) in events.as_chunks::<4>().0.iter().zip(families) {
         assert!(matches!(
             &family_events[0],
             LedgerStreamEvent::RpcResponse {
