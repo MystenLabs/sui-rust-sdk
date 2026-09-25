@@ -33,3 +33,14 @@ pub const X_SUI_TIMESTAMP_MS: &str = "x-sui-timestamp-ms";
 ///
 /// [RFC 3339]: https://www.ietf.org/rfc/rfc3339.txt
 pub const X_SUI_TIMESTAMP: &str = "x-sui-timestamp";
+
+/// Request header carrying the highest protocol version whose types the client can decode.
+///
+/// The server may use it to avoid sending data the client cannot decode.
+pub const X_SUI_CLIENT_PROTOCOL_VERSION: &str = "x-sui-client-protocol-version";
+
+/// Highest Sui protocol version whose on-chain types this SDK can decode, sent as
+/// [`X_SUI_CLIENT_PROTOCOL_VERSION`].
+///
+/// Bump this when the SDK gains support for types introduced in a newer protocol version.
+pub const MAX_PROTOCOL_VERSION: u64 = 138;
