@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["DescriptorGraph","Enum","EnumValue","Field","Message","Method","OneofField","Service"]};
