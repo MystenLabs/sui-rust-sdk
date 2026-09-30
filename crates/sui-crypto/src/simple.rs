@@ -386,10 +386,15 @@ mod keypair {
     }
 
     impl Signer<SimpleSignature> for SimpleKeypair {
-        /// Returns an error for ML-DSA-65: it needs per-signature randomness,
-        /// so sign through [`signature::RandomizedSigner`]. Checked at run time
-        /// since `SimpleKeypair` erases the scheme.
-        // Only ML-DSA-65 compiled in: no arm reads `message`.
+        /// Signs with the underlying classical scheme.
+        ///
+        /// ML-DSA-65 cannot use this interface because signing requires fresh
+        /// per-signature randomness. Since `SimpleKeypair` hides the concrete
+        /// scheme, this is checked at runtime and ML-DSA users must use
+        /// [`signature::RandomizedSigner`] instead.
+        //
+        // When only `mldsa65` is enabled, `message` is unused because the only
+        // match arm returns the error above.
         #[cfg_attr(
             not(any(feature = "ed25519", feature = "secp256k1", feature = "secp256r1")),
             allow(unused_variables)
