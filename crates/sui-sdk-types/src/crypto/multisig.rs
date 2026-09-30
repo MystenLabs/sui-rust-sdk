@@ -737,10 +737,6 @@ mod serialization {
         }
     }
 
-    /// Variant indices must match Sui's `PublicKey` enum, which validators
-    /// hash to derive the committee address. Index 5 is reserved for zkLogin
-    /// v2 so ML-DSA-65 stays at 6 on both sides. `MemberSignature` does not
-    /// shift: zkLogin v2 reuses the v1 `CompressedSignature`.
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
     enum MemberPublicKey {
         Ed25519(Ed25519PublicKey),
