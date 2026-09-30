@@ -22,7 +22,7 @@ rustdoc-args = [
 
 [features]
 default = []
-faucet = ["dep:reqwest"]
+faucet = ["dep:argon2", "dep:reqwest"]
 # Alpha/experimental APIs. Items behind this feature are not covered by
 # the crate's semver guarantees and may change or be removed at any time.
 unstable = ["sui-sdk-types/unstable", "dep:sui-crypto"]
@@ -53,6 +53,7 @@ futures = "0.3"
 tokio = { version = "1.40", features = ["time", "rt", "sync"] }
 tower = { version = "0.5.3", default-features = false, features = ["util"] }
 
+argon2 = { version = "0.5.3", default-features = false, features = ["alloc"], optional = true }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"], optional = true }
 
 [dev-dependencies]
