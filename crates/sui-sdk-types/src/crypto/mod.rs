@@ -1,6 +1,7 @@
 mod bls12381;
 mod ed25519;
 mod intent;
+mod mldsa65;
 mod multisig;
 mod passkey;
 mod secp256k1;
@@ -17,6 +18,8 @@ pub use intent::Intent;
 pub use intent::IntentAppId;
 pub use intent::IntentScope;
 pub use intent::IntentVersion;
+pub use mldsa65::MlDsa65PublicKey;
+pub use mldsa65::MlDsa65Signature;
 pub use multisig::MultisigAggregatedSignature;
 pub use multisig::MultisigCommittee;
 pub use multisig::MultisigMember;
@@ -169,3 +172,17 @@ impl_base64_helper!(Base64Array34, Base64Display34, Base64FromStr34, test34, 34)
 impl_base64_helper!(Base64Array48, Base64Display48, Base64FromStr48, test48, 48);
 impl_base64_helper!(Base64Array64, Base64Display64, Base64FromStr64, test64, 64);
 impl_base64_helper!(Base64Array96, Base64Display96, Base64FromStr96, test96, 96);
+impl_base64_helper!(
+    Base64Array1952,
+    Base64Display1952,
+    Base64FromStr1952,
+    test1952,
+    1952
+);
+impl_base64_helper!(
+    Base64Array3309,
+    Base64Display3309,
+    Base64FromStr3309,
+    test3309,
+    3309
+);

@@ -27,6 +27,12 @@ ed25519 = ["dep:ed25519-dalek", "dep:rand_core"]
 secp256r1 = ["dep:p256", "dep:rand_core"]
 passkey = ["secp256r1", "dep:sha2"]
 secp256k1 = ["dep:k256", "dep:rand_core", "signature/std"]
+mldsa65 = [
+    "dep:mysten-mldsa-native-rs",
+    "dep:rand_core",
+    "signature/std",
+    "signature/rand_core",
+]
 zklogin = [
     "dep:ark-bn254",
     "dep:ark-ff",
@@ -42,6 +48,7 @@ zklogin = [
 ]
 pem = [
     "dep:pkcs8",
+    "pkcs8/pem",
     "dep:pem-rfc7468",
     "ed25519-dalek?/pkcs8",
     "p256?/pkcs8",
@@ -69,6 +76,9 @@ rand_core = { version = "0.6.4", optional = true }
 
 # ed25519 support
 ed25519-dalek = { version = "2.2.0", optional = true }
+
+# ML-DSA-65 support: the same mldsa-native build Sui validators run.
+mysten-mldsa-native-rs = { version = "0.2.0", optional = true }
 
 # secp256r1 support
 p256 = { version = "0.13.2", default-features = false, features = ["ecdsa", "std"], optional = true }
