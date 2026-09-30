@@ -2,7 +2,9 @@ use argon2::Algorithm;
 use argon2::Argon2;
 use argon2::Params;
 use argon2::Version;
+use reqwest::StatusCode;
 use serde::Deserialize;
+use serde::Serialize;
 use serde::de;
 use sui_sdk_types::Address;
 use sui_sdk_types::Digest;
@@ -20,6 +22,15 @@ const POW_HASH_LENGTH: usize = 32;
 const POW_SALT: &[u8] = b"sui-faucet-pow-1";
 const MIN_DIFFICULTY: u64 = 2;
 const MAX_DIFFICULTY: u64 = 1 << 48;
+
+/// Represent a coin sent by a v2 faucet.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct CoinInfo {
+    pub amount: u64,
+    pub id: Address,
+    pub transfer_tx_digest: Digest,
+}
 
 #[derive(Clone)]
 pub struct FaucetClient {
@@ -50,25 +61,26 @@ impl FaucetClient {
 
     /// Fetch a proof-of-work challenge for `recipient`.
     pub async fn create_challenge(&self, recipient: Address) -> Result<PowChallenge, BoxError> {
-        let response = self
-            .inner
-            .get(self.endpoint("v3/challenge"))
-            .query(&[("recipient", recipient.to_string())])
-            .send()
-            .await?;
-        let challenge: PowChallenge = self.json_response(response).await?;
-        challenge.validate(recipient)?;
-        Ok(challenge)
+        self.fetch_challenge(recipient)
+            .await?
+            .ok_or_else(|| "faucet does not support v3 proof-of-work challenges".into())
     }
 
-    /// Solve a fresh challenge and submit its proof for `recipient`.
+    /// Request faucet funds, using v3 proof of work when the faucet supports it.
     ///
-    /// This method blocks while it grinds the proof. Use [`Self::create_challenge`],
-    /// [`PowChallenge::solve`], and [`Self::submit`] to schedule that work separately.
+    /// This method falls back to v2 only when `GET /v3/challenge` returns 404. It blocks while it
+    /// grinds a v3 proof. Use [`Self::create_challenge`], [`PowChallenge::solve`], and
+    /// [`Self::submit`] to schedule that work separately.
     pub async fn request(&self, recipient: Address) -> Result<FaucetResponse, BoxError> {
-        let challenge = self.create_challenge(recipient).await?;
-        let solution = challenge.solve()?;
-        self.submit(&challenge, &solution).await
+        match self.fetch_challenge(recipient).await? {
+            Some(challenge) => {
+                let solution = challenge.solve()?;
+                self.submit(&challenge, &solution)
+                    .await
+                    .map(FaucetResponse::V3)
+            }
+            None => self.request_v2(recipient).await.map(FaucetResponse::V2),
+        }
     }
 
     /// Submit a solved proof-of-work challenge.
@@ -76,7 +88,7 @@ impl FaucetClient {
         &self,
         challenge: &PowChallenge,
         solution: &PowSolution,
-    ) -> Result<FaucetResponse, BoxError> {
+    ) -> Result<V3FaucetResponse, BoxError> {
         challenge.validate(challenge.recipient)?;
         let response = self
             .inner
@@ -90,6 +102,39 @@ impl FaucetClient {
             .send()
             .await?;
         self.json_response(response).await
+    }
+
+    async fn fetch_challenge(&self, recipient: Address) -> Result<Option<PowChallenge>, BoxError> {
+        let response = self
+            .inner
+            .get(self.endpoint("v3/challenge"))
+            .query(&[("recipient", recipient.to_string())])
+            .send()
+            .await?;
+        if response.status() == StatusCode::NOT_FOUND {
+            return Ok(None);
+        }
+        let challenge: PowChallenge = self.json_response(response).await?;
+        challenge.validate(recipient)?;
+        Ok(Some(challenge))
+    }
+
+    async fn request_v2(&self, recipient: Address) -> Result<Vec<CoinInfo>, BoxError> {
+        let response = self
+            .inner
+            .post(self.endpoint("v2/gas"))
+            .json(&V2FaucetRequest {
+                fixed_amount_request: V2FixedAmountRequest { recipient },
+            })
+            .send()
+            .await?;
+        let response: V2FaucetResponse = self.json_response(response).await?;
+        match response.status {
+            V2RequestStatus::Success => Ok(response.coins_sent.unwrap_or_default()),
+            V2RequestStatus::Failure(error) => {
+                Err(format!("v2 faucet request failed: {error}").into())
+            }
+        }
     }
 
     fn endpoint(&self, path: &str) -> String {
@@ -238,10 +283,19 @@ impl PowSolution {
     }
 }
 
+/// Represent a successful faucet payout.
+#[derive(Debug, Clone)]
+pub enum FaucetResponse {
+    /// A non-PoW v2 payout containing the faucet's coin objects.
+    V2(Vec<CoinInfo>),
+    /// A PoW-protected v3 payout.
+    V3(V3FaucetResponse),
+}
+
 /// Represent a successful v3 faucet payout.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FaucetResponse {
+pub struct V3FaucetResponse {
     pub digest: Digest,
     pub recipient: Address,
     #[serde(deserialize_with = "deserialize_u64")]
@@ -250,7 +304,7 @@ pub struct FaucetResponse {
     pub difficulty: u64,
 }
 
-#[derive(serde::Serialize)]
+#[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct FaucetRequest {
     recipient: Address,
@@ -263,6 +317,49 @@ struct FaucetRequest {
 struct FaucetErrorResponse {
     error: String,
     code: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct V2FaucetRequest {
+    #[serde(rename = "FixedAmountRequest")]
+    fixed_amount_request: V2FixedAmountRequest,
+}
+
+#[derive(Serialize)]
+struct V2FixedAmountRequest {
+    recipient: Address,
+}
+
+#[derive(Deserialize)]
+struct V2FaucetResponse {
+    status: V2RequestStatus,
+    coins_sent: Option<Vec<CoinInfo>>,
+}
+
+#[derive(Deserialize)]
+enum V2RequestStatus {
+    Success,
+    Failure(V2FaucetError),
+}
+
+#[derive(Deserialize)]
+enum V2FaucetError {
+    MissingTurnstileTokenHeader,
+    TooManyRequests(String),
+    Internal(String),
+    InvalidUserAgent(String),
+}
+
+impl std::fmt::Display for V2FaucetError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::MissingTurnstileTokenHeader => f.write_str("missing X-Turnstile-Token header"),
+            Self::TooManyRequests(message) => write!(f, "request limit exceeded: {message}"),
+            Self::Internal(message) => write!(f, "internal error: {message}"),
+            Self::InvalidUserAgent(message) => write!(f, "invalid user agent: {message}"),
+        }
+    }
 }
 
 fn deserialize_u64<'de, D>(deserializer: D) -> Result<u64, D::Error>
@@ -376,9 +473,81 @@ mod tests {
             gas_body["hashHex"].as_str().unwrap().len(),
             POW_HASH_LENGTH * 2
         );
+        let FaucetResponse::V3(payout) = payout else {
+            panic!("expected a v3 faucet response");
+        };
         assert_eq!(payout.recipient, Address::from_str(RECIPIENT).unwrap());
         assert_eq!(payout.amount_mist, 1_000_000_000);
         assert_eq!(payout.difficulty, 2);
+    }
+
+    #[tokio::test]
+    async fn falls_back_to_v2_when_v3_challenge_is_unavailable() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = std::thread::spawn(move || {
+            let (mut challenge_stream, _) = listener.accept().unwrap();
+            let challenge_request = read_http_request(&mut challenge_stream);
+            write_http_response(
+                &mut challenge_stream,
+                404,
+                "Not Found",
+                r#"{"error":"not found","code":"not_found"}"#,
+            );
+
+            let (mut gas_stream, _) = listener.accept().unwrap();
+            let gas_request = read_http_request(&mut gas_stream);
+            let body = format!(
+                r#"{{"status":"Success","coins_sent":[{{"amount":1000000000,"id":"0x0000000000000000000000000000000000000000000000000000000000000003","transferTxDigest":"{}"}}]}}"#,
+                "1".repeat(32),
+            );
+            write_json_response(&mut gas_stream, &body);
+            (challenge_request, gas_request)
+        });
+
+        let client = FaucetClient::new(format!("http://{address}")).unwrap();
+        let response = client
+            .request(Address::from_str(RECIPIENT).unwrap())
+            .await
+            .unwrap();
+        let (challenge_request, gas_request) = server.join().unwrap();
+        let gas_body = gas_request.split_once("\r\n\r\n").unwrap().1;
+        let gas_body: serde_json::Value = serde_json::from_str(gas_body).unwrap();
+
+        assert!(challenge_request.starts_with("GET /v3/challenge"));
+        assert!(gas_request.starts_with("POST /v2/gas HTTP/1.1"));
+        assert_eq!(gas_body["FixedAmountRequest"]["recipient"], RECIPIENT);
+        let FaucetResponse::V2(coins) = response else {
+            panic!("expected a v2 faucet response");
+        };
+        assert_eq!(coins.len(), 1);
+        assert_eq!(coins[0].amount, 1_000_000_000);
+    }
+
+    #[tokio::test]
+    async fn does_not_fall_back_to_v2_when_v3_challenge_fails() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let request = read_http_request(&mut stream);
+            write_http_response(
+                &mut stream,
+                503,
+                "Service Unavailable",
+                r#"{"error":"not ready","code":"not_ready"}"#,
+            );
+            request
+        });
+
+        let client = FaucetClient::new(format!("http://{address}")).unwrap();
+        assert!(
+            client
+                .request(Address::from_str(RECIPIENT).unwrap())
+                .await
+                .is_err()
+        );
+        assert!(server.join().unwrap().starts_with("GET /v3/challenge"));
     }
 
     #[test]
@@ -421,9 +590,18 @@ mod tests {
     }
 
     fn write_json_response(stream: &mut std::net::TcpStream, body: &str) {
+        write_http_response(stream, 200, "OK", body);
+    }
+
+    fn write_http_response(
+        stream: &mut std::net::TcpStream,
+        status: u16,
+        reason: &str,
+        body: &str,
+    ) {
         write!(
             stream,
-            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+            "HTTP/1.1 {status} {reason}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
             body.len(),
         )
         .unwrap();
