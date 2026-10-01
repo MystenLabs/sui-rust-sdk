@@ -28,6 +28,10 @@ pub mod secp256r1;
 #[cfg_attr(doc_cfg, doc(cfg(feature = "passkey")))]
 pub mod passkey;
 
+#[cfg(feature = "mldsa65")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "mldsa65")))]
+pub mod mldsa65;
+
 #[cfg(feature = "zklogin")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "zklogin")))]
 pub mod zklogin;
@@ -36,6 +40,7 @@ pub mod zklogin;
     feature = "ed25519",
     feature = "secp256r1",
     feature = "secp256k1",
+    feature = "mldsa65",
     feature = "zklogin"
 ))]
 #[cfg_attr(
@@ -44,18 +49,25 @@ pub mod zklogin;
         feature = "ed25519",
         feature = "secp256r1",
         feature = "secp256k1",
+        feature = "mldsa65",
         feature = "zklogin"
     )))
 )]
 pub mod simple;
 
-#[cfg(any(feature = "ed25519", feature = "secp256r1", feature = "secp256k1"))]
+#[cfg(any(
+    feature = "ed25519",
+    feature = "secp256r1",
+    feature = "secp256k1",
+    feature = "mldsa65"
+))]
 mod suipriv;
 
 #[cfg(any(
     feature = "ed25519",
     feature = "secp256r1",
     feature = "secp256k1",
+    feature = "mldsa65",
     feature = "zklogin"
 ))]
 #[cfg_attr(
@@ -64,6 +76,7 @@ mod suipriv;
         feature = "ed25519",
         feature = "secp256r1",
         feature = "secp256k1",
+        feature = "mldsa65",
         feature = "zklogin"
     )))
 )]
@@ -73,6 +86,7 @@ pub mod multisig;
     feature = "ed25519",
     feature = "secp256r1",
     feature = "secp256k1",
+    feature = "mldsa65",
     feature = "zklogin"
 ))]
 #[cfg_attr(
@@ -81,6 +95,7 @@ pub mod multisig;
         feature = "ed25519",
         feature = "secp256r1",
         feature = "secp256k1",
+        feature = "mldsa65",
         feature = "zklogin"
     )))
 )]
@@ -115,6 +130,53 @@ impl<T: Signer<UserSignature>> SuiSigner for T {
     ) -> Result<UserSignature, SignatureError> {
         let msg = message.signing_digest();
         self.try_sign(&msg)
+    }
+}
+
+/// Interface for signing user transactions and messages with a scheme that
+/// takes fresh randomness per signature
+///
+/// Randomized counterpart of [`SuiSigner`]. Today that is ML-DSA-65 only. The
+/// caller supplies the rng, so the crate needs no `getrandom` backend.
+///
+/// # Note
+///
+/// There is a blanket implementation of `SuiRandomizedSigner` for all `T`
+/// where `T: `[`signature::RandomizedSigner`]`<`[`UserSignature`]`>`, which handles the
+/// proper construction of the signing message.
+#[cfg(feature = "mldsa65")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "mldsa65")))]
+pub trait SuiRandomizedSigner {
+    fn sign_transaction_with_rng(
+        &self,
+        rng: &mut impl rand_core::CryptoRngCore,
+        transaction: &Transaction,
+    ) -> Result<UserSignature, SignatureError>;
+    fn sign_personal_message_with_rng(
+        &self,
+        rng: &mut impl rand_core::CryptoRngCore,
+        message: &PersonalMessage<'_>,
+    ) -> Result<UserSignature, SignatureError>;
+}
+
+#[cfg(feature = "mldsa65")]
+impl<T: signature::RandomizedSigner<UserSignature>> SuiRandomizedSigner for T {
+    fn sign_transaction_with_rng(
+        &self,
+        rng: &mut impl rand_core::CryptoRngCore,
+        transaction: &Transaction,
+    ) -> Result<UserSignature, SignatureError> {
+        let msg = transaction.signing_digest();
+        self.try_sign_with_rng(rng, &msg)
+    }
+
+    fn sign_personal_message_with_rng(
+        &self,
+        rng: &mut impl rand_core::CryptoRngCore,
+        message: &PersonalMessage<'_>,
+    ) -> Result<UserSignature, SignatureError> {
+        let msg = message.signing_digest();
+        self.try_sign_with_rng(rng, &msg)
     }
 }
 

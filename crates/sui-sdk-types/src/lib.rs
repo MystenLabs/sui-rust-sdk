@@ -158,6 +158,8 @@ pub use crypto::IntentVersion;
 pub use crypto::InvalidZkLoginAuthenticatorError;
 pub use crypto::Jwk;
 pub use crypto::JwkId;
+pub use crypto::MlDsa65PublicKey;
+pub use crypto::MlDsa65Signature;
 pub use crypto::MultisigAggregatedSignature;
 pub use crypto::MultisigCommittee;
 pub use crypto::MultisigMember;

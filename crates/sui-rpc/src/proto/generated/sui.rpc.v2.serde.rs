@@ -25958,6 +25958,7 @@ impl serde::Serialize for SignatureScheme {
             Self::Bls12381 => "BLS12381",
             Self::Zklogin => "ZKLOGIN",
             Self::Passkey => "PASSKEY",
+            Self::Mldsa65 => "MLDSA65",
         };
         serializer.serialize_str(variant)
     }
@@ -25976,6 +25977,7 @@ impl<'de> serde::Deserialize<'de> for SignatureScheme {
             "BLS12381",
             "ZKLOGIN",
             "PASSKEY",
+            "MLDSA65",
         ];
         struct GeneratedVisitor;
         impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
@@ -26026,6 +26028,7 @@ impl<'de> serde::Deserialize<'de> for SignatureScheme {
                     "BLS12381" => Ok(SignatureScheme::Bls12381),
                     "ZKLOGIN" => Ok(SignatureScheme::Zklogin),
                     "PASSKEY" => Ok(SignatureScheme::Passkey),
+                    "MLDSA65" => Ok(SignatureScheme::Mldsa65),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }
