@@ -452,6 +452,195 @@ fn hash_two_to_one(left: U256, right: U256) -> U256 {
     U256::from_digits(hasher.finalize().into_inner())
 }
 
+/// Rust representation of the on-chain `sui::dynamic_field::Field` object.
+///
+/// A dynamic field attached to a parent object. `id` is the field object's
+/// `UID`; `name` and `value` are the Move field name and value types.
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// field = address name value
+/// ```
+///
+/// where `name` and `value` are the BCS serialized forms of `N` and `V`.
+#[derive(Debug, Clone, Eq, PartialEq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+pub struct Field<N, V> {
+    pub id: Address,
+    pub name: N,
+    pub value: V,
+}
+
+/// Rust representation of the on-chain `sui::table::Table` type.
+///
+/// Table entries are stored as dynamic fields of the table's `id` and are not
+/// part of the table value itself; look them up as [`Field`] objects derived
+/// from `id`.
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// table = address u64
+/// ```
+#[derive(Debug, Clone, Eq, PartialEq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+pub struct Table {
+    pub id: Address,
+    pub size: u64,
+}
+
+/// Rust representation of the on-chain `sui::vec_map::Entry` type.
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// entry = key value
+/// ```
+///
+/// where `key` and `value` are the BCS serialized forms of `K` and `V`.
+#[derive(Debug, Clone, Eq, PartialEq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+pub struct Entry<K, V> {
+    pub key: K,
+    pub value: V,
+}
+
+/// Rust representation of the on-chain `sui::vec_map::VecMap` type.
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// vec-map = (vector entry)
+/// ```
+#[derive(Debug, Clone, Eq, PartialEq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+pub struct VecMap<K, V> {
+    pub contents: Vec<Entry<K, V>>,
+}
+
+impl<K, V> VecMap<K, V> {
+    /// Looks up the value associated with `key`, by linear scan.
+    pub fn get(&self, key: &K) -> Option<&V>
+    where
+        K: PartialEq,
+    {
+        self.contents
+            .iter()
+            .find(|entry| &entry.key == key)
+            .map(|entry| &entry.value)
+    }
+}
+
+impl<K, V> IntoIterator for VecMap<K, V> {
+    type Item = (K, V);
+    type IntoIter = std::iter::Map<std::vec::IntoIter<Entry<K, V>>, fn(Entry<K, V>) -> (K, V)>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.contents
+            .into_iter()
+            .map(|entry| (entry.key, entry.value))
+    }
+}
+
+/// Rust representation of the on-chain `sui::vec_set::VecSet` type.
+///
+/// # BCS
+///
+/// The BCS serialized form for this type is defined by the following ABNF:
+///
+/// ```text
+/// vec-set = (vector key)
+/// ```
+#[derive(Debug, Clone, Eq, PartialEq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+pub struct VecSet<K> {
+    pub contents: Vec<K>,
+}
+
+#[cfg(test)]
+#[cfg(feature = "serde")]
+mod collection_types_test {
+    use super::*;
+
+    // Pinned BCS encodings. The shapes must agree byte-for-byte with the
+    // corresponding framework types (`sui::dynamic_field::Field`,
+    // `sui::table::Table`, `sui::vec_map::VecMap`, `sui::vec_set::VecSet`),
+    // since these are deserialized directly from on-chain object contents.
+    #[test]
+    fn collection_types_bcs_layout() {
+        let id = Address::from_static(
+            "0x0101010101010101010101010101010101010101010101010101010101010101",
+        );
+
+        let field = Field {
+            id,
+            name: 7u64,
+            value: 9u8,
+        };
+        let mut expected = id.as_bytes().to_vec();
+        expected.extend_from_slice(&7u64.to_le_bytes());
+        expected.push(9u8);
+        assert_eq!(bcs::to_bytes(&field).unwrap(), expected);
+        assert_eq!(bcs::from_bytes::<Field<u64, u8>>(&expected).unwrap(), field);
+
+        let table = Table { id, size: 3 };
+        let mut expected = id.as_bytes().to_vec();
+        expected.extend_from_slice(&3u64.to_le_bytes());
+        assert_eq!(bcs::to_bytes(&table).unwrap(), expected);
+        assert_eq!(bcs::from_bytes::<Table>(&expected).unwrap(), table);
+
+        let map = VecMap {
+            contents: vec![
+                Entry {
+                    key: 1u8,
+                    value: 2u8,
+                },
+                Entry {
+                    key: 3u8,
+                    value: 4u8,
+                },
+            ],
+        };
+        let expected = vec![2u8, 1, 2, 3, 4];
+        assert_eq!(bcs::to_bytes(&map).unwrap(), expected);
+        assert_eq!(bcs::from_bytes::<VecMap<u8, u8>>(&expected).unwrap(), map);
+        assert_eq!(map.get(&3), Some(&4));
+        assert_eq!(map.get(&5), None);
+        assert_eq!(map.into_iter().collect::<Vec<_>>(), vec![(1, 2), (3, 4)]);
+
+        let set = VecSet {
+            contents: vec![1u8, 2, 3],
+        };
+        let expected = vec![3u8, 1, 2, 3];
+        assert_eq!(bcs::to_bytes(&set).unwrap(), expected);
+        assert_eq!(bcs::from_bytes::<VecSet<u8>>(&expected).unwrap(), set);
+    }
+}
+
 #[cfg(test)]
 #[cfg(feature = "unstable")]
 mod test {
