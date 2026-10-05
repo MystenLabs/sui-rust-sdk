@@ -26,3 +26,14 @@ impl SimulateTransactionRequest {
         }
     }
 }
+
+impl ::prost::Name for InsufficientGasBalance {
+    const NAME: &'static str = "InsufficientGasBalance";
+    const PACKAGE: &'static str = "sui.rpc.v2";
+    fn full_name() -> ::prost::alloc::string::String {
+        "sui.rpc.v2.InsufficientGasBalance".into()
+    }
+    fn type_url() -> ::prost::alloc::string::String {
+        "/sui.rpc.v2.InsufficientGasBalance".into()
+    }
+}
