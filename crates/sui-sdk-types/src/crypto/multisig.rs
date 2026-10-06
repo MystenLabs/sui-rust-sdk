@@ -744,7 +744,6 @@ mod serialization {
         Secp256r1(Secp256r1PublicKey),
         ZkLogin(ZkLoginPublicIdentifier),
         Passkey(PasskeyPublicKey),
-        ZkLoginV2(ZkLoginPublicIdentifier),
         MlDsa65(Box<MlDsa65PublicKey>),
     }
 
@@ -850,11 +849,6 @@ mod serialization {
                     MemberPublicKey::Secp256r1(public_key) => Self::Secp256r1(public_key),
                     MemberPublicKey::ZkLogin(public_id) => Self::ZkLogin(public_id),
                     MemberPublicKey::Passkey(public_key) => Self::Passkey(public_key),
-                    MemberPublicKey::ZkLoginV2(_) => {
-                        return Err(serde::de::Error::custom(
-                            "zklogin v2 multisig members are not supported",
-                        ));
-                    }
                     MemberPublicKey::MlDsa65(public_key) => Self::MlDsa65(public_key),
                 })
             }

@@ -116,7 +116,7 @@ impl MlDsa65PrivateKey {
     #[cfg(feature = "bech32")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "bech32")))]
     /// Decode a Bech32 `suiprivkey` string produced by the Sui CLI; the
-    /// payload is `0x08 || seed`.
+    /// payload is `0x07 || seed`.
     pub fn from_suiprivkey(s: &str) -> Result<Self, SignatureError> {
         let (scheme, key) = crate::suipriv::decode(s)?;
         Self::from_flagged_key_bytes(scheme, key)
@@ -254,7 +254,7 @@ mod test {
     /// Produced by Sui's signer (fastcrypto-pq, wrapping mldsa-native) over the
     /// personal message "hello": seed `[2; 32]`, hedging randomness `[7; 32]`.
     const SUI_SIGNATURE: &str = include_str!("fixtures/mldsa65-personal-message-signature");
-    const SUI_ADDRESS: &str = "0x687afa13b5510548e8ab9c57b34544c8ade5507559cfb944db0453fae2a68d4c";
+    const SUI_ADDRESS: &str = "0xa44576e02f83a9e1bddac6fd742a77931d1689d9a61122eb3125dee425f6dd36";
 
     fn sui_fixture() -> (MlDsa65Signature, MlDsa65PublicKey) {
         let UserSignature::Simple(SimpleSignature::MlDsa65 {
@@ -364,7 +364,7 @@ mod test {
     fn suiprivkey_matches_sui_keytool() {
         // `sui keytool` encoding of the seed [2; 32], from Sui's keytool tests.
         const SUIPRIVKEY: &str =
-            "suiprivkey1pqpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyrndku7";
+            "suiprivkey1qupqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyghdug7";
         let key = MlDsa65PrivateKey::from_suiprivkey(SUIPRIVKEY).unwrap();
         assert_eq!(key.seed(), &[2; 32]);
         assert_eq!(key.public_key().derive_address().to_string(), SUI_ADDRESS);
