@@ -1,3 +1,6 @@
+use std::collections::hash_map::RandomState;
+use std::hash::BuildHasher;
+
 use argon2::Algorithm;
 use argon2::Argon2;
 use argon2::Params;
@@ -216,7 +219,10 @@ impl PowChallenge {
         let mut memory_blocks = vec![argon2::Block::default(); params.block_count()];
         let argon2 = Argon2::new(Algorithm::Argon2d, Version::V0x13, params);
 
-        for nonce in 0..=u64::MAX {
+        // Vary the start to reduce duplicate proofs for the same checkpoint and recipient.
+        let start_nonce = RandomState::new().hash_one(());
+        for offset in 0..=u64::MAX {
+            let nonce = start_nonce.wrapping_add(offset);
             let mut hash = [0; POW_HASH_LENGTH];
             argon2
                 .hash_password_into_with_memory(
