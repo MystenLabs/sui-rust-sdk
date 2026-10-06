@@ -161,11 +161,29 @@ impl FaucetClient {
             return Ok(response.json().await?);
         }
 
-        let error = response.json::<FaucetErrorResponse>().await.ok();
-        let message = error
-            .map(|error| format!("{} ({})", error.error, error.code))
-            .unwrap_or_else(|| status.to_string());
-        Err(format!("faucet request failed: {message}").into())
+        let body = response
+            .json::<serde_json::Value>()
+            .await
+            .unwrap_or_default();
+        // Decode fields independently so an incompatible challenge cannot hide a payout digest.
+        Err(FaucetError {
+            status,
+            code: body.get("code").and_then(|v| v.as_str()).map(str::to_owned),
+            message: body
+                .get("error")
+                .and_then(|v| v.as_str())
+                .map(str::to_owned)
+                .unwrap_or_else(|| status.to_string()),
+            digest: body
+                .get("digest")
+                .and_then(|v| v.as_str())
+                .and_then(|v| v.parse().ok()),
+            challenge: body
+                .get("challenge")
+                .cloned()
+                .and_then(|v| serde_json::from_value(v).ok()),
+        }
+        .into())
     }
 }
 
@@ -324,11 +342,34 @@ struct FaucetRequest {
     hash_hex: String,
 }
 
-#[derive(Deserialize)]
-struct FaucetErrorResponse {
-    error: String,
-    code: String,
+/// Preserve a faucet HTTP failure for inspection through `error.downcast_ref::<FaucetError>()`.
+///
+/// Check `code` and `digest` before requesting another payout. An error does not necessarily mean
+/// that no funds were sent. An attached challenge does not authorize an automatic retry.
+#[derive(Debug, Clone)]
+#[non_exhaustive]
+pub struct FaucetError {
+    pub status: StatusCode,
+    /// Preserve the server's error code, including unknown codes; `None` means absent or malformed.
+    pub code: Option<String>,
+    pub message: String,
+    /// Identify the payout transaction to inspect; `None` does not prove that no payout occurred.
+    pub digest: Option<Digest>,
+    /// Retain a decodable challenge supplied by the server, without validating it.
+    pub challenge: Option<PowChallenge>,
 }
+
+impl std::fmt::Display for FaucetError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "faucet request failed: {}", self.message)?;
+        if let Some(code) = &self.code {
+            write!(f, " ({code})")?;
+        }
+        Ok(())
+    }
+}
+
+impl std::error::Error for FaucetError {}
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -577,6 +618,95 @@ mod tests {
                 .is_err()
         );
         assert!(server.join().unwrap().starts_with("GET /v3/challenge"));
+    }
+
+    #[tokio::test]
+    async fn preserves_structured_faucet_errors() {
+        let client = FaucetClient::new(FaucetClient::LOCAL).unwrap();
+        let digest = Digest::ZERO;
+        let challenge: serde_json::Value = serde_json::from_str(&challenge_json()).unwrap();
+        for (status, code) in [
+            (StatusCode::BAD_GATEWAY, "payout_status_unknown"),
+            (StatusCode::BAD_GATEWAY, "payout_failed"),
+            (StatusCode::CONFLICT, "already_used"),
+            (StatusCode::BAD_REQUEST, "future_error_code"),
+        ] {
+            let body = serde_json::json!({
+                "error": "inspect the payout",
+                "code": code,
+                "digest": digest,
+                "challenge": challenge,
+            });
+            let response = http::Response::builder()
+                .status(status)
+                .body(body.to_string())
+                .unwrap();
+            let error = client
+                .json_response::<serde_json::Value>(response.into())
+                .await
+                .unwrap_err();
+            let error = error.downcast_ref::<FaucetError>().unwrap();
+
+            assert_eq!(error.status, status);
+            assert_eq!(error.code.as_deref(), Some(code));
+            assert_eq!(error.message, "inspect the payout");
+            assert_eq!(error.digest, Some(digest));
+            assert_eq!(error.challenge.as_ref().unwrap().checkpoint_seq, 42);
+            assert_eq!(
+                error.to_string(),
+                format!("faucet request failed: inspect the payout ({code})")
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn preserves_error_metadata_without_a_decodable_challenge() {
+        let client = FaucetClient::new(FaucetClient::LOCAL).unwrap();
+        for body in [
+            serde_json::json!({"error": "failed", "code": "payout_failed"}),
+            serde_json::json!({
+                "error": "failed",
+                "code": "payout_failed",
+                "digest": Digest::ZERO,
+                "challenge": {"version": 2},
+            }),
+        ] {
+            let response = http::Response::builder()
+                .status(StatusCode::BAD_GATEWAY)
+                .body(body.to_string())
+                .unwrap();
+            let error = client
+                .json_response::<serde_json::Value>(response.into())
+                .await
+                .unwrap_err();
+            let error = error.downcast_ref::<FaucetError>().unwrap();
+
+            assert_eq!(error.status, StatusCode::BAD_GATEWAY);
+            assert_eq!(error.code.as_deref(), Some("payout_failed"));
+            assert_eq!(error.message, "failed");
+            assert_eq!(error.digest.is_some(), body.get("digest").is_some());
+            assert!(error.challenge.is_none());
+        }
+    }
+
+    #[tokio::test]
+    async fn preserves_http_status_without_a_json_error_body() {
+        let client = FaucetClient::new(FaucetClient::LOCAL).unwrap();
+        let response = http::Response::builder()
+            .status(StatusCode::BAD_GATEWAY)
+            .body("bad gateway")
+            .unwrap();
+        let error = client
+            .json_response::<serde_json::Value>(response.into())
+            .await
+            .unwrap_err();
+        let error = error.downcast_ref::<FaucetError>().unwrap();
+
+        assert_eq!(error.status, StatusCode::BAD_GATEWAY);
+        assert_eq!(error.message, StatusCode::BAD_GATEWAY.to_string());
+        assert!(error.code.is_none());
+        assert!(error.digest.is_none());
+        assert!(error.challenge.is_none());
     }
 
     #[test]
