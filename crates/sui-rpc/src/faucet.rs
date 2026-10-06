@@ -68,13 +68,18 @@ impl FaucetClient {
 
     /// Request faucet funds, using v3 proof of work when the faucet supports it.
     ///
-    /// This method falls back to v2 only when `GET /v3/challenge` returns 404. It blocks while it
-    /// grinds a v3 proof. Use [`Self::create_challenge`], [`PowChallenge::solve`], and
-    /// [`Self::submit`] to schedule that work separately.
+    /// This method falls back to v2 only when `GET /v3/challenge` returns 404. It solves v3 proofs
+    /// on Tokio's blocking thread pool. Once started, solving continues even if this future is
+    /// dropped. Use [`Self::create_challenge`], [`PowChallenge::solve`], and [`Self::submit`] to
+    /// schedule that work separately.
     pub async fn request(&self, recipient: Address) -> Result<FaucetResponse, BoxError> {
         match self.fetch_challenge(recipient).await? {
             Some(challenge) => {
-                let solution = challenge.solve()?;
+                let (challenge, solution) = tokio::task::spawn_blocking(move || {
+                    let solution = challenge.solve()?;
+                    Ok::<_, BoxError>((challenge, solution))
+                })
+                .await??;
                 self.submit(&challenge, &solution)
                     .await
                     .map(FaucetResponse::V3)
@@ -433,8 +438,26 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn solves_and_submits_a_v3_gas_request() {
+    #[test]
+    fn solves_and_submits_a_v3_gas_request() {
+        let (started_tx, started_rx) = std::sync::mpsc::channel();
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .on_thread_start(move || started_tx.send(()).unwrap())
+            .build()
+            .unwrap();
+
+        runtime.block_on(request_v3_with_mock_server());
+
+        // A current-thread runtime only starts threads for blocking work. The mock server uses
+        // an IP address, so DNS resolution cannot start a blocking task instead of the solver.
+        assert!(
+            started_rx.try_recv().is_ok(),
+            "proof of work must run on a blocking thread"
+        );
+    }
+
+    async fn request_v3_with_mock_server() {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let address = listener.local_addr().unwrap();
         let server = std::thread::spawn(move || {
