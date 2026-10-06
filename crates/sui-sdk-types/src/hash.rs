@@ -236,7 +236,7 @@ impl crate::ZkLoginAuthenticator {
 impl crate::MlDsa65PublicKey {
     /// Derive an `Address` from this Public Key
     ///
-    /// `hash( 0x08 || 1952-byte ml-dsa-65 public key)`
+    /// `hash( 0x07 || 1952-byte ml-dsa-65 public key)`
     pub fn derive_address(&self) -> Address {
         let mut hasher = Hasher::new();
         self.write_into_hasher(&mut hasher);

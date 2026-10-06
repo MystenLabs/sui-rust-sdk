@@ -5729,7 +5729,7 @@ pub enum SignatureScheme {
     Bls12381 = 4,
     Zklogin = 5,
     Passkey = 6,
-    Mldsa65 = 8,
+    Mldsa65 = 7,
 }
 impl SignatureScheme {
     /// String value of the enum field names used in the ProtoBuf definition.

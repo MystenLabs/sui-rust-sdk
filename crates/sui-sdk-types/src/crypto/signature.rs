@@ -386,7 +386,7 @@ impl<'de> serde::Deserialize<'de> for SimpleSignature {
 /// bls-flag         = %x04
 /// zklogin-flag     = %x05
 /// passkey-flag     = %x06
-/// mldsa65-flag     = %x08
+/// mldsa65-flag     = %x07
 /// ```
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
@@ -400,7 +400,7 @@ pub enum SignatureScheme {
     Bls12381 = 0x04, // This is currently not supported for user addresses
     ZkLogin = 0x05,
     Passkey = 0x06,
-    MlDsa65 = 0x08,
+    MlDsa65 = 0x07,
 }
 
 impl SignatureScheme {
@@ -428,7 +428,7 @@ impl SignatureScheme {
             0x04 => Ok(Self::Bls12381),
             0x05 => Ok(Self::ZkLogin),
             0x06 => Ok(Self::Passkey),
-            0x08 => Ok(Self::MlDsa65),
+            0x07 => Ok(Self::MlDsa65),
             invalid => Err(InvalidSignatureScheme(invalid)),
         }
     }
@@ -791,7 +791,7 @@ mod serialization {
             assert_eq!(simple.scheme(), SignatureScheme::MlDsa65);
             assert_eq!(
                 simple.derive_address().to_string(),
-                "0x687afa13b5510548e8ab9c57b34544c8ade5507559cfb944db0453fae2a68d4c"
+                "0xa44576e02f83a9e1bddac6fd742a77931d1689d9a61122eb3125dee425f6dd36"
             );
             assert_eq!(signature.to_base64(), SIGNATURE.trim());
 
