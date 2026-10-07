@@ -293,8 +293,27 @@ impl MultisigAggregatedSignature {
     }
 
     /// Configure with a legacy roaring bitmap
+    #[deprecated(note = "use `try_with_legacy_bitmap`, which rejects unserializable bitmaps")]
     pub fn with_legacy_bitmap(&mut self, legacy_bitmap: crate::Bitmap) {
         self.legacy_bitmap = Some(legacy_bitmap);
+    }
+
+    /// Configure with a legacy roaring bitmap.
+    ///
+    /// When a legacy bitmap is present, this signature serializes in the
+    /// legacy format, which carries the signer set only as the roaring
+    /// bitmap and can only encode Ed25519, Secp256k1, and Secp256r1
+    /// committee members. Returns an error, leaving `self` unchanged, if
+    /// `legacy_bitmap` does not encode the same signer set as
+    /// [`Self::bitmap`] or if the committee has a member that the legacy
+    /// format cannot encode.
+    pub fn try_with_legacy_bitmap(
+        &mut self,
+        legacy_bitmap: crate::Bitmap,
+    ) -> Result<(), InvalidLegacyBitmapError> {
+        validate_legacy_bitmap(&self.committee, self.bitmap, &legacy_bitmap)?;
+        self.legacy_bitmap = Some(legacy_bitmap);
+        Ok(())
     }
 
     /// The committee for this aggregated signature
@@ -324,7 +343,6 @@ impl PartialEq for MultisigAggregatedSignature {
 impl Eq for MultisigAggregatedSignature {}
 
 /// Convert a roaring bitmap to plain bitmap.
-#[cfg(feature = "serde")]
 fn roaring_bitmap_to_u16(roaring: &crate::Bitmap) -> Result<BitmapUnit, &'static str> {
     let mut val = 0;
     for i in roaring.iter() {
@@ -335,6 +353,61 @@ fn roaring_bitmap_to_u16(roaring: &crate::Bitmap) -> Result<BitmapUnit, &'static
     }
     Ok(val)
 }
+
+/// Check that `legacy_bitmap` can be attached to a multisig with the given
+/// `committee` and `bitmap`.
+///
+/// The BCS legacy decoder always derives `bitmap` from the roaring bitmap, so
+/// requiring the same here keeps `bitmap()` and `to_bytes()` from reporting
+/// two different signer sets for one signature. The legacy member encoding
+/// (`Base64MultisigMemberPublicKey`) only supports Ed25519, Secp256k1, and
+/// Secp256r1, so any other member would make `to_bytes()` fail to serialize
+/// the legacy form and panic.
+fn validate_legacy_bitmap(
+    committee: &MultisigCommittee,
+    bitmap: BitmapUnit,
+    legacy_bitmap: &crate::Bitmap,
+) -> Result<(), InvalidLegacyBitmapError> {
+    let derived = roaring_bitmap_to_u16(legacy_bitmap).map_err(InvalidLegacyBitmapError)?;
+    if derived != bitmap {
+        return Err(InvalidLegacyBitmapError(
+            "bitmap does not match legacy_bitmap",
+        ));
+    }
+
+    for member in &committee.members {
+        let reason = match member.public_key {
+            MultisigMemberPublicKey::Ed25519(_)
+            | MultisigMemberPublicKey::Secp256k1(_)
+            | MultisigMemberPublicKey::Secp256r1(_) => continue,
+            MultisigMemberPublicKey::ZkLogin(_) => {
+                "zklogin member is not representable in legacy multisig"
+            }
+            MultisigMemberPublicKey::Passkey(_) => {
+                "passkey member is not representable in legacy multisig"
+            }
+            MultisigMemberPublicKey::MlDsa65(_) => {
+                "mldsa65 member is not representable in legacy multisig"
+            }
+        };
+        return Err(InvalidLegacyBitmapError(reason));
+    }
+
+    Ok(())
+}
+
+/// Error returned when a legacy roaring bitmap cannot be attached to a
+/// [`MultisigAggregatedSignature`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InvalidLegacyBitmapError(&'static str);
+
+impl std::fmt::Display for InvalidLegacyBitmapError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.0)
+    }
+}
+
+impl std::error::Error for InvalidLegacyBitmapError {}
 
 /// A signature from a member of a multisig committee.
 ///
@@ -600,58 +673,12 @@ mod serialization {
         {
             if deserializer.is_human_readable() {
                 let readable = ReadableMultisigAggregatedSignature::deserialize(deserializer)?;
-                // Mirror the BCS legacy branch's invariant: when
-                // `legacy_bitmap` is present, `bitmap` is derived from it
-                // (`from_serialized_bytes` always rebuilds it via
-                // `roaring_bitmap_to_u16`). Rejecting any other
-                // combination prevents a JSON payload from carrying two
-                // independent signer sets — one observed by `bitmap()`
-                // and another emitted by `to_bytes()` — which would let
-                // an attacker exhibit different attributable signers
-                // through different accessor paths on the same
-                // logical signature.
+                // An untrusted JSON payload must not be able to produce a
+                // value whose `bitmap()` and `to_bytes()` disagree on the
+                // signer set, or whose `to_bytes()` panics.
                 if let Some(legacy_bitmap) = &readable.legacy_bitmap {
-                    let derived =
-                        roaring_bitmap_to_u16(legacy_bitmap).map_err(serde::de::Error::custom)?;
-                    if derived != readable.bitmap {
-                        return Err(serde::de::Error::custom(
-                            "bitmap does not match legacy_bitmap",
-                        ));
-                    }
-                    // The legacy BCS form encodes each member public key
-                    // via `Base64MultisigMemberPublicKey`, which only
-                    // supports Ed25519/Secp256k1/Secp256r1. A
-                    // `legacy_bitmap` attached to a committee with a
-                    // ZkLogin or Passkey member therefore cannot be
-                    // re-serialized: `to_bytes()` would route through
-                    // the legacy branch, hit the explicit `Err` for
-                    // those variants, and panic via the inner
-                    // `.expect("serialization cannot fail")`. Reject the
-                    // combination at deserialization so an untrusted
-                    // JSON payload cannot crash a worker thread on its
-                    // first `to_bytes()`.
-                    for member in &readable.committee.members {
-                        match member.public_key {
-                            MultisigMemberPublicKey::ZkLogin(_) => {
-                                return Err(serde::de::Error::custom(
-                                    "zklogin member is not representable in legacy multisig",
-                                ));
-                            }
-                            MultisigMemberPublicKey::Passkey(_) => {
-                                return Err(serde::de::Error::custom(
-                                    "passkey member is not representable in legacy multisig",
-                                ));
-                            }
-                            MultisigMemberPublicKey::MlDsa65(_) => {
-                                return Err(serde::de::Error::custom(
-                                    "mldsa65 member is not representable in legacy multisig",
-                                ));
-                            }
-                            MultisigMemberPublicKey::Ed25519(_)
-                            | MultisigMemberPublicKey::Secp256k1(_)
-                            | MultisigMemberPublicKey::Secp256r1(_) => {}
-                        }
-                    }
+                    validate_legacy_bitmap(&readable.committee, readable.bitmap, legacy_bitmap)
+                        .map_err(serde::de::Error::custom)?;
                 }
                 Ok(Self {
                     signatures: readable.signatures,
@@ -986,8 +1013,101 @@ mod test {
         let mut b = MultisigAggregatedSignature::new(committee, Vec::new(), 0);
         assert_eq!(a, b);
 
-        b.with_legacy_bitmap(crate::Bitmap::new());
+        b.try_with_legacy_bitmap(crate::Bitmap::new()).unwrap();
         assert_ne!(a, b);
+    }
+
+    fn ed25519_member(byte: u8) -> MultisigMember {
+        MultisigMember::new(
+            MultisigMemberPublicKey::Ed25519(Ed25519PublicKey::new(
+                [byte; Ed25519PublicKey::LENGTH],
+            )),
+            1,
+        )
+    }
+
+    #[test]
+    fn try_with_legacy_bitmap_rejects_mismatched_bitmap() {
+        let committee = MultisigCommittee::new(vec![ed25519_member(1), ed25519_member(2)], 1);
+        let mut signature = MultisigAggregatedSignature::new(committee, Vec::new(), 0b10);
+
+        let err = signature
+            .try_with_legacy_bitmap([0].into_iter().collect())
+            .unwrap_err();
+        assert_eq!(err.to_string(), "bitmap does not match legacy_bitmap");
+
+        let err = signature
+            .try_with_legacy_bitmap([MAX_COMMITTEE_SIZE as u32].into_iter().collect())
+            .unwrap_err();
+        assert_eq!(err.to_string(), "invalid bitmap");
+
+        assert_eq!(signature.legacy_bitmap(), None);
+
+        let legacy_bitmap: crate::Bitmap = [1].into_iter().collect();
+        signature
+            .try_with_legacy_bitmap(legacy_bitmap.clone())
+            .unwrap();
+        assert_eq!(signature.legacy_bitmap(), Some(&legacy_bitmap));
+    }
+
+    // Regression test: attaching a legacy bitmap to a committee with a
+    // member that has no legacy encoding made `to_bytes()` panic.
+    #[test]
+    fn try_with_legacy_bitmap_rejects_unrepresentable_members() {
+        let zklogin = MultisigMemberPublicKey::ZkLogin(
+            ZkLoginPublicIdentifier::new(
+                "https://accounts.google.com".to_owned(),
+                "7".parse().unwrap(),
+            )
+            .unwrap(),
+        );
+        let passkey = MultisigMemberPublicKey::Passkey(PasskeyPublicKey::new(
+            Secp256r1PublicKey::new([2; Secp256r1PublicKey::LENGTH]),
+        ));
+        let mldsa65 = MultisigMemberPublicKey::MlDsa65(Box::new(MlDsa65PublicKey::new(
+            [0; MlDsa65PublicKey::LENGTH],
+        )));
+
+        for (public_key, scheme) in [
+            (zklogin, "zklogin"),
+            (passkey, "passkey"),
+            (mldsa65, "mldsa65"),
+        ] {
+            let committee = MultisigCommittee::new(
+                vec![ed25519_member(1), MultisigMember::new(public_key, 1)],
+                1,
+            );
+            let mut signature = MultisigAggregatedSignature::new(committee, Vec::new(), 0b1);
+
+            let err = signature
+                .try_with_legacy_bitmap([0].into_iter().collect())
+                .unwrap_err();
+            assert_eq!(
+                err.to_string(),
+                format!("{scheme} member is not representable in legacy multisig")
+            );
+            assert_eq!(signature.legacy_bitmap(), None);
+        }
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn try_with_legacy_bitmap_round_trips_through_bcs() {
+        let committee = MultisigCommittee::new(vec![ed25519_member(1), ed25519_member(2)], 1);
+        let mut signature = MultisigAggregatedSignature::new(
+            committee,
+            vec![MultisigMemberSignature::Ed25519(Ed25519Signature::new(
+                [3; Ed25519Signature::LENGTH],
+            ))],
+            0b10,
+        );
+        signature
+            .try_with_legacy_bitmap([1].into_iter().collect())
+            .unwrap();
+
+        let signature = crate::UserSignature::Multisig(signature);
+        let bytes = signature.to_bytes();
+        assert_eq!(crate::UserSignature::from_bytes(&bytes).unwrap(), signature);
     }
 
     // Regression test: the JSON deserializer used to copy `bitmap` and

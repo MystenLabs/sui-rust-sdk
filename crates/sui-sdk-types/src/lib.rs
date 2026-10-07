@@ -155,6 +155,7 @@ pub use crypto::Intent;
 pub use crypto::IntentAppId;
 pub use crypto::IntentScope;
 pub use crypto::IntentVersion;
+pub use crypto::InvalidLegacyBitmapError;
 pub use crypto::InvalidZkLoginAuthenticatorError;
 pub use crypto::Jwk;
 pub use crypto::JwkId;

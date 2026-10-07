@@ -20,6 +20,7 @@ pub use intent::IntentScope;
 pub use intent::IntentVersion;
 pub use mldsa65::MlDsa65PublicKey;
 pub use mldsa65::MlDsa65Signature;
+pub use multisig::InvalidLegacyBitmapError;
 pub use multisig::MultisigAggregatedSignature;
 pub use multisig::MultisigCommittee;
 pub use multisig::MultisigMember;

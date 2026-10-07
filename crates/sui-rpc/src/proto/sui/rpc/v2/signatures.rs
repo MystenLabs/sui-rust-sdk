@@ -905,7 +905,11 @@ impl TryFrom<&MultisigAggregatedSignature> for sui_sdk_types::MultisigAggregated
                 sui_sdk_types::Bitmap::deserialize_from(legacy_bitmap).map_err(|e| {
                     TryFromProtoError::invalid(MultisigAggregatedSignature::LEGACY_BITMAP_FIELD, e)
                 })?;
-            signature.with_legacy_bitmap(legacy_bitmap);
+            signature
+                .try_with_legacy_bitmap(legacy_bitmap)
+                .map_err(|e| {
+                    TryFromProtoError::invalid(MultisigAggregatedSignature::LEGACY_BITMAP_FIELD, e)
+                })?;
         }
 
         Ok(signature)
@@ -1022,5 +1026,83 @@ impl TryFrom<&UserSignature> for sui_sdk_types::UserSignature {
             }
         }
         .pipe(Ok)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn legacy_bitmap_bytes(indices: &[u32]) -> prost::bytes::Bytes {
+        let bitmap: sui_sdk_types::Bitmap = indices.iter().copied().collect();
+        let mut bytes = Vec::new();
+        bitmap.serialize_into(&mut bytes).unwrap();
+        bytes.into()
+    }
+
+    /// A proto multisig whose single-member committee has signed, per
+    /// `bitmap`, with no `legacy_bitmap` set yet.
+    fn single_member_multisig(
+        public_key: sui_sdk_types::MultisigMemberPublicKey,
+    ) -> MultisigAggregatedSignature {
+        let committee = sui_sdk_types::MultisigCommittee::new(
+            vec![sui_sdk_types::MultisigMember::new(public_key, 1)],
+            1,
+        );
+        let signature = sui_sdk_types::MultisigAggregatedSignature::new(committee, Vec::new(), 0b1);
+        MultisigAggregatedSignature::from(&signature)
+    }
+
+    fn assert_invalid_legacy_bitmap(proto: &MultisigAggregatedSignature, description: &str) {
+        let err = sui_sdk_types::MultisigAggregatedSignature::try_from(proto).unwrap_err();
+        let violation = err.field_violation();
+        assert_eq!(
+            violation.field,
+            MultisigAggregatedSignature::LEGACY_BITMAP_FIELD.name
+        );
+        assert_eq!(violation.description, description);
+    }
+
+    // Regression test: a `legacy_bitmap` on a committee with a member that
+    // the legacy format cannot encode used to convert successfully, and the
+    // resulting signature then panicked on its first `to_bytes()`.
+    #[test]
+    fn legacy_bitmap_with_unrepresentable_member_is_rejected() {
+        let public_key = sui_sdk_types::MultisigMemberPublicKey::MlDsa65(Box::new(
+            sui_sdk_types::MlDsa65PublicKey::new([0; sui_sdk_types::MlDsa65PublicKey::LENGTH]),
+        ));
+        let mut proto = single_member_multisig(public_key);
+        proto.legacy_bitmap = Some(legacy_bitmap_bytes(&[0]));
+
+        assert_invalid_legacy_bitmap(
+            &proto,
+            "mldsa65 member is not representable in legacy multisig",
+        );
+    }
+
+    // Regression test: `bitmap` and `legacy_bitmap` used to be accepted
+    // even when they named different signers, so `bitmap()` and
+    // `to_bytes()` disagreed on who signed.
+    #[test]
+    fn legacy_bitmap_must_match_bitmap() {
+        let public_key = sui_sdk_types::MultisigMemberPublicKey::Ed25519(
+            sui_sdk_types::Ed25519PublicKey::new([1; sui_sdk_types::Ed25519PublicKey::LENGTH]),
+        );
+        let mut proto = single_member_multisig(public_key);
+
+        proto.legacy_bitmap = Some(legacy_bitmap_bytes(&[1]));
+        assert_invalid_legacy_bitmap(&proto, "bitmap does not match legacy_bitmap");
+
+        proto.legacy_bitmap = Some(legacy_bitmap_bytes(&[0]));
+        let signature = sui_sdk_types::MultisigAggregatedSignature::try_from(&proto).unwrap();
+        let expected: sui_sdk_types::Bitmap = [0].into_iter().collect();
+        assert_eq!(signature.legacy_bitmap(), Some(&expected));
+
+        let signature = sui_sdk_types::UserSignature::Multisig(signature);
+        let bytes = signature.to_bytes();
+        assert_eq!(
+            sui_sdk_types::UserSignature::from_bytes(&bytes).unwrap(),
+            signature
+        );
     }
 }
