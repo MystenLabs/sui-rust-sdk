@@ -136,8 +136,7 @@ impl<T: Signer<UserSignature>> SuiSigner for T {
 /// Interface for signing user transactions and messages with a scheme that
 /// takes fresh randomness per signature
 ///
-/// Randomized counterpart of [`SuiSigner`]. Today that is ML-DSA-65 only. The
-/// caller supplies the rng, so the crate needs no `getrandom` backend.
+/// Randomized counterpart of [`SuiSigner`]. Today that is ML-DSA-65 only.
 ///
 /// # Note
 ///
