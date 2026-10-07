@@ -116,7 +116,7 @@ impl Secp256r1PrivateKey {
     ///
     /// Unlike [`Self::new`] this does not panic on key bytes that do not
     /// form a valid secp256r1 scalar, since the payload is untrusted input.
-    fn from_flagged_key_bytes(
+    pub(crate) fn from_flagged_key_bytes(
         scheme: SignatureScheme,
         key: Vec<u8>,
     ) -> Result<Self, SignatureError> {
