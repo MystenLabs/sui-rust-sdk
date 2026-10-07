@@ -143,17 +143,21 @@ impl<T: Signer<UserSignature>> SuiSigner for T {
 /// There is a blanket implementation of `SuiRandomizedSigner` for all `T`
 /// where `T: `[`signature::RandomizedSigner`]`<`[`UserSignature`]`>`, which handles the
 /// proper construction of the signing message.
+///
+/// The rng is taken as `&mut dyn CryptoRngCore` rather than `&mut impl
+/// CryptoRngCore` so that the trait stays dyn-compatible, like
+/// [`SuiSigner`], and signers can be held as `dyn SuiRandomizedSigner`.
 #[cfg(feature = "mldsa65")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "mldsa65")))]
 pub trait SuiRandomizedSigner {
     fn sign_transaction_with_rng(
         &self,
-        rng: &mut impl rand_core::CryptoRngCore,
+        rng: &mut dyn rand_core::CryptoRngCore,
         transaction: &Transaction,
     ) -> Result<UserSignature, SignatureError>;
     fn sign_personal_message_with_rng(
         &self,
-        rng: &mut impl rand_core::CryptoRngCore,
+        rng: &mut dyn rand_core::CryptoRngCore,
         message: &PersonalMessage<'_>,
     ) -> Result<UserSignature, SignatureError>;
 }
@@ -162,20 +166,20 @@ pub trait SuiRandomizedSigner {
 impl<T: signature::RandomizedSigner<UserSignature>> SuiRandomizedSigner for T {
     fn sign_transaction_with_rng(
         &self,
-        rng: &mut impl rand_core::CryptoRngCore,
+        mut rng: &mut dyn rand_core::CryptoRngCore,
         transaction: &Transaction,
     ) -> Result<UserSignature, SignatureError> {
         let msg = transaction.signing_digest();
-        self.try_sign_with_rng(rng, &msg)
+        self.try_sign_with_rng(&mut rng, &msg)
     }
 
     fn sign_personal_message_with_rng(
         &self,
-        rng: &mut impl rand_core::CryptoRngCore,
+        mut rng: &mut dyn rand_core::CryptoRngCore,
         message: &PersonalMessage<'_>,
     ) -> Result<UserSignature, SignatureError> {
         let msg = message.signing_digest();
-        self.try_sign_with_rng(rng, &msg)
+        self.try_sign_with_rng(&mut rng, &msg)
     }
 }
 

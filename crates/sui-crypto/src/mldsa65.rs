@@ -384,6 +384,29 @@ mod test {
             .unwrap_err();
     }
 
+    /// Signers of different concrete types can be held behind one trait
+    /// object and driven by a type-erased rng.
+    #[test]
+    fn randomized_signer_is_dyn_compatible() {
+        let message = PersonalMessage(b"hello".as_slice().into());
+        let signers: Vec<Box<dyn SuiRandomizedSigner>> = vec![
+            Box::new(MlDsa65PrivateKey::new([2; 32])),
+            Box::new(crate::simple::SimpleKeypair::from(MlDsa65PrivateKey::new(
+                [2; 32],
+            ))),
+        ];
+        let rng: &mut dyn rand_core::CryptoRngCore = &mut TestRng(1);
+        for signer in &signers {
+            let signature = signer
+                .sign_personal_message_with_rng(rng, &message)
+                .unwrap();
+            assert_eq!(signature.derive_address().to_string(), SUI_ADDRESS);
+            crate::simple::SimpleVerifier
+                .verify_personal_message(&message, &signature)
+                .unwrap();
+        }
+    }
+
     #[test]
     fn tampered_signature_fails() {
         let (sui_signature, sui_public_key) = sui_fixture();
