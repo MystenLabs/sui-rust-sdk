@@ -3,9 +3,8 @@
 //! Pure ML-DSA-65 with an empty context over the 32-byte signing digest,
 //! hedged with 32 bytes of caller-supplied randomness.
 //!
-//! Caller-supplied randomness keeps `getrandom` out of the crate and wasm
-//! builds working. [`SuiRandomizedSigner`](crate::SuiRandomizedSigner) is
-//! the randomized counterpart of [`SuiSigner`](crate::SuiSigner).
+//! [`SuiRandomizedSigner`](crate::SuiRandomizedSigner) is the randomized
+//! counterpart of [`SuiSigner`](crate::SuiSigner).
 
 use crate::SignatureError;
 use mysten_mldsa_native_rs as mldsa;
