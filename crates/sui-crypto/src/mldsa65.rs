@@ -96,13 +96,13 @@ impl MlDsa65PrivateKey {
         Self::new(seed)
     }
 
-    fn from_flagged_key_bytes(
+    pub(crate) fn from_flagged_key_bytes(
         scheme: SignatureScheme,
         key: Vec<u8>,
     ) -> Result<Self, SignatureError> {
         if scheme != SignatureScheme::MlDsa65 {
             return Err(SignatureError::from_source(format!(
-                "expected mldsa65 private key, found scheme `{}`",
+                "private key scheme flag is `{}`, expected `mldsa65`",
                 scheme.name(),
             )));
         }

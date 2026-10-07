@@ -113,7 +113,7 @@ impl Secp256k1PrivateKey {
 
     /// Build a key from the scheme flag and key bytes of a decoded
     /// `flag || private_key` payload.
-    fn from_flagged_key_bytes(
+    pub(crate) fn from_flagged_key_bytes(
         scheme: SignatureScheme,
         key: Vec<u8>,
     ) -> Result<Self, SignatureError> {

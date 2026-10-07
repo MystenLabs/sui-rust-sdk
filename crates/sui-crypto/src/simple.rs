@@ -280,45 +280,21 @@ mod keypair {
         ) -> Result<Self, SignatureError> {
             let inner = match scheme {
                 #[cfg(feature = "ed25519")]
-                SignatureScheme::Ed25519 => {
-                    let bytes: [u8; crate::ed25519::Ed25519PrivateKey::LENGTH] =
-                        key.try_into().map_err(|_: Vec<u8>| {
-                            SignatureError::from_source(
-                                "private key has invalid length for ed25519",
-                            )
-                        })?;
-                    InnerKeypair::Ed25519(crate::ed25519::Ed25519PrivateKey::new(bytes))
-                }
+                SignatureScheme::Ed25519 => InnerKeypair::Ed25519(
+                    crate::ed25519::Ed25519PrivateKey::from_flagged_key_bytes(scheme, key)?,
+                ),
                 #[cfg(feature = "secp256k1")]
-                SignatureScheme::Secp256k1 => {
-                    let bytes: [u8; crate::secp256k1::Secp256k1PrivateKey::LENGTH] =
-                        key.try_into().map_err(|_: Vec<u8>| {
-                            SignatureError::from_source(
-                                "private key has invalid length for secp256k1",
-                            )
-                        })?;
-                    InnerKeypair::Secp256k1(crate::secp256k1::Secp256k1PrivateKey::new(bytes)?)
-                }
+                SignatureScheme::Secp256k1 => InnerKeypair::Secp256k1(
+                    crate::secp256k1::Secp256k1PrivateKey::from_flagged_key_bytes(scheme, key)?,
+                ),
                 #[cfg(feature = "secp256r1")]
-                SignatureScheme::Secp256r1 => {
-                    let bytes: [u8; crate::secp256r1::Secp256r1PrivateKey::LENGTH] =
-                        key.try_into().map_err(|_: Vec<u8>| {
-                            SignatureError::from_source(
-                                "private key has invalid length for secp256r1",
-                            )
-                        })?;
-                    InnerKeypair::Secp256r1(crate::secp256r1::Secp256r1PrivateKey::new(bytes))
-                }
+                SignatureScheme::Secp256r1 => InnerKeypair::Secp256r1(
+                    crate::secp256r1::Secp256r1PrivateKey::from_flagged_key_bytes(scheme, key)?,
+                ),
                 #[cfg(feature = "mldsa65")]
-                SignatureScheme::MlDsa65 => {
-                    let bytes: [u8; crate::mldsa65::MlDsa65PrivateKey::LENGTH] =
-                        key.try_into().map_err(|_: Vec<u8>| {
-                            SignatureError::from_source(
-                                "private key has invalid length for mldsa65",
-                            )
-                        })?;
-                    InnerKeypair::MlDsa65(crate::mldsa65::MlDsa65PrivateKey::new(bytes))
-                }
+                SignatureScheme::MlDsa65 => InnerKeypair::MlDsa65(
+                    crate::mldsa65::MlDsa65PrivateKey::from_flagged_key_bytes(scheme, key)?,
+                ),
                 other => {
                     return Err(SignatureError::from_source(format!(
                         "unsupported scheme `{}` in private key encoding",
@@ -1147,6 +1123,21 @@ mod test {
             // Valid Base64 and flag but truncated key bytes.
             let truncated = base64ct::Base64::encode_string(&payload[..16]);
             SimpleKeypair::from_base64(&truncated).unwrap_err();
+        }
+
+        #[test]
+        fn rejects_invalid_ecdsa_scalar() {
+            // Zero is not a valid secp256k1 or secp256r1 private key. The
+            // payload is untrusted input, so decoding must return an error
+            // rather than panic.
+            use base64ct::Encoding;
+            for scheme in [SignatureScheme::Secp256k1, SignatureScheme::Secp256r1] {
+                let mut payload = vec![scheme.to_u8()];
+                payload.extend_from_slice(&[0; 32]);
+                let encoded = base64ct::Base64::encode_string(&payload);
+
+                SimpleKeypair::from_base64(&encoded).unwrap_err();
+            }
         }
     }
 }
