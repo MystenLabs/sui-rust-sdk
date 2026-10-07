@@ -152,7 +152,8 @@ impl RandomizedSigner<MlDsa65Signature> for MlDsa65PrivateKey {
         msg: &[u8],
     ) -> Result<MlDsa65Signature, SignatureError> {
         let mut rnd = [0; mldsa::RND_LENGTH];
-        rng.fill_bytes(&mut rnd);
+        rng.try_fill_bytes(&mut rnd)
+            .map_err(SignatureError::from_source)?;
         self.signing_key
             .sign(msg, b"", &rnd)
             .map(|signature| MlDsa65Signature::new(*signature.as_bytes()))
@@ -299,6 +300,29 @@ mod test {
 
     impl rand_core::CryptoRng for TestRng {}
 
+    /// An rng whose entropy source is unavailable.
+    struct FailingRng;
+
+    impl rand_core::RngCore for FailingRng {
+        fn next_u32(&mut self) -> u32 {
+            unimplemented!("only try_fill_bytes is expected to be called")
+        }
+
+        fn next_u64(&mut self) -> u64 {
+            unimplemented!("only try_fill_bytes is expected to be called")
+        }
+
+        fn fill_bytes(&mut self, _dst: &mut [u8]) {
+            unimplemented!("only try_fill_bytes is expected to be called")
+        }
+
+        fn try_fill_bytes(&mut self, _dst: &mut [u8]) -> Result<(), rand_core::Error> {
+            Err(rand_core::Error::new("entropy source unavailable"))
+        }
+    }
+
+    impl rand_core::CryptoRng for FailingRng {}
+
     /// A signature from Sui's signer verifies here under the same address.
     /// The reverse direction is covered by Sui's e2e tests.
     #[test]
@@ -323,6 +347,20 @@ mod test {
         assert_ne!(first, second);
         key.verifying_key().verify(&digest, &first).unwrap();
         key.verifying_key().verify(&digest, &second).unwrap();
+    }
+
+    /// An rng failure surfaces as an error instead of a panic.
+    #[test]
+    fn rng_failure_is_an_error() {
+        let key = MlDsa65PrivateKey::new([3; 32]);
+        let err = RandomizedSigner::<MlDsa65Signature>::try_sign_with_rng(
+            &key,
+            &mut FailingRng,
+            b"hello",
+        )
+        .unwrap_err();
+        let source = std::error::Error::source(&err).expect("rng error is the source");
+        assert_eq!(source.to_string(), "entropy source unavailable");
     }
 
     #[test]
