@@ -36,6 +36,9 @@ pub mod mldsa65;
 #[cfg_attr(doc_cfg, doc(cfg(feature = "zklogin")))]
 pub mod zklogin;
 
+#[cfg(all(test, feature = "mldsa65"))]
+mod test_util;
+
 #[cfg(any(
     feature = "ed25519",
     feature = "secp256r1",

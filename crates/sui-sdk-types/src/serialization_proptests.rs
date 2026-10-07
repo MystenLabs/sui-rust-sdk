@@ -61,6 +61,8 @@ serialization_test!(Ed25519PublicKey);
 serialization_test!(Ed25519Signature);
 serialization_test!(Jwk);
 serialization_test!(JwkId);
+serialization_test!(MlDsa65PublicKey);
+serialization_test!(MlDsa65Signature);
 serialization_test!(MultisigAggregatedSignature);
 serialization_test!(MultisigCommittee);
 serialization_test!(MultisigMember);
