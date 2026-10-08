@@ -1,0 +1,1 @@
+rd_("DjSets <code>authenticator_object_initial_shared_version</code> with the \xe2\x80\xa60DgIf <code>authenticator_object_initial_shared_version</code> is set, \xe2\x80\xa60")
