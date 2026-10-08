@@ -13000,6 +13000,66 @@ pub(crate) mod _field_impls {
             self.finish()
         }
     }
+    impl InsufficientGasBalance {
+        pub const REQUIRED_BUDGET_FIELD: &'static MessageField = &MessageField {
+            name: "required_budget",
+            json_name: "requiredBudget",
+            number: 1i32,
+            message_fields: None,
+        };
+        pub const COIN_BALANCE_FIELD: &'static MessageField = &MessageField {
+            name: "coin_balance",
+            json_name: "coinBalance",
+            number: 2i32,
+            message_fields: None,
+        };
+        pub const ADDRESS_BALANCE_FIELD: &'static MessageField = &MessageField {
+            name: "address_balance",
+            json_name: "addressBalance",
+            number: 3i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for InsufficientGasBalance {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::REQUIRED_BUDGET_FIELD,
+            Self::COIN_BALANCE_FIELD,
+            Self::ADDRESS_BALANCE_FIELD,
+        ];
+    }
+    impl InsufficientGasBalance {
+        pub fn path_builder() -> InsufficientGasBalanceFieldPathBuilder {
+            InsufficientGasBalanceFieldPathBuilder::new()
+        }
+    }
+    pub struct InsufficientGasBalanceFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl InsufficientGasBalanceFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn required_budget(mut self) -> String {
+            self.path.push(InsufficientGasBalance::REQUIRED_BUDGET_FIELD.name);
+            self.finish()
+        }
+        pub fn coin_balance(mut self) -> String {
+            self.path.push(InsufficientGasBalance::COIN_BALANCE_FIELD.name);
+            self.finish()
+        }
+        pub fn address_balance(mut self) -> String {
+            self.path.push(InsufficientGasBalance::ADDRESS_BALANCE_FIELD.name);
+            self.finish()
+        }
+    }
     impl CommandResult {
         pub const RETURN_VALUES_FIELD: &'static MessageField = &MessageField {
             name: "return_values",

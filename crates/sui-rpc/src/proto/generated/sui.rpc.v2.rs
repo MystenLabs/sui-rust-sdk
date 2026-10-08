@@ -9175,7 +9175,9 @@ pub struct SimulateTransactionRequest {
     )]
     pub checks: ::core::option::Option<i32>,
     /// Perform gas selection based on a budget estimation and include the
-    /// selected gas payment and budget in the response.
+    /// selected gas payment and budget in the response. If selection fails
+    /// because the gas owner lacks enough SUI to cover the budget, the returned
+    /// error carries an `InsufficientGasBalance` detail.
     ///
     /// This option will be ignored if `checks` is `DISABLED`.
     #[prost(bool, optional, tag = "4")]
@@ -9234,6 +9236,36 @@ pub struct SimulateTransactionResponse {
     /// congested objects.
     #[prost(uint64, optional, tag = "3")]
     pub suggested_gas_price: ::core::option::Option<u64>,
+}
+/// Error detail attached to the `INVALID_ARGUMENT` error that
+/// `SimulateTransaction` returns when `do_gas_selection` is set and gas
+/// selection cannot find enough SUI to cover the gas budget. It is packed in a
+/// `google.protobuf.Any` in the `google.rpc.Status` details, so clients that
+/// ignore details still see the same error code and message.
+///
+/// The two balances are reported separately because they combine differently.
+/// When the transaction uses the gas coin (an `Argument` of kind `GAS`), coins
+/// and address balance are combined to pay for gas. Otherwise the address
+/// balance pays for gas only if it alone covers `required_budget`; if it does
+/// not, the coins alone must cover it.
+#[non_exhaustive]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct InsufficientGasBalance {
+    /// Gas budget in MIST the transaction needs. When the request leaves the
+    /// budget unset, this is the server's estimate plus the cost of loading the
+    /// gas coins selected beyond the first; otherwise it is the budget from the
+    /// request.
+    #[prost(uint64, optional, tag = "1")]
+    pub required_budget: ::core::option::Option<u64>,
+    /// Total MIST of the gas owner's `Coin<SUI>` objects considered by gas
+    /// selection: owned, non-consensus coins not already used as transaction
+    /// inputs, capped at the protocol's maximum number of gas payment objects.
+    #[prost(uint64, optional, tag = "2")]
+    pub coin_balance: ::core::option::Option<u64>,
+    /// The gas owner's SUI address balance in MIST remaining after the
+    /// transaction's own explicit SUI withdrawals; 0 if there is none.
+    #[prost(uint64, optional, tag = "3")]
+    pub address_balance: ::core::option::Option<u64>,
 }
 /// An intermediate result/output from the execution of a single command
 #[non_exhaustive]
