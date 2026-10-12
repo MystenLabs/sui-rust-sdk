@@ -1,6 +1,6 @@
 # Set the default target of this Makefile
 .PHONY: all
-all:: check-features clippy test
+all:: check-features clippy test wasm
 
 .PHONY: check-features
 check-features:
@@ -14,6 +14,10 @@ clippy:
 test:
 	cargo nextest run --all-features
 	cargo test --all-features --doc
+
+.PHONY: wasm
+wasm:
+	CC=clang cargo check --all-features --target wasm32-unknown-unknown
 
 %:
 	$(MAKE) -C ../.. $@
