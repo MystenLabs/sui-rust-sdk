@@ -38,7 +38,7 @@ impl Client {
     pub fn list_checkpoints(
         &self,
         request: ListCheckpointsRequest,
-    ) -> impl Stream<Item = Result<ListCheckpointsResponse>> + Send + 'static {
+    ) -> impl Stream<Item = Result<ListCheckpointsResponse>> + crate::rt::MaybeSend + 'static {
         self.list_checkpoints_with_config(request, ListConfig::default())
     }
     /// Performs [`Client::list_checkpoints`] using `config`.
@@ -46,7 +46,7 @@ impl Client {
         &self,
         request: ListCheckpointsRequest,
         config: ListConfig,
-    ) -> impl Stream<Item = Result<ListCheckpointsResponse>> + Send + 'static {
+    ) -> impl Stream<Item = Result<ListCheckpointsResponse>> + crate::rt::MaybeSend + 'static {
         list_stream(ListDriver::<CheckpointAdapter>::new(
             self.clone(),
             request,
@@ -63,7 +63,7 @@ impl Client {
     pub fn stream_checkpoints(
         &self,
         request: CheckpointStreamRequest,
-    ) -> impl Stream<Item = Result<CheckpointStreamFrame>> + Send + 'static {
+    ) -> impl Stream<Item = Result<CheckpointStreamFrame>> + crate::rt::MaybeSend + 'static {
         self.stream_checkpoints_with_config(request, LedgerStreamConfig::default())
     }
 
@@ -72,7 +72,7 @@ impl Client {
         &self,
         request: CheckpointStreamRequest,
         config: LedgerStreamConfig,
-    ) -> impl Stream<Item = Result<CheckpointStreamFrame>> + Send + 'static {
+    ) -> impl Stream<Item = Result<CheckpointStreamFrame>> + crate::rt::MaybeSend + 'static {
         let subscribe_payload = SubscribeCheckpointsRequest {
             read_mask: request.read_mask.clone(),
             filter: request.filter.clone(),
@@ -105,7 +105,7 @@ impl Client {
     pub fn list_transactions(
         &self,
         request: ListTransactionsRequest,
-    ) -> impl Stream<Item = Result<ListTransactionsResponse>> + Send + 'static {
+    ) -> impl Stream<Item = Result<ListTransactionsResponse>> + crate::rt::MaybeSend + 'static {
         self.list_transactions_with_config(request, ListConfig::default())
     }
     /// Performs [`Client::list_transactions`] using `config`.
@@ -113,7 +113,7 @@ impl Client {
         &self,
         request: ListTransactionsRequest,
         config: ListConfig,
-    ) -> impl Stream<Item = Result<ListTransactionsResponse>> + Send + 'static {
+    ) -> impl Stream<Item = Result<ListTransactionsResponse>> + crate::rt::MaybeSend + 'static {
         list_stream(ListDriver::<TransactionAdapter>::new(
             self.clone(),
             request,
@@ -130,7 +130,7 @@ impl Client {
     pub fn stream_transactions(
         &self,
         request: TransactionStreamRequest,
-    ) -> impl Stream<Item = Result<TransactionStreamFrame>> + Send + 'static {
+    ) -> impl Stream<Item = Result<TransactionStreamFrame>> + crate::rt::MaybeSend + 'static {
         self.stream_transactions_with_config(request, LedgerStreamConfig::default())
     }
 
@@ -139,7 +139,7 @@ impl Client {
         &self,
         request: TransactionStreamRequest,
         config: LedgerStreamConfig,
-    ) -> impl Stream<Item = Result<TransactionStreamFrame>> + Send + 'static {
+    ) -> impl Stream<Item = Result<TransactionStreamFrame>> + crate::rt::MaybeSend + 'static {
         let subscribe_payload = SubscribeTransactionsRequest {
             read_mask: request.read_mask.clone(),
             filter: request.filter.clone(),
@@ -173,7 +173,7 @@ impl Client {
     pub fn list_events(
         &self,
         request: ListEventsRequest,
-    ) -> impl Stream<Item = Result<ListEventsResponse>> + Send + 'static {
+    ) -> impl Stream<Item = Result<ListEventsResponse>> + crate::rt::MaybeSend + 'static {
         self.list_events_with_config(request, ListConfig::default())
     }
     /// Performs [`Client::list_events`] using `config`.
@@ -181,7 +181,7 @@ impl Client {
         &self,
         request: ListEventsRequest,
         config: ListConfig,
-    ) -> impl Stream<Item = Result<ListEventsResponse>> + Send + 'static {
+    ) -> impl Stream<Item = Result<ListEventsResponse>> + crate::rt::MaybeSend + 'static {
         list_stream(ListDriver::<EventAdapter>::new(
             self.clone(),
             request,
@@ -199,7 +199,7 @@ impl Client {
     pub fn stream_events(
         &self,
         request: EventStreamRequest,
-    ) -> impl Stream<Item = Result<EventStreamFrame>> + Send + 'static {
+    ) -> impl Stream<Item = Result<EventStreamFrame>> + crate::rt::MaybeSend + 'static {
         self.stream_events_with_config(request, LedgerStreamConfig::default())
     }
 
@@ -208,7 +208,7 @@ impl Client {
         &self,
         request: EventStreamRequest,
         config: LedgerStreamConfig,
-    ) -> impl Stream<Item = Result<EventStreamFrame>> + Send + 'static {
+    ) -> impl Stream<Item = Result<EventStreamFrame>> + crate::rt::MaybeSend + 'static {
         let subscribe_payload = SubscribeEventsRequest {
             read_mask: request.read_mask.clone(),
             filter: request.filter.clone(),
@@ -238,7 +238,7 @@ impl Client {
 
 fn list_stream<A: SubscriptionAdapter>(
     driver: ListDriver<A>,
-) -> impl Stream<Item = Result<A::ListResponse>> + Send + 'static {
+) -> impl Stream<Item = Result<A::ListResponse>> + crate::rt::MaybeSend + 'static {
     futures::stream::unfold(driver, |mut driver| async move {
         driver.next().await.map(|item| (item, driver))
     })
@@ -246,7 +246,7 @@ fn list_stream<A: SubscriptionAdapter>(
 
 fn resumable_stream<A: SubscriptionAdapter>(
     driver: Driver<A>,
-) -> impl Stream<Item = Result<A::Output>> + Send + 'static {
+) -> impl Stream<Item = Result<A::Output>> + crate::rt::MaybeSend + 'static {
     futures::stream::unfold(driver, |mut driver| async move {
         driver.next().await.map(|item| (item, driver))
     })

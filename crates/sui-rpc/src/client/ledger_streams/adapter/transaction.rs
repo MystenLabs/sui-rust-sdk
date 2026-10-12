@@ -1,7 +1,7 @@
+use crate::rt::BoxStream;
 use prost::bytes::Bytes;
 use tonic::Request;
 use tonic::Status;
-use tonic::codegen::BoxStream;
 
 use super::super::super::Client;
 use super::super::super::Result;

@@ -35,12 +35,7 @@ sui-crypto = { version = "0.4.0", path = "../sui-crypto", default-features = fal
 
 # dependencies for the protobuf and gRPC definitions
 bytes = "1.10"
-# Not used directly; this floors hyper at 1.10, whose h2 requirement
-# excludes the h2 versions with stream-cancellation flow-control
-# accounting bugs (hyperium/h2#893, #896, #897, #898, and #913) that can
-# permanently wedge a multiplexed gRPC connection.
-hyper = { version = "1.10", default-features = false }
-tonic = { version = "0.14.2", default-features = false, features = ["channel", "codegen", "tls-ring", "tls-webpki-roots", "zstd"] }
+tonic = { version = "0.14.2", default-features = false, features = ["codegen"] }
 tonic-prost = "0.14.2"
 prost = "0.14.1"
 prost-types = "0.14.1"
@@ -50,11 +45,29 @@ serde_json = "1.0.145"
 http = "1.3.1"
 http-body = "1"
 futures = "0.3"
-tokio = { version = "1.40", features = ["time", "rt", "sync"] }
+tokio = { version = "1.40", features = ["sync", "macros"] }
 tower = { version = "0.5.3", default-features = false, features = ["util"] }
 
 argon2 = { version = "0.5.3", default-features = false, features = ["alloc"], optional = true }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"], optional = true }
+
+# Natively, `Client::new` connects over tonic's HTTP/2 channel with TLS, and
+# timers and tasks run on tokio.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+# Not used directly; this floors hyper at 1.10, whose h2 requirement
+# excludes the h2 versions with stream-cancellation flow-control
+# accounting bugs (hyperium/h2#893, #896, #897, #898, and #913) that can
+# permanently wedge a multiplexed gRPC connection.
+hyper = { version = "1.10", default-features = false }
+tokio = { version = "1.40", features = ["time", "rt"] }
+tonic = { version = "0.14.2", default-features = false, features = ["channel", "tls-ring", "tls-webpki-roots", "zstd"] }
+
+# On wasm32, `Client::new` speaks gRPC-web over `fetch`, and timers and tasks
+# run on the host's event loop.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+tonic-web-wasm-client = "0.9.2"
+wasm-bindgen-futures = "0.4"
+wasmtimer = { version = "0.4.3", default-features = false, features = ["tokio"] }
 
 [dev-dependencies]
 rand = "0.8"
@@ -63,10 +76,18 @@ proptest = { version = "1.8.0", default-features = false, features = ["std"] }
 test-strategy = { version = "0.4" }
 sui-sdk-types = { version = "0.4.0", path = "../sui-sdk-types", default-features = false, features = ["proptest", "serde", "hash"] }
 serde_json = { version = "1.0.145" }
+http-body-util = "0.1"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 tokio = { version = "1.40", features = ["rt", "rt-multi-thread", "macros", "net", "test-util"] }
 # The starvation integration tests host a mock gRPC server built from this
 # crate's own generated server stubs.
 tonic = { version = "0.14.2", default-features = false, features = ["server", "router"] }
+
+[target.wasm32-unknown-unknown.dev-dependencies]
+wasm-bindgen-test = "0.3"
+getrandom_2 = { version = "0.2", package = "getrandom", features = ["js"] }
+getrandom_4 = { version = "0.4", package = "getrandom", features = ["wasm_js"] }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(doc_cfg)'] }

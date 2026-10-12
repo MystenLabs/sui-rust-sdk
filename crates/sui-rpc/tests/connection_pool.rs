@@ -19,6 +19,9 @@
 //! distribution test asserts coverage over many requests rather than an even
 //! split, which would be flaky.
 
+// These tests host a mock gRPC server on tokio; `tests/transport.rs` covers the client on wasm32.
+#![cfg(not(target_arch = "wasm32"))]
+
 use std::collections::BTreeMap;
 use std::net::SocketAddr;
 use std::sync::Arc;

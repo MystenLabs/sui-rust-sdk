@@ -29,6 +29,9 @@ test: ## Run unit tests
 wasm: ## Build WASM modules
 	$(MAKE) -C crates/sui-sdk-types wasm
 	$(MAKE) -C crates/sui-crypto wasm
+	$(MAKE) -C crates/sui-rpc wasm
+	$(MAKE) -C crates/sui-transaction-builder wasm
+	$(MAKE) -C crates/sui-graphql wasm
 
 .PHONY: doc
 doc: ## Generate documentation

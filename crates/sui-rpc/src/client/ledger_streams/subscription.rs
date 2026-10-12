@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
+use crate::rt::BoxStream;
 use tonic::Status;
-use tonic::codegen::BoxStream;
 
 use super::super::Result;
 use super::adapter::LiveFrame;

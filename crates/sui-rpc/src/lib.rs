@@ -14,7 +14,11 @@ pub mod faucet;
 #[cfg_attr(doc_cfg, doc(cfg(feature = "unstable")))]
 pub mod light_client;
 
+mod rt;
+
 pub use client::Client;
+pub use rt::MaybeSend;
+pub use rt::MaybeSync;
 
 #[doc(hidden)]
 pub mod _serde;

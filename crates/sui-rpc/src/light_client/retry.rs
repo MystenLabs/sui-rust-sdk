@@ -35,7 +35,7 @@ pub(crate) async fn step(
     if !is_retryable(&err) || *attempt >= config.max_retries {
         return Err(err);
     }
-    tokio::time::sleep(backoff_delay(config, *attempt)).await;
+    crate::rt::time::sleep(backoff_delay(config, *attempt)).await;
     *attempt = attempt.saturating_add(1);
     Ok(())
 }
@@ -79,7 +79,8 @@ fn pseudo_jitter(attempt: u32, ceiling: Duration) -> Duration {
     Duration::from_millis(offset_ms)
 }
 
-#[cfg(test)]
+// These tests drive tokio's runtime and paused clock; `tests/transport.rs` covers the client on wasm32.
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
 

@@ -1,3 +1,21 @@
+# Unreleased
+
+## Added
+
+- `Client` runs on wasm32: `Client::new` speaks gRPC-web over `fetch` there,
+  with the same API as natively, including ledger streams,
+  `execute_transaction_and_wait_for_checkpoint`, the idle-body watchdog, and
+  timeouts
+- add `Client::from_service` to run the client over any `tower::Service`
+  transport, on every target
+- add `MaybeSend` and `MaybeSync`, which are `Send` and `Sync` except on wasm32
+
+## Changed
+
+- `Client::from_endpoint`, `Client::with_num_connections`, the HTTP/2
+  window-size setters, and the generated clients' `connect` constructors are
+  not available on wasm32
+
 # [0.4.0] - 2026-09-09
 
 ## Added

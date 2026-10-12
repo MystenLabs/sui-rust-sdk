@@ -30,7 +30,9 @@ pub(crate) trait Intent: std::any::Any + Send + Sync {
     fn register(self, builder: &mut TransactionBuilder) -> Argument;
 }
 
-#[async_trait::async_trait]
+// Futures on wasm32 hold JavaScript values (the RPC transport) and are not `Send`.
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
 pub(crate) trait IntentResolver: std::any::Any + std::fmt::Debug + Send + Sync {
     // Perform any required resolutions
     async fn resolve(

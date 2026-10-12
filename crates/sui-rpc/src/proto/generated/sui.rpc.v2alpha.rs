@@ -201,6 +201,7 @@ pub mod proof_service_client {
     pub struct ProofServiceClient<T> {
         inner: tonic::client::Grpc<T>,
     }
+    #[cfg(not(target_arch = "wasm32"))]
     impl ProofServiceClient<tonic::transport::Channel> {
         /// Attempt to create a new client by connecting to a given endpoint.
         pub async fn connect<D>(dst: D) -> Result<Self, tonic::transport::Error>

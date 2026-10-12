@@ -328,7 +328,9 @@ struct Request {
     kind: IntentKind,
 }
 
-#[async_trait::async_trait]
+// Futures on wasm32 hold JavaScript values (the RPC transport) and are not `Send`.
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait::async_trait(?Send))]
 impl IntentResolver for Resolver {
     async fn resolve(
         &self,

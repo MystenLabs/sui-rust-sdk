@@ -1,9 +1,9 @@
 use std::time::Duration;
 
+use crate::rt::BoxStream;
 use futures::StreamExt;
 use tonic::Request;
 use tonic::Status;
-use tonic::codegen::BoxStream;
 
 use super::super::Client;
 use super::super::Result;
@@ -322,7 +322,7 @@ impl<A: SubscriptionAdapter> Driver<A> {
                     if A::start_checkpoint(&self.list_template)
                         .is_some_and(|start_checkpoint| checkpoint_height < start_checkpoint) =>
                 {
-                    tokio::time::sleep(self.config.ledger_tip_poll_interval).await;
+                    crate::rt::time::sleep(self.config.ledger_tip_poll_interval).await;
                     (Phase::Prologue(ProloguePhase::ReadInitialTip), None)
                 }
                 Ok(checkpoint_height) => {
@@ -721,7 +721,7 @@ impl<A: SubscriptionAdapter> Driver<A> {
                 }
             }
             PollingPhase::Sleep => {
-                tokio::time::sleep(self.config.ledger_tip_poll_interval).await;
+                crate::rt::time::sleep(self.config.ledger_tip_poll_interval).await;
                 PollingStep::Next(PollingPhase::ReadTip)
             }
             PollingPhase::ReadTip => match self
@@ -808,7 +808,7 @@ impl<A: SubscriptionAdapter> Driver<A> {
                     ) else {
                         return Err(status);
                     };
-                    tokio::time::sleep(delay).await;
+                    crate::rt::time::sleep(delay).await;
                 }
             }
         }
@@ -1039,7 +1039,7 @@ impl<A: SubscriptionAdapter> Driver<A> {
                 }
             }
             ConnectPhase::RetryDelay { delay } => {
-                tokio::time::sleep(delay).await;
+                crate::rt::time::sleep(delay).await;
                 SubscribingStep::Next(SubscribingPhase::Connect(ConnectMachine {
                     context,
                     phase: ConnectPhase::ReadRecoveryTip,

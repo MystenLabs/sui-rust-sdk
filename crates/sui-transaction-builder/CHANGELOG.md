@@ -1,3 +1,10 @@
+# Unreleased
+
+## Added
+
+- the `intents` feature (`TransactionBuilder::build` and the coin and balance
+  intents) compiles for wasm32
+
 # [0.4.0] - 2026-09-09
 
 ## Changed

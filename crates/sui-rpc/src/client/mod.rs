@@ -1,14 +1,21 @@
+// On wasm32 the client's configuration holds non-`Send` transports and layers; it stays behind an
+// `Arc` so both targets share one type.
+#![cfg_attr(target_arch = "wasm32", allow(clippy::arc_with_non_send_sync))]
+
 use std::sync::Arc;
 use std::time::Duration;
-use tap::Pipe;
 use tonic::body::Body;
+#[cfg(not(target_arch = "wasm32"))]
 use tonic::codec::CompressionEncoding;
+#[cfg(not(target_arch = "wasm32"))]
 use tonic::transport::channel::ClientTlsConfig;
 use tower::Layer;
 use tower::Service;
 use tower::ServiceBuilder;
-use tower::util::BoxLayer;
-use tower::util::BoxService;
+
+use crate::rt::BoxService;
+use crate::rt::MaybeSend;
+use crate::rt::MaybeSync;
 
 mod response_ext;
 pub use response_ext::ResponseExt;
@@ -19,6 +26,7 @@ pub use interceptors::HeadersInterceptor;
 mod watchdog;
 pub use watchdog::BodyIdleTimeout;
 use watchdog::DEFAULT_BODY_IDLE_TIMEOUT;
+use watchdog::HeadersTimeout;
 use watchdog::WatchdogLayer;
 
 mod staking_rewards;
@@ -58,22 +66,37 @@ use crate::proto::sui::rpc::v2::transaction_execution_service_client::Transactio
 use crate::proto::sui::rpc::v2alpha::proof_service_client::ProofServiceClient;
 
 type Result<T, E = tonic::Status> = std::result::Result<T, E>;
-type BoxError = Box<dyn std::error::Error + Send + Sync + 'static>;
+pub(crate) type BoxError = Box<dyn std::error::Error + Send + Sync + 'static>;
 type BoxedChannel = BoxService<http::Request<Body>, http::Response<Body>, tonic::Status>;
 
-type RequestLayer = BoxLayer<
-    BoxService<http::Request<Body>, http::Response<Body>, BoxError>,
-    http::Request<Body>,
-    http::Response<Body>,
-    BoxError,
->;
+/// The client's transport before its own layers, with the error type user layers see.
+type BaseService = BoxService<http::Request<Body>, http::Response<Body>, BoxError>;
 
+/// The user's request layer, applied to the base service on every RPC.
+#[cfg(not(target_arch = "wasm32"))]
+type RequestLayer = Arc<dyn Fn(BaseService) -> BaseService + Send + Sync>;
+#[cfg(target_arch = "wasm32")]
+type RequestLayer = Arc<dyn Fn(BaseService) -> BaseService>;
+
+/// A transport supplied to [`Client::from_service`]: a fresh service per RPC.
+#[cfg(not(target_arch = "wasm32"))]
+type MakeService = Arc<dyn Fn() -> BaseService + Send + Sync>;
+#[cfg(target_arch = "wasm32")]
+type MakeService = Arc<dyn Fn() -> BaseService>;
+
+#[cfg(not(target_arch = "wasm32"))]
 const DEFAULT_CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
+#[cfg(not(target_arch = "wasm32"))]
 const DEFAULT_TCP_KEEPALIVE_IDLE: Duration = Duration::from_secs(15);
+#[cfg(not(target_arch = "wasm32"))]
 const DEFAULT_TCP_KEEPALIVE_INTERVAL: Duration = Duration::from_secs(5);
+#[cfg(not(target_arch = "wasm32"))]
 const DEFAULT_TCP_KEEPALIVE_RETRIES: u32 = 3;
+#[cfg(not(target_arch = "wasm32"))]
 const DEFAULT_HTTP2_KEEP_ALIVE_INTERVAL: Duration = Duration::from_secs(5);
+#[cfg(not(target_arch = "wasm32"))]
 const DEFAULT_HTTP2_KEEP_ALIVE_TIMEOUT: Duration = Duration::from_secs(20);
+#[cfg(not(target_arch = "wasm32"))]
 const DEFAULT_NUM_CONNECTIONS: usize = 1;
 
 // RPCs made through a `Client` (and all of its clones) are multiplexed over
@@ -86,15 +109,30 @@ const DEFAULT_NUM_CONNECTIONS: usize = 1;
 // streams starve the connection. Keep the stream window at hyper's default
 // but raise the connection window so ~32 concurrently stalled streams are
 // needed instead.
+#[cfg(not(target_arch = "wasm32"))]
 const DEFAULT_HTTP2_STREAM_WINDOW_SIZE: u32 = 2 * 1024 * 1024;
+#[cfg(not(target_arch = "wasm32"))]
 const DEFAULT_HTTP2_CONNECTION_WINDOW_SIZE: u32 = 64 * 1024 * 1024;
 
 /// A gRPC client for the Sui fullnode RPC interface.
 ///
 /// RPCs made through a client and its clones are multiplexed over a single
-/// HTTP/2 connection by default; see
-/// [`with_num_connections`](Client::with_num_connections) to spread them over
-/// several.
+/// HTTP/2 connection by default; natively, see `with_num_connections` to spread
+/// them over several.
+///
+/// # Transports and targets
+///
+/// [`Client::new`] connects over tonic's HTTP/2 channel natively, and over
+/// gRPC-web with the host's `fetch` on wasm32 (tested in Node; the fullnode must
+/// accept gRPC-web, as Sui's public fullnodes do), so the same code runs on both.
+/// [`Client::from_service`] runs the client over any other transport.
+///
+/// Everything else the client offers is available on every target and
+/// transport. The exceptions are the channel's connection settings
+/// (`from_endpoint`, `with_num_connections`, and the HTTP/2 window sizes),
+/// which exist only natively, and gRPC message compression, which is not
+/// negotiated on wasm32. On wasm32 the futures and streams the client returns
+/// are not `Send` (see [`crate::MaybeSend`]).
 ///
 /// # Ledger streams
 ///
@@ -184,7 +222,7 @@ const DEFAULT_HTTP2_CONNECTION_WINDOW_SIZE: u32 = 64 * 1024 * 1024;
 /// connection fails with `DeadlineExceeded` instead of hanging forever.
 #[derive(Clone)]
 pub struct Client {
-    channel: tonic::transport::Channel,
+    transport: Transport,
 
     // Everything other than the channel is only consulted when building a
     // per-service client or reconfiguring, so it lives behind an `Arc` to
@@ -193,19 +231,39 @@ pub struct Client {
     config: Arc<ClientConfig>,
 }
 
+/// How a [`Client`] reaches the fullnode.
+#[derive(Clone)]
+enum Transport {
+    /// tonic's HTTP/2 channel, built from the endpoint in [`ClientConfig`].
+    #[cfg(not(target_arch = "wasm32"))]
+    Channel(tonic::transport::Channel),
+    /// Any other transport (see [`Client::from_service`]), with the origin its requests carry.
+    Service {
+        make: MakeService,
+        origin: http::Uri,
+    },
+}
+
 #[derive(Clone)]
 struct ClientConfig {
     uri: http::Uri,
-    endpoint: tonic::transport::Endpoint,
+    /// The channel's endpoint; `None` for a client built with [`Client::from_service`].
+    #[cfg(not(target_arch = "wasm32"))]
+    endpoint: Option<tonic::transport::Endpoint>,
     headers: HeadersInterceptor,
     max_decoding_message_size: Option<usize>,
     body_idle_timeout: Option<Duration>,
+    /// Bounds the response-headers phase of a transport other than the channel, whose endpoint
+    /// enforces it instead.
+    response_headers_timeout: Option<Duration>,
+    #[cfg(not(target_arch = "wasm32"))]
     num_connections: usize,
 
     /// Layer to apply to all RPC requests
     request_layer: Option<RequestLayer>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /// Open `num_connections` lazy connections to `endpoint`, all sharing its
 /// configuration, and balance requests across them.
 ///
@@ -232,6 +290,24 @@ fn build_channel(
     }
 
     channel
+}
+
+/// Builds a generated service client over a [`Client`]'s transport and settings.
+macro_rules! service_client {
+    ($self:ident, $client:ident) => {{
+        let channel = $self.channel();
+        let client = match $self.origin() {
+            Some(origin) => $client::with_origin(channel, origin),
+            None => $client::new(channel),
+        };
+        // gRPC message compression; on wasm32 `fetch` compresses at the HTTP level instead.
+        #[cfg(not(target_arch = "wasm32"))]
+        let client = client.accept_compressed(CompressionEncoding::Zstd);
+        match $self.config.max_decoding_message_size {
+            Some(limit) => client.max_decoding_message_size(limit),
+            None => client,
+        }
+    }};
 }
 
 impl Client {
@@ -266,23 +342,28 @@ impl Client {
     /// hyper starts the connection window at the 64 KiB HTTP/2 spec default
     /// until bandwidth-delay probing ramps up, so a single stalled stream can
     /// starve the whole connection.
+    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg_attr(doc_cfg, doc(cfg(not(target_arch = "wasm32"))))]
     pub fn from_endpoint(endpoint: &tonic::transport::Endpoint) -> Self {
         let uri = endpoint.uri().clone();
         let channel = build_channel(endpoint, DEFAULT_NUM_CONNECTIONS);
         Self {
-            channel,
+            transport: Transport::Channel(channel),
             config: Arc::new(ClientConfig {
                 uri,
-                endpoint: endpoint.clone(),
+                endpoint: Some(endpoint.clone()),
                 headers: Default::default(),
                 max_decoding_message_size: None,
                 body_idle_timeout: Some(DEFAULT_BODY_IDLE_TIMEOUT),
+                response_headers_timeout: None,
                 num_connections: DEFAULT_NUM_CONNECTIONS,
                 request_layer: None,
             }),
         }
     }
 
+    /// Build a client for the fullnode at `uri` over the built-in transport: tonic's HTTP/2
+    /// channel (with TLS for `https`) natively, and gRPC-web over `fetch` on wasm32.
     #[allow(clippy::result_large_err)]
     pub fn new<T>(uri: T) -> Result<Self>
     where
@@ -293,6 +374,32 @@ impl Client {
             .try_into()
             .map_err(Into::into)
             .map_err(status_from_error)?;
+        Self::with_built_in_transport(uri)
+    }
+
+    /// gRPC-web over `fetch`. Requests carry absolute URIs (see [`Client::from_service`]), so
+    /// the fetch client needs no base URL of its own.
+    #[cfg(target_arch = "wasm32")]
+    #[allow(clippy::result_large_err)]
+    fn with_built_in_transport(uri: http::Uri) -> Result<Self> {
+        let fetch = ServiceBuilder::new()
+            .map_err(|error: tonic_web_wasm_client::Error| -> BoxError {
+                match error {
+                    // `fetch` itself failed: the fullnode could not be reached. The channel
+                    // reports a failed connection as `Unavailable` too.
+                    tonic_web_wasm_client::Error::JsError(message) => {
+                        Box::new(tonic::Status::unavailable(message))
+                    }
+                    error => Box::new(error),
+                }
+            })
+            .service(tonic_web_wasm_client::Client::new(String::new()));
+        Self::from_service(uri, fetch)
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[allow(clippy::result_large_err)]
+    fn with_built_in_transport(uri: http::Uri) -> Result<Self> {
         let mut endpoint = tonic::transport::Endpoint::from(uri.clone());
         if uri.scheme() == Some(&http::uri::Scheme::HTTPS) {
             endpoint = endpoint
@@ -313,13 +420,68 @@ impl Client {
         let channel = build_channel(&endpoint, DEFAULT_NUM_CONNECTIONS);
 
         Ok(Self {
-            channel,
+            transport: Transport::Channel(channel),
             config: Arc::new(ClientConfig {
                 uri,
-                endpoint,
+                endpoint: Some(endpoint),
                 headers: Default::default(),
                 max_decoding_message_size: None,
                 body_idle_timeout: Some(DEFAULT_BODY_IDLE_TIMEOUT),
+                response_headers_timeout: None,
+                num_connections: DEFAULT_NUM_CONNECTIONS,
+                request_layer: None,
+            }),
+        })
+    }
+
+    /// Build a client for the fullnode at `uri` over any transport: a [`tower::Service`] that
+    /// performs a gRPC (or gRPC-web) HTTP request. This is how to supply a transport of your
+    /// own, such as a platform HTTP stack, a proxy, or a test double.
+    ///
+    /// Each request carries an absolute URI: the scheme and authority of `uri` followed by the
+    /// RPC's path (for example
+    /// `https://fullnode.mainnet.sui.io/sui.rpc.v2.LedgerService/GetServiceInfo`). As with the
+    /// built-in transport, a path in `uri` is not used. The client's headers, request layer,
+    /// response-headers timeout, and idle-body watchdog apply as with the built-in transport;
+    /// the channel's connection settings (`with_num_connections` and the HTTP/2 window sizes)
+    /// have no effect.
+    ///
+    /// # Errors
+    ///
+    /// `InvalidArgument` if `uri` has no scheme or no authority.
+    #[allow(clippy::result_large_err)]
+    pub fn from_service<S, B>(uri: http::Uri, service: S) -> Result<Self>
+    where
+        S: Service<http::Request<Body>, Response = http::Response<B>>
+            + Clone
+            + MaybeSend
+            + MaybeSync
+            + 'static,
+        S::Future: MaybeSend + 'static,
+        S::Error: Into<BoxError>,
+        B: http_body::Body<Data = bytes::Bytes> + Send + 'static,
+        B::Error: Into<BoxError>,
+    {
+        let origin = origin_of(&uri)?;
+        let make: MakeService = Arc::new(move || {
+            BoxService::new(
+                ServiceBuilder::new()
+                    .map_response(|response: http::Response<B>| response.map(Body::new))
+                    .map_err(Into::<BoxError>::into)
+                    .service(service.clone()),
+            )
+        });
+        Ok(Self {
+            transport: Transport::Service { make, origin },
+            config: Arc::new(ClientConfig {
+                uri,
+                #[cfg(not(target_arch = "wasm32"))]
+                endpoint: None,
+                headers: Default::default(),
+                max_decoding_message_size: None,
+                body_idle_timeout: Some(DEFAULT_BODY_IDLE_TIMEOUT),
+                response_headers_timeout: None,
+                #[cfg(not(target_arch = "wasm32"))]
                 num_connections: DEFAULT_NUM_CONNECTIONS,
                 request_layer: None,
             }),
@@ -381,13 +543,22 @@ impl Client {
     /// size the timeout for the slowest expected RPC. Expiry surfaces as
     /// [`DeadlineExceeded`](tonic::Code::DeadlineExceeded).
     ///
-    /// This rebuilds the underlying channel, so it must be called before the
-    /// client is used or cloned; earlier clones keep the previous
+    /// The channel enforces this timeout itself; for any other transport
+    /// (gRPC-web on wasm32, or [`Client::from_service`]) the client enforces it
+    /// around the transport's response future, with the same semantics.
+    ///
+    /// Natively this rebuilds the underlying channel, so it must be called
+    /// before the client is used or cloned; earlier clones keep the previous
     /// configuration.
     pub fn with_response_headers_timeout(mut self, timeout: Duration) -> Self {
         let config = Arc::make_mut(&mut self.config);
-        config.endpoint = config.endpoint.clone().timeout(timeout);
-        self.channel = build_channel(&config.endpoint, config.num_connections);
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(endpoint) = &mut config.endpoint {
+            *endpoint = endpoint.clone().timeout(timeout);
+            self.transport = Transport::Channel(build_channel(endpoint, config.num_connections));
+            return self;
+        }
+        config.response_headers_timeout = Some(timeout);
         self
     }
 
@@ -415,10 +586,14 @@ impl Client {
     /// This rebuilds the underlying channel, so it must be called before the
     /// client is used or cloned; earlier clones keep the previous
     /// configuration.
+    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg_attr(doc_cfg, doc(cfg(not(target_arch = "wasm32"))))]
     pub fn with_num_connections(mut self, num_connections: usize) -> Self {
         let config = Arc::make_mut(&mut self.config);
         config.num_connections = num_connections.max(1);
-        self.channel = build_channel(&config.endpoint, config.num_connections);
+        if let Some(endpoint) = &config.endpoint {
+            self.transport = Transport::Channel(build_channel(endpoint, config.num_connections));
+        }
         self
     }
 
@@ -433,10 +608,14 @@ impl Client {
     /// This rebuilds the underlying channel, so it must be called before the
     /// client is used or cloned; earlier clones keep the previous
     /// configuration.
+    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg_attr(doc_cfg, doc(cfg(not(target_arch = "wasm32"))))]
     pub fn with_initial_stream_window_size(mut self, size: u32) -> Self {
         let config = Arc::make_mut(&mut self.config);
-        config.endpoint = config.endpoint.clone().initial_stream_window_size(size);
-        self.channel = build_channel(&config.endpoint, config.num_connections);
+        if let Some(endpoint) = &mut config.endpoint {
+            *endpoint = endpoint.clone().initial_stream_window_size(size);
+            self.transport = Transport::Channel(build_channel(endpoint, config.num_connections));
+        }
         self
     }
 
@@ -456,10 +635,14 @@ impl Client {
     /// This rebuilds the underlying channel, so it must be called before the
     /// client is used or cloned; earlier clones keep the previous
     /// configuration.
+    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg_attr(doc_cfg, doc(cfg(not(target_arch = "wasm32"))))]
     pub fn with_initial_connection_window_size(mut self, size: u32) -> Self {
         let config = Arc::make_mut(&mut self.config);
-        config.endpoint = config.endpoint.clone().initial_connection_window_size(size);
-        self.channel = build_channel(&config.endpoint, config.num_connections);
+        if let Some(endpoint) = &mut config.endpoint {
+            *endpoint = endpoint.clone().initial_connection_window_size(size);
+            self.transport = Transport::Channel(build_channel(endpoint, config.num_connections));
+        }
         self
     }
 
@@ -484,9 +667,11 @@ impl Client {
     /// Add a layer that logs each request URI:
     ///
     /// ```
+    /// # #[cfg(not(target_arch = "wasm32"))]
     /// # let _rt = tokio::runtime::Builder::new_current_thread()
     /// #     .build()
     /// #     .unwrap();
+    /// # #[cfg(not(target_arch = "wasm32"))]
     /// # let _guard = _rt.enter();
     /// use sui_rpc::Client;
     /// use tower::ServiceBuilder;
@@ -500,24 +685,23 @@ impl Client {
     /// ```
     pub fn request_layer<L, ResBody, E>(mut self, layer: L) -> Self
     where
-        L: Layer<BoxService<http::Request<Body>, http::Response<Body>, BoxError>>
-            + Send
-            + Sync
-            + 'static,
+        L: Layer<BaseService> + MaybeSend + MaybeSync + 'static,
         L::Service: Service<http::Request<Body>, Response = http::Response<ResBody>, Error = E>
-            + Send
+            + MaybeSend
             + 'static,
-        <L::Service as Service<http::Request<Body>>>::Future: Send + 'static,
+        <L::Service as Service<http::Request<Body>>>::Future: MaybeSend + 'static,
         ResBody: http_body::Body<Data = bytes::Bytes> + Send + 'static,
         ResBody::Error: Into<BoxError>,
-        E: Into<BoxError> + Send + 'static,
+        E: Into<BoxError> + MaybeSend + 'static,
     {
-        let layer = BoxLayer::new(
-            ServiceBuilder::new()
-                .map_response(|resp: http::Response<ResBody>| resp.map(Body::new))
-                .map_err(Into::<BoxError>::into)
-                .layer(layer),
-        );
+        let layer: RequestLayer = Arc::new(move |base: BaseService| {
+            BoxService::new(
+                ServiceBuilder::new()
+                    .map_response(|resp: http::Response<ResBody>| resp.map(Body::new))
+                    .map_err(Into::<BoxError>::into)
+                    .service(layer.layer(base)),
+            )
+        });
         Arc::make_mut(&mut self.config).request_layer = Some(layer);
         self
     }
@@ -533,26 +717,37 @@ impl Client {
 
     fn channel(&self) -> BoxedChannel {
         let headers = self.config.headers.clone();
+        // Inserted before the configured headers so a caller can override it.
+        let add_headers = move |mut req: http::Request<Body>| {
+            req.headers_mut().insert(
+                crate::headers::X_SUI_CLIENT_PROTOCOL_VERSION,
+                http::HeaderValue::from(crate::headers::MAX_PROTOCOL_VERSION),
+            );
+            if !headers.headers().is_empty() {
+                req.headers_mut()
+                    .extend(headers.headers().clone().into_headers());
+            }
+            req
+        };
 
         // Build the base service with headers applied at the HTTP level and the
         // transport error mapped to BoxError for compatibility with user layers.
-        let base = BoxService::new(
-            ServiceBuilder::new()
-                .map_err(|e: tonic::transport::Error| -> BoxError { Box::new(e) })
-                .map_request(move |mut req: http::Request<Body>| {
-                    // Inserted before the configured headers so a caller can override it.
-                    req.headers_mut().insert(
-                        crate::headers::X_SUI_CLIENT_PROTOCOL_VERSION,
-                        http::HeaderValue::from(crate::headers::MAX_PROTOCOL_VERSION),
-                    );
-                    if !headers.headers().is_empty() {
-                        req.headers_mut()
-                            .extend(headers.headers().clone().into_headers());
-                    }
-                    req
-                })
-                .service(self.channel.clone()),
-        );
+        let base: BaseService = match &self.transport {
+            #[cfg(not(target_arch = "wasm32"))]
+            Transport::Channel(channel) => BoxService::new(
+                ServiceBuilder::new()
+                    .map_err(|e: tonic::transport::Error| -> BoxError { Box::new(e) })
+                    .map_request(add_headers)
+                    .service(channel.clone()),
+            ),
+            // The client's headers go in first, so a `grpc-timeout` among them bounds the
+            // response headers too, as it does with the channel.
+            Transport::Service { make, .. } => {
+                BoxService::new(ServiceBuilder::new().map_request(add_headers).service(
+                    HeadersTimeout::new(self.config.response_headers_timeout, make()),
+                ))
+            }
+        };
 
         // Guard every response body with the idle-body watchdog, beneath any
         // user layers so their view of the response goes through the
@@ -561,7 +756,7 @@ impl Client {
 
         // Apply the user's outbound request layer if present.
         let layered = if let Some(layer) = &self.config.request_layer {
-            layer.layer(base)
+            layer(base)
         } else {
             base
         };
@@ -576,78 +771,40 @@ impl Client {
         )
     }
 
+    /// The origin requests carry: the channel adds its own, any other transport receives
+    /// absolute URIs (see [`Client::from_service`]).
+    fn origin(&self) -> Option<http::Uri> {
+        match &self.transport {
+            #[cfg(not(target_arch = "wasm32"))]
+            Transport::Channel(_) => None,
+            Transport::Service { origin, .. } => Some(origin.clone()),
+        }
+    }
+
     pub fn ledger_client(&mut self) -> LedgerServiceClient<BoxedChannel> {
-        LedgerServiceClient::new(self.channel())
-            .accept_compressed(CompressionEncoding::Zstd)
-            .pipe(|client| {
-                if let Some(limit) = self.config.max_decoding_message_size {
-                    client.max_decoding_message_size(limit)
-                } else {
-                    client
-                }
-            })
+        service_client!(self, LedgerServiceClient)
     }
 
     pub fn state_client(&mut self) -> StateServiceClient<BoxedChannel> {
-        StateServiceClient::new(self.channel())
-            .accept_compressed(CompressionEncoding::Zstd)
-            .pipe(|client| {
-                if let Some(limit) = self.config.max_decoding_message_size {
-                    client.max_decoding_message_size(limit)
-                } else {
-                    client
-                }
-            })
+        service_client!(self, StateServiceClient)
     }
 
     pub fn execution_client(&mut self) -> TransactionExecutionServiceClient<BoxedChannel> {
-        TransactionExecutionServiceClient::new(self.channel())
-            .accept_compressed(CompressionEncoding::Zstd)
-            .pipe(|client| {
-                if let Some(limit) = self.config.max_decoding_message_size {
-                    client.max_decoding_message_size(limit)
-                } else {
-                    client
-                }
-            })
+        service_client!(self, TransactionExecutionServiceClient)
     }
 
     pub fn package_client(&mut self) -> MovePackageServiceClient<BoxedChannel> {
-        MovePackageServiceClient::new(self.channel())
-            .accept_compressed(CompressionEncoding::Zstd)
-            .pipe(|client| {
-                if let Some(limit) = self.config.max_decoding_message_size {
-                    client.max_decoding_message_size(limit)
-                } else {
-                    client
-                }
-            })
+        service_client!(self, MovePackageServiceClient)
     }
 
     pub fn signature_verification_client(
         &mut self,
     ) -> SignatureVerificationServiceClient<BoxedChannel> {
-        SignatureVerificationServiceClient::new(self.channel())
-            .accept_compressed(CompressionEncoding::Zstd)
-            .pipe(|client| {
-                if let Some(limit) = self.config.max_decoding_message_size {
-                    client.max_decoding_message_size(limit)
-                } else {
-                    client
-                }
-            })
+        service_client!(self, SignatureVerificationServiceClient)
     }
 
     pub fn subscription_client(&mut self) -> SubscriptionServiceClient<BoxedChannel> {
-        SubscriptionServiceClient::new(self.channel())
-            .accept_compressed(CompressionEncoding::Zstd)
-            .pipe(|client| {
-                if let Some(limit) = self.config.max_decoding_message_size {
-                    client.max_decoding_message_size(limit)
-                } else {
-                    client
-                }
-            })
+        service_client!(self, SubscriptionServiceClient)
     }
 
     /// Returns a client for the unstable alpha `ProofService`, which serves
@@ -655,16 +812,25 @@ impl Client {
     #[cfg(feature = "unstable")]
     #[cfg_attr(doc_cfg, doc(cfg(feature = "unstable")))]
     pub fn proof_client(&mut self) -> ProofServiceClient<BoxedChannel> {
-        ProofServiceClient::new(self.channel())
-            .accept_compressed(CompressionEncoding::Zstd)
-            .pipe(|client| {
-                if let Some(limit) = self.config.max_decoding_message_size {
-                    client.max_decoding_message_size(limit)
-                } else {
-                    client
-                }
-            })
+        service_client!(self, ProofServiceClient)
     }
+}
+
+/// The scheme and authority of `uri`: where requests over a transport other than the channel are
+/// sent. Like the channel, it leaves out any path in `uri`.
+#[allow(clippy::result_large_err)]
+fn origin_of(uri: &http::Uri) -> Result<http::Uri> {
+    let (Some(scheme), Some(authority)) = (uri.scheme(), uri.authority()) else {
+        return Err(tonic::Status::invalid_argument(format!(
+            "fullnode URI `{uri}` needs a scheme and an authority"
+        )));
+    };
+    http::Uri::builder()
+        .scheme(scheme.clone())
+        .authority(authority.clone())
+        .path_and_query("/")
+        .build()
+        .map_err(|e| tonic::Status::invalid_argument(e.to_string()))
 }
 
 /// Map a transport error to a [`tonic::Status`].

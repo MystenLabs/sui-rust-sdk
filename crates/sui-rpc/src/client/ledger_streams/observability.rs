@@ -205,13 +205,15 @@ impl LedgerStreamObservability {
         }
     }
 
-    pub(super) fn start_timer(&self) -> Option<tokio::time::Instant> {
-        self.observer.as_ref().map(|_| tokio::time::Instant::now())
+    pub(super) fn start_timer(&self) -> Option<crate::rt::time::Instant> {
+        self.observer
+            .as_ref()
+            .map(|_| crate::rt::time::Instant::now())
     }
 
     pub(super) fn emit_rpc_response<T>(
         &self,
-        started_at: Option<tokio::time::Instant>,
+        started_at: Option<crate::rt::time::Instant>,
         family: LedgerStreamFamily,
         operation: LedgerStreamOperation,
         stage: LedgerStreamStage,

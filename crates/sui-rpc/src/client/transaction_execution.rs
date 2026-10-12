@@ -281,7 +281,7 @@ impl Client {
                 None => {
                     tokio::select! {
                         result = &mut scan => result,
-                        _ = tokio::time::sleep(timeout) => {
+                        _ = crate::rt::time::sleep(timeout) => {
                             return Err(ExecuteAndWaitError::CheckpointTimeout(response));
                         }
                     }

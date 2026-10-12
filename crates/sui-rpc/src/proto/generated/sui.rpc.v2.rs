@@ -2459,6 +2459,7 @@ pub mod ledger_service_client {
     pub struct LedgerServiceClient<T> {
         inner: tonic::client::Grpc<T>,
     }
+    #[cfg(not(target_arch = "wasm32"))]
     impl LedgerServiceClient<tonic::transport::Channel> {
         /// Attempt to create a new client by connecting to a given endpoint.
         pub async fn connect<D>(dst: D) -> Result<Self, tonic::transport::Error>
@@ -4090,6 +4091,7 @@ pub mod move_package_service_client {
     pub struct MovePackageServiceClient<T> {
         inner: tonic::client::Grpc<T>,
     }
+    #[cfg(not(target_arch = "wasm32"))]
     impl MovePackageServiceClient<tonic::transport::Channel> {
         /// Attempt to create a new client by connecting to a given endpoint.
         pub async fn connect<D>(dst: D) -> Result<Self, tonic::transport::Error>
@@ -4704,6 +4706,7 @@ pub mod name_service_client {
     pub struct NameServiceClient<T> {
         inner: tonic::client::Grpc<T>,
     }
+    #[cfg(not(target_arch = "wasm32"))]
     impl NameServiceClient<tonic::transport::Channel> {
         /// Attempt to create a new client by connecting to a given endpoint.
         pub async fn connect<D>(dst: D) -> Result<Self, tonic::transport::Error>
@@ -5813,6 +5816,7 @@ pub mod signature_verification_service_client {
     pub struct SignatureVerificationServiceClient<T> {
         inner: tonic::client::Grpc<T>,
     }
+    #[cfg(not(target_arch = "wasm32"))]
     impl SignatureVerificationServiceClient<tonic::transport::Channel> {
         /// Attempt to create a new client by connecting to a given endpoint.
         pub async fn connect<D>(dst: D) -> Result<Self, tonic::transport::Error>
@@ -6619,6 +6623,7 @@ pub mod state_service_client {
     pub struct StateServiceClient<T> {
         inner: tonic::client::Grpc<T>,
     }
+    #[cfg(not(target_arch = "wasm32"))]
     impl StateServiceClient<tonic::transport::Channel> {
         /// Attempt to create a new client by connecting to a given endpoint.
         pub async fn connect<D>(dst: D) -> Result<Self, tonic::transport::Error>
@@ -7356,6 +7361,7 @@ pub mod subscription_service_client {
     pub struct SubscriptionServiceClient<T> {
         inner: tonic::client::Grpc<T>,
     }
+    #[cfg(not(target_arch = "wasm32"))]
     impl SubscriptionServiceClient<tonic::transport::Channel> {
         /// Attempt to create a new client by connecting to a given endpoint.
         pub async fn connect<D>(dst: D) -> Result<Self, tonic::transport::Error>
@@ -9273,6 +9279,7 @@ pub mod transaction_execution_service_client {
     pub struct TransactionExecutionServiceClient<T> {
         inner: tonic::client::Grpc<T>,
     }
+    #[cfg(not(target_arch = "wasm32"))]
     impl TransactionExecutionServiceClient<tonic::transport::Channel> {
         /// Attempt to create a new client by connecting to a given endpoint.
         pub async fn connect<D>(dst: D) -> Result<Self, tonic::transport::Error>

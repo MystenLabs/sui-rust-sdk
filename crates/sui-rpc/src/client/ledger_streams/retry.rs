@@ -55,7 +55,7 @@ pub(super) struct RetryState {
     family: LedgerStreamFamily,
     operation: LedgerStreamOperation,
     consecutive_errors: u32,
-    first_failure: Option<tokio::time::Instant>,
+    first_failure: Option<crate::rt::time::Instant>,
     started_in: Option<LedgerStreamStage>,
 }
 
