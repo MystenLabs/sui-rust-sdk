@@ -7,6 +7,9 @@
 //! keep following the token instead of treating an empty page as
 //! end-of-stream, which would silently truncate the results.
 
+// These tests host a mock gRPC server on tokio; `tests/transport.rs` covers the client on wasm32.
+#![cfg(not(target_arch = "wasm32"))]
+
 use bytes::Bytes;
 use futures::StreamExt;
 use proto::state_service_server::StateService;

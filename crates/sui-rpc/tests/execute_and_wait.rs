@@ -9,6 +9,9 @@
 //! client's body watchdog — turning a successful execution into a spurious
 //! `CheckpointStreamError`.
 
+// These tests host a mock gRPC server on tokio; `tests/transport.rs` covers the client on wasm32.
+#![cfg(not(target_arch = "wasm32"))]
+
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;

@@ -1,12 +1,9 @@
-use std::future::Future;
-use std::pin::Pin;
-
+use crate::rt::BoxStream;
 use prost::Message;
 use prost::bytes::Bytes;
 use prost_types::FieldMask;
 use tonic::Request;
 use tonic::Status;
-use tonic::codegen::BoxStream;
 
 use super::super::Client;
 use super::super::Result;
@@ -33,7 +30,7 @@ pub(super) use transaction::TransactionAdapter;
 
 const CHECKPOINT_CURSOR_OVERFLOW: &str = "checkpoint subscription cursor cannot be resumed";
 
-pub(super) type RpcFuture<T> = Pin<Box<dyn Future<Output = Result<BoxStream<T>>> + Send + 'static>>;
+pub(super) type RpcFuture<T> = crate::rt::BoxFuture<'static, Result<BoxStream<T>>>;
 
 pub(super) struct PositionedItem<I, P> {
     payload: I,

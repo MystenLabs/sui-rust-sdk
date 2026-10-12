@@ -1,11 +1,11 @@
 use std::pin::Pin;
 use std::time::Duration;
 
+use crate::rt::BoxStream;
 use futures::StreamExt;
 use prost::bytes::Bytes;
 use tonic::Request;
 use tonic::Status;
-use tonic::codegen::BoxStream;
 
 use super::super::Client;
 use super::super::Result;
@@ -224,10 +224,10 @@ enum RpcState<A: SubscriptionAdapter> {
     Idle,
     Dispatch {
         future: RpcFuture<A::ListResponse>,
-        started_at: Option<tokio::time::Instant>,
+        started_at: Option<crate::rt::time::Instant>,
     },
     Stream(BoxStream<A::ListResponse>),
-    Sleep(Pin<Box<tokio::time::Sleep>>),
+    Sleep(Pin<Box<crate::rt::time::Sleep>>),
 }
 
 /// Raw I/O event produced by [`ListMachine::poll_rpc`].
@@ -325,7 +325,7 @@ impl<A: SubscriptionAdapter> ListMachine<A> {
     }
 
     fn sleep(&mut self, delay: Duration) {
-        self.rpc_state = RpcState::Sleep(Box::pin(tokio::time::sleep(delay)));
+        self.rpc_state = RpcState::Sleep(Box::pin(crate::rt::time::sleep(delay)));
     }
 
     /// Dropping this future preserves `self.rpc_state`, so the next call resumes rather than

@@ -73,16 +73,13 @@ impl FaucetClient {
     ///
     /// This method falls back to v2 only when `GET /v3/challenge` returns 404. It solves v3 proofs
     /// on Tokio's blocking thread pool. Once started, solving continues even if this future is
-    /// dropped. Use [`Self::create_challenge`], [`PowChallenge::solve`], and [`Self::submit`] to
-    /// schedule that work separately.
+    /// dropped. On wasm32, which has no blocking thread pool, it solves inline, blocking the event
+    /// loop (and, on a browser's main thread, the page) until solved. Use [`Self::create_challenge`], [`PowChallenge::solve`], and [`Self::submit`] to
+    /// schedule that work separately (on wasm32, for example, in a web worker).
     pub async fn request(&self, recipient: Address) -> Result<FaucetResponse, BoxError> {
         match self.fetch_challenge(recipient).await? {
             Some(challenge) => {
-                let (challenge, solution) = tokio::task::spawn_blocking(move || {
-                    let solution = challenge.solve()?;
-                    Ok::<_, BoxError>((challenge, solution))
-                })
-                .await??;
+                let (challenge, solution) = solve_off_thread(challenge).await?;
                 self.submit(&challenge, &solution)
                     .await
                     .map(FaucetResponse::V3)
@@ -438,7 +435,27 @@ fn threshold_for(difficulty: u64) -> u64 {
     ((1u128 << 64) / u128::from(difficulty)) as u64
 }
 
-#[cfg(test)]
+/// Solves `challenge` on Tokio's blocking thread pool, or inline on wasm32, which has no threads.
+async fn solve_off_thread(
+    challenge: PowChallenge,
+) -> Result<(PowChallenge, PowSolution), BoxError> {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        tokio::task::spawn_blocking(move || {
+            let solution = challenge.solve()?;
+            Ok::<_, BoxError>((challenge, solution))
+        })
+        .await?
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        let solution = challenge.solve()?;
+        Ok((challenge, solution))
+    }
+}
+
+// These tests drive tokio's runtime and paused clock; `tests/transport.rs` covers the client on wasm32.
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use std::io::Read;
     use std::io::Write;

@@ -1,5 +1,8 @@
 //! Integration tests for the `x-sui-client-protocol-version` request header.
 
+// These tests host a mock gRPC server on tokio; `tests/transport.rs` covers the client on wasm32.
+#![cfg(not(target_arch = "wasm32"))]
+
 use proto::ledger_service_server::LedgerService;
 use proto::ledger_service_server::LedgerServiceServer;
 use sui_rpc::Client;

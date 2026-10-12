@@ -87,6 +87,7 @@ fn main() {
     {
         panic!("failed to compile protos: {error}");
     }
+    gate_native_transport(&out_dir);
 
     // Setup for extended codegen
     let extern_paths = context::extern_paths::ExternPaths::new(&[], true).unwrap();
@@ -138,5 +139,44 @@ fn main() {
         Ok(status) if !status.success() => panic!("You should commit the protobuf files"),
         Err(error) => panic!("failed to run `git diff`: {error}"),
         Ok(_) => {}
+    }
+}
+
+/// tonic generates a `connect` constructor for every client over its native HTTP/2 channel, which
+/// does not exist on wasm32 (there the client runs over gRPC-web; see `sui_rpc::Client`). Compile
+/// those constructors only where the channel is available.
+fn gate_native_transport(out_dir: &std::path::Path) {
+    for entry in std::fs::read_dir(out_dir).unwrap() {
+        let path = entry.unwrap().path();
+        if path.extension().is_none_or(|ext| ext != "rs") {
+            continue;
+        }
+        let source = std::fs::read_to_string(&path).unwrap();
+        let mut gated = String::with_capacity(source.len());
+        let mut count = 0;
+        for line in source.split_inclusive('\n') {
+            if line.trim_start().starts_with("impl ")
+                && line
+                    .trim_end()
+                    .ends_with("Client<tonic::transport::Channel> {")
+            {
+                let indent = &line[..line.len() - line.trim_start().len()];
+                gated.push_str(indent);
+                gated.push_str("#[cfg(not(target_arch = \"wasm32\"))]\n");
+                count += 1;
+            }
+            gated.push_str(line);
+        }
+        // Fail here, not at the next wasm32 build, if tonic changes what it generates.
+        let uses = source.matches("tonic::transport::Channel").count();
+        assert_eq!(
+            count,
+            uses,
+            "{}: gated {count} `connect` impls, but tonic's channel is named {uses} times",
+            path.display()
+        );
+        if gated != source {
+            std::fs::write(&path, gated).unwrap();
+        }
     }
 }

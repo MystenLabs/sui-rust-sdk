@@ -1,6 +1,6 @@
 # Set the default target of this Makefile
 .PHONY: all
-all:: clippy test
+all:: clippy test wasm
 
 .PHONY: check-features
 check-features:
@@ -14,6 +14,10 @@ clippy:
 test:
 	cargo nextest run --all-features
 	cargo test --doc
+
+.PHONY: wasm
+wasm:
+	CC=clang wasm-pack test --node --all-features
 
 # Update vendored protos from sui-apis master branch.
 .PHONY: update-protos

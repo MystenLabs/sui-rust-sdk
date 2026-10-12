@@ -35,7 +35,6 @@
 //! deadline: the same value is enforced locally end to end and communicated
 //! to the server through the standard header.
 
-use std::future::Future;
 use std::ops::ControlFlow;
 use std::pin::Pin;
 use std::task::Context;
@@ -49,6 +48,12 @@ use tonic::Status;
 use tonic::body::Body;
 use tower::Layer;
 use tower::Service;
+
+use crate::rt::BoxFuture;
+use crate::rt::MaybeSend;
+use crate::rt::Task;
+use crate::rt::TaskExit;
+use crate::rt::time::Instant;
 
 /// Default maximum time between response-body progress events before the
 /// watchdog resets the stream. Comfortably above the fullnode's subscription
@@ -121,12 +126,12 @@ pub(super) struct Watchdog<S> {
 impl<S> Service<http::Request<Body>> for Watchdog<S>
 where
     S: Service<http::Request<Body>, Response = http::Response<Body>>,
-    S::Future: Send + 'static,
-    S::Error: Send + 'static,
+    S::Future: MaybeSend + 'static,
+    S::Error: MaybeSend + 'static,
 {
     type Response = http::Response<Body>;
     type Error = S::Error;
-    type Future = futures::future::BoxFuture<'static, Result<Self::Response, Self::Error>>;
+    type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         self.inner.poll_ready(cx)
@@ -139,8 +144,8 @@ where
         };
         // The deadline starts at request time, so the budget the header
         // communicates to the server is the same one enforced locally.
-        let deadline = parse_grpc_timeout(request.headers())
-            .map(|timeout| tokio::time::Instant::now() + timeout);
+        let deadline =
+            parse_grpc_timeout(request.headers()).map(|timeout| Instant::now() + timeout);
 
         let response = self.inner.call(request);
         Box::pin(async move {
@@ -176,6 +181,54 @@ fn parse_grpc_timeout(headers: &http::HeaderMap) -> Option<Duration> {
     }
 }
 
+/// Bounds the response-headers phase of a transport other than tonic's channel, which enforces
+/// the same bound itself: the shorter of the client's response-headers timeout and the request's
+/// `grpc-timeout` deadline. Expiry surfaces as `DeadlineExceeded`, as with the channel.
+pub(super) struct HeadersTimeout<S> {
+    timeout: Option<Duration>,
+    inner: S,
+}
+
+impl<S> HeadersTimeout<S> {
+    pub(super) fn new(timeout: Option<Duration>, inner: S) -> Self {
+        Self { timeout, inner }
+    }
+}
+
+impl<S> Service<http::Request<Body>> for HeadersTimeout<S>
+where
+    S: Service<http::Request<Body>, Response = http::Response<Body>, Error = super::BoxError>,
+    S::Future: MaybeSend + 'static,
+{
+    type Response = http::Response<Body>;
+    type Error = super::BoxError;
+    type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
+
+    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        self.inner.poll_ready(cx)
+    }
+
+    fn call(&mut self, request: http::Request<Body>) -> Self::Future {
+        let timeout = [self.timeout, parse_grpc_timeout(request.headers())]
+            .into_iter()
+            .flatten()
+            .min();
+        let response = self.inner.call(request);
+        Box::pin(async move {
+            match timeout {
+                Some(timeout) => crate::rt::time::timeout(timeout, response)
+                    .await
+                    .unwrap_or_else(|_| {
+                        Err(Box::new(Status::deadline_exceeded(
+                            "timeout expired before response headers were received",
+                        )))
+                    }),
+                None => response.await,
+            }
+        })
+    }
+}
+
 /// The caller-facing half of the bridge: receives frames from the watchdog
 /// task over a bounded channel and aborts the task if dropped, so dropping a
 /// response still resets the underlying stream promptly.
@@ -184,20 +237,16 @@ struct WatchdogBody {
     /// `Some` until the task's completion has been observed. Consulted when
     /// the channel closes without a terminal status so that a panic in the
     /// watchdog task surfaces as an error instead of a clean end-of-stream.
-    task: Option<tokio::task::JoinHandle<()>>,
+    task: Option<Task>,
 }
 
 impl WatchdogBody {
-    fn spawn(
-        body: Body,
-        idle_timeout: Option<Duration>,
-        deadline: Option<tokio::time::Instant>,
-    ) -> Self {
+    fn spawn(body: Body, idle_timeout: Option<Duration>, deadline: Option<Instant>) -> Self {
         // Capacity 1: the bridge only needs to decouple the two polling
         // roots, and the tightest bound keeps the transport's own
         // flow-control backpressure intact.
         let (tx, rx) = tokio::sync::mpsc::channel(1);
-        let task = tokio::spawn(drive(body, tx, idle_timeout, deadline));
+        let task = Task::spawn(drive(body, tx, idle_timeout, deadline));
         Self {
             rx,
             task: Some(task),
@@ -207,7 +256,7 @@ impl WatchdogBody {
 
 impl Drop for WatchdogBody {
     fn drop(&mut self) {
-        if let Some(task) = &self.task {
+        if let Some(task) = &mut self.task {
             task.abort();
         }
     }
@@ -228,17 +277,17 @@ impl http_body::Body for WatchdogBody {
                 let Some(task) = &mut this.task else {
                     return Poll::Ready(None);
                 };
-                match Pin::new(task).poll(cx) {
-                    Poll::Ready(result) => {
+                match task.poll_exit(cx) {
+                    Poll::Ready(exit) => {
                         this.task = None;
-                        match result {
-                            Err(e) if e.is_panic() => Poll::Ready(Some(Err(Status::internal(
+                        match exit {
+                            TaskExit::Panicked => Poll::Ready(Some(Err(Status::internal(
                                 "client idle-body watchdog task panicked",
                             )))),
                             // A clean exit, or cancellation via our own
                             // abort-on-drop (not observable here since we
                             // are being polled, not dropped).
-                            Ok(()) | Err(_) => Poll::Ready(None),
+                            TaskExit::Finished => Poll::Ready(None),
                         }
                     }
                     Poll::Pending => Poll::Pending,
@@ -258,11 +307,11 @@ async fn drive(
     body: Body,
     tx: tokio::sync::mpsc::Sender<Result<Frame<Bytes>, Status>>,
     idle_timeout: Option<Duration>,
-    deadline: Option<tokio::time::Instant>,
+    deadline: Option<Instant>,
 ) {
     let pump = pump(body, tx.clone(), idle_timeout);
     let cut = match deadline {
-        Some(deadline) => tokio::time::timeout_at(deadline, pump)
+        Some(deadline) => crate::rt::time::timeout_at(deadline, pump)
             .await
             .unwrap_or_else(|_| {
                 Some(Status::deadline_exceeded(
@@ -316,7 +365,7 @@ async fn pump(
         };
 
         let flow = match idle_timeout {
-            Some(idle_timeout) => match tokio::time::timeout(idle_timeout, step).await {
+            Some(idle_timeout) => match crate::rt::time::timeout(idle_timeout, step).await {
                 Ok(flow) => flow,
                 Err(_) => {
                     return Some(Status::deadline_exceeded(format!(
@@ -334,7 +383,8 @@ async fn pump(
     }
 }
 
-#[cfg(test)]
+// These tests drive tokio's runtime and paused clock; `tests/transport.rs` covers the client on wasm32.
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use std::sync::Arc;

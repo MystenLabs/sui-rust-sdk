@@ -15,6 +15,9 @@
 //!   does not cut off long-lived streaming responses;
 //! - a healthy unary call is unaffected.
 
+// These tests host a mock gRPC server on tokio; `tests/transport.rs` covers the client on wasm32.
+#![cfg(not(target_arch = "wasm32"))]
+
 use std::time::Duration;
 
 use futures::StreamExt;

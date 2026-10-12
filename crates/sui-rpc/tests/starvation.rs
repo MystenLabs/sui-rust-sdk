@@ -24,6 +24,9 @@
 //! - a per-call `grpc-timeout` deadline (`tonic::Request::set_timeout`)
 //!   bounds a streaming call end to end even while items are flowing.
 
+// These tests host a mock gRPC server on tokio; `tests/transport.rs` covers the client on wasm32.
+#![cfg(not(target_arch = "wasm32"))]
+
 use std::time::Duration;
 
 use futures::StreamExt;

@@ -59,9 +59,10 @@ impl AuthenticatedEventsClient {
     /// item before termination).
     pub fn stream(
         self,
-    ) -> impl Stream<Item = Result<AuthenticatedEvent, LightClientError>> + Send + 'static {
+    ) -> impl Stream<Item = Result<AuthenticatedEvent, LightClientError>> + crate::rt::MaybeSend + 'static
+    {
         let (tx, rx) = mpsc::channel(self.config.channel_capacity);
-        tokio::spawn(run_stream_task(self.light, self.config, tx));
+        crate::rt::spawn_detached(run_stream_task(self.light, self.config, tx));
         futures::stream::unfold(rx, |mut rx| async move { rx.recv().await.map(|v| (v, rx)) })
     }
 }
@@ -222,7 +223,7 @@ async fn run_stream_task(
                             .unwrap_or(next_checkpoint)
                             .max(next_checkpoint);
                         // Sleep briefly so we don't spin when at the tip.
-                        tokio::time::sleep(config.retry_backoff).await;
+                        crate::rt::time::sleep(config.retry_backoff).await;
                     }
                     None => {
                         // Stream ended cleanly (no transport error) but
@@ -231,7 +232,7 @@ async fn run_stream_task(
                         // cursor and back off briefly rather than
                         // assume the scan finished and skip ahead.
                         next_cursor = end_cursor;
-                        tokio::time::sleep(config.retry_backoff).await;
+                        crate::rt::time::sleep(config.retry_backoff).await;
                     }
                 }
             }
@@ -618,7 +619,7 @@ async fn backoff_or_give_up(
     }
     let base = config.retry_backoff.saturating_mul(*consecutive_failures);
     let jitter = pseudo_jitter(*consecutive_failures, config.retry_jitter);
-    tokio::time::sleep(base.saturating_add(jitter)).await;
+    crate::rt::time::sleep(base.saturating_add(jitter)).await;
     true
 }
 
