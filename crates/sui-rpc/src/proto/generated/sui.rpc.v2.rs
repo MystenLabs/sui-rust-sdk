@@ -774,6 +774,8 @@ pub struct Epoch {
     #[prost(message, optional, tag = "9")]
     pub protocol_config: ::core::option::Option<ProtocolConfig>,
 }
+/// Error reasons in the `sui.io` error domain, used as the `reason` of a
+/// `google.rpc.ErrorInfo` or of a `google.rpc.BadRequest.FieldViolation`.
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
@@ -781,6 +783,95 @@ pub enum ErrorReason {
     Unknown = 0,
     FieldInvalid = 1,
     FieldMissing = 2,
+    /// Gas selection could not find enough SUI to cover the gas budget.
+    /// `SimulateTransaction` returns this with `INVALID_ARGUMENT`. Gas selection
+    /// runs only when `do_gas_selection` is set, `checks` is not `DISABLED`, and
+    /// the transaction has no gas payment objects. When the server estimates the
+    /// budget and the transaction fails in that estimation, `SimulateTransaction`
+    /// returns `TRANSACTION_EXECUTION_FAILED` instead of this error, so with an
+    /// estimated budget this reason means the transaction executed successfully
+    /// in simulation.
+    ///
+    /// Example of an ErrorInfo when the gas owner holds a single 2246360 MIST
+    /// coin, has no address balance, and the transaction needs a budget of
+    /// 8924024 MIST:
+    ///
+    /// ```text
+    /// { "reason": "INSUFFICIENT_GAS_BALANCE",
+    ///    "domain": "sui.io",
+    ///    "metadata": {
+    ///      "owner": "0x0000000000000000000000000000000000000000000000000000000000000123",
+    ///      "requiredBudget": "8924024",
+    ///      "coinBalance": "2246360",
+    ///      "addressBalance": "0"
+    ///    }
+    /// }
+    /// ```
+    ///
+    /// Metadata, with amounts in MIST as decimal strings:
+    ///
+    /// * `owner`: the gas owner's address, as "0x" followed by 64 hex digits.
+    /// * `requiredBudget`: the gas budget the transaction needs. When the
+    ///   request leaves the budget unset, this is the server's estimate plus the
+    ///   cost of loading every coin counted in `coinBalance` beyond the first;
+    ///   otherwise it is the budget from the request. An estimated
+    ///   `requiredBudget` depends on how many coins the gas owner holds: when
+    ///   the owner already holds coins, sending it a new coin raises
+    ///   `requiredBudget` by up to the cost of loading one more coin. A new coin
+    ///   worth `requiredBudget` covers that increase unless `coinBalance` is
+    ///   less than the cost of loading one coin; a new coin worth only
+    ///   `requiredBudget` minus `coinBalance` can fall short.
+    /// * `coinBalance`: total of the gas owner's `Coin<SUI>` objects considered
+    ///   by gas selection: owned, non-consensus coins not already used as
+    ///   transaction inputs, largest first, up to the protocol's maximum number
+    ///   of gas payment objects.
+    /// * `addressBalance`: the gas owner's SUI address balance remaining after
+    ///   the transaction's own explicit SUI withdrawals from the gas owner; "0"
+    ///   if there is none.
+    ///
+    /// The two balances are reported separately because they combine
+    /// differently. When the transaction uses the gas coin (an `Argument` of kind
+    /// `GAS`), coins and address balance are combined to pay for gas. Otherwise
+    /// they are never combined: the address balance pays for gas only if it
+    /// alone covers the budget before coin-loading costs, which is at most
+    /// `requiredBudget`; if it does not, the coins alone must cover
+    /// `requiredBudget`.
+    InsufficientGasBalance = 3,
+    /// The transaction failed while executing in simulation. `SimulateTransaction`
+    /// returns this with `INVALID_ARGUMENT` when it estimates the budget, the
+    /// transaction fails in that estimation, and gas selection then cannot cover
+    /// the budget. It is returned instead of the `INSUFFICIENT_GAS_BALANCE`
+    /// reason in that case because the transaction fails even with its gas paid
+    /// for, so the gas budget is not what stops it; `kind` says what does. Some
+    /// kinds can still be fixed by adding funds: for example,
+    /// `INSUFFICIENT_FUNDS_FOR_WITHDRAW` means a balance the transaction
+    /// withdraws from holds too little. `INSUFFICIENT_GAS` cannot: the estimation
+    /// runs with the maximum gas budget, so it means the transaction needs more
+    /// gas than any budget allows. A gas owner that can cover the budget instead
+    /// gets a successful response whose `effects.status.error` describes the
+    /// failure.
+    ///
+    /// The status details also carry the `ExecutionError`, in the same form as
+    /// `effects.status.error`.
+    ///
+    /// Example of an ErrorInfo for a Move abort in the first command:
+    ///
+    /// ```text
+    /// { "reason": "TRANSACTION_EXECUTION_FAILED",
+    ///    "domain": "sui.io",
+    ///    "metadata": {
+    ///      "kind": "MOVE_ABORT",
+    ///      "command": "0"
+    ///    }
+    /// }
+    /// ```
+    ///
+    /// Metadata:
+    ///
+    /// * `kind`: the failure's `ExecutionError.ExecutionErrorKind` name.
+    /// * `command`: index of the command that failed, as a decimal string, or
+    ///   "" if no single command failed.
+    TransactionExecutionFailed = 4,
 }
 impl ErrorReason {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -792,6 +883,8 @@ impl ErrorReason {
             Self::Unknown => "ERROR_REASON_UNKNOWN",
             Self::FieldInvalid => "FIELD_INVALID",
             Self::FieldMissing => "FIELD_MISSING",
+            Self::InsufficientGasBalance => "INSUFFICIENT_GAS_BALANCE",
+            Self::TransactionExecutionFailed => "TRANSACTION_EXECUTION_FAILED",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -800,6 +893,8 @@ impl ErrorReason {
             "ERROR_REASON_UNKNOWN" => Some(Self::Unknown),
             "FIELD_INVALID" => Some(Self::FieldInvalid),
             "FIELD_MISSING" => Some(Self::FieldMissing),
+            "INSUFFICIENT_GAS_BALANCE" => Some(Self::InsufficientGasBalance),
+            "TRANSACTION_EXECUTION_FAILED" => Some(Self::TransactionExecutionFailed),
             _ => None,
         }
     }
@@ -5443,7 +5538,7 @@ pub mod user_signature {
     #[non_exhaustive]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Signature {
-        /// Simple signature if scheme is ed25519 | secp256k1 | secp256r1.
+        /// Simple signature if scheme is ed25519 | secp256k1 | secp256r1 | mldsa65.
         #[prost(message, tag = "3")]
         Simple(super::SimpleSignature),
         /// The multisig aggregated signature if scheme is `MULTISIG`.
@@ -5457,7 +5552,7 @@ pub mod user_signature {
         Passkey(super::PasskeyAuthenticator),
     }
 }
-/// Either an ed25519, secp256k1 or secp256r1 signature
+/// Either an ed25519, secp256k1, secp256r1 or mldsa65 signature
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct SimpleSignature {
@@ -5488,7 +5583,7 @@ pub struct MultisigMemberPublicKey {
     /// The signature scheme of this public key.
     #[prost(enumeration = "SignatureScheme", optional, tag = "1")]
     pub scheme: ::core::option::Option<i32>,
-    /// Public key bytes if scheme is ed25519 | secp256k1 | secp256r1 | passkey.
+    /// Public key bytes if scheme is ed25519 | secp256k1 | secp256r1 | passkey | mldsa65.
     #[prost(bytes = "bytes", optional, tag = "2")]
     pub public_key: ::core::option::Option<::prost::bytes::Bytes>,
     /// A zklogin public identifier if scheme is zklogin.
@@ -5546,7 +5641,7 @@ pub struct MultisigMemberSignature {
     /// The signature scheme of this signature.
     #[prost(enumeration = "SignatureScheme", optional, tag = "1")]
     pub scheme: ::core::option::Option<i32>,
-    /// Signature bytes if scheme is ed25519 | secp256k1 | secp256r1.
+    /// Signature bytes if scheme is ed25519 | secp256k1 | secp256r1 | mldsa65.
     #[prost(bytes = "bytes", optional, tag = "2")]
     pub signature: ::core::option::Option<::prost::bytes::Bytes>,
     /// The zklogin authenticator if scheme is `ZKLOGIN`.
@@ -9178,7 +9273,11 @@ pub struct SimulateTransactionRequest {
     )]
     pub checks: ::core::option::Option<i32>,
     /// Perform gas selection based on a budget estimation and include the
-    /// selected gas payment and budget in the response.
+    /// selected gas payment and budget in the response. If selection fails
+    /// because the gas owner lacks enough SUI to cover the budget, the returned
+    /// error carries a `google.rpc.ErrorInfo` with reason
+    /// `INSUFFICIENT_GAS_BALANCE`, or `TRANSACTION_EXECUTION_FAILED` if the
+    /// transaction also fails while estimating the budget (see `ErrorReason`).
     ///
     /// This option will be ignored if `checks` is `DISABLED`.
     #[prost(bool, optional, tag = "4")]

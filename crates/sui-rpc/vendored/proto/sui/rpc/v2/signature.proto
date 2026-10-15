@@ -21,7 +21,7 @@ message UserSignature {
   optional SignatureScheme scheme = 2;
 
   oneof signature {
-    // Simple signature if scheme is ed25519 | secp256k1 | secp256r1.
+    // Simple signature if scheme is ed25519 | secp256k1 | secp256r1 | mldsa65.
     SimpleSignature simple = 3;
 
     // The multisig aggregated signature if scheme is `MULTISIG`.
@@ -35,7 +35,7 @@ message UserSignature {
   }
 }
 
-// Either an ed25519, secp256k1 or secp256r1 signature
+// Either an ed25519, secp256k1, secp256r1 or mldsa65 signature
 message SimpleSignature {
   // The signature scheme of this signature.
   optional SignatureScheme scheme = 1;
@@ -59,7 +59,7 @@ message MultisigMemberPublicKey {
   // The signature scheme of this public key.
   optional SignatureScheme scheme = 1;
 
-  // Public key bytes if scheme is ed25519 | secp256k1 | secp256r1 | passkey.
+  // Public key bytes if scheme is ed25519 | secp256k1 | secp256r1 | passkey | mldsa65.
   optional bytes public_key = 2;
 
   // A zklogin public identifier if scheme is zklogin.
@@ -105,7 +105,7 @@ message MultisigMemberSignature {
   // The signature scheme of this signature.
   optional SignatureScheme scheme = 1;
 
-  // Signature bytes if scheme is ed25519 | secp256k1 | secp256r1.
+  // Signature bytes if scheme is ed25519 | secp256k1 | secp256r1 | mldsa65.
   optional bytes signature = 2;
 
   // The zklogin authenticator if scheme is `ZKLOGIN`.

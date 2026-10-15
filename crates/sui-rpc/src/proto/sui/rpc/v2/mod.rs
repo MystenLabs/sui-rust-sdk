@@ -113,6 +113,11 @@ impl From<Bcs> for prost::bytes::Bytes {
     }
 }
 
+impl ErrorReason {
+    /// The error domain of every `ErrorReason`, used as `google.rpc.ErrorInfo.domain`.
+    pub const DOMAIN: &'static str = "sui.io";
+}
+
 impl AsRef<str> for ErrorReason {
     fn as_ref(&self) -> &str {
         self.as_str_name()
