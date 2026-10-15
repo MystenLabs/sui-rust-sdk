@@ -1,0 +1,1 @@
+rd_("DgIf <code>authenticator_object_initial_shared_version</code> is set, \xe2\x80\xa6DjSets <code>authenticator_object_initial_shared_version</code> with the \xe2\x80\xa60DdIf <code>consensus_determined_version_assignments</code> is set, \xe2\x80\xa6DdIf <code>randomness_object_initial_shared_version</code> is set, \xe2\x80\xa62233")
