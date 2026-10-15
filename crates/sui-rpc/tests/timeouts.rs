@@ -98,6 +98,36 @@ async fn spawn_mock_server(unary_delay: Duration) -> std::net::SocketAddr {
     addr
 }
 
+/// Start an HTTP/2 server that accepts requests and never answers them.
+///
+/// A tonic server enforces the request's `grpc-timeout` itself and answers
+/// `Cancelled` when it expires, which races the client's own enforcement of
+/// the same deadline. This server enforces nothing, so a call against it can
+/// only end by the client's local bound.
+async fn spawn_unresponsive_server() -> std::net::SocketAddr {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind unresponsive server listener");
+    let addr = listener
+        .local_addr()
+        .expect("unresponsive server local addr");
+    tokio::spawn(async move {
+        while let Ok((socket, _)) = listener.accept().await {
+            tokio::spawn(async move {
+                let Ok(mut connection) = h2::server::handshake(socket).await else {
+                    return;
+                };
+                // Hold every request open, unanswered, for the connection's life.
+                let mut held = Vec::new();
+                while let Some(Ok(request)) = connection.accept().await {
+                    held.push(request);
+                }
+            });
+        }
+    });
+    addr
+}
+
 /// Issue a unary call and expect it to fail before [`FAILURE_BOUND`],
 /// returning the status it failed with.
 async fn expect_prompt_failure(
@@ -149,7 +179,7 @@ async fn per_call_deadline_cannot_extend_the_timeout() {
 /// the locally enforced bound below it.
 #[tokio::test(flavor = "multi_thread")]
 async fn per_call_deadline_tightens_below_the_timeout() {
-    let addr = spawn_mock_server(UNARY_STALL).await;
+    let addr = spawn_unresponsive_server().await;
     let mut client = Client::new(format!("http://{addr}"))
         .expect("client")
         .with_response_headers_timeout(Duration::from_secs(60));
