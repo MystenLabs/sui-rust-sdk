@@ -21,6 +21,9 @@ pub use watchdog::BodyIdleTimeout;
 use watchdog::DEFAULT_BODY_IDLE_TIMEOUT;
 use watchdog::WatchdogLayer;
 
+mod unsent_request_retry;
+use unsent_request_retry::UnsentRequestRetry;
+
 mod staking_rewards;
 pub use staking_rewards::DelegatedStake;
 
@@ -182,6 +185,18 @@ const DEFAULT_HTTP2_CONNECTION_WINDOW_SIZE: u32 = 64 * 1024 * 1024;
 /// Independent of any deadline, the watchdog resets RPCs whose response body
 /// makes no progress for 30 seconds (configurable), so a call on a stalled
 /// connection fails with `DeadlineExceeded` instead of hanging forever.
+///
+/// # Undelivered requests
+///
+/// Requests the server never processed are resent automatically, following
+/// gRPC's transparent retry (gRFC A6) as grpc-go and grpc-java implement it:
+/// a request cancelled before it left the client is retried up to three
+/// times, and a request the server rejected unprocessed -- a stream above the
+/// last stream id of a NO_ERROR GOAWAY, as sent when a server or load
+/// balancer drains a connection, or a stream reset with REFUSED_STREAM -- is
+/// retried once. A request the server may have processed is never resent.
+/// A per-call deadline ([`tonic::Request::set_timeout`]) covers all attempts
+/// together; the response-headers timeout applies to each attempt.
 #[derive(Clone)]
 pub struct Client {
     channel: tonic::transport::Channel,
@@ -538,7 +553,6 @@ impl Client {
         // transport error mapped to BoxError for compatibility with user layers.
         let base = BoxService::new(
             ServiceBuilder::new()
-                .map_err(|e: tonic::transport::Error| -> BoxError { Box::new(e) })
                 .map_request(move |mut req: http::Request<Body>| {
                     // Inserted before the configured headers so a caller can override it.
                     req.headers_mut().insert(
@@ -551,7 +565,7 @@ impl Client {
                     }
                     req
                 })
-                .service(self.channel.clone()),
+                .service(UnsentRequestRetry::new(self.channel.clone())),
         );
 
         // Guard every response body with the idle-body watchdog, beneath any

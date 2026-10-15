@@ -157,7 +157,7 @@ where
 /// followed by a unit, per the gRPC-over-HTTP/2 spec). Malformed values are
 /// ignored, matching tonic's own leniency, since failing the call over an
 /// unenforceable header would be worse than not enforcing it.
-fn parse_grpc_timeout(headers: &http::HeaderMap) -> Option<Duration> {
+pub(super) fn parse_grpc_timeout(headers: &http::HeaderMap) -> Option<Duration> {
     let value = headers.get("grpc-timeout")?.to_str().ok()?;
     let (magnitude, unit) = value.split_at(value.len().checked_sub(1)?);
     if magnitude.is_empty() || magnitude.len() > 8 || !magnitude.bytes().all(|b| b.is_ascii_digit())

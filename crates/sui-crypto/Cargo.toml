@@ -124,6 +124,7 @@ sui-sdk-types = { version = "0.4.0", path = "../sui-sdk-types", default-features
 wasm-bindgen-test = "0.3"
 getrandom_2 = { version = "0.2", package = "getrandom", features = ["js"] }
 getrandom_3 = { version = "0.3", package = "getrandom", features = ["wasm_js"] }
+getrandom_4 = { version = "0.4", package = "getrandom", features = ["wasm_js"] }
 test-strategy = "=0.4.1"
 
 [lints.rust]
