@@ -2,6 +2,17 @@ use super::*;
 use crate::proto::TryFromProtoError;
 use tap::Pipe;
 
+impl ::prost::Name for ExecutionError {
+    const NAME: &'static str = "ExecutionError";
+    const PACKAGE: &'static str = "sui.rpc.v2";
+    fn full_name() -> ::prost::alloc::string::String {
+        "sui.rpc.v2.ExecutionError".into()
+    }
+    fn type_url() -> ::prost::alloc::string::String {
+        "/sui.rpc.v2.ExecutionError".into()
+    }
+}
+
 //
 // ExecutionStatus
 //
