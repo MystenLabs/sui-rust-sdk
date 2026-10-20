@@ -5882,6 +5882,15 @@ pub struct VerifySignatureRequest {
     /// If this is empty the current set of valid JWKs stored onchain will be used
     #[prost(message, repeated, tag = "4")]
     pub jwks: ::prost::alloc::vec::Vec<ActiveJwk>,
+    /// Optional. If true, `address` is required and the signature must be from a
+    /// member of `address`'s current `AddressAliases` set rather than from
+    /// `address` itself. An address with no `AddressAliases` set is its own only
+    /// alias.
+    ///
+    /// Servers that predate this field ignore it, so clients must check
+    /// `address_aliases_checked` in the response.
+    #[prost(bool, optional, tag = "6")]
+    pub check_address_aliases: ::core::option::Option<bool>,
 }
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
@@ -5892,6 +5901,10 @@ pub struct VerifySignatureResponse {
     /// If `is_valid` is `false`, this is the reason for why the signature verification failed.
     #[prost(string, optional, tag = "2")]
     pub reason: ::core::option::Option<::prost::alloc::string::String>,
+    /// Set to true when the server applied `check_address_aliases`, whether or
+    /// not the signature is valid. Unset by servers that predate it.
+    #[prost(bool, optional, tag = "3")]
+    pub address_aliases_checked: ::core::option::Option<bool>,
 }
 /// Generated client implementations.
 pub mod signature_verification_service_client {

@@ -38,6 +38,15 @@ message VerifySignatureRequest {
 
   // The epoch to use
   // optional uint64 epoch = 5;
+
+  // Optional. If true, `address` is required and the signature must be from a
+  // member of `address`'s current `AddressAliases` set rather than from
+  // `address` itself. An address with no `AddressAliases` set is its own only
+  // alias.
+  //
+  // Servers that predate this field ignore it, so clients must check
+  // `address_aliases_checked` in the response.
+  optional bool check_address_aliases = 6;
 }
 
 message VerifySignatureResponse {
@@ -46,4 +55,8 @@ message VerifySignatureResponse {
 
   // If `is_valid` is `false`, this is the reason for why the signature verification failed.
   optional string reason = 2;
+
+  // Set to true when the server applied `check_address_aliases`, whether or
+  // not the signature is valid. Unset by servers that predate it.
+  optional bool address_aliases_checked = 3;
 }
