@@ -35299,6 +35299,9 @@ impl serde::Serialize for Watermark {
         if self.checkpoint.is_some() {
             len += 1;
         }
+        if self.inclusive_cursor.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("sui.rpc.v2.Watermark", len)?;
         if let Some(v) = self.cursor.as_ref() {
             #[allow(clippy::needless_borrow)]
@@ -35311,6 +35314,15 @@ impl serde::Serialize for Watermark {
             #[allow(clippy::needless_borrows_for_generic_args)]
             struct_ser.serialize_field("checkpoint", ToString::to_string(&v).as_str())?;
         }
+        if let Some(v) = self.inclusive_cursor.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser
+                .serialize_field(
+                    "inclusiveCursor",
+                    crate::_serde::base64::encode(&v).as_str(),
+                )?;
+        }
         struct_ser.end()
     }
 }
@@ -35320,11 +35332,17 @@ impl<'de> serde::Deserialize<'de> for Watermark {
     where
         D: serde::Deserializer<'de>,
     {
-        const FIELDS: &[&str] = &["cursor", "checkpoint"];
+        const FIELDS: &[&str] = &[
+            "cursor",
+            "checkpoint",
+            "inclusive_cursor",
+            "inclusiveCursor",
+        ];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             Cursor,
             Checkpoint,
+            InclusiveCursor,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -35354,6 +35372,9 @@ impl<'de> serde::Deserialize<'de> for Watermark {
                         match value {
                             "cursor" => Ok(GeneratedField::Cursor),
                             "checkpoint" => Ok(GeneratedField::Checkpoint),
+                            "inclusiveCursor" | "inclusive_cursor" => {
+                                Ok(GeneratedField::InclusiveCursor)
+                            }
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -35381,6 +35402,7 @@ impl<'de> serde::Deserialize<'de> for Watermark {
             {
                 let mut cursor__ = None;
                 let mut checkpoint__ = None;
+                let mut inclusive_cursor__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Cursor => {
@@ -35403,6 +35425,18 @@ impl<'de> serde::Deserialize<'de> for Watermark {
                                 >()?
                                 .map(|x| x.0);
                         }
+                        GeneratedField::InclusiveCursor => {
+                            if inclusive_cursor__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("inclusiveCursor"),
+                                );
+                            }
+                            inclusive_cursor__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::BytesDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -35411,6 +35445,7 @@ impl<'de> serde::Deserialize<'de> for Watermark {
                 Ok(Watermark {
                     cursor: cursor__,
                     checkpoint: checkpoint__,
+                    inclusive_cursor: inclusive_cursor__,
                 })
             }
         }
