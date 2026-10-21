@@ -5414,6 +5414,13 @@ pub struct Watermark {
     /// A watermark still has a valid resume cursor while this field is unset.
     #[prost(uint64, optional, tag = "2")]
     pub checkpoint: ::core::option::Option<u64>,
+    /// Opaque cursor that includes this frame's item from either side. Set only
+    /// on frames that carry an item. In either ordering, as `options.after` it
+    /// admits the item and every item after it, and as `options.before` the item
+    /// and every item before it. Use it to resume with the item instead of after
+    /// it, or to bound a scan so that it ends with the item.
+    #[prost(bytes = "bytes", optional, tag = "3")]
+    pub inclusive_cursor: ::core::option::Option<::prost::bytes::Bytes>,
 }
 /// Marker for the final frame of a successful query stream. Every successful
 /// stream sets `QueryEnd` on exactly one frame, after which no further frames

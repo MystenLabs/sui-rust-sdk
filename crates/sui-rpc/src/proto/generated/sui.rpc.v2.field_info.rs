@@ -6853,11 +6853,18 @@ pub(crate) mod _field_impls {
             number: 2i32,
             message_fields: None,
         };
+        pub const INCLUSIVE_CURSOR_FIELD: &'static MessageField = &MessageField {
+            name: "inclusive_cursor",
+            json_name: "inclusiveCursor",
+            number: 3i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for Watermark {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::CURSOR_FIELD,
             Self::CHECKPOINT_FIELD,
+            Self::INCLUSIVE_CURSOR_FIELD,
         ];
     }
     impl Watermark {
@@ -6886,6 +6893,10 @@ pub(crate) mod _field_impls {
         }
         pub fn checkpoint(mut self) -> String {
             self.path.push(Watermark::CHECKPOINT_FIELD.name);
+            self.finish()
+        }
+        pub fn inclusive_cursor(mut self) -> String {
+            self.path.push(Watermark::INCLUSIVE_CURSOR_FIELD.name);
             self.finish()
         }
     }

@@ -20480,6 +20480,7 @@ mod _accessor_impls {
             Self {
                 cursor: None,
                 checkpoint: None,
+                inclusive_cursor: None,
             }
         }
         #[doc(hidden)]
@@ -20520,6 +20521,25 @@ mod _accessor_impls {
         ///Sets `checkpoint` with the provided value.
         pub fn with_checkpoint(mut self, field: u64) -> Self {
             self.set_checkpoint(field);
+            self
+        }
+        ///If `inclusive_cursor` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn inclusive_cursor_opt(&self) -> Option<&[u8]> {
+            self.inclusive_cursor.as_ref().map(|field| field as _)
+        }
+        ///Sets `inclusive_cursor` with the provided value.
+        pub fn set_inclusive_cursor<T: Into<::prost::bytes::Bytes>>(
+            &mut self,
+            field: T,
+        ) {
+            self.inclusive_cursor = Some(field.into().into());
+        }
+        ///Sets `inclusive_cursor` with the provided value.
+        pub fn with_inclusive_cursor<T: Into<::prost::bytes::Bytes>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_inclusive_cursor(field.into());
             self
         }
     }
