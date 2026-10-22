@@ -93,10 +93,25 @@ message ListPackageVersionsRequest {
   // When paginating, all other parameters provided to `ListPackageVersions` must
   // match the call that provided the page token.
   optional bytes page_token = 3;
+
+  // Optional. List only the versions published at or before this
+  // checkpoint. The checkpoint must be at or below the highest checkpoint
+  // the server has indexed; larger values fail with `NOT_FOUND` instead of
+  // listing every known version, so a successful response is exact as of
+  // `at_checkpoint`. Servers that prune history fail with `OUT_OF_RANGE`
+  // for checkpoints below their lowest available one, and may fail with
+  // `UNAVAILABLE` while they rebuild history after restoring from a
+  // snapshot. A package first published after this checkpoint lists no
+  // versions.
+  optional uint64 at_checkpoint = 4;
 }
 
 message ListPackageVersionsResponse {
   // List of all package versions, ordered by version.
+  //
+  // Servers that prune history may omit versions published before their
+  // lowest available checkpoint that were later replaced in place, such as
+  // earlier versions of system packages.
   repeated PackageVersion versions = 1;
 
   // A token, which can be sent as `page_token` to retrieve the next page.
@@ -110,4 +125,8 @@ message PackageVersion {
   optional string package_id = 1;
   // The version number
   optional uint64 version = 2;
+  // The checkpoint in which this version was published. Servers that prune
+  // history may leave this unset for versions published before their lowest
+  // available checkpoint.
+  optional uint64 checkpoint = 3;
 }
