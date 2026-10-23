@@ -5971,6 +5971,12 @@ pub(crate) mod _field_impls {
             number: 7i32,
             message_fields: None,
         };
+        pub const START_CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "start_checkpoint",
+            json_name: "startCheckpoint",
+            number: 8i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for ListPackageVersionsRequest {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -5981,6 +5987,7 @@ pub(crate) mod _field_impls {
             Self::OPTIONS_FIELD,
             Self::START_VERSION_FIELD,
             Self::END_VERSION_FIELD,
+            Self::START_CHECKPOINT_FIELD,
         ];
     }
     impl ListPackageVersionsRequest {
@@ -6029,6 +6036,10 @@ pub(crate) mod _field_impls {
         }
         pub fn end_version(mut self) -> String {
             self.path.push(ListPackageVersionsRequest::END_VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn start_checkpoint(mut self) -> String {
+            self.path.push(ListPackageVersionsRequest::START_CHECKPOINT_FIELD.name);
             self.finish()
         }
     }
@@ -6106,6 +6117,12 @@ pub(crate) mod _field_impls {
             number: 4i32,
             message_fields: None,
         };
+        pub const ORIGINAL_ID_FIELD: &'static MessageField = &MessageField {
+            name: "original_id",
+            json_name: "originalId",
+            number: 5i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for PackageVersion {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -6113,6 +6130,7 @@ pub(crate) mod _field_impls {
             Self::VERSION_FIELD,
             Self::CHECKPOINT_FIELD,
             Self::CURSOR_FIELD,
+            Self::ORIGINAL_ID_FIELD,
         ];
     }
     impl PackageVersion {
@@ -6149,6 +6167,10 @@ pub(crate) mod _field_impls {
         }
         pub fn cursor(mut self) -> String {
             self.path.push(PackageVersion::CURSOR_FIELD.name);
+            self.finish()
+        }
+        pub fn original_id(mut self) -> String {
+            self.path.push(PackageVersion::ORIGINAL_ID_FIELD.name);
             self.finish()
         }
     }

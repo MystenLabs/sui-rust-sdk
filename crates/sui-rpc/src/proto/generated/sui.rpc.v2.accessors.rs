@@ -10868,6 +10868,7 @@ mod _accessor_impls {
                 options: None,
                 start_version: None,
                 end_version: None,
+                start_checkpoint: None,
             }
         }
         #[doc(hidden)]
@@ -11028,6 +11029,28 @@ mod _accessor_impls {
         ///Sets `end_version` with the provided value.
         pub fn with_end_version(mut self, field: u64) -> Self {
             self.set_end_version(field);
+            self
+        }
+        ///If `start_checkpoint` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn start_checkpoint_opt_mut(&mut self) -> Option<&mut u64> {
+            self.start_checkpoint.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `start_checkpoint`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn start_checkpoint_mut(&mut self) -> &mut u64 {
+            self.start_checkpoint.get_or_insert_default()
+        }
+        ///If `start_checkpoint` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn start_checkpoint_opt(&self) -> Option<u64> {
+            self.start_checkpoint.as_ref().map(|field| *field)
+        }
+        ///Sets `start_checkpoint` with the provided value.
+        pub fn set_start_checkpoint(&mut self, field: u64) {
+            self.start_checkpoint = Some(field);
+        }
+        ///Sets `start_checkpoint` with the provided value.
+        pub fn with_start_checkpoint(mut self, field: u64) -> Self {
+            self.set_start_checkpoint(field);
             self
         }
     }
@@ -13534,6 +13557,7 @@ mod _accessor_impls {
                 version: None,
                 checkpoint: None,
                 cursor: None,
+                original_id: None,
             }
         }
         #[doc(hidden)]
@@ -13618,6 +13642,28 @@ mod _accessor_impls {
         ///Sets `cursor` with the provided value.
         pub fn with_cursor<T: Into<::prost::bytes::Bytes>>(mut self, field: T) -> Self {
             self.set_cursor(field.into());
+            self
+        }
+        ///If `original_id` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn original_id_opt_mut(&mut self) -> Option<&mut String> {
+            self.original_id.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `original_id`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn original_id_mut(&mut self) -> &mut String {
+            self.original_id.get_or_insert_default()
+        }
+        ///If `original_id` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn original_id_opt(&self) -> Option<&str> {
+            self.original_id.as_ref().map(|field| field as _)
+        }
+        ///Sets `original_id` with the provided value.
+        pub fn set_original_id<T: Into<String>>(&mut self, field: T) {
+            self.original_id = Some(field.into().into());
+        }
+        ///Sets `original_id` with the provided value.
+        pub fn with_original_id<T: Into<String>>(mut self, field: T) -> Self {
+            self.set_original_id(field.into());
             self
         }
     }
