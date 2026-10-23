@@ -14959,6 +14959,9 @@ impl serde::Serialize for GetObjectRequest {
         if self.at_checkpoint.is_some() {
             len += 1;
         }
+        if self.max_version.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer
             .serialize_struct("sui.rpc.v2.GetObjectRequest", len)?;
         if let Some(v) = self.object_id.as_ref() {
@@ -14979,6 +14982,11 @@ impl serde::Serialize for GetObjectRequest {
             struct_ser
                 .serialize_field("atCheckpoint", ToString::to_string(&v).as_str())?;
         }
+        if let Some(v) = self.max_version.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("maxVersion", ToString::to_string(&v).as_str())?;
+        }
         struct_ser.end()
     }
 }
@@ -14996,6 +15004,8 @@ impl<'de> serde::Deserialize<'de> for GetObjectRequest {
             "readMask",
             "at_checkpoint",
             "atCheckpoint",
+            "max_version",
+            "maxVersion",
         ];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
@@ -15003,6 +15013,7 @@ impl<'de> serde::Deserialize<'de> for GetObjectRequest {
             Version,
             ReadMask,
             AtCheckpoint,
+            MaxVersion,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -15036,6 +15047,9 @@ impl<'de> serde::Deserialize<'de> for GetObjectRequest {
                             "atCheckpoint" | "at_checkpoint" => {
                                 Ok(GeneratedField::AtCheckpoint)
                             }
+                            "maxVersion" | "max_version" => {
+                                Ok(GeneratedField::MaxVersion)
+                            }
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -15065,6 +15079,7 @@ impl<'de> serde::Deserialize<'de> for GetObjectRequest {
                 let mut version__ = None;
                 let mut read_mask__ = None;
                 let mut at_checkpoint__ = None;
+                let mut max_version__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::ObjectId => {
@@ -15105,6 +15120,16 @@ impl<'de> serde::Deserialize<'de> for GetObjectRequest {
                                 >()?
                                 .map(|x| x.0);
                         }
+                        GeneratedField::MaxVersion => {
+                            if max_version__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("maxVersion"));
+                            }
+                            max_version__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -15115,6 +15140,7 @@ impl<'de> serde::Deserialize<'de> for GetObjectRequest {
                     version: version__,
                     read_mask: read_mask__,
                     at_checkpoint: at_checkpoint__,
+                    max_version: max_version__,
                 })
             }
         }
