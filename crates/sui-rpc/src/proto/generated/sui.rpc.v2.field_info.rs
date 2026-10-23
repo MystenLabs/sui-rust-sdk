@@ -5947,12 +5947,19 @@ pub(crate) mod _field_impls {
             number: 3i32,
             message_fields: None,
         };
+        pub const AT_CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "at_checkpoint",
+            json_name: "atCheckpoint",
+            number: 4i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for ListPackageVersionsRequest {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::PACKAGE_ID_FIELD,
             Self::PAGE_SIZE_FIELD,
             Self::PAGE_TOKEN_FIELD,
+            Self::AT_CHECKPOINT_FIELD,
         ];
     }
     impl ListPackageVersionsRequest {
@@ -5985,6 +5992,10 @@ pub(crate) mod _field_impls {
         }
         pub fn page_token(mut self) -> String {
             self.path.push(ListPackageVersionsRequest::PAGE_TOKEN_FIELD.name);
+            self.finish()
+        }
+        pub fn at_checkpoint(mut self) -> String {
+            self.path.push(ListPackageVersionsRequest::AT_CHECKPOINT_FIELD.name);
             self.finish()
         }
     }
@@ -6050,11 +6061,18 @@ pub(crate) mod _field_impls {
             number: 2i32,
             message_fields: None,
         };
+        pub const CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "checkpoint",
+            json_name: "checkpoint",
+            number: 3i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for PackageVersion {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::PACKAGE_ID_FIELD,
             Self::VERSION_FIELD,
+            Self::CHECKPOINT_FIELD,
         ];
     }
     impl PackageVersion {
@@ -6083,6 +6101,10 @@ pub(crate) mod _field_impls {
         }
         pub fn version(mut self) -> String {
             self.path.push(PackageVersion::VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn checkpoint(mut self) -> String {
+            self.path.push(PackageVersion::CHECKPOINT_FIELD.name);
             self.finish()
         }
     }

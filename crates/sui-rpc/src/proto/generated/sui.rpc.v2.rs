@@ -4169,11 +4169,26 @@ pub struct ListPackageVersionsRequest {
     /// match the call that provided the page token.
     #[prost(bytes = "bytes", optional, tag = "3")]
     pub page_token: ::core::option::Option<::prost::bytes::Bytes>,
+    /// Optional. List only the versions published at or before this
+    /// checkpoint. The checkpoint must be at or below the highest checkpoint
+    /// the server has indexed; larger values fail with `NOT_FOUND` instead of
+    /// listing every known version, so a successful response is exact as of
+    /// `at_checkpoint`. Servers that prune history fail with `OUT_OF_RANGE`
+    /// for checkpoints below their lowest available one, and may fail with
+    /// `UNAVAILABLE` while they rebuild history after restoring from a
+    /// snapshot. A package first published after this checkpoint lists no
+    /// versions.
+    #[prost(uint64, optional, tag = "4")]
+    pub at_checkpoint: ::core::option::Option<u64>,
 }
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListPackageVersionsResponse {
     /// List of all package versions, ordered by version.
+    ///
+    /// Servers that prune history may omit versions published before their
+    /// lowest available checkpoint that were later replaced in place, such as
+    /// earlier versions of system packages.
     #[prost(message, repeated, tag = "1")]
     pub versions: ::prost::alloc::vec::Vec<PackageVersion>,
     /// A token, which can be sent as `page_token` to retrieve the next page.
@@ -4191,6 +4206,11 @@ pub struct PackageVersion {
     /// The version number
     #[prost(uint64, optional, tag = "2")]
     pub version: ::core::option::Option<u64>,
+    /// The checkpoint in which this version was published. Servers that prune
+    /// history may leave this unset for versions published before their lowest
+    /// available checkpoint.
+    #[prost(uint64, optional, tag = "3")]
+    pub checkpoint: ::core::option::Option<u64>,
 }
 /// Generated client implementations.
 pub mod move_package_service_client {
