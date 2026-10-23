@@ -4154,14 +4154,18 @@ pub struct GetFunctionResponse {
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ListPackageVersionsRequest {
-    /// Required. The `storage_id` of any version of the package.
+    /// The `storage_id` of any version of a package, to list the versions of
+    /// that package's upgrade lineage. When unset, the request lists the
+    /// versions of every package by publish checkpoint (see `options`), and
+    /// servers may fail it with `UNAVAILABLE` while they rebuild history after
+    /// restoring from a snapshot.
     #[prost(string, optional, tag = "1")]
     pub package_id: ::core::option::Option<::prost::alloc::string::String>,
     /// The maximum number of versions to return. The service may return fewer than this value.
     /// If unspecified, at most `1000` entries will be returned.
     /// The maximum value is `10000`; values above `10000` will be coerced to `10000`.
     ///
-    /// Must be unset when `options` is set.
+    /// Must be unset when `options` is set or `package_id` is unset.
     #[prost(uint32, optional, tag = "2")]
     pub page_size: ::core::option::Option<u32>,
     /// A page token, received from a previous `ListPackageVersions` call.
@@ -4170,7 +4174,7 @@ pub struct ListPackageVersionsRequest {
     /// When paginating, all other parameters provided to `ListPackageVersions` must
     /// match the call that provided the page token.
     ///
-    /// Must be unset when `options` is set.
+    /// Must be unset when `options` is set or `package_id` is unset.
     #[prost(bytes = "bytes", optional, tag = "3")]
     pub page_token: ::core::option::Option<::prost::bytes::Bytes>,
     /// Optional. List only the versions published at or before this
@@ -4186,10 +4190,14 @@ pub struct ListPackageVersionsRequest {
     pub at_checkpoint: ::core::option::Option<u64>,
     /// Optional. Cursor-bounded paging. Setting this selects cursor mode:
     /// `page_size` and `page_token` must be unset (`INVALID_ARGUMENT`
-    /// otherwise), and `next_page_token` is never set.
+    /// otherwise), and `next_page_token` is never set. A request with
+    /// `package_id` unset is always in cursor mode, whether or not it sets
+    /// `options`.
     ///
-    /// This listing's order is ascending version within the package's upgrade
-    /// lineage.
+    /// With `package_id` set, this listing's order is ascending version within
+    /// the package's upgrade lineage. With `package_id` unset, it is ascending
+    /// publish checkpoint, then ascending `original_id`, then ascending
+    /// version.
     ///
     /// * `limit`: the maximum number of versions to return, with the same
     ///   default (`1000`) and maximum (`10000`) as `page_size`. The response
@@ -4199,9 +4207,10 @@ pub struct ListPackageVersionsRequest {
     /// * `after` / `before`: exclusive bounds in this listing's order, taken
     ///   from the `cursor` of versions in earlier responses. Their meaning does
     ///   not depend on `ordering`. Either or both may be set, and they
-    ///   intersect with `start_version`, `end_version`, and `at_checkpoint`. A
-    ///   malformed cursor, or one for another package, fails with
-    ///   `INVALID_ARGUMENT`.
+    ///   intersect with `start_version`, `end_version`, `start_checkpoint`, and
+    ///   `at_checkpoint`. A malformed cursor, or one from another listing (of
+    ///   another package, or of every package when `package_id` is set, or
+    ///   vice versa), fails with `INVALID_ARGUMENT`.
     /// * `ordering`: `ORDERING_ASCENDING` (the default) returns versions in
     ///   this listing's order, and `ORDERING_DESCENDING` in reverse.
     ///
@@ -4217,23 +4226,36 @@ pub struct ListPackageVersionsRequest {
     #[prost(message, optional, tag = "5")]
     pub options: ::core::option::Option<QueryOptions>,
     /// Optional. Start of the version range to list (inclusive). Applies with
-    /// or without `options`, and intersects with every other bound.
+    /// or without `options`, and intersects with every other bound. Must be
+    /// unset when `package_id` is unset.
     #[prost(uint64, optional, tag = "6")]
     pub start_version: ::core::option::Option<u64>,
     /// Optional. End of the version range to list (exclusive). Applies with or
-    /// without `options`, and intersects with every other bound.
+    /// without `options`, and intersects with every other bound. Must be unset
+    /// when `package_id` is unset.
     #[prost(uint64, optional, tag = "7")]
     pub end_version: ::core::option::Option<u64>,
+    /// Optional. List only the versions published at or after this checkpoint
+    /// (inclusive). Intersects with every other bound, and must be unset when
+    /// `package_id` is set. Servers that prune history fail with `OUT_OF_RANGE`
+    /// for checkpoints below the lowest one they can list every publish from.
+    /// If unset, the listing starts at that checkpoint, which is genesis on
+    /// servers that keep full history, and a cursor below it fails with
+    /// `OUT_OF_RANGE` rather than skipping to it.
+    #[prost(uint64, optional, tag = "8")]
+    pub start_checkpoint: ::core::option::Option<u64>,
 }
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListPackageVersionsResponse {
-    /// The package's versions in this listing's order (ascending version), or
-    /// in reverse when `options.ordering` is `ORDERING_DESCENDING`.
+    /// The listed versions in this listing's order (see
+    /// `ListPackageVersionsRequest.options`), or in reverse when
+    /// `options.ordering` is `ORDERING_DESCENDING`.
     ///
-    /// Servers that prune history may omit versions published before their
-    /// lowest available checkpoint that were later replaced in place, such as
-    /// earlier versions of system packages.
+    /// When listing one package's upgrade lineage, servers that prune history
+    /// may omit versions published before their lowest available checkpoint
+    /// that were later replaced in place, such as earlier versions of system
+    /// packages.
     #[prost(message, repeated, tag = "1")]
     pub versions: ::prost::alloc::vec::Vec<PackageVersion>,
     /// A token, which can be sent as `page_token` to retrieve the next page.
@@ -4264,6 +4286,10 @@ pub struct PackageVersion {
     /// `options`.
     #[prost(bytes = "bytes", optional, tag = "4")]
     pub cursor: ::core::option::Option<::prost::bytes::Bytes>,
+    /// The `original_id` of this version's package: the `storage_id` of its
+    /// first version, shared by every version in its upgrade lineage.
+    #[prost(string, optional, tag = "5")]
+    pub original_id: ::core::option::Option<::prost::alloc::string::String>,
 }
 /// Generated client implementations.
 pub mod move_package_service_client {
