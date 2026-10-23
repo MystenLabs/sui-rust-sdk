@@ -2319,6 +2319,103 @@ pub mod get_object_result {
         Error(super::super::super::super::google::rpc::Status),
     }
 }
+/// Request message for LedgerService.ListObjectVersions.
+///
+/// Lists only the object's live versions: versions at which the object was
+/// deleted or wrapped have no contents, are skipped, and do not count toward
+/// `options.limit`. Versions are bounded by the intersection of `start_version`
+/// and `end_version`, `options.after` and `options.before`, and
+/// `at_checkpoint` (or, when it is unset, the highest checkpoint the server has
+/// indexed). When no live version falls within those bounds, including when the
+/// object does not exist, the response lists no versions rather than failing
+/// with `NOT_FOUND`.
+///
+/// Servers that keep no object version history, such as fullnodes, fail with
+/// `UNIMPLEMENTED`.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ListObjectVersionsRequest {
+    /// Required. The `ObjectId` of the object whose versions to list.
+    #[prost(string, optional, tag = "1")]
+    pub object_id: ::core::option::Option<::prost::alloc::string::String>,
+    /// Mask specifying which fields of each version's `object` to read.
+    /// If no mask is specified, defaults to `object_id,version,digest`.
+    #[prost(message, optional, tag = "2")]
+    pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
+    /// Optional. Cursor-bounded paging.
+    ///
+    /// This listing's order is ascending version.
+    ///
+    /// * `limit`: the maximum number of versions to return. Defaults to `50`
+    ///   when unset; the maximum is `1000`, and larger values are coerced to
+    ///   `1000` (and `0` to `1`). The response holds that coerced number of
+    ///   versions unless the requested range has fewer left in the requested
+    ///   ordering, so a shorter response is the last page in that direction.
+    /// * `after` / `before`: exclusive bounds in this listing's order, taken
+    ///   from the `cursor` of versions in earlier responses. Their meaning does
+    ///   not depend on `ordering`. Either or both may be set, and they
+    ///   intersect with `start_version`, `end_version`, and `at_checkpoint`. A
+    ///   malformed cursor, or one for another object, fails with
+    ///   `INVALID_ARGUMENT`.
+    /// * `ordering`: `ORDERING_ASCENDING` (the default) returns versions in
+    ///   this listing's order, and `ORDERING_DESCENDING` in reverse.
+    ///
+    /// To continue in the same direction, pass the `cursor` of the last
+    /// version received as `after` (ascending) or `before` (descending). To
+    /// page backward from the versions already received, request
+    /// `ORDERING_DESCENDING` with `before` set to the `cursor` of the first
+    /// version in this listing's order.
+    ///
+    /// Responses carry no `Watermark` or `QueryEnd`: resume from
+    /// `ObjectVersion.cursor`, and treat a response holding fewer versions than
+    /// the coerced `limit` as the last page in that direction.
+    #[prost(message, optional, tag = "3")]
+    pub options: ::core::option::Option<QueryOptions>,
+    /// Optional. Start of the version range to list (inclusive). Intersects with
+    /// every other bound.
+    #[prost(uint64, optional, tag = "4")]
+    pub start_version: ::core::option::Option<u64>,
+    /// Optional. End of the version range to list (exclusive). Intersects with
+    /// every other bound.
+    #[prost(uint64, optional, tag = "5")]
+    pub end_version: ::core::option::Option<u64>,
+    /// Optional. List only the versions written at or before this checkpoint.
+    /// Intersects with every other bound.
+    ///
+    /// If unset, the server lists only the versions written at or before the
+    /// highest checkpoint it has indexed, so that paging never skips a version
+    /// that was still being indexed when a later version was listed.
+    ///
+    /// The checkpoint must be at or below the highest checkpoint the server has
+    /// indexed; larger values fail with `NOT_FOUND`, because the server cannot
+    /// answer for them yet. Servers that prune history may also fail with
+    /// `NOT_FOUND` for checkpoints below their lowest available one, and servers
+    /// still backfilling history may fail with `UNAVAILABLE`.
+    #[prost(uint64, optional, tag = "6")]
+    pub at_checkpoint: ::core::option::Option<u64>,
+}
+/// Response message for LedgerService.ListObjectVersions.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListObjectVersionsResponse {
+    /// The object's live versions in this listing's order (ascending version),
+    /// or in reverse when `options.ordering` is `ORDERING_DESCENDING`.
+    #[prost(message, repeated, tag = "1")]
+    pub versions: ::prost::alloc::vec::Vec<ObjectVersion>,
+}
+/// One live version of an object, listed by `ListObjectVersions`.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ObjectVersion {
+    /// The object at this version, with the fields selected by
+    /// `ListObjectVersionsRequest.read_mask`.
+    #[prost(message, optional, tag = "1")]
+    pub object: ::core::option::Option<Object>,
+    /// The opaque position of this version in the listing, for use as
+    /// `ListObjectVersionsRequest.options.after` or `options.before`.
+    #[prost(bytes = "bytes", optional, tag = "2")]
+    pub cursor: ::core::option::Option<::prost::bytes::Bytes>,
+}
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetTransactionRequest {
@@ -2746,6 +2843,37 @@ pub mod ledger_service_client {
                 .insert(GrpcMethod::new("sui.rpc.v2.LedgerService", "BatchGetObjects"));
             self.inner.unary(req, path, codec).await
         }
+        /// List one object's live versions, in ascending or descending version
+        /// order, paged by cursor.
+        ///
+        /// Servers that keep no object version history, such as fullnodes, fail with
+        /// `UNIMPLEMENTED`.
+        pub async fn list_object_versions(
+            &mut self,
+            request: impl tonic::IntoRequest<super::ListObjectVersionsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::ListObjectVersionsResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/sui.rpc.v2.LedgerService/ListObjectVersions",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new("sui.rpc.v2.LedgerService", "ListObjectVersions"),
+                );
+            self.inner.unary(req, path, codec).await
+        }
         pub async fn get_transaction(
             &mut self,
             request: impl tonic::IntoRequest<super::GetTransactionRequest>,
@@ -2968,6 +3096,20 @@ pub mod ledger_service_server {
             request: tonic::Request<super::BatchGetObjectsRequest>,
         ) -> std::result::Result<
             tonic::Response<super::BatchGetObjectsResponse>,
+            tonic::Status,
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
+        /// List one object's live versions, in ascending or descending version
+        /// order, paged by cursor.
+        ///
+        /// Servers that keep no object version history, such as fullnodes, fail with
+        /// `UNIMPLEMENTED`.
+        async fn list_object_versions(
+            &self,
+            request: tonic::Request<super::ListObjectVersionsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::ListObjectVersionsResponse>,
             tonic::Status,
         > {
             Err(tonic::Status::unimplemented("Not yet implemented"))
@@ -3247,6 +3389,52 @@ pub mod ledger_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = BatchGetObjectsSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/sui.rpc.v2.LedgerService/ListObjectVersions" => {
+                    #[allow(non_camel_case_types)]
+                    struct ListObjectVersionsSvc<T: LedgerService>(pub Arc<T>);
+                    impl<
+                        T: LedgerService,
+                    > tonic::server::UnaryService<super::ListObjectVersionsRequest>
+                    for ListObjectVersionsSvc<T> {
+                        type Response = super::ListObjectVersionsResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::ListObjectVersionsRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as LedgerService>::list_object_versions(&inner, request)
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = ListObjectVersionsSvc(inner);
                         let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
