@@ -63,6 +63,9 @@ impl ListPackageVersionsRequest {
             page_size: None,
             page_token: None,
             at_checkpoint: None,
+            options: None,
+            start_version: None,
+            end_version: None,
         }
     }
 }
@@ -82,6 +85,7 @@ impl PackageVersion {
             package_id: Some(package_id.to_string()),
             version: Some(version),
             checkpoint: None,
+            cursor: None,
         }
     }
 }
