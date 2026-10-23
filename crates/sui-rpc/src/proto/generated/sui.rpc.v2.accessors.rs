@@ -10865,6 +10865,9 @@ mod _accessor_impls {
                 page_size: None,
                 page_token: None,
                 at_checkpoint: None,
+                options: None,
+                start_version: None,
+                end_version: None,
             }
         }
         #[doc(hidden)]
@@ -10952,6 +10955,79 @@ mod _accessor_impls {
         ///Sets `at_checkpoint` with the provided value.
         pub fn with_at_checkpoint(mut self, field: u64) -> Self {
             self.set_at_checkpoint(field);
+            self
+        }
+        ///Returns the value of `options`, or the default value if `options` is unset.
+        pub fn options(&self) -> &super::QueryOptions {
+            self.options
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::QueryOptions::default_instance() as _)
+        }
+        ///If `options` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn options_opt_mut(&mut self) -> Option<&mut super::QueryOptions> {
+            self.options.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `options`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn options_mut(&mut self) -> &mut super::QueryOptions {
+            self.options.get_or_insert_default()
+        }
+        ///If `options` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn options_opt(&self) -> Option<&super::QueryOptions> {
+            self.options.as_ref().map(|field| field as _)
+        }
+        ///Sets `options` with the provided value.
+        pub fn set_options<T: Into<super::QueryOptions>>(&mut self, field: T) {
+            self.options = Some(field.into().into());
+        }
+        ///Sets `options` with the provided value.
+        pub fn with_options<T: Into<super::QueryOptions>>(mut self, field: T) -> Self {
+            self.set_options(field.into());
+            self
+        }
+        ///If `start_version` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn start_version_opt_mut(&mut self) -> Option<&mut u64> {
+            self.start_version.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `start_version`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn start_version_mut(&mut self) -> &mut u64 {
+            self.start_version.get_or_insert_default()
+        }
+        ///If `start_version` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn start_version_opt(&self) -> Option<u64> {
+            self.start_version.as_ref().map(|field| *field)
+        }
+        ///Sets `start_version` with the provided value.
+        pub fn set_start_version(&mut self, field: u64) {
+            self.start_version = Some(field);
+        }
+        ///Sets `start_version` with the provided value.
+        pub fn with_start_version(mut self, field: u64) -> Self {
+            self.set_start_version(field);
+            self
+        }
+        ///If `end_version` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn end_version_opt_mut(&mut self) -> Option<&mut u64> {
+            self.end_version.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `end_version`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn end_version_mut(&mut self) -> &mut u64 {
+            self.end_version.get_or_insert_default()
+        }
+        ///If `end_version` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn end_version_opt(&self) -> Option<u64> {
+            self.end_version.as_ref().map(|field| *field)
+        }
+        ///Sets `end_version` with the provided value.
+        pub fn set_end_version(&mut self, field: u64) {
+            self.end_version = Some(field);
+        }
+        ///Sets `end_version` with the provided value.
+        pub fn with_end_version(mut self, field: u64) -> Self {
+            self.set_end_version(field);
             self
         }
     }
@@ -13457,6 +13533,7 @@ mod _accessor_impls {
                 package_id: None,
                 version: None,
                 checkpoint: None,
+                cursor: None,
             }
         }
         #[doc(hidden)]
@@ -13528,6 +13605,19 @@ mod _accessor_impls {
         ///Sets `checkpoint` with the provided value.
         pub fn with_checkpoint(mut self, field: u64) -> Self {
             self.set_checkpoint(field);
+            self
+        }
+        ///If `cursor` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn cursor_opt(&self) -> Option<&[u8]> {
+            self.cursor.as_ref().map(|field| field as _)
+        }
+        ///Sets `cursor` with the provided value.
+        pub fn set_cursor<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
+            self.cursor = Some(field.into().into());
+        }
+        ///Sets `cursor` with the provided value.
+        pub fn with_cursor<T: Into<::prost::bytes::Bytes>>(mut self, field: T) -> Self {
+            self.set_cursor(field.into());
             self
         }
     }
