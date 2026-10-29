@@ -20229,6 +20229,7 @@ mod _accessor_impls {
                 signature: None,
                 address: None,
                 jwks: Vec::new(),
+                check_address_aliases: None,
             }
         }
         #[doc(hidden)]
@@ -20337,12 +20338,35 @@ mod _accessor_impls {
             self.set_jwks(field);
             self
         }
+        ///If `check_address_aliases` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn check_address_aliases_opt_mut(&mut self) -> Option<&mut bool> {
+            self.check_address_aliases.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `check_address_aliases`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn check_address_aliases_mut(&mut self) -> &mut bool {
+            self.check_address_aliases.get_or_insert_default()
+        }
+        ///If `check_address_aliases` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn check_address_aliases_opt(&self) -> Option<bool> {
+            self.check_address_aliases.as_ref().map(|field| *field)
+        }
+        ///Sets `check_address_aliases` with the provided value.
+        pub fn set_check_address_aliases(&mut self, field: bool) {
+            self.check_address_aliases = Some(field);
+        }
+        ///Sets `check_address_aliases` with the provided value.
+        pub fn with_check_address_aliases(mut self, field: bool) -> Self {
+            self.set_check_address_aliases(field);
+            self
+        }
     }
     impl super::VerifySignatureResponse {
         pub const fn const_default() -> Self {
             Self {
                 is_valid: None,
                 reason: None,
+                address_aliases_checked: None,
             }
         }
         #[doc(hidden)]
@@ -20392,6 +20416,28 @@ mod _accessor_impls {
         ///Sets `reason` with the provided value.
         pub fn with_reason<T: Into<String>>(mut self, field: T) -> Self {
             self.set_reason(field.into());
+            self
+        }
+        ///If `address_aliases_checked` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn address_aliases_checked_opt_mut(&mut self) -> Option<&mut bool> {
+            self.address_aliases_checked.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `address_aliases_checked`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn address_aliases_checked_mut(&mut self) -> &mut bool {
+            self.address_aliases_checked.get_or_insert_default()
+        }
+        ///If `address_aliases_checked` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn address_aliases_checked_opt(&self) -> Option<bool> {
+            self.address_aliases_checked.as_ref().map(|field| *field)
+        }
+        ///Sets `address_aliases_checked` with the provided value.
+        pub fn set_address_aliases_checked(&mut self, field: bool) {
+            self.address_aliases_checked = Some(field);
+        }
+        ///Sets `address_aliases_checked` with the provided value.
+        pub fn with_address_aliases_checked(mut self, field: bool) -> Self {
+            self.set_address_aliases_checked(field);
             self
         }
     }

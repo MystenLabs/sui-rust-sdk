@@ -8085,6 +8085,12 @@ pub(crate) mod _field_impls {
             number: 4i32,
             message_fields: Some(ActiveJwk::FIELDS),
         };
+        pub const CHECK_ADDRESS_ALIASES_FIELD: &'static MessageField = &MessageField {
+            name: "check_address_aliases",
+            json_name: "checkAddressAliases",
+            number: 6i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for VerifySignatureRequest {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -8092,6 +8098,7 @@ pub(crate) mod _field_impls {
             Self::SIGNATURE_FIELD,
             Self::ADDRESS_FIELD,
             Self::JWKS_FIELD,
+            Self::CHECK_ADDRESS_ALIASES_FIELD,
         ];
     }
     impl VerifySignatureRequest {
@@ -8130,6 +8137,10 @@ pub(crate) mod _field_impls {
             self.path.push(VerifySignatureRequest::JWKS_FIELD.name);
             ActiveJwkFieldPathBuilder::new_with_base(self.path)
         }
+        pub fn check_address_aliases(mut self) -> String {
+            self.path.push(VerifySignatureRequest::CHECK_ADDRESS_ALIASES_FIELD.name);
+            self.finish()
+        }
     }
     impl VerifySignatureResponse {
         pub const IS_VALID_FIELD: &'static MessageField = &MessageField {
@@ -8144,11 +8155,18 @@ pub(crate) mod _field_impls {
             number: 2i32,
             message_fields: None,
         };
+        pub const ADDRESS_ALIASES_CHECKED_FIELD: &'static MessageField = &MessageField {
+            name: "address_aliases_checked",
+            json_name: "addressAliasesChecked",
+            number: 3i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for VerifySignatureResponse {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::IS_VALID_FIELD,
             Self::REASON_FIELD,
+            Self::ADDRESS_ALIASES_CHECKED_FIELD,
         ];
     }
     impl VerifySignatureResponse {
@@ -8177,6 +8195,10 @@ pub(crate) mod _field_impls {
         }
         pub fn reason(mut self) -> String {
             self.path.push(VerifySignatureResponse::REASON_FIELD.name);
+            self.finish()
+        }
+        pub fn address_aliases_checked(mut self) -> String {
+            self.path.push(VerifySignatureResponse::ADDRESS_ALIASES_CHECKED_FIELD.name);
             self.finish()
         }
     }
