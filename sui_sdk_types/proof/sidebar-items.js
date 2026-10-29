@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["OcsProof","ProofError"],"struct":["OcsInclusionProof","OcsNonInclusionProof"]};
