@@ -2227,15 +2227,31 @@ pub struct GetObjectRequest {
     /// Required. The `ObjectId` of the requested object.
     #[prost(string, optional, tag = "1")]
     pub object_id: ::core::option::Option<::prost::alloc::string::String>,
-    /// Request a specific version of the object.
-    /// If no version is specified, and the object is live, then the latest
-    /// version of the object is returned.
+    /// Optional. Request a specific version of the object.
+    ///
+    /// Mutually exclusive with `at_checkpoint`; servers reject a request that
+    /// sets both with `INVALID_ARGUMENT`. If neither is set and the object is
+    /// live, the latest version of the object is returned.
     #[prost(uint64, optional, tag = "2")]
     pub version: ::core::option::Option<u64>,
     /// Mask specifying which fields to read.
     /// If no mask is specified, defaults to `object_id,version,digest`.
     #[prost(message, optional, tag = "3")]
     pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
+    /// Optional. Return the object's state at the end of this checkpoint.
+    ///
+    /// The checkpoint must be at or below the highest checkpoint the server has
+    /// indexed; larger values fail with `NOT_FOUND` instead of resolving to the
+    /// latest version, so a successful response is exact as of `at_checkpoint`.
+    /// Servers that prune history may also fail with `NOT_FOUND` for
+    /// checkpoints below their lowest available one. An object that was deleted
+    /// or wrapped at or before this checkpoint (and not since unwrapped) is
+    /// `NOT_FOUND`.
+    ///
+    /// Mutually exclusive with `version`; servers reject a request that sets
+    /// both with `INVALID_ARGUMENT`.
+    #[prost(uint64, optional, tag = "4")]
+    pub at_checkpoint: ::core::option::Option<u64>,
 }
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -2246,6 +2262,12 @@ pub struct GetObjectResponse {
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct BatchGetObjectsRequest {
+    /// The objects to fetch. Each request carries its own `version` or
+    /// `at_checkpoint`, so a single batch may read different objects at
+    /// different versions or checkpoints. Errors for individual objects, such
+    /// as `NOT_FOUND`, are reported per item in the response. A malformed
+    /// request, such as one that sets both `version` and `at_checkpoint`, fails
+    /// the whole batch with `INVALID_ARGUMENT`.
     #[prost(message, repeated, tag = "1")]
     pub requests: ::prost::alloc::vec::Vec<GetObjectRequest>,
     /// Mask specifying which fields to read.
