@@ -18328,6 +18328,18 @@ impl serde::Serialize for ListEventsRequest {
         if self.options.is_some() {
             len += 1;
         }
+        if self.start_transaction_index.is_some() {
+            len += 1;
+        }
+        if self.start_event_index.is_some() {
+            len += 1;
+        }
+        if self.end_transaction_index.is_some() {
+            len += 1;
+        }
+        if self.end_event_index.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer
             .serialize_struct("sui.rpc.v2.ListEventsRequest", len)?;
         if let Some(v) = self.read_mask.as_ref() {
@@ -18352,6 +18364,30 @@ impl serde::Serialize for ListEventsRequest {
         if let Some(v) = self.options.as_ref() {
             struct_ser.serialize_field("options", v)?;
         }
+        if let Some(v) = self.start_transaction_index.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser
+                .serialize_field(
+                    "startTransactionIndex",
+                    ToString::to_string(&v).as_str(),
+                )?;
+        }
+        if let Some(v) = self.start_event_index.as_ref() {
+            struct_ser.serialize_field("startEventIndex", v)?;
+        }
+        if let Some(v) = self.end_transaction_index.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser
+                .serialize_field(
+                    "endTransactionIndex",
+                    ToString::to_string(&v).as_str(),
+                )?;
+        }
+        if let Some(v) = self.end_event_index.as_ref() {
+            struct_ser.serialize_field("endEventIndex", v)?;
+        }
         struct_ser.end()
     }
 }
@@ -18370,6 +18406,14 @@ impl<'de> serde::Deserialize<'de> for ListEventsRequest {
             "endCheckpoint",
             "filter",
             "options",
+            "start_transaction_index",
+            "startTransactionIndex",
+            "start_event_index",
+            "startEventIndex",
+            "end_transaction_index",
+            "endTransactionIndex",
+            "end_event_index",
+            "endEventIndex",
         ];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
@@ -18378,6 +18422,10 @@ impl<'de> serde::Deserialize<'de> for ListEventsRequest {
             EndCheckpoint,
             Filter,
             Options,
+            StartTransactionIndex,
+            StartEventIndex,
+            EndTransactionIndex,
+            EndEventIndex,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -18414,6 +18462,18 @@ impl<'de> serde::Deserialize<'de> for ListEventsRequest {
                             }
                             "filter" => Ok(GeneratedField::Filter),
                             "options" => Ok(GeneratedField::Options),
+                            "startTransactionIndex" | "start_transaction_index" => {
+                                Ok(GeneratedField::StartTransactionIndex)
+                            }
+                            "startEventIndex" | "start_event_index" => {
+                                Ok(GeneratedField::StartEventIndex)
+                            }
+                            "endTransactionIndex" | "end_transaction_index" => {
+                                Ok(GeneratedField::EndTransactionIndex)
+                            }
+                            "endEventIndex" | "end_event_index" => {
+                                Ok(GeneratedField::EndEventIndex)
+                            }
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -18444,6 +18504,10 @@ impl<'de> serde::Deserialize<'de> for ListEventsRequest {
                 let mut end_checkpoint__ = None;
                 let mut filter__ = None;
                 let mut options__ = None;
+                let mut start_transaction_index__ = None;
+                let mut start_event_index__ = None;
+                let mut end_transaction_index__ = None;
+                let mut end_event_index__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::ReadMask => {
@@ -18492,6 +18556,54 @@ impl<'de> serde::Deserialize<'de> for ListEventsRequest {
                             }
                             options__ = map_.next_value()?;
                         }
+                        GeneratedField::StartTransactionIndex => {
+                            if start_transaction_index__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("startTransactionIndex"),
+                                );
+                            }
+                            start_transaction_index__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::StartEventIndex => {
+                            if start_event_index__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("startEventIndex"),
+                                );
+                            }
+                            start_event_index__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::EndTransactionIndex => {
+                            if end_transaction_index__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("endTransactionIndex"),
+                                );
+                            }
+                            end_transaction_index__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::EndEventIndex => {
+                            if end_event_index__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("endEventIndex"),
+                                );
+                            }
+                            end_event_index__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -18503,6 +18615,10 @@ impl<'de> serde::Deserialize<'de> for ListEventsRequest {
                     end_checkpoint: end_checkpoint__,
                     filter: filter__,
                     options: options__,
+                    start_transaction_index: start_transaction_index__,
+                    start_event_index: start_event_index__,
+                    end_transaction_index: end_transaction_index__,
+                    end_event_index: end_event_index__,
                 })
             }
         }
@@ -19318,6 +19434,12 @@ impl serde::Serialize for ListTransactionsRequest {
         if self.options.is_some() {
             len += 1;
         }
+        if self.start_transaction_index.is_some() {
+            len += 1;
+        }
+        if self.end_transaction_index.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer
             .serialize_struct("sui.rpc.v2.ListTransactionsRequest", len)?;
         if let Some(v) = self.read_mask.as_ref() {
@@ -19342,6 +19464,24 @@ impl serde::Serialize for ListTransactionsRequest {
         if let Some(v) = self.options.as_ref() {
             struct_ser.serialize_field("options", v)?;
         }
+        if let Some(v) = self.start_transaction_index.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser
+                .serialize_field(
+                    "startTransactionIndex",
+                    ToString::to_string(&v).as_str(),
+                )?;
+        }
+        if let Some(v) = self.end_transaction_index.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser
+                .serialize_field(
+                    "endTransactionIndex",
+                    ToString::to_string(&v).as_str(),
+                )?;
+        }
         struct_ser.end()
     }
 }
@@ -19360,6 +19500,10 @@ impl<'de> serde::Deserialize<'de> for ListTransactionsRequest {
             "endCheckpoint",
             "filter",
             "options",
+            "start_transaction_index",
+            "startTransactionIndex",
+            "end_transaction_index",
+            "endTransactionIndex",
         ];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
@@ -19368,6 +19512,8 @@ impl<'de> serde::Deserialize<'de> for ListTransactionsRequest {
             EndCheckpoint,
             Filter,
             Options,
+            StartTransactionIndex,
+            EndTransactionIndex,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -19404,6 +19550,12 @@ impl<'de> serde::Deserialize<'de> for ListTransactionsRequest {
                             }
                             "filter" => Ok(GeneratedField::Filter),
                             "options" => Ok(GeneratedField::Options),
+                            "startTransactionIndex" | "start_transaction_index" => {
+                                Ok(GeneratedField::StartTransactionIndex)
+                            }
+                            "endTransactionIndex" | "end_transaction_index" => {
+                                Ok(GeneratedField::EndTransactionIndex)
+                            }
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -19434,6 +19586,8 @@ impl<'de> serde::Deserialize<'de> for ListTransactionsRequest {
                 let mut end_checkpoint__ = None;
                 let mut filter__ = None;
                 let mut options__ = None;
+                let mut start_transaction_index__ = None;
+                let mut end_transaction_index__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::ReadMask => {
@@ -19482,6 +19636,30 @@ impl<'de> serde::Deserialize<'de> for ListTransactionsRequest {
                             }
                             options__ = map_.next_value()?;
                         }
+                        GeneratedField::StartTransactionIndex => {
+                            if start_transaction_index__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("startTransactionIndex"),
+                                );
+                            }
+                            start_transaction_index__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::EndTransactionIndex => {
+                            if end_transaction_index__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("endTransactionIndex"),
+                                );
+                            }
+                            end_transaction_index__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -19493,6 +19671,8 @@ impl<'de> serde::Deserialize<'de> for ListTransactionsRequest {
                     end_checkpoint: end_checkpoint__,
                     filter: filter__,
                     options: options__,
+                    start_transaction_index: start_transaction_index__,
+                    end_transaction_index: end_transaction_index__,
                 })
             }
         }

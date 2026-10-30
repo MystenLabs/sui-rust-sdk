@@ -4584,6 +4584,18 @@ pub(crate) mod _field_impls {
             number: 5i32,
             message_fields: Some(QueryOptions::FIELDS),
         };
+        pub const START_TRANSACTION_INDEX_FIELD: &'static MessageField = &MessageField {
+            name: "start_transaction_index",
+            json_name: "startTransactionIndex",
+            number: 6i32,
+            message_fields: None,
+        };
+        pub const END_TRANSACTION_INDEX_FIELD: &'static MessageField = &MessageField {
+            name: "end_transaction_index",
+            json_name: "endTransactionIndex",
+            number: 7i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for ListTransactionsRequest {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -4592,6 +4604,8 @@ pub(crate) mod _field_impls {
             Self::END_CHECKPOINT_FIELD,
             Self::FILTER_FIELD,
             Self::OPTIONS_FIELD,
+            Self::START_TRANSACTION_INDEX_FIELD,
+            Self::END_TRANSACTION_INDEX_FIELD,
         ];
     }
     impl ListTransactionsRequest {
@@ -4633,6 +4647,14 @@ pub(crate) mod _field_impls {
         pub fn options(mut self) -> QueryOptionsFieldPathBuilder {
             self.path.push(ListTransactionsRequest::OPTIONS_FIELD.name);
             QueryOptionsFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn start_transaction_index(mut self) -> String {
+            self.path.push(ListTransactionsRequest::START_TRANSACTION_INDEX_FIELD.name);
+            self.finish()
+        }
+        pub fn end_transaction_index(mut self) -> String {
+            self.path.push(ListTransactionsRequest::END_TRANSACTION_INDEX_FIELD.name);
+            self.finish()
         }
     }
     impl ListTransactionsResponse {
@@ -4726,6 +4748,30 @@ pub(crate) mod _field_impls {
             number: 5i32,
             message_fields: Some(QueryOptions::FIELDS),
         };
+        pub const START_TRANSACTION_INDEX_FIELD: &'static MessageField = &MessageField {
+            name: "start_transaction_index",
+            json_name: "startTransactionIndex",
+            number: 6i32,
+            message_fields: None,
+        };
+        pub const START_EVENT_INDEX_FIELD: &'static MessageField = &MessageField {
+            name: "start_event_index",
+            json_name: "startEventIndex",
+            number: 7i32,
+            message_fields: None,
+        };
+        pub const END_TRANSACTION_INDEX_FIELD: &'static MessageField = &MessageField {
+            name: "end_transaction_index",
+            json_name: "endTransactionIndex",
+            number: 8i32,
+            message_fields: None,
+        };
+        pub const END_EVENT_INDEX_FIELD: &'static MessageField = &MessageField {
+            name: "end_event_index",
+            json_name: "endEventIndex",
+            number: 9i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for ListEventsRequest {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -4734,6 +4780,10 @@ pub(crate) mod _field_impls {
             Self::END_CHECKPOINT_FIELD,
             Self::FILTER_FIELD,
             Self::OPTIONS_FIELD,
+            Self::START_TRANSACTION_INDEX_FIELD,
+            Self::START_EVENT_INDEX_FIELD,
+            Self::END_TRANSACTION_INDEX_FIELD,
+            Self::END_EVENT_INDEX_FIELD,
         ];
     }
     impl ListEventsRequest {
@@ -4775,6 +4825,22 @@ pub(crate) mod _field_impls {
         pub fn options(mut self) -> QueryOptionsFieldPathBuilder {
             self.path.push(ListEventsRequest::OPTIONS_FIELD.name);
             QueryOptionsFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn start_transaction_index(mut self) -> String {
+            self.path.push(ListEventsRequest::START_TRANSACTION_INDEX_FIELD.name);
+            self.finish()
+        }
+        pub fn start_event_index(mut self) -> String {
+            self.path.push(ListEventsRequest::START_EVENT_INDEX_FIELD.name);
+            self.finish()
+        }
+        pub fn end_transaction_index(mut self) -> String {
+            self.path.push(ListEventsRequest::END_TRANSACTION_INDEX_FIELD.name);
+            self.finish()
+        }
+        pub fn end_event_index(mut self) -> String {
+            self.path.push(ListEventsRequest::END_EVENT_INDEX_FIELD.name);
+            self.finish()
         }
     }
     impl ListEventsResponse {
