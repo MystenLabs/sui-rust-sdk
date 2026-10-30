@@ -3,8 +3,12 @@ use std::error::Error as _;
 use std::hash::BuildHasher;
 use std::time::Duration;
 
+use prost::Message as _;
 use tonic::Code;
 use tonic::Status;
+
+use crate::proto::google::rpc::ErrorInfo;
+use crate::proto::sui::rpc::v2::ErrorReason;
 
 use super::observability::LedgerStreamEvent;
 use super::observability::LedgerStreamFamily;
@@ -40,6 +44,13 @@ pub(super) enum FailurePhase {
 ///   `Cancelled` and `Unknown` as retryable based on the observation phase alone, allowing the stream
 ///   to reconnect and resume from the latest cursor.
 ///
+/// `OutOfRange` is retried when it carries the [`ErrorReason::AboveLatestAvailable`] reason for a
+/// cursor (see [`cursor_above_latest_available`]): the request reached a server, such as a lagging
+/// replica, that has not yet indexed the cursor's position, and the same request succeeds once
+/// that server catches up. Every other `OutOfRange` is terminal, including data below the pruned
+/// floor ([`ErrorReason::BelowEarliestAvailable`]), a checkpoint bound above the tip, which can
+/// name a checkpoint the chain has not reached, and an `OutOfRange` without a reason.
+///
 /// All other statuses are terminal.
 fn transient(status: &Status, phase: FailurePhase) -> bool {
     let dispatch_transient = matches!(
@@ -48,7 +59,32 @@ fn transient(status: &Status, phase: FailurePhase) -> bool {
     );
     let reset_code = matches!(status.code(), Code::Cancelled | Code::Unknown);
     let transport_reset = reset_code && (phase == FailurePhase::Body || status.source().is_some());
-    dispatch_transient || transport_reset
+    dispatch_transient || transport_reset || cursor_above_latest_available(status)
+}
+
+/// Whether `status` is an `OutOfRange` whose status details carry an `ErrorInfo` with reason
+/// [`ErrorReason::AboveLatestAvailable`] and `bound` metadata `"cursor"`. A cursor comes from a
+/// server that had indexed its position, so the wait is bounded by how far replicas lag each
+/// other.
+fn cursor_above_latest_available(status: &Status) -> bool {
+    if status.code() != Code::OutOfRange {
+        return false;
+    }
+    let Ok(details) = crate::proto::google::rpc::Status::decode(status.details()) else {
+        return false;
+    };
+    details
+        .details
+        .iter()
+        .filter_map(|detail| detail.to_msg::<ErrorInfo>().ok())
+        .any(|error_info| {
+            error_info.domain == ErrorReason::DOMAIN
+                && error_info.reason == ErrorReason::AboveLatestAvailable.as_str_name()
+                && error_info
+                    .metadata
+                    .get("bound")
+                    .is_some_and(|bound| bound == "cursor")
+        })
 }
 
 pub(super) struct RetryState {
@@ -182,5 +218,58 @@ mod tests {
         let status = Status::unavailable("connection refused");
         assert!(transient(&status, FailurePhase::Dispatch));
         assert!(transient(&status, FailurePhase::Body));
+    }
+
+    fn out_of_range_with_reason(reason: ErrorReason, bound: Option<&str>) -> Status {
+        let mut error_info = ErrorInfo::default()
+            .with_domain(ErrorReason::DOMAIN)
+            .with_reason(reason.as_str_name());
+        if let Some(bound) = bound {
+            error_info
+                .metadata
+                .insert("bound".to_owned(), bound.to_owned());
+        }
+        let details = crate::proto::google::rpc::Status {
+            code: Code::OutOfRange.into(),
+            message: "requested data out of range".to_owned(),
+            details: vec![prost_types::Any::from_msg(&error_info).unwrap()],
+        };
+        Status::with_details(
+            Code::OutOfRange,
+            details.message.clone(),
+            details.encode_to_vec().into(),
+        )
+    }
+
+    fn above_latest_available(bound: &str) -> Status {
+        out_of_range_with_reason(ErrorReason::AboveLatestAvailable, Some(bound))
+    }
+
+    #[test]
+    fn cursor_above_latest_available_is_transient_in_both_phases() {
+        let status = above_latest_available("cursor");
+        assert!(transient(&status, FailurePhase::Dispatch));
+        assert!(transient(&status, FailurePhase::Body));
+    }
+
+    #[test]
+    fn checkpoint_bound_above_latest_available_is_terminal() {
+        for bound in ["start_checkpoint", "end_checkpoint"] {
+            let status = above_latest_available(bound);
+            assert!(!transient(&status, FailurePhase::Dispatch), "{bound}");
+            assert!(!transient(&status, FailurePhase::Body), "{bound}");
+        }
+    }
+
+    #[test]
+    fn out_of_range_without_a_cursor_past_the_tip_is_terminal() {
+        let below_earliest_available =
+            out_of_range_with_reason(ErrorReason::BelowEarliestAvailable, None);
+        let missing_bound = out_of_range_with_reason(ErrorReason::AboveLatestAvailable, None);
+        let without_reason = Status::out_of_range("requested data above latest available");
+        for status in [below_earliest_available, missing_bound, without_reason] {
+            assert!(!transient(&status, FailurePhase::Dispatch), "{status:?}");
+            assert!(!transient(&status, FailurePhase::Body), "{status:?}");
+        }
     }
 }

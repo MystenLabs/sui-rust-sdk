@@ -872,6 +872,85 @@ pub enum ErrorReason {
     /// * `command`: index of the command that failed, as a decimal string, or
     ///   "" if no single command failed.
     TransactionExecutionFailed = 4,
+    /// The request reads ledger data above what this server has indexed. The
+    /// `LedgerService` `List*` RPCs return this with `OUT_OF_RANGE` when:
+    ///
+    /// * a cursor names a position this server has not indexed: an ascending
+    ///   query's `after` cursor, or either cursor of a descending query. An
+    ///   ascending query's `before` cursor is never rejected this way: the query
+    ///   ends at the latest indexed checkpoint instead.
+    /// * a descending query's `end_checkpoint`, which is exclusive, is above
+    ///   `firstUnavailableCheckpoint`, or, with `end_checkpoint` unset, its
+    ///   `start_checkpoint` is at or above `firstUnavailableCheckpoint`. An
+    ///   ascending query's checkpoint range is never rejected this way: it ends
+    ///   at the latest indexed checkpoint instead.
+    ///
+    /// Such a cursor comes from a newer view of the ledger than this server's,
+    /// for example from another replica behind the same load balancer. The data
+    /// is not indexed here yet, so the same request becomes servable once this
+    /// server catches up, and a client may resend it unchanged after a delay. A
+    /// cursor comes from a server that had indexed its position, so a request
+    /// rejected for its cursor (`bound` is "cursor") is servable within the time
+    /// replicas take to catch up with each other. A checkpoint bound may name a
+    /// checkpoint the chain has not reached, so retrying it can wait
+    /// indefinitely.
+    ///
+    /// Example of an ErrorInfo for an `after` cursor at checkpoint 1205, sent to
+    /// a server whose latest indexed checkpoint is 1199:
+    ///
+    /// ```text
+    /// { "reason": "ABOVE_LATEST_AVAILABLE",
+    ///    "domain": "sui.io",
+    ///    "metadata": {
+    ///      "bound": "cursor",
+    ///      "requestedCheckpoint": "1205",
+    ///      "firstUnavailableCheckpoint": "1200"
+    ///    }
+    /// }
+    /// ```
+    ///
+    /// Metadata, with checkpoints as decimal strings:
+    ///
+    /// * `bound`: what reads above the indexed data: "cursor" for an `after` or
+    ///   `before` cursor, or the name of the request field, "start_checkpoint"
+    ///   or "end_checkpoint".
+    /// * `requestedCheckpoint`: the checkpoint recorded in the cursor, or the
+    ///   value of the request field.
+    /// * `firstUnavailableCheckpoint`: the lowest checkpoint this server has not
+    ///   indexed, one above its latest indexed checkpoint, or "0" if it has
+    ///   indexed none.
+    AboveLatestAvailable = 5,
+    /// The request needs ledger data this server has pruned. The
+    /// `LedgerService` `List*` RPCs return this with `OUT_OF_RANGE` when the
+    /// request's `start_checkpoint` or `after` cursor is below the lowest
+    /// checkpoint this server serves, when its checkpoint range ends at or below
+    /// that checkpoint, when a descending query with no lower bound of its own
+    /// reaches it, or when the server prunes data a query has not read yet. A
+    /// descending query that reaches the lowest checkpoint fails after it
+    /// streams every item at or above that checkpoint, and its last response
+    /// carries a watermark at that checkpoint.
+    ///
+    /// Pruned data does not come back, so the same request fails the same way
+    /// on this server. A client can send it to a server that retains the data,
+    /// or resume at or above `lowestAvailableCheckpoint`.
+    ///
+    /// Example of an ErrorInfo from a server whose lowest available checkpoint
+    /// is 5000:
+    ///
+    /// ```text
+    /// { "reason": "BELOW_EARLIEST_AVAILABLE",
+    ///    "domain": "sui.io",
+    ///    "metadata": {
+    ///      "lowestAvailableCheckpoint": "5000"
+    ///    }
+    /// }
+    /// ```
+    ///
+    /// Metadata:
+    ///
+    /// * `lowestAvailableCheckpoint`: the lowest checkpoint this server serves,
+    ///   as a decimal string.
+    BelowEarliestAvailable = 6,
 }
 impl ErrorReason {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -885,6 +964,8 @@ impl ErrorReason {
             Self::FieldMissing => "FIELD_MISSING",
             Self::InsufficientGasBalance => "INSUFFICIENT_GAS_BALANCE",
             Self::TransactionExecutionFailed => "TRANSACTION_EXECUTION_FAILED",
+            Self::AboveLatestAvailable => "ABOVE_LATEST_AVAILABLE",
+            Self::BelowEarliestAvailable => "BELOW_EARLIEST_AVAILABLE",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -895,6 +976,8 @@ impl ErrorReason {
             "FIELD_MISSING" => Some(Self::FieldMissing),
             "INSUFFICIENT_GAS_BALANCE" => Some(Self::InsufficientGasBalance),
             "TRANSACTION_EXECUTION_FAILED" => Some(Self::TransactionExecutionFailed),
+            "ABOVE_LATEST_AVAILABLE" => Some(Self::AboveLatestAvailable),
+            "BELOW_EARLIEST_AVAILABLE" => Some(Self::BelowEarliestAvailable),
             _ => None,
         }
     }

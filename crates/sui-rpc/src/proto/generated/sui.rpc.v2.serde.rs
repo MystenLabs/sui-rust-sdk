@@ -9392,6 +9392,8 @@ impl serde::Serialize for ErrorReason {
             Self::FieldMissing => "FIELD_MISSING",
             Self::InsufficientGasBalance => "INSUFFICIENT_GAS_BALANCE",
             Self::TransactionExecutionFailed => "TRANSACTION_EXECUTION_FAILED",
+            Self::AboveLatestAvailable => "ABOVE_LATEST_AVAILABLE",
+            Self::BelowEarliestAvailable => "BELOW_EARLIEST_AVAILABLE",
         };
         serializer.serialize_str(variant)
     }
@@ -9408,6 +9410,8 @@ impl<'de> serde::Deserialize<'de> for ErrorReason {
             "FIELD_MISSING",
             "INSUFFICIENT_GAS_BALANCE",
             "TRANSACTION_EXECUTION_FAILED",
+            "ABOVE_LATEST_AVAILABLE",
+            "BELOW_EARLIEST_AVAILABLE",
         ];
         struct GeneratedVisitor;
         impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
@@ -9458,6 +9462,8 @@ impl<'de> serde::Deserialize<'de> for ErrorReason {
                     "TRANSACTION_EXECUTION_FAILED" => {
                         Ok(ErrorReason::TransactionExecutionFailed)
                     }
+                    "ABOVE_LATEST_AVAILABLE" => Ok(ErrorReason::AboveLatestAvailable),
+                    "BELOW_EARLIEST_AVAILABLE" => Ok(ErrorReason::BelowEarliestAvailable),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }
