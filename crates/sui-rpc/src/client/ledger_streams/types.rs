@@ -259,6 +259,11 @@ pub struct LedgerStreamConfig {
     pub max_retry_delay: Duration,
     /// Maximum random jitter added to a retry delay.
     pub retry_jitter: Duration,
+    /// Maximum number of consecutive retries of a transient failure before the stream yields the
+    /// failure as its terminal error. The count restarts each time the stream makes progress, so
+    /// it bounds how long a stream keeps retrying one outage, not how many retries it makes in
+    /// total. `Some(0)` never retries. `None`, the default, retries indefinitely.
+    pub max_consecutive_retries: Option<u32>,
     /// Maximum number of live subscription items buffered during gap replay before reconnecting.
     pub max_buffered_live_items: NonZeroUsize,
     observer: Option<LedgerStreamObserver>,
@@ -273,6 +278,7 @@ impl fmt::Debug for LedgerStreamConfig {
             .field("base_retry_delay", &self.base_retry_delay)
             .field("max_retry_delay", &self.max_retry_delay)
             .field("retry_jitter", &self.retry_jitter)
+            .field("max_consecutive_retries", &self.max_consecutive_retries)
             .field("max_buffered_live_items", &self.max_buffered_live_items)
             .field("observer_configured", &self.observer.is_some())
             .finish()
@@ -287,6 +293,7 @@ impl Default for LedgerStreamConfig {
             base_retry_delay: Duration::from_millis(250),
             max_retry_delay: Duration::from_secs(30),
             retry_jitter: Duration::from_millis(500),
+            max_consecutive_retries: None,
             max_buffered_live_items: NonZeroUsize::new(1_024).expect("non-zero constant"),
             observer: None,
         }
@@ -320,6 +327,11 @@ pub struct ListConfig {
     pub max_retry_delay: Duration,
     /// Maximum random jitter added to a retry delay.
     pub retry_jitter: Duration,
+    /// Maximum number of consecutive retries of a transient failure before the stream yields the
+    /// failure as its terminal error. The count restarts each time the stream makes progress.
+    /// `Some(0)` never retries, and `None` retries indefinitely. Defaults to
+    /// [`Self::DEFAULT_MAX_CONSECUTIVE_RETRIES`].
+    pub max_consecutive_retries: Option<u32>,
     observer: Option<ListObserver>,
 }
 
@@ -330,6 +342,7 @@ impl fmt::Debug for ListConfig {
             .field("base_retry_delay", &self.base_retry_delay)
             .field("max_retry_delay", &self.max_retry_delay)
             .field("retry_jitter", &self.retry_jitter)
+            .field("max_consecutive_retries", &self.max_consecutive_retries)
             .field("observer_configured", &self.observer.is_some())
             .finish()
     }
@@ -342,12 +355,19 @@ impl Default for ListConfig {
             base_retry_delay: stream_defaults.base_retry_delay,
             max_retry_delay: stream_defaults.max_retry_delay,
             retry_jitter: stream_defaults.retry_jitter,
+            max_consecutive_retries: Some(Self::DEFAULT_MAX_CONSECUTIVE_RETRIES),
             observer: None,
         }
     }
 }
 
 impl ListConfig {
+    /// The default [`Self::max_consecutive_retries`]. A `list_*` call is a finite read that a
+    /// caller is usually waiting on, so by default it gives up on an outage after about two
+    /// seconds of backoff instead of waiting for the outage to end. That still covers a replica
+    /// that is a few checkpoints behind.
+    pub const DEFAULT_MAX_CONSECUTIVE_RETRIES: u32 = 3;
+
     /// Installs the synchronous List observer, replacing any prior callback.
     ///
     /// The callback must return quickly and not block; its panic propagates to the polling task.
@@ -369,6 +389,7 @@ impl ListConfig {
             base_retry_delay: self.base_retry_delay,
             max_retry_delay: self.max_retry_delay,
             retry_jitter: self.retry_jitter,
+            max_consecutive_retries: self.max_consecutive_retries,
             observer,
             ..LedgerStreamConfig::default()
         }
