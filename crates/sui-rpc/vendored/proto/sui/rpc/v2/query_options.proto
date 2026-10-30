@@ -69,8 +69,10 @@ enum QueryEndReason {
   // frontier from which to resume.
   QUERY_END_REASON_SCAN_LIMIT = 2;
 
-  // The scan reached a requested checkpoint range bound. The terminal frame
-  // carries no item.
+  // The scan reached the edge of the window the request set: its checkpoint
+  // range bound, or a start or end position the request set within a
+  // checkpoint at that range's edge (for example `end_transaction_index` on
+  // `ListTransactionsRequest`). The terminal frame carries no item.
   QUERY_END_REASON_CHECKPOINT_BOUND = 3;
 
   // The scan reached an exclusive cursor bound. The terminal frame carries no

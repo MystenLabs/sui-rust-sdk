@@ -52,6 +52,10 @@ impl SubscriptionAdapter for EventAdapter {
             start_checkpoint: None,
             end_checkpoint: None,
             options: None,
+            start_transaction_index: None,
+            start_event_index: None,
+            end_transaction_index: None,
+            end_event_index: None,
         }
     }
 

@@ -2457,6 +2457,41 @@ pub struct ListTransactionsRequest {
     /// `options.before` (descending) on the next request.
     #[prost(message, optional, tag = "5")]
     pub options: ::core::option::Option<QueryOptions>,
+    /// Optional. Transaction position within `start_checkpoint` at which the
+    /// query starts (inclusive): within `start_checkpoint`, only transactions
+    /// whose `ExecutedTransaction.transaction_index` is at least this value are
+    /// returned. Unset starts at the beginning of `start_checkpoint`. An index at
+    /// or past the checkpoint's transaction count starts at the next checkpoint.
+    /// Requires `start_checkpoint`. When this position leaves transactions of
+    /// `start_checkpoint` out, a descending query does not report that checkpoint
+    /// as covered in `Watermark.checkpoint`.
+    ///
+    /// Combines with `options.after` by intersection: the query starts at
+    /// whichever of the two is later in ledger order.
+    ///
+    /// Servers that predate this field ignore it and start at the beginning of
+    /// `start_checkpoint`, so clients must still drop transactions before this
+    /// position themselves.
+    #[prost(uint64, optional, tag = "6")]
+    pub start_transaction_index: ::core::option::Option<u64>,
+    /// Optional. Transaction position within the last checkpoint of the range,
+    /// `end_checkpoint - 1`, at which the query ends (exclusive): within that
+    /// checkpoint, only transactions whose `ExecutedTransaction.transaction_index`
+    /// is below this value are returned, so 0 returns none of it. Unset ends after
+    /// the whole checkpoint. An index at or past the checkpoint's transaction
+    /// count ends after the whole checkpoint. Requires `end_checkpoint`. A query
+    /// that stops at this position ends with `QUERY_END_REASON_CHECKPOINT_BOUND`.
+    /// When this position leaves transactions of that checkpoint out, an
+    /// ascending query does not report it as covered in `Watermark.checkpoint`.
+    ///
+    /// Combines with `options.before` by intersection: the query ends at
+    /// whichever of the two is earlier in ledger order.
+    ///
+    /// Servers that predate this field ignore it and return the whole
+    /// checkpoint, so clients must still drop transactions at or after this
+    /// position themselves.
+    #[prost(uint64, optional, tag = "7")]
+    pub end_transaction_index: ::core::option::Option<u64>,
 }
 /// Response message for LedgerService.ListTransactions.
 ///
@@ -2510,6 +2545,64 @@ pub struct ListEventsRequest {
     /// `options.before` (descending) on the next request.
     #[prost(message, optional, tag = "5")]
     pub options: ::core::option::Option<QueryOptions>,
+    /// Optional. Transaction position within `start_checkpoint` at which the
+    /// query starts (inclusive): within `start_checkpoint`, only events of
+    /// transactions whose `Event.transaction_index` is at least this value are
+    /// returned. Unset starts at the beginning of `start_checkpoint`. An index at
+    /// or past the checkpoint's transaction count starts at the next checkpoint,
+    /// ignoring `start_event_index`. Requires `start_checkpoint`. When this
+    /// position leaves events of `start_checkpoint` out, a descending query does
+    /// not report that checkpoint as covered in `Watermark.checkpoint`.
+    ///
+    /// Combines with `options.after` by intersection: the query starts at
+    /// whichever of the two is later in ledger order.
+    ///
+    /// Servers that predate this field ignore it and start at the beginning of
+    /// `start_checkpoint`, so clients must still drop events before this
+    /// position themselves.
+    #[prost(uint64, optional, tag = "6")]
+    pub start_transaction_index: ::core::option::Option<u64>,
+    /// Optional. Event position within the transaction at
+    /// `start_transaction_index` at which the query starts (inclusive): within
+    /// that transaction, only events whose `Event.event_index` is at least this
+    /// value are returned. Unset starts at the transaction's first event. An
+    /// index past the transaction's last event starts at the next transaction.
+    /// Requires `start_transaction_index`.
+    ///
+    /// Servers that predate this field ignore it, as for
+    /// `start_transaction_index`.
+    #[prost(uint32, optional, tag = "7")]
+    pub start_event_index: ::core::option::Option<u32>,
+    /// Optional. Transaction position within the last checkpoint of the range,
+    /// `end_checkpoint - 1`, at which the query ends (exclusive): within that
+    /// checkpoint, only events of transactions whose `Event.transaction_index` is
+    /// below this value are returned, plus, with `end_event_index`, the events
+    /// of the transaction at this index that precede it. Unset ends after the
+    /// whole checkpoint. An index at or past the checkpoint's transaction count
+    /// ends after the whole checkpoint. Requires `end_checkpoint`. A query that
+    /// stops at this position ends with `QUERY_END_REASON_CHECKPOINT_BOUND`.
+    /// When this position leaves events of that checkpoint out, an ascending
+    /// query does not report it as covered in `Watermark.checkpoint`.
+    ///
+    /// Combines with `options.before` by intersection: the query ends at
+    /// whichever of the two is earlier in ledger order.
+    ///
+    /// Servers that predate this field ignore it and return the whole
+    /// checkpoint, so clients must still drop events at or after this position
+    /// themselves.
+    #[prost(uint64, optional, tag = "8")]
+    pub end_transaction_index: ::core::option::Option<u64>,
+    /// Optional. Event position within the transaction at
+    /// `end_transaction_index` at which the query ends (exclusive): events of
+    /// that transaction whose `Event.event_index` is below this value are also
+    /// returned. Unset, like 0, returns none of the transaction's events. An
+    /// index past the transaction's last event returns all of them. Requires
+    /// `end_transaction_index`.
+    ///
+    /// Servers that predate this field ignore it, as for
+    /// `end_transaction_index`.
+    #[prost(uint32, optional, tag = "9")]
+    pub end_event_index: ::core::option::Option<u32>,
 }
 /// Response message for LedgerService.ListEvents.
 ///
@@ -5478,8 +5571,10 @@ pub enum QueryEndReason {
     /// frame carries no item. Its watermark cursor is the authoritative scan
     /// frontier from which to resume.
     ScanLimit = 2,
-    /// The scan reached a requested checkpoint range bound. The terminal frame
-    /// carries no item.
+    /// The scan reached the edge of the window the request set: its checkpoint
+    /// range bound, or a start or end position the request set within a
+    /// checkpoint at that range's edge (for example `end_transaction_index` on
+    /// `ListTransactionsRequest`). The terminal frame carries no item.
     CheckpointBound = 3,
     /// The scan reached an exclusive cursor bound. The terminal frame carries no
     /// item. Its watermark cursor represents that resolved bound without claiming

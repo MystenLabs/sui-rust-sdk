@@ -157,6 +157,10 @@ async fn run_stream_task(
                 before: None,
                 ordering: None, // ascending (default)
             }),
+            start_transaction_index: None,
+            start_event_index: None,
+            end_transaction_index: None,
+            end_event_index: None,
         };
 
         match fetch_one_page(&mut light, request).await {
@@ -492,6 +496,8 @@ async fn fetch_settlements_for_range(
                 before: None,
                 ordering: None, // ascending
             }),
+            start_transaction_index: None,
+            end_transaction_index: None,
         };
 
         let page = fetch_settlements_page(light, request).await?;
