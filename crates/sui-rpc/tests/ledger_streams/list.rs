@@ -981,6 +981,127 @@ async fn list_accepts_empty_continuation_without_checkpoint_coverage() {
     assert_eq!(server.state.lock().unwrap().event_requests.len(), 2);
 }
 
+/// An `OutOfRange` carrying the ledger's structured reason, as the server sends it.
+fn out_of_range_with_reason(
+    reason: proto::ErrorReason,
+    metadata: &[(&str, &str)],
+) -> tonic::Status {
+    use prost::Message as _;
+
+    let error_info = sui_rpc::proto::google::rpc::ErrorInfo::default()
+        .with_reason(reason.as_str_name())
+        .with_domain(proto::ErrorReason::DOMAIN)
+        .with_metadata(
+            metadata
+                .iter()
+                .map(|(key, value)| (key.to_string(), value.to_string()))
+                .collect(),
+        );
+    let message = format!("{} from scripted server", reason.as_str_name());
+    let details = sui_rpc::proto::google::rpc::Status::default()
+        .with_code(tonic::Code::OutOfRange as i32)
+        .with_message(message.clone())
+        .with_details(vec![prost_types::Any::from_msg(&error_info).unwrap()]);
+    tonic::Status::with_details(
+        tonic::Code::OutOfRange,
+        message,
+        details.encode_to_vec().into(),
+    )
+}
+
+fn cursor_above_latest_available() -> tonic::Status {
+    out_of_range_with_reason(
+        proto::ErrorReason::AboveLatestAvailable,
+        &[
+            ("bound", "cursor"),
+            ("requestedCheckpoint", "10"),
+            ("firstUnavailableCheckpoint", "9"),
+        ],
+    )
+}
+
+#[tokio::test]
+async fn descending_list_resends_the_cursor_a_lagging_server_has_not_indexed() {
+    let (server, _calls) = ScriptedStreamServer::new();
+    server.push_event_lists([
+        StreamScript::DispatchError(cursor_above_latest_available()),
+        StreamScript::frames([
+            Ok(event_list_frame(Some(9), 9, None)),
+            Err(cursor_above_latest_available()),
+        ]),
+        StreamScript::frames([
+            Ok(event_list_frame(Some(7), 7, None)),
+            Ok(event_list_frame(
+                None,
+                5,
+                Some(proto::QueryEndReason::CursorBound),
+            )),
+        ]),
+    ]);
+    let address = spawn_server(server.clone()).await;
+    let (client, _observations) = observed_client(address);
+
+    let frames = client
+        .list_events_with_config(
+            proto::ListEventsRequest::default()
+                .with_read_mask(event_identity_mask())
+                .with_options(
+                    proto::QueryOptions::default()
+                        .with_after(bytes(5))
+                        .with_before(bytes(10))
+                        .with_ordering(proto::Ordering::Descending),
+                ),
+            fast_list_config(),
+        )
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
+    assert_eq!(
+        frames
+            .iter()
+            .map(|frame| frame.watermark.as_ref().unwrap().cursor.clone().unwrap())
+            .collect::<Vec<_>>(),
+        [bytes(9), bytes(7), bytes(5)]
+    );
+    let state = server.state.lock().unwrap();
+    assert_eq!(
+        state
+            .event_requests
+            .iter()
+            .map(|request| request.body.options.as_ref().unwrap().before.clone())
+            .collect::<Vec<_>>(),
+        [Some(bytes(10)), Some(bytes(10)), Some(bytes(9))]
+    );
+}
+
+#[tokio::test]
+async fn list_ends_when_the_server_pruned_the_requested_data() {
+    let (server, _calls) = ScriptedStreamServer::new();
+    server.push_event_lists([StreamScript::frames([
+        Ok(event_list_frame(Some(4), 4, None)),
+        Err(out_of_range_with_reason(
+            proto::ErrorReason::BelowEarliestAvailable,
+            &[("lowestAvailableCheckpoint", "5")],
+        )),
+    ])]);
+    let address = spawn_server(server.clone()).await;
+    let (client, _observations) = observed_client(address);
+
+    let mut stream = Box::pin(client.list_events_with_config(
+        bounded_event_request().with_end_checkpoint(6),
+        fast_list_config(),
+    ));
+    let frame = stream.next().await.unwrap().unwrap();
+    assert_eq!(frame.watermark.unwrap().cursor, Some(bytes(4)));
+    let status = stream.next().await.unwrap().unwrap_err();
+    assert_eq!(status.code(), tonic::Code::OutOfRange);
+    assert_eq!(
+        status.message(),
+        "BELOW_EARLIEST_AVAILABLE from scripted server"
+    );
+    assert_eq!(server.state.lock().unwrap().event_requests.len(), 1);
+}
+
 #[tokio::test]
 async fn scan_limit_frontiers_redispatch_immediately_when_the_cursor_advances() {
     let (server, mut calls) = ScriptedStreamServer::new();

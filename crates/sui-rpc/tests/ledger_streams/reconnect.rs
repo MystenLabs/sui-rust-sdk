@@ -1165,10 +1165,12 @@ async fn transient_retries_and_in_body_resume_preserve_the_safe_watermark() {
     );
     let address = spawn_server(unlimited_server.clone()).await;
     let (client, _observations) = observed_client(address);
+    let mut unlimited_config = fast_list_config();
+    unlimited_config.max_consecutive_retries = None;
     let events = tokio::time::timeout(
         Duration::from_secs(2),
         client
-            .list_events_with_config(bounded_event_request(), fast_list_config())
+            .list_events_with_config(bounded_event_request(), unlimited_config)
             .try_filter_map(|frame| async move {
                 Ok(frame.event.map(|event| event.event_type.unwrap()))
             })
@@ -1223,6 +1225,78 @@ async fn transient_retries_and_in_body_resume_preserve_the_safe_watermark() {
 }
 
 #[tokio::test]
+async fn list_yields_the_failure_after_the_default_consecutive_retries() {
+    let retries = ListConfig::DEFAULT_MAX_CONSECUTIVE_RETRIES;
+    let (server, _calls) = ScriptedStreamServer::new();
+    server.push_event_lists(
+        (0..=retries)
+            .map(|attempt| {
+                StreamScript::DispatchError(tonic::Status::unavailable(format!(
+                    "attempt-{attempt}"
+                )))
+            })
+            .chain([StreamScript::frames([Ok(event_positioned_list_frame(
+                None,
+                10,
+                9,
+                Some(proto::QueryEndReason::CheckpointBound),
+            ))])]),
+    );
+    let address = spawn_server(server.clone()).await;
+    let (client, _observations) = observed_client(address);
+
+    let status = client
+        .list_events_with_config(bounded_event_request(), fast_list_config())
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap_err();
+    assert_eq!(status.code(), tonic::Code::Unavailable);
+    assert_eq!(status.message(), format!("attempt-{retries}"));
+    assert_eq!(
+        server.state.lock().unwrap().event_requests.len(),
+        retries as usize + 1
+    );
+}
+
+#[tokio::test]
+async fn list_progress_restarts_the_consecutive_retry_count() {
+    let (server, _calls) = ScriptedStreamServer::new();
+    server.push_event_lists([
+        StreamScript::frames([
+            Ok(event_list_frame(Some(2), 2, None)),
+            Err(tonic::Status::unavailable("body failed after 2")),
+        ]),
+        StreamScript::DispatchError(tonic::Status::unavailable("dispatch failed after 2")),
+        StreamScript::frames([
+            Ok(event_list_frame(Some(5), 5, None)),
+            Err(tonic::Status::unavailable("body failed after 5")),
+        ]),
+        StreamScript::DispatchError(tonic::Status::unavailable("dispatch failed after 5")),
+        StreamScript::frames([Ok(event_positioned_list_frame(
+            None,
+            10,
+            9,
+            Some(proto::QueryEndReason::CheckpointBound),
+        ))]),
+    ]);
+    let address = spawn_server(server.clone()).await;
+    let (client, _observations) = observed_client(address);
+    let mut config = fast_list_config();
+    config.max_consecutive_retries = Some(2);
+
+    let events = client
+        .list_events_with_config(bounded_event_request(), config)
+        .try_filter_map(
+            |frame| async move { Ok(frame.event.map(|event| event.event_type.unwrap())) },
+        )
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
+    assert_eq!(events, ["event-2", "event-5"]);
+    assert_eq!(server.state.lock().unwrap().event_requests.len(), 5);
+}
+
+#[tokio::test]
 async fn transient_retry_backoff_is_exponential_and_capped() {
     let (server, mut calls) = ScriptedStreamServer::new();
     server.push_event_lists(
@@ -1248,6 +1322,7 @@ async fn transient_retry_backoff_is_exponential_and_capped() {
     config.base_retry_delay = Duration::from_millis(50);
     config.max_retry_delay = Duration::from_millis(150);
     config.retry_jitter = Duration::ZERO;
+    config.max_consecutive_retries = None;
     let collector = tokio::spawn(async move {
         client
             .list_events_with_config(bounded_event_request(), config)

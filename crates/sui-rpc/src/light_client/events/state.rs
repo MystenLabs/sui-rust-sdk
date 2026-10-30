@@ -2,13 +2,14 @@
 //!
 //! Factored out of the spawned task so they can be unit-tested without
 //! standing up an RPC harness. The streaming task in `client` calls
-//! [`buffer_response_batch`] for each incoming page of events and
-//! [`fold_and_reconcile`] each reconciliation tick — passing in the
+//! [`apply_stream_frame`] for each frame of the ledger event stream and
+//! [`fold_and_reconcile`] each reconciliation round — passing in the
 //! settlement boundaries fetched from `ListTransactions(affected_object =
 //! event_stream_head)` so events are folded into the local MMR in the
 //! same per-settlement partitions the framework used on chain.
 
 use std::collections::VecDeque;
+use std::ops::Range;
 
 use sui_sdk_types::Object;
 use sui_sdk_types::framework::EventBatch;
@@ -20,23 +21,23 @@ use super::envelope::AuthenticatedEvent;
 use crate::light_client::error::LightClientError;
 use crate::light_client::error::MmrMismatch;
 
-/// In-memory state the streaming task carries across iterations of the
-/// list-events / reconcile loop.
+/// In-memory state the streaming task carries across frames of the
+/// ledger event stream and reconciliation rounds.
 ///
-/// Events are buffered (not folded) as `ListEvents` pages arrive: the
-/// framework can run multiple `settle_events` transactions per
-/// checkpoint (one per consensus commit per stream), and folding events
-/// into the wrong settlement bucket produces an MMR shape that will
-/// never match the on-chain head. The buffer is flushed at
-/// reconciliation time, once `ListTransactions(affected_object =
-/// event_stream_head)` has surfaced the per-settlement boundaries.
+/// Events are buffered (not folded) as they arrive: the framework can
+/// run multiple `settle_events` transactions per checkpoint (one per
+/// consensus commit per stream), and folding events into the wrong
+/// settlement bucket produces an MMR shape that will never match the
+/// on-chain head. The buffer is flushed at reconciliation time, once
+/// `ListTransactions(affected_object = event_stream_head)` has surfaced
+/// the per-settlement boundaries.
 #[derive(Debug, Default)]
 pub(super) struct StreamState {
-    /// Events received from `ListEvents` but not yet folded into
-    /// [`Self::local_head`]. Once a reconciliation tick succeeds, every
-    /// entry with `checkpoint <= reconciled_checkpoint` is folded into
-    /// the local MMR, released to the consumer, and drained from this
-    /// queue.
+    /// Events received from the ledger event stream but not yet folded
+    /// into [`Self::local_head`]. Once a reconciliation round succeeds,
+    /// every entry with `checkpoint <= reconciled_checkpoint` is folded
+    /// into the local MMR, released to the consumer, and drained from
+    /// this queue.
     ///
     /// Items are stored in receipt order — which matches strictly
     /// ascending `(checkpoint, transaction_index, event_index)` per the
@@ -53,14 +54,16 @@ pub(super) struct StreamState {
     /// to fold events landed strictly after this point.
     pub confirmed_through: u64,
 
-    /// Highest checkpoint number whose events `ListEvents` has fully
-    /// emitted to us, derived from the latest `Watermark.checkpoint`
-    /// observed on response frames.
+    /// Highest checkpoint the ledger event stream has claimed complete:
+    /// the highest `covered_checkpoint` seen on its frames. Every
+    /// matching event at a checkpoint `<=` this value has been received.
     ///
-    /// Reconciliation uses this as the upper bound when fetching
-    /// settlements: settlements at checkpoints we haven't fully scanned
-    /// for events would otherwise produce an empty fold (with the head
-    /// stamping a different `num_events`) and fail reconciliation.
+    /// This is the only source of checkpoint completeness. The position
+    /// of the last received event says nothing about whether the rest
+    /// of its checkpoint has been delivered, so it never advances this
+    /// value. Reconciliation folds only checkpoints at or below it:
+    /// folding a checkpoint whose events have not all been received
+    /// produces an MMR that can never match the on-chain head.
     pub events_scanned_through: u64,
 }
 
@@ -73,39 +76,58 @@ impl StreamState {
             events_scanned_through: confirmed_through,
         }
     }
+
+    /// True if the buffer holds at least one event at a checkpoint the
+    /// ledger event stream has claimed complete, so a reconciliation
+    /// round could fold and release it.
+    pub(super) fn has_complete_buffered_events(&self) -> bool {
+        self.buffer
+            .front()
+            .is_some_and(|event| event.checkpoint <= self.events_scanned_through)
+    }
+
+    /// The unconfirmed checkpoints the ledger event stream has claimed
+    /// complete, `(confirmed_through, events_scanned_through]`, as the
+    /// half-open `[start, end)` range the settlement listing takes.
+    /// `None` when that range is empty.
+    pub(super) fn complete_unconfirmed_checkpoints(&self) -> Option<Range<u64>> {
+        (self.events_scanned_through > self.confirmed_through).then(|| {
+            self.confirmed_through.saturating_add(1)..self.events_scanned_through.saturating_add(1)
+        })
+    }
 }
 
-/// Append `events` to `state.buffer` and advance
-/// `state.events_scanned_through` to `watermark_hi.max(events.last())` if
-/// either is greater than the current value.
+/// Apply one frame of the ledger event stream to `state`: buffer its
+/// event, if any, and advance `state.events_scanned_through` to the
+/// frame's `covered_checkpoint` claim when that claim is higher.
 ///
-/// `events` must be in strictly ascending
-/// `(checkpoint, transaction_index, event_index)` order with respect to
-/// each other and to whatever's already at the back of `state.buffer` —
-/// the v2 List API contract guarantees this for `ListEvents` responses, and
-/// the fold-time partitioner relies on it. Empty input is a no-op.
+/// Events must arrive in strictly ascending
+/// `(checkpoint, transaction_index, event_index)` order — the ledger
+/// event stream guarantees this, and the fold-time partitioner relies
+/// on it.
 ///
-/// `watermark_hi` is the most recent `Watermark.checkpoint` observed
-/// during this page. Pass `None` when no frame in the page carried a
-/// watermark with its `checkpoint` boundary set (e.g., an immediate end
-/// frame at genesis).
-pub(super) fn buffer_response_batch(
+/// Returns `true` when the frame is progress-only (`event` is `None`),
+/// events are buffered, and the stream's claim covers every one of
+/// them: the stream has caught up with the server, so the buffered
+/// events are ready to be reconciled and released without waiting for
+/// the next periodic reconciliation.
+pub(super) fn apply_stream_frame(
     state: &mut StreamState,
-    events: Vec<AuthenticatedEvent>,
-    watermark_hi: Option<u64>,
-) {
-    let last_event_cp = events.last().map(|e| e.checkpoint);
-    for event in events {
-        state.buffer.push_back(event);
+    event: Option<AuthenticatedEvent>,
+    covered_checkpoint: Option<u64>,
+) -> bool {
+    if let Some(covered) = covered_checkpoint {
+        state.events_scanned_through = state.events_scanned_through.max(covered);
     }
-
-    if let Some(hi) = watermark_hi {
-        state.events_scanned_through = state.events_scanned_through.max(hi);
-    }
-    if let Some(cp) = last_event_cp {
-        // Defensive: even if no watermark frame surfaced for this page,
-        // every emitted event implies the scan reached its checkpoint.
-        state.events_scanned_through = state.events_scanned_through.max(cp);
+    match event {
+        Some(event) => {
+            state.buffer.push_back(event);
+            false
+        }
+        None => state
+            .buffer
+            .back()
+            .is_some_and(|event| event.checkpoint <= state.events_scanned_through),
     }
 }
 
@@ -119,7 +141,9 @@ pub(super) fn buffer_response_batch(
 /// event_stream_head)`, covering `(state.confirmed_through,
 /// reconcile_checkpoint]`. `reconcile_checkpoint` is the checkpoint at
 /// which `chain_head` was authenticated — by construction the
-/// checkpoint of the last entry in `settlements`.
+/// checkpoint of the last entry in `settlements`. It must not exceed
+/// `state.events_scanned_through`: a checkpoint the ledger event stream
+/// has not claimed complete may still be missing events.
 ///
 /// Each event in the partitioned prefix is assigned to the next
 /// settlement whose `(cp, tx_offset)` lies at-or-after the event's
@@ -151,6 +175,12 @@ pub(super) fn fold_and_reconcile(
     if last_settlement.0 != reconcile_checkpoint {
         return Err(LightClientError::UnexpectedObjectShape {
             reason: "settlement boundaries disagree with reconciliation checkpoint",
+        });
+    }
+    if reconcile_checkpoint > state.events_scanned_through {
+        return Err(LightClientError::UnexpectedObjectShape {
+            reason: "reconciliation checkpoint is past the checkpoints the event stream \
+                     has claimed complete",
         });
     }
 
@@ -357,45 +387,106 @@ mod tests {
         s.parse().expect("decimal U256 literal must parse")
     }
 
-    /// `buffer_response_batch` only buffers — folding is deferred to
+    /// Feed `events` to `state` as item frames without a claim, then a
+    /// progress-only frame claiming `covered_checkpoint` complete.
+    fn buffer_complete(
+        state: &mut StreamState,
+        events: Vec<AuthenticatedEvent>,
+        covered_checkpoint: u64,
+    ) {
+        for event in events {
+            apply_stream_frame(state, Some(event), None);
+        }
+        apply_stream_frame(state, None, Some(covered_checkpoint));
+    }
+
+    /// `apply_stream_frame` only buffers — folding is deferred to
     /// `fold_and_reconcile`. The local head must not move just from
     /// receiving events.
     #[test]
-    fn buffer_response_batch_defers_folding() {
+    fn apply_stream_frame_defers_folding() {
         let mut state = StreamState::new(EventStreamHead::default(), 0);
-        let events = vec![sample_event(7, 0, 0), sample_event(7, 0, 1)];
-
-        buffer_response_batch(&mut state, events, Some(7));
+        buffer_complete(
+            &mut state,
+            vec![sample_event(7, 0, 0), sample_event(7, 0, 1)],
+            7,
+        );
 
         assert_eq!(state.local_head, EventStreamHead::default());
         assert_eq!(state.buffer.len(), 2);
         assert_eq!(state.events_scanned_through, 7);
     }
 
-    /// Events arriving without a watermark still bump
-    /// `events_scanned_through` to at least the last event's
-    /// checkpoint — otherwise reconciliation would never see those
-    /// checkpoints as "scanned" and skip them when fetching
-    /// settlements.
+    /// `events_scanned_through` is monotonic — a lower claim does not
+    /// regress it.
     #[test]
-    fn buffer_response_batch_advances_scan_floor_from_events() {
-        let mut state = StreamState::new(EventStreamHead::default(), 0);
-        buffer_response_batch(&mut state, vec![sample_event(11, 0, 0)], None);
-        assert_eq!(state.events_scanned_through, 11);
-    }
-
-    /// `events_scanned_through` is monotonic — a smaller watermark
-    /// (e.g., a retry that re-emits earlier items) does not regress it.
-    #[test]
-    fn buffer_response_batch_does_not_regress_scan_floor() {
+    fn apply_stream_frame_does_not_regress_scan_floor() {
         let mut state = StreamState::new(EventStreamHead::default(), 0);
         state.events_scanned_through = 20;
-        buffer_response_batch(&mut state, vec![sample_event(5, 0, 0)], Some(5));
+        apply_stream_frame(&mut state, None, Some(5));
         assert_eq!(state.events_scanned_through, 20);
     }
 
-    /// Single settlement per checkpoint — the legacy case the previous
-    /// implementation also supported. All events at one checkpoint
+    /// A page can end partway through a checkpoint, and the next request
+    /// can land on a lagging replica that answers with an empty page and
+    /// no checkpoint claim. Neither the last event's checkpoint nor the
+    /// end of a page says the checkpoint is complete: only a
+    /// `covered_checkpoint` claim does. Until a claim reaches the
+    /// checkpoint, its events are neither folded nor released.
+    #[test]
+    fn checkpoint_is_complete_only_once_claimed() {
+        let first_half = vec![sample_event(10, 0, 0), sample_event(10, 1, 0)];
+        let second_half = vec![sample_event(10, 3, 0)];
+        let all_events: Vec<_> = first_half.iter().chain(&second_half).cloned().collect();
+        let settlements = vec![(10u64, 4u64)];
+        let chain_head = expected_chain_head(&all_events, &settlements);
+
+        let mut state = StreamState::new(EventStreamHead::default(), 9);
+        // With nothing buffered, a progress-only frame is not a reason
+        // to reconcile.
+        assert!(!apply_stream_frame(&mut state, None, Some(9)));
+
+        // The first part of checkpoint 10 arrives under a claim that
+        // stops at checkpoint 9.
+        for event in first_half {
+            assert!(!apply_stream_frame(&mut state, Some(event), Some(9)));
+        }
+        // A progress-only frame whose claim does not reach checkpoint 10,
+        // and one with no claim at all.
+        assert!(!apply_stream_frame(&mut state, None, Some(9)));
+        assert!(!apply_stream_frame(&mut state, None, None));
+
+        assert_eq!(state.events_scanned_through, 9);
+        assert!(!state.has_complete_buffered_events());
+        assert_eq!(state.complete_unconfirmed_checkpoints(), None);
+        // Folding checkpoint 10 is refused even if a settlement for it is
+        // known, and nothing is released.
+        let err = fold_and_reconcile(&mut state, &settlements, chain_head.clone(), 10).unwrap_err();
+        assert!(matches!(
+            err,
+            LightClientError::UnexpectedObjectShape { .. }
+        ));
+        assert_eq!(state.buffer.len(), 2);
+        assert_eq!(state.confirmed_through, 9);
+        assert_eq!(state.local_head, EventStreamHead::default());
+
+        // The rest of checkpoint 10 arrives, then a claim covering it.
+        for event in second_half {
+            assert!(!apply_stream_frame(&mut state, Some(event), None));
+        }
+        assert!(apply_stream_frame(&mut state, None, Some(10)));
+
+        assert!(state.has_complete_buffered_events());
+        assert_eq!(state.complete_unconfirmed_checkpoints(), Some(10..11));
+        let released =
+            fold_and_reconcile(&mut state, &settlements, chain_head.clone(), 10).unwrap();
+        assert_eq!(released, all_events);
+        assert_eq!(state.local_head, chain_head);
+        assert_eq!(state.confirmed_through, 10);
+        assert!(state.buffer.is_empty());
+    }
+
+    /// Single settlement per checkpoint. All events at one checkpoint
     /// fold into a single batch and the chain head matches.
     #[test]
     fn fold_and_reconcile_single_settlement_per_checkpoint() {
@@ -409,7 +500,7 @@ mod tests {
         let chain_head = expected_chain_head(&events, &settlements);
 
         let mut state = StreamState::new(EventStreamHead::default(), 0);
-        buffer_response_batch(&mut state, events.clone(), Some(7));
+        buffer_complete(&mut state, events.clone(), 7);
 
         let released = fold_and_reconcile(&mut state, &settlements, chain_head.clone(), 7).unwrap();
 
@@ -437,11 +528,11 @@ mod tests {
         let chain_head = expected_chain_head(&events, &settlements);
 
         let mut state = StreamState::new(EventStreamHead::default(), 0);
-        buffer_response_batch(&mut state, events.clone(), Some(10));
+        buffer_complete(&mut state, events.clone(), 10);
 
         // Sanity-check that the two-batch fold differs from the
-        // (incorrect) single-batch fold the old code would have
-        // produced — this is the regression we're guarding against.
+        // (incorrect) single-batch fold — this is the regression we're
+        // guarding against.
         let single_batch = apply_stream_updates(
             EventStreamHead::default(),
             &[EventBatch {
@@ -489,7 +580,7 @@ mod tests {
         let chain_head_at_5 = expected_chain_head(&cp5_events, &settlements);
 
         let mut state = StreamState::new(EventStreamHead::default(), 0);
-        buffer_response_batch(&mut state, events.clone(), Some(9));
+        buffer_complete(&mut state, events.clone(), 9);
 
         let released =
             fold_and_reconcile(&mut state, &settlements, chain_head_at_5.clone(), 5).unwrap();
@@ -515,7 +606,7 @@ mod tests {
         };
 
         let mut state = StreamState::new(EventStreamHead::default(), 0);
-        buffer_response_batch(&mut state, events.clone(), Some(3));
+        buffer_complete(&mut state, events.clone(), 3);
         let pre_local_head = state.local_head.clone();
         let pre_buffer_len = state.buffer.len();
         let pre_confirmed = state.confirmed_through;
@@ -567,7 +658,7 @@ mod tests {
         let events = vec![sample_event(5, 0, 0)];
         let settlements = vec![(7u64, 0u64)];
         let mut state = StreamState::new(EventStreamHead::default(), 0);
-        buffer_response_batch(&mut state, events, Some(7));
+        buffer_complete(&mut state, events, 7);
 
         let err = fold_and_reconcile(&mut state, &settlements, EventStreamHead::default(), 7)
             .unwrap_err();
