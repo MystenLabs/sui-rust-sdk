@@ -944,6 +944,34 @@ async fn dispatch_unimplemented_is_terminal_for_ledger_streams() {
 }
 
 #[tokio::test]
+async fn stream_yields_the_failure_after_max_consecutive_retries() {
+    let (server, _calls) = ScriptedStreamServer::new();
+    server.push_service_infos([
+        Err(tonic::Status::unavailable("service-info first")),
+        Err(tonic::Status::unavailable("service-info second")),
+        Err(tonic::Status::unavailable("service-info third")),
+        Ok(service_info(2)),
+    ]);
+    let address = spawn_server(server.clone()).await;
+    let (client, _observations) = observed_client(address);
+    let mut config = fast_config();
+    config.max_consecutive_retries = Some(2);
+    let stream = client.stream_events_with_config(
+        EventStreamRequest::new()
+            .with_read_mask(event_identity_mask())
+            .with_start(EventStreamStart::Checkpoint(0)),
+        config,
+    );
+    futures::pin_mut!(stream);
+
+    let status = stream.next().await.unwrap().unwrap_err();
+    assert_eq!(status.code(), tonic::Code::Unavailable);
+    assert_eq!(status.message(), "service-info third");
+    assert!(stream.next().await.is_none());
+    assert_eq!(server.state.lock().unwrap().service_info_requests.len(), 3);
+}
+
+#[tokio::test]
 async fn service_info_retry_and_validation() {
     let (retry_server, _calls) = ScriptedStreamServer::new();
     retry_server.push_service_infos([
