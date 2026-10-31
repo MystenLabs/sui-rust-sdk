@@ -2,6 +2,9 @@ use std::time::Duration;
 
 use sui_sdk_types::Address;
 
+use crate::client::LedgerStreamConfig;
+use crate::client::ListConfig;
+
 /// Configuration for [`super::AuthenticatedEventsClient`].
 ///
 /// All fields are public so callers can construct one inline. The
@@ -17,8 +20,10 @@ pub struct AuthenticatedEventsConfig {
     /// network's current tip at construction time".
     pub start_checkpoint: Option<u64>,
 
-    /// Maximum number of events to request per `ListEvents` page. The
-    /// server clamps to 1000 per the v2 List API contract.
+    /// Maximum number of items to request per page, for both the
+    /// `ListEvents` pages of the event stream and the `ListTransactions`
+    /// pages of the settlement listing. The server clamps to 1000 per
+    /// the v2 List API contract.
     pub page_size: u32,
 
     /// Buffer capacity of the mpsc channel between the streaming task
@@ -26,13 +31,22 @@ pub struct AuthenticatedEventsConfig {
     /// values apply more backpressure to the producer.
     pub channel_capacity: usize,
 
-    /// Maximum number of consecutive RPC errors to tolerate before the
-    /// streaming task gives up and aborts the stream with the last
-    /// error.
-    pub max_connect_retries: u32,
+    /// Maximum number of consecutive retries of a transient RPC failure
+    /// before the stream yields the failure as its terminal error. The
+    /// count restarts each time the failing call makes progress, so it
+    /// bounds how long the stream keeps retrying one outage, not how
+    /// many retries it makes in total. It applies to the ledger event
+    /// stream, the settlement listing, and the head proofs made while
+    /// reconciling; the startup reads are not retried.
+    /// `Some(0)` never retries. `None`, the default, retries
+    /// indefinitely.
+    pub max_consecutive_retries: Option<u32>,
 
-    /// Base backoff between RPC retry attempts. Each subsequent attempt
-    /// waits an additional `retry_backoff`.
+    /// Delay before the first retry of a transient RPC failure. The
+    /// ledger event stream and the settlement listing double the delay
+    /// on each consecutive retry; reconciliation head proofs wait an
+    /// additional `retry_backoff` per consecutive retry. Either way the
+    /// delay is capped at 30 seconds before jitter.
     pub retry_backoff: Duration,
 
     /// Upper bound on random jitter added to each retry sleep, to avoid
@@ -40,10 +54,15 @@ pub struct AuthenticatedEventsConfig {
     /// failure mode.
     pub retry_jitter: Duration,
 
-    /// Cadence at which the streaming task fetches the on-chain
-    /// [`EventStreamHead`] and reconciles it against the locally
-    /// replayed MMR. Smaller values release events to the consumer
-    /// faster at the cost of more OCS inclusion-proof round trips.
+    /// Longest time events at checkpoints the event stream has claimed
+    /// complete stay buffered before the streaming task fetches the
+    /// on-chain [`EventStreamHead`], reconciles it against the locally
+    /// replayed MMR, and releases them. Once the event stream reports
+    /// that it has caught up with the server, buffered events are
+    /// reconciled without waiting for this interval, so it mainly
+    /// bounds buffering while the stream is catching up. Smaller values
+    /// release events to the consumer sooner at the cost of more OCS
+    /// inclusion-proof round trips.
     ///
     /// [`EventStreamHead`]: sui_sdk_types::framework::EventStreamHead
     pub head_check_interval: Duration,
@@ -68,10 +87,29 @@ impl AuthenticatedEventsConfig {
             start_checkpoint: None,
             page_size: 1000,
             channel_capacity: 256,
-            max_connect_retries: 5,
+            max_consecutive_retries: None,
             retry_backoff: Duration::from_millis(500),
             retry_jitter: Duration::from_millis(250),
             head_check_interval: Duration::from_secs(30),
         }
+    }
+
+    /// Configuration for the ledger event stream.
+    pub(super) fn event_stream_config(&self) -> LedgerStreamConfig {
+        let mut stream_config = LedgerStreamConfig::default();
+        stream_config.list_page_limit = Some(self.page_size);
+        stream_config.base_retry_delay = self.retry_backoff;
+        stream_config.retry_jitter = self.retry_jitter;
+        stream_config.max_consecutive_retries = self.max_consecutive_retries;
+        stream_config
+    }
+
+    /// Configuration for the settlement `ListTransactions` listing.
+    pub(super) fn settlement_list_config(&self) -> ListConfig {
+        let mut list_config = ListConfig::default();
+        list_config.base_retry_delay = self.retry_backoff;
+        list_config.retry_jitter = self.retry_jitter;
+        list_config.max_consecutive_retries = self.max_consecutive_retries;
+        list_config
     }
 }
