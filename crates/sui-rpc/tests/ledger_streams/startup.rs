@@ -8,18 +8,25 @@ use super::support::event_identity_mask;
 use super::support::event_list_frame;
 use super::support::event_live_frame;
 use super::support::fast_config;
+use super::support::next_scripted_call;
 use super::support::observed_client;
+use super::support::query_end;
 use super::support::recording_config;
 use super::support::service_info;
 use super::support::spawn_server;
+use super::support::transaction_at;
 use super::support::transaction_identity_mask;
 use super::support::transaction_list_frame;
 use super::support::transaction_live_frame;
+use super::support::transaction_positioned_list_frame;
+use super::support::transaction_positioned_live_frame;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use prost::bytes::Bytes;
 use std::time::Duration;
 use sui_rpc::client::CheckpointStreamRequest;
 use sui_rpc::client::CheckpointStreamStart;
+use sui_rpc::client::Delivery;
 use sui_rpc::client::EventStreamRequest;
 use sui_rpc::client::EventStreamStart;
 use sui_rpc::client::LedgerStreamConfig;
@@ -27,6 +34,7 @@ use sui_rpc::client::LedgerStreamEvent;
 use sui_rpc::client::TransactionStreamRequest;
 use sui_rpc::client::TransactionStreamStart;
 use sui_rpc::proto::sui::rpc::v2 as proto;
+use tokio::sync::mpsc;
 
 #[tokio::test]
 async fn steady_live_streams_yield_advanced_progress_only_frames() {
@@ -948,4 +956,153 @@ async fn maximum_service_info_or_new_subscription_checkpoint_is_out_of_range() {
             .len(),
         1
     );
+}
+
+/// An empty page that ends where a cursor past the tip resumes, claiming no checkpoint.
+fn past_tip_echo(cursor: u64) -> proto::ListTransactionsResponse {
+    let mut watermark = proto::Watermark::default();
+    watermark.cursor = Some(bytes(cursor));
+    let mut response = proto::ListTransactionsResponse::default();
+    response.watermark = Some(watermark);
+    response.end = Some(query_end(proto::QueryEndReason::LedgerTip));
+    response
+}
+
+/// A Subscribe stream resumed from a cursor `U` past the node's tip yields nothing at or before
+/// `U`: no transaction, and no cursor a restart would replay from.
+///
+/// The node has indexed checkpoint 10. `U` (cursor 500) sits inside checkpoint 11, after its
+/// transactions 0..=2, which the caller has already processed. The server answers as a fullnode
+/// with MystenLabs/sui#28523 does:
+///
+/// - a List from `U` bounded at the tip is empty and ends at `U`, claiming the bound's
+///   checkpoint 10;
+/// - a List from `U` with no end bound is empty and ends at `U` with no claim until the node
+///   indexes checkpoint 11; it then returns checkpoint 11's transactions after `U` and ends at
+///   the start of checkpoint 12 (cursor 600), claiming 11;
+/// - the subscription starts at the start of checkpoint 11 (cursor 400), still claiming 10, and
+///   sends all of checkpoint 11 before reaching cursor 600.
+#[tokio::test]
+async fn subscribe_resumed_past_the_tip_yields_nothing_before_its_cursor() {
+    let resume = 500;
+    let (server, mut calls) = ScriptedStreamServer::new();
+    server.push_service_infos([Ok(service_info(10))]);
+    server.push_transaction_lists([
+        StreamScript::frames([Ok(transaction_positioned_list_frame(
+            None,
+            resume,
+            10,
+            Some(proto::QueryEndReason::CheckpointBound),
+        ))]),
+        StreamScript::frames([Ok(past_tip_echo(resume))]),
+        StreamScript::frames([
+            Ok(transaction_positioned_list_frame(
+                Some(transaction_at(11, 3, "after-u-0")),
+                501,
+                10,
+                None,
+            )),
+            Ok(transaction_positioned_list_frame(
+                Some(transaction_at(11, 4, "after-u-1")),
+                502,
+                10,
+                None,
+            )),
+            Ok(transaction_positioned_list_frame(
+                None,
+                600,
+                11,
+                Some(proto::QueryEndReason::LedgerTip),
+            )),
+        ]),
+    ]);
+    let (subscription_tx, subscription_rx) = mpsc::unbounded_channel();
+    server.push_transaction_subscriptions([StreamScript::Channel(subscription_rx)]);
+    let address = spawn_server(server.clone()).await;
+    let (client, _observations) = observed_client(address);
+
+    let request = TransactionStreamRequest::new()
+        .with_read_mask(prost_types::FieldMask {
+            paths: vec![
+                "digest".to_owned(),
+                "checkpoint".to_owned(),
+                "transaction_index".to_owned(),
+            ],
+        })
+        .with_start(TransactionStreamStart::Resume(bytes(resume)))
+        .with_delivery(Delivery::Subscribe);
+    let mut stream = Box::pin(client.stream_transactions_with_config(request, fast_config()));
+    let collector = tokio::spawn(async move {
+        let mut frames: Vec<(Option<String>, Bytes, Option<u64>)> = Vec::new();
+        while let Some(frame) = stream.next().await {
+            let frame = frame.expect("stream error");
+            let digest = frame.transaction.and_then(|transaction| transaction.digest);
+            let last = digest.as_deref() == Some("live-12-0");
+            frames.push((digest, frame.cursor, frame.covered_checkpoint));
+            if last {
+                break;
+            }
+        }
+        frames
+    });
+
+    assert_eq!(next_scripted_call(&mut calls).await, "get_service_info");
+    for _ in 0..3 {
+        assert_eq!(next_scripted_call(&mut calls).await, "list_transactions");
+    }
+    assert_eq!(
+        next_scripted_call(&mut calls).await,
+        "subscribe_transactions"
+    );
+    subscription_tx
+        .send(Ok(transaction_positioned_live_frame(None, 400, 10)))
+        .unwrap();
+    for (cursor, index, digest) in [
+        (401, 0, "before-u-0"),
+        (402, 1, "before-u-1"),
+        (403, 2, "before-u-2"),
+        (501, 3, "after-u-0"),
+        (502, 4, "after-u-1"),
+    ] {
+        subscription_tx
+            .send(Ok(transaction_positioned_live_frame(
+                Some(transaction_at(11, index, digest)),
+                cursor,
+                10,
+            )))
+            .unwrap();
+    }
+    subscription_tx
+        .send(Ok(transaction_positioned_live_frame(None, 600, 11)))
+        .unwrap();
+    subscription_tx
+        .send(Ok(transaction_positioned_live_frame(
+            Some(transaction_at(12, 0, "live-12-0")),
+            701,
+            11,
+        )))
+        .unwrap();
+
+    let frames = tokio::time::timeout(Duration::from_secs(5), collector)
+        .await
+        .expect("stream stalled")
+        .unwrap();
+    let digest = |value: &str| Some(value.to_owned());
+    assert_eq!(
+        frames,
+        [
+            (digest("after-u-0"), bytes(501), Some(10)),
+            (digest("after-u-1"), bytes(502), Some(10)),
+            (None, bytes(600), Some(11)),
+            (digest("live-12-0"), bytes(701), Some(11)),
+        ]
+    );
+
+    let state = server.state.lock().unwrap();
+    for request in &state.transaction_requests[1..] {
+        let options = request.body.options.as_ref().unwrap();
+        assert_eq!(options.after, Some(bytes(resume)));
+        assert_eq!(options.before, None);
+        assert_eq!(request.body.end_checkpoint, None);
+    }
 }

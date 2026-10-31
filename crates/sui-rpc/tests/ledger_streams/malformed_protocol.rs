@@ -56,6 +56,11 @@ async fn malformed_list_and_subscription_frames_are_terminal_data_loss() {
             0,
             Some(proto::QueryEndReason::CheckpointBound),
         ))]),
+        StreamScript::frames([Ok(event_list_frame(
+            None,
+            0,
+            Some(proto::QueryEndReason::LedgerTip),
+        ))]),
     ]);
     let mut missing_subscription_identity =
         event_positioned_live_frame(Some(event_at(1, 0, 0, "missing-index")), 1, 1);

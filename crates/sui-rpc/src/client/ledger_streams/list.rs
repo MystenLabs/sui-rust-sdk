@@ -144,6 +144,23 @@ pub(super) fn build_polling_list_request<A: SubscriptionAdapter>(
     Ok((request, ExpectedEnd::from_bounds(true, false)))
 }
 
+/// Lists strictly after `committed_progress` through the server's indexed tip, with no end bound.
+/// The scan's last frame claims the tip it reached, or no checkpoint when `committed_progress`
+/// lies past that tip.
+pub(super) fn build_resume_to_tip_list_request<A: SubscriptionAdapter>(
+    template: &A::ListRequest,
+    committed_progress: &Progress<A::Cursor>,
+    list_page_limit: Option<u32>,
+) -> Result<(A::ListRequest, ExpectedEnd)> {
+    let mut request = template.clone();
+    apply_internal_list_page_limit::<A>(&mut request, list_page_limit);
+    A::set_ascending_resume(&mut request, committed_progress)?;
+    A::options_mut(&mut request).before = None;
+    A::set_end_checkpoint(&mut request, None);
+    let expected_end = determine_expected_end::<A>(&request, ListScanDirection::Ascending);
+    Ok((request, expected_end))
+}
+
 pub(super) fn build_recovery_list_request<A: SubscriptionAdapter>(
     template: A::ListRequest,
     gap: &RecoveryGap,
@@ -249,13 +266,16 @@ pub(super) enum ListAction<R, P> {
     Terminal(Status),
 }
 
-/// How an ascending scan handles `LedgerTip` before its requested bound.
+/// How an ascending scan handles a `LedgerTip` end.
 #[derive(Clone, Copy)]
 pub(super) enum LedgerTipPolicy {
     /// Complete at the indexed tip.
     Complete,
     /// Retry from the served frontier until the fixed bound is indexed.
     WaitForExpectedBound,
+    /// Complete at a tip whose end frame claims checkpoint coverage. Retry from the served
+    /// frontier while the end frame claims none, as it does for an `after` cursor past the tip.
+    WaitForCoverage,
 }
 
 pub(super) struct ListMachine<A: SubscriptionAdapter> {
@@ -558,7 +578,11 @@ impl<A: SubscriptionAdapter> ListMachine<A> {
                         ));
                     }
                     QueryEndReason::LedgerTip
-                        if matches!(self.ledger_tip_policy, LedgerTipPolicy::Complete) =>
+                        if matches!(self.ledger_tip_policy, LedgerTipPolicy::Complete)
+                            || matches!(
+                                self.ledger_tip_policy,
+                                LedgerTipPolicy::WaitForCoverage
+                            ) && checkpoint.is_some() =>
                     {
                         self.rpc_state = RpcState::Idle;
                         true

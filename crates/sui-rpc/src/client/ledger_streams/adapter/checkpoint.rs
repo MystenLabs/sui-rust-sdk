@@ -118,6 +118,10 @@ impl SubscriptionAdapter for CheckpointAdapter {
         item.position()
     }
 
+    fn item_checkpoint(position: &Self::ItemPosition) -> u64 {
+        *position
+    }
+
     fn extract_metadata(
         response: &Self::ListResponse,
     ) -> (bool, Option<&Watermark>, Option<&QueryEnd>) {
