@@ -24,6 +24,7 @@ use super::list::build_initial_list_request;
 use super::list::build_live_tip_baseline_list_request;
 use super::list::build_polling_list_request;
 use super::list::build_recovery_list_request;
+use super::list::build_resume_to_tip_list_request;
 use super::observability::LedgerStreamEvent;
 use super::observability::LedgerStreamObservability;
 use super::observability::LedgerStreamOperation;
@@ -60,7 +61,24 @@ enum ProloguePhase<A: SubscriptionAdapter> {
         // `Phase` moves by value; prologue replay allocates this boxed machine once.
         list_machine: Box<ListMachine<A>>,
         target_checkpoint: u64,
+        scan: PrologueScan,
     },
+}
+
+#[derive(Clone, Copy)]
+enum PrologueScan {
+    /// Ends at the tip read when the stream started.
+    Initial,
+    /// Runs before a stream resumed from the caller's cursor first subscribes, when the initial
+    /// scan delivered no item: lists from the committed cursor through the server's tip, with no
+    /// end bound, until the server claims checkpoint coverage.
+    ///
+    /// Subscription recovery orders the committed cursor against live frames by the coverage
+    /// claimed with it. A resume cursor past the node's tip ends the initial scan at that cursor
+    /// with the coverage of the scan's bound, which lies below it. With no end bound, the server
+    /// claims no coverage for a cursor past its tip, and the scan ends inside the coverage it
+    /// claims.
+    PastResumeCursor,
 }
 
 enum SubscribingPhase<A: SubscriptionAdapter> {
@@ -193,6 +211,8 @@ pub(super) struct Driver<A: SubscriptionAdapter> {
     service_info_retry: RetryState,
     subscription_retry: RetryState,
     delivery: Delivery,
+    /// Whether the stream started strictly after a caller-supplied cursor (`Start::After`).
+    started_after_cursor: bool,
     phase: Option<Phase<A>>,
     committed_progress: Option<Progress<A::Cursor>>,
     committed_item_position: Option<A::ItemPosition>,
@@ -210,6 +230,7 @@ impl<A: SubscriptionAdapter> Driver<A> {
     ) -> Self {
         let observability = LedgerStreamObservability::new(config.observer());
         let item_required = A::item_required(&subscribe_payload);
+        let started_after_cursor = matches!(start, Start::After(_));
         let requested_phase = match start {
             Start::Tip => match delivery {
                 Delivery::Subscribe => {
@@ -250,6 +271,7 @@ impl<A: SubscriptionAdapter> Driver<A> {
             service_info_retry: RetryState::new(A::FAMILY, LedgerStreamOperation::GetServiceInfo),
             subscription_retry: RetryState::new(A::FAMILY, LedgerStreamOperation::Subscribe),
             delivery,
+            started_after_cursor,
             phase: Some(phase),
             committed_progress: None,
             committed_item_position: None,
@@ -343,6 +365,7 @@ impl<A: SubscriptionAdapter> Driver<A> {
                                     LedgerStreamStage::InitialReplay,
                                 )),
                                 target_checkpoint: checkpoint_height,
+                                scan: PrologueScan::Initial,
                             }),
                             None,
                         ),
@@ -353,6 +376,7 @@ impl<A: SubscriptionAdapter> Driver<A> {
             ProloguePhase::Replay {
                 mut list_machine,
                 target_checkpoint,
+                scan,
             } => {
                 let rpc_event = list_machine.poll_rpc().await;
                 let action = list_machine.process_event(rpc_event, &self.config);
@@ -360,20 +384,24 @@ impl<A: SubscriptionAdapter> Driver<A> {
                 match self.process_replay_frame(action, target_checkpoint, ReplayOutput::Yield) {
                     ReplayStep::Yield(output) => {
                         let next = if complete {
-                            self.finish_prologue_replay(target_checkpoint)
+                            self.finish_prologue_replay(target_checkpoint, scan)
                         } else {
                             Phase::Prologue(ProloguePhase::Replay {
                                 list_machine,
                                 target_checkpoint,
+                                scan,
                             })
                         };
                         (next, Some(output))
                     }
-                    ReplayStep::Complete => (self.finish_prologue_replay(target_checkpoint), None),
+                    ReplayStep::Complete => {
+                        (self.finish_prologue_replay(target_checkpoint, scan), None)
+                    }
                     ReplayStep::Continue => (
                         Phase::Prologue(ProloguePhase::Replay {
                             list_machine,
                             target_checkpoint,
+                            scan,
                         }),
                         None,
                     ),
@@ -512,15 +540,7 @@ impl<A: SubscriptionAdapter> Driver<A> {
                                 SubscribingPhase::GapReplay(gap)
                             });
                         }
-                        let mut item = frame.item;
-                        if item
-                            .as_ref()
-                            .is_some_and(|item| gap.replayed_item_was_already_emitted(item))
-                        {
-                            item = None;
-                        } else if let Some(item) = &item {
-                            gap.record_replayed_item(item);
-                        }
+                        let item = frame.item.filter(|item| !self.item_was_delivered(item));
                         self.commit_progress(progress.clone());
                         let next = if complete {
                             SubscribingPhase::DrainGapBuffer(
@@ -537,6 +557,10 @@ impl<A: SubscriptionAdapter> Driver<A> {
             }
             SubscribingPhase::DrainGapBuffer(mut delivery) => {
                 if let Some(frame) = delivery.buffered_subscription_frames.pop_front() {
+                    let next = SubscribingPhase::DrainGapBuffer(delivery);
+                    if self.behind_delivered_item(&frame) {
+                        return SubscribingStep::Next(next);
+                    }
                     let cursor_advanced = self
                         .committed_progress
                         .as_ref()
@@ -547,26 +571,14 @@ impl<A: SubscriptionAdapter> Driver<A> {
                         .and_then(|committed| committed.checkpoint)
                         .zip(frame.progress.checkpoint)
                         .is_some_and(|(committed, next)| next > committed);
-                    let duplicate = frame.item.as_ref().is_some_and(|item| {
-                        delivery
-                            .replay_item_frontier
-                            .as_ref()
-                            .is_some_and(|frontier| A::item_position(item) <= frontier)
-                    });
-                    let item = if duplicate { None } else { frame.item };
-                    let next = SubscribingPhase::DrainGapBuffer(delivery);
-                    if duplicate {
-                        SubscribingStep::Next(next)
+                    let yield_frame = frame.item.is_some() || cursor_advanced;
+                    if yield_frame || checkpoint_coverage_advanced {
+                        self.commit_progress(frame.progress.clone());
+                    }
+                    if yield_frame {
+                        SubscribingStep::Yield(next, self.make_output(frame.item, frame.progress))
                     } else {
-                        let yield_frame = item.is_some() || cursor_advanced;
-                        if yield_frame || checkpoint_coverage_advanced {
-                            self.commit_progress(frame.progress.clone());
-                        }
-                        if yield_frame {
-                            SubscribingStep::Yield(next, self.make_output(item, frame.progress))
-                        } else {
-                            SubscribingStep::Next(next)
-                        }
+                        SubscribingStep::Next(next)
                     }
                 } else {
                     match delivery.subscription_state {
@@ -601,19 +613,25 @@ impl<A: SubscriptionAdapter> Driver<A> {
                         }
                         Ok(ProgressAdvance::CheckpointCoverageAdvanced) => {
                             live.last_seen = frame.progress.clone();
-                            self.commit_progress(frame.progress);
+                            if !self.behind_delivered_item(&frame) {
+                                self.commit_progress(frame.progress);
+                            }
                             self.subscription_retry.reset(&self.observability);
                             SubscribingStep::Next(SubscribingPhase::Live(live))
                         }
                         Ok(ProgressAdvance::CursorAdvanced) => {
-                            let LiveFrame { item, progress } = frame;
-                            live.last_seen = progress.clone();
-                            self.commit_progress(progress.clone());
+                            live.last_seen = frame.progress.clone();
                             self.subscription_retry.reset(&self.observability);
-                            SubscribingStep::Yield(
-                                SubscribingPhase::Live(live),
-                                self.make_output(item, progress),
-                            )
+                            if self.behind_delivered_item(&frame) {
+                                SubscribingStep::Next(SubscribingPhase::Live(live))
+                            } else {
+                                let LiveFrame { item, progress } = frame;
+                                self.commit_progress(progress.clone());
+                                SubscribingStep::Yield(
+                                    SubscribingPhase::Live(live),
+                                    self.make_output(item, progress),
+                                )
+                            }
                         }
                     },
                 },
@@ -884,17 +902,51 @@ impl<A: SubscriptionAdapter> Driver<A> {
         }
     }
 
-    fn finish_prologue_replay(&mut self, target_checkpoint: u64) -> Phase<A> {
-        self.last_covered_checkpoint_height = Some(
-            self.last_covered_checkpoint_height
-                .map_or(target_checkpoint, |covered| covered.max(target_checkpoint)),
-        );
-        if self.committed_progress.is_none() {
+    fn finish_prologue_replay(&mut self, target_checkpoint: u64, scan: PrologueScan) -> Phase<A> {
+        let Some(committed_progress) = self.committed_progress.as_ref() else {
             return Phase::Terminal(Status::data_loss(
                 "subscription recovery has no committed progress marker",
             ));
-        }
+        };
+        // The initial scan claims no more than its bound; a scan with no end bound claims the tip
+        // it reached.
+        let covered = committed_progress
+            .checkpoint
+            .map_or(target_checkpoint, |claimed| claimed.max(target_checkpoint));
+        self.last_covered_checkpoint_height = Some(
+            self.last_covered_checkpoint_height
+                .map_or(covered, |known| known.max(covered)),
+        );
         match self.delivery {
+            // With no item delivered, the committed cursor is the caller's cursor, the server's
+            // echo of it, or the end of the initial scan, and opaque cursors do not say which. An
+            // echo of a cursor past the tip lies beyond the coverage claimed with it.
+            Delivery::Subscribe
+                if matches!(scan, PrologueScan::Initial)
+                    && self.started_after_cursor
+                    && self.committed_item_position.is_none() =>
+            {
+                match build_resume_to_tip_list_request::<A>(
+                    &self.list_template,
+                    committed_progress,
+                    self.config.list_page_limit,
+                ) {
+                    Ok((payload, expected_end)) => Phase::Prologue(ProloguePhase::Replay {
+                        list_machine: Box::new(ListMachine::new(
+                            self.client.clone(),
+                            payload,
+                            expected_end,
+                            ListScanDirection::Ascending,
+                            LedgerTipPolicy::WaitForCoverage,
+                            self.observability.clone(),
+                            LedgerStreamStage::InitialReplay,
+                        )),
+                        target_checkpoint,
+                        scan: PrologueScan::PastResumeCursor,
+                    }),
+                    Err(status) => Phase::Terminal(status),
+                }
+            }
             Delivery::Subscribe => Phase::Subscribing(SubscribingPhase::Connect(ConnectMachine {
                 context: ConnectContext::Resume,
                 phase: ConnectPhase::Attempt,
@@ -962,7 +1014,6 @@ impl<A: SubscriptionAdapter> Driver<A> {
             recovery_list_machine,
             new_live_subscription,
             new_subscription_frame,
-            self.committed_item_position.clone(),
             &self.config,
             gap.replays_boundary_item(),
         ))))
@@ -1246,6 +1297,28 @@ impl<A: SubscriptionAdapter> Driver<A> {
     fn commit_item_position(&mut self, item: &Option<A::Item>) {
         if let Some(item) = item {
             self.committed_item_position = Some(A::item_position(item).clone());
+        }
+    }
+
+    fn item_was_delivered(&self, item: &A::Item) -> bool {
+        self.committed_item_position
+            .as_ref()
+            .is_some_and(|delivered| A::item_position(item) <= delivered)
+    }
+
+    /// Whether a subscription frame is, or may be, at or before the last delivered item, as
+    /// frames from a replacement subscription that started behind that item are. Such a frame
+    /// is neither yielded nor committed. A progress-only frame claiming less than the item's
+    /// checkpoint cannot be ordered after the item; withholding it only defers its progress to
+    /// a later frame.
+    fn behind_delivered_item(&self, frame: &LiveFrame<A::Item, Progress<A::Cursor>>) -> bool {
+        match &frame.item {
+            Some(item) => self.item_was_delivered(item),
+            None => self
+                .committed_item_position
+                .as_ref()
+                .zip(frame.progress.checkpoint)
+                .is_some_and(|(delivered, claim)| claim < A::item_checkpoint(delivered)),
         }
     }
 
