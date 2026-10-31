@@ -112,6 +112,10 @@ impl SubscriptionAdapter for EventAdapter {
         item.position()
     }
 
+    fn item_checkpoint(position: &Self::ItemPosition) -> u64 {
+        position.0
+    }
+
     fn extract_metadata(
         response: &Self::ListResponse,
     ) -> (bool, Option<&Watermark>, Option<&QueryEnd>) {

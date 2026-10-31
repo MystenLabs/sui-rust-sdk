@@ -138,6 +138,8 @@ pub(super) trait SubscriptionAdapter: Send + Sync + 'static {
     ) -> Result<()>;
     /// Returns the item identity used for ordering and deduplication.
     fn item_position(item: &Self::Item) -> &Self::ItemPosition;
+    /// Returns the checkpoint containing the item at `position`.
+    fn item_checkpoint(position: &Self::ItemPosition) -> u64;
     /// Extracts `(has_item, watermark, query_end)` metadata from a list response frame.
     fn extract_metadata(
         response: &Self::ListResponse,

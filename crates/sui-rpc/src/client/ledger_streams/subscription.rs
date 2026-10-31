@@ -33,7 +33,6 @@ pub(super) struct GapReplay<A: SubscriptionAdapter> {
     /// Number of payload-bearing frames currently buffered, bounded by `max_buffered_live_items`
     /// (empty progress-only frames do not count toward this limit).
     buffered_subscription_items: usize,
-    replay_item_frontier: Option<A::ItemPosition>,
     observability: LedgerStreamObservability,
 }
 
@@ -42,7 +41,6 @@ impl<A: SubscriptionAdapter> GapReplay<A> {
         list_machine: ListMachine<A>,
         live: LiveSubscription<A>,
         first: LiveFrame<A::Item, Progress<A::Cursor>>,
-        committed_item_position: Option<A::ItemPosition>,
         config: &LedgerStreamConfig,
         replays_boundary_item: bool,
     ) -> Self {
@@ -53,7 +51,6 @@ impl<A: SubscriptionAdapter> GapReplay<A> {
             buffered_subscription_frames: VecDeque::new(),
             buffered_subscription_items: 0,
             observability,
-            replay_item_frontier: committed_item_position,
         };
         if !replays_boundary_item {
             gap.retain_frame(first, Some(config));
@@ -101,23 +98,6 @@ impl<A: SubscriptionAdapter> GapReplay<A> {
         self.buffered_subscription_frames
             .iter()
             .any(|frame| frame.progress.same_position(progress))
-    }
-
-    pub(super) fn replayed_item_was_already_emitted(&self, item: &A::Item) -> bool {
-        self.replay_item_frontier
-            .as_ref()
-            .is_some_and(|frontier| A::item_position(item) <= frontier)
-    }
-
-    pub(super) fn record_replayed_item(&mut self, item: &A::Item) {
-        let position = A::item_position(item);
-        if self
-            .replay_item_frontier
-            .as_ref()
-            .is_none_or(|frontier| position > frontier)
-        {
-            self.replay_item_frontier = Some(position.clone());
-        }
     }
 
     /// Returns whether a valid buffered frame advanced subscription progress, controlling retry
@@ -183,7 +163,6 @@ impl<A: SubscriptionAdapter> GapReplay<A> {
         BufferedSubscriptionDrain {
             subscription_state: self.subscription_state,
             buffered_subscription_frames: self.buffered_subscription_frames,
-            replay_item_frontier: self.replay_item_frontier,
         }
     }
 }
@@ -191,5 +170,4 @@ impl<A: SubscriptionAdapter> GapReplay<A> {
 pub(super) struct BufferedSubscriptionDrain<A: SubscriptionAdapter> {
     pub(super) subscription_state: BufferedSubscriptionState<A>,
     pub(super) buffered_subscription_frames: VecDeque<LiveFrame<A::Item, Progress<A::Cursor>>>,
-    pub(super) replay_item_frontier: Option<A::ItemPosition>,
 }

@@ -260,6 +260,14 @@ async fn same_checkpoint_transaction_reconnect_replays_immediately_and_deduplica
             10,
             Some(proto::QueryEndReason::CheckpointBound),
         ))]),
+        // The initial scan delivered nothing, so the stream scans from its end to the tip before
+        // subscribing.
+        StreamScript::frames([Ok(transaction_positioned_list_frame(
+            None,
+            100,
+            10,
+            Some(proto::QueryEndReason::LedgerTip),
+        ))]),
         StreamScript::Channel(recovery_rx),
     ]);
     let address = spawn_server(server.clone()).await;
@@ -284,6 +292,7 @@ async fn same_checkpoint_transaction_reconnect_replays_immediately_and_deduplica
     });
 
     assert_eq!(next_scripted_call(&mut calls).await, "get_service_info");
+    assert_eq!(next_scripted_call(&mut calls).await, "list_transactions");
     assert_eq!(next_scripted_call(&mut calls).await, "list_transactions");
     assert_eq!(
         next_scripted_call(&mut calls).await,
@@ -371,7 +380,7 @@ async fn same_checkpoint_transaction_reconnect_replays_immediately_and_deduplica
 
     let state = server.state.lock().unwrap();
     assert_eq!(state.transaction_subscriptions.len(), 1);
-    assert_eq!(state.transaction_requests.len(), 2);
+    assert_eq!(state.transaction_requests.len(), 3);
     assert_eq!(
         state.transaction_requests[0]
             .body
@@ -390,7 +399,13 @@ async fn same_checkpoint_transaction_reconnect_replays_immediately_and_deduplica
             .limit,
         Some(7)
     );
-    let recovery_request = &state.transaction_requests[1].body;
+    let resume_to_tip_request = &state.transaction_requests[1].body;
+    assert_eq!(resume_to_tip_request.end_checkpoint, None);
+    assert_eq!(
+        resume_to_tip_request.options.as_ref().unwrap().after,
+        Some(bytes(100))
+    );
+    let recovery_request = &state.transaction_requests[2].body;
     assert_eq!(recovery_request.end_checkpoint, Some(11));
     assert_eq!(
         recovery_request.options.as_ref().unwrap().after,
@@ -1649,11 +1664,18 @@ async fn dropping_facade_during_retry_sleep_prevents_later_rpc() {
 async fn clean_subscription_eof_uses_the_transient_recovery_policy() {
     let (server, _calls) = ScriptedStreamServer::new();
     server.push_service_infos([Ok(service_info(0)), Ok(service_info(0))]);
-    server.push_event_lists([StreamScript::frames([Ok(event_list_frame(
-        None,
-        0,
-        Some(proto::QueryEndReason::CheckpointBound),
-    ))])]);
+    server.push_event_lists([
+        StreamScript::frames([Ok(event_list_frame(
+            None,
+            0,
+            Some(proto::QueryEndReason::CheckpointBound),
+        ))]),
+        StreamScript::frames([Ok(event_list_frame(
+            None,
+            0,
+            Some(proto::QueryEndReason::LedgerTip),
+        ))]),
+    ]);
     server.push_event_subscriptions([
         StreamScript::frames([]),
         StreamScript::DispatchError(tonic::Status::permission_denied(
@@ -2280,4 +2302,150 @@ async fn same_cursor_reconnect_preserves_committed_checkpoint_coverage() {
             .collect::<Vec<_>>(),
         ["already-delivered", "after-committed-frontier"]
     );
+}
+
+/// A live stream that loses its subscription partway through a checkpoint and reconnects to a
+/// replica one checkpoint behind yields nothing at or before the last transaction it delivered:
+/// no transaction twice, and no cursor a restart would replay from.
+///
+/// Frames follow a fullnode's subscription: a transaction in checkpoint `n` claims `n - 1`, and
+/// a progress-only frame at the start of checkpoint `n + 1` claims `n`.
+///
+/// - The first subscription starts at the start of checkpoint 11 (cursor 400), delivers its
+///   transactions 0 and 1 (cursors 401 and 402), and fails.
+/// - The replacement replica has indexed only checkpoint 10. Its subscription starts at cursor
+///   400 again, still claiming 10, and then sends all of checkpoint 11, either while the
+///   recovery List is open or after it has finished.
+#[tokio::test]
+async fn reconnect_to_a_replica_behind_the_last_transaction_yields_nothing_at_or_before_it() {
+    for catches_up_during_recovery in [false, true] {
+        let (server, mut calls) = ScriptedStreamServer::new();
+        server.push_service_infos([Ok(service_info(10))]);
+        let (replacement_tx, replacement_rx) = mpsc::unbounded_channel();
+        let (recovery_tx, recovery_rx) = mpsc::unbounded_channel();
+        server.push_transaction_subscriptions([
+            StreamScript::frames([
+                Ok(transaction_positioned_live_frame(None, 400, 10)),
+                Ok(transaction_positioned_live_frame(
+                    Some(transaction_at(11, 0, "tx-11-0")),
+                    401,
+                    10,
+                )),
+                Ok(transaction_positioned_live_frame(
+                    Some(transaction_at(11, 1, "tx-11-1")),
+                    402,
+                    10,
+                )),
+                Err(tonic::Status::unavailable("replica restarted")),
+            ]),
+            StreamScript::Channel(replacement_rx),
+        ]);
+        server.push_transaction_lists([StreamScript::Channel(recovery_rx)]);
+        let address = spawn_server(server.clone()).await;
+        let (client, _observations) = observed_client(address);
+        let mut stream = Box::pin(client.stream_transactions_with_config(
+            TransactionStreamRequest::new().with_read_mask(transaction_identity_mask()),
+            fast_config(),
+        ));
+        let collector = tokio::spawn(async move {
+            let mut frames = Vec::new();
+            while let Some(frame) = stream.next().await {
+                let frame = frame.expect("stream error");
+                let digest = frame.transaction.and_then(|transaction| transaction.digest);
+                let last = digest.as_deref() == Some("tx-12-0");
+                frames.push((digest, frame.cursor, frame.covered_checkpoint));
+                if last {
+                    break;
+                }
+            }
+            frames
+        });
+
+        assert_eq!(
+            next_scripted_call(&mut calls).await,
+            "subscribe_transactions"
+        );
+        assert_eq!(next_scripted_call(&mut calls).await, "get_service_info");
+        assert_eq!(
+            next_scripted_call(&mut calls).await,
+            "subscribe_transactions"
+        );
+        replacement_tx
+            .send(Ok(transaction_positioned_live_frame(None, 400, 10)))
+            .unwrap();
+        assert_eq!(next_scripted_call(&mut calls).await, "list_transactions");
+        let catch_up = || {
+            for (cursor, index, digest) in [
+                (401, 0, "tx-11-0"),
+                (402, 1, "tx-11-1"),
+                (403, 2, "tx-11-2"),
+            ] {
+                replacement_tx
+                    .send(Ok(transaction_positioned_live_frame(
+                        Some(transaction_at(11, index, digest)),
+                        cursor,
+                        10,
+                    )))
+                    .unwrap();
+            }
+            replacement_tx
+                .send(Ok(transaction_positioned_live_frame(None, 500, 11)))
+                .unwrap();
+            replacement_tx
+                .send(Ok(transaction_positioned_live_frame(
+                    Some(transaction_at(12, 0, "tx-12-0")),
+                    501,
+                    11,
+                )))
+                .unwrap();
+        };
+        // The replica has not indexed past cursor 402, so the List after it through
+        // checkpoint 10 is empty and ends where it started.
+        let finish_recovery = || {
+            recovery_tx
+                .send(Ok(transaction_positioned_list_frame(
+                    None,
+                    402,
+                    10,
+                    Some(proto::QueryEndReason::CheckpointBound),
+                )))
+                .unwrap();
+        };
+        // The pause only steers which phase receives the replica's frames; the yielded frames
+        // must be the same either way.
+        if catches_up_during_recovery {
+            catch_up();
+            tokio::time::sleep(Duration::from_millis(100)).await;
+            finish_recovery();
+        } else {
+            finish_recovery();
+            tokio::time::sleep(Duration::from_millis(100)).await;
+            catch_up();
+        }
+
+        let frames = tokio::time::timeout(Duration::from_secs(5), collector)
+            .await
+            .expect("stream stalled")
+            .unwrap();
+        let digest = |value: &str| Some(value.to_owned());
+        assert_eq!(
+            frames,
+            [
+                (None, bytes(400), Some(10)),
+                (digest("tx-11-0"), bytes(401), Some(10)),
+                (digest("tx-11-1"), bytes(402), Some(10)),
+                (digest("tx-11-2"), bytes(403), Some(10)),
+                (None, bytes(500), Some(11)),
+                (digest("tx-12-0"), bytes(501), Some(11)),
+            ],
+            "catches_up_during_recovery: {catches_up_during_recovery}"
+        );
+        let state = server.state.lock().unwrap();
+        let recovery_request = &state.transaction_requests[0].body;
+        assert_eq!(
+            recovery_request.options.as_ref().unwrap().after,
+            Some(bytes(402))
+        );
+        assert_eq!(recovery_request.end_checkpoint, Some(11));
+    }
 }
