@@ -52,6 +52,8 @@ impl SubscriptionAdapter for TransactionAdapter {
             start_checkpoint: None,
             end_checkpoint: None,
             options: None,
+            start_transaction_index: None,
+            end_transaction_index: None,
         }
     }
 

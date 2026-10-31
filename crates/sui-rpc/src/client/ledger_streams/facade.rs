@@ -150,6 +150,8 @@ impl Client {
             start_checkpoint: None,
             end_checkpoint: None,
             options: None,
+            start_transaction_index: None,
+            end_transaction_index: None,
         };
         let start = match request.start {
             TransactionStreamStart::Tip => Start::Tip,
@@ -219,6 +221,10 @@ impl Client {
             start_checkpoint: None,
             end_checkpoint: None,
             options: None,
+            start_transaction_index: None,
+            start_event_index: None,
+            end_transaction_index: None,
+            end_event_index: None,
         };
         let start = match request.start {
             EventStreamStart::Tip => Start::Tip,
