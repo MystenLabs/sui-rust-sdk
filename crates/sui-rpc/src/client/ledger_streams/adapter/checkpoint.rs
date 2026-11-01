@@ -1,3 +1,4 @@
+use prost::bytes::Bytes;
 use tonic::Request;
 use tonic::Status;
 use tonic::codegen::BoxStream;
@@ -6,11 +7,11 @@ use super::super::super::Client;
 use super::super::super::Result;
 use super::super::observability::LedgerStreamFamily;
 use super::super::types::CheckpointStreamFrame;
-use super::CHECKPOINT_CURSOR_OVERFLOW;
-use super::ListResponseParts;
+use super::BoundFields;
+use super::KeyGranularity;
+use super::LedgerFrame;
 use super::ListScanDirection;
-use super::LiveFrame;
-use super::PositionedItem;
+use super::Position;
 use super::Progress;
 use super::RpcFuture;
 use super::SubscriptionAdapter;
@@ -27,32 +28,17 @@ pub(in crate::client::ledger_streams) struct CheckpointAdapter;
 
 impl SubscriptionAdapter for CheckpointAdapter {
     const FAMILY: LedgerStreamFamily = LedgerStreamFamily::Checkpoint;
-    const REQUIRED_READ_MASK_FIELDS: &'static [&'static str] = &["sequence_number"];
-    const READ_MASK_REQUIREMENT: &'static str =
-        "read_mask must include \"sequence_number\" or \"*\"";
+    const GRANULARITY: KeyGranularity = KeyGranularity::Checkpoint;
 
-    type Item = PositionedItem<Checkpoint, u64>;
-    type ItemPosition = u64;
-    type Cursor = u64;
+    type Item = Checkpoint;
+    /// Checkpoint positions are dense, so `start_checkpoint` and `end_checkpoint` bound requests
+    /// without opaque cursors.
+    type Cursor = ();
     type Output = CheckpointStreamFrame;
     type ListRequest = ListCheckpointsRequest;
     type ListResponse = ListCheckpointsResponse;
     type SubscribeRequest = SubscribeCheckpointsRequest;
     type SubscribeResponse = SubscribeCheckpointsResponse;
-
-    fn list_read_mask(request: &Self::ListRequest) -> Option<&prost_types::FieldMask> {
-        request.read_mask.as_ref()
-    }
-
-    fn list_request_from_subscribe(request: &Self::SubscribeRequest) -> Self::ListRequest {
-        ListCheckpointsRequest {
-            read_mask: request.read_mask.clone(),
-            filter: request.filter.clone(),
-            start_checkpoint: None,
-            end_checkpoint: None,
-            options: None,
-        }
-    }
 
     fn options(request: &Self::ListRequest) -> Option<&QueryOptions> {
         request.options.as_ref()
@@ -66,61 +52,45 @@ impl SubscriptionAdapter for CheckpointAdapter {
         request.start_checkpoint
     }
 
-    fn set_start_checkpoint(request: &mut Self::ListRequest, checkpoint: Option<u64>) {
-        request.start_checkpoint = checkpoint;
-    }
-
     fn end_checkpoint(request: &Self::ListRequest) -> Option<u64> {
         request.end_checkpoint
     }
 
-    fn set_end_checkpoint(request: &mut Self::ListRequest, checkpoint: Option<u64>) {
-        request.end_checkpoint = checkpoint;
+    fn set_start_fields(request: &mut Self::ListRequest, fields: BoundFields) {
+        request.start_checkpoint = Some(fields.checkpoint);
     }
 
-    fn set_ascending_resume(
-        request: &mut Self::ListRequest,
-        progress: &Progress<Self::Cursor>,
-    ) -> Result<()> {
-        request.start_checkpoint = Some(
-            progress
-                .cursor
-                .checked_add(1)
-                .ok_or_else(|| Status::out_of_range(CHECKPOINT_CURSOR_OVERFLOW))?,
-        );
-        Self::options_mut(request).after = None;
-        Ok(())
+    fn set_end_fields(request: &mut Self::ListRequest, fields: BoundFields) {
+        request.end_checkpoint = Some(fields.checkpoint);
     }
 
-    fn request_resume_position(request: &Self::ListRequest) -> Option<Progress<Self::Cursor>> {
-        request
-            .start_checkpoint
-            .and_then(|start| start.checked_sub(1))
-            .map(|cursor| Progress {
-                cursor,
-                checkpoint: Some(cursor),
-            })
-    }
-
+    /// A checkpoint scan that ends at its checkpoint bound has covered the checkpoint at that
+    /// bound: `end_checkpoint - 1` ascending, `start_checkpoint` descending.
     fn validate_checkpoint_bound(
         request: &Self::ListRequest,
         direction: ListScanDirection,
         checkpoint: Option<u64>,
     ) -> Result<()> {
-        super::validate_typed_checkpoint_bound(
-            request.start_checkpoint,
-            request.end_checkpoint,
-            direction,
-            checkpoint,
-        )
-    }
-    fn item_position(item: &Self::Item) -> &Self::ItemPosition {
-        item.position()
+        let expected_checkpoint = match direction {
+            ListScanDirection::Ascending => {
+                request.end_checkpoint.and_then(|end| end.checked_sub(1))
+            }
+            ListScanDirection::Descending => Some(request.start_checkpoint.unwrap_or(0)),
+        };
+        if checkpoint.is_some() && checkpoint != expected_checkpoint {
+            Err(Status::data_loss(
+                "List CheckpointBound watermark does not match the requested bound",
+            ))
+        } else {
+            Ok(())
+        }
     }
 
-    fn item_checkpoint(position: &Self::ItemPosition) -> u64 {
-        *position
+    fn cursor_bytes(_cursor: &Self::Cursor) -> Option<Bytes> {
+        None
     }
+
+    fn list_cursor(_cursor: Bytes) -> Self::Cursor {}
 
     fn extract_metadata(
         response: &Self::ListResponse,
@@ -132,17 +102,8 @@ impl SubscriptionAdapter for CheckpointAdapter {
         )
     }
 
-    fn split_list(response: Self::ListResponse) -> Result<ListResponseParts<Self>> {
-        let item = response.checkpoint.map(|checkpoint| -> Result<Self::Item> {
-            let position = checkpoint.sequence_number.ok_or_else(|| {
-                Status::data_loss("List checkpoint item is missing its sequence number")
-            })?;
-            Ok(PositionedItem::new(checkpoint, position))
-        });
-        Ok(ListResponseParts {
-            item: item.transpose()?,
-            watermark: response.watermark,
-        })
+    fn into_list_item(response: Self::ListResponse) -> Option<Self::Item> {
+        response.checkpoint
     }
 
     fn item_required(request: &Self::SubscribeRequest) -> bool {
@@ -152,7 +113,7 @@ impl SubscriptionAdapter for CheckpointAdapter {
     fn parse_live(
         response: Self::SubscribeResponse,
         item_required: bool,
-    ) -> Result<LiveFrame<Self::Item, Progress<Self::Cursor>>> {
+    ) -> Result<LedgerFrame<Self::Item, Self::Cursor>> {
         let cursor = response.cursor.ok_or_else(|| {
             Status::data_loss("checkpoint subscription frame is missing its cursor")
         })?;
@@ -161,31 +122,27 @@ impl SubscriptionAdapter for CheckpointAdapter {
                 "unfiltered checkpoint subscription frame is missing its checkpoint",
             ));
         }
-        let item = response.checkpoint.map(|checkpoint| -> Result<Self::Item> {
-            let position = checkpoint.sequence_number.ok_or_else(|| {
-                Status::data_loss("checkpoint subscription item is missing its sequence number")
-            })?;
-            if position != cursor {
-                return Err(Status::data_loss(
-                    "checkpoint subscription item sequence does not match its cursor",
-                ));
-            }
-            Ok(PositionedItem::new(checkpoint, position))
-        });
-        Ok(LiveFrame {
-            item: item.transpose()?,
-            progress: Progress {
-                cursor,
+        // `cursor` is the inclusive checkpoint covered, so the frame's position is the start of
+        // the next checkpoint.
+        let next_checkpoint = cursor.checked_add(1).ok_or_else(|| {
+            Status::out_of_range("checkpoint subscription cursor cannot be resumed")
+        })?;
+        LedgerFrame::new(
+            response.checkpoint,
+            Progress {
+                position: Position::checkpoint_start(next_checkpoint),
+                cursor: (),
                 checkpoint: Some(cursor),
             },
-        })
+            Self::GRANULARITY,
+        )
     }
 
     fn into_output(item: Option<Self::Item>, progress: Progress<Self::Cursor>) -> Self::Output {
-        let checkpoint = item.map(PositionedItem::into_payload);
         CheckpointStreamFrame {
-            checkpoint,
-            cursor: progress.cursor,
+            checkpoint: item,
+            // Output frames lie past the start of the stream, so their position is at least 1.
+            cursor: progress.position.checkpoint.saturating_sub(1),
         }
     }
 

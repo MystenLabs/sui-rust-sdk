@@ -1,3 +1,4 @@
+use super::support::MISSING_LIST_CURSOR_POSITION;
 use super::support::STREAM_DROP_TIMEOUT;
 use super::support::ScriptedStreamServer;
 use super::support::StreamScript;
@@ -6,17 +7,28 @@ use super::support::bounded_event_request;
 use super::support::bounded_event_scripts;
 use super::support::bounded_transaction_scripts;
 use super::support::bytes;
+use super::support::checkpoint_descending_list_frame;
 use super::support::checkpoint_identity_mask;
 use super::support::checkpoint_list_frame;
+use super::support::event_at;
+use super::support::event_descending_list_frame;
 use super::support::event_identity_mask;
 use super::support::event_list_frame;
+use super::support::event_position;
 use super::support::event_positioned_list_frame;
 use super::support::fast_list_config;
+use super::support::first_list_event_error;
 use super::support::observed_client;
 use super::support::service_info;
 use super::support::spawn_server;
+use super::support::transaction_at;
+use super::support::transaction_descending_list_frame;
 use super::support::transaction_identity_mask;
 use super::support::transaction_list_frame;
+use super::support::transaction_position;
+use super::support::transaction_positioned_list_frame;
+use super::support::with_position;
+use super::support::without_position;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use std::time::Duration;
@@ -69,12 +81,13 @@ async fn lists_continue_pagination_then_stop_at_ledger_tip_for_all_families() {
     let address = spawn_server(server.clone()).await;
     let (client, observations) = observed_client(address);
 
+    // Read masks need not select item identity fields: keys come from watermark positions.
     let options = proto::QueryOptions::default()
         .with_limit(2)
         .with_ordering(proto::Ordering::Ascending);
     let checkpoint_request = proto::ListCheckpointsRequest::default()
         .with_read_mask(prost_types::FieldMask {
-            paths: vec!["digest".to_owned(), "sequence_number".to_owned()],
+            paths: vec!["digest".to_owned()],
         })
         .with_filter(proto::TransactionFilter::default())
         .with_start_checkpoint(2)
@@ -96,20 +109,10 @@ async fn lists_continue_pagination_then_stop_at_ledger_tip_for_all_families() {
             .count(),
         4
     );
-    assert!(
-        checkpoint_responses
-            .iter()
-            .filter_map(|response| response.checkpoint.as_ref())
-            .all(|checkpoint| checkpoint.sequence_number.is_some())
-    );
 
     let transaction_request = proto::ListTransactionsRequest::default()
         .with_read_mask(prost_types::FieldMask {
-            paths: vec![
-                "digest".to_owned(),
-                "checkpoint".to_owned(),
-                "transaction_index".to_owned(),
-            ],
+            paths: vec!["digest".to_owned()],
         })
         .with_filter(proto::TransactionFilter::default())
         .with_start_checkpoint(2)
@@ -132,23 +135,10 @@ async fn lists_continue_pagination_then_stop_at_ledger_tip_for_all_families() {
             .collect::<Vec<_>>(),
         ["tx-2", "tx-3", "tx-6", "tx-7"]
     );
-    assert!(
-        transaction_responses
-            .iter()
-            .filter_map(|response| response.transaction.as_ref())
-            .all(|transaction| {
-                transaction.checkpoint.is_some() && transaction.transaction_index.is_some()
-            })
-    );
 
     let event_request = proto::ListEventsRequest::default()
         .with_read_mask(prost_types::FieldMask {
-            paths: vec![
-                "event_type".to_owned(),
-                "checkpoint".to_owned(),
-                "transaction_index".to_owned(),
-                "event_index".to_owned(),
-            ],
+            paths: vec!["event_type".to_owned()],
         })
         .with_filter(proto::EventFilter::default())
         .with_start_checkpoint(2)
@@ -170,16 +160,6 @@ async fn lists_continue_pagination_then_stop_at_ledger_tip_for_all_families() {
             .map(|event| event.event_type.as_deref().unwrap())
             .collect::<Vec<_>>(),
         ["event-2", "event-3", "event-6", "event-7"]
-    );
-    assert!(
-        event_responses
-            .iter()
-            .filter_map(|response| response.event.as_ref())
-            .all(|event| {
-                event.checkpoint.is_some()
-                    && event.transaction_index.is_some()
-                    && event.event_index.is_some()
-            })
     );
 
     for reasons in [
@@ -236,26 +216,36 @@ async fn lists_continue_pagination_then_stop_at_ledger_tip_for_all_families() {
         assert_eq!(options.limit, Some(2));
         assert_eq!(options.ordering, Some(proto::Ordering::Ascending as i32));
     }
+
+    // Each continuation starts at the ItemLimit frame's position and sends its cursor as `after`;
+    // the caller's end bound is unchanged.
+    let checkpoint_continuation = &state.checkpoint_requests[1].body;
+    assert_eq!(checkpoint_continuation.start_checkpoint, Some(4));
+    assert_eq!(checkpoint_continuation.end_checkpoint, Some(8));
     assert_eq!(
-        state.checkpoint_requests[1]
-            .body
-            .options
-            .as_ref()
-            .unwrap()
-            .after,
+        checkpoint_continuation.options.as_ref().unwrap().after,
         Some(bytes(3))
     );
+
+    let transaction_continuation = &state.transaction_requests[1].body;
+    assert_eq!(transaction_continuation.start_checkpoint, Some(3));
+    assert_eq!(transaction_continuation.start_transaction_index, Some(1));
+    assert_eq!(transaction_continuation.end_checkpoint, Some(8));
+    assert_eq!(transaction_continuation.end_transaction_index, None);
     assert_eq!(
-        state.transaction_requests[1]
-            .body
-            .options
-            .as_ref()
-            .unwrap()
-            .after,
+        transaction_continuation.options.as_ref().unwrap().after,
         Some(bytes(3))
     );
+
+    let event_continuation = &state.event_requests[1].body;
+    assert_eq!(event_continuation.start_checkpoint, Some(3));
+    assert_eq!(event_continuation.start_transaction_index, Some(0));
+    assert_eq!(event_continuation.start_event_index, Some(1));
+    assert_eq!(event_continuation.end_checkpoint, Some(8));
+    assert_eq!(event_continuation.end_transaction_index, None);
+    assert_eq!(event_continuation.end_event_index, None);
     assert_eq!(
-        state.event_requests[1].body.options.as_ref().unwrap().after,
+        event_continuation.options.as_ref().unwrap().after,
         Some(bytes(3))
     );
     drop(state);
@@ -267,6 +257,69 @@ async fn lists_continue_pagination_then_stop_at_ledger_tip_for_all_families() {
             .iter()
             .all(|observation| observation.path.contains("List"))
     );
+}
+
+#[tokio::test]
+async fn ascending_item_limit_continuation_starts_at_the_item_frame_position() {
+    let (server, _calls) = ScriptedStreamServer::new();
+    server.push_transaction_lists([
+        StreamScript::frames([Ok(transaction_positioned_list_frame(
+            Some(transaction_at(7, 0, "tx-7-0")),
+            70,
+            6,
+            Some(proto::QueryEndReason::ItemLimit),
+        ))]),
+        StreamScript::frames([Ok(transaction_positioned_list_frame(
+            Some(transaction_at(7, 1, "tx-7-1")),
+            71,
+            6,
+            Some(proto::QueryEndReason::ItemLimit),
+        ))]),
+        StreamScript::frames([Ok(transaction_positioned_list_frame(
+            None,
+            9,
+            8,
+            Some(proto::QueryEndReason::CheckpointBound),
+        ))]),
+    ]);
+    let address = spawn_server(server.clone()).await;
+    let (client, _observations) = observed_client(address);
+
+    let digests = client
+        .list_transactions(
+            proto::ListTransactionsRequest::default()
+                .with_start_checkpoint(7)
+                .with_end_checkpoint(9)
+                .with_options(proto::QueryOptions::default().with_limit(1)),
+        )
+        .try_filter_map(|frame| async move {
+            Ok(frame.transaction.and_then(|transaction| transaction.digest))
+        })
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
+    assert_eq!(digests, ["tx-7-0", "tx-7-1"]);
+
+    let state = server.state.lock().unwrap();
+    assert_eq!(state.transaction_requests.len(), 3);
+    let initial = &state.transaction_requests[0].body;
+    assert_eq!(initial.start_checkpoint, Some(7));
+    assert_eq!(initial.start_transaction_index, None);
+    assert!(initial.options.as_ref().unwrap().after.is_none());
+    // Item `(7, 0)` is positioned at `(7, 1)`, item `(7, 1)` at `(7, 2)`.
+    for (request, transaction_index, cursor) in [
+        (&state.transaction_requests[1].body, 1, 70),
+        (&state.transaction_requests[2].body, 2, 71),
+    ] {
+        assert_eq!(request.start_checkpoint, Some(7));
+        assert_eq!(request.start_transaction_index, Some(transaction_index));
+        assert_eq!(request.end_checkpoint, Some(9));
+        assert_eq!(request.end_transaction_index, None);
+        let options = request.options.as_ref().unwrap();
+        assert_eq!(options.after, Some(bytes(cursor)));
+        assert!(options.before.is_none());
+        assert_eq!(options.limit, Some(1));
+    }
 }
 
 #[tokio::test]
@@ -311,11 +364,10 @@ async fn default_lists_insert_only_the_required_resume_bound() {
     let address = spawn_server(server.clone()).await;
     let (client, _observations) = observed_client(address);
 
+    // Requests without a read mask are accepted.
     assert_eq!(
         client
-            .list_checkpoints(
-                proto::ListCheckpointsRequest::default().with_read_mask(checkpoint_identity_mask()),
-            )
+            .list_checkpoints(proto::ListCheckpointsRequest::default())
             .try_collect::<Vec<_>>()
             .await
             .unwrap()
@@ -324,10 +376,7 @@ async fn default_lists_insert_only_the_required_resume_bound() {
     );
     assert_eq!(
         client
-            .list_transactions(
-                proto::ListTransactionsRequest::default()
-                    .with_read_mask(transaction_identity_mask()),
-            )
+            .list_transactions(proto::ListTransactionsRequest::default())
             .try_collect::<Vec<_>>()
             .await
             .unwrap()
@@ -336,7 +385,7 @@ async fn default_lists_insert_only_the_required_resume_bound() {
     );
     assert_eq!(
         client
-            .list_events(proto::ListEventsRequest::default().with_read_mask(event_identity_mask()),)
+            .list_events(proto::ListEventsRequest::default())
             .try_collect::<Vec<_>>()
             .await
             .unwrap()
@@ -366,6 +415,24 @@ async fn default_lists_insert_only_the_required_resume_bound() {
         assert!(continuation.limit.is_none());
         assert!(continuation.ordering.is_none());
     }
+
+    let checkpoint_continuation = &state.checkpoint_requests[1].body;
+    assert_eq!(checkpoint_continuation.start_checkpoint, Some(2));
+    assert_eq!(checkpoint_continuation.end_checkpoint, None);
+
+    let transaction_continuation = &state.transaction_requests[1].body;
+    assert_eq!(transaction_continuation.start_checkpoint, Some(1));
+    assert_eq!(transaction_continuation.start_transaction_index, Some(1));
+    assert_eq!(transaction_continuation.end_checkpoint, None);
+    assert_eq!(transaction_continuation.end_transaction_index, None);
+
+    let event_continuation = &state.event_requests[1].body;
+    assert_eq!(event_continuation.start_checkpoint, Some(1));
+    assert_eq!(event_continuation.start_transaction_index, Some(0));
+    assert_eq!(event_continuation.start_event_index, Some(1));
+    assert_eq!(event_continuation.end_checkpoint, None);
+    assert_eq!(event_continuation.end_transaction_index, None);
+    assert_eq!(event_continuation.end_event_index, None);
 }
 
 #[tokio::test]
@@ -514,7 +581,7 @@ async fn sparse_bounded_streams_yield_progress_and_the_final_watermark() {
 }
 
 #[tokio::test]
-async fn stream_position_round_trips_through_bytes() {
+async fn stream_resume_round_trips_frame_cursor_and_position() {
     let (server, _calls) = ScriptedStreamServer::new();
     server.push_service_infos([2, 4, 2, 4, 2, 4].into_iter().map(service_info).map(Ok));
     server.push_checkpoint_lists([
@@ -541,7 +608,7 @@ async fn stream_position_round_trips_through_bytes() {
             Ok(transaction_list_frame(Some(2), 2, None)),
             Ok(transaction_list_frame(
                 None,
-                3,
+                2,
                 Some(proto::QueryEndReason::CheckpointBound),
             )),
         ]),
@@ -550,7 +617,7 @@ async fn stream_position_round_trips_through_bytes() {
             Ok(transaction_list_frame(Some(4), 4, None)),
             Ok(transaction_list_frame(
                 None,
-                5,
+                4,
                 Some(proto::QueryEndReason::CheckpointBound),
             )),
         ]),
@@ -560,7 +627,7 @@ async fn stream_position_round_trips_through_bytes() {
             Ok(event_list_frame(Some(2), 2, None)),
             Ok(event_list_frame(
                 None,
-                3,
+                2,
                 Some(proto::QueryEndReason::CheckpointBound),
             )),
         ]),
@@ -569,7 +636,7 @@ async fn stream_position_round_trips_through_bytes() {
             Ok(event_list_frame(Some(4), 4, None)),
             Ok(event_list_frame(
                 None,
-                5,
+                4,
                 Some(proto::QueryEndReason::CheckpointBound),
             )),
         ]),
@@ -634,12 +701,15 @@ async fn stream_position_round_trips_through_bytes() {
         Some("tx-2")
     );
     assert_eq!(transaction_frames[0].cursor, bytes(2));
+    assert_eq!(transaction_frames[0].position, transaction_position(2, 1));
     assert_eq!(transaction_frames[0].covered_checkpoint, Some(2));
 
-    let persisted = transaction_frames[0].cursor.clone();
     let transaction_resume = TransactionStreamRequest::new()
         .with_read_mask(transaction_identity_mask())
-        .with_start(TransactionStreamStart::Resume(persisted));
+        .with_start(TransactionStreamStart::Resume {
+            cursor: transaction_frames[0].cursor.clone(),
+            position: transaction_frames[0].position,
+        });
     let transactions = client
         .stream_transactions(transaction_resume)
         .take(2)
@@ -672,11 +742,15 @@ async fn stream_position_round_trips_through_bytes() {
         Some("event-2")
     );
     assert_eq!(event_frames[0].cursor, bytes(2));
+    assert_eq!(event_frames[0].position, event_position(2, 0, 1));
     assert_eq!(event_frames[0].covered_checkpoint, Some(2));
 
     let event_resume = EventStreamRequest::new()
         .with_read_mask(event_identity_mask())
-        .with_start(EventStreamStart::Resume(event_frames[0].cursor.clone()));
+        .with_start(EventStreamStart::Resume {
+            cursor: event_frames[0].cursor.clone(),
+            position: event_frames[0].position,
+        });
     let events = client
         .stream_events(event_resume)
         .take(2)
@@ -691,17 +765,25 @@ async fn stream_position_round_trips_through_bytes() {
     let state = server.state.lock().unwrap();
 
     assert_eq!(state.checkpoint_requests[1].body.start_checkpoint, Some(3));
+    assert_eq!(state.checkpoint_requests[1].body.end_checkpoint, Some(5));
+
+    // A resumed stream starts at the persisted position and sends the persisted cursor as `after`.
+    let transaction_resumed = &state.transaction_requests[1].body;
+    assert_eq!(transaction_resumed.start_checkpoint, Some(2));
+    assert_eq!(transaction_resumed.start_transaction_index, Some(1));
+    assert_eq!(transaction_resumed.end_checkpoint, Some(5));
     assert_eq!(
-        state.transaction_requests[1]
-            .body
-            .options
-            .as_ref()
-            .unwrap()
-            .after,
+        transaction_resumed.options.as_ref().unwrap().after,
         Some(bytes(2))
     );
+
+    let event_resumed = &state.event_requests[1].body;
+    assert_eq!(event_resumed.start_checkpoint, Some(2));
+    assert_eq!(event_resumed.start_transaction_index, Some(0));
+    assert_eq!(event_resumed.start_event_index, Some(1));
+    assert_eq!(event_resumed.end_checkpoint, Some(5));
     assert_eq!(
-        state.event_requests[1].body.options.as_ref().unwrap().after,
+        event_resumed.options.as_ref().unwrap().after,
         Some(bytes(2))
     );
 }
@@ -709,28 +791,24 @@ async fn stream_position_round_trips_through_bytes() {
 #[tokio::test]
 async fn list_accepts_checkpoint_cursor_and_intersection_bounds() {
     let (server, _calls) = ScriptedStreamServer::new();
-    let mut checkpoint_bounded_end =
-        event_list_frame(None, 10, Some(proto::QueryEndReason::CheckpointBound));
-    checkpoint_bounded_end
-        .watermark
-        .as_mut()
-        .unwrap()
-        .checkpoint = Some(9);
-    let mut intersection_bounded_end =
-        event_list_frame(None, 30, Some(proto::QueryEndReason::CheckpointBound));
-    intersection_bounded_end
-        .watermark
-        .as_mut()
-        .unwrap()
-        .checkpoint = Some(29);
     server.push_event_lists([
-        StreamScript::frames([Ok(checkpoint_bounded_end)]),
+        StreamScript::frames([Ok(event_positioned_list_frame(
+            None,
+            10,
+            9,
+            Some(proto::QueryEndReason::CheckpointBound),
+        ))]),
         StreamScript::frames([Ok(event_list_frame(
             None,
             20,
             Some(proto::QueryEndReason::CursorBound),
         ))]),
-        StreamScript::frames([Ok(intersection_bounded_end)]),
+        StreamScript::frames([Ok(event_positioned_list_frame(
+            None,
+            30,
+            29,
+            Some(proto::QueryEndReason::CheckpointBound),
+        ))]),
     ]);
     let address = spawn_server(server.clone()).await;
     let (client, _observations) = observed_client(address);
@@ -823,7 +901,7 @@ async fn opaque_checkpoint_bound_accepts_server_reported_coverage() {
 #[tokio::test]
 async fn descending_event_checkpoint_bound_accepts_server_reported_opaque_coverage() {
     let (server, _calls) = ScriptedStreamServer::new();
-    server.push_event_lists([StreamScript::frames([Ok(event_list_frame(
+    server.push_event_lists([StreamScript::frames([Ok(event_descending_list_frame(
         None,
         5,
         Some(proto::QueryEndReason::CheckpointBound),
@@ -894,10 +972,12 @@ async fn list_carries_checkpoint_coverage_across_continuation_requests() {
     );
     let state = server.state.lock().unwrap();
     assert_eq!(state.event_requests.len(), 2);
-    assert_eq!(
-        state.event_requests[1].body.options.as_ref().unwrap().after,
-        Some(bytes(5))
-    );
+    let retry = &state.event_requests[1].body;
+    assert_eq!(retry.start_checkpoint, Some(5));
+    assert_eq!(retry.start_transaction_index, Some(0));
+    assert_eq!(retry.start_event_index, Some(1));
+    assert_eq!(retry.end_checkpoint, Some(8));
+    assert_eq!(retry.options.as_ref().unwrap().after, Some(bytes(5)));
 }
 
 #[tokio::test]
@@ -981,6 +1061,225 @@ async fn list_accepts_empty_continuation_without_checkpoint_coverage() {
     assert_eq!(server.state.lock().unwrap().event_requests.len(), 2);
 }
 
+#[tokio::test]
+async fn list_rejects_frames_without_cursor_position() {
+    let (server, _calls) = ScriptedStreamServer::new();
+    server.push_event_lists([
+        StreamScript::frames([Ok(without_position(event_list_frame(Some(3), 3, None)))]),
+        StreamScript::frames([Ok(without_position(event_list_frame(
+            None,
+            5,
+            Some(proto::QueryEndReason::LedgerTip),
+        )))]),
+        StreamScript::frames([Ok(without_position(event_list_frame(
+            None,
+            5,
+            Some(proto::QueryEndReason::ScanLimit),
+        )))]),
+    ]);
+    let address = spawn_server(server.clone()).await;
+    let (client, _observations) = observed_client(address);
+
+    // An item frame, a LedgerTip end of a request without a cursor, and a ScanLimit end of a
+    // request with `after` all must carry a position.
+    for request_body in [
+        bounded_event_request(),
+        proto::ListEventsRequest::default(),
+        proto::ListEventsRequest::default()
+            .with_end_checkpoint(6)
+            .with_options(proto::QueryOptions::default().with_after(bytes(1))),
+    ] {
+        let status = first_list_event_error(&client, request_body, fast_list_config()).await;
+        assert_eq!(status.code(), tonic::Code::DataLoss);
+        assert_eq!(status.message(), MISSING_LIST_CURSOR_POSITION);
+    }
+    assert_eq!(server.state.lock().unwrap().event_requests.len(), 3);
+}
+
+#[tokio::test]
+async fn list_accepts_an_unpositioned_ledger_tip_echo_of_a_bare_after_cursor() {
+    let (server, _calls) = ScriptedStreamServer::new();
+    server.push_event_lists([StreamScript::frames([Ok(without_position(
+        event_list_frame(None, 20, Some(proto::QueryEndReason::LedgerTip)),
+    ))])]);
+    let address = spawn_server(server.clone()).await;
+    let (client, _observations) = observed_client(address);
+
+    let frames = client
+        .list_events(
+            proto::ListEventsRequest::default()
+                .with_options(proto::QueryOptions::default().with_after(bytes(20))),
+        )
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
+
+    assert_eq!(frames.len(), 1);
+    assert!(frames[0].event.is_none());
+    let watermark = frames[0].watermark.as_ref().unwrap();
+    assert_eq!(watermark.cursor, Some(bytes(20)));
+    assert!(watermark.cursor_position.is_none());
+    assert_eq!(
+        frames[0].end.as_ref().unwrap().reason,
+        Some(proto::QueryEndReason::LedgerTip as i32)
+    );
+    assert_eq!(server.state.lock().unwrap().event_requests.len(), 1);
+}
+
+#[tokio::test]
+async fn list_accepts_an_unpositioned_cursor_bound_end_at_a_bare_before_cursor() {
+    let (server, _calls) = ScriptedStreamServer::new();
+    server.push_event_lists([StreamScript::frames([
+        Ok(event_list_frame(Some(3), 3, None)),
+        Ok(without_position(event_list_frame(
+            None,
+            9,
+            Some(proto::QueryEndReason::CursorBound),
+        ))),
+    ])]);
+    let address = spawn_server(server.clone()).await;
+    let (client, _observations) = observed_client(address);
+
+    // The caller's bare `before` cursor carries no position, so the page's final frame names that
+    // cursor without one.
+    let frames = client
+        .list_events(
+            proto::ListEventsRequest::default()
+                .with_options(proto::QueryOptions::default().with_before(bytes(9))),
+        )
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
+
+    assert_eq!(frames.len(), 2);
+    assert!(frames[0].event.is_some());
+    assert!(frames[1].event.is_none());
+    let watermark = frames[1].watermark.as_ref().unwrap();
+    assert_eq!(watermark.cursor, Some(bytes(9)));
+    assert!(watermark.cursor_position.is_none());
+    assert_eq!(
+        frames[1].end.as_ref().unwrap().reason,
+        Some(proto::QueryEndReason::CursorBound as i32)
+    );
+    assert_eq!(server.state.lock().unwrap().event_requests.len(), 1);
+}
+
+#[tokio::test]
+async fn list_accepts_an_unpositioned_cursor_bound_end_of_a_continuation_at_the_callers_before() {
+    let (server, _calls) = ScriptedStreamServer::new();
+    server.push_transaction_lists([
+        StreamScript::frames([
+            Ok(transaction_list_frame(Some(2), 2, None)),
+            Ok(transaction_list_frame(
+                Some(3),
+                3,
+                Some(proto::QueryEndReason::ItemLimit),
+            )),
+        ]),
+        StreamScript::frames([
+            Ok(transaction_list_frame(Some(5), 5, None)),
+            Ok(without_position(transaction_list_frame(
+                None,
+                9,
+                Some(proto::QueryEndReason::CursorBound),
+            ))),
+        ]),
+    ]);
+    let address = spawn_server(server.clone()).await;
+    let (client, _observations) = observed_client(address);
+
+    // The continuation keeps the caller's bare `before`, which carries no position, so the last
+    // page ends at it without one.
+    let responses = tokio::time::timeout(
+        Duration::from_secs(2),
+        client
+            .list_transactions_with_config(
+                proto::ListTransactionsRequest::default()
+                    .with_options(proto::QueryOptions::default().with_before(bytes(9))),
+                fast_list_config(),
+            )
+            .try_collect::<Vec<_>>(),
+    )
+    .await
+    .expect("List stalled at the caller's before cursor")
+    .unwrap();
+
+    assert_eq!(responses.len(), 4);
+    let end = responses.last().unwrap();
+    assert!(end.watermark.as_ref().unwrap().cursor_position.is_none());
+    assert_eq!(
+        end.end.as_ref().unwrap().reason,
+        Some(proto::QueryEndReason::CursorBound as i32)
+    );
+    let state = server.state.lock().unwrap();
+    assert_eq!(state.transaction_requests.len(), 2);
+    let continuation = &state.transaction_requests[1].body;
+    assert_eq!(continuation.start_checkpoint, Some(3));
+    assert_eq!(continuation.start_transaction_index, Some(1));
+    assert_eq!(continuation.end_checkpoint, None);
+    let options = continuation.options.as_ref().unwrap();
+    assert_eq!(options.after, Some(bytes(3)));
+    assert_eq!(options.before, Some(bytes(9)));
+}
+
+#[tokio::test]
+async fn list_rejects_an_unpositioned_ledger_tip_end_of_a_continuation() {
+    let (server, _calls) = ScriptedStreamServer::new();
+    server.push_event_lists([
+        StreamScript::frames([Ok(event_list_frame(
+            Some(21),
+            21,
+            Some(proto::QueryEndReason::ItemLimit),
+        ))]),
+        StreamScript::frames([Ok(without_position(event_list_frame(
+            None,
+            21,
+            Some(proto::QueryEndReason::LedgerTip),
+        )))]),
+    ]);
+    let address = spawn_server(server.clone()).await;
+    let (client, _observations) = observed_client(address);
+
+    // The continuation sends start fields with its `after` cursor, so the server can always
+    // place its resume point.
+    let stream = client.list_events_with_config(
+        proto::ListEventsRequest::default()
+            .with_options(proto::QueryOptions::default().with_after(bytes(20))),
+        fast_list_config(),
+    );
+    futures::pin_mut!(stream);
+    let first_page = tokio::time::timeout(Duration::from_secs(2), stream.next())
+        .await
+        .expect("timed out waiting for the first page")
+        .unwrap()
+        .unwrap();
+    assert!(first_page.event.is_some());
+    let status = tokio::time::timeout(Duration::from_secs(2), stream.next())
+        .await
+        .expect("timed out waiting for terminal List error")
+        .unwrap()
+        .unwrap_err();
+    assert_eq!(status.code(), tonic::Code::DataLoss);
+    assert_eq!(status.message(), MISSING_LIST_CURSOR_POSITION);
+    assert!(
+        tokio::time::timeout(Duration::from_secs(2), stream.next())
+            .await
+            .expect("timed out waiting for List termination")
+            .is_none()
+    );
+
+    let state = server.state.lock().unwrap();
+    assert_eq!(state.event_requests.len(), 2);
+    let continuation = &state.event_requests[1].body;
+    assert_eq!(continuation.start_checkpoint, Some(21));
+    assert_eq!(continuation.start_transaction_index, Some(0));
+    assert_eq!(continuation.start_event_index, Some(1));
+    assert_eq!(
+        continuation.options.as_ref().unwrap().after,
+        Some(bytes(21))
+    );
+}
+
 /// An `OutOfRange` carrying the ledger's structured reason, as the server sends it.
 fn out_of_range_with_reason(
     reason: proto::ErrorReason,
@@ -1009,11 +1308,12 @@ fn out_of_range_with_reason(
     )
 }
 
-fn cursor_above_latest_available() -> tonic::Status {
+/// `ABOVE_LATEST_AVAILABLE` for the request field `bound`.
+fn above_latest_available(bound: &str) -> tonic::Status {
     out_of_range_with_reason(
         proto::ErrorReason::AboveLatestAvailable,
         &[
-            ("bound", "cursor"),
+            ("bound", bound),
             ("requestedCheckpoint", "10"),
             ("firstUnavailableCheckpoint", "9"),
         ],
@@ -1024,14 +1324,14 @@ fn cursor_above_latest_available() -> tonic::Status {
 async fn descending_list_resends_the_cursor_a_lagging_server_has_not_indexed() {
     let (server, _calls) = ScriptedStreamServer::new();
     server.push_event_lists([
-        StreamScript::DispatchError(cursor_above_latest_available()),
+        StreamScript::DispatchError(above_latest_available("cursor")),
         StreamScript::frames([
-            Ok(event_list_frame(Some(9), 9, None)),
-            Err(cursor_above_latest_available()),
+            Ok(event_descending_list_frame(Some(9), 9, None)),
+            Err(above_latest_available("cursor")),
         ]),
         StreamScript::frames([
-            Ok(event_list_frame(Some(7), 7, None)),
-            Ok(event_list_frame(
+            Ok(event_descending_list_frame(Some(7), 7, None)),
+            Ok(event_descending_list_frame(
                 None,
                 5,
                 Some(proto::QueryEndReason::CursorBound),
@@ -1075,6 +1375,61 @@ async fn descending_list_resends_the_cursor_a_lagging_server_has_not_indexed() {
 }
 
 #[tokio::test]
+async fn list_retries_a_server_reported_bound_above_the_tip_after_the_first_frame() {
+    let (server, _calls) = ScriptedStreamServer::new();
+    server.push_event_lists([
+        StreamScript::frames([Ok(event_list_frame(
+            Some(3),
+            3,
+            Some(proto::QueryEndReason::ItemLimit),
+        ))]),
+        StreamScript::DispatchError(above_latest_available("end_checkpoint")),
+        StreamScript::frames([
+            Ok(event_list_frame(Some(4), 4, None)),
+            Ok(event_positioned_list_frame(
+                None,
+                10,
+                9,
+                Some(proto::QueryEndReason::CheckpointBound),
+            )),
+        ]),
+    ]);
+    let address = spawn_server(server).await;
+    let (client, _observations) = observed_client(address);
+
+    let events = client
+        .list_events_with_config(
+            bounded_event_request().with_options(proto::QueryOptions::default().with_limit(1)),
+            fast_list_config(),
+        )
+        .try_filter_map(|frame| async move { Ok(frame.event.and_then(|event| event.event_type)) })
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
+
+    assert_eq!(events, ["event-3", "event-4"]);
+}
+
+#[tokio::test]
+async fn list_keeps_a_caller_bound_above_the_tip_terminal_before_any_frame() {
+    let (server, _calls) = ScriptedStreamServer::new();
+    server.push_event_lists([StreamScript::DispatchError(above_latest_available(
+        "end_checkpoint",
+    ))]);
+    let address = spawn_server(server.clone()).await;
+    let (client, _observations) = observed_client(address);
+
+    let status = first_list_event_error(&client, bounded_event_request(), fast_list_config()).await;
+
+    assert_eq!(status.code(), tonic::Code::OutOfRange);
+    assert_eq!(
+        status.message(),
+        "ABOVE_LATEST_AVAILABLE from scripted server"
+    );
+    assert_eq!(server.state.lock().unwrap().event_requests.len(), 1);
+}
+
+#[tokio::test]
 async fn list_ends_when_the_server_pruned_the_requested_data() {
     let (server, _calls) = ScriptedStreamServer::new();
     server.push_event_lists([StreamScript::frames([
@@ -1103,7 +1458,7 @@ async fn list_ends_when_the_server_pruned_the_requested_data() {
 }
 
 #[tokio::test]
-async fn scan_limit_frontiers_redispatch_immediately_when_the_cursor_advances() {
+async fn scan_limit_frontiers_redispatch_immediately_when_the_position_advances() {
     let (server, mut calls) = ScriptedStreamServer::new();
     let (repeated_scan_tx, repeated_scan_rx) = mpsc::unbounded_channel();
     server.push_event_lists([
@@ -1161,27 +1516,27 @@ async fn scan_limit_frontiers_redispatch_immediately_when_the_cursor_advances() 
 async fn descending_streams_are_list_only_and_normalize_genesis_for_all_families() {
     let (server, _calls) = ScriptedStreamServer::new();
     server.push_checkpoint_lists([StreamScript::frames([
-        Ok(checkpoint_list_frame(Some(9), 9, None)),
-        Ok(checkpoint_list_frame(Some(7), 7, None)),
-        Ok(checkpoint_list_frame(
+        Ok(checkpoint_descending_list_frame(Some(9), 9, None)),
+        Ok(checkpoint_descending_list_frame(Some(7), 7, None)),
+        Ok(checkpoint_descending_list_frame(
             None,
             0,
             Some(proto::QueryEndReason::CheckpointBound),
         )),
     ])]);
     server.push_transaction_lists([StreamScript::frames([
-        Ok(transaction_list_frame(Some(9), 9, None)),
-        Ok(transaction_list_frame(Some(7), 7, None)),
-        Ok(transaction_list_frame(
+        Ok(transaction_descending_list_frame(Some(9), 9, None)),
+        Ok(transaction_descending_list_frame(Some(7), 7, None)),
+        Ok(transaction_descending_list_frame(
             None,
             0,
             Some(proto::QueryEndReason::CheckpointBound),
         )),
     ])]);
     server.push_event_lists([StreamScript::frames([
-        Ok(event_list_frame(Some(9), 9, None)),
-        Ok(event_list_frame(Some(7), 7, None)),
-        Ok(event_list_frame(
+        Ok(event_descending_list_frame(Some(9), 9, None)),
+        Ok(event_descending_list_frame(Some(7), 7, None)),
+        Ok(event_descending_list_frame(
             None,
             0,
             Some(proto::QueryEndReason::CheckpointBound),
@@ -1262,20 +1617,104 @@ async fn descending_streams_are_list_only_and_normalize_genesis_for_all_families
 }
 
 #[tokio::test]
+async fn descending_item_limit_continuation_ends_at_the_item_key() {
+    let (server, _calls) = ScriptedStreamServer::new();
+    server.push_event_lists([
+        StreamScript::frames([Ok(event_descending_list_frame(
+            Some(5),
+            5,
+            Some(proto::QueryEndReason::ItemLimit),
+        ))]),
+        StreamScript::frames([Ok(event_descending_list_frame(
+            None,
+            0,
+            Some(proto::QueryEndReason::CheckpointBound),
+        ))]),
+        // A descending item frame is positioned at its item's key.
+        StreamScript::frames([Ok(with_position(
+            event_positioned_list_frame(
+                Some(event_at(5, 2, 1, "event-5-2-1")),
+                21,
+                5,
+                Some(proto::QueryEndReason::ItemLimit),
+            ),
+            event_position(5, 2, 1),
+        ))]),
+        StreamScript::frames([Ok(event_descending_list_frame(
+            None,
+            0,
+            Some(proto::QueryEndReason::CheckpointBound),
+        ))]),
+    ]);
+    let address = spawn_server(server.clone()).await;
+    let (client, _observations) = observed_client(address);
+
+    let request = proto::ListEventsRequest::default()
+        .with_end_checkpoint(10)
+        .with_options(
+            proto::QueryOptions::default()
+                .with_limit(1)
+                .with_ordering(proto::Ordering::Descending),
+        );
+    for expected in ["event-5", "event-5-2-1"] {
+        let events = client
+            .list_events(request.clone())
+            .try_filter_map(
+                |frame| async move { Ok(frame.event.and_then(|event| event.event_type)) },
+            )
+            .try_collect::<Vec<_>>()
+            .await
+            .unwrap();
+        assert_eq!(events, [expected]);
+    }
+
+    let state = server.state.lock().unwrap();
+    assert_eq!(state.event_requests.len(), 4);
+    for initial in [&state.event_requests[0].body, &state.event_requests[2].body] {
+        assert_eq!(initial.end_checkpoint, Some(10));
+        assert!(initial.options.as_ref().unwrap().before.is_none());
+    }
+
+    // Key `(5, 0, 0)` is the start of checkpoint 5.
+    let checkpoint_start = &state.event_requests[1].body;
+    assert_eq!(checkpoint_start.end_checkpoint, Some(5));
+    assert_eq!(checkpoint_start.end_transaction_index, None);
+    assert_eq!(checkpoint_start.end_event_index, None);
+    assert_eq!(checkpoint_start.start_checkpoint, None);
+    let options = checkpoint_start.options.as_ref().unwrap();
+    assert_eq!(options.before, Some(bytes(5)));
+    assert!(options.after.is_none());
+    assert_eq!(options.limit, Some(1));
+    assert_eq!(options.ordering, Some(proto::Ordering::Descending as i32));
+
+    // Key `(5, 2, 1)` lies inside checkpoint 5, so the range runs through checkpoint 5 and stops
+    // at that transaction and event index.
+    let within_checkpoint = &state.event_requests[3].body;
+    assert_eq!(within_checkpoint.end_checkpoint, Some(6));
+    assert_eq!(within_checkpoint.end_transaction_index, Some(2));
+    assert_eq!(within_checkpoint.end_event_index, Some(1));
+    assert_eq!(within_checkpoint.start_checkpoint, None);
+    let options = within_checkpoint.options.as_ref().unwrap();
+    assert_eq!(options.before, Some(bytes(21)));
+    assert!(options.after.is_none());
+    assert_eq!(options.ordering, Some(proto::Ordering::Descending as i32));
+}
+
+#[tokio::test]
 async fn descending_item_and_scan_limits_resume_through_before_and_preserve_after() {
     let (server, _calls) = ScriptedStreamServer::new();
     server.push_transaction_lists([
         StreamScript::frames([
-            Ok(transaction_list_frame(Some(9), 9, None)),
-            Ok(transaction_list_frame(
+            Ok(transaction_descending_list_frame(Some(9), 9, None)),
+            Ok(transaction_descending_list_frame(
                 Some(8),
                 8,
                 Some(proto::QueryEndReason::ItemLimit),
             )),
         ]),
         StreamScript::frames([
-            Ok(transaction_list_frame(Some(7), 7, None)),
-            Ok(transaction_list_frame(
+            Ok(transaction_descending_list_frame(Some(7), 7, None)),
+            Ok(transaction_descending_list_frame(
                 None,
                 5,
                 Some(proto::QueryEndReason::CursorBound),
@@ -1283,14 +1722,14 @@ async fn descending_item_and_scan_limits_resume_through_before_and_preserve_afte
         ]),
     ]);
     server.push_event_lists([
-        StreamScript::frames([Ok(event_list_frame(
+        StreamScript::frames([Ok(event_descending_list_frame(
             None,
             8,
             Some(proto::QueryEndReason::ScanLimit),
         ))]),
         StreamScript::frames([
-            Ok(event_list_frame(Some(7), 7, None)),
-            Ok(event_list_frame(
+            Ok(event_descending_list_frame(Some(7), 7, None)),
+            Ok(event_descending_list_frame(
                 None,
                 5,
                 Some(proto::QueryEndReason::CursorBound),
@@ -1357,46 +1796,42 @@ async fn descending_item_and_scan_limits_resume_through_before_and_preserve_afte
         let options = request.body.options.as_ref().unwrap();
         assert_eq!(options.after, Some(bytes(5)));
         assert_eq!(options.ordering, Some(proto::Ordering::Descending as i32));
+        assert_eq!(request.body.start_checkpoint, None);
     }
+    let transaction_initial = &state.transaction_requests[0].body;
+    assert_eq!(transaction_initial.end_checkpoint, None);
     assert_eq!(
-        state.transaction_requests[0]
-            .body
-            .options
-            .as_ref()
-            .unwrap()
-            .before,
+        transaction_initial.options.as_ref().unwrap().before,
         Some(bytes(10))
     );
+    // The page after item `(8, 0)` ends at the start of checkpoint 8.
+    let transaction_continuation = &state.transaction_requests[1].body;
+    assert_eq!(transaction_continuation.end_checkpoint, Some(8));
+    assert_eq!(transaction_continuation.end_transaction_index, None);
     assert_eq!(
-        state.transaction_requests[1]
-            .body
-            .options
-            .as_ref()
-            .unwrap()
-            .before,
+        transaction_continuation.options.as_ref().unwrap().before,
         Some(bytes(8))
     );
+
     for request in [&state.event_requests[0], &state.event_requests[1]] {
         let options = request.body.options.as_ref().unwrap();
         assert_eq!(options.after, Some(bytes(5)));
         assert_eq!(options.ordering, Some(proto::Ordering::Descending as i32));
+        assert_eq!(request.body.start_checkpoint, None);
     }
+    let event_initial = &state.event_requests[0].body;
+    assert_eq!(event_initial.end_checkpoint, None);
     assert_eq!(
-        state.event_requests[0]
-            .body
-            .options
-            .as_ref()
-            .unwrap()
-            .before,
+        event_initial.options.as_ref().unwrap().before,
         Some(bytes(10))
     );
+    // The ScanLimit frontier at `(8, 0, 0)` ends the next page at the start of checkpoint 8.
+    let event_continuation = &state.event_requests[1].body;
+    assert_eq!(event_continuation.end_checkpoint, Some(8));
+    assert_eq!(event_continuation.end_transaction_index, None);
+    assert_eq!(event_continuation.end_event_index, None);
     assert_eq!(
-        state.event_requests[1]
-            .body
-            .options
-            .as_ref()
-            .unwrap()
-            .before,
+        event_continuation.options.as_ref().unwrap().before,
         Some(bytes(8))
     );
 }
@@ -1406,12 +1841,12 @@ async fn descending_partial_response_retry_resumes_through_before() {
     let (server, _calls) = ScriptedStreamServer::new();
     server.push_event_lists([
         StreamScript::frames([
-            Ok(event_list_frame(Some(9), 9, None)),
+            Ok(event_descending_list_frame(Some(9), 9, None)),
             Err(tonic::Status::unavailable("partial response")),
         ]),
         StreamScript::frames([
-            Ok(event_list_frame(Some(8), 8, None)),
-            Ok(event_list_frame(
+            Ok(event_descending_list_frame(Some(8), 8, None)),
+            Ok(event_descending_list_frame(
                 None,
                 5,
                 Some(proto::QueryEndReason::CursorBound),
@@ -1441,7 +1876,11 @@ async fn descending_partial_response_retry_resumes_through_before() {
     assert_eq!(event_ids, [9, 8]);
     let state = server.state.lock().unwrap();
     assert_eq!(state.calls, ["list_events", "list_events"]);
-    let retry_options = state.event_requests[1].body.options.as_ref().unwrap();
+    let retry = &state.event_requests[1].body;
+    assert_eq!(retry.end_checkpoint, Some(9));
+    assert_eq!(retry.end_transaction_index, None);
+    assert_eq!(retry.end_event_index, None);
+    let retry_options = retry.options.as_ref().unwrap();
     assert_eq!(retry_options.after, Some(bytes(5)));
     assert_eq!(retry_options.before, Some(bytes(9)));
     assert_eq!(
@@ -1451,18 +1890,11 @@ async fn descending_partial_response_retry_resumes_through_before() {
 }
 
 #[tokio::test]
-async fn descending_accepts_low_cursor_completion_and_empty_ledger_tip() {
+async fn descending_accepts_low_cursor_completion() {
     let (server, _calls) = ScriptedStreamServer::new();
-    server.push_transaction_lists([StreamScript::frames([Ok(transaction_list_frame(
-        None,
-        5,
-        Some(proto::QueryEndReason::CursorBound),
-    ))])]);
-    server.push_event_lists([StreamScript::frames([Ok(event_list_frame(
-        None,
-        9,
-        Some(proto::QueryEndReason::LedgerTip),
-    ))])]);
+    server.push_transaction_lists([StreamScript::frames([Ok(
+        transaction_descending_list_frame(None, 5, Some(proto::QueryEndReason::CursorBound)),
+    )])]);
     let address = spawn_server(server.clone()).await;
     let (client, _observations) = observed_client(address);
 
@@ -1480,17 +1912,6 @@ async fn descending_accepts_low_cursor_completion_and_empty_ledger_tip() {
         .try_collect::<Vec<_>>()
         .await
         .unwrap();
-    let event_frames = client
-        .list_events(
-            proto::ListEventsRequest::default()
-                .with_read_mask(event_identity_mask())
-                .with_options(
-                    proto::QueryOptions::default().with_ordering(proto::Ordering::Descending),
-                ),
-        )
-        .try_collect::<Vec<_>>()
-        .await
-        .unwrap();
 
     assert_eq!(transaction_frames.len(), 1);
     assert!(transaction_frames[0].transaction.is_none());
@@ -1498,25 +1919,17 @@ async fn descending_accepts_low_cursor_completion_and_empty_ledger_tip() {
         transaction_frames[0].end.as_ref().unwrap().reason,
         Some(proto::QueryEndReason::CursorBound as i32)
     );
-    assert_eq!(event_frames.len(), 1);
-    assert!(event_frames[0].event.is_none());
-    assert_eq!(
-        event_frames[0].watermark.as_ref().unwrap().cursor,
-        Some(bytes(9))
-    );
     let state = server.state.lock().unwrap();
-    assert_eq!(state.calls, ["list_transactions", "list_events"]);
+    assert_eq!(state.calls, ["list_transactions"]);
     assert!(state.transaction_subscriptions.is_empty());
-    assert!(state.event_subscriptions.is_empty());
-    assert_eq!(state.event_requests[0].body.start_checkpoint, None);
 }
 
 #[tokio::test]
 async fn nonempty_fixed_streams_reject_entry_side_terminal_reasons() {
     let (server, _calls) = ScriptedStreamServer::new();
     server.push_transaction_lists([StreamScript::frames([
-        Ok(transaction_list_frame(Some(9), 9, None)),
-        Ok(transaction_list_frame(
+        Ok(transaction_descending_list_frame(Some(9), 9, None)),
+        Ok(transaction_descending_list_frame(
             None,
             5,
             Some(proto::QueryEndReason::CursorBound),
@@ -1524,9 +1937,10 @@ async fn nonempty_fixed_streams_reject_entry_side_terminal_reasons() {
     ])]);
     server.push_event_lists([StreamScript::frames([
         Ok(event_list_frame(Some(1), 1, None)),
-        Ok(event_list_frame(
+        Ok(event_positioned_list_frame(
             None,
             10,
+            9,
             Some(proto::QueryEndReason::CursorBound),
         )),
     ])]);
@@ -1573,7 +1987,7 @@ async fn nonempty_fixed_streams_reject_entry_side_terminal_reasons() {
 #[tokio::test]
 async fn empty_descending_stream_accepts_entry_side_cursor_bound() {
     let (server, _calls) = ScriptedStreamServer::new();
-    server.push_event_lists([StreamScript::frames([Ok(event_list_frame(
+    server.push_event_lists([StreamScript::frames([Ok(event_descending_list_frame(
         None,
         0,
         Some(proto::QueryEndReason::CursorBound),
@@ -1610,16 +2024,16 @@ async fn empty_descending_stream_accepts_entry_side_cursor_bound() {
 async fn progress_only_fixed_streams_reject_entry_side_or_ledger_tip_termination() {
     let (server, _calls) = ScriptedStreamServer::new();
     server.push_event_lists([StreamScript::frames([
-        Ok(event_list_frame(None, 9, None)),
-        Ok(event_list_frame(
+        Ok(event_descending_list_frame(None, 9, None)),
+        Ok(event_descending_list_frame(
             None,
             5,
             Some(proto::QueryEndReason::CursorBound),
         )),
     ])]);
     server.push_transaction_lists([StreamScript::frames([
-        Ok(transaction_list_frame(None, 9, None)),
-        Ok(transaction_list_frame(
+        Ok(transaction_descending_list_frame(None, 9, None)),
+        Ok(transaction_descending_list_frame(
             None,
             9,
             Some(proto::QueryEndReason::LedgerTip),
@@ -1659,7 +2073,7 @@ async fn progress_only_fixed_streams_reject_entry_side_or_ledger_tip_termination
     assert_eq!(ledger_tip_status.code(), tonic::Code::DataLoss);
     assert_eq!(
         ledger_tip_status.message(),
-        "descending List reached LedgerTip after prior scan progress"
+        "descending List reached LedgerTip"
     );
 }
 
@@ -1668,10 +2082,10 @@ async fn descending_retry_accepts_terminal_only_empty_intersection() {
     let (server, _calls) = ScriptedStreamServer::new();
     server.push_event_lists([
         StreamScript::frames([
-            Ok(event_list_frame(Some(9), 9, None)),
+            Ok(event_descending_list_frame(Some(9), 9, None)),
             Err(tonic::Status::unavailable("partial response")),
         ]),
-        StreamScript::frames([Ok(event_list_frame(
+        StreamScript::frames([Ok(event_descending_list_frame(
             None,
             9,
             Some(proto::QueryEndReason::CursorBound),
@@ -1700,75 +2114,52 @@ async fn descending_retry_accepts_terminal_only_empty_intersection() {
     assert_eq!(events, [9]);
     let state = server.state.lock().unwrap();
     assert_eq!(state.event_requests.len(), 2);
-    assert_eq!(
-        state.event_requests[1]
-            .body
-            .options
-            .as_ref()
-            .unwrap()
-            .before,
-        Some(bytes(9))
-    );
+    let retry = &state.event_requests[1].body;
+    assert_eq!(retry.start_checkpoint, Some(9));
+    assert_eq!(retry.options.as_ref().unwrap().before, Some(bytes(9)));
 }
 
 #[tokio::test]
-async fn descending_retry_rejects_terminal_only_ledger_tip_after_progress() {
+async fn descending_list_rejects_a_terminal_only_ledger_tip() {
     let (server, _calls) = ScriptedStreamServer::new();
-    server.push_transaction_lists([
-        StreamScript::frames([
-            Ok(transaction_list_frame(None, 9, None)),
-            Err(tonic::Status::unavailable("partial response")),
-        ]),
-        StreamScript::frames([Ok(transaction_list_frame(
-            None,
-            9,
-            Some(proto::QueryEndReason::LedgerTip),
-        ))]),
-    ]);
+    server.push_event_lists([StreamScript::frames([Ok(event_descending_list_frame(
+        None,
+        9,
+        Some(proto::QueryEndReason::LedgerTip),
+    ))])]);
     let address = spawn_server(server.clone()).await;
     let (client, _observations) = observed_client(address);
 
-    let status = client
-        .list_transactions_with_config(
-            proto::ListTransactionsRequest::default()
-                .with_read_mask(transaction_identity_mask())
-                .with_options(
-                    proto::QueryOptions::default().with_ordering(proto::Ordering::Descending),
-                ),
-            fast_list_config(),
-        )
-        .try_collect::<Vec<_>>()
-        .await
-        .unwrap_err();
+    // Servers end only ascending scans at the ledger tip, even when the scan returns nothing.
+    let status = first_list_event_error(
+        &client,
+        proto::ListEventsRequest::default()
+            .with_read_mask(event_identity_mask())
+            .with_options(
+                proto::QueryOptions::default().with_ordering(proto::Ordering::Descending),
+            ),
+        fast_list_config(),
+    )
+    .await;
 
     assert_eq!(status.code(), tonic::Code::DataLoss);
-    assert_eq!(
-        status.message(),
-        "descending List reached LedgerTip after prior scan progress"
-    );
+    assert_eq!(status.message(), "descending List reached LedgerTip");
     let state = server.state.lock().unwrap();
-    assert_eq!(state.transaction_requests.len(), 2);
-    assert_eq!(
-        state.transaction_requests[1]
-            .body
-            .options
-            .as_ref()
-            .unwrap()
-            .before,
-        Some(bytes(9))
-    );
+    assert_eq!(state.event_requests.len(), 1);
+    assert_eq!(state.event_requests[0].body.start_checkpoint, None);
+    assert!(state.event_subscriptions.is_empty());
 }
 
 #[tokio::test]
 async fn descending_item_limit_accepts_terminal_only_resume_cursor_bound() {
     let (server, _calls) = ScriptedStreamServer::new();
     server.push_event_lists([
-        StreamScript::frames([Ok(event_list_frame(
+        StreamScript::frames([Ok(event_descending_list_frame(
             Some(9),
             9,
             Some(proto::QueryEndReason::ItemLimit),
         ))]),
-        StreamScript::frames([Ok(event_list_frame(
+        StreamScript::frames([Ok(event_descending_list_frame(
             None,
             9,
             Some(proto::QueryEndReason::CursorBound),
@@ -1794,13 +2185,9 @@ async fn descending_item_limit_accepts_terminal_only_resume_cursor_bound() {
     assert_eq!(events, [9]);
     let state = server.state.lock().unwrap();
     assert_eq!(state.event_requests.len(), 2);
+    let continuation = &state.event_requests[1].body;
     assert_eq!(
-        state.event_requests[1]
-            .body
-            .options
-            .as_ref()
-            .unwrap()
-            .before,
+        continuation.options.as_ref().unwrap().before,
         Some(bytes(9))
     );
 }

@@ -11,11 +11,11 @@ use super::support::event_at;
 use super::support::event_identity_mask;
 use super::support::event_list_frame;
 use super::support::event_live_frame;
+use super::support::event_position;
 use super::support::event_positioned_list_frame;
 use super::support::event_positioned_live_frame;
 use super::support::fast_config;
 use super::support::fast_list_config;
-use super::support::first_event_error;
 use super::support::first_list_event_error;
 use super::support::next_scripted_call;
 use super::support::observed_client;
@@ -26,10 +26,13 @@ use super::support::transaction_at;
 use super::support::transaction_identity_mask;
 use super::support::transaction_list_frame;
 use super::support::transaction_live_frame;
+use super::support::transaction_position;
 use super::support::transaction_positioned_list_frame;
 use super::support::transaction_positioned_live_frame;
+use super::support::with_position;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use prost::bytes::Bytes;
 use std::num::NonZeroUsize;
 use std::time::Duration;
 use sui_rpc::client::CheckpointStreamRequest;
@@ -42,6 +45,7 @@ use sui_rpc::client::LedgerStreamFamily;
 use sui_rpc::client::LedgerStreamOperation;
 use sui_rpc::client::LedgerStreamStage;
 use sui_rpc::client::ListConfig;
+use sui_rpc::client::TransactionStreamFrame;
 use sui_rpc::client::TransactionStreamRequest;
 use sui_rpc::client::TransactionStreamStart;
 use sui_rpc::proto::sui::rpc::v2 as proto;
@@ -175,98 +179,22 @@ async fn lagging_new_subscriptions_catch_up_without_reconnect_churn_for_all_fami
     assert_eq!(state.event_requests.len(), 1);
 }
 
+/// A subscription whose first item lies in the checkpoint committed progress reached replays the
+/// gap before that item at once, without waiting for another subscription frame.
 #[tokio::test]
-async fn lagging_opaque_subscription_replays_unknown_cursor_order_before_live_data() {
-    let (server, _calls) = ScriptedStreamServer::new();
-    server.push_service_infos([Ok(service_info(10))]);
-    let mut unknown_cursor_order_progress = event_live_frame(None, 9);
-    unknown_cursor_order_progress
-        .watermark
-        .as_mut()
-        .unwrap()
-        .checkpoint = Some(10);
-    server.push_event_subscriptions([StreamScript::frames([
-        Ok(event_live_frame(None, 8)),
-        Ok(unknown_cursor_order_progress),
-        Ok(event_live_frame(Some(12), 12)),
-    ])]);
-    server.push_event_lists([
-        StreamScript::frames([Ok(event_list_frame(
-            None,
-            10,
-            Some(proto::QueryEndReason::CheckpointBound),
-        ))]),
-        StreamScript::frames([Ok(event_positioned_list_frame(
-            None,
-            9,
-            10,
-            Some(proto::QueryEndReason::CheckpointBound),
-        ))]),
-    ]);
-    let address = spawn_server(server.clone()).await;
-    let (client, _observations) = observed_client(address);
-    let frames = client
-        .stream_events_with_config(
-            EventStreamRequest::new()
-                .with_read_mask(event_identity_mask())
-                .with_start(EventStreamStart::Checkpoint(0)),
-            fast_config(),
-        )
-        .take(3)
-        .try_collect::<Vec<_>>()
-        .await
-        .unwrap();
-
-    assert!(frames[0].event.is_none());
-    assert_eq!(frames[0].cursor, bytes(10));
-    assert_eq!(frames[0].covered_checkpoint, Some(10));
-    assert!(frames[1].event.is_none());
-    assert_eq!(frames[1].cursor, bytes(9));
-    assert_eq!(frames[1].covered_checkpoint, Some(10));
-    assert_eq!(
-        frames[2].event.as_ref().unwrap().event_type.as_deref(),
-        Some("event-12")
-    );
-    let state = server.state.lock().unwrap();
-    assert_eq!(state.event_subscriptions.len(), 1);
-    assert_eq!(state.event_requests.len(), 2);
-    assert_eq!(
-        state.event_requests[1].body.options.as_ref().unwrap().after,
-        Some(bytes(10))
-    );
-    assert_eq!(
-        state.event_requests[1]
-            .body
-            .options
-            .as_ref()
-            .unwrap()
-            .before,
-        None,
-    );
-    assert_eq!(state.event_requests[1].body.end_checkpoint, Some(11));
-}
-
-#[tokio::test]
-async fn same_checkpoint_transaction_reconnect_replays_immediately_and_deduplicates_positions() {
+async fn same_checkpoint_transaction_reconnect_replays_the_gap_before_the_first_live_item() {
     let (server, mut calls) = ScriptedStreamServer::new();
-    server.push_service_infos([Ok(service_info(10))]);
+    server.push_service_infos([Ok(service_info(9))]);
     let (subscription_tx, subscription_rx) = mpsc::unbounded_channel();
     let (recovery_tx, recovery_rx) = mpsc::unbounded_channel();
     server.push_transaction_subscriptions([StreamScript::Channel(subscription_rx)]);
     server.push_transaction_lists([
+        // The resumed scan ends at the start of checkpoint 10.
         StreamScript::frames([Ok(transaction_positioned_list_frame(
             None,
             100,
-            10,
+            9,
             Some(proto::QueryEndReason::CheckpointBound),
-        ))]),
-        // The initial scan delivered nothing, so the stream scans from its end to the tip before
-        // subscribing.
-        StreamScript::frames([Ok(transaction_positioned_list_frame(
-            None,
-            100,
-            10,
-            Some(proto::QueryEndReason::LedgerTip),
         ))]),
         StreamScript::Channel(recovery_rx),
     ]);
@@ -280,19 +208,27 @@ async fn same_checkpoint_transaction_reconnect_replays_immediately_and_deduplica
                 "transaction_index".to_owned(),
             ],
         })
-        .with_start(TransactionStreamStart::Resume(bytes(50)));
+        .with_start(TransactionStreamStart::Resume {
+            cursor: bytes(50),
+            position: transaction_position(9, 3),
+        });
     let collector = tokio::spawn(async move {
         let mut config = fast_config();
         config.list_page_limit = Some(7);
         client
             .stream_transactions_with_config(body, config)
             .take(5)
+            .map_ok(|frame| {
+                (
+                    frame.transaction.and_then(|transaction| transaction.digest),
+                    frame.cursor,
+                )
+            })
             .try_collect::<Vec<_>>()
             .await
     });
 
     assert_eq!(next_scripted_call(&mut calls).await, "get_service_info");
-    assert_eq!(next_scripted_call(&mut calls).await, "list_transactions");
     assert_eq!(next_scripted_call(&mut calls).await, "list_transactions");
     assert_eq!(
         next_scripted_call(&mut calls).await,
@@ -300,9 +236,9 @@ async fn same_checkpoint_transaction_reconnect_replays_immediately_and_deduplica
     );
     subscription_tx
         .send(Ok(transaction_positioned_live_frame(
-            Some(transaction_at(10, 1, "retained-and-listed")),
+            Some(transaction_at(10, 1, "first-live")),
             900,
-            10,
+            9,
         )))
         .unwrap();
     assert_eq!(
@@ -312,40 +248,35 @@ async fn same_checkpoint_transaction_reconnect_replays_immediately_and_deduplica
     );
     subscription_tx
         .send(Ok(transaction_positioned_live_frame(
-            Some(transaction_at(10, 2, "retained-only")),
+            Some(transaction_at(10, 2, "buffered-live")),
             901,
-            10,
+            9,
         )))
         .unwrap();
     recovery_tx
         .send(Ok(transaction_positioned_list_frame(
             Some(transaction_at(10, 0, "list-only")),
             800,
-            10,
+            9,
             None,
         )))
         .unwrap();
     recovery_tx
-        .send(Ok(transaction_positioned_list_frame(
-            Some(transaction_at(10, 1, "retained-and-listed")),
-            900,
-            10,
-            None,
-        )))
-        .unwrap();
-    recovery_tx
-        .send(Ok(transaction_positioned_list_frame(
-            None,
-            900,
-            10,
-            Some(proto::QueryEndReason::CheckpointBound),
+        .send(Ok(with_position(
+            transaction_positioned_list_frame(
+                None,
+                900,
+                9,
+                Some(proto::QueryEndReason::CursorBound),
+            ),
+            transaction_position(10, 1),
         )))
         .unwrap();
     subscription_tx
         .send(Ok(transaction_positioned_live_frame(
             Some(transaction_at(11, 0, "live-after-drain")),
             1_000,
-            11,
+            10,
         )))
         .unwrap();
 
@@ -354,73 +285,41 @@ async fn same_checkpoint_transaction_reconnect_replays_immediately_and_deduplica
         .expect("same-checkpoint transaction recovery stalled")
         .unwrap()
         .unwrap();
-    let transactions = frames
-        .iter()
-        .filter_map(|frame| frame.transaction.as_ref())
-        .collect::<Vec<_>>();
+    let digest = |value: &str| Some(value.to_owned());
+    // The replay's end names the position transaction `list-only` reached, so it is not yielded.
     assert_eq!(
-        transactions
-            .iter()
-            .map(|transaction| transaction.digest.as_deref().unwrap())
-            .collect::<Vec<_>>(),
+        frames,
         [
-            "list-only",
-            "retained-and-listed",
-            "retained-only",
-            "live-after-drain",
+            (None, bytes(100)),
+            (digest("list-only"), bytes(800)),
+            (digest("first-live"), bytes(900)),
+            (digest("buffered-live"), bytes(901)),
+            (digest("live-after-drain"), bytes(1_000)),
         ]
     );
-    assert!(
-        transactions
-            .iter()
-            .all(|transaction| transaction.checkpoint.is_some()
-                && transaction.transaction_index.is_some())
-    );
-    assert_eq!(frames.last().unwrap().cursor, bytes(1_000));
 
     let state = server.state.lock().unwrap();
     assert_eq!(state.transaction_subscriptions.len(), 1);
-    assert_eq!(state.transaction_requests.len(), 3);
-    assert_eq!(
-        state.transaction_requests[0]
-            .body
-            .options
-            .as_ref()
-            .unwrap()
-            .after,
-        Some(bytes(50))
-    );
-    assert_eq!(
-        state.transaction_requests[0]
-            .body
-            .options
-            .as_ref()
-            .unwrap()
-            .limit,
-        Some(7)
-    );
-    let resume_to_tip_request = &state.transaction_requests[1].body;
-    assert_eq!(resume_to_tip_request.end_checkpoint, None);
-    assert_eq!(
-        resume_to_tip_request.options.as_ref().unwrap().after,
-        Some(bytes(100))
-    );
-    let recovery_request = &state.transaction_requests[2].body;
+    assert_eq!(state.transaction_requests.len(), 2);
+    let initial_request = &state.transaction_requests[0].body;
+    assert_eq!(initial_request.start_checkpoint, Some(9));
+    assert_eq!(initial_request.start_transaction_index, Some(3));
+    assert_eq!(initial_request.end_checkpoint, Some(10));
+    assert_eq!(initial_request.end_transaction_index, None);
+    let initial_options = initial_request.options.as_ref().unwrap();
+    assert_eq!(initial_options.after, Some(bytes(50)));
+    assert_eq!(initial_options.before, None);
+    assert_eq!(initial_options.limit, Some(7));
+    let recovery_request = &state.transaction_requests[1].body;
+    assert_eq!(recovery_request.start_checkpoint, Some(10));
+    assert_eq!(recovery_request.start_transaction_index, None);
     assert_eq!(recovery_request.end_checkpoint, Some(11));
-    assert_eq!(
-        recovery_request.options.as_ref().unwrap().after,
-        Some(bytes(100))
-    );
-    assert_eq!(recovery_request.options.as_ref().unwrap().before, None);
-    assert_eq!(recovery_request.options.as_ref().unwrap().limit, Some(7));
-    assert!(
-        recovery_request
-            .options
-            .as_ref()
-            .unwrap()
-            .ordering
-            .is_none()
-    );
+    assert_eq!(recovery_request.end_transaction_index, Some(1));
+    let recovery_options = recovery_request.options.as_ref().unwrap();
+    assert_eq!(recovery_options.after, Some(bytes(100)));
+    assert_eq!(recovery_options.before, Some(bytes(900)));
+    assert_eq!(recovery_options.limit, Some(7));
+    assert!(recovery_options.ordering.is_none());
     assert_eq!(
         recovery_request.read_mask.as_ref().unwrap().paths,
         ["digest", "checkpoint", "transaction_index"]
@@ -436,18 +335,21 @@ async fn same_checkpoint_transaction_reconnect_replays_immediately_and_deduplica
     );
 }
 
+/// A progress-only first frame inside the checkpoint committed progress reached also bounds a gap
+/// replay, which starts at once.
 #[tokio::test]
 async fn same_checkpoint_progress_only_reconnect_replays_immediately() {
     let (server, mut calls) = ScriptedStreamServer::new();
-    server.push_service_infos([Ok(service_info(10))]);
+    server.push_service_infos([Ok(service_info(9))]);
     let (subscription_tx, subscription_rx) = mpsc::unbounded_channel();
     let (recovery_tx, recovery_rx) = mpsc::unbounded_channel();
     server.push_transaction_subscriptions([StreamScript::Channel(subscription_rx)]);
     server.push_transaction_lists([
+        // The initial scan ends at the start of checkpoint 10.
         StreamScript::frames([Ok(transaction_positioned_list_frame(
             None,
             100,
-            10,
+            9,
             Some(proto::QueryEndReason::CheckpointBound),
         ))]),
         StreamScript::Channel(recovery_rx),
@@ -462,7 +364,13 @@ async fn same_checkpoint_progress_only_reconnect_replays_immediately() {
                     .with_start(TransactionStreamStart::Checkpoint(0)),
                 fast_config(),
             )
-            .take(4)
+            .take(3)
+            .map_ok(|frame| {
+                (
+                    frame.transaction.and_then(|transaction| transaction.digest),
+                    frame.cursor,
+                )
+            })
             .try_collect::<Vec<_>>()
             .await
     });
@@ -474,7 +382,10 @@ async fn same_checkpoint_progress_only_reconnect_replays_immediately() {
         "subscribe_transactions"
     );
     subscription_tx
-        .send(Ok(transaction_positioned_live_frame(None, 900, 10)))
+        .send(Ok(with_position(
+            transaction_positioned_live_frame(None, 900, 9),
+            transaction_position(10, 1),
+        )))
         .unwrap();
     assert_eq!(
         next_scripted_call(&mut calls).await,
@@ -486,23 +397,26 @@ async fn same_checkpoint_progress_only_reconnect_replays_immediately() {
         .send(Ok(transaction_positioned_list_frame(
             Some(transaction_at(10, 0, "replayed")),
             800,
-            10,
+            9,
             None,
         )))
         .unwrap();
     recovery_tx
-        .send(Ok(transaction_positioned_list_frame(
-            None,
-            900,
-            10,
-            Some(proto::QueryEndReason::CheckpointBound),
+        .send(Ok(with_position(
+            transaction_positioned_list_frame(
+                None,
+                900,
+                9,
+                Some(proto::QueryEndReason::CursorBound),
+            ),
+            transaction_position(10, 1),
         )))
         .unwrap();
     subscription_tx
         .send(Ok(transaction_positioned_live_frame(
             Some(transaction_at(11, 0, "live")),
             1_000,
-            11,
+            10,
         )))
         .unwrap();
 
@@ -511,29 +425,40 @@ async fn same_checkpoint_progress_only_reconnect_replays_immediately() {
         .expect("progress-only same-checkpoint recovery stalled")
         .unwrap()
         .unwrap();
+    // The replay's end and the buffered first frame both name `(10, 1)`, the position the
+    // replayed transaction reached, so neither is yielded.
     assert_eq!(
-        frames
-            .iter()
-            .filter_map(|frame| frame.transaction.as_ref())
-            .map(|transaction| transaction.digest.as_deref().unwrap())
-            .collect::<Vec<_>>(),
-        ["replayed", "live"]
+        frames,
+        [
+            (None, bytes(100)),
+            (Some("replayed".to_owned()), bytes(800)),
+            (Some("live".to_owned()), bytes(1_000)),
+        ]
     );
-    assert_eq!(frames.last().unwrap().cursor, bytes(1_000));
+    let state = server.state.lock().unwrap();
+    let recovery_request = &state.transaction_requests[1].body;
+    assert_eq!(recovery_request.start_checkpoint, Some(10));
+    assert_eq!(recovery_request.start_transaction_index, None);
+    assert_eq!(recovery_request.end_checkpoint, Some(11));
+    assert_eq!(recovery_request.end_transaction_index, Some(1));
+    let options = recovery_request.options.as_ref().unwrap();
+    assert_eq!(options.after, Some(bytes(100)));
+    assert_eq!(options.before, Some(bytes(900)));
 }
 
 #[tokio::test]
-async fn same_checkpoint_event_reconnect_replays_immediately_and_deduplicates_positions() {
+async fn same_checkpoint_event_reconnect_replays_the_gap_before_the_first_live_item() {
     let (server, mut calls) = ScriptedStreamServer::new();
-    server.push_service_infos([Ok(service_info(10))]);
+    server.push_service_infos([Ok(service_info(9))]);
     let (subscription_tx, subscription_rx) = mpsc::unbounded_channel();
     let (recovery_tx, recovery_rx) = mpsc::unbounded_channel();
     server.push_event_subscriptions([StreamScript::Channel(subscription_rx)]);
     server.push_event_lists([
+        // The initial scan ends at the start of checkpoint 10.
         StreamScript::frames([Ok(event_positioned_list_frame(
             None,
             100,
-            10,
+            9,
             Some(proto::QueryEndReason::CheckpointBound),
         ))]),
         StreamScript::Channel(recovery_rx),
@@ -553,7 +478,13 @@ async fn same_checkpoint_event_reconnect_replays_immediately_and_deduplicates_po
     let collector = tokio::spawn(async move {
         client
             .stream_events_with_config(body, fast_config())
-            .take(5)
+            .take(6)
+            .map_ok(|frame| {
+                (
+                    frame.event.map(|event| event.event_type.unwrap()),
+                    frame.cursor,
+                )
+            })
             .try_collect::<Vec<_>>()
             .await
     });
@@ -563,9 +494,9 @@ async fn same_checkpoint_event_reconnect_replays_immediately_and_deduplicates_po
     assert_eq!(next_scripted_call(&mut calls).await, "subscribe_events");
     subscription_tx
         .send(Ok(event_positioned_live_frame(
-            Some(event_at(10, 1, 0, "retained-and-listed")),
+            Some(event_at(10, 1, 0, "first-live")),
             900,
-            10,
+            9,
         )))
         .unwrap();
     assert_eq!(
@@ -575,40 +506,30 @@ async fn same_checkpoint_event_reconnect_replays_immediately_and_deduplicates_po
     );
     subscription_tx
         .send(Ok(event_positioned_live_frame(
-            Some(event_at(10, 1, 1, "retained-only")),
+            Some(event_at(10, 1, 1, "buffered-live")),
             901,
-            10,
+            9,
         )))
         .unwrap();
     recovery_tx
         .send(Ok(event_positioned_list_frame(
             Some(event_at(10, 0, 0, "list-only")),
             800,
-            10,
+            9,
             None,
         )))
         .unwrap();
     recovery_tx
-        .send(Ok(event_positioned_list_frame(
-            Some(event_at(10, 1, 0, "retained-and-listed")),
-            900,
-            10,
-            None,
-        )))
-        .unwrap();
-    recovery_tx
-        .send(Ok(event_positioned_list_frame(
-            None,
-            900,
-            10,
-            Some(proto::QueryEndReason::CheckpointBound),
+        .send(Ok(with_position(
+            event_positioned_list_frame(None, 900, 9, Some(proto::QueryEndReason::CursorBound)),
+            event_position(10, 1, 0),
         )))
         .unwrap();
     subscription_tx
         .send(Ok(event_positioned_live_frame(
             Some(event_at(11, 0, 0, "live-after-drain")),
             1_000,
-            11,
+            10,
         )))
         .unwrap();
 
@@ -617,39 +538,39 @@ async fn same_checkpoint_event_reconnect_replays_immediately_and_deduplicates_po
         .expect("same-checkpoint event recovery stalled")
         .unwrap()
         .unwrap();
-    let events = frames
-        .iter()
-        .filter_map(|frame| frame.event.as_ref())
-        .collect::<Vec<_>>();
+    let event_type = |value: &str| Some(value.to_owned());
+    // The replay's end names `(10, 1, 0)`, past the `(10, 0, 1)` that event `list-only` reached,
+    // so it is yielded as progress before the buffered live items.
     assert_eq!(
-        events
-            .iter()
-            .map(|event| event.event_type.as_deref().unwrap())
-            .collect::<Vec<_>>(),
+        frames,
         [
-            "list-only",
-            "retained-and-listed",
-            "retained-only",
-            "live-after-drain",
+            (None, bytes(100)),
+            (event_type("list-only"), bytes(800)),
+            (None, bytes(900)),
+            (event_type("first-live"), bytes(900)),
+            (event_type("buffered-live"), bytes(901)),
+            (event_type("live-after-drain"), bytes(1_000)),
         ]
     );
-    assert!(events.iter().all(|event| {
-        event.checkpoint.is_some()
-            && event.transaction_index.is_some()
-            && event.event_index.is_some()
-    }));
-    assert_eq!(frames.last().unwrap().cursor, bytes(1_000));
 
     let state = server.state.lock().unwrap();
     assert_eq!(state.event_subscriptions.len(), 1);
     assert_eq!(state.event_requests.len(), 2);
     let recovery_request = &state.event_requests[1].body;
+    assert_eq!(recovery_request.start_checkpoint, Some(10));
+    assert_eq!(recovery_request.start_transaction_index, None);
+    assert_eq!(recovery_request.start_event_index, None);
     assert_eq!(recovery_request.end_checkpoint, Some(11));
+    assert_eq!(recovery_request.end_transaction_index, Some(1));
+    assert_eq!(recovery_request.end_event_index, None);
     assert_eq!(
         recovery_request.options.as_ref().unwrap().after,
         Some(bytes(100))
     );
-    assert_eq!(recovery_request.options.as_ref().unwrap().before, None);
+    assert_eq!(
+        recovery_request.options.as_ref().unwrap().before,
+        Some(bytes(900))
+    );
     assert_eq!(
         recovery_request.read_mask.as_ref().unwrap().paths,
         [
@@ -683,6 +604,7 @@ async fn filtered_opaque_bootstrap_and_subscription_gap_release_boundary_once() 
         Some(7),
         7,
     ))])]);
+    // Each gap ends at the start of checkpoint 7, before the first live item.
     server.push_transaction_lists([
         StreamScript::frames([Ok(transaction_list_frame(
             None,
@@ -691,9 +613,10 @@ async fn filtered_opaque_bootstrap_and_subscription_gap_release_boundary_once() 
         ))]),
         StreamScript::frames([
             Ok(transaction_list_frame(Some(6), 6, None)),
-            Ok(transaction_list_frame(
+            Ok(transaction_positioned_list_frame(
                 None,
                 7,
+                6,
                 Some(proto::QueryEndReason::CursorBound),
             )),
         ]),
@@ -707,9 +630,10 @@ async fn filtered_opaque_bootstrap_and_subscription_gap_release_boundary_once() 
         ))]),
         StreamScript::frames([
             Ok(event_list_frame(Some(6), 6, None)),
-            Ok(event_list_frame(
+            Ok(event_positioned_list_frame(
                 None,
                 7,
+                6,
                 Some(proto::QueryEndReason::CursorBound),
             )),
         ]),
@@ -764,42 +688,31 @@ async fn filtered_opaque_bootstrap_and_subscription_gap_release_boundary_once() 
 
     let state = server.state.lock().unwrap();
     assert_eq!(state.transaction_requests[0].body.end_checkpoint, Some(6));
-    assert_eq!(
-        state.transaction_requests[1]
-            .body
-            .options
-            .as_ref()
-            .unwrap()
-            .after,
-        Some(bytes(5))
-    );
-    assert_eq!(
-        state.transaction_requests[1]
-            .body
-            .options
-            .as_ref()
-            .unwrap()
-            .before,
-        Some(bytes(7))
-    );
+    let transaction_gap = &state.transaction_requests[1].body;
+    assert_eq!(transaction_gap.start_checkpoint, Some(6));
+    assert_eq!(transaction_gap.start_transaction_index, None);
+    assert_eq!(transaction_gap.end_checkpoint, Some(7));
+    assert_eq!(transaction_gap.end_transaction_index, None);
+    let options = transaction_gap.options.as_ref().unwrap();
+    assert_eq!(options.after, Some(bytes(5)));
+    assert_eq!(options.before, Some(bytes(7)));
     assert_eq!(state.event_requests[0].body.end_checkpoint, Some(6));
-    assert_eq!(
-        state.event_requests[1].body.options.as_ref().unwrap().after,
-        Some(bytes(5))
-    );
-    assert_eq!(
-        state.event_requests[1]
-            .body
-            .options
-            .as_ref()
-            .unwrap()
-            .before,
-        Some(bytes(7))
-    );
+    let event_gap = &state.event_requests[1].body;
+    assert_eq!(event_gap.start_checkpoint, Some(6));
+    assert_eq!(event_gap.start_transaction_index, None);
+    assert_eq!(event_gap.start_event_index, None);
+    assert_eq!(event_gap.end_checkpoint, Some(7));
+    assert_eq!(event_gap.end_transaction_index, None);
+    assert_eq!(event_gap.end_event_index, None);
+    let options = event_gap.options.as_ref().unwrap();
+    assert_eq!(options.after, Some(bytes(5)));
+    assert_eq!(options.before, Some(bytes(7)));
     assert_eq!(state.transaction_subscriptions.len(), 1);
     assert_eq!(state.event_subscriptions.len(), 1);
 }
 
+/// The replacement subscription starts ahead of the replica serving the gap replay. That replica
+/// first answers at its indexed tip, echoing the replay's start, and then catches up.
 #[tokio::test]
 async fn dropped_event_stream_replays_index_lag_before_buffered_live_data() {
     let (server, _calls) = ScriptedStreamServer::new();
@@ -856,33 +769,22 @@ async fn dropped_event_stream_replays_index_lag_before_buffered_live_data() {
         .unwrap();
     assert_eq!(events, ["event-11", "event-14", "event-15", "event-17"]);
 
+    // Both gap requests list from the start of checkpoint 13 to the start of checkpoint 17: the
+    // retry after `LedgerTip` resumes from the echoed start.
     let state = server.state.lock().unwrap();
-    assert_eq!(
-        state.event_requests[1].body.options.as_ref().unwrap().after,
-        Some(bytes(12))
-    );
-    assert_eq!(
-        state.event_requests[1]
-            .body
-            .options
-            .as_ref()
-            .unwrap()
-            .before,
-        Some(bytes(16))
-    );
-    assert_eq!(
-        state.event_requests[2].body.options.as_ref().unwrap().after,
-        Some(bytes(12))
-    );
-    assert_eq!(
-        state.event_requests[2]
-            .body
-            .options
-            .as_ref()
-            .unwrap()
-            .before,
-        Some(bytes(16))
-    );
+    assert_eq!(state.event_requests.len(), 3);
+    for request in &state.event_requests[1..] {
+        let request = &request.body;
+        assert_eq!(request.start_checkpoint, Some(13));
+        assert_eq!(request.start_transaction_index, None);
+        assert_eq!(request.start_event_index, None);
+        assert_eq!(request.end_checkpoint, Some(17));
+        assert_eq!(request.end_transaction_index, None);
+        assert_eq!(request.end_event_index, None);
+        let options = request.options.as_ref().unwrap();
+        assert_eq!(options.after, Some(bytes(12)));
+        assert_eq!(options.before, Some(bytes(16)));
+    }
 }
 
 #[tokio::test]
@@ -904,9 +806,10 @@ async fn replay_defers_and_coalesces_progress_until_the_fixed_gap_completes() {
         StreamScript::Channel(gap_rx),
         StreamScript::frames([
             Ok(event_list_frame(Some(6), 6, None)),
-            Ok(event_list_frame(
+            Ok(event_positioned_list_frame(
                 None,
                 7,
+                6,
                 Some(proto::QueryEndReason::CursorBound),
             )),
         ]),
@@ -924,7 +827,7 @@ async fn replay_defers_and_coalesces_progress_until_the_fixed_gap_completes() {
                     .with_start(EventStreamStart::Checkpoint(0)),
                 config,
             )
-            .take(7)
+            .take(9)
             .map_ok(|frame| {
                 (
                     frame.event.map(|event| event.event_type.unwrap()),
@@ -970,42 +873,38 @@ async fn replay_defers_and_coalesces_progress_until_the_fixed_gap_completes() {
         }
     ));
     gap_tx.send(Ok(event_list_frame(Some(1), 1, None))).unwrap();
+    // The gap ends before event `(2, 0, 0)`, the first live frame's item.
     gap_tx
-        .send(Ok(event_list_frame(
+        .send(Ok(event_positioned_list_frame(
             None,
             2,
+            1,
             Some(proto::QueryEndReason::CursorBound),
         )))
         .unwrap();
 
     let events = collector.await.unwrap().unwrap();
+    // Each replay ends with a progress frame at the start of the checkpoint holding its first
+    // live item; the progress-only live frames 3 and 4 coalesce into one.
     assert_eq!(
         events,
         [
             (None, bytes(0)),
             (Some("event-1".to_owned()), bytes(1)),
+            (None, bytes(2)),
             (Some("event-2".to_owned()), bytes(2)),
             (None, bytes(4)),
             (Some("event-5".to_owned()), bytes(5)),
             (Some("event-6".to_owned()), bytes(6)),
+            (None, bytes(7)),
             (Some("event-7".to_owned()), bytes(7)),
         ]
     );
     let state = server.state.lock().unwrap();
-    assert_eq!(
-        state.event_requests[2].body.options.as_ref().unwrap().after,
-        Some(bytes(5))
-    );
-    assert_eq!(
-        state.event_requests[2]
-            .body
-            .options
-            .as_ref()
-            .unwrap()
-            .before,
-        Some(bytes(7))
-    );
-    drop(state);
+    // The subscription dropped at the buffer limit resumes after event 5, its last buffered item.
+    let options = state.event_requests[2].body.options.as_ref().unwrap();
+    assert_eq!(options.after, Some(bytes(5)));
+    assert_eq!(options.before, Some(bytes(7)));
 }
 
 #[tokio::test]
@@ -1027,9 +926,10 @@ async fn live_failure_during_replay_is_deferred_until_valid_buffer_is_delivered(
         StreamScript::Channel(gap_rx),
         StreamScript::frames([
             Ok(event_list_frame(Some(4), 4, None)),
-            Ok(event_list_frame(
+            Ok(event_positioned_list_frame(
                 None,
                 5,
+                4,
                 Some(proto::QueryEndReason::CursorBound),
             )),
         ]),
@@ -1129,10 +1029,12 @@ async fn live_failure_during_replay_is_deferred_until_valid_buffer_is_delivered(
         .await
         .expect("failed pinned stream was not dropped");
     gap_tx.send(Ok(event_list_frame(Some(1), 1, None))).unwrap();
+    // The gap ends before event `(2, 0, 0)`, the first live frame's item.
     gap_tx
-        .send(Ok(event_list_frame(
+        .send(Ok(event_positioned_list_frame(
             None,
             2,
+            1,
             Some(proto::QueryEndReason::CursorBound),
         )))
         .unwrap();
@@ -1399,9 +1301,10 @@ async fn list_and_subscription_failures_use_independent_retry_states() {
             Ok(event_list_frame(Some(11), 11, None)),
             Err(tonic::Status::unavailable("List failed after progress")),
         ]),
+        // The gap ends at the first live frame's position, the start of checkpoint 13.
         StreamScript::frames([Ok(event_list_frame(
             None,
-            11,
+            12,
             Some(proto::QueryEndReason::CursorBound),
         ))]),
     ]);
@@ -1470,50 +1373,6 @@ async fn list_and_subscription_failures_use_independent_retry_states() {
     let state = server.state.lock().unwrap();
     assert_eq!(state.event_requests.len(), 3);
     assert_eq!(state.event_subscriptions.len(), 2);
-}
-
-#[tokio::test]
-async fn reconnection_requires_checkpoint_coverage_in_its_initial_frame() {
-    let (server, _calls) = ScriptedStreamServer::new();
-    server.push_service_infos([Ok(service_info(5)), Ok(service_info(5))]);
-    let mut invalid_reconnection_boundary = event_live_frame(None, 6);
-    invalid_reconnection_boundary
-        .watermark
-        .as_mut()
-        .unwrap()
-        .checkpoint = None;
-    server.push_event_subscriptions([
-        StreamScript::frames([Ok(event_live_frame(None, 5))]),
-        StreamScript::frames([Ok(invalid_reconnection_boundary)]),
-    ]);
-    server.push_event_lists([StreamScript::frames([Ok(event_list_frame(
-        None,
-        5,
-        Some(proto::QueryEndReason::CheckpointBound),
-    ))])]);
-    let address = spawn_server(server.clone()).await;
-    let (client, _observations) = observed_client(address);
-    let stream = client.stream_events_with_config(
-        EventStreamRequest::new()
-            .with_read_mask(event_identity_mask())
-            .with_start(EventStreamStart::Checkpoint(0)),
-        fast_config(),
-    );
-    futures::pin_mut!(stream);
-
-    let history = stream.next().await.unwrap().unwrap();
-    assert_eq!(history.cursor, bytes(5));
-    assert_eq!(history.covered_checkpoint, Some(5));
-    let status = stream.next().await.unwrap().unwrap_err();
-    assert_eq!(status.code(), tonic::Code::DataLoss);
-    assert_eq!(
-        status.message(),
-        "subscription initial frame is missing checkpoint coverage"
-    );
-    assert!(stream.next().await.is_none());
-    let state = server.state.lock().unwrap();
-    assert_eq!(state.event_subscriptions.len(), 2);
-    assert_eq!(state.event_requests.len(), 1);
 }
 
 #[tokio::test]
@@ -1586,6 +1445,10 @@ async fn checkpoint_gap_rejects_out_of_order_buffered_live_frames() {
 
     let status = collector.await.unwrap();
     assert_eq!(status.code(), tonic::Code::DataLoss);
+    assert_eq!(
+        status.message(),
+        "subscription checkpoint coverage regressed"
+    );
 }
 
 #[tokio::test]
@@ -1664,18 +1527,11 @@ async fn dropping_facade_during_retry_sleep_prevents_later_rpc() {
 async fn clean_subscription_eof_uses_the_transient_recovery_policy() {
     let (server, _calls) = ScriptedStreamServer::new();
     server.push_service_infos([Ok(service_info(0)), Ok(service_info(0))]);
-    server.push_event_lists([
-        StreamScript::frames([Ok(event_list_frame(
-            None,
-            0,
-            Some(proto::QueryEndReason::CheckpointBound),
-        ))]),
-        StreamScript::frames([Ok(event_list_frame(
-            None,
-            0,
-            Some(proto::QueryEndReason::LedgerTip),
-        ))]),
-    ]);
+    server.push_event_lists([StreamScript::frames([Ok(event_list_frame(
+        None,
+        0,
+        Some(proto::QueryEndReason::CheckpointBound),
+    ))])]);
     server.push_event_subscriptions([
         StreamScript::frames([]),
         StreamScript::DispatchError(tonic::Status::permission_denied(
@@ -1684,15 +1540,30 @@ async fn clean_subscription_eof_uses_the_transient_recovery_policy() {
     ]);
     let address = spawn_server(server.clone()).await;
     let (client, _observations) = observed_client(address);
-    let config = fast_config();
     let body = EventStreamRequest::new()
         .with_read_mask(event_identity_mask())
-        .with_start(EventStreamStart::Resume(bytes(0)));
-    let status = first_event_error(&client, body, config).await;
+        .with_start(EventStreamStart::Resume {
+            cursor: bytes(0),
+            position: event_position(0, 0, 1),
+        });
+    let stream = client.stream_events_with_config(body, fast_config());
+    futures::pin_mut!(stream);
+    // The resumed scan ends at the start of checkpoint 1, past the resume position.
+    let progress = stream.next().await.unwrap().unwrap();
+    assert!(progress.event.is_none());
+    assert_eq!(progress.cursor, bytes(0));
+    let status = tokio::time::timeout(Duration::from_secs(2), stream.next())
+        .await
+        .expect("timed out waiting for the terminal Subscribe error")
+        .unwrap()
+        .unwrap_err();
     assert_eq!(status.code(), tonic::Code::PermissionDenied);
+    assert!(stream.next().await.is_none());
     assert_eq!(server.state.lock().unwrap().event_subscriptions.len(), 2);
 }
 
+/// Gap replay List frames that report no checkpoint coverage still commit progress, so a reconnect
+/// after that replay plans the next gap from it.
 #[tokio::test]
 async fn gap_recovery_without_list_coverage_still_plans_replay_on_reconnect() {
     let (server, mut calls) = ScriptedStreamServer::new();
@@ -1708,18 +1579,25 @@ async fn gap_recovery_without_list_coverage_still_plans_replay_on_reconnect() {
         StreamScript::Channel(second_subscription_rx),
         StreamScript::Channel(third_subscription_rx),
     ]);
-    let mut first_gap_item = event_positioned_list_frame(Some(event(1)), 1, 0, None);
-    first_gap_item.watermark.as_mut().unwrap().checkpoint = None;
-    let mut first_gap_second_item = event_positioned_list_frame(Some(event(2)), 2, 0, None);
-    first_gap_second_item.watermark.as_mut().unwrap().checkpoint = None;
-    let mut first_gap_end =
-        event_positioned_list_frame(None, 3, 0, Some(proto::QueryEndReason::CursorBound));
-    first_gap_end.watermark.as_mut().unwrap().checkpoint = None;
-    let mut second_gap_item = event_positioned_list_frame(Some(event(4)), 4, 0, None);
-    second_gap_item.watermark.as_mut().unwrap().checkpoint = None;
-    let mut second_gap_end =
-        event_positioned_list_frame(None, 5, 0, Some(proto::QueryEndReason::CursorBound));
-    second_gap_end.watermark.as_mut().unwrap().checkpoint = None;
+    let without_coverage = |mut frame: proto::ListEventsResponse| {
+        frame.watermark.as_mut().unwrap().checkpoint = None;
+        frame
+    };
+    // Each gap ends at the start of the checkpoint holding its subscription's first item.
+    let first_gap_item = without_coverage(event_positioned_list_frame(Some(event(1)), 1, 0, None));
+    let first_gap_end = without_coverage(event_positioned_list_frame(
+        None,
+        2,
+        1,
+        Some(proto::QueryEndReason::CursorBound),
+    ));
+    let second_gap_item = without_coverage(event_positioned_list_frame(Some(event(4)), 4, 0, None));
+    let second_gap_end = without_coverage(event_positioned_list_frame(
+        None,
+        5,
+        4,
+        Some(proto::QueryEndReason::CursorBound),
+    ));
     server.push_event_lists([
         StreamScript::Channel(first_gap_rx),
         StreamScript::frames([Ok(second_gap_item), Ok(second_gap_end)]),
@@ -1744,7 +1622,7 @@ async fn gap_recovery_without_list_coverage_still_plans_replay_on_reconnect() {
     assert_eq!(next_scripted_call(&mut calls).await, "get_service_info");
     assert_eq!(next_scripted_call(&mut calls).await, "subscribe_events");
     second_subscription_tx
-        .send(Ok(event_live_frame(Some(2), 3)))
+        .send(Ok(event_live_frame(Some(2), 2)))
         .unwrap();
     assert_eq!(next_scripted_call(&mut calls).await, "list_events");
     first_gap_tx.send(Ok(first_gap_item)).unwrap();
@@ -1756,7 +1634,6 @@ async fn gap_recovery_without_list_coverage_still_plans_replay_on_reconnect() {
     tokio::time::timeout(STREAM_DROP_TIMEOUT, second_subscription_tx.closed())
         .await
         .expect("failed gap subscription was not dropped");
-    first_gap_tx.send(Ok(first_gap_second_item)).unwrap();
     first_gap_tx.send(Ok(first_gap_end)).unwrap();
 
     assert_eq!(next_scripted_call(&mut calls).await, "get_service_info");
@@ -1768,11 +1645,22 @@ async fn gap_recovery_without_list_coverage_still_plans_replay_on_reconnect() {
     assert_eq!(
         tokio::time::timeout(Duration::from_secs(2), collector)
             .await
-            .expect("stream stalled instead of replaying the next cursor gap")
+            .expect("stream stalled instead of replaying the next gap")
             .unwrap()
             .unwrap(),
         ["event-1", "event-2", "event-4"]
     );
+    // The second gap starts after event 2, the buffered item the first gap delivered.
+    let state = server.state.lock().unwrap();
+    let second_gap = &state.event_requests[1].body;
+    assert_eq!(second_gap.start_checkpoint, Some(2));
+    assert_eq!(second_gap.start_transaction_index, Some(0));
+    assert_eq!(second_gap.start_event_index, Some(1));
+    assert_eq!(second_gap.end_checkpoint, Some(5));
+    assert_eq!(second_gap.end_transaction_index, None);
+    let options = second_gap.options.as_ref().unwrap();
+    assert_eq!(options.after, Some(bytes(2)));
+    assert_eq!(options.before, Some(bytes(5)));
 }
 
 #[tokio::test]
@@ -1821,6 +1709,9 @@ async fn live_stream_cancelled_and_unknown_interruptions_reconnect() {
             StreamScript::frames([
                 Ok(event_live_frame(None, 20)),
                 Ok(event_live_frame(Some(21), 21)),
+                // The subscription reaches the start of checkpoint 22, past the tip, so the
+                // reconnect needs no List.
+                Ok(event_live_frame(None, 21)),
                 Err(interruption),
             ]),
             StreamScript::frames([
@@ -2052,11 +1943,12 @@ async fn list_body_unknown_interruption_retries() {
 }
 
 #[tokio::test]
-async fn live_item_with_repeated_cursor_is_terminal_data_loss() {
+async fn live_item_before_the_previous_position_is_terminal_data_loss() {
     let (server, _calls) = ScriptedStreamServer::new();
+    // The second frame repeats event `(1, 0, 0)`, which lies before the first frame's position.
     server.push_event_subscriptions([StreamScript::frames([
         Ok(event_live_frame(Some(1), 1)),
-        Ok(event_live_frame(Some(2), 1)),
+        Ok(event_positioned_live_frame(Some(event(1)), 2, 1)),
     ])]);
     let address = spawn_server(server).await;
     let (client, _observations) = observed_client(address);
@@ -2073,44 +1965,15 @@ async fn live_item_with_repeated_cursor_is_terminal_data_loss() {
     );
     let status = stream.next().await.unwrap().unwrap_err();
     assert_eq!(status.code(), tonic::Code::DataLoss);
-    assert_eq!(status.message(), "subscription item repeated its cursor");
-    assert!(stream.next().await.is_none());
-}
-
-#[tokio::test]
-async fn muted_subscription_item_with_repeated_cursor_is_terminal_data_loss() {
-    let (server, _calls) = ScriptedStreamServer::new();
-    server.push_service_infos([Ok(service_info(10))]);
-    server.push_event_lists([StreamScript::frames([Ok(event_list_frame(
-        None,
-        10,
-        Some(proto::QueryEndReason::CheckpointBound),
-    ))])]);
-    server.push_event_subscriptions([StreamScript::frames([
-        Ok(event_live_frame(None, 8)),
-        Ok(event_live_frame(Some(9), 8)),
-    ])]);
-    let address = spawn_server(server).await;
-    let (client, _observations) = observed_client(address);
-
-    let stream = client.stream_events_with_config(
-        EventStreamRequest::new()
-            .with_read_mask(event_identity_mask())
-            .with_start(EventStreamStart::Checkpoint(0)),
-        fast_config(),
+    assert_eq!(
+        status.message(),
+        "subscription item did not advance its cursor_position"
     );
-    futures::pin_mut!(stream);
-    let history = stream.next().await.unwrap().unwrap();
-    assert!(history.event.is_none());
-    assert_eq!(history.cursor, bytes(10));
-    let status = stream.next().await.unwrap().unwrap_err();
-    assert_eq!(status.code(), tonic::Code::DataLoss);
-    assert_eq!(status.message(), "subscription item repeated its cursor");
     assert!(stream.next().await.is_none());
 }
 
 #[tokio::test]
-async fn gap_buffered_item_with_repeated_cursor_is_terminal_data_loss() {
+async fn gap_buffered_item_before_the_previous_position_is_terminal_data_loss() {
     let (server, mut calls) = ScriptedStreamServer::new();
     server.push_service_infos([Ok(service_info(0))]);
     let (live_tx, live_rx) = mpsc::unbounded_channel();
@@ -2147,7 +2010,7 @@ async fn gap_buffered_item_with_repeated_cursor_is_terminal_data_loss() {
                 }
             }
         }
-        panic!("stream ended without reporting repeated subscription cursor");
+        panic!("stream ended without reporting the repeated subscription item");
     });
 
     assert_eq!(next_scripted_call(&mut calls).await, "get_service_info");
@@ -2155,15 +2018,19 @@ async fn gap_buffered_item_with_repeated_cursor_is_terminal_data_loss() {
     assert_eq!(next_scripted_call(&mut calls).await, "subscribe_events");
     live_tx.send(Ok(event_live_frame(Some(2), 2))).unwrap();
     assert_eq!(next_scripted_call(&mut calls).await, "list_events");
-    live_tx.send(Ok(event_live_frame(Some(3), 2))).unwrap();
+    live_tx
+        .send(Ok(event_positioned_live_frame(Some(event(2)), 3, 2)))
+        .unwrap();
     tokio::time::timeout(STREAM_DROP_TIMEOUT, live_tx.closed())
         .await
         .expect("malformed pinned subscription was not dropped");
     gap_tx.send(Ok(event_list_frame(Some(1), 1, None))).unwrap();
+    // The gap ends before event `(2, 0, 0)`, the first live frame's item.
     gap_tx
-        .send(Ok(event_list_frame(
+        .send(Ok(event_positioned_list_frame(
             None,
             2,
+            1,
             Some(proto::QueryEndReason::CursorBound),
         )))
         .unwrap();
@@ -2174,16 +2041,22 @@ async fn gap_buffered_item_with_repeated_cursor_is_terminal_data_loss() {
         [
             (None, bytes(0)),
             (Some("event-1".to_owned()), bytes(1)),
+            (None, bytes(2)),
             (Some("event-2".to_owned()), bytes(2)),
         ]
     );
     assert_eq!(status.code(), tonic::Code::DataLoss);
-    assert_eq!(status.message(), "subscription item repeated its cursor");
+    assert_eq!(
+        status.message(),
+        "subscription item did not advance its cursor_position"
+    );
     assert!(ended);
 }
 
+/// An item-free frame that advances committed progress past the last item moves the reconnect
+/// boundary with it: a replacement subscription starting at that position needs no replay.
 #[tokio::test]
-async fn equal_cursor_coverage_growth_updates_recovery_planning() {
+async fn item_free_progress_advances_the_reconnect_boundary() {
     let (server, _calls) = ScriptedStreamServer::new();
     server.push_service_infos([Ok(service_info(21))]);
     server.push_event_subscriptions([
@@ -2193,14 +2066,15 @@ async fn equal_cursor_coverage_growth_updates_recovery_planning() {
                 10,
                 20,
             )),
-            Ok(event_positioned_live_frame(None, 10, 21)),
+            // Checkpoint 21 holds no match, so the subscription reaches the start of 22.
+            Ok(event_positioned_live_frame(None, 11, 21)),
             Err(tonic::Status::unavailable("live stream interrupted")),
         ]),
         StreamScript::frames([
-            Ok(event_positioned_live_frame(None, 10, 21)),
+            Ok(event_positioned_live_frame(None, 12, 21)),
             Ok(event_positioned_live_frame(
-                Some(event_at(21, 0, 0, "event-21")),
-                11,
+                Some(event_at(22, 0, 0, "event-22")),
+                13,
                 21,
             )),
         ]),
@@ -2214,14 +2088,39 @@ async fn equal_cursor_coverage_growth_updates_recovery_planning() {
             EventStreamRequest::new().with_read_mask(event_identity_mask()),
             config,
         )
-        .take(2)
+        .take(3)
         .try_collect::<Vec<_>>()
         .await
         .unwrap();
-    assert_eq!(frames[0].cursor, bytes(10));
-    assert_eq!(frames[0].covered_checkpoint, Some(20));
-    assert_eq!(frames[1].cursor, bytes(11));
-    assert_eq!(frames[1].covered_checkpoint, Some(21));
+    assert_eq!(
+        frames
+            .iter()
+            .map(|frame| (
+                frame
+                    .event
+                    .as_ref()
+                    .map(|event| event.event_type.clone().unwrap()),
+                frame.cursor.clone(),
+                frame.position,
+                frame.covered_checkpoint,
+            ))
+            .collect::<Vec<_>>(),
+        [
+            (
+                Some("event-20".to_owned()),
+                bytes(10),
+                event_position(20, 0, 1),
+                Some(20)
+            ),
+            (None, bytes(11), event_position(22, 0, 0), Some(21)),
+            (
+                Some("event-22".to_owned()),
+                bytes(13),
+                event_position(22, 0, 1),
+                Some(21)
+            ),
+        ]
+    );
     while let Ok(event) = observer_events.try_recv() {
         assert!(!matches!(
             event,
@@ -2231,46 +2130,44 @@ async fn equal_cursor_coverage_growth_updates_recovery_planning() {
     assert!(server.state.lock().unwrap().event_requests.is_empty());
 }
 
+/// Replacement subscriptions that start behind committed progress are hidden until they pass it,
+/// and their hidden frames never move committed progress, so a later reconnect still needs no
+/// List.
 #[tokio::test]
-async fn same_cursor_reconnect_preserves_committed_checkpoint_coverage() {
+async fn lagging_reconnects_hide_repeated_frames_without_moving_committed_progress() {
     let (server, _calls) = ScriptedStreamServer::new();
     server.push_service_infos([Ok(service_info(10)), Ok(service_info(10))]);
     server.push_event_subscriptions([
         StreamScript::frames([
             Ok(event_positioned_live_frame(
-                Some(event_at(8, 0, 0, "already-delivered")),
+                Some(event_at(10, 0, 0, "already-delivered")),
                 100,
                 10,
             )),
+            // Committed progress reaches the start of checkpoint 11, past the tip.
+            Ok(event_positioned_live_frame(None, 101, 10)),
             Err(tonic::Status::unavailable("first interruption")),
         ]),
         StreamScript::frames([
-            Ok(event_positioned_live_frame(None, 100, 5)),
-            Ok(event_positioned_live_frame(None, 100, 6)),
+            Ok(event_positioned_live_frame(None, 200, 5)),
+            Ok(event_positioned_live_frame(None, 201, 6)),
             Err(tonic::Status::unavailable("second interruption")),
         ]),
         StreamScript::frames([
-            Ok(event_positioned_live_frame(None, 200, 8)),
+            Ok(event_positioned_live_frame(None, 300, 8)),
             Ok(event_positioned_live_frame(
-                Some(event_at(8, 0, 0, "already-delivered")),
-                201,
+                Some(event_at(10, 0, 0, "already-delivered")),
+                301,
                 9,
             )),
-            Ok(event_positioned_live_frame(None, 100, 10)),
             Ok(event_positioned_live_frame(
-                Some(event_at(11, 0, 0, "after-committed-frontier")),
-                300,
-                11,
+                Some(event_at(11, 0, 0, "after-committed-position")),
+                302,
+                10,
             )),
         ]),
     ]);
-    server.push_event_lists([StreamScript::frames([Ok(event_positioned_list_frame(
-        None,
-        100,
-        6,
-        Some(proto::QueryEndReason::CursorBound),
-    ))])]);
-    let address = spawn_server(server).await;
+    let address = spawn_server(server.clone()).await;
     let (client, _observations) = observed_client(address);
 
     let frames = tokio::time::timeout(
@@ -2280,28 +2177,33 @@ async fn same_cursor_reconnect_preserves_committed_checkpoint_coverage() {
                 EventStreamRequest::new().with_read_mask(event_identity_mask()),
                 fast_config(),
             )
-            .take(2)
+            .take(3)
             .try_collect::<Vec<_>>(),
     )
     .await
-    .expect("muted subscription did not reach the committed frontier")
+    .expect("lagging subscription did not pass the committed position")
     .unwrap();
 
     assert_eq!(
         frames
             .iter()
-            .map(|frame| frame.cursor.clone())
+            .map(|frame| (
+                frame
+                    .event
+                    .as_ref()
+                    .map(|event| event.event_type.clone().unwrap()),
+                frame.cursor.clone(),
+            ))
             .collect::<Vec<_>>(),
-        [bytes(100), bytes(300)]
+        [
+            (Some("already-delivered".to_owned()), bytes(100)),
+            (None, bytes(101)),
+            (Some("after-committed-position".to_owned()), bytes(302)),
+        ]
     );
-    assert_eq!(
-        frames
-            .iter()
-            .filter_map(|frame| frame.event.as_ref())
-            .map(|event| event.event_type.as_deref().unwrap())
-            .collect::<Vec<_>>(),
-        ["already-delivered", "after-committed-frontier"]
-    );
+    let state = server.state.lock().unwrap();
+    assert!(state.event_requests.is_empty());
+    assert_eq!(state.event_subscriptions.len(), 3);
 }
 
 /// A live stream that loses its subscription partway through a checkpoint and reconnects to a
@@ -2312,140 +2214,208 @@ async fn same_cursor_reconnect_preserves_committed_checkpoint_coverage() {
 /// a progress-only frame at the start of checkpoint `n + 1` claims `n`.
 ///
 /// - The first subscription starts at the start of checkpoint 11 (cursor 400), delivers its
-///   transactions 0 and 1 (cursors 401 and 402), and fails.
-/// - The replacement replica has indexed only checkpoint 10. Its subscription starts at cursor
-///   400 again, still claiming 10, and then sends all of checkpoint 11, either while the
-///   recovery List is open or after it has finished.
+///   transactions 0 and 1 (cursors 401 and 402, positions `(11, 1)` and `(11, 2)`), and fails.
+/// - The replacement replica has indexed only checkpoint 10. Its subscription starts at `(11, 0)`,
+///   behind committed position `(11, 2)`, so it needs no List, and then sends all of checkpoint
+///   11; only what lies past `(11, 2)` is yielded.
 #[tokio::test]
 async fn reconnect_to_a_replica_behind_the_last_transaction_yields_nothing_at_or_before_it() {
-    for catches_up_during_recovery in [false, true] {
-        let (server, mut calls) = ScriptedStreamServer::new();
-        server.push_service_infos([Ok(service_info(10))]);
-        let (replacement_tx, replacement_rx) = mpsc::unbounded_channel();
-        let (recovery_tx, recovery_rx) = mpsc::unbounded_channel();
-        server.push_transaction_subscriptions([
-            StreamScript::frames([
-                Ok(transaction_positioned_live_frame(None, 400, 10)),
-                Ok(transaction_positioned_live_frame(
-                    Some(transaction_at(11, 0, "tx-11-0")),
-                    401,
-                    10,
-                )),
-                Ok(transaction_positioned_live_frame(
-                    Some(transaction_at(11, 1, "tx-11-1")),
-                    402,
-                    10,
-                )),
-                Err(tonic::Status::unavailable("replica restarted")),
-            ]),
-            StreamScript::Channel(replacement_rx),
-        ]);
-        server.push_transaction_lists([StreamScript::Channel(recovery_rx)]);
-        let address = spawn_server(server.clone()).await;
-        let (client, _observations) = observed_client(address);
-        let mut stream = Box::pin(client.stream_transactions_with_config(
+    let (server, _calls) = ScriptedStreamServer::new();
+    server.push_service_infos([Ok(service_info(10))]);
+    server.push_transaction_subscriptions([
+        StreamScript::frames([
+            Ok(transaction_positioned_live_frame(None, 400, 10)),
+            Ok(transaction_positioned_live_frame(
+                Some(transaction_at(11, 0, "tx-11-0")),
+                401,
+                10,
+            )),
+            Ok(transaction_positioned_live_frame(
+                Some(transaction_at(11, 1, "tx-11-1")),
+                402,
+                10,
+            )),
+            Err(tonic::Status::unavailable("replica restarted")),
+        ]),
+        StreamScript::frames([
+            Ok(transaction_positioned_live_frame(None, 400, 10)),
+            Ok(transaction_positioned_live_frame(
+                Some(transaction_at(11, 0, "tx-11-0")),
+                401,
+                10,
+            )),
+            Ok(transaction_positioned_live_frame(
+                Some(transaction_at(11, 1, "tx-11-1")),
+                402,
+                10,
+            )),
+            Ok(transaction_positioned_live_frame(
+                Some(transaction_at(11, 2, "tx-11-2")),
+                403,
+                10,
+            )),
+            Ok(transaction_positioned_live_frame(None, 500, 11)),
+            Ok(transaction_positioned_live_frame(
+                Some(transaction_at(12, 0, "tx-12-0")),
+                501,
+                11,
+            )),
+        ]),
+    ]);
+    let address = spawn_server(server.clone()).await;
+    let (client, _observations) = observed_client(address);
+
+    let frames = tokio::time::timeout(
+        Duration::from_secs(5),
+        client
+            .stream_transactions_with_config(
+                TransactionStreamRequest::new().with_read_mask(transaction_identity_mask()),
+                fast_config(),
+            )
+            .take(6)
+            .map_ok(|frame| {
+                (
+                    frame.transaction.and_then(|transaction| transaction.digest),
+                    frame.cursor,
+                    frame.covered_checkpoint,
+                )
+            })
+            .try_collect::<Vec<_>>(),
+    )
+    .await
+    .expect("stream stalled")
+    .unwrap();
+    let digest = |value: &str| Some(value.to_owned());
+    assert_eq!(
+        frames,
+        [
+            (None, bytes(400), Some(10)),
+            (digest("tx-11-0"), bytes(401), Some(10)),
+            (digest("tx-11-1"), bytes(402), Some(10)),
+            (digest("tx-11-2"), bytes(403), Some(10)),
+            (None, bytes(500), Some(11)),
+            (digest("tx-12-0"), bytes(501), Some(11)),
+        ]
+    );
+    let state = server.state.lock().unwrap();
+    assert!(state.transaction_requests.is_empty());
+    assert_eq!(
+        state.calls,
+        [
+            "subscribe_transactions",
+            "get_service_info",
+            "subscribe_transactions"
+        ]
+    );
+}
+
+/// Collects `(digest, cursor)` for the first `count` transaction frames of `stream`.
+async fn collect_transaction_frames(
+    stream: impl futures::Stream<Item = Result<TransactionStreamFrame, tonic::Status>>,
+    count: usize,
+) -> Vec<(Option<String>, Bytes)> {
+    tokio::time::timeout(
+        Duration::from_secs(2),
+        stream
+            .take(count)
+            .map_ok(|frame| {
+                (
+                    frame.transaction.and_then(|transaction| transaction.digest),
+                    frame.cursor,
+                )
+            })
+            .try_collect::<Vec<_>>(),
+    )
+    .await
+    .expect("transaction stream stalled")
+    .unwrap()
+}
+
+/// Two servers name one boundary with different tuples, `(10, 3)` and `(11, 0)`, and no
+/// transaction is repeated or lost across the reconnect.
+///
+/// Server A ends checkpoint 10, which holds three transactions, at `(10, 3)` and claims coverage
+/// of checkpoint 10. Positions are only ordered, so `(10, 3)` does not pass the start of checkpoint
+/// 11: with the tip at checkpoint 10, the reconnect lists `[(10, 3), 11)`, which holds no
+/// transaction, before resubscribing. Server B's first frame names the boundary that List reached
+/// as `(11, 0)`, so it needs no gap replay, and checkpoint 11 is delivered once.
+#[tokio::test]
+async fn reconnect_across_two_tuples_for_one_boundary_delivers_each_transaction_once() {
+    let (server, _calls) = ScriptedStreamServer::new();
+    server.push_service_infos([Ok(service_info(10))]);
+    server.push_transaction_subscriptions([
+        StreamScript::frames([
+            Ok(transaction_positioned_live_frame(
+                Some(transaction_at(10, 2, "tx-10-2")),
+                302,
+                9,
+            )),
+            Ok(with_position(
+                transaction_positioned_live_frame(None, 303, 10),
+                transaction_position(10, 3),
+            )),
+            Err(tonic::Status::unavailable("server A interrupted")),
+        ]),
+        StreamScript::frames([
+            // Server B's first frame names the start of checkpoint 11.
+            Ok(transaction_positioned_live_frame(None, 500, 10)),
+            Ok(transaction_positioned_live_frame(
+                Some(transaction_at(11, 0, "tx-11-0")),
+                501,
+                10,
+            )),
+            Ok(transaction_positioned_live_frame(
+                Some(transaction_at(11, 1, "tx-11-1")),
+                502,
+                10,
+            )),
+        ]),
+    ]);
+    server.push_transaction_lists([StreamScript::frames([Ok(
+        transaction_positioned_list_frame(
+            None,
+            500,
+            10,
+            Some(proto::QueryEndReason::CheckpointBound),
+        ),
+    )])]);
+    let address = spawn_server(server.clone()).await;
+    let (client, _observations) = observed_client(address);
+
+    let frames = collect_transaction_frames(
+        client.stream_transactions_with_config(
             TransactionStreamRequest::new().with_read_mask(transaction_identity_mask()),
             fast_config(),
-        ));
-        let collector = tokio::spawn(async move {
-            let mut frames = Vec::new();
-            while let Some(frame) = stream.next().await {
-                let frame = frame.expect("stream error");
-                let digest = frame.transaction.and_then(|transaction| transaction.digest);
-                let last = digest.as_deref() == Some("tx-12-0");
-                frames.push((digest, frame.cursor, frame.covered_checkpoint));
-                if last {
-                    break;
-                }
-            }
-            frames
-        });
-
-        assert_eq!(
-            next_scripted_call(&mut calls).await,
+        ),
+        4,
+    )
+    .await;
+    let digest = |value: &str| Some(value.to_owned());
+    assert_eq!(
+        frames,
+        [
+            (digest("tx-10-2"), bytes(302)),
+            (None, bytes(500)),
+            (digest("tx-11-0"), bytes(501)),
+            (digest("tx-11-1"), bytes(502)),
+        ]
+    );
+    let state = server.state.lock().unwrap();
+    assert_eq!(
+        state.calls,
+        [
+            "subscribe_transactions",
+            "get_service_info",
+            "list_transactions",
             "subscribe_transactions"
-        );
-        assert_eq!(next_scripted_call(&mut calls).await, "get_service_info");
-        assert_eq!(
-            next_scripted_call(&mut calls).await,
-            "subscribe_transactions"
-        );
-        replacement_tx
-            .send(Ok(transaction_positioned_live_frame(None, 400, 10)))
-            .unwrap();
-        assert_eq!(next_scripted_call(&mut calls).await, "list_transactions");
-        let catch_up = || {
-            for (cursor, index, digest) in [
-                (401, 0, "tx-11-0"),
-                (402, 1, "tx-11-1"),
-                (403, 2, "tx-11-2"),
-            ] {
-                replacement_tx
-                    .send(Ok(transaction_positioned_live_frame(
-                        Some(transaction_at(11, index, digest)),
-                        cursor,
-                        10,
-                    )))
-                    .unwrap();
-            }
-            replacement_tx
-                .send(Ok(transaction_positioned_live_frame(None, 500, 11)))
-                .unwrap();
-            replacement_tx
-                .send(Ok(transaction_positioned_live_frame(
-                    Some(transaction_at(12, 0, "tx-12-0")),
-                    501,
-                    11,
-                )))
-                .unwrap();
-        };
-        // The replica has not indexed past cursor 402, so the List after it through
-        // checkpoint 10 is empty and ends where it started.
-        let finish_recovery = || {
-            recovery_tx
-                .send(Ok(transaction_positioned_list_frame(
-                    None,
-                    402,
-                    10,
-                    Some(proto::QueryEndReason::CheckpointBound),
-                )))
-                .unwrap();
-        };
-        // The pause only steers which phase receives the replica's frames; the yielded frames
-        // must be the same either way.
-        if catches_up_during_recovery {
-            catch_up();
-            tokio::time::sleep(Duration::from_millis(100)).await;
-            finish_recovery();
-        } else {
-            finish_recovery();
-            tokio::time::sleep(Duration::from_millis(100)).await;
-            catch_up();
-        }
-
-        let frames = tokio::time::timeout(Duration::from_secs(5), collector)
-            .await
-            .expect("stream stalled")
-            .unwrap();
-        let digest = |value: &str| Some(value.to_owned());
-        assert_eq!(
-            frames,
-            [
-                (None, bytes(400), Some(10)),
-                (digest("tx-11-0"), bytes(401), Some(10)),
-                (digest("tx-11-1"), bytes(402), Some(10)),
-                (digest("tx-11-2"), bytes(403), Some(10)),
-                (None, bytes(500), Some(11)),
-                (digest("tx-12-0"), bytes(501), Some(11)),
-            ],
-            "catches_up_during_recovery: {catches_up_during_recovery}"
-        );
-        let state = server.state.lock().unwrap();
-        let recovery_request = &state.transaction_requests[0].body;
-        assert_eq!(
-            recovery_request.options.as_ref().unwrap().after,
-            Some(bytes(402))
-        );
-        assert_eq!(recovery_request.end_checkpoint, Some(11));
-    }
+        ]
+    );
+    let catch_up = &state.transaction_requests[0].body;
+    assert_eq!(catch_up.start_checkpoint, Some(10));
+    assert_eq!(catch_up.start_transaction_index, Some(3));
+    assert_eq!(catch_up.end_checkpoint, Some(11));
+    assert_eq!(catch_up.end_transaction_index, None);
+    let options = catch_up.options.as_ref().unwrap();
+    assert_eq!(options.after, Some(bytes(302)));
+    assert_eq!(options.before, None);
 }
