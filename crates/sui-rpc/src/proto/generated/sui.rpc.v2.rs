@@ -5564,17 +5564,75 @@ pub struct QueryOptions {
     #[prost(enumeration = "Ordering", optional, tag = "4")]
     pub ordering: ::core::option::Option<i32>,
 }
-/// Progress marker for a query scan. Carried on every response frame, whether or
-/// not the frame delivers a matching item. Watermarks never regress in the
-/// requested ordering, but consecutive frames may carry the same watermark when
+/// A point in ledger order: the boundary between the items whose keys sort
+/// below this position and the items whose keys sort at or above it.
+///
+/// An item's key is (`sequence_number`) for a `Checkpoint`, (`checkpoint`,
+/// `transaction_index`) for an `ExecutedTransaction`, and (`checkpoint`,
+/// `transaction_index`, `event_index`) for an `Event`. Keys and positions sort
+/// lexicographically, with unset fields counting as 0.
+///
+/// An index past the last transaction of a checkpoint, or past the last event of
+/// a transaction, names the start of the next one, so different positions can
+/// name the same boundary: after the last of checkpoint `c`'s `n` transactions,
+/// both (`c`, `n`) and (`c + 1`, 0) name the start of checkpoint `c + 1`.
+/// Sorting never contradicts ledger order: a position that sorts below another
+/// is at or before it. Use comparisons to drop what is behind, and never assume
+/// that positions that differ name different boundaries.
+///
+/// To bound a request at a position: as its start, set `start_checkpoint` to
+/// `checkpoint` and, when either index is nonzero, the start index fields to
+/// both indexes, including one that is 0 (`start_transaction_index`, plus
+/// `start_event_index` for events). As its end, set `end_checkpoint` to
+/// `checkpoint` when both indexes are 0; otherwise set `end_checkpoint` to
+/// `checkpoint + 1` and the end index fields to both indexes
+/// (`end_transaction_index`, plus `end_event_index` for events). Checkpoint
+/// positions carry only `checkpoint`, so they set only `start_checkpoint` or
+/// `end_checkpoint`.
+#[non_exhaustive]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct LedgerPosition {
+    /// Checkpoint sequence number.
+    #[prost(uint64, optional, tag = "1")]
+    pub checkpoint: ::core::option::Option<u64>,
+    /// Zero-based position of a transaction within `checkpoint`.
+    #[prost(uint64, optional, tag = "2")]
+    pub transaction_index: ::core::option::Option<u64>,
+    /// Zero-based index of an event within its transaction's event list. Event
+    /// streams only.
+    #[prost(uint32, optional, tag = "3")]
+    pub event_index: ::core::option::Option<u32>,
+}
+/// Progress of a scan, carried on every response frame, whether or not the
+/// frame delivers a matching item. Watermarks never regress in the requested
+/// ordering, but consecutive frames may carry the same watermark when
 /// additional work does not advance the safe resume frontier.
+///
+/// A watermark has two parts:
+///
+/// * The resume point, in two forms: `cursor`, opaque, for the server, and
+///   `cursor_position`, in ledger coordinates, for clients to order frames and
+///   drop duplicates.
+/// * Coverage: `checkpoint`, the boundary checkpoint the scan has proven fully
+///   covered. It trails the resume point.
+///
+/// To continue in the same direction, set the request's start (ascending) or
+/// end (descending) at `cursor_position`. To read in the other direction, set
+/// the other bound at `cursor_position` from a frame without an item; from a
+/// frame with an item, start a page after the item at its key with the finest
+/// index incremented, or end a page before it at its key. In both cases pass
+/// `cursor` as `options.after` with a start and as `options.before` with an
+/// end.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Watermark {
-    /// Opaque cursor at this scan position. Set on every watermark. Use as
+    /// Opaque cursor at the resume point. Set on every watermark. Use as
     /// `options.after` (ascending) or `options.before` (descending) on the next
     /// request to resume from here. The most recently received cursor is always
     /// the safe resume point.
+    ///
+    /// Pass cursors back unchanged; never compare or inspect them. Cursors that
+    /// differ can name the same point, and their encoding may change.
     #[prost(bytes = "bytes", optional, tag = "1")]
     pub cursor: ::core::option::Option<::prost::bytes::Bytes>,
     /// The inclusive boundary checkpoint that the scan has fully covered within
@@ -5591,6 +5649,27 @@ pub struct Watermark {
     /// A watermark still has a valid resume cursor while this field is unset.
     #[prost(uint64, optional, tag = "2")]
     pub checkpoint: ::core::option::Option<u64>,
+    /// The resume point in ledger coordinates. Set on every watermark by servers
+    /// that support it.
+    ///
+    /// Ascending, every match from the request's start up to (excluding)
+    /// `cursor_position` has been delivered. Descending, every match from
+    /// `cursor_position` up to (excluding) the request's end has been delivered.
+    ///
+    /// On a frame that carries an item, ascending, it is the boundary just past
+    /// the item, so it is not the item's own key: it is that key with its finest
+    /// index incremented (`event_index` for events, `transaction_index` for
+    /// transactions, `checkpoint` for checkpoints). Descending, it is the boundary
+    /// just before the item, which is the item's key.
+    ///
+    /// It never moves before the request's start (ascending) or past its end
+    /// (descending), so an ascending request that starts beyond what the server
+    /// has indexed gets its start echoed back: the resume point says where the
+    /// client is, not where the ledger is. `cursor` may then name an earlier
+    /// point; bounds intersect, so resuming with both starts at
+    /// `cursor_position`.
+    #[prost(message, optional, tag = "4")]
+    pub cursor_position: ::core::option::Option<LedgerPosition>,
 }
 /// Marker for the final frame of a successful query stream. Every successful
 /// stream sets `QueryEnd` on exactly one frame, after which no further frames
@@ -5614,9 +5693,9 @@ pub struct QueryEnd {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum Ordering {
-    /// Return results in increasing cursor order.
+    /// Return results in increasing ledger order.
     Ascending = 0,
-    /// Return results in decreasing cursor order.
+    /// Return results in decreasing ledger order.
     Descending = 1,
 }
 impl Ordering {
@@ -7623,11 +7702,14 @@ pub mod subscription_service_client {
     /// at the current tip of the chain as seen by the server (the latest executed
     /// checkpoint). To recover data missed between subscriptions, replay the gap
     /// with the paired List API: pass the last received `Watermark.cursor` as
-    /// `options.after` on the List request (for checkpoints, pass the last
-    /// received `cursor + 1` as `start_checkpoint`). The List scan reads from the
-    /// indexed tip, which may trail the subscription's start position; repeat the
-    /// List call as the index advances until the replay reaches the position
-    /// established by the subscription's first frame.
+    /// `options.after`, with the request's start at its `cursor_position` (for
+    /// checkpoints, pass the last received `cursor + 1` as `start_checkpoint`). The
+    /// List scan reads from the indexed tip, which may trail the subscription's
+    /// start position; repeat the List call as the index advances until the replay
+    /// reaches the position established by the subscription's first frame: for
+    /// transactions and events, that frame's item key if it carries an item, and
+    /// its `cursor_position` otherwise. Compare positions and item keys, never
+    /// cursor bytes.
     ///
     /// A subscription behaves like an unbounded ascending scan: every frame
     /// carries the subscriber's resume point, and progress advances as
@@ -7889,11 +7971,14 @@ pub mod subscription_service_server {
     /// at the current tip of the chain as seen by the server (the latest executed
     /// checkpoint). To recover data missed between subscriptions, replay the gap
     /// with the paired List API: pass the last received `Watermark.cursor` as
-    /// `options.after` on the List request (for checkpoints, pass the last
-    /// received `cursor + 1` as `start_checkpoint`). The List scan reads from the
-    /// indexed tip, which may trail the subscription's start position; repeat the
-    /// List call as the index advances until the replay reaches the position
-    /// established by the subscription's first frame.
+    /// `options.after`, with the request's start at its `cursor_position` (for
+    /// checkpoints, pass the last received `cursor + 1` as `start_checkpoint`). The
+    /// List scan reads from the indexed tip, which may trail the subscription's
+    /// start position; repeat the List call as the index advances until the replay
+    /// reaches the position established by the subscription's first frame: for
+    /// transactions and events, that frame's item key if it carries an item, and
+    /// its `cursor_position` otherwise. Compare positions and item keys, never
+    /// cursor bytes.
     ///
     /// A subscription behaves like an unbounded ascending scan: every frame
     /// carries the subscriber's resume point, and progress advances as
