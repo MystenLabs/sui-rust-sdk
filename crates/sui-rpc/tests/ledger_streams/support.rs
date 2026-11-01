@@ -14,12 +14,17 @@ use sui_rpc::client::EventStreamRequest;
 use sui_rpc::client::LedgerStreamConfig;
 use sui_rpc::client::LedgerStreamEvent;
 use sui_rpc::client::ListConfig;
+use sui_rpc::client::Position;
 use sui_rpc::proto::sui::rpc::v2 as proto;
 use tokio::sync::mpsc;
 use tonic::codegen::BoxStream;
 use tower::ServiceBuilder;
 
 pub(crate) const STREAM_DROP_TIMEOUT: Duration = Duration::from_secs(5);
+
+/// The error for a List frame without `cursor_position`.
+pub(crate) const MISSING_LIST_CURSOR_POSITION: &str = "List watermark is missing its \
+     cursor_position; servers that predate cursor positions do not send it";
 
 #[derive(Clone, Debug)]
 pub(crate) struct HttpObservation {
@@ -411,16 +416,74 @@ pub(crate) fn bytes(value: u64) -> Bytes {
     Bytes::from(format!("c{value}"))
 }
 
-pub(crate) fn watermark(value: u64) -> proto::Watermark {
+pub(crate) fn checkpoint_position(checkpoint: u64) -> Position {
+    transaction_position(checkpoint, 0)
+}
+
+pub(crate) fn transaction_position(checkpoint: u64, transaction_index: u64) -> Position {
+    event_position(checkpoint, transaction_index, 0)
+}
+
+pub(crate) fn event_position(
+    checkpoint: u64,
+    transaction_index: u64,
+    event_index: u32,
+) -> Position {
+    Position {
+        checkpoint,
+        transaction_index,
+        event_index,
+    }
+}
+
+/// `position` as the wire `Watermark.cursor_position`.
+pub(crate) fn wire_position(position: Position) -> proto::LedgerPosition {
+    proto::LedgerPosition::default()
+        .with_checkpoint(position.checkpoint)
+        .with_transaction_index(position.transaction_index)
+        .with_event_index(position.event_index)
+}
+
+/// A watermark with cursor bytes `bytes(cursor)`, coverage `checkpoint`, and `position`.
+pub(crate) fn positioned_watermark(
+    cursor: u64,
+    checkpoint: Option<u64>,
+    position: Position,
+) -> proto::Watermark {
     let mut watermark = proto::Watermark::default();
-    watermark.cursor = Some(bytes(value));
-    watermark.checkpoint = Some(value);
+    watermark.cursor = Some(bytes(cursor));
+    watermark.checkpoint = checkpoint;
+    watermark.cursor_position = Some(wire_position(position));
     watermark
 }
-pub(crate) fn watermark_at(cursor: u64, checkpoint: u64) -> proto::Watermark {
-    let mut watermark = watermark(cursor);
-    watermark.checkpoint = Some(checkpoint);
-    watermark
+
+// The unpositioned frame helpers below script a ledger whose checkpoint `c` holds one matching
+// item, at index 0. An item frame's position is derived from its item (`above(key)`), whatever
+// cursor value it carries. An item-free frame at cursor `c` covers checkpoint `c`, so, as servers
+// do, it sits at the start of checkpoint `c + 1`.
+
+/// Checkpoint watermark at cursor `cursor`: the boundary before checkpoint `cursor + 1`.
+pub(crate) fn checkpoint_watermark(cursor: u64) -> proto::Watermark {
+    positioned_watermark(cursor, Some(cursor), checkpoint_position(cursor + 1))
+}
+
+/// The ascending position of a transaction item frame: the item's key with its transaction index
+/// incremented.
+pub(crate) fn transaction_item_position(transaction: &proto::ExecutedTransaction) -> Position {
+    transaction_position(
+        transaction.checkpoint.unwrap(),
+        transaction.transaction_index.unwrap() + 1,
+    )
+}
+
+/// The ascending position of an event item frame: the item's key with its event index
+/// incremented.
+pub(crate) fn event_item_position(event: &proto::Event) -> Position {
+    event_position(
+        event.checkpoint.unwrap(),
+        event.transaction_index.unwrap(),
+        event.event_index.unwrap() + 1,
+    )
 }
 
 pub(crate) fn query_end(reason: proto::QueryEndReason) -> proto::QueryEnd {
@@ -482,9 +545,13 @@ pub(crate) fn checkpoint_list_frame(
     cursor: u64,
     reason: Option<proto::QueryEndReason>,
 ) -> proto::ListCheckpointsResponse {
+    let mut watermark = checkpoint_watermark(cursor);
+    if let Some(item) = item {
+        watermark.cursor_position = Some(wire_position(checkpoint_position(item + 1)));
+    }
     let mut response = proto::ListCheckpointsResponse::default();
     response.checkpoint = item.map(checkpoint);
-    response.watermark = Some(watermark(cursor));
+    response.watermark = Some(watermark);
     response.end = reason.map(query_end);
     response
 }
@@ -494,11 +561,7 @@ pub(crate) fn transaction_list_frame(
     cursor: u64,
     reason: Option<proto::QueryEndReason>,
 ) -> proto::ListTransactionsResponse {
-    let mut response = proto::ListTransactionsResponse::default();
-    response.transaction = item.map(transaction);
-    response.watermark = Some(watermark(cursor));
-    response.end = reason.map(query_end);
-    response
+    transaction_positioned_list_frame(item.map(transaction), cursor, cursor, reason)
 }
 
 pub(crate) fn event_list_frame(
@@ -506,13 +569,47 @@ pub(crate) fn event_list_frame(
     cursor: u64,
     reason: Option<proto::QueryEndReason>,
 ) -> proto::ListEventsResponse {
-    let mut response = proto::ListEventsResponse::default();
-    response.event = item.map(event);
-    response.watermark = Some(watermark(cursor));
-    response.end = reason.map(query_end);
-    response
+    event_positioned_list_frame(item.map(event), cursor, cursor, reason)
 }
 
+// Descending scans deliver every match in `[cursor_position, request end)`, so a descending frame
+// for cursor `c` (or for the item at checkpoint `c`) is positioned at that item's key: the start of
+// checkpoint `c` in the one-item-per-checkpoint ledger above.
+
+pub(crate) fn checkpoint_descending_list_frame(
+    item: Option<u64>,
+    cursor: u64,
+    reason: Option<proto::QueryEndReason>,
+) -> proto::ListCheckpointsResponse {
+    with_position(
+        checkpoint_list_frame(item, cursor, reason),
+        checkpoint_position(item.unwrap_or(cursor)),
+    )
+}
+
+pub(crate) fn transaction_descending_list_frame(
+    item: Option<u64>,
+    cursor: u64,
+    reason: Option<proto::QueryEndReason>,
+) -> proto::ListTransactionsResponse {
+    with_position(
+        transaction_list_frame(item, cursor, reason),
+        transaction_position(item.unwrap_or(cursor), 0),
+    )
+}
+
+pub(crate) fn event_descending_list_frame(
+    item: Option<u64>,
+    cursor: u64,
+    reason: Option<proto::QueryEndReason>,
+) -> proto::ListEventsResponse {
+    with_position(
+        event_list_frame(item, cursor, reason),
+        event_position(item.unwrap_or(cursor), 0, 0),
+    )
+}
+
+/// Checkpoint subscriptions report the inclusive checkpoint covered instead of a watermark.
 pub(crate) fn checkpoint_live_frame(
     item: Option<u64>,
     cursor: u64,
@@ -527,18 +624,39 @@ pub(crate) fn transaction_live_frame(
     item: Option<u64>,
     cursor: u64,
 ) -> proto::SubscribeTransactionsResponse {
-    let mut response = proto::SubscribeTransactionsResponse::default();
-    response.transaction = item.map(transaction);
-    response.watermark = Some(watermark(cursor));
-    response
+    transaction_positioned_live_frame(item.map(transaction), cursor, cursor)
 }
 
 pub(crate) fn event_live_frame(item: Option<u64>, cursor: u64) -> proto::SubscribeEventsResponse {
-    let mut response = proto::SubscribeEventsResponse::default();
-    response.event = item.map(event);
-    response.watermark = Some(watermark(cursor));
-    response
+    event_positioned_live_frame(item.map(event), cursor, cursor)
 }
+
+/// A transaction watermark with cursor bytes `bytes(cursor)` and coverage `checkpoint`,
+/// positioned after `item` when present and otherwise at the start of checkpoint
+/// `checkpoint + 1`, the boundary that coverage of `checkpoint` reaches. Use [`with_position`] for
+/// any other item-free position.
+fn transaction_frame_watermark(
+    item: Option<&proto::ExecutedTransaction>,
+    cursor: u64,
+    checkpoint: u64,
+) -> proto::Watermark {
+    let position = item.map_or_else(
+        || checkpoint_position(checkpoint + 1),
+        transaction_item_position,
+    );
+    positioned_watermark(cursor, Some(checkpoint), position)
+}
+
+/// The event counterpart of [`transaction_frame_watermark`].
+fn event_frame_watermark(
+    item: Option<&proto::Event>,
+    cursor: u64,
+    checkpoint: u64,
+) -> proto::Watermark {
+    let position = item.map_or_else(|| checkpoint_position(checkpoint + 1), event_item_position);
+    positioned_watermark(cursor, Some(checkpoint), position)
+}
+
 pub(crate) fn transaction_positioned_list_frame(
     item: Option<proto::ExecutedTransaction>,
     cursor: u64,
@@ -546,8 +664,12 @@ pub(crate) fn transaction_positioned_list_frame(
     reason: Option<proto::QueryEndReason>,
 ) -> proto::ListTransactionsResponse {
     let mut response = proto::ListTransactionsResponse::default();
+    response.watermark = Some(transaction_frame_watermark(
+        item.as_ref(),
+        cursor,
+        checkpoint,
+    ));
     response.transaction = item;
-    response.watermark = Some(watermark_at(cursor, checkpoint));
     response.end = reason.map(query_end);
     response
 }
@@ -559,8 +681,8 @@ pub(crate) fn event_positioned_list_frame(
     reason: Option<proto::QueryEndReason>,
 ) -> proto::ListEventsResponse {
     let mut response = proto::ListEventsResponse::default();
+    response.watermark = Some(event_frame_watermark(item.as_ref(), cursor, checkpoint));
     response.event = item;
-    response.watermark = Some(watermark_at(cursor, checkpoint));
     response.end = reason.map(query_end);
     response
 }
@@ -571,8 +693,12 @@ pub(crate) fn transaction_positioned_live_frame(
     checkpoint: u64,
 ) -> proto::SubscribeTransactionsResponse {
     let mut response = proto::SubscribeTransactionsResponse::default();
+    response.watermark = Some(transaction_frame_watermark(
+        item.as_ref(),
+        cursor,
+        checkpoint,
+    ));
     response.transaction = item;
-    response.watermark = Some(watermark_at(cursor, checkpoint));
     response
 }
 
@@ -582,9 +708,44 @@ pub(crate) fn event_positioned_live_frame(
     checkpoint: u64,
 ) -> proto::SubscribeEventsResponse {
     let mut response = proto::SubscribeEventsResponse::default();
+    response.watermark = Some(event_frame_watermark(item.as_ref(), cursor, checkpoint));
     response.event = item;
-    response.watermark = Some(watermark_at(cursor, checkpoint));
     response
+}
+
+/// Frames whose watermark position a test can override.
+pub(crate) trait WatermarkFrame {
+    fn watermark_mut(&mut self) -> &mut proto::Watermark;
+}
+
+macro_rules! impl_watermark_frame {
+    ($($response:ty),* $(,)?) => {
+        $(impl WatermarkFrame for $response {
+            fn watermark_mut(&mut self) -> &mut proto::Watermark {
+                self.watermark.get_or_insert_default()
+            }
+        })*
+    };
+}
+
+impl_watermark_frame!(
+    proto::ListCheckpointsResponse,
+    proto::ListTransactionsResponse,
+    proto::ListEventsResponse,
+    proto::SubscribeTransactionsResponse,
+    proto::SubscribeEventsResponse,
+);
+
+/// Replaces `frame`'s watermark position.
+pub(crate) fn with_position<F: WatermarkFrame>(mut frame: F, position: Position) -> F {
+    frame.watermark_mut().cursor_position = Some(wire_position(position));
+    frame
+}
+
+/// Removes `frame`'s watermark position, as servers that predate cursor positions send it.
+pub(crate) fn without_position<F: WatermarkFrame>(mut frame: F) -> F {
+    frame.watermark_mut().cursor_position = None;
+    frame
 }
 
 pub(crate) fn bounded_checkpoint_scripts() -> Vec<StreamScript<proto::ListCheckpointsResponse>> {

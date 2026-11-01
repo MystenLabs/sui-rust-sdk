@@ -14,6 +14,26 @@ use crate::proto::sui::rpc::v2::ExecutedTransaction;
 use crate::proto::sui::rpc::v2::TransactionFilter;
 use prost::bytes::Bytes;
 use prost_types::FieldMask;
+
+/// A point in ledger order, as coordinates `(checkpoint, transaction_index, event_index)`: the
+/// boundary immediately before the item with that key. Transaction positions leave
+/// `event_index` at 0.
+///
+/// Ordering is lexicographic and never contradicts ledger order, so sorting, `max`, and `<` are
+/// safe. `==` compares coordinates: equal coordinates name the same point, but different
+/// coordinates can name one point too. For example, the point after the last of checkpoint
+/// `c`'s `n` transactions is `(c, n)` on that transaction's frame and `(c + 1, 0)` on a following
+/// progress frame.
+#[derive(Clone, Copy, Debug, Default, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Position {
+    /// Checkpoint sequence number.
+    pub checkpoint: u64,
+    /// Zero-based index of a transaction within `checkpoint`.
+    pub transaction_index: u64,
+    /// Zero-based index of an event within its transaction's event list.
+    pub event_index: u32,
+}
+
 /// How a stream follows the ledger.
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -47,8 +67,15 @@ pub enum TransactionStreamStart {
     Tip,
     /// Starts at and includes transactions from this checkpoint.
     Checkpoint(u64),
-    /// Starts strictly after this server-validated opaque cursor.
-    Resume(Bytes),
+    /// Resumes from a previous frame: starts at `position`, which the server-validated opaque
+    /// `cursor` also names. Pass a frame's [`TransactionStreamFrame::cursor`] and
+    /// [`TransactionStreamFrame::position`] unchanged.
+    Resume {
+        /// The frame's opaque cursor.
+        cursor: Bytes,
+        /// The frame's resume point; the stream sends it as the request's start fields.
+        position: Position,
+    },
 }
 
 /// Starting position for an event stream.
@@ -61,8 +88,15 @@ pub enum EventStreamStart {
     Tip,
     /// Starts at and includes events from this checkpoint.
     Checkpoint(u64),
-    /// Starts strictly after this server-validated opaque cursor.
-    Resume(Bytes),
+    /// Resumes from a previous frame: starts at `position`, which the server-validated opaque
+    /// `cursor` also names. Pass a frame's [`EventStreamFrame::cursor`] and
+    /// [`EventStreamFrame::position`] unchanged.
+    Resume {
+        /// The frame's opaque cursor.
+        cursor: Bytes,
+        /// The frame's resume point; the stream sends it as the request's start fields.
+        position: Position,
+    },
 }
 
 /// Request for a resumable checkpoint stream.
@@ -213,31 +247,42 @@ pub struct CheckpointStreamFrame {
     pub cursor: u64,
 }
 
-/// A transaction frame with an optional payload and opaque exclusive restart cursor.
+/// A transaction frame with an optional payload and its exclusive restart point.
 ///
-/// Process `transaction` before persisting `cursor`, then resume with
-/// `TransactionStreamStart::Resume(cursor)`.
+/// Process `transaction` before persisting `cursor` and `position`, then resume with
+/// `TransactionStreamStart::Resume { cursor, position }`.
 #[non_exhaustive]
 #[derive(Clone, Debug)]
 pub struct TransactionStreamFrame {
     /// The executed transaction payload, or `None` for a progress-only frame.
     pub transaction: Option<ExecutedTransaction>,
-    /// The server's opaque resume cursor as of this frame, passed through verbatim.
+    /// The server's opaque resume cursor as of this frame, passed through verbatim. Never compare
+    /// cursors; compare `position` instead.
     pub cursor: Bytes,
+    /// The resume point `cursor` names: every matching transaction before it has been delivered.
+    /// On a frame with a transaction, it is that transaction's
+    /// `(checkpoint, transaction_index + 1)`. See [`Position`] for how positions compare.
+    pub position: Position,
     /// Checkpoint coverage reported with this frame, when known, for progress observability.
     pub covered_checkpoint: Option<u64>,
 }
 
-/// An event frame with an optional payload and opaque exclusive restart cursor.
+/// An event frame with an optional payload and its exclusive restart point.
 ///
-/// Process `event` before persisting `cursor`, then resume with `EventStreamStart::Resume(cursor)`.
+/// Process `event` before persisting `cursor` and `position`, then resume with
+/// `EventStreamStart::Resume { cursor, position }`.
 #[non_exhaustive]
 #[derive(Clone, Debug)]
 pub struct EventStreamFrame {
     /// The event payload, or `None` for a progress-only frame.
     pub event: Option<Event>,
-    /// The server's opaque resume cursor as of this frame, passed through verbatim.
+    /// The server's opaque resume cursor as of this frame, passed through verbatim. Never compare
+    /// cursors; compare `position` instead.
     pub cursor: Bytes,
+    /// The resume point `cursor` names: every matching event before it has been delivered. On a
+    /// frame with an event, it is that event's `(checkpoint, transaction_index, event_index + 1)`.
+    /// See [`Position`] for how positions compare.
+    pub position: Position,
     /// Checkpoint coverage reported with this frame, when known, for progress observability.
     pub covered_checkpoint: Option<u64>,
 }

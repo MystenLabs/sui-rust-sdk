@@ -1,3 +1,32 @@
+# Unreleased
+
+## Added
+
+- add `client::Position`, a sortable point in ledger order, and `position`,
+  the frame's `Watermark.cursor_position` as a `Position`, to
+  `TransactionStreamFrame` and `EventStreamFrame`
+
+## Changed
+
+- ledger streams order, deduplicate, and resume frames by
+  `Watermark.cursor_position` instead of comparing opaque cursors and
+  checkpoint coverage, and require it on every List and Subscribe frame
+  (servers that predate cursor positions do not send it); a frame without it
+  ends the stream with `DataLoss`. `list_*` accepts one exception: a page's
+  final frame may omit it when the page names its bound by a bare
+  `options.after` or `options.before` cursor minted by such a server.
+  Internally built requests and `list_*` pagination send each resume point
+  as start or end fields together with its cursor
+- `TransactionStreamStart::Resume` and `EventStreamStart::Resume` take
+  `{ cursor, position }` (a `Position`) from a previous frame instead of a
+  bare cursor
+- `stream_*` read masks no longer need to include the item's position
+  fields
+- `list_*` retries `OUT_OF_RANGE` with `ABOVE_LATEST_AVAILABLE` for any
+  bound of a descending continuation, which it derives from a
+  server-reported position, as when a lagging replica receives it; a
+  caller's own checkpoint bounds above the tip stay terminal
+
 # [0.4.0] - 2026-09-09
 
 ## Added

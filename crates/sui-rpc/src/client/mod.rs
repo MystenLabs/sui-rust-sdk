@@ -44,6 +44,7 @@ pub use ledger_streams::LedgerStreamOperation;
 pub use ledger_streams::LedgerStreamStage;
 pub use ledger_streams::ListConfig;
 pub use ledger_streams::ListEvent;
+pub use ledger_streams::Position;
 pub use ledger_streams::TransactionStreamFrame;
 pub use ledger_streams::TransactionStreamRequest;
 pub use ledger_streams::TransactionStreamStart;
@@ -106,16 +107,17 @@ const DEFAULT_HTTP2_CONNECTION_WINDOW_SIZE: u32 = 64 * 1024 * 1024;
 /// - `list_*` ([`list_checkpoints`](Client::list_checkpoints), [`list_transactions`](Client::list_transactions), [`list_events`](Client::list_events)):
 ///   Finite pagination streams yielding raw response pages until reaching an end bound or the ledger tip.
 /// - `stream_*` ([`stream_checkpoints`](Client::stream_checkpoints), [`stream_transactions`](Client::stream_transactions), [`stream_events`](Client::stream_events)):
-///   Resumable, infinite streams starting from any position (`Tip`, `Checkpoint`, or `Resume` cursor)
-///   that automatically handle backfill replay, live subscription or polling, and transient error retries.
+///   Resumable, infinite streams starting from any position (`Tip`, `Checkpoint`, or `Resume` from
+///   a frame) that automatically handle backfill replay, live subscription or polling, and
+///   transient error retries.
 ///
-/// Stream read masks must include `sequence_number` for checkpoints; `checkpoint` and
-/// `transaction_index` for transactions; and `checkpoint`, `transaction_index`, and `event_index`
-/// for events (`"*"` satisfies all three).
+/// Streams order and deduplicate frames by each watermark's `cursor_position`; a frame without it,
+/// as servers that predate cursor positions send, ends the stream with `DataLoss`.
 ///
 /// Process a payload before persisting its restart position. To resume after a checkpoint, pass
 /// `cursor + 1` to [`CheckpointStreamStart::Checkpoint`]. To resume transactions or events, pass
-/// `frame.cursor` to [`TransactionStreamStart::Resume`] or [`EventStreamStart::Resume`].
+/// `frame.cursor` and `frame.position` to [`TransactionStreamStart::Resume`] or
+/// [`EventStreamStart::Resume`].
 ///
 /// ## Example
 ///
@@ -124,17 +126,18 @@ const DEFAULT_HTTP2_CONNECTION_WINDOW_SIZE: u32 = 64 * 1024 * 1024;
 /// # use sui_rpc::field::{FieldMask, FieldMaskUtil};
 /// # use sui_rpc::proto::sui::rpc::v2::ExecutedTransaction;
 /// # use sui_rpc::Client;
-/// # use sui_rpc::client::{TransactionStreamRequest, TransactionStreamStart};
+/// # use sui_rpc::client::{Position, TransactionStreamRequest, TransactionStreamStart};
+/// # use prost::bytes::Bytes;
 /// #
 /// # async fn process_transaction(_: &ExecutedTransaction) {}
-/// # async fn persist_position(_: &[u8]) {}
+/// # async fn persist_position(_: &Bytes, _: Position) {}
 /// # async fn run() -> Result<(), Box<dyn std::error::Error>> {
 /// let client = Client::new(Client::MAINNET_FULLNODE)?;
-/// let read_mask = FieldMask::from_paths(["checkpoint", "transaction_index", "digest"]);
+/// let read_mask = FieldMask::from_paths(["digest"]);
 /// let request = TransactionStreamRequest::new().with_read_mask(read_mask.clone());
 ///
 /// let mut stream = Box::pin(client.stream_transactions(request));
-/// let persisted = loop {
+/// let (cursor, position) = loop {
 ///     let Some(frame) = stream.next().await else {
 ///         return Ok(());
 ///     };
@@ -143,15 +146,14 @@ const DEFAULT_HTTP2_CONNECTION_WINDOW_SIZE: u32 = 64 * 1024 * 1024;
 ///     if let Some(transaction) = &frame.transaction {
 ///         process_transaction(transaction).await;
 ///     }
-///     let persisted = frame.cursor.clone();
-///     persist_position(&persisted).await;
-///     break persisted;
+///     persist_position(&frame.cursor, frame.position).await;
+///     break (frame.cursor, frame.position);
 /// };
 /// drop(stream);
 ///
 /// let restart_request = TransactionStreamRequest::new()
 ///     .with_read_mask(read_mask)
-///     .with_start(TransactionStreamStart::Resume(persisted));
+///     .with_start(TransactionStreamStart::Resume { cursor, position });
 /// let mut resumed = Box::pin(client.stream_transactions(restart_request));
 /// let _ = resumed.next().await;
 /// # Ok(())

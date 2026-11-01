@@ -29,6 +29,16 @@ pub(super) enum FailurePhase {
     Body,
 }
 
+/// Where a request's checkpoint and cursor bounds came from.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum RequestBounds {
+    /// The caller set the bounds, or the request has none.
+    CallerSupplied,
+    /// The request resumes from a position and cursor a server reported. Only descending scans
+    /// receive `ABOVE_LATEST_AVAILABLE` for them.
+    ServerReported,
+}
+
 /// Classifies failures eligible for automatic retry.
 ///
 /// `Unavailable`, `DeadlineExceeded`, `ResourceExhausted`, and `Aborted` are always retried.
@@ -44,31 +54,30 @@ pub(super) enum FailurePhase {
 ///   `Cancelled` and `Unknown` as retryable based on the observation phase alone, allowing the stream
 ///   to reconnect and resume from the latest cursor.
 ///
-/// `OutOfRange` is retried when it carries the [`ErrorReason::AboveLatestAvailable`] reason for a
-/// cursor (see [`cursor_above_latest_available`]): the request reached a server, such as a lagging
-/// replica, that has not yet indexed the cursor's position, and the same request succeeds once
-/// that server catches up. Servers return it for a descending scan's cursors; an ascending scan's
-/// `after` cursor past the tip ends an empty page with `LedgerTip` instead. Every other
-/// `OutOfRange` is terminal, including data below the pruned floor
-/// ([`ErrorReason::BelowEarliestAvailable`]), a checkpoint bound above the tip, which can name a
-/// checkpoint the chain has not reached, and an `OutOfRange` without a reason.
+/// `OutOfRange` with the [`ErrorReason::AboveLatestAvailable`] reason is retried when the bound it
+/// names is servable once the server catches up (see [`above_latest_available_is_transient`]): the
+/// request reached a server, such as a lagging replica, that has not yet indexed a point another
+/// server reported. Every other `OutOfRange` is terminal, including data below the pruned floor
+/// ([`ErrorReason::BelowEarliestAvailable`]), a caller's checkpoint bound above the tip, which can
+/// name a checkpoint the chain has not reached, and an `OutOfRange` without a reason.
 ///
 /// All other statuses are terminal.
-fn transient(status: &Status, phase: FailurePhase) -> bool {
+fn transient(status: &Status, phase: FailurePhase, bounds: RequestBounds) -> bool {
     let dispatch_transient = matches!(
         status.code(),
         Code::Unavailable | Code::DeadlineExceeded | Code::ResourceExhausted | Code::Aborted
     );
     let reset_code = matches!(status.code(), Code::Cancelled | Code::Unknown);
     let transport_reset = reset_code && (phase == FailurePhase::Body || status.source().is_some());
-    dispatch_transient || transport_reset || cursor_above_latest_available(status)
+    dispatch_transient || transport_reset || above_latest_available_is_transient(status, bounds)
 }
 
 /// Whether `status` is an `OutOfRange` whose status details carry an `ErrorInfo` with reason
-/// [`ErrorReason::AboveLatestAvailable`] and `bound` metadata `"cursor"`. A cursor comes from a
-/// server that had indexed its position, so the wait is bounded by how far replicas lag each
-/// other.
-fn cursor_above_latest_available(status: &Status) -> bool {
+/// [`ErrorReason::AboveLatestAvailable`] for a bound some server reported: any bound of a request
+/// whose bounds are [`RequestBounds::ServerReported`], or the `bound` metadata `"cursor"`, since
+/// every cursor comes from a server. A server reported such a bound after indexing it, so the
+/// wait is bounded by how far replicas lag each other.
+fn above_latest_available_is_transient(status: &Status, bounds: RequestBounds) -> bool {
     if status.code() != Code::OutOfRange {
         return false;
     }
@@ -82,10 +91,11 @@ fn cursor_above_latest_available(status: &Status) -> bool {
         .any(|error_info| {
             error_info.domain == ErrorReason::DOMAIN
                 && error_info.reason == ErrorReason::AboveLatestAvailable.as_str_name()
-                && error_info
-                    .metadata
-                    .get("bound")
-                    .is_some_and(|bound| bound == "cursor")
+                && (bounds == RequestBounds::ServerReported
+                    || error_info
+                        .metadata
+                        .get("bound")
+                        .is_some_and(|bound| bound == "cursor"))
         })
 }
 
@@ -128,17 +138,18 @@ impl RetryState {
     }
 
     /// Returns the delay before retrying `status`, or `None` when `status` is terminal: it is not
-    /// [`transient`], or this state has already retried `config.max_consecutive_retries` times
-    /// since the last [`Self::reset`].
+    /// [`transient`] for a request with `bounds`, or this state has already retried
+    /// `config.max_consecutive_retries` times since the last [`Self::reset`].
     pub(super) fn retry_delay(
         &mut self,
         status: &Status,
         phase: FailurePhase,
+        bounds: RequestBounds,
         config: &LedgerStreamConfig,
         observability: &LedgerStreamObservability,
         stage: LedgerStreamStage,
     ) -> Option<Duration> {
-        if !transient(status, phase) {
+        if !transient(status, phase, bounds) {
             return None;
         }
         if config
@@ -196,11 +207,14 @@ fn random_jitter(maximum: Duration) -> Duration {
 mod tests {
     use super::*;
 
+    const CALLER: RequestBounds = RequestBounds::CallerSupplied;
+    const SERVER: RequestBounds = RequestBounds::ServerReported;
+
     #[test]
     fn internal_is_terminal_in_both_phases() {
         let status = Status::internal("client idle-body watchdog task panicked");
-        assert!(!transient(&status, FailurePhase::Body));
-        assert!(!transient(&status, FailurePhase::Dispatch));
+        assert!(!transient(&status, FailurePhase::Body, SERVER));
+        assert!(!transient(&status, FailurePhase::Dispatch, SERVER));
     }
 
     #[test]
@@ -209,8 +223,8 @@ mod tests {
             Status::cancelled("server cancelled request"),
             Status::unknown("server failed request"),
         ] {
-            assert!(transient(&status, FailurePhase::Body));
-            assert!(!transient(&status, FailurePhase::Dispatch));
+            assert!(transient(&status, FailurePhase::Body, CALLER));
+            assert!(!transient(&status, FailurePhase::Dispatch, CALLER));
         }
     }
 
@@ -221,14 +235,14 @@ mod tests {
         )));
         assert_eq!(status.code(), Code::Unknown);
         assert!(status.source().is_some());
-        assert!(transient(&status, FailurePhase::Dispatch));
+        assert!(transient(&status, FailurePhase::Dispatch, CALLER));
     }
 
     #[test]
     fn dispatch_set_is_transient_in_both_phases() {
         let status = Status::unavailable("connection refused");
-        assert!(transient(&status, FailurePhase::Dispatch));
-        assert!(transient(&status, FailurePhase::Body));
+        assert!(transient(&status, FailurePhase::Dispatch, CALLER));
+        assert!(transient(&status, FailurePhase::Body, CALLER));
     }
 
     fn out_of_range_with_reason(reason: ErrorReason, bound: Option<&str>) -> Status {
@@ -259,28 +273,65 @@ mod tests {
     #[test]
     fn cursor_above_latest_available_is_transient_in_both_phases() {
         let status = above_latest_available("cursor");
-        assert!(transient(&status, FailurePhase::Dispatch));
-        assert!(transient(&status, FailurePhase::Body));
-    }
-
-    #[test]
-    fn checkpoint_bound_above_latest_available_is_terminal() {
-        for bound in ["start_checkpoint", "end_checkpoint"] {
-            let status = above_latest_available(bound);
-            assert!(!transient(&status, FailurePhase::Dispatch), "{bound}");
-            assert!(!transient(&status, FailurePhase::Body), "{bound}");
+        for bounds in [CALLER, SERVER] {
+            assert!(transient(&status, FailurePhase::Dispatch, bounds));
+            assert!(transient(&status, FailurePhase::Body, bounds));
         }
     }
 
     #[test]
-    fn out_of_range_without_a_cursor_past_the_tip_is_terminal() {
+    fn caller_checkpoint_bound_above_latest_available_is_terminal() {
+        for bound in ["start_checkpoint", "end_checkpoint"] {
+            let status = above_latest_available(bound);
+            assert!(
+                !transient(&status, FailurePhase::Dispatch, CALLER),
+                "{bound}"
+            );
+            assert!(!transient(&status, FailurePhase::Body, CALLER), "{bound}");
+        }
+    }
+
+    #[test]
+    fn server_reported_checkpoint_bound_above_latest_available_is_transient() {
+        for bound in ["start_checkpoint", "end_checkpoint"] {
+            let status = above_latest_available(bound);
+            assert!(
+                transient(&status, FailurePhase::Dispatch, SERVER),
+                "{bound}"
+            );
+            assert!(transient(&status, FailurePhase::Body, SERVER), "{bound}");
+        }
+    }
+
+    #[test]
+    fn out_of_range_without_a_server_reported_bound_past_the_tip_is_terminal() {
         let below_earliest_available =
             out_of_range_with_reason(ErrorReason::BelowEarliestAvailable, None);
         let missing_bound = out_of_range_with_reason(ErrorReason::AboveLatestAvailable, None);
         let without_reason = Status::out_of_range("requested data above latest available");
-        for status in [below_earliest_available, missing_bound, without_reason] {
-            assert!(!transient(&status, FailurePhase::Dispatch), "{status:?}");
-            assert!(!transient(&status, FailurePhase::Body), "{status:?}");
+        for status in [
+            below_earliest_available.clone(),
+            missing_bound,
+            without_reason.clone(),
+        ] {
+            assert!(
+                !transient(&status, FailurePhase::Dispatch, CALLER),
+                "{status:?}"
+            );
+            assert!(
+                !transient(&status, FailurePhase::Body, CALLER),
+                "{status:?}"
+            );
+        }
+        for status in [below_earliest_available, without_reason] {
+            assert!(
+                !transient(&status, FailurePhase::Dispatch, SERVER),
+                "{status:?}"
+            );
+            assert!(
+                !transient(&status, FailurePhase::Body, SERVER),
+                "{status:?}"
+            );
         }
     }
 }
