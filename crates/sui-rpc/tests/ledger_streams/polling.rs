@@ -4,8 +4,10 @@ use super::support::bytes;
 use super::support::checkpoint_identity_mask;
 use super::support::checkpoint_list_frame;
 use super::support::event_identity_mask;
+use super::support::event_item_position;
 use super::support::event_list_frame;
 use super::support::event_live_frame;
+use super::support::event_position;
 use super::support::event_positioned_list_frame;
 use super::support::fast_config;
 use super::support::fast_list_config;
@@ -189,12 +191,74 @@ async fn poll_suppresses_baseline_for_all_families() {
             "list_events",
         ]
     );
+    // The baseline lists the tip checkpoint alone, without cursors.
     assert_eq!(state.checkpoint_requests[0].body.start_checkpoint, Some(5));
     assert_eq!(state.checkpoint_requests[0].body.end_checkpoint, Some(6));
     assert_eq!(state.transaction_requests[0].body.start_checkpoint, Some(5));
+    assert_eq!(
+        state.transaction_requests[0].body.start_transaction_index,
+        None
+    );
     assert_eq!(state.transaction_requests[0].body.end_checkpoint, Some(6));
     assert_eq!(state.event_requests[0].body.start_checkpoint, Some(5));
+    assert_eq!(state.event_requests[0].body.start_transaction_index, None);
+    assert_eq!(state.event_requests[0].body.start_event_index, None);
     assert_eq!(state.event_requests[0].body.end_checkpoint, Some(6));
+    // The next poll starts from the baseline's committed position and cursor and lists through
+    // the new tip.
+    assert_eq!(state.checkpoint_requests[1].body.start_checkpoint, Some(6));
+    assert_eq!(state.checkpoint_requests[1].body.end_checkpoint, Some(7));
+    assert_eq!(state.transaction_requests[1].body.start_checkpoint, Some(6));
+    assert_eq!(
+        state.transaction_requests[1].body.start_transaction_index,
+        None
+    );
+    assert_eq!(state.transaction_requests[1].body.end_checkpoint, Some(7));
+    assert_eq!(state.event_requests[1].body.start_checkpoint, Some(6));
+    assert_eq!(state.event_requests[1].body.start_transaction_index, None);
+    assert_eq!(state.event_requests[1].body.start_event_index, None);
+    assert_eq!(state.event_requests[1].body.end_checkpoint, Some(7));
+    for (baseline, poll) in [
+        (
+            state.checkpoint_requests[0].body.options.as_ref().unwrap(),
+            state.checkpoint_requests[1].body.options.as_ref().unwrap(),
+        ),
+        (
+            state.transaction_requests[0].body.options.as_ref().unwrap(),
+            state.transaction_requests[1].body.options.as_ref().unwrap(),
+        ),
+        (
+            state.event_requests[0].body.options.as_ref().unwrap(),
+            state.event_requests[1].body.options.as_ref().unwrap(),
+        ),
+    ] {
+        assert_eq!(baseline.after, None);
+        assert_eq!(baseline.before, None);
+        assert_eq!(poll.before, None);
+    }
+    // Checkpoint positions are dense, so checkpoint polls carry no cursor.
+    assert_eq!(
+        state.checkpoint_requests[1]
+            .body
+            .options
+            .as_ref()
+            .unwrap()
+            .after,
+        None
+    );
+    assert_eq!(
+        state.transaction_requests[1]
+            .body
+            .options
+            .as_ref()
+            .unwrap()
+            .after,
+        Some(bytes(5))
+    );
+    assert_eq!(
+        state.event_requests[1].body.options.as_ref().unwrap().after,
+        Some(bytes(5))
+    );
     assert_eq!(
         state.checkpoint_requests[0].body.read_mask,
         Some(prost_types::FieldMask {
@@ -339,11 +403,7 @@ async fn tip_poll_and_tip_subscribe_share_the_frame_contract() {
         .unwrap();
 
     let (poll_server, _calls) = ScriptedStreamServer::new();
-    poll_server.push_service_infos([
-        Ok(service_info(5)),
-        Ok(service_info(6)),
-        Ok(service_info(7)),
-    ]);
+    poll_server.push_service_infos([Ok(service_info(5)), Ok(service_info(6))]);
     poll_server.push_event_lists([
         StreamScript::frames([
             Ok(event_list_frame(Some(5), 5, None)),
@@ -361,11 +421,6 @@ async fn tip_poll_and_tip_subscribe_share_the_frame_contract() {
                 Some(proto::QueryEndReason::CheckpointBound),
             )),
         ]),
-        StreamScript::frames([Ok(event_list_frame(
-            None,
-            7,
-            Some(proto::QueryEndReason::CheckpointBound),
-        ))]),
     ]);
     let address = spawn_ledger_only_server(poll_server).await;
     let (poll_client, _observations) = observed_client(address);
@@ -389,6 +444,9 @@ async fn tip_poll_and_tip_subscribe_share_the_frame_contract() {
         assert_eq!(frames.len(), 2);
         for frame in frames.iter() {
             assert!(!frame.cursor.is_empty());
+            if let Some(event) = &frame.event {
+                assert_eq!(frame.position, event_item_position(event));
+            }
         }
         let item_checkpoints: Vec<_> = frames
             .iter()
@@ -397,6 +455,21 @@ async fn tip_poll_and_tip_subscribe_share_the_frame_contract() {
             .collect();
         assert_eq!(item_checkpoints, [Some(6)]);
     }
+    assert_eq!(
+        subscribe_frames
+            .iter()
+            .map(|frame| frame.position)
+            .collect::<Vec<_>>(),
+        [event_position(6, 0, 0), event_position(6, 0, 1)]
+    );
+    // The poll's end frame follows the item, at the start of checkpoint 7.
+    assert_eq!(
+        poll_frames
+            .iter()
+            .map(|frame| frame.position)
+            .collect::<Vec<_>>(),
+        [event_position(6, 0, 1), event_position(7, 0, 0)]
+    );
 }
 
 #[tokio::test]
@@ -461,6 +534,8 @@ async fn future_lower_bound_polls_service_info_before_listing() {
         )),
     ])]);
     let (live_tx, live_rx) = mpsc::unbounded_channel();
+    // The subscription's first frame names the replay's committed position, so the stream needs
+    // no gap replay and does not yield that frame.
     live_tx.send(Ok(event_live_frame(None, 100))).unwrap();
     live_tx.send(Ok(event_live_frame(Some(101), 101))).unwrap();
     server.push_event_subscriptions([StreamScript::Channel(live_rx)]);
@@ -679,6 +754,8 @@ async fn list_page_limit_applies_to_internal_lists_only() {
         state.event_requests[2].body.options.as_ref().unwrap().limit,
         Some(7)
     );
+    // Each poll resumes from committed progress at the start of checkpoint 3 and lists through
+    // the tip.
     assert_eq!(state.checkpoint_requests[1].body.start_checkpoint, Some(3));
     assert_eq!(state.checkpoint_requests[1].body.end_checkpoint, Some(5));
     assert_eq!(
@@ -690,7 +767,7 @@ async fn list_page_limit_applies_to_internal_lists_only() {
             .after,
         Some(bytes(2))
     );
-    assert_eq!(state.transaction_requests[1].body.end_checkpoint, Some(5));
+    assert_eq!(state.event_requests[1].body.start_event_index, None);
     assert_eq!(
         state.event_requests[1].body.options.as_ref().unwrap().after,
         Some(bytes(2))
@@ -1107,9 +1184,12 @@ async fn dropping_during_tip_poll_sleep_prevents_later_rpc() {
                 Some(proto::QueryEndReason::CheckpointBound),
             )),
         ]),
-        StreamScript::frames([Ok(event_list_frame(
+        // The poll finds checkpoint 3 empty and yields its end frame, which lies past the
+        // baseline; the stream then sleeps before reading the tip again.
+        StreamScript::frames([Ok(event_positioned_list_frame(
             None,
-            2,
+            4,
+            3,
             Some(proto::QueryEndReason::CheckpointBound),
         ))]),
     ]);
@@ -1157,7 +1237,7 @@ async fn ledger_tip_polling_redispatches_until_the_fixed_bound() {
         ))]),
         StreamScript::Channel(bound_rx),
     ]);
-    let address = spawn_server(server).await;
+    let address = spawn_server(server.clone()).await;
     let (client, _observations) = observed_client(address);
     let collector = tokio::spawn(async move {
         client
@@ -1188,11 +1268,34 @@ async fn ledger_tip_polling_redispatches_until_the_fixed_bound() {
     assert!(frames.iter().all(|frame| frame.event.is_none()));
     assert_eq!(
         frames
-            .into_iter()
-            .map(|frame| frame.cursor)
+            .iter()
+            .map(|frame| frame.cursor.clone())
             .collect::<Vec<_>>(),
         [bytes(4), bytes(10)]
     );
+    assert_eq!(
+        frames
+            .into_iter()
+            .map(|frame| frame.position)
+            .collect::<Vec<_>>(),
+        [event_position(5, 0, 0), event_position(10, 0, 0)]
+    );
+    // The redispatch resumes from the LedgerTip frame and keeps the fixed end bound.
+    let state = server.state.lock().unwrap();
+    assert_eq!(state.event_requests.len(), 2);
+    assert_eq!(state.event_requests[0].body.start_checkpoint, Some(0));
+    assert_eq!(state.event_requests[0].body.end_checkpoint, Some(10));
+    assert_eq!(
+        state.event_requests[0].body.options.as_ref().unwrap().after,
+        None
+    );
+    let redispatch = &state.event_requests[1].body;
+    assert_eq!(redispatch.start_checkpoint, Some(5));
+    assert_eq!(redispatch.start_transaction_index, None);
+    assert_eq!(redispatch.start_event_index, None);
+    assert_eq!(redispatch.end_checkpoint, Some(10));
+    assert_eq!(redispatch.options.as_ref().unwrap().after, Some(bytes(4)));
+    assert_eq!(redispatch.options.as_ref().unwrap().before, None);
 }
 
 #[tokio::test]
@@ -1265,10 +1368,14 @@ async fn persisted_positions_resume_with_poll_delivery() {
     assert_eq!(first_frames.len(), 1);
     assert_eq!(first_frames[0].event.as_ref().unwrap().checkpoint, Some(2));
     assert_eq!(first_frames[0].cursor, bytes(2));
+    assert_eq!(first_frames[0].position, event_position(2, 0, 1));
 
     let resume_request = EventStreamRequest::new()
         .with_read_mask(event_identity_mask())
-        .with_start(EventStreamStart::Resume(first_frames[0].cursor.clone()))
+        .with_start(EventStreamStart::Resume {
+            cursor: first_frames[0].cursor.clone(),
+            position: first_frames[0].position,
+        })
         .with_delivery(Delivery::Poll);
     let resumed = client
         .stream_events(resume_request)
@@ -1289,10 +1396,17 @@ async fn persisted_positions_resume_with_poll_delivery() {
             "list_events"
         ]
     );
+    // The resumed scan starts at the persisted position and cursor and lists through the tip.
+    let resumed_request = &state.event_requests[1].body;
+    assert_eq!(resumed_request.start_checkpoint, Some(2));
+    assert_eq!(resumed_request.start_transaction_index, Some(0));
+    assert_eq!(resumed_request.start_event_index, Some(1));
+    assert_eq!(resumed_request.end_checkpoint, Some(5));
     assert_eq!(
-        state.event_requests[1].body.options.as_ref().unwrap().after,
+        resumed_request.options.as_ref().unwrap().after,
         Some(bytes(2))
     );
+    assert_eq!(resumed_request.options.as_ref().unwrap().before, None);
     assert!(state.event_subscriptions.is_empty());
     drop(state);
     assert!(

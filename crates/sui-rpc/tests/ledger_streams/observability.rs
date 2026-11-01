@@ -4,6 +4,7 @@ use super::support::bytes;
 use super::support::event_identity_mask;
 use super::support::event_list_frame;
 use super::support::event_live_frame;
+use super::support::event_position;
 use super::support::observed_client;
 use super::support::recording_config;
 use super::support::service_info;
@@ -185,6 +186,8 @@ async fn observer_reports_rpc_response_context_and_elapsed_time() {
         event => panic!("unexpected observer event: {event:?}"),
     }
 
+    // The subscription's first frame names the List frame's committed position, so the stream
+    // needs no gap replay and does not yield it.
     live_tx.send(Ok(event_live_frame(None, 0))).unwrap();
     live_tx.send(Ok(event_live_frame(Some(1), 1))).unwrap();
     live_tx.send(Ok(event_live_frame(None, 2))).unwrap();
@@ -208,6 +211,17 @@ async fn observer_reports_rpc_response_context_and_elapsed_time() {
     assert_eq!(frames[1].cursor, bytes(1));
     assert!(frames[2].event.is_none());
     assert_eq!(frames[2].cursor, bytes(2));
+    assert_eq!(
+        frames
+            .iter()
+            .map(|frame| frame.position)
+            .collect::<Vec<_>>(),
+        [
+            event_position(1, 0, 0),
+            event_position(1, 0, 1),
+            event_position(3, 0, 0),
+        ]
+    );
     assert!(observer_events.try_recv().is_err());
 
     let observations = observations.lock().unwrap();
@@ -451,6 +465,8 @@ async fn observer_reports_independent_retry_episodes() {
             event => panic!("unexpected observer event: {event:?}"),
         }
         if operation == LedgerStreamOperation::Subscribe {
+            // This frame names the committed position, so it ends the retry episode without
+            // being yielded.
             live_tx.send(Ok(event_live_frame(None, 0))).unwrap();
         }
         match receive_observer_event_without_advancing_time(
@@ -499,5 +515,12 @@ async fn observer_reports_independent_retry_episodes() {
         Some("event-1")
     );
     assert_eq!(frames[1].cursor, bytes(1));
+    assert_eq!(
+        frames
+            .iter()
+            .map(|frame| frame.position)
+            .collect::<Vec<_>>(),
+        [event_position(1, 0, 0), event_position(1, 0, 1)]
+    );
     assert!(observer_events.try_recv().is_err());
 }

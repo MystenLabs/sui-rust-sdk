@@ -1,22 +1,22 @@
 use std::time::Duration;
 
 use futures::StreamExt;
+use prost::bytes::Bytes;
 use tonic::Request;
 use tonic::Status;
 use tonic::codegen::BoxStream;
 
 use super::super::Client;
 use super::super::Result;
-use super::adapter::CursorDomain;
-use super::adapter::ListResponseParts;
+use super::adapter::LedgerFrame;
 use super::adapter::ListScanDirection;
-use super::adapter::LiveFrame;
+use super::adapter::Position;
 use super::adapter::Progress;
-use super::adapter::ProgressAdvance;
-use super::adapter::Recovery;
 use super::adapter::RecoveryGap;
 use super::adapter::SubscriptionAdapter;
-use super::adapter::validate_caller_read_mask;
+use super::adapter::missing_cursor_position;
+use super::adapter::set_start;
+use super::list::ExpectedEnd;
 use super::list::LedgerTipPolicy;
 use super::list::ListAction;
 use super::list::ListMachine;
@@ -24,12 +24,12 @@ use super::list::build_initial_list_request;
 use super::list::build_live_tip_baseline_list_request;
 use super::list::build_polling_list_request;
 use super::list::build_recovery_list_request;
-use super::list::build_resume_to_tip_list_request;
 use super::observability::LedgerStreamEvent;
 use super::observability::LedgerStreamObservability;
 use super::observability::LedgerStreamOperation;
 use super::observability::LedgerStreamStage;
 use super::retry::FailurePhase;
+use super::retry::RequestBounds;
 use super::retry::RetryState;
 use super::subscription::BufferedSubscriptionDrain;
 use super::subscription::BufferedSubscriptionState;
@@ -38,13 +38,15 @@ use super::subscription::LiveSubscription;
 use super::types::Delivery;
 use super::types::LedgerStreamConfig;
 use crate::proto::sui::rpc::v2::GetServiceInfoRequest;
-use crate::proto::sui::rpc::v2::Watermark;
-use prost::bytes::Bytes;
 
 enum Phase<A: SubscriptionAdapter> {
-    Prologue(ProloguePhase<A>),
+    /// Waits until the ledger reaches the start checkpoint, then lists history through its tip.
+    ReadInitialTip,
+    /// Lists through a tip, then follows the ledger with the stream's delivery.
+    // `Phase` moves by value; each replay allocates its boxed machine once.
+    Replay(Box<Replay<A>>),
     Subscribing(SubscribingPhase<A>),
-    Polling(PollingPhase<A>),
+    Polling(PollingPhase),
     Terminal(Status),
     Done,
 }
@@ -52,76 +54,16 @@ enum Phase<A: SubscriptionAdapter> {
 pub(super) enum Start {
     Tip,
     Checkpoint(u64),
-    After(Bytes),
-}
-
-enum ProloguePhase<A: SubscriptionAdapter> {
-    ReadInitialTip,
-    Replay {
-        // `Phase` moves by value; prologue replay allocates this boxed machine once.
-        list_machine: Box<ListMachine<A>>,
-        target_checkpoint: u64,
-        scan: PrologueScan,
+    /// At `position`, which the opaque `cursor` also names.
+    After {
+        cursor: Bytes,
+        position: Position,
     },
 }
 
-#[derive(Clone, Copy)]
-enum PrologueScan {
-    /// Ends at the tip read when the stream started.
-    Initial,
-    /// Runs before a stream resumed from the caller's cursor first subscribes, when the initial
-    /// scan delivered no item: lists from the committed cursor through the server's tip, with no
-    /// end bound, until the server claims checkpoint coverage.
-    ///
-    /// Subscription recovery orders the committed cursor against live frames by the coverage
-    /// claimed with it. A resume cursor past the node's tip ends the initial scan at that cursor
-    /// with the coverage of the scan's bound, which lies below it. With no end bound, the server
-    /// claims no coverage for a cursor past its tip, and the scan ends inside the coverage it
-    /// claims.
-    PastResumeCursor,
-}
-
-enum SubscribingPhase<A: SubscriptionAdapter> {
-    Connect(ConnectMachine<A>),
-    MuteUntilCommitted(LiveSubscription<A>),
-    GapReplay(Box<GapReplay<A>>),
-    DrainGapBuffer(BufferedSubscriptionDrain<A>),
-    Live(LiveSubscription<A>),
-}
-
-struct ConnectMachine<A: SubscriptionAdapter> {
-    context: ConnectContext,
-    phase: ConnectPhase<A>,
-}
-
-#[derive(Clone, Copy)]
-enum ConnectContext {
-    LiveTipStartup,
-    Resume,
-}
-
-enum ConnectPhase<A: SubscriptionAdapter> {
-    Attempt,
-    RetryDelay {
-        delay: Duration,
-    },
-    ReadRecoveryTip,
-    ReplayToRecoveryTip {
-        list_machine: Box<ListMachine<A>>,
-        target_checkpoint: u64,
-        output: ReplayOutput,
-    },
-}
-
-enum PollingPhase<A: SubscriptionAdapter> {
-    ReadBaselineTip,
-    Replay {
-        list_machine: Box<ListMachine<A>>,
-        target_checkpoint: u64,
-        output: ReplayOutput,
-    },
-    Sleep,
-    ReadTip,
+struct Replay<A: SubscriptionAdapter> {
+    list_machine: ListMachine<A>,
+    output: ReplayOutput,
 }
 
 #[derive(Clone, Copy)]
@@ -130,56 +72,75 @@ enum ReplayOutput {
     Yield,
 }
 
-struct ReplayFrame<I, P> {
-    item: Option<I>,
-    watermark: Watermark,
-    progress: Option<P>,
+enum SubscribingPhase<A: SubscriptionAdapter> {
+    Attempt,
+    RetryDelay(Duration),
+    ReadRecoveryTip,
+    GapReplay(Box<GapReplay<A>>),
+    DrainGapBuffer(BufferedSubscriptionDrain<A>),
+    Live(LiveSubscription<A>),
 }
 
-fn parse_replay_frame<A: SubscriptionAdapter>(
+enum PollingPhase {
+    Sleep,
+    ReadTip,
+}
+
+enum Step<A: SubscriptionAdapter> {
+    Next(Phase<A>),
+    Yield(Phase<A>, A::Output),
+}
+
+fn terminal<A: SubscriptionAdapter>(status: Status) -> Step<A> {
+    Step::Next(Phase::Terminal(status))
+}
+
+/// Keys a List response from its progress, which an ascending stream scan always carries.
+fn list_frame<A: SubscriptionAdapter>(
     response: A::ListResponse,
-    progress: Option<Progress<A::Cursor>>,
-) -> Result<ReplayFrame<A::Item, Progress<A::Cursor>>> {
-    let ListResponseParts {
-        item, watermark, ..
-    } = A::split_list(response)?;
-    let watermark =
-        watermark.ok_or_else(|| Status::data_loss("List frame is missing its watermark"))?;
-    Ok(ReplayFrame {
-        item,
-        watermark,
-        progress,
-    })
+    progress: Option<Progress<Bytes>>,
+) -> Result<LedgerFrame<A::Item, A::Cursor>> {
+    let Progress {
+        position,
+        cursor,
+        checkpoint,
+    } = progress.ok_or_else(|| missing_cursor_position("List"))?;
+    LedgerFrame::new(
+        A::into_list_item(response),
+        Progress {
+            position,
+            cursor: A::list_cursor(cursor),
+            checkpoint,
+        },
+        A::GRANULARITY,
+    )
 }
 
-enum ReplayStep<A: SubscriptionAdapter> {
-    Yield(A::Output),
-    Complete,
-    Continue,
-    Terminal(Status),
+/// The List interval between `committed` progress and a new subscription's `first` frame, or
+/// `None` when the subscription starts at or before committed progress.
+fn recovery_gap<A: SubscriptionAdapter>(
+    committed: &Progress<A::Cursor>,
+    first: &LedgerFrame<A::Item, A::Cursor>,
+) -> Option<RecoveryGap<A::Cursor>> {
+    // An item frame's cursor names its item's key as `options.before`.
+    let end = first.leading_boundary();
+    (end > committed.position).then(|| RecoveryGap {
+        start: committed.position,
+        after: committed.cursor.clone(),
+        end,
+        before: first.progress.cursor.clone(),
+    })
 }
 
 enum SubscriptionAttempt<A: SubscriptionAdapter> {
     Established {
         stream: BoxStream<A::SubscribeResponse>,
-        first_frame: LiveFrame<A::Item, Progress<A::Cursor>>,
+        first_frame: LedgerFrame<A::Item, A::Cursor>,
     },
     Failed {
         status: Status,
         failure_phase: FailurePhase,
     },
-}
-
-enum SubscribingStep<A: SubscriptionAdapter> {
-    Next(SubscribingPhase<A>),
-    Yield(SubscribingPhase<A>, A::Output),
-    Terminal(Status),
-}
-
-enum PollingStep<A: SubscriptionAdapter> {
-    Next(PollingPhase<A>),
-    Yield(PollingPhase<A>, A::Output),
-    Terminal(Status),
 }
 
 async fn dispatch_subscription<A: SubscriptionAdapter>(
@@ -211,12 +172,12 @@ pub(super) struct Driver<A: SubscriptionAdapter> {
     service_info_retry: RetryState,
     subscription_retry: RetryState,
     delivery: Delivery,
-    /// Whether the stream started strictly after a caller-supplied cursor (`Start::After`).
-    started_after_cursor: bool,
     phase: Option<Phase<A>>,
+    /// The position a stream started at a checkpoint begins at. Until progress is committed,
+    /// frames at or before it deliver nothing.
+    start_position: Option<Position>,
+    /// Every match before `position` has been delivered, or precedes the stream's start.
     committed_progress: Option<Progress<A::Cursor>>,
-    committed_item_position: Option<A::ItemPosition>,
-    last_covered_checkpoint_height: Option<u64>,
 }
 
 impl<A: SubscriptionAdapter> Driver<A> {
@@ -230,34 +191,34 @@ impl<A: SubscriptionAdapter> Driver<A> {
     ) -> Self {
         let observability = LedgerStreamObservability::new(config.observer());
         let item_required = A::item_required(&subscribe_payload);
-        let started_after_cursor = matches!(start, Start::After(_));
+        let mut start_position = None;
+        let mut committed_progress = None;
         let requested_phase = match start {
             Start::Tip => match delivery {
-                Delivery::Subscribe => {
-                    Phase::Subscribing(SubscribingPhase::Connect(ConnectMachine {
-                        context: ConnectContext::LiveTipStartup,
-                        phase: ConnectPhase::Attempt,
-                    }))
-                }
-                Delivery::Poll => Phase::Polling(PollingPhase::ReadBaselineTip),
+                Delivery::Subscribe => Phase::Subscribing(SubscribingPhase::Attempt),
+                Delivery::Poll => Phase::Polling(PollingPhase::ReadTip),
             },
             Start::Checkpoint(checkpoint) => {
-                A::set_start_checkpoint(&mut list_template, Some(checkpoint));
-                Phase::Prologue(ProloguePhase::ReadInitialTip)
+                let position = Position::checkpoint_start(checkpoint);
+                set_start::<A>(&mut list_template, position, None);
+                start_position = Some(position);
+                Phase::ReadInitialTip
             }
-            Start::After(cursor) => {
-                A::options_mut(&mut list_template).after = Some(cursor);
-                Phase::Prologue(ProloguePhase::ReadInitialTip)
+            Start::After { cursor, position } => {
+                let position = A::GRANULARITY.normalize(position);
+                set_start::<A>(&mut list_template, position, Some(cursor.clone()));
+                committed_progress = Some(Progress {
+                    position,
+                    cursor: A::list_cursor(cursor),
+                    checkpoint: None,
+                });
+                Phase::ReadInitialTip
             }
         };
         let phase = if config.ledger_tip_poll_interval == Duration::ZERO {
             Phase::Terminal(Status::invalid_argument(
                 "ledger_tip_poll_interval must be greater than zero",
             ))
-        } else if let Err(status) =
-            validate_caller_read_mask::<A>(A::list_read_mask(&list_template))
-        {
-            Phase::Terminal(status)
         } else {
             requested_phase
         };
@@ -271,18 +232,15 @@ impl<A: SubscriptionAdapter> Driver<A> {
             service_info_retry: RetryState::new(A::FAMILY, LedgerStreamOperation::GetServiceInfo),
             subscription_retry: RetryState::new(A::FAMILY, LedgerStreamOperation::Subscribe),
             delivery,
-            started_after_cursor,
             phase: Some(phase),
-            committed_progress: None,
-            committed_item_position: None,
-            last_covered_checkpoint_height: None,
+            start_position,
+            committed_progress,
         }
     }
 
     pub(super) async fn next(&mut self) -> Option<Result<A::Output>> {
         loop {
-            let phase = self.phase.take().unwrap_or(Phase::Done);
-            match phase {
+            let step = match self.phase.take().unwrap_or(Phase::Done) {
                 Phase::Done => {
                     self.phase = Some(Phase::Done);
                     return None;
@@ -296,197 +254,228 @@ impl<A: SubscriptionAdapter> Driver<A> {
                     self.phase = Some(Phase::Done);
                     return Some(Err(status));
                 }
-                Phase::Prologue(phase) => {
-                    let (next_phase, output) = self.step_prologue(phase).await;
-                    self.phase = Some(next_phase);
-                    if let Some(output) = output {
-                        return Some(Ok(output));
-                    }
+                Phase::ReadInitialTip => self.read_initial_tip().await,
+                Phase::Replay(replay) => self.step_replay(replay).await,
+                Phase::Subscribing(phase) => self.step_subscribing(phase).await,
+                Phase::Polling(phase) => self.step_polling(phase).await,
+            };
+            match step {
+                Step::Next(next) => self.phase = Some(next),
+                Step::Yield(next, output) => {
+                    self.phase = Some(next);
+                    return Some(Ok(output));
                 }
-                Phase::Subscribing(phase) => match self.step_subscribing(phase).await {
-                    SubscribingStep::Next(next) => {
-                        self.phase = Some(Phase::Subscribing(next));
-                    }
-                    SubscribingStep::Yield(next, output) => {
-                        self.phase = Some(Phase::Subscribing(next));
-                        return Some(Ok(output));
-                    }
-                    SubscribingStep::Terminal(status) => {
-                        self.phase = Some(Phase::Terminal(status));
-                    }
-                },
-                Phase::Polling(phase) => match self.step_polling(phase).await {
-                    PollingStep::Next(next) => {
-                        self.phase = Some(Phase::Polling(next));
-                    }
-                    PollingStep::Yield(next, output) => {
-                        self.phase = Some(Phase::Polling(next));
-                        return Some(Ok(output));
-                    }
-                    PollingStep::Terminal(status) => {
-                        self.phase = Some(Phase::Terminal(status));
-                    }
-                },
             }
         }
     }
 
-    async fn step_prologue(&mut self, phase: ProloguePhase<A>) -> (Phase<A>, Option<A::Output>) {
+    /// A replay phase over an internally built ascending request.
+    fn replay(
+        &self,
+        payload: A::ListRequest,
+        expected_end: ExpectedEnd,
+        stage: LedgerStreamStage,
+        output: ReplayOutput,
+    ) -> Phase<A> {
+        Phase::Replay(Box::new(Replay {
+            list_machine: self.list_machine(payload, expected_end, stage),
+            output,
+        }))
+    }
+
+    /// An ascending List machine for an internally built request, paged by `list_page_limit`.
+    fn list_machine(
+        &self,
+        mut payload: A::ListRequest,
+        expected_end: ExpectedEnd,
+        stage: LedgerStreamStage,
+    ) -> ListMachine<A> {
+        A::options_mut(&mut payload).limit = self.config.list_page_limit;
+        ListMachine::new(
+            self.client.clone(),
+            payload,
+            expected_end,
+            ListScanDirection::Ascending,
+            LedgerTipPolicy::WaitForExpectedBound,
+            self.observability.clone(),
+            stage,
+        )
+    }
+
+    /// Delivers `frame` unless it lies behind committed progress, then continues with `next`.
+    fn deliver(&mut self, next: Phase<A>, frame: LedgerFrame<A::Item, A::Cursor>) -> Step<A> {
+        match self.accept_frame(frame) {
+            Some(output) => Step::Yield(next, output),
+            None => Step::Next(next),
+        }
+    }
+
+    async fn read_initial_tip(&mut self) -> Step<A> {
+        match self
+            .read_service_checkpoint_height(LedgerStreamStage::InitialReplay)
+            .await
+        {
+            Err(status) => terminal(status),
+            // Wait for `start_checkpoint`; otherwise `[start_checkpoint, checkpoint_height + 1)`
+            // is invalid.
+            Ok(checkpoint_height)
+                if A::start_checkpoint(&self.list_template)
+                    .is_some_and(|start_checkpoint| checkpoint_height < start_checkpoint) =>
+            {
+                tokio::time::sleep(self.config.ledger_tip_poll_interval).await;
+                Step::Next(Phase::ReadInitialTip)
+            }
+            Ok(checkpoint_height) => {
+                match build_initial_list_request::<A>(&self.list_template, checkpoint_height) {
+                    Ok((payload, expected_end)) => Step::Next(self.replay(
+                        payload,
+                        expected_end,
+                        LedgerStreamStage::InitialReplay,
+                        ReplayOutput::Yield,
+                    )),
+                    Err(status) => terminal(status),
+                }
+            }
+        }
+    }
+
+    async fn step_replay(&mut self, mut replay: Box<Replay<A>>) -> Step<A> {
+        let rpc_event = replay.list_machine.poll_rpc().await;
+        match replay.list_machine.process_event(rpc_event, &self.config) {
+            ListAction::Frame {
+                response,
+                progress,
+                complete,
+            } => {
+                let frame = match list_frame::<A>(response, progress) {
+                    Ok(frame) => frame,
+                    Err(status) => return terminal(status),
+                };
+                let output = replay.output;
+                let next = if complete {
+                    self.finish_replay()
+                } else {
+                    Phase::Replay(replay)
+                };
+                match (self.accept_frame(frame), output) {
+                    (Some(frame_output), ReplayOutput::Yield) => Step::Yield(next, frame_output),
+                    _ => Step::Next(next),
+                }
+            }
+            ListAction::Continue => Step::Next(Phase::Replay(replay)),
+            ListAction::Terminal(status) => terminal(status),
+        }
+    }
+
+    /// Follows the ledger with the stream's delivery once a replay reaches its tip.
+    fn finish_replay(&self) -> Phase<A> {
+        match self.delivery {
+            Delivery::Subscribe => Phase::Subscribing(SubscribingPhase::Attempt),
+            Delivery::Poll => Phase::Polling(PollingPhase::Sleep),
+        }
+    }
+
+    /// The replay from committed progress through `checkpoint_height`, or `None` when committed
+    /// progress already passes it. With nothing committed, lists only the tip checkpoint, without
+    /// yielding its frames, to establish a resume point.
+    fn catch_up(
+        &self,
+        checkpoint_height: u64,
+        stage: LedgerStreamStage,
+    ) -> Result<Option<Phase<A>>> {
+        match &self.committed_progress {
+            None => {
+                let (payload, expected_end) = build_live_tip_baseline_list_request::<A>(
+                    &self.list_template,
+                    checkpoint_height,
+                )?;
+                Ok(Some(self.replay(
+                    payload,
+                    expected_end,
+                    stage,
+                    ReplayOutput::Suppress,
+                )))
+            }
+            // The position lies at or past the start of checkpoint `checkpoint_height + 1`.
+            Some(committed) if committed.position.checkpoint > checkpoint_height => Ok(None),
+            Some(committed) => {
+                let (payload, expected_end) = build_polling_list_request::<A>(
+                    &self.list_template,
+                    committed,
+                    checkpoint_height,
+                )?;
+                Ok(Some(self.replay(
+                    payload,
+                    expected_end,
+                    stage,
+                    ReplayOutput::Yield,
+                )))
+            }
+        }
+    }
+
+    async fn step_subscribing(&mut self, phase: SubscribingPhase<A>) -> Step<A> {
         match phase {
-            ProloguePhase::ReadInitialTip => match self
-                .read_service_checkpoint_height(LedgerStreamStage::InitialReplay)
+            SubscribingPhase::Attempt => {
+                let observability_stage = if self.committed_progress.is_some() {
+                    LedgerStreamStage::LiveSubscription
+                } else {
+                    LedgerStreamStage::LiveTipStartup
+                };
+                match self.subscription_attempt(observability_stage).await {
+                    Err(status) => terminal(status),
+                    Ok(SubscriptionAttempt::Failed {
+                        status,
+                        failure_phase,
+                    }) => self.schedule_connect_retry(status, failure_phase, observability_stage),
+                    Ok(SubscriptionAttempt::Established {
+                        stream,
+                        first_frame,
+                    }) => {
+                        self.subscription_retry.reset(&self.observability);
+                        let gap = self
+                            .committed_progress
+                            .as_ref()
+                            .and_then(|committed| recovery_gap::<A>(committed, &first_frame));
+                        match gap {
+                            Some(gap) => self.enter_gap_replay(gap, stream, first_frame),
+                            None => {
+                                let live = LiveSubscription {
+                                    stream,
+                                    furthest: first_frame.progress.clone(),
+                                };
+                                self.deliver(
+                                    Phase::Subscribing(SubscribingPhase::Live(live)),
+                                    first_frame,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            SubscribingPhase::RetryDelay(delay) => {
+                tokio::time::sleep(delay).await;
+                Step::Next(Phase::Subscribing(SubscribingPhase::ReadRecoveryTip))
+            }
+            SubscribingPhase::ReadRecoveryTip => match self
+                .read_service_checkpoint_height(LedgerStreamStage::GapRecovery)
                 .await
             {
-                Err(status) => (Phase::Terminal(status), None),
-                // Wait for `start_checkpoint`; otherwise `[start_checkpoint, checkpoint_height + 1)`
-                // is invalid.
-                Ok(checkpoint_height)
-                    if A::start_checkpoint(&self.list_template)
-                        .is_some_and(|start_checkpoint| checkpoint_height < start_checkpoint) =>
-                {
-                    tokio::time::sleep(self.config.ledger_tip_poll_interval).await;
-                    (Phase::Prologue(ProloguePhase::ReadInitialTip), None)
-                }
+                Err(status) => terminal(status),
                 Ok(checkpoint_height) => {
-                    match build_initial_list_request::<A>(
-                        &self.list_template,
-                        checkpoint_height,
-                        self.config.list_page_limit,
-                    ) {
-                        Ok((payload, expected_end)) => (
-                            Phase::Prologue(ProloguePhase::Replay {
-                                list_machine: Box::new(ListMachine::new(
-                                    self.client.clone(),
-                                    payload,
-                                    expected_end,
-                                    ListScanDirection::Ascending,
-                                    LedgerTipPolicy::WaitForExpectedBound,
-                                    self.observability.clone(),
-                                    LedgerStreamStage::InitialReplay,
-                                )),
-                                target_checkpoint: checkpoint_height,
-                                scan: PrologueScan::Initial,
-                            }),
-                            None,
-                        ),
-                        Err(status) => (Phase::Terminal(status), None),
+                    match self.catch_up(checkpoint_height, LedgerStreamStage::GapRecovery) {
+                        Err(status) => terminal(status),
+                        Ok(None) => Step::Next(Phase::Subscribing(SubscribingPhase::Attempt)),
+                        Ok(Some(replay)) => {
+                            self.observability
+                                .emit(|| LedgerStreamEvent::GapRecoveryStarted {
+                                    family: A::FAMILY,
+                                });
+                            Step::Next(replay)
+                        }
                     }
                 }
             },
-            ProloguePhase::Replay {
-                mut list_machine,
-                target_checkpoint,
-                scan,
-            } => {
-                let rpc_event = list_machine.poll_rpc().await;
-                let action = list_machine.process_event(rpc_event, &self.config);
-                let complete = matches!(&action, ListAction::Frame { complete: true, .. });
-                match self.process_replay_frame(action, target_checkpoint, ReplayOutput::Yield) {
-                    ReplayStep::Yield(output) => {
-                        let next = if complete {
-                            self.finish_prologue_replay(target_checkpoint, scan)
-                        } else {
-                            Phase::Prologue(ProloguePhase::Replay {
-                                list_machine,
-                                target_checkpoint,
-                                scan,
-                            })
-                        };
-                        (next, Some(output))
-                    }
-                    ReplayStep::Complete => {
-                        (self.finish_prologue_replay(target_checkpoint, scan), None)
-                    }
-                    ReplayStep::Continue => (
-                        Phase::Prologue(ProloguePhase::Replay {
-                            list_machine,
-                            target_checkpoint,
-                            scan,
-                        }),
-                        None,
-                    ),
-                    ReplayStep::Terminal(status) => (Phase::Terminal(status), None),
-                }
-            }
-        }
-    }
-
-    async fn step_subscribing(&mut self, phase: SubscribingPhase<A>) -> SubscribingStep<A> {
-        match phase {
-            SubscribingPhase::Connect(machine) => self.step_connect(machine).await,
-            SubscribingPhase::MuteUntilCommitted(mut live) => {
-                // This subscription began behind committed progress. Keep its frames hidden
-                // until it reaches that point; a later frame bounds the required List replay.
-                match live.stream.next().await {
-                    Some(Ok(response)) => match A::parse_live(response, self.item_required) {
-                        Err(status) => SubscribingStep::Terminal(status),
-                        Ok(frame) => match live
-                            .last_seen
-                            .classify_consecutive_subscription_progress(
-                                &frame.progress,
-                                frame.item.is_some(),
-                            ) {
-                            Err(status) => SubscribingStep::Terminal(status),
-                            Ok(ProgressAdvance::Unchanged) => {
-                                SubscribingStep::Next(SubscribingPhase::MuteUntilCommitted(live))
-                            }
-                            Ok(
-                                ProgressAdvance::CheckpointCoverageAdvanced
-                                | ProgressAdvance::CursorAdvanced,
-                            ) => {
-                                live.last_seen = frame.progress.clone();
-                                self.subscription_retry.reset(&self.observability);
-                                let Some(last_committed_progress) = self.committed_progress.clone()
-                                else {
-                                    return SubscribingStep::Terminal(Status::internal(
-                                        "muted subscription has no committed progress",
-                                    ));
-                                };
-                                match last_committed_progress.plan_recovery(
-                                    &frame.progress,
-                                    self.last_covered_checkpoint_height,
-                                ) {
-                                    Err(status) => SubscribingStep::Terminal(status),
-                                    Ok(Recovery::Live) => {
-                                        SubscribingStep::Next(SubscribingPhase::Live(live))
-                                    }
-                                    Ok(Recovery::MuteUntilCommitted) => SubscribingStep::Next(
-                                        SubscribingPhase::MuteUntilCommitted(live),
-                                    ),
-                                    Ok(Recovery::Replay(gap)) => {
-                                        self.enter_gap_replay(gap, live.stream, frame)
-                                    }
-                                }
-                            }
-                        },
-                    },
-                    Some(Err(status)) => {
-                        self.emit_subscription_interruption(
-                            &status,
-                            LedgerStreamStage::LiveSubscription,
-                        );
-                        self.schedule_connect_retry(
-                            status,
-                            FailurePhase::Body,
-                            LedgerStreamStage::LiveSubscription,
-                            ConnectContext::Resume,
-                        )
-                    }
-                    None => {
-                        let status = Status::unavailable("subscription stream ended unexpectedly");
-                        self.emit_subscription_interruption(
-                            &status,
-                            LedgerStreamStage::LiveSubscription,
-                        );
-                        self.schedule_connect_retry(
-                            status,
-                            FailurePhase::Body,
-                            LedgerStreamStage::LiveSubscription,
-                            ConnectContext::Resume,
-                        )
-                    }
-                }
-            }
             SubscribingPhase::GapReplay(mut gap) => {
                 let rpc_event =
                     if let BufferedSubscriptionState::Active(live) = &mut gap.subscription_state {
@@ -507,7 +496,7 @@ impl<A: SubscriptionAdapter> Driver<A> {
                         Some(gap.list_machine.poll_rpc().await)
                     };
                 let Some(rpc_event) = rpc_event else {
-                    return SubscribingStep::Next(SubscribingPhase::GapReplay(gap));
+                    return Step::Next(Phase::Subscribing(SubscribingPhase::GapReplay(gap)));
                 };
                 match gap.list_machine.process_event(rpc_event, &self.config) {
                     ListAction::Frame {
@@ -515,33 +504,10 @@ impl<A: SubscriptionAdapter> Driver<A> {
                         progress,
                         complete,
                     } => {
-                        let frame = match parse_replay_frame::<A>(response, progress) {
+                        let frame = match list_frame::<A>(response, progress) {
                             Ok(frame) => frame,
-                            Err(status) => return SubscribingStep::Terminal(status),
+                            Err(status) => return terminal(status),
                         };
-                        let Some(progress) = frame.progress else {
-                            return SubscribingStep::Next(if complete {
-                                SubscribingPhase::DrainGapBuffer(
-                                    (*gap).into_buffered_subscription_drain(),
-                                )
-                            } else {
-                                SubscribingPhase::GapReplay(gap)
-                            });
-                        };
-                        if frame.item.is_none()
-                            && (gap.has_deferred_progress(&progress)
-                                || self.progress_is_committed(&progress))
-                        {
-                            return SubscribingStep::Next(if complete {
-                                SubscribingPhase::DrainGapBuffer(
-                                    (*gap).into_buffered_subscription_drain(),
-                                )
-                            } else {
-                                SubscribingPhase::GapReplay(gap)
-                            });
-                        }
-                        let item = frame.item.filter(|item| !self.item_was_delivered(item));
-                        self.commit_progress(progress.clone());
                         let next = if complete {
                             SubscribingPhase::DrainGapBuffer(
                                 (*gap).into_buffered_subscription_drain(),
@@ -549,89 +515,53 @@ impl<A: SubscriptionAdapter> Driver<A> {
                         } else {
                             SubscribingPhase::GapReplay(gap)
                         };
-                        SubscribingStep::Yield(next, self.make_output(item, progress))
+                        self.deliver(Phase::Subscribing(next), frame)
                     }
-                    ListAction::Continue => SubscribingStep::Next(SubscribingPhase::GapReplay(gap)),
-                    ListAction::Terminal(status) => SubscribingStep::Terminal(status),
+                    ListAction::Continue => {
+                        Step::Next(Phase::Subscribing(SubscribingPhase::GapReplay(gap)))
+                    }
+                    ListAction::Terminal(status) => terminal(status),
                 }
             }
             SubscribingPhase::DrainGapBuffer(mut delivery) => {
                 if let Some(frame) = delivery.buffered_subscription_frames.pop_front() {
-                    let next = SubscribingPhase::DrainGapBuffer(delivery);
-                    if self.behind_delivered_item(&frame) {
-                        return SubscribingStep::Next(next);
-                    }
-                    let cursor_advanced = self
-                        .committed_progress
-                        .as_ref()
-                        .is_none_or(|committed| !committed.same_position(&frame.progress));
-                    let checkpoint_coverage_advanced = self
-                        .committed_progress
-                        .as_ref()
-                        .and_then(|committed| committed.checkpoint)
-                        .zip(frame.progress.checkpoint)
-                        .is_some_and(|(committed, next)| next > committed);
-                    let yield_frame = frame.item.is_some() || cursor_advanced;
-                    if yield_frame || checkpoint_coverage_advanced {
-                        self.commit_progress(frame.progress.clone());
-                    }
-                    if yield_frame {
-                        SubscribingStep::Yield(next, self.make_output(frame.item, frame.progress))
-                    } else {
-                        SubscribingStep::Next(next)
-                    }
+                    self.deliver(
+                        Phase::Subscribing(SubscribingPhase::DrainGapBuffer(delivery)),
+                        frame,
+                    )
                 } else {
                     match delivery.subscription_state {
                         BufferedSubscriptionState::Failed(status) => self.schedule_connect_retry(
                             status,
                             FailurePhase::Body,
                             LedgerStreamStage::GapRecovery,
-                            ConnectContext::Resume,
                         ),
                         BufferedSubscriptionState::DroppedAtBufferLimit => {
-                            SubscribingStep::Next(SubscribingPhase::Connect(ConnectMachine {
-                                context: ConnectContext::Resume,
-                                phase: ConnectPhase::Attempt,
-                            }))
+                            Step::Next(Phase::Subscribing(SubscribingPhase::Attempt))
                         }
                         BufferedSubscriptionState::Active(live) => {
-                            SubscribingStep::Next(SubscribingPhase::Live(live))
+                            Step::Next(Phase::Subscribing(SubscribingPhase::Live(live)))
                         }
                     }
                 }
             }
             SubscribingPhase::Live(mut live) => match live.stream.next().await {
                 Some(Ok(response)) => match A::parse_live(response, self.item_required) {
-                    Err(status) => SubscribingStep::Terminal(status),
-                    Ok(frame) => match live.last_seen.classify_consecutive_subscription_progress(
+                    Err(status) => terminal(status),
+                    Ok(frame) => match live.furthest.advance(
                         &frame.progress,
+                        ListScanDirection::Ascending,
                         frame.item.is_some(),
+                        "subscription",
                     ) {
-                        Err(status) => SubscribingStep::Terminal(status),
-                        Ok(ProgressAdvance::Unchanged) => {
-                            SubscribingStep::Next(SubscribingPhase::Live(live))
-                        }
-                        Ok(ProgressAdvance::CheckpointCoverageAdvanced) => {
-                            live.last_seen = frame.progress.clone();
-                            if !self.behind_delivered_item(&frame) {
-                                self.commit_progress(frame.progress);
+                        Err(status) => terminal(status),
+                        Ok((position_advanced, coverage_advanced)) => {
+                            if position_advanced || coverage_advanced {
+                                self.subscription_retry.reset(&self.observability);
                             }
-                            self.subscription_retry.reset(&self.observability);
-                            SubscribingStep::Next(SubscribingPhase::Live(live))
-                        }
-                        Ok(ProgressAdvance::CursorAdvanced) => {
-                            live.last_seen = frame.progress.clone();
-                            self.subscription_retry.reset(&self.observability);
-                            if self.behind_delivered_item(&frame) {
-                                SubscribingStep::Next(SubscribingPhase::Live(live))
-                            } else {
-                                let LiveFrame { item, progress } = frame;
-                                self.commit_progress(progress.clone());
-                                SubscribingStep::Yield(
-                                    SubscribingPhase::Live(live),
-                                    self.make_output(item, progress),
-                                )
-                            }
+                            // A subscription that started behind committed progress repeats
+                            // frames until it passes that progress.
+                            self.deliver(Phase::Subscribing(SubscribingPhase::Live(live)), frame)
                         }
                     },
                 },
@@ -644,7 +574,6 @@ impl<A: SubscriptionAdapter> Driver<A> {
                         status,
                         FailurePhase::Body,
                         LedgerStreamStage::LiveSubscription,
-                        ConnectContext::Resume,
                     )
                 }
                 None => {
@@ -657,132 +586,33 @@ impl<A: SubscriptionAdapter> Driver<A> {
                         status,
                         FailurePhase::Body,
                         LedgerStreamStage::LiveSubscription,
-                        ConnectContext::Resume,
                     )
                 }
             },
         }
     }
 
-    async fn step_polling(&mut self, phase: PollingPhase<A>) -> PollingStep<A> {
+    async fn step_polling(&mut self, phase: PollingPhase) -> Step<A> {
         match phase {
-            PollingPhase::ReadBaselineTip => match self
-                .read_service_checkpoint_height(LedgerStreamStage::PollingBaseline)
-                .await
-            {
-                Err(status) => PollingStep::Terminal(status),
-                Ok(checkpoint_height) => {
-                    match build_live_tip_baseline_list_request::<A>(
-                        &self.list_template,
-                        checkpoint_height,
-                        self.config.list_page_limit,
-                    ) {
-                        Ok((payload, expected_end)) => PollingStep::Next(PollingPhase::Replay {
-                            list_machine: Box::new(ListMachine::new(
-                                self.client.clone(),
-                                payload,
-                                expected_end,
-                                ListScanDirection::Ascending,
-                                LedgerTipPolicy::WaitForExpectedBound,
-                                self.observability.clone(),
-                                LedgerStreamStage::PollingBaseline,
-                            )),
-                            target_checkpoint: checkpoint_height,
-                            output: ReplayOutput::Suppress,
-                        }),
-                        Err(status) => PollingStep::Terminal(status),
-                    }
-                }
-            },
-            PollingPhase::Replay {
-                mut list_machine,
-                target_checkpoint,
-                output,
-            } => {
-                let rpc_event = list_machine.poll_rpc().await;
-                let action = list_machine.process_event(rpc_event, &self.config);
-                let complete = matches!(&action, ListAction::Frame { complete: true, .. });
-                match self.process_replay_frame(action, target_checkpoint, output) {
-                    ReplayStep::Yield(frame_output) => {
-                        if complete {
-                            match self.finish_polling_replay(target_checkpoint) {
-                                Ok(next) => PollingStep::Yield(next, frame_output),
-                                Err(status) => PollingStep::Terminal(status),
-                            }
-                        } else {
-                            PollingStep::Yield(
-                                PollingPhase::Replay {
-                                    list_machine,
-                                    target_checkpoint,
-                                    output,
-                                },
-                                frame_output,
-                            )
-                        }
-                    }
-                    ReplayStep::Complete => match self.finish_polling_replay(target_checkpoint) {
-                        Ok(next) => PollingStep::Next(next),
-                        Err(status) => PollingStep::Terminal(status),
-                    },
-                    ReplayStep::Continue if complete => {
-                        match self.finish_polling_replay(target_checkpoint) {
-                            Ok(next) => PollingStep::Next(next),
-                            Err(status) => PollingStep::Terminal(status),
-                        }
-                    }
-                    ReplayStep::Continue => PollingStep::Next(PollingPhase::Replay {
-                        list_machine,
-                        target_checkpoint,
-                        output,
-                    }),
-                    ReplayStep::Terminal(status) => PollingStep::Terminal(status),
-                }
-            }
             PollingPhase::Sleep => {
                 tokio::time::sleep(self.config.ledger_tip_poll_interval).await;
-                PollingStep::Next(PollingPhase::ReadTip)
+                Step::Next(Phase::Polling(PollingPhase::ReadTip))
             }
-            PollingPhase::ReadTip => match self
-                .read_service_checkpoint_height(LedgerStreamStage::PollingTail)
-                .await
-            {
-                Err(status) => PollingStep::Terminal(status),
-                Ok(checkpoint_height)
-                    if self
-                        .last_covered_checkpoint_height
-                        .is_some_and(|covered| checkpoint_height <= covered) =>
-                {
-                    PollingStep::Next(PollingPhase::Sleep)
+            PollingPhase::ReadTip => {
+                let stage = if self.committed_progress.is_some() {
+                    LedgerStreamStage::PollingTail
+                } else {
+                    LedgerStreamStage::PollingBaseline
+                };
+                match self.read_service_checkpoint_height(stage).await {
+                    Err(status) => terminal(status),
+                    Ok(checkpoint_height) => match self.catch_up(checkpoint_height, stage) {
+                        Err(status) => terminal(status),
+                        Ok(None) => Step::Next(Phase::Polling(PollingPhase::Sleep)),
+                        Ok(Some(replay)) => Step::Next(replay),
+                    },
                 }
-                Ok(checkpoint_height) => {
-                    let Some(committed_progress) = self.committed_progress.as_ref() else {
-                        return PollingStep::Terminal(Status::data_loss(
-                            "subscription recovery has no committed progress marker",
-                        ));
-                    };
-                    match build_polling_list_request::<A>(
-                        &self.list_template,
-                        committed_progress,
-                        checkpoint_height,
-                        self.config.list_page_limit,
-                    ) {
-                        Ok((payload, expected_end)) => PollingStep::Next(PollingPhase::Replay {
-                            list_machine: Box::new(ListMachine::new(
-                                self.client.clone(),
-                                payload,
-                                expected_end,
-                                ListScanDirection::Ascending,
-                                LedgerTipPolicy::WaitForExpectedBound,
-                                self.observability.clone(),
-                                LedgerStreamStage::PollingTail,
-                            )),
-                            target_checkpoint: checkpoint_height,
-                            output: ReplayOutput::Yield,
-                        }),
-                        Err(status) => PollingStep::Terminal(status),
-                    }
-                }
-            },
+            }
         }
     }
 
@@ -820,6 +650,7 @@ impl<A: SubscriptionAdapter> Driver<A> {
                         // Unary dispatch and body share this await. Remote statuses retain dispatch
                         // classification; local tonic transport sources allow reset-code retry.
                         FailurePhase::Dispatch,
+                        RequestBounds::CallerSupplied,
                         &self.config,
                         &self.observability,
                         observability_stage,
@@ -845,371 +676,34 @@ impl<A: SubscriptionAdapter> Driver<A> {
             });
     }
 
-    fn process_replay_frame(
-        &mut self,
-        action: ListAction<A::ListResponse, Progress<A::Cursor>>,
-        target_checkpoint: u64,
-        output: ReplayOutput,
-    ) -> ReplayStep<A> {
-        match action {
-            ListAction::Frame {
-                response,
-                progress,
-                complete,
-            } => {
-                let frame = match parse_replay_frame::<A>(response, progress) {
-                    Ok(frame) => frame,
-                    Err(status) => return ReplayStep::Terminal(status),
-                };
-                let Some(progress) = frame.progress else {
-                    if !complete {
-                        return ReplayStep::Continue;
-                    }
-                    let Some(cursor) = frame.watermark.cursor else {
-                        return ReplayStep::Terminal(Status::data_loss(
-                            "subscription recovery has no committed progress marker",
-                        ));
-                    };
-                    let Some(progress) = A::Cursor::position(&cursor, Some(target_checkpoint))
-                    else {
-                        return ReplayStep::Terminal(Status::internal(
-                            "checkpoint-bound watermark names no position",
-                        ));
-                    };
-                    let duplicate = self.progress_is_committed(&progress);
-                    self.commit_progress(progress.clone());
-                    return if duplicate || matches!(output, ReplayOutput::Suppress) {
-                        ReplayStep::Complete
-                    } else {
-                        ReplayStep::Yield(self.make_output(None, progress))
-                    };
-                };
-                let duplicate = frame.item.is_none() && self.progress_is_committed(&progress);
-                self.commit_progress(progress.clone());
-                if duplicate || matches!(output, ReplayOutput::Suppress) {
-                    self.commit_item_position(&frame.item);
-                    if complete {
-                        ReplayStep::Complete
-                    } else {
-                        ReplayStep::Continue
-                    }
-                } else {
-                    ReplayStep::Yield(self.make_output(frame.item, progress))
-                }
-            }
-            ListAction::Continue => ReplayStep::Continue,
-            ListAction::Terminal(status) => ReplayStep::Terminal(status),
-        }
-    }
-
-    fn finish_prologue_replay(&mut self, target_checkpoint: u64, scan: PrologueScan) -> Phase<A> {
-        let Some(committed_progress) = self.committed_progress.as_ref() else {
-            return Phase::Terminal(Status::data_loss(
-                "subscription recovery has no committed progress marker",
-            ));
-        };
-        // The initial scan claims no more than its bound; a scan with no end bound claims the tip
-        // it reached.
-        let covered = committed_progress
-            .checkpoint
-            .map_or(target_checkpoint, |claimed| claimed.max(target_checkpoint));
-        self.last_covered_checkpoint_height = Some(
-            self.last_covered_checkpoint_height
-                .map_or(covered, |known| known.max(covered)),
-        );
-        match self.delivery {
-            // With no item delivered, the committed cursor is the caller's cursor, the server's
-            // echo of it, or the end of the initial scan, and opaque cursors do not say which. An
-            // echo of a cursor past the tip lies beyond the coverage claimed with it.
-            Delivery::Subscribe
-                if matches!(scan, PrologueScan::Initial)
-                    && self.started_after_cursor
-                    && self.committed_item_position.is_none() =>
-            {
-                match build_resume_to_tip_list_request::<A>(
-                    &self.list_template,
-                    committed_progress,
-                    self.config.list_page_limit,
-                ) {
-                    Ok((payload, expected_end)) => Phase::Prologue(ProloguePhase::Replay {
-                        list_machine: Box::new(ListMachine::new(
-                            self.client.clone(),
-                            payload,
-                            expected_end,
-                            ListScanDirection::Ascending,
-                            LedgerTipPolicy::WaitForCoverage,
-                            self.observability.clone(),
-                            LedgerStreamStage::InitialReplay,
-                        )),
-                        target_checkpoint,
-                        scan: PrologueScan::PastResumeCursor,
-                    }),
-                    Err(status) => Phase::Terminal(status),
-                }
-            }
-            Delivery::Subscribe => Phase::Subscribing(SubscribingPhase::Connect(ConnectMachine {
-                context: ConnectContext::Resume,
-                phase: ConnectPhase::Attempt,
-            })),
-            Delivery::Poll => Phase::Polling(PollingPhase::Sleep),
-        }
-    }
-
-    fn finish_polling_replay(&mut self, target_checkpoint: u64) -> Result<PollingPhase<A>> {
-        self.last_covered_checkpoint_height = Some(
-            self.last_covered_checkpoint_height
-                .map_or(target_checkpoint, |covered| covered.max(target_checkpoint)),
-        );
-        if self.committed_progress.is_none() {
-            return Err(Status::data_loss(
-                "subscription recovery has no committed progress marker",
-            ));
-        }
-        Ok(PollingPhase::Sleep)
-    }
-
-    fn finish_subscription_recovery_replay(&mut self, target_checkpoint: u64) -> ConnectMachine<A> {
-        self.last_covered_checkpoint_height = Some(
-            self.last_covered_checkpoint_height
-                .map_or(target_checkpoint, |covered| covered.max(target_checkpoint)),
-        );
-        ConnectMachine {
-            context: ConnectContext::Resume,
-            phase: ConnectPhase::Attempt,
-        }
-    }
-
     fn enter_gap_replay(
         &mut self,
-        gap: RecoveryGap,
+        gap: RecoveryGap<A::Cursor>,
         new_subscription_stream: BoxStream<A::SubscribeResponse>,
-        new_subscription_frame: LiveFrame<A::Item, Progress<A::Cursor>>,
-    ) -> SubscribingStep<A> {
-        // List fills the interval through this frame before buffered live data is delivered.
-        let recovery_list_template = A::list_request_from_subscribe(&self.subscribe_payload);
-        let (payload, expected_end) = match build_recovery_list_request::<A>(
-            recovery_list_template,
-            &gap,
-            self.config.list_page_limit,
-        ) {
-            Ok(request) => request,
-            Err(status) => return SubscribingStep::Terminal(status),
-        };
+        new_subscription_frame: LedgerFrame<A::Item, A::Cursor>,
+    ) -> Step<A> {
+        // List fills the interval before this frame before buffered live data is delivered.
+        let (payload, expected_end) =
+            match build_recovery_list_request::<A>(self.list_template.clone(), &gap) {
+                Ok(request) => request,
+                Err(status) => return terminal(status),
+            };
         self.observability
             .emit(|| LedgerStreamEvent::GapRecoveryStarted { family: A::FAMILY });
         let new_live_subscription = LiveSubscription {
             stream: new_subscription_stream,
-            last_seen: new_subscription_frame.progress.clone(),
+            furthest: new_subscription_frame.progress.clone(),
         };
-        let recovery_list_machine = ListMachine::new(
-            self.client.clone(),
-            payload,
-            expected_end,
-            ListScanDirection::Ascending,
-            LedgerTipPolicy::WaitForExpectedBound,
-            self.observability.clone(),
-            LedgerStreamStage::GapRecovery,
-        );
-        SubscribingStep::Next(SubscribingPhase::GapReplay(Box::new(GapReplay::new(
-            recovery_list_machine,
-            new_live_subscription,
-            new_subscription_frame,
-            &self.config,
-            gap.replays_boundary_item(),
+        let recovery_list_machine =
+            self.list_machine(payload, expected_end, LedgerStreamStage::GapRecovery);
+        Step::Next(Phase::Subscribing(SubscribingPhase::GapReplay(Box::new(
+            GapReplay::new(
+                recovery_list_machine,
+                new_live_subscription,
+                new_subscription_frame,
+                &self.config,
+            ),
         ))))
-    }
-
-    async fn step_connect(&mut self, machine: ConnectMachine<A>) -> SubscribingStep<A> {
-        let ConnectMachine { context, phase } = machine;
-        match phase {
-            ConnectPhase::Attempt => {
-                let observability_stage = match context {
-                    ConnectContext::LiveTipStartup => LedgerStreamStage::LiveTipStartup,
-                    ConnectContext::Resume => LedgerStreamStage::LiveSubscription,
-                };
-                match self.subscription_attempt(observability_stage).await {
-                    Err(status) => SubscribingStep::Terminal(status),
-                    Ok(SubscriptionAttempt::Failed {
-                        status,
-                        failure_phase,
-                    }) => self.schedule_connect_retry(
-                        status,
-                        failure_phase,
-                        observability_stage,
-                        context,
-                    ),
-                    Ok(SubscriptionAttempt::Established {
-                        stream,
-                        first_frame,
-                    }) => {
-                        self.subscription_retry.reset(&self.observability);
-                        match context {
-                            ConnectContext::LiveTipStartup => {
-                                let LiveFrame { item, progress } = first_frame;
-                                let live = LiveSubscription {
-                                    stream,
-                                    last_seen: progress.clone(),
-                                };
-                                self.commit_progress(progress.clone());
-                                SubscribingStep::Yield(
-                                    SubscribingPhase::Live(live),
-                                    self.make_output(item, progress),
-                                )
-                            }
-                            ConnectContext::Resume => {
-                                let Some(last_committed_progress) = self.committed_progress.clone()
-                                else {
-                                    return SubscribingStep::Terminal(Status::data_loss(
-                                        "subscription recovery has no committed progress marker",
-                                    ));
-                                };
-                                match last_committed_progress.plan_recovery(
-                                    &first_frame.progress,
-                                    self.last_covered_checkpoint_height,
-                                ) {
-                                    Err(status) => SubscribingStep::Terminal(status),
-                                    Ok(Recovery::Live) => SubscribingStep::Next(
-                                        SubscribingPhase::Live(LiveSubscription {
-                                            stream,
-                                            last_seen: first_frame.progress,
-                                        }),
-                                    ),
-                                    Ok(Recovery::MuteUntilCommitted) => SubscribingStep::Next(
-                                        SubscribingPhase::MuteUntilCommitted(LiveSubscription {
-                                            stream,
-                                            last_seen: first_frame.progress,
-                                        }),
-                                    ),
-                                    Ok(Recovery::Replay(gap)) => {
-                                        self.enter_gap_replay(gap, stream, first_frame)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            ConnectPhase::RetryDelay { delay } => {
-                tokio::time::sleep(delay).await;
-                SubscribingStep::Next(SubscribingPhase::Connect(ConnectMachine {
-                    context,
-                    phase: ConnectPhase::ReadRecoveryTip,
-                }))
-            }
-            ConnectPhase::ReadRecoveryTip => {
-                let committed_progress = self.committed_progress.clone();
-                match self
-                    .read_service_checkpoint_height(LedgerStreamStage::GapRecovery)
-                    .await
-                {
-                    Err(status) => SubscribingStep::Terminal(status),
-                    Ok(checkpoint_height)
-                        if committed_progress
-                            .as_ref()
-                            .and_then(|progress| progress.checkpoint)
-                            .is_some_and(|committed| checkpoint_height <= committed) =>
-                    {
-                        SubscribingStep::Next(SubscribingPhase::Connect(ConnectMachine {
-                            context: ConnectContext::Resume,
-                            phase: ConnectPhase::Attempt,
-                        }))
-                    }
-                    Ok(checkpoint_height) => {
-                        let (request, output) =
-                            if let Some(committed_progress) = &committed_progress {
-                                (
-                                    build_polling_list_request::<A>(
-                                        &self.list_template,
-                                        committed_progress,
-                                        checkpoint_height,
-                                        self.config.list_page_limit,
-                                    ),
-                                    ReplayOutput::Yield,
-                                )
-                            } else {
-                                (
-                                    build_live_tip_baseline_list_request::<A>(
-                                        &self.list_template,
-                                        checkpoint_height,
-                                        self.config.list_page_limit,
-                                    ),
-                                    ReplayOutput::Suppress,
-                                )
-                            };
-                        match request {
-                            Err(status) => SubscribingStep::Terminal(status),
-                            Ok((payload, expected_end)) => {
-                                self.observability
-                                    .emit(|| LedgerStreamEvent::GapRecoveryStarted {
-                                        family: A::FAMILY,
-                                    });
-                                SubscribingStep::Next(SubscribingPhase::Connect(ConnectMachine {
-                                    context,
-                                    phase: ConnectPhase::ReplayToRecoveryTip {
-                                        list_machine: Box::new(ListMachine::new(
-                                            self.client.clone(),
-                                            payload,
-                                            expected_end,
-                                            ListScanDirection::Ascending,
-                                            LedgerTipPolicy::WaitForExpectedBound,
-                                            self.observability.clone(),
-                                            LedgerStreamStage::GapRecovery,
-                                        )),
-                                        target_checkpoint: checkpoint_height,
-                                        output,
-                                    },
-                                }))
-                            }
-                        }
-                    }
-                }
-            }
-            ConnectPhase::ReplayToRecoveryTip {
-                mut list_machine,
-                target_checkpoint,
-                output,
-            } => {
-                let rpc_event = list_machine.poll_rpc().await;
-                let action = list_machine.process_event(rpc_event, &self.config);
-                let complete = matches!(&action, ListAction::Frame { complete: true, .. });
-                match self.process_replay_frame(action, target_checkpoint, output) {
-                    ReplayStep::Yield(frame_output) => {
-                        let next = if complete {
-                            self.finish_subscription_recovery_replay(target_checkpoint)
-                        } else {
-                            ConnectMachine {
-                                context,
-                                phase: ConnectPhase::ReplayToRecoveryTip {
-                                    list_machine,
-                                    target_checkpoint,
-                                    output,
-                                },
-                            }
-                        };
-                        SubscribingStep::Yield(SubscribingPhase::Connect(next), frame_output)
-                    }
-                    ReplayStep::Complete => SubscribingStep::Next(SubscribingPhase::Connect(
-                        self.finish_subscription_recovery_replay(target_checkpoint),
-                    )),
-                    ReplayStep::Continue if complete => {
-                        SubscribingStep::Next(SubscribingPhase::Connect(
-                            self.finish_subscription_recovery_replay(target_checkpoint),
-                        ))
-                    }
-                    ReplayStep::Continue => {
-                        SubscribingStep::Next(SubscribingPhase::Connect(ConnectMachine {
-                            context,
-                            phase: ConnectPhase::ReplayToRecoveryTip {
-                                list_machine,
-                                target_checkpoint,
-                                output,
-                            },
-                        }))
-                    }
-                    ReplayStep::Terminal(status) => SubscribingStep::Terminal(status),
-                }
-            }
-        }
     }
 
     async fn subscription_attempt(
@@ -1251,11 +745,6 @@ impl<A: SubscriptionAdapter> Driver<A> {
                 });
             }
         };
-        if !first_frame.progress.has_checkpoint_coverage() {
-            return Err(Status::data_loss(
-                "subscription initial frame is missing checkpoint coverage",
-            ));
-        }
         Ok(SubscriptionAttempt::Established {
             stream,
             first_frame,
@@ -1267,71 +756,35 @@ impl<A: SubscriptionAdapter> Driver<A> {
         status: Status,
         failure_phase: FailurePhase,
         observability_stage: LedgerStreamStage,
-        context: ConnectContext,
-    ) -> SubscribingStep<A> {
-        let Some(delay) = self.subscription_retry.retry_delay(
+    ) -> Step<A> {
+        match self.subscription_retry.retry_delay(
             &status,
             failure_phase,
+            RequestBounds::CallerSupplied,
             &self.config,
             &self.observability,
             observability_stage,
-        ) else {
-            return SubscribingStep::Terminal(status);
-        };
-        SubscribingStep::Next(SubscribingPhase::Connect(ConnectMachine {
-            context,
-            phase: ConnectPhase::RetryDelay { delay },
-        }))
+        ) {
+            Some(delay) => Step::Next(Phase::Subscribing(SubscribingPhase::RetryDelay(delay))),
+            None => terminal(status),
+        }
     }
 
-    fn progress_is_committed(&self, progress: &Progress<A::Cursor>) -> bool {
-        self.committed_progress
+    /// Commits `frame` and returns its output when it lies past committed progress, or past the
+    /// stream's start while nothing is committed. An item frame's position is its item's key with
+    /// the finest index incremented, so the item lies before that point exactly when the frame's
+    /// position does not pass it.
+    fn accept_frame(&mut self, frame: LedgerFrame<A::Item, A::Cursor>) -> Option<A::Output> {
+        let LedgerFrame { item, progress } = frame;
+        let floor = self
+            .committed_progress
             .as_ref()
-            .is_some_and(|committed| committed.same_position(progress))
-            || self.committed_progress.is_none()
-                && A::request_resume_position(&self.list_template)
-                    .as_ref()
-                    .is_some_and(|resume| resume.same_position(progress))
-    }
-
-    fn commit_item_position(&mut self, item: &Option<A::Item>) {
-        if let Some(item) = item {
-            self.committed_item_position = Some(A::item_position(item).clone());
+            .map(|committed| committed.position)
+            .or(self.start_position);
+        if floor.is_some_and(|floor| progress.position <= floor) {
+            return None;
         }
-    }
-
-    fn item_was_delivered(&self, item: &A::Item) -> bool {
-        self.committed_item_position
-            .as_ref()
-            .is_some_and(|delivered| A::item_position(item) <= delivered)
-    }
-
-    /// Whether a subscription frame is, or may be, at or before the last delivered item, as
-    /// frames from a replacement subscription that started behind that item are. Such a frame
-    /// is neither yielded nor committed. A progress-only frame claiming less than the item's
-    /// checkpoint cannot be ordered after the item; withholding it only defers its progress to
-    /// a later frame.
-    fn behind_delivered_item(&self, frame: &LiveFrame<A::Item, Progress<A::Cursor>>) -> bool {
-        match &frame.item {
-            Some(item) => self.item_was_delivered(item),
-            None => self
-                .committed_item_position
-                .as_ref()
-                .zip(frame.progress.checkpoint)
-                .is_some_and(|(delivered, claim)| claim < A::item_checkpoint(delivered)),
-        }
-    }
-
-    fn make_output(&mut self, item: Option<A::Item>, progress: Progress<A::Cursor>) -> A::Output {
-        self.commit_item_position(&item);
-        A::into_output(item, progress)
-    }
-
-    fn commit_progress(&mut self, mut progress: Progress<A::Cursor>) {
-        if let Some(committed) = &self.committed_progress {
-            // Preserve known checkpoint coverage when a later watermark omits it.
-            progress.inherit_checkpoint_coverage(committed);
-        }
-        self.committed_progress = Some(progress);
+        self.committed_progress = Some(progress.clone());
+        Some(A::into_output(item.map(|item| item.payload), progress))
     }
 }

@@ -34,7 +34,9 @@ impl Client {
     /// Paginates `ListCheckpoints` requests into a stream of raw response pages.
     ///
     /// Automatically follows `ItemLimit` and `ScanLimit` pagination until reaching the
-    /// request's end bound or the ledger tip.
+    /// request's end bound or the ledger tip, continuing each page from the last frame's
+    /// `Watermark.cursor_position` and `Watermark.cursor`. Every frame must carry
+    /// `cursor_position`.
     pub fn list_checkpoints(
         &self,
         request: ListCheckpointsRequest,
@@ -56,8 +58,8 @@ impl Client {
 
     /// Streams checkpoints indefinitely, automatically retrying transient errors.
     ///
-    /// The request's read mask must include `sequence_number` (or `*`). To resume after a
-    /// previous checkpoint, pass `cursor + 1` to [`CheckpointStreamStart::Checkpoint`].
+    /// To resume after a previous checkpoint, pass `cursor + 1` to
+    /// [`CheckpointStreamStart::Checkpoint`].
     ///
     /// For a finite read that stops at a bound, use [`Client::list_checkpoints`].
     pub fn stream_checkpoints(
@@ -101,7 +103,9 @@ impl Client {
     /// Paginates `ListTransactions` requests into a stream of raw response pages.
     ///
     /// Automatically follows `ItemLimit` and `ScanLimit` pagination until reaching the
-    /// request's end bound or the ledger tip.
+    /// request's end bound or the ledger tip, continuing each page from the last frame's
+    /// `Watermark.cursor_position` and `Watermark.cursor`. Every frame must carry
+    /// `cursor_position`.
     pub fn list_transactions(
         &self,
         request: ListTransactionsRequest,
@@ -123,8 +127,8 @@ impl Client {
 
     /// Streams transactions indefinitely, automatically retrying transient errors.
     ///
-    /// The request's read mask must include `checkpoint` and `transaction_index` (or `*`).
-    /// To resume from a previous frame, pass `frame.cursor` to [`TransactionStreamStart::Resume`].
+    /// To resume from a previous frame, pass `frame.cursor` and `frame.position` to
+    /// [`TransactionStreamStart::Resume`].
     ///
     /// For a finite read that stops at a bound, use [`Client::list_transactions`].
     pub fn stream_transactions(
@@ -156,7 +160,9 @@ impl Client {
         let start = match request.start {
             TransactionStreamStart::Tip => Start::Tip,
             TransactionStreamStart::Checkpoint(checkpoint) => Start::Checkpoint(checkpoint),
-            TransactionStreamStart::Resume(cursor) => Start::After(cursor),
+            TransactionStreamStart::Resume { cursor, position } => {
+                Start::After { cursor, position }
+            }
         };
         resumable_stream(Driver::<TransactionAdapter>::new_stream(
             self.clone(),
@@ -171,7 +177,9 @@ impl Client {
     /// Paginates `ListEvents` requests into a stream of raw response pages.
     ///
     /// Automatically follows `ItemLimit` and `ScanLimit` pagination until reaching the
-    /// request's end bound or the ledger tip.
+    /// request's end bound or the ledger tip, continuing each page from the last frame's
+    /// `Watermark.cursor_position` and `Watermark.cursor`. Every frame must carry
+    /// `cursor_position`.
     pub fn list_events(
         &self,
         request: ListEventsRequest,
@@ -193,8 +201,7 @@ impl Client {
 
     /// Streams events indefinitely, automatically retrying transient errors.
     ///
-    /// The request's read mask must include `checkpoint`, `transaction_index`, and `event_index`
-    /// (or `*`). To resume from a previous frame, pass `frame.cursor` to
+    /// To resume from a previous frame, pass `frame.cursor` and `frame.position` to
     /// [`EventStreamStart::Resume`].
     ///
     /// For a finite read that stops at a bound, use [`Client::list_events`].
@@ -229,7 +236,7 @@ impl Client {
         let start = match request.start {
             EventStreamStart::Tip => Start::Tip,
             EventStreamStart::Checkpoint(checkpoint) => Start::Checkpoint(checkpoint),
-            EventStreamStart::Resume(cursor) => Start::After(cursor),
+            EventStreamStart::Resume { cursor, position } => Start::After { cursor, position },
         };
         resumable_stream(Driver::<EventAdapter>::new_stream(
             self.clone(),
