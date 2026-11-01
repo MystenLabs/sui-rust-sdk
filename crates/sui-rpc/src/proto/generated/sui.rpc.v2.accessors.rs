@@ -9826,6 +9826,86 @@ mod _accessor_impls {
             self
         }
     }
+    impl super::LedgerPosition {
+        pub const fn const_default() -> Self {
+            Self {
+                checkpoint: None,
+                transaction_index: None,
+                event_index: None,
+            }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::LedgerPosition = super::LedgerPosition::const_default();
+            &DEFAULT
+        }
+        ///If `checkpoint` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn checkpoint_opt_mut(&mut self) -> Option<&mut u64> {
+            self.checkpoint.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `checkpoint`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn checkpoint_mut(&mut self) -> &mut u64 {
+            self.checkpoint.get_or_insert_default()
+        }
+        ///If `checkpoint` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn checkpoint_opt(&self) -> Option<u64> {
+            self.checkpoint.as_ref().map(|field| *field)
+        }
+        ///Sets `checkpoint` with the provided value.
+        pub fn set_checkpoint(&mut self, field: u64) {
+            self.checkpoint = Some(field);
+        }
+        ///Sets `checkpoint` with the provided value.
+        pub fn with_checkpoint(mut self, field: u64) -> Self {
+            self.set_checkpoint(field);
+            self
+        }
+        ///If `transaction_index` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn transaction_index_opt_mut(&mut self) -> Option<&mut u64> {
+            self.transaction_index.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `transaction_index`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn transaction_index_mut(&mut self) -> &mut u64 {
+            self.transaction_index.get_or_insert_default()
+        }
+        ///If `transaction_index` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn transaction_index_opt(&self) -> Option<u64> {
+            self.transaction_index.as_ref().map(|field| *field)
+        }
+        ///Sets `transaction_index` with the provided value.
+        pub fn set_transaction_index(&mut self, field: u64) {
+            self.transaction_index = Some(field);
+        }
+        ///Sets `transaction_index` with the provided value.
+        pub fn with_transaction_index(mut self, field: u64) -> Self {
+            self.set_transaction_index(field);
+            self
+        }
+        ///If `event_index` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn event_index_opt_mut(&mut self) -> Option<&mut u32> {
+            self.event_index.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `event_index`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn event_index_mut(&mut self) -> &mut u32 {
+            self.event_index.get_or_insert_default()
+        }
+        ///If `event_index` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn event_index_opt(&self) -> Option<u32> {
+            self.event_index.as_ref().map(|field| *field)
+        }
+        ///Sets `event_index` with the provided value.
+        pub fn set_event_index(&mut self, field: u32) {
+            self.event_index = Some(field);
+        }
+        ///Sets `event_index` with the provided value.
+        pub fn with_event_index(mut self, field: u32) -> Self {
+            self.set_event_index(field);
+            self
+        }
+    }
     impl super::Linkage {
         pub const fn const_default() -> Self {
             Self {
@@ -20664,6 +20744,7 @@ mod _accessor_impls {
             Self {
                 cursor: None,
                 checkpoint: None,
+                cursor_position: None,
             }
         }
         #[doc(hidden)]
@@ -20704,6 +20785,38 @@ mod _accessor_impls {
         ///Sets `checkpoint` with the provided value.
         pub fn with_checkpoint(mut self, field: u64) -> Self {
             self.set_checkpoint(field);
+            self
+        }
+        ///Returns the value of `cursor_position`, or the default value if `cursor_position` is unset.
+        pub fn cursor_position(&self) -> &super::LedgerPosition {
+            self.cursor_position
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::LedgerPosition::default_instance() as _)
+        }
+        ///If `cursor_position` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn cursor_position_opt_mut(&mut self) -> Option<&mut super::LedgerPosition> {
+            self.cursor_position.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `cursor_position`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn cursor_position_mut(&mut self) -> &mut super::LedgerPosition {
+            self.cursor_position.get_or_insert_default()
+        }
+        ///If `cursor_position` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn cursor_position_opt(&self) -> Option<&super::LedgerPosition> {
+            self.cursor_position.as_ref().map(|field| field as _)
+        }
+        ///Sets `cursor_position` with the provided value.
+        pub fn set_cursor_position<T: Into<super::LedgerPosition>>(&mut self, field: T) {
+            self.cursor_position = Some(field.into().into());
+        }
+        ///Sets `cursor_position` with the provided value.
+        pub fn with_cursor_position<T: Into<super::LedgerPosition>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_cursor_position(field.into());
             self
         }
     }

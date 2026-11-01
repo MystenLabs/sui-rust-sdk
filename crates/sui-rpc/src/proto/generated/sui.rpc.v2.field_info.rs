@@ -6906,6 +6906,66 @@ pub(crate) mod _field_impls {
             self.finish()
         }
     }
+    impl LedgerPosition {
+        pub const CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "checkpoint",
+            json_name: "checkpoint",
+            number: 1i32,
+            message_fields: None,
+        };
+        pub const TRANSACTION_INDEX_FIELD: &'static MessageField = &MessageField {
+            name: "transaction_index",
+            json_name: "transactionIndex",
+            number: 2i32,
+            message_fields: None,
+        };
+        pub const EVENT_INDEX_FIELD: &'static MessageField = &MessageField {
+            name: "event_index",
+            json_name: "eventIndex",
+            number: 3i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for LedgerPosition {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::CHECKPOINT_FIELD,
+            Self::TRANSACTION_INDEX_FIELD,
+            Self::EVENT_INDEX_FIELD,
+        ];
+    }
+    impl LedgerPosition {
+        pub fn path_builder() -> LedgerPositionFieldPathBuilder {
+            LedgerPositionFieldPathBuilder::new()
+        }
+    }
+    pub struct LedgerPositionFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl LedgerPositionFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn checkpoint(mut self) -> String {
+            self.path.push(LedgerPosition::CHECKPOINT_FIELD.name);
+            self.finish()
+        }
+        pub fn transaction_index(mut self) -> String {
+            self.path.push(LedgerPosition::TRANSACTION_INDEX_FIELD.name);
+            self.finish()
+        }
+        pub fn event_index(mut self) -> String {
+            self.path.push(LedgerPosition::EVENT_INDEX_FIELD.name);
+            self.finish()
+        }
+    }
     impl Watermark {
         pub const CURSOR_FIELD: &'static MessageField = &MessageField {
             name: "cursor",
@@ -6919,11 +6979,18 @@ pub(crate) mod _field_impls {
             number: 2i32,
             message_fields: None,
         };
+        pub const CURSOR_POSITION_FIELD: &'static MessageField = &MessageField {
+            name: "cursor_position",
+            json_name: "cursorPosition",
+            number: 4i32,
+            message_fields: Some(LedgerPosition::FIELDS),
+        };
     }
     impl MessageFields for Watermark {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::CURSOR_FIELD,
             Self::CHECKPOINT_FIELD,
+            Self::CURSOR_POSITION_FIELD,
         ];
     }
     impl Watermark {
@@ -6953,6 +7020,10 @@ pub(crate) mod _field_impls {
         pub fn checkpoint(mut self) -> String {
             self.path.push(Watermark::CHECKPOINT_FIELD.name);
             self.finish()
+        }
+        pub fn cursor_position(mut self) -> LedgerPositionFieldPathBuilder {
+            self.path.push(Watermark::CURSOR_POSITION_FIELD.name);
+            LedgerPositionFieldPathBuilder::new_with_base(self.path)
         }
     }
     impl QueryEnd {
