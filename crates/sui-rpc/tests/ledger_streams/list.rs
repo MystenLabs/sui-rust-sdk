@@ -2,6 +2,7 @@ use super::support::MISSING_LIST_CURSOR_POSITION;
 use super::support::STREAM_DROP_TIMEOUT;
 use super::support::ScriptedStreamServer;
 use super::support::StreamScript;
+use super::support::above_latest_available;
 use super::support::bounded_checkpoint_scripts;
 use super::support::bounded_event_request;
 use super::support::bounded_event_scripts;
@@ -19,6 +20,7 @@ use super::support::event_positioned_list_frame;
 use super::support::fast_list_config;
 use super::support::first_list_event_error;
 use super::support::observed_client;
+use super::support::out_of_range_with_reason;
 use super::support::service_info;
 use super::support::spawn_server;
 use super::support::transaction_at;
@@ -706,7 +708,7 @@ async fn stream_resume_round_trips_frame_cursor_and_position() {
 
     let transaction_resume = TransactionStreamRequest::new()
         .with_read_mask(transaction_identity_mask())
-        .with_start(TransactionStreamStart::Resume {
+        .with_start(TransactionStreamStart::ResumeAt {
             cursor: transaction_frames[0].cursor.clone(),
             position: transaction_frames[0].position,
         });
@@ -747,7 +749,7 @@ async fn stream_resume_round_trips_frame_cursor_and_position() {
 
     let event_resume = EventStreamRequest::new()
         .with_read_mask(event_identity_mask())
-        .with_start(EventStreamStart::Resume {
+        .with_start(EventStreamStart::ResumeAt {
             cursor: event_frames[0].cursor.clone(),
             position: event_frames[0].position,
         });
@@ -1278,46 +1280,6 @@ async fn list_rejects_an_unpositioned_ledger_tip_end_of_a_continuation() {
         continuation.options.as_ref().unwrap().after,
         Some(bytes(21))
     );
-}
-
-/// An `OutOfRange` carrying the ledger's structured reason, as the server sends it.
-fn out_of_range_with_reason(
-    reason: proto::ErrorReason,
-    metadata: &[(&str, &str)],
-) -> tonic::Status {
-    use prost::Message as _;
-
-    let error_info = sui_rpc::proto::google::rpc::ErrorInfo::default()
-        .with_reason(reason.as_str_name())
-        .with_domain(proto::ErrorReason::DOMAIN)
-        .with_metadata(
-            metadata
-                .iter()
-                .map(|(key, value)| (key.to_string(), value.to_string()))
-                .collect(),
-        );
-    let message = format!("{} from scripted server", reason.as_str_name());
-    let details = sui_rpc::proto::google::rpc::Status::default()
-        .with_code(tonic::Code::OutOfRange as i32)
-        .with_message(message.clone())
-        .with_details(vec![prost_types::Any::from_msg(&error_info).unwrap()]);
-    tonic::Status::with_details(
-        tonic::Code::OutOfRange,
-        message,
-        details.encode_to_vec().into(),
-    )
-}
-
-/// `ABOVE_LATEST_AVAILABLE` for the request field `bound`.
-fn above_latest_available(bound: &str) -> tonic::Status {
-    out_of_range_with_reason(
-        proto::ErrorReason::AboveLatestAvailable,
-        &[
-            ("bound", bound),
-            ("requestedCheckpoint", "10"),
-            ("firstUnavailableCheckpoint", "9"),
-        ],
-    )
 }
 
 #[tokio::test]

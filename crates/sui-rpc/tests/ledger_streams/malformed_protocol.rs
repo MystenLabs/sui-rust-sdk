@@ -429,7 +429,7 @@ async fn transaction_prologue_list_frame_without_cursor_position_is_terminal_dat
     let (client, _observations) = observed_client(address);
 
     let (frames, status) = transaction_frames_until_error(client.stream_transactions_with_config(
-        TransactionStreamRequest::new().with_start(TransactionStreamStart::Resume {
+        TransactionStreamRequest::new().with_start(TransactionStreamStart::ResumeAt {
             cursor: bytes(50),
             position: transaction_position(6, 1),
         }),

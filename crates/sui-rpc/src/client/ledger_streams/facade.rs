@@ -128,7 +128,7 @@ impl Client {
     /// Streams transactions indefinitely, automatically retrying transient errors.
     ///
     /// To resume from a previous frame, pass `frame.cursor` and `frame.position` to
-    /// [`TransactionStreamStart::Resume`].
+    /// [`TransactionStreamStart::ResumeAt`].
     ///
     /// For a finite read that stops at a bound, use [`Client::list_transactions`].
     pub fn stream_transactions(
@@ -157,10 +157,12 @@ impl Client {
             start_transaction_index: None,
             end_transaction_index: None,
         };
+        #[allow(deprecated)]
         let start = match request.start {
             TransactionStreamStart::Tip => Start::Tip,
             TransactionStreamStart::Checkpoint(checkpoint) => Start::Checkpoint(checkpoint),
-            TransactionStreamStart::Resume { cursor, position } => {
+            TransactionStreamStart::Resume(cursor) => Start::AfterCursor(cursor),
+            TransactionStreamStart::ResumeAt { cursor, position } => {
                 Start::After { cursor, position }
             }
         };
@@ -202,7 +204,7 @@ impl Client {
     /// Streams events indefinitely, automatically retrying transient errors.
     ///
     /// To resume from a previous frame, pass `frame.cursor` and `frame.position` to
-    /// [`EventStreamStart::Resume`].
+    /// [`EventStreamStart::ResumeAt`].
     ///
     /// For a finite read that stops at a bound, use [`Client::list_events`].
     pub fn stream_events(
@@ -233,10 +235,12 @@ impl Client {
             end_transaction_index: None,
             end_event_index: None,
         };
+        #[allow(deprecated)]
         let start = match request.start {
             EventStreamStart::Tip => Start::Tip,
             EventStreamStart::Checkpoint(checkpoint) => Start::Checkpoint(checkpoint),
-            EventStreamStart::Resume { cursor, position } => Start::After { cursor, position },
+            EventStreamStart::Resume(cursor) => Start::AfterCursor(cursor),
+            EventStreamStart::ResumeAt { cursor, position } => Start::After { cursor, position },
         };
         resumable_stream(Driver::<EventAdapter>::new_stream(
             self.clone(),

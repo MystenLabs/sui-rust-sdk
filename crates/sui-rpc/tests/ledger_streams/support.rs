@@ -492,6 +492,46 @@ pub(crate) fn query_end(reason: proto::QueryEndReason) -> proto::QueryEnd {
     end
 }
 
+/// An `OutOfRange` carrying the ledger's structured reason, as the server sends it.
+pub(crate) fn out_of_range_with_reason(
+    reason: proto::ErrorReason,
+    metadata: &[(&str, &str)],
+) -> tonic::Status {
+    use prost::Message as _;
+
+    let error_info = sui_rpc::proto::google::rpc::ErrorInfo::default()
+        .with_reason(reason.as_str_name())
+        .with_domain(proto::ErrorReason::DOMAIN)
+        .with_metadata(
+            metadata
+                .iter()
+                .map(|(key, value)| (key.to_string(), value.to_string()))
+                .collect(),
+        );
+    let message = format!("{} from scripted server", reason.as_str_name());
+    let details = sui_rpc::proto::google::rpc::Status::default()
+        .with_code(tonic::Code::OutOfRange as i32)
+        .with_message(message.clone())
+        .with_details(vec![prost_types::Any::from_msg(&error_info).unwrap()]);
+    tonic::Status::with_details(
+        tonic::Code::OutOfRange,
+        message,
+        details.encode_to_vec().into(),
+    )
+}
+
+/// `ABOVE_LATEST_AVAILABLE` for the request field `bound`.
+pub(crate) fn above_latest_available(bound: &str) -> tonic::Status {
+    out_of_range_with_reason(
+        proto::ErrorReason::AboveLatestAvailable,
+        &[
+            ("bound", bound),
+            ("requestedCheckpoint", "10"),
+            ("firstUnavailableCheckpoint", "9"),
+        ],
+    )
+}
+
 pub(crate) fn checkpoint(value: u64) -> proto::Checkpoint {
     let mut checkpoint = proto::Checkpoint::default();
     checkpoint.sequence_number = Some(value);

@@ -107,8 +107,8 @@ const DEFAULT_HTTP2_CONNECTION_WINDOW_SIZE: u32 = 64 * 1024 * 1024;
 /// - `list_*` ([`list_checkpoints`](Client::list_checkpoints), [`list_transactions`](Client::list_transactions), [`list_events`](Client::list_events)):
 ///   Finite pagination streams yielding raw response pages until reaching an end bound or the ledger tip.
 /// - `stream_*` ([`stream_checkpoints`](Client::stream_checkpoints), [`stream_transactions`](Client::stream_transactions), [`stream_events`](Client::stream_events)):
-///   Resumable, infinite streams starting from any position (`Tip`, `Checkpoint`, or `Resume` from
-///   a frame) that automatically handle backfill replay, live subscription or polling, and
+///   Resumable, infinite streams starting from any position (`Tip`, `Checkpoint`, or `ResumeAt`
+///   from a frame) that automatically handle backfill replay, live subscription or polling, and
 ///   transient error retries.
 ///
 /// Streams order and deduplicate frames by each watermark's `cursor_position`; a frame without it,
@@ -116,8 +116,8 @@ const DEFAULT_HTTP2_CONNECTION_WINDOW_SIZE: u32 = 64 * 1024 * 1024;
 ///
 /// Process a payload before persisting its restart position. To resume after a checkpoint, pass
 /// `cursor + 1` to [`CheckpointStreamStart::Checkpoint`]. To resume transactions or events, pass
-/// `frame.cursor` and `frame.position` to [`TransactionStreamStart::Resume`] or
-/// [`EventStreamStart::Resume`].
+/// `frame.cursor` and `frame.position` to [`TransactionStreamStart::ResumeAt`] or
+/// [`EventStreamStart::ResumeAt`].
 ///
 /// ## Example
 ///
@@ -153,7 +153,7 @@ const DEFAULT_HTTP2_CONNECTION_WINDOW_SIZE: u32 = 64 * 1024 * 1024;
 ///
 /// let restart_request = TransactionStreamRequest::new()
 ///     .with_read_mask(read_mask)
-///     .with_start(TransactionStreamStart::Resume { cursor, position });
+///     .with_start(TransactionStreamStart::ResumeAt { cursor, position });
 /// let mut resumed = Box::pin(client.stream_transactions(restart_request));
 /// let _ = resumed.next().await;
 /// # Ok(())

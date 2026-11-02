@@ -208,7 +208,7 @@ async fn same_checkpoint_transaction_reconnect_replays_the_gap_before_the_first_
                 "transaction_index".to_owned(),
             ],
         })
-        .with_start(TransactionStreamStart::Resume {
+        .with_start(TransactionStreamStart::ResumeAt {
             cursor: bytes(50),
             position: transaction_position(9, 3),
         });
@@ -1542,7 +1542,7 @@ async fn clean_subscription_eof_uses_the_transient_recovery_policy() {
     let (client, _observations) = observed_client(address);
     let body = EventStreamRequest::new()
         .with_read_mask(event_identity_mask())
-        .with_start(EventStreamStart::Resume {
+        .with_start(EventStreamStart::ResumeAt {
             cursor: bytes(0),
             position: event_position(0, 0, 1),
         });

@@ -5,6 +5,8 @@
 - add `client::Position`, a sortable point in ledger order, and `position`,
   the frame's `Watermark.cursor_position` as a `Position`, to
   `TransactionStreamFrame` and `EventStreamFrame`
+- add `TransactionStreamStart::ResumeAt` and `EventStreamStart::ResumeAt`,
+  which resume from a previous frame's `cursor` and `position`
 
 ## Changed
 
@@ -17,15 +19,21 @@
   `options.after` or `options.before` cursor minted by such a server.
   Internally built requests and `list_*` pagination send each resume point
   as start or end fields together with its cursor
-- `TransactionStreamStart::Resume` and `EventStreamStart::Resume` take
-  `{ cursor, position }` (a `Position`) from a previous frame instead of a
-  bare cursor
+- `TransactionStreamStart::Resume` and `EventStreamStart::Resume` first
+  list one match after their cursor to learn a position, deliver that List
+  frame, and continue from it; a cursor from a server that predates cursor
+  positions waits until the server scans past it
 - `stream_*` read masks no longer need to include the item's position
   fields
 - `list_*` retries `OUT_OF_RANGE` with `ABOVE_LATEST_AVAILABLE` for any
   bound of a descending continuation, which it derives from a
   server-reported position, as when a lagging replica receives it; a
   caller's own checkpoint bounds above the tip stay terminal
+
+## Deprecated
+
+- `TransactionStreamStart::Resume` and `EventStreamStart::Resume`; use
+  `ResumeAt`, which saves a List request
 
 # [0.4.0] - 2026-09-09
 

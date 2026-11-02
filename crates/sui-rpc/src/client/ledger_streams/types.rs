@@ -67,10 +67,19 @@ pub enum TransactionStreamStart {
     Tip,
     /// Starts at and includes transactions from this checkpoint.
     Checkpoint(u64),
+    /// Starts strictly after this server-validated opaque cursor. The stream lists one match after
+    /// `cursor` to learn a position, delivers that List frame, and continues from it as
+    /// [`Self::ResumeAt`] does, one List request later. A cursor from a server that predates
+    /// cursor positions waits until the server scans past it.
+    #[deprecated(
+        note = "resume with `ResumeAt`, passing a frame's `cursor` and `position`, which saves a \
+                List request"
+    )]
+    Resume(Bytes),
     /// Resumes from a previous frame: starts at `position`, which the server-validated opaque
     /// `cursor` also names. Pass a frame's [`TransactionStreamFrame::cursor`] and
     /// [`TransactionStreamFrame::position`] unchanged.
-    Resume {
+    ResumeAt {
         /// The frame's opaque cursor.
         cursor: Bytes,
         /// The frame's resume point; the stream sends it as the request's start fields.
@@ -88,10 +97,19 @@ pub enum EventStreamStart {
     Tip,
     /// Starts at and includes events from this checkpoint.
     Checkpoint(u64),
+    /// Starts strictly after this server-validated opaque cursor. The stream lists one match after
+    /// `cursor` to learn a position, delivers that List frame, and continues from it as
+    /// [`Self::ResumeAt`] does, one List request later. A cursor from a server that predates
+    /// cursor positions waits until the server scans past it.
+    #[deprecated(
+        note = "resume with `ResumeAt`, passing a frame's `cursor` and `position`, which saves a \
+                List request"
+    )]
+    Resume(Bytes),
     /// Resumes from a previous frame: starts at `position`, which the server-validated opaque
     /// `cursor` also names. Pass a frame's [`EventStreamFrame::cursor`] and
     /// [`EventStreamFrame::position`] unchanged.
-    Resume {
+    ResumeAt {
         /// The frame's opaque cursor.
         cursor: Bytes,
         /// The frame's resume point; the stream sends it as the request's start fields.
@@ -250,7 +268,7 @@ pub struct CheckpointStreamFrame {
 /// A transaction frame with an optional payload and its exclusive restart point.
 ///
 /// Process `transaction` before persisting `cursor` and `position`, then resume with
-/// `TransactionStreamStart::Resume { cursor, position }`.
+/// `TransactionStreamStart::ResumeAt { cursor, position }`.
 #[non_exhaustive]
 #[derive(Clone, Debug)]
 pub struct TransactionStreamFrame {
@@ -270,7 +288,7 @@ pub struct TransactionStreamFrame {
 /// An event frame with an optional payload and its exclusive restart point.
 ///
 /// Process `event` before persisting `cursor` and `position`, then resume with
-/// `EventStreamStart::Resume { cursor, position }`.
+/// `EventStreamStart::ResumeAt { cursor, position }`.
 #[non_exhaustive]
 #[derive(Clone, Debug)]
 pub struct EventStreamFrame {

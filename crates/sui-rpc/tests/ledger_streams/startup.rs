@@ -1,5 +1,6 @@
 use super::support::ScriptedStreamServer;
 use super::support::StreamScript;
+use super::support::above_latest_available;
 use super::support::bytes;
 use super::support::checkpoint_identity_mask;
 use super::support::checkpoint_list_frame;
@@ -24,6 +25,7 @@ use super::support::transaction_position;
 use super::support::transaction_positioned_list_frame;
 use super::support::transaction_positioned_live_frame;
 use super::support::with_position;
+use super::support::without_position;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use std::time::Duration;
@@ -1114,7 +1116,7 @@ async fn subscribe_resumed_past_the_tip_yields_nothing_before_its_position() {
         .with_read_mask(prost_types::FieldMask {
             paths: vec!["digest".to_owned()],
         })
-        .with_start(TransactionStreamStart::Resume {
+        .with_start(TransactionStreamStart::ResumeAt {
             cursor: bytes(resume),
             position: transaction_position(11, 3),
         })
@@ -1221,7 +1223,7 @@ async fn event_resume_waits_for_its_checkpoint_and_lists_from_its_position() {
         client
             .stream_events_with_config(
                 EventStreamRequest::new()
-                    .with_start(EventStreamStart::Resume {
+                    .with_start(EventStreamStart::ResumeAt {
                         cursor: bytes(70),
                         position: event_position(7, 2, 1),
                     })
@@ -1273,4 +1275,208 @@ async fn event_resume_waits_for_its_checkpoint_and_lists_from_its_position() {
     let options = request.options.as_ref().unwrap();
     assert_eq!(options.after, Some(bytes(70)));
     assert_eq!(options.before, None);
+}
+
+/// A transaction stream resumed from a bare cursor lists one match after it, delivers that
+/// transaction, and lists on from its frame. The frame's position keys the item, so the read mask
+/// needs no position fields.
+#[tokio::test]
+async fn transaction_cursor_resume_delivers_the_first_match_then_lists_from_its_frame() {
+    let (server, _calls) = ScriptedStreamServer::new();
+    server.push_service_infos([Ok(service_info(11))]);
+    server.push_transaction_lists([
+        StreamScript::frames([Ok(transaction_positioned_list_frame(
+            Some(transaction_at(11, 3, "first")),
+            501,
+            10,
+            Some(proto::QueryEndReason::ItemLimit),
+        ))]),
+        StreamScript::frames([
+            Ok(transaction_positioned_list_frame(
+                Some(transaction_at(11, 4, "second")),
+                502,
+                10,
+                None,
+            )),
+            Ok(transaction_positioned_list_frame(
+                None,
+                600,
+                11,
+                Some(proto::QueryEndReason::CheckpointBound),
+            )),
+        ]),
+    ]);
+    let address = spawn_server(server.clone()).await;
+    let (client, _observations) = observed_client(address);
+
+    let read_mask = prost_types::FieldMask {
+        paths: vec!["digest".to_owned()],
+    };
+    #[allow(deprecated)]
+    let start = TransactionStreamStart::Resume(bytes(50));
+    let request = TransactionStreamRequest::new()
+        .with_read_mask(read_mask.clone())
+        .with_start(start)
+        .with_delivery(Delivery::Poll);
+    let frames = tokio::time::timeout(
+        Duration::from_secs(5),
+        client
+            .stream_transactions_with_config(request, fast_config())
+            .take(3)
+            .map_ok(|frame| {
+                (
+                    frame.transaction.and_then(|transaction| transaction.digest),
+                    frame.cursor,
+                    frame.position,
+                )
+            })
+            .try_collect::<Vec<_>>(),
+    )
+    .await
+    .expect("stream stalled")
+    .unwrap();
+    let digest = |value: &str| Some(value.to_owned());
+    assert_eq!(
+        frames,
+        [
+            (digest("first"), bytes(501), transaction_position(11, 4)),
+            (digest("second"), bytes(502), transaction_position(11, 5)),
+            (None, bytes(600), transaction_position(12, 0)),
+        ]
+    );
+
+    let state = server.state.lock().unwrap();
+    assert_eq!(
+        state.calls,
+        ["list_transactions", "get_service_info", "list_transactions"]
+    );
+    let resolution = &state.transaction_requests[0].body;
+    assert_eq!(resolution.read_mask, Some(read_mask.clone()));
+    assert_eq!(resolution.start_checkpoint, None);
+    assert_eq!(resolution.start_transaction_index, None);
+    assert_eq!(resolution.end_checkpoint, None);
+    let options = resolution.options.as_ref().unwrap();
+    assert_eq!(options.after, Some(bytes(50)));
+    assert_eq!(options.before, None);
+    assert_eq!(options.limit, Some(1));
+
+    let replay = &state.transaction_requests[1].body;
+    assert_eq!(replay.read_mask, Some(read_mask));
+    assert_eq!(replay.start_checkpoint, Some(11));
+    assert_eq!(replay.start_transaction_index, Some(4));
+    assert_eq!(replay.end_checkpoint, Some(12));
+    let options = replay.options.as_ref().unwrap();
+    assert_eq!(options.after, Some(bytes(501)));
+    assert_eq!(options.limit, None);
+}
+
+/// An event stream resumed from a bare cursor lists from that cursor again until a frame reports a
+/// position: after a lagging replica's `OutOfRange`, and after `LedgerTip` and `CursorBound` ends
+/// that echo a cursor minted without a position. It resumes from the first positioned frame.
+#[tokio::test]
+async fn event_cursor_resume_lists_from_the_cursor_until_a_frame_reports_a_position() {
+    let (server, _calls) = ScriptedStreamServer::new();
+    server.push_service_infos([Ok(service_info(7)), Ok(service_info(8))]);
+    server.push_event_lists([
+        StreamScript::DispatchError(above_latest_available("cursor")),
+        StreamScript::frames([Ok(without_position(event_positioned_list_frame(
+            None,
+            70,
+            6,
+            Some(proto::QueryEndReason::LedgerTip),
+        )))]),
+        StreamScript::frames([Ok(without_position(event_positioned_list_frame(
+            None,
+            70,
+            6,
+            Some(proto::QueryEndReason::CursorBound),
+        )))]),
+        StreamScript::frames([Ok(event_positioned_list_frame(
+            None,
+            71,
+            7,
+            Some(proto::QueryEndReason::LedgerTip),
+        ))]),
+        StreamScript::frames([
+            Ok(event_positioned_list_frame(
+                Some(event_at(8, 1, 0, "after-resume")),
+                81,
+                7,
+                None,
+            )),
+            Ok(event_positioned_list_frame(
+                None,
+                82,
+                8,
+                Some(proto::QueryEndReason::CheckpointBound),
+            )),
+        ]),
+    ]);
+    let address = spawn_server(server.clone()).await;
+    let (client, _observations) = observed_client(address);
+
+    let mut config = fast_config();
+    config.ledger_tip_poll_interval = Duration::from_millis(1);
+    #[allow(deprecated)]
+    let start = EventStreamStart::Resume(bytes(70));
+    let request = EventStreamRequest::new()
+        .with_start(start)
+        .with_delivery(Delivery::Poll);
+    let frames = tokio::time::timeout(
+        Duration::from_secs(5),
+        client
+            .stream_events_with_config(request, config)
+            .take(3)
+            .map_ok(|frame| {
+                (
+                    frame.event.and_then(|event| event.event_type),
+                    frame.cursor,
+                    frame.position,
+                )
+            })
+            .try_collect::<Vec<_>>(),
+    )
+    .await
+    .expect("stream stalled")
+    .unwrap();
+    assert_eq!(
+        frames,
+        [
+            (None, bytes(71), event_position(8, 0, 0)),
+            (
+                Some("after-resume".to_owned()),
+                bytes(81),
+                event_position(8, 1, 1)
+            ),
+            (None, bytes(82), event_position(9, 0, 0)),
+        ]
+    );
+
+    let state = server.state.lock().unwrap();
+    assert_eq!(
+        state.calls,
+        [
+            "list_events",
+            "list_events",
+            "list_events",
+            "list_events",
+            "get_service_info",
+            "get_service_info",
+            "list_events"
+        ]
+    );
+    for request in &state.event_requests[..4] {
+        assert_eq!(request.body.start_checkpoint, None);
+        assert_eq!(request.body.end_checkpoint, None);
+        let options = request.body.options.as_ref().unwrap();
+        assert_eq!(options.after, Some(bytes(70)));
+        assert_eq!(options.before, None);
+        assert_eq!(options.limit, Some(1));
+    }
+    let replay = &state.event_requests[4].body;
+    assert_eq!(replay.start_checkpoint, Some(8));
+    assert_eq!(replay.start_transaction_index, None);
+    assert_eq!(replay.start_event_index, None);
+    assert_eq!(replay.end_checkpoint, Some(9));
+    assert_eq!(replay.options.as_ref().unwrap().after, Some(bytes(71)));
 }

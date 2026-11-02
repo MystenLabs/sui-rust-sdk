@@ -1372,7 +1372,7 @@ async fn persisted_positions_resume_with_poll_delivery() {
 
     let resume_request = EventStreamRequest::new()
         .with_read_mask(event_identity_mask())
-        .with_start(EventStreamStart::Resume {
+        .with_start(EventStreamStart::ResumeAt {
             cursor: first_frames[0].cursor.clone(),
             position: first_frames[0].position,
         })
