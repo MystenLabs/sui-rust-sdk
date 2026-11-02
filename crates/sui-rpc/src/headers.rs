@@ -43,4 +43,4 @@ pub const X_SUI_CLIENT_PROTOCOL_VERSION: &str = "x-sui-client-protocol-version";
 /// [`X_SUI_CLIENT_PROTOCOL_VERSION`].
 ///
 /// Bump this when the SDK gains support for types introduced in a newer protocol version.
-pub const MAX_PROTOCOL_VERSION: u64 = 138;
+pub const MAX_PROTOCOL_VERSION: u64 = 141;

@@ -292,6 +292,9 @@ pub enum ExecutionError {
 
     /// An input object with non-exclusive write mutability was modified
     NonExclusiveWriteInputObjectModified { object: Address },
+
+    /// The consensus commit timestamp is outside the transaction's validity window
+    TransactionExpired,
 }
 
 /// Location in move bytecode where an error occurred

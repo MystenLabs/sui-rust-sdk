@@ -1226,6 +1226,8 @@ pub mod execution_error {
         InsufficientFundsForWithdraw = 41,
         /// An input object with non-exclusive write mutability was modified
         NonExclusiveWriteInputObjectModified = 42,
+        /// The consensus commit timestamp is outside the transaction's validity window.
+        TransactionExpired = 43,
     }
     impl ExecutionErrorKind {
         /// String value of the enum field names used in the ProtoBuf definition.
@@ -1293,6 +1295,7 @@ pub mod execution_error {
                 Self::NonExclusiveWriteInputObjectModified => {
                     "NON_EXCLUSIVE_WRITE_INPUT_OBJECT_MODIFIED"
                 }
+                Self::TransactionExpired => "TRANSACTION_EXPIRED",
             }
         }
         /// Creates an enum from field names used in the ProtoBuf definition.
@@ -1363,6 +1366,7 @@ pub mod execution_error {
                 "NON_EXCLUSIVE_WRITE_INPUT_OBJECT_MODIFIED" => {
                     Some(Self::NonExclusiveWriteInputObjectModified)
                 }
+                "TRANSACTION_EXPIRED" => Some(Self::TransactionExpired),
                 _ => None,
             }
         }

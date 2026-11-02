@@ -184,6 +184,9 @@ message ExecutionError {
 
     // An input object with non-exclusive write mutability was modified
     NON_EXCLUSIVE_WRITE_INPUT_OBJECT_MODIFIED = 42;
+
+    // The consensus commit timestamp is outside the transaction's validity window.
+    TRANSACTION_EXPIRED = 43;
   }
 
   optional ExecutionErrorKind kind = 3;
