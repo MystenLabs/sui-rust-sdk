@@ -14,36 +14,31 @@ enum Ordering {
   ORDERING_DESCENDING = 1;
 }
 
-// Cursor-bounded query options.
+// Cursor-bounded options for a listing request.
 //
-// `after` and `before` are canonical ledger-position bounds, not
-// ordering-relative cursors. `after` always excludes items at or below that
-// cursor, and `before` always excludes items at or above that cursor. Ordering
-// only controls the order of returned items within the resulting open interval.
+// `after` and `before` are opaque, exclusive bounds in the listing's canonical
+// order. `after` always excludes items at or below that cursor, and `before`
+// always excludes items at or above that cursor. Their meaning does not depend
+// on `ordering`, which only sets the order of results within the bounded
+// interval.
 //
-// When a request also specifies a checkpoint range, cursor bounds and
-// checkpoint bounds compose by intersection: results come only from ledger
-// positions inside both. Checkpoint bounds are likewise canonical and
-// ordering-independent.
+// Other range fields on the request, such as checkpoint or version bounds,
+// compose with the cursor bounds by intersection: results come only from
+// inside both.
 //
-// For example, with `after = A`, `before = B`, `ordering = DESCENDING`, and
-// `limit = N`, the response contains up to N matching items in descending
-// order from the interval `(A, B)`. If the response ends with
-// `QUERY_END_REASON_ITEM_LIMIT`, resume by keeping `after = A` and setting
-// `before` to the last `Watermark.cursor` received. That cursor is the
-// lowest position reached in ledger order, so it becomes the next exclusive
-// upper bound.
+// Each method documents its own `limit` default and maximum, how to resume,
+// and how to detect the last page.
 message QueryOptions {
   // The maximum number of items to return. Each method applies its own default
-  // and maximum. QueryEnd does not count against this limit.
+  // and maximum.
   optional uint32 limit = 1;
 
   // Opaque exclusive lower bound. Results must be strictly after this cursor in
-  // canonical ledger order.
+  // the listing's canonical order.
   optional bytes after = 2;
 
   // Opaque exclusive upper bound. Results must be strictly before this cursor
-  // in canonical ledger order.
+  // in the listing's canonical order.
   optional bytes before = 3;
 
   // Ordering for returned results. Defaults to ASCENDING.
@@ -142,6 +137,14 @@ message LedgerPosition {
 // index incremented, or end a page before it at its key. In both cases pass
 // `cursor` as `options.after` with a start and as `options.before` with an
 // end.
+//
+// For example, with `after = A`, `before = B`, `ordering = DESCENDING`, and
+// `limit = N`, the response contains up to N matching items in descending
+// order from the interval `(A, B)`. If the response ends with
+// `QUERY_END_REASON_ITEM_LIMIT`, resume by keeping `after = A` and setting
+// `before` to the last `Watermark.cursor` received. That cursor is the
+// lowest position reached in ledger order, so it becomes the next exclusive
+// upper bound.
 message Watermark {
   // Opaque cursor at the resume point. Set on every watermark. Use as
   // `options.after` (ascending) or `options.before` (descending) on the next
@@ -195,6 +198,9 @@ message Watermark {
 // item. A ScanLimit terminal watermark may repeat the previous frame's cursor
 // when its authoritative scan frontier was already emitted; this does not
 // repeat an item.
+//
+// `QueryEnd` marks a frame; it is not an item, and it does not count against
+// `QueryOptions.limit`.
 //
 // A stream that fails or is cancelled terminates with a gRPC status and does
 // not send `QueryEnd`.
