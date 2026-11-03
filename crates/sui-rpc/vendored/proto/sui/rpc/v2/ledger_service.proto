@@ -89,9 +89,14 @@ message GetObjectRequest {
 
   // Optional. Request a specific version of the object.
   //
-  // Mutually exclusive with `at_checkpoint`; servers reject a request that
-  // sets both with `INVALID_ARGUMENT`. If neither is set and the object is
-  // live, the latest version of the object is returned.
+  // Mutually exclusive with `max_version`; servers reject a request that sets
+  // both with `INVALID_ARGUMENT`. If none of `version`, `max_version` and
+  // `at_checkpoint` is set and the object is live, the latest version of the
+  // object is returned.
+  //
+  // Servers that prune object history fail with `OUT_OF_RANGE` and reason
+  // `BELOW_EARLIEST_AVAILABLE` for a version they no longer hold. A version
+  // above the object's latest version is `NOT_FOUND`.
   //
   // Servers that keep only each object's latest version fail with
   // `UNIMPLEMENTED` and reason `NOT_SERVED_HERE` for any other version.
@@ -101,19 +106,22 @@ message GetObjectRequest {
   // If no mask is specified, defaults to `object_id,version,digest`.
   optional google.protobuf.FieldMask read_mask = 3;
 
-  // Optional. Return the object's state at the end of this checkpoint.
+  // Optional. Set alone, return the object's state at the end of this
+  // checkpoint. An object deleted or wrapped at or before it (and not since
+  // unwrapped or re-created) is `NOT_FOUND`.
   //
-  // The checkpoint must be at or below the highest checkpoint the server has
-  // indexed; larger values fail with `OUT_OF_RANGE` and reason
-  // `ABOVE_LATEST_AVAILABLE` instead of resolving to the latest version, so a
-  // successful response is exact as of `at_checkpoint`. Servers that prune
-  // history may also fail with `OUT_OF_RANGE` and reason
-  // `BELOW_EARLIEST_AVAILABLE` for checkpoints below their lowest available
-  // one. An object that was deleted or wrapped at or before this checkpoint
-  // (and not since unwrapped) is `NOT_FOUND`.
+  // Combined with `version` or `max_version`, it bounds which versions are
+  // visible: the server resolves the selected version first, then fails with
+  // `NOT_FOUND` if that version was written after `at_checkpoint`, without
+  // falling back to an older visible version. A visible version is returned
+  // even if the object was deleted or wrapped by the end of `at_checkpoint`.
+  // For example, if version 5 was written in checkpoint 10 and version 8 in
+  // checkpoint 20, `max_version: 8` with `at_checkpoint: 15` is `NOT_FOUND`,
+  // and with `at_checkpoint: 25` returns version 8.
   //
-  // Mutually exclusive with `version`; servers reject a request that sets
-  // both with `INVALID_ARGUMENT`.
+  // Outside the checkpoints the server has indexed, it fails as a request
+  // pinned to a checkpoint (see `ErrorReason.ABOVE_LATEST_AVAILABLE` and
+  // `BELOW_EARLIEST_AVAILABLE`).
   //
   // Servers that are not set up for reads at a checkpoint, such as servers
   // that keep only each object's latest version, fail with `UNIMPLEMENTED`
@@ -122,6 +130,21 @@ message GetObjectRequest {
   // `NOT_READY`. Servers that predate this field ignore it and answer as if
   // it were unset.
   optional uint64 at_checkpoint = 4;
+
+  // Optional. Return the object's newest version at or below `max_version`
+  // among the versions up to the highest checkpoint the server has indexed.
+  // Fails with `NOT_FOUND` if there is none, or if the object was deleted or
+  // wrapped at that version. Mutually exclusive with `version`; a request
+  // that sets both fails with `INVALID_ARGUMENT`. Servers that prune object
+  // history fail with `OUT_OF_RANGE` and reason `BELOW_EARLIEST_AVAILABLE`
+  // for a version they no longer hold.
+  //
+  // Servers that are not set up for `max_version` reads, such as servers that
+  // keep only each object's latest version, fail with `UNIMPLEMENTED` and
+  // reason `NOT_SERVED_HERE`. Servers that cannot serve them yet fail with
+  // `UNAVAILABLE` and reason `NOT_READY`. Servers that predate this field
+  // ignore it and answer as if it were unset.
+  optional uint64 max_version = 5;
 }
 
 message GetObjectResponse {
@@ -129,14 +152,15 @@ message GetObjectResponse {
 }
 
 message BatchGetObjectsRequest {
-  // The objects to fetch. Each request carries its own `version` or
-  // `at_checkpoint`, so a single batch may read different objects at
-  // different versions or checkpoints. Errors for individual objects, such
-  // as `NOT_FOUND`, are reported per item in the response. A malformed
-  // request, such as one that sets both `version` and `at_checkpoint`, fails
-  // the whole batch with `INVALID_ARGUMENT`. If any request sets
-  // `at_checkpoint` and the server cannot serve reads at a checkpoint, the
-  // whole batch fails as `GetObjectRequest.at_checkpoint` describes.
+  // The objects to fetch. Each request carries its own `version`,
+  // `max_version` or `at_checkpoint`, so a single batch may read different
+  // objects at different versions or checkpoints. Errors for individual
+  // objects, such as `NOT_FOUND`, are reported per item in the response. A
+  // malformed request, such as one that sets both `version` and
+  // `max_version`, fails the whole batch with `INVALID_ARGUMENT`. If any
+  // request sets `at_checkpoint` or `max_version` and the server cannot serve
+  // such reads, the whole batch fails as `GetObjectRequest` describes for
+  // that field.
   repeated GetObjectRequest requests = 1;
 
   // Mask specifying which fields to read.
