@@ -14971,6 +14971,9 @@ impl serde::Serialize for GetObjectRequest {
         if self.read_mask.is_some() {
             len += 1;
         }
+        if self.at_checkpoint.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer
             .serialize_struct("sui.rpc.v2.GetObjectRequest", len)?;
         if let Some(v) = self.object_id.as_ref() {
@@ -14984,6 +14987,12 @@ impl serde::Serialize for GetObjectRequest {
         if let Some(v) = self.read_mask.as_ref() {
             struct_ser
                 .serialize_field("readMask", &crate::_serde::FieldMaskSerializer(v))?;
+        }
+        if let Some(v) = self.at_checkpoint.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser
+                .serialize_field("atCheckpoint", ToString::to_string(&v).as_str())?;
         }
         struct_ser.end()
     }
@@ -15000,12 +15009,15 @@ impl<'de> serde::Deserialize<'de> for GetObjectRequest {
             "version",
             "read_mask",
             "readMask",
+            "at_checkpoint",
+            "atCheckpoint",
         ];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             ObjectId,
             Version,
             ReadMask,
+            AtCheckpoint,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -15036,6 +15048,9 @@ impl<'de> serde::Deserialize<'de> for GetObjectRequest {
                             "objectId" | "object_id" => Ok(GeneratedField::ObjectId),
                             "version" => Ok(GeneratedField::Version),
                             "readMask" | "read_mask" => Ok(GeneratedField::ReadMask),
+                            "atCheckpoint" | "at_checkpoint" => {
+                                Ok(GeneratedField::AtCheckpoint)
+                            }
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -15064,6 +15079,7 @@ impl<'de> serde::Deserialize<'de> for GetObjectRequest {
                 let mut object_id__ = None;
                 let mut version__ = None;
                 let mut read_mask__ = None;
+                let mut at_checkpoint__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::ObjectId => {
@@ -15092,6 +15108,18 @@ impl<'de> serde::Deserialize<'de> for GetObjectRequest {
                                 >()?
                                 .map(|x| x.0.into());
                         }
+                        GeneratedField::AtCheckpoint => {
+                            if at_checkpoint__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("atCheckpoint"),
+                                );
+                            }
+                            at_checkpoint__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -15101,6 +15129,7 @@ impl<'de> serde::Deserialize<'de> for GetObjectRequest {
                     object_id: object_id__,
                     version: version__,
                     read_mask: read_mask__,
+                    at_checkpoint: at_checkpoint__,
                 })
             }
         }

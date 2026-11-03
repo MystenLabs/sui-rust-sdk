@@ -29,10 +29,12 @@ message GetPackageRequest {
   // - `version`: the package with exactly this version.
   // - `at_checkpoint`: the latest package that existed at or before this
   //   checkpoint. The checkpoint must be at or below the highest checkpoint
-  //   the server has indexed; larger values fail with `NOT_FOUND` instead of
-  //   resolving to the latest known version, so a successful response is
-  //   exact as of `at_checkpoint`. Servers that prune history may also fail
-  //   with `NOT_FOUND` for checkpoints below their lowest available one.
+  //   the server has indexed; larger values fail with `OUT_OF_RANGE` and
+  //   reason `ABOVE_LATEST_AVAILABLE` instead of resolving to the latest
+  //   known version, so a successful response is exact as of
+  //   `at_checkpoint`. Servers that prune history may also fail with
+  //   `OUT_OF_RANGE` and reason `BELOW_EARLIEST_AVAILABLE` for checkpoints
+  //   below their lowest available one.
   //
   // If neither is set, the package stored at `package_id` is returned.
   oneof selector {
