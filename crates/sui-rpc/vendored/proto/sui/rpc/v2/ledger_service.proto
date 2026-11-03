@@ -107,16 +107,22 @@ message GetObjectRequest {
   // object that was deleted or wrapped at or before this checkpoint (and not
   // since unwrapped) is `NOT_FOUND`.
   //
-  // Combined with `version` or `max_version`, `at_checkpoint` instead bounds
-  // which versions are visible: the server first resolves the version that
-  // `version` or `max_version` selects, then fails with `NOT_FOUND` if that
-  // version was written in a checkpoint after `at_checkpoint`. It does not
-  // fall back to an older version that was visible at `at_checkpoint`, and it
-  // returns a visible version even if the object was deleted or wrapped by
-  // the end of `at_checkpoint`.
+  // Combined with `version`, `at_checkpoint` instead bounds which versions are
+  // visible: the server fails with `NOT_FOUND` if `version` was written in a
+  // checkpoint after `at_checkpoint`. It returns a visible version even if the
+  // object was deleted or wrapped by the end of `at_checkpoint`.
   //
-  // Either way, the checkpoint must be at or below the highest checkpoint the
-  // server has indexed; larger values fail with `OUT_OF_RANGE` and reason
+  // Combined with `max_version`, the server selects the object's newest
+  // version at or below `max_version` among the versions written in
+  // checkpoints at or before `at_checkpoint`, so the result does not depend on
+  // anything written after `at_checkpoint`. It fails with `NOT_FOUND` if the
+  // object has no such version, or if the selected version deleted or wrapped
+  // the object. A live selected version is returned even if the object was
+  // deleted or wrapped later, including by the end of `at_checkpoint` at a
+  // version above `max_version`.
+  //
+  // In every case, the checkpoint must be at or below the highest checkpoint
+  // the server has indexed; larger values fail with `OUT_OF_RANGE` and reason
   // `ABOVE_LATEST_AVAILABLE`, because the server cannot answer for them yet.
   // Servers that prune history may also fail with `OUT_OF_RANGE` and reason
   // `BELOW_EARLIEST_AVAILABLE` for checkpoints below their lowest available
@@ -124,9 +130,11 @@ message GetObjectRequest {
   optional uint64 at_checkpoint = 4;
 
   // Optional. Return the object's newest version at or below `max_version`.
+  // When `at_checkpoint` is also set, only versions written in checkpoints at
+  // or before `at_checkpoint` are considered.
   //
-  // Fails with `NOT_FOUND` if the object has no version at or below
-  // `max_version`, or if it was deleted or wrapped at that newest version.
+  // Fails with `NOT_FOUND` if the object has no such version, or if it was
+  // deleted or wrapped at the selected version.
   //
   // Mutually exclusive with `version`; servers reject a request that sets
   // both with `INVALID_ARGUMENT`. Servers that prune history may fail with
