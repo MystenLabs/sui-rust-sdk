@@ -209,9 +209,7 @@ pub(super) enum RpcEvent<R> {
 pub(super) enum ListAction<R> {
     Frame {
         response: R,
-        /// `None` only on a page's final frame when the request names its bound by a bare
-        /// `options.after` or `options.before` cursor minted without a position.
-        progress: Option<Progress<Bytes>>,
+        progress: Progress<Bytes>,
         complete: bool,
     },
     Continue,
@@ -425,7 +423,7 @@ impl<A: SubscriptionAdapter> ListMachine<A> {
         watermark: Option<&Watermark>,
         end: Option<&QueryEnd>,
         config: &LedgerStreamConfig,
-    ) -> Result<(Option<Progress<Bytes>>, bool)> {
+    ) -> Result<(Progress<Bytes>, bool)> {
         let watermark =
             watermark.ok_or_else(|| Status::data_loss("List frame is missing its watermark"))?;
         let cursor = watermark
@@ -453,49 +451,27 @@ impl<A: SubscriptionAdapter> ListMachine<A> {
             self.request_has_checkpoint_coverage = true;
         }
 
-        let mut frame_progress = match watermark.cursor_position.as_ref() {
-            Some(position) => Some(Progress {
-                position: A::GRANULARITY.position(position),
-                cursor,
-                checkpoint,
-            }),
-            // A server leaves the position unset only on a page's final frame when the request
-            // names that point by an `after` or `before` cursor alone and the cursor was minted
-            // without a position, by a server that predates cursor positions. A caller's cursor on
-            // the far side of the scan (`before` ascending, `after` descending) stays bare on every
-            // request. A near-side cursor is bare only on the caller's first request:
-            // continuations pair it with position fields.
-            None if !item_present
-                && matches!(
-                    end_reason,
-                    Some(
-                        QueryEndReason::LedgerTip
-                            | QueryEndReason::CursorBound
-                            | QueryEndReason::CheckpointBound
-                    )
-                )
-                && A::options(&self.payload).is_some_and(|options| {
-                    self.direction.has_far_cursor(options)
-                        || (self.request_resume_position.is_none()
-                            && self.direction.has_resume_cursor(options))
-                }) =>
-            {
-                None
-            }
-            None => return Err(missing_cursor_position("List")),
+        let position = watermark
+            .cursor_position
+            .as_ref()
+            .ok_or_else(|| missing_cursor_position("List"))?;
+        let mut frame_progress = Progress {
+            position: A::GRANULARITY.position(position),
+            cursor,
+            checkpoint,
         };
-        let mut advanced = item_present;
-        if let Some(next) = &mut frame_progress {
-            if let Some(latest) = &mut self.latest_progress {
-                next.inherit_checkpoint_coverage(latest);
+        let advanced = match &mut self.latest_progress {
+            Some(latest) => {
+                frame_progress.inherit_checkpoint_coverage(latest);
                 let (position_advanced, _) =
-                    latest.advance(next, self.direction, item_present, "List")?;
-                advanced |= position_advanced;
-            } else {
-                advanced = true;
-                self.latest_progress = Some(next.clone());
+                    latest.advance(&frame_progress, self.direction, item_present, "List")?;
+                item_present || position_advanced
             }
-        }
+            None => {
+                self.latest_progress = Some(frame_progress.clone());
+                true
+            }
+        };
         let received_prior_frame_in_request = self.received_frame_in_request;
         self.received_frame_in_request = true;
         if advanced {
@@ -515,9 +491,8 @@ impl<A: SubscriptionAdapter> ListMachine<A> {
                     QueryEndReason::ItemLimit | QueryEndReason::ScanLimit => {
                         // An ItemLimit item already advanced past the previous frame.
                         if reason == QueryEndReason::ScanLimit
-                            && let (Some(progress), Some(resumed_from)) =
-                                (&frame_progress, self.request_resume_position)
-                            && !self.direction.beyond(progress.position, resumed_from)
+                            && let Some(resumed_from) = self.request_resume_position
+                            && !self.direction.beyond(frame_progress.position, resumed_from)
                         {
                             return Err(Status::data_loss(
                                 "ScanLimit QueryEnd did not advance its cursor_position",

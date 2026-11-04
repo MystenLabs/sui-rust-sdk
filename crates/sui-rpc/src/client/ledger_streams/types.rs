@@ -69,8 +69,9 @@ pub enum TransactionStreamStart {
     Checkpoint(u64),
     /// Starts strictly after this server-validated opaque cursor. The stream lists one match after
     /// `cursor` to learn a position, delivers that List frame, and continues from it as
-    /// [`Self::ResumeAt`] does, one List request later. A cursor from a server that predates
-    /// cursor positions waits until the server scans past it.
+    /// [`Self::ResumeAt`] does, one List request later. A server that rejects `cursor`, as sui 1.84
+    /// and later do for a cursor minted without a position, ends the stream with its error; a List
+    /// frame without `cursor_position` ends it with `DataLoss`.
     #[deprecated(
         note = "resume with `ResumeAt`, passing a frame's `cursor` and `position`, which saves a \
                 List request"
@@ -99,8 +100,9 @@ pub enum EventStreamStart {
     Checkpoint(u64),
     /// Starts strictly after this server-validated opaque cursor. The stream lists one match after
     /// `cursor` to learn a position, delivers that List frame, and continues from it as
-    /// [`Self::ResumeAt`] does, one List request later. A cursor from a server that predates
-    /// cursor positions waits until the server scans past it.
+    /// [`Self::ResumeAt`] does, one List request later. A server that rejects `cursor`, as sui 1.84
+    /// and later do for a cursor minted without a position, ends the stream with its error; a List
+    /// frame without `cursor_position` ends it with `DataLoss`.
     #[deprecated(
         note = "resume with `ResumeAt`, passing a frame's `cursor` and `position`, which saves a \
                 List request"
