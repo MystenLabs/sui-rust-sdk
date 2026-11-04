@@ -66,6 +66,7 @@ impl ListPackageVersionsRequest {
             options: None,
             start_version: None,
             end_version: None,
+            start_checkpoint: None,
         }
     }
 }
@@ -86,6 +87,7 @@ impl PackageVersion {
             version: Some(version),
             checkpoint: None,
             cursor: None,
+            original_id: None,
         }
     }
 }
