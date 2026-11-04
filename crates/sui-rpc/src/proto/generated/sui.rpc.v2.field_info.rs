@@ -6008,6 +6008,24 @@ pub(crate) mod _field_impls {
             number: 4i32,
             message_fields: None,
         };
+        pub const OPTIONS_FIELD: &'static MessageField = &MessageField {
+            name: "options",
+            json_name: "options",
+            number: 5i32,
+            message_fields: Some(QueryOptions::FIELDS),
+        };
+        pub const START_VERSION_FIELD: &'static MessageField = &MessageField {
+            name: "start_version",
+            json_name: "startVersion",
+            number: 6i32,
+            message_fields: None,
+        };
+        pub const END_VERSION_FIELD: &'static MessageField = &MessageField {
+            name: "end_version",
+            json_name: "endVersion",
+            number: 7i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for ListPackageVersionsRequest {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -6015,6 +6033,9 @@ pub(crate) mod _field_impls {
             Self::PAGE_SIZE_FIELD,
             Self::PAGE_TOKEN_FIELD,
             Self::AT_CHECKPOINT_FIELD,
+            Self::OPTIONS_FIELD,
+            Self::START_VERSION_FIELD,
+            Self::END_VERSION_FIELD,
         ];
     }
     impl ListPackageVersionsRequest {
@@ -6051,6 +6072,18 @@ pub(crate) mod _field_impls {
         }
         pub fn at_checkpoint(mut self) -> String {
             self.path.push(ListPackageVersionsRequest::AT_CHECKPOINT_FIELD.name);
+            self.finish()
+        }
+        pub fn options(mut self) -> QueryOptionsFieldPathBuilder {
+            self.path.push(ListPackageVersionsRequest::OPTIONS_FIELD.name);
+            QueryOptionsFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn start_version(mut self) -> String {
+            self.path.push(ListPackageVersionsRequest::START_VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn end_version(mut self) -> String {
+            self.path.push(ListPackageVersionsRequest::END_VERSION_FIELD.name);
             self.finish()
         }
     }
@@ -6122,12 +6155,19 @@ pub(crate) mod _field_impls {
             number: 3i32,
             message_fields: None,
         };
+        pub const CURSOR_FIELD: &'static MessageField = &MessageField {
+            name: "cursor",
+            json_name: "cursor",
+            number: 4i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for PackageVersion {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::PACKAGE_ID_FIELD,
             Self::VERSION_FIELD,
             Self::CHECKPOINT_FIELD,
+            Self::CURSOR_FIELD,
         ];
     }
     impl PackageVersion {
@@ -6160,6 +6200,10 @@ pub(crate) mod _field_impls {
         }
         pub fn checkpoint(mut self) -> String {
             self.path.push(PackageVersion::CHECKPOINT_FIELD.name);
+            self.finish()
+        }
+        pub fn cursor(mut self) -> String {
+            self.path.push(PackageVersion::CURSOR_FIELD.name);
             self.finish()
         }
     }
