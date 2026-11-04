@@ -62,6 +62,7 @@ impl ListPackageVersionsRequest {
             package_id: Some(package_id.to_string()),
             page_size: None,
             page_token: None,
+            at_checkpoint: None,
         }
     }
 }
@@ -80,6 +81,7 @@ impl PackageVersion {
         Self {
             package_id: Some(package_id.to_string()),
             version: Some(version),
+            checkpoint: None,
         }
     }
 }

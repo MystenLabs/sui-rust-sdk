@@ -19299,6 +19299,9 @@ impl serde::Serialize for ListPackageVersionsRequest {
         if self.page_token.is_some() {
             len += 1;
         }
+        if self.at_checkpoint.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer
             .serialize_struct("sui.rpc.v2.ListPackageVersionsRequest", len)?;
         if let Some(v) = self.package_id.as_ref() {
@@ -19316,6 +19319,12 @@ impl serde::Serialize for ListPackageVersionsRequest {
                     crate::_serde::base64::encode(&v).as_str(),
                 )?;
         }
+        if let Some(v) = self.at_checkpoint.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser
+                .serialize_field("atCheckpoint", ToString::to_string(&v).as_str())?;
+        }
         struct_ser.end()
     }
 }
@@ -19332,12 +19341,15 @@ impl<'de> serde::Deserialize<'de> for ListPackageVersionsRequest {
             "pageSize",
             "page_token",
             "pageToken",
+            "at_checkpoint",
+            "atCheckpoint",
         ];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             PackageId,
             PageSize,
             PageToken,
+            AtCheckpoint,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -19368,6 +19380,9 @@ impl<'de> serde::Deserialize<'de> for ListPackageVersionsRequest {
                             "packageId" | "package_id" => Ok(GeneratedField::PackageId),
                             "pageSize" | "page_size" => Ok(GeneratedField::PageSize),
                             "pageToken" | "page_token" => Ok(GeneratedField::PageToken),
+                            "atCheckpoint" | "at_checkpoint" => {
+                                Ok(GeneratedField::AtCheckpoint)
+                            }
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -19396,6 +19411,7 @@ impl<'de> serde::Deserialize<'de> for ListPackageVersionsRequest {
                 let mut package_id__ = None;
                 let mut page_size__ = None;
                 let mut page_token__ = None;
+                let mut at_checkpoint__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::PackageId => {
@@ -19424,6 +19440,18 @@ impl<'de> serde::Deserialize<'de> for ListPackageVersionsRequest {
                                 >()?
                                 .map(|x| x.0);
                         }
+                        GeneratedField::AtCheckpoint => {
+                            if at_checkpoint__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("atCheckpoint"),
+                                );
+                            }
+                            at_checkpoint__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -19433,6 +19461,7 @@ impl<'de> serde::Deserialize<'de> for ListPackageVersionsRequest {
                     package_id: package_id__,
                     page_size: page_size__,
                     page_token: page_token__,
+                    at_checkpoint: at_checkpoint__,
                 })
             }
         }
@@ -24272,6 +24301,9 @@ impl serde::Serialize for PackageVersion {
         if self.version.is_some() {
             len += 1;
         }
+        if self.checkpoint.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer
             .serialize_struct("sui.rpc.v2.PackageVersion", len)?;
         if let Some(v) = self.package_id.as_ref() {
@@ -24282,6 +24314,11 @@ impl serde::Serialize for PackageVersion {
             #[allow(clippy::needless_borrows_for_generic_args)]
             struct_ser.serialize_field("version", ToString::to_string(&v).as_str())?;
         }
+        if let Some(v) = self.checkpoint.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("checkpoint", ToString::to_string(&v).as_str())?;
+        }
         struct_ser.end()
     }
 }
@@ -24291,11 +24328,12 @@ impl<'de> serde::Deserialize<'de> for PackageVersion {
     where
         D: serde::Deserializer<'de>,
     {
-        const FIELDS: &[&str] = &["package_id", "packageId", "version"];
+        const FIELDS: &[&str] = &["package_id", "packageId", "version", "checkpoint"];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             PackageId,
             Version,
+            Checkpoint,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -24325,6 +24363,7 @@ impl<'de> serde::Deserialize<'de> for PackageVersion {
                         match value {
                             "packageId" | "package_id" => Ok(GeneratedField::PackageId),
                             "version" => Ok(GeneratedField::Version),
+                            "checkpoint" => Ok(GeneratedField::Checkpoint),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -24352,6 +24391,7 @@ impl<'de> serde::Deserialize<'de> for PackageVersion {
             {
                 let mut package_id__ = None;
                 let mut version__ = None;
+                let mut checkpoint__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::PackageId => {
@@ -24370,6 +24410,16 @@ impl<'de> serde::Deserialize<'de> for PackageVersion {
                                 >()?
                                 .map(|x| x.0);
                         }
+                        GeneratedField::Checkpoint => {
+                            if checkpoint__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("checkpoint"));
+                            }
+                            checkpoint__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -24378,6 +24428,7 @@ impl<'de> serde::Deserialize<'de> for PackageVersion {
                 Ok(PackageVersion {
                     package_id: package_id__,
                     version: version__,
+                    checkpoint: checkpoint__,
                 })
             }
         }
