@@ -6147,6 +6147,78 @@ pub(crate) mod _field_impls {
             self.finish()
         }
     }
+    impl ListSystemPackagesRequest {
+        pub const AT_CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "at_checkpoint",
+            json_name: "atCheckpoint",
+            number: 1i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for ListSystemPackagesRequest {
+        const FIELDS: &'static [&'static MessageField] = &[Self::AT_CHECKPOINT_FIELD];
+    }
+    impl ListSystemPackagesRequest {
+        pub fn path_builder() -> ListSystemPackagesRequestFieldPathBuilder {
+            ListSystemPackagesRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct ListSystemPackagesRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ListSystemPackagesRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn at_checkpoint(mut self) -> String {
+            self.path.push(ListSystemPackagesRequest::AT_CHECKPOINT_FIELD.name);
+            self.finish()
+        }
+    }
+    impl ListSystemPackagesResponse {
+        pub const SYSTEM_PACKAGES_FIELD: &'static MessageField = &MessageField {
+            name: "system_packages",
+            json_name: "systemPackages",
+            number: 1i32,
+            message_fields: Some(PackageVersion::FIELDS),
+        };
+    }
+    impl MessageFields for ListSystemPackagesResponse {
+        const FIELDS: &'static [&'static MessageField] = &[Self::SYSTEM_PACKAGES_FIELD];
+    }
+    impl ListSystemPackagesResponse {
+        pub fn path_builder() -> ListSystemPackagesResponseFieldPathBuilder {
+            ListSystemPackagesResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct ListSystemPackagesResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ListSystemPackagesResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn system_packages(mut self) -> PackageVersionFieldPathBuilder {
+            self.path.push(ListSystemPackagesResponse::SYSTEM_PACKAGES_FIELD.name);
+            PackageVersionFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl PackageVersion {
         pub const PACKAGE_ID_FIELD: &'static MessageField = &MessageField {
             name: "package_id",

@@ -11250,6 +11250,71 @@ mod _accessor_impls {
             self
         }
     }
+    impl super::ListSystemPackagesRequest {
+        pub const fn const_default() -> Self {
+            Self { at_checkpoint: None }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::ListSystemPackagesRequest = super::ListSystemPackagesRequest::const_default();
+            &DEFAULT
+        }
+        ///If `at_checkpoint` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn at_checkpoint_opt_mut(&mut self) -> Option<&mut u64> {
+            self.at_checkpoint.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `at_checkpoint`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn at_checkpoint_mut(&mut self) -> &mut u64 {
+            self.at_checkpoint.get_or_insert_default()
+        }
+        ///If `at_checkpoint` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn at_checkpoint_opt(&self) -> Option<u64> {
+            self.at_checkpoint.as_ref().map(|field| *field)
+        }
+        ///Sets `at_checkpoint` with the provided value.
+        pub fn set_at_checkpoint(&mut self, field: u64) {
+            self.at_checkpoint = Some(field);
+        }
+        ///Sets `at_checkpoint` with the provided value.
+        pub fn with_at_checkpoint(mut self, field: u64) -> Self {
+            self.set_at_checkpoint(field);
+            self
+        }
+    }
+    impl super::ListSystemPackagesResponse {
+        pub const fn const_default() -> Self {
+            Self {
+                system_packages: Vec::new(),
+            }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::ListSystemPackagesResponse = super::ListSystemPackagesResponse::const_default();
+            &DEFAULT
+        }
+        ///Returns the value of `system_packages`, or the default value if `system_packages` is unset.
+        pub fn system_packages(&self) -> &[super::PackageVersion] {
+            &self.system_packages
+        }
+        ///Returns a mutable reference to `system_packages`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn system_packages_mut(&mut self) -> &mut Vec<super::PackageVersion> {
+            &mut self.system_packages
+        }
+        ///Sets `system_packages` with the provided value.
+        pub fn set_system_packages(&mut self, field: Vec<super::PackageVersion>) {
+            self.system_packages = field;
+        }
+        ///Sets `system_packages` with the provided value.
+        pub fn with_system_packages(
+            mut self,
+            field: Vec<super::PackageVersion>,
+        ) -> Self {
+            self.set_system_packages(field);
+            self
+        }
+    }
     impl super::ListTransactionsRequest {
         pub const fn const_default() -> Self {
             Self {

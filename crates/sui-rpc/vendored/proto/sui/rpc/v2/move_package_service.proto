@@ -13,6 +13,10 @@ service MovePackageService {
   rpc GetDatatype(GetDatatypeRequest) returns (GetDatatypeResponse);
   rpc GetFunction(GetFunctionRequest) returns (GetFunctionResponse);
   rpc ListPackageVersions(ListPackageVersionsRequest) returns (ListPackageVersionsResponse);
+
+  // List the system packages that existed as of a checkpoint, each at its
+  // latest version as of that checkpoint.
+  rpc ListSystemPackages(ListSystemPackagesRequest) returns (ListSystemPackagesResponse);
 }
 
 message GetPackageRequest {
@@ -189,6 +193,35 @@ message ListPackageVersionsResponse {
   // If this field is omitted, there are no subsequent pages. Never set when
   // the request sets `options`.
   optional bytes next_page_token = 2;
+}
+
+message ListSystemPackagesRequest {
+  // Required. Return the system packages as of the end of this checkpoint.
+  // A request without it fails with `INVALID_ARGUMENT`.
+  //
+  // The checkpoint must be at or below the highest checkpoint the server has
+  // indexed; larger values fail with `OUT_OF_RANGE` and reason
+  // `ABOVE_LATEST_AVAILABLE`. Servers that prune history may also fail with
+  // `OUT_OF_RANGE` and reason `BELOW_EARLIEST_AVAILABLE` for checkpoints
+  // below their lowest available one, and may fail with `UNAVAILABLE` while
+  // they rebuild history after restoring from a snapshot. Any of these fails
+  // the whole request, so a successful response is the complete set as of
+  // `at_checkpoint`.
+  optional uint64 at_checkpoint = 1;
+}
+
+message ListSystemPackagesResponse {
+  // The system packages that existed as of `at_checkpoint`, ordered by
+  // `package_id`, each at its latest version as of that checkpoint. System
+  // packages are upgraded in place, so every version of one shares its
+  // `package_id`. A system package created after `at_checkpoint` is omitted.
+  // There is one entry per system package, so the list is not paginated.
+  //
+  // Each entry sets `package_id`, `version`, `original_id` (equal to
+  // `package_id`), and `checkpoint`, which servers that prune history may
+  // leave unset as `PackageVersion.checkpoint` describes. `cursor` is never
+  // set.
+  repeated PackageVersion system_packages = 1;
 }
 
 // A simplified representation of a package version
