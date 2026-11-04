@@ -886,6 +886,10 @@ pub enum ErrorReason {
     ///   cursor past it ends an empty response with `LEDGER_TIP` at the position
     ///   that cursor resumes from.
     ///
+    /// Requests pinned to a checkpoint, such as `GetPackage` with
+    /// `at_checkpoint`, return this with `OUT_OF_RANGE` when that checkpoint is
+    /// above the latest indexed checkpoint.
+    ///
     /// Such a cursor comes from a newer view of the ledger than this server's,
     /// for example from another replica behind the same load balancer. The data
     /// is not indexed here yet, so the same request becomes servable once this
@@ -913,8 +917,8 @@ pub enum ErrorReason {
     /// Metadata, with checkpoints as decimal strings:
     ///
     /// * `bound`: what reads above the indexed data: "cursor" for a `before` or
-    ///   `after` cursor, or the name of the request field, "start_checkpoint"
-    ///   or "end_checkpoint".
+    ///   `after` cursor, or the name of the request field, such as
+    ///   "start_checkpoint", "end_checkpoint" or "at_checkpoint".
     /// * `requestedCheckpoint`: the checkpoint recorded in the cursor, or the
     ///   value of the request field.
     /// * `firstUnavailableCheckpoint`: the lowest checkpoint this server has not
@@ -930,6 +934,10 @@ pub enum ErrorReason {
     /// descending query that reaches the lowest checkpoint fails after it
     /// streams every item at or above that checkpoint, and its last response
     /// carries a watermark at that checkpoint.
+    ///
+    /// Requests pinned to a checkpoint, such as `GetPackage` with
+    /// `at_checkpoint`, return this with `OUT_OF_RANGE` when that checkpoint is
+    /// below the lowest checkpoint this server serves.
     ///
     /// Pruned data does not come back, so the same request fails the same way
     /// on this server. A client can send it to a server that retains the data,
@@ -4227,10 +4235,12 @@ pub struct GetPackageRequest {
     /// * `version`: the package with exactly this version.
     /// * `at_checkpoint`: the latest package that existed at or before this
     ///   checkpoint. The checkpoint must be at or below the highest checkpoint
-    ///   the server has indexed; larger values fail with `NOT_FOUND` instead of
-    ///   resolving to the latest known version, so a successful response is
-    ///   exact as of `at_checkpoint`. Servers that prune history may also fail
-    ///   with `NOT_FOUND` for checkpoints below their lowest available one.
+    ///   the server has indexed; larger values fail with `OUT_OF_RANGE` and
+    ///   reason `ABOVE_LATEST_AVAILABLE` instead of resolving to the latest
+    ///   known version, so a successful response is exact as of
+    ///   `at_checkpoint`. Servers that prune history may also fail with
+    ///   `OUT_OF_RANGE` and reason `BELOW_EARLIEST_AVAILABLE` for checkpoints
+    ///   below their lowest available one.
     ///
     /// If neither is set, the package stored at `package_id` is returned.
     #[prost(oneof = "get_package_request::Selector", tags = "2, 3")]
@@ -4244,10 +4254,12 @@ pub mod get_package_request {
     /// * `version`: the package with exactly this version.
     /// * `at_checkpoint`: the latest package that existed at or before this
     ///   checkpoint. The checkpoint must be at or below the highest checkpoint
-    ///   the server has indexed; larger values fail with `NOT_FOUND` instead of
-    ///   resolving to the latest known version, so a successful response is
-    ///   exact as of `at_checkpoint`. Servers that prune history may also fail
-    ///   with `NOT_FOUND` for checkpoints below their lowest available one.
+    ///   the server has indexed; larger values fail with `OUT_OF_RANGE` and
+    ///   reason `ABOVE_LATEST_AVAILABLE` instead of resolving to the latest
+    ///   known version, so a successful response is exact as of
+    ///   `at_checkpoint`. Servers that prune history may also fail with
+    ///   `OUT_OF_RANGE` and reason `BELOW_EARLIEST_AVAILABLE` for checkpoints
+    ///   below their lowest available one.
     ///
     /// If neither is set, the package stored at `package_id` is returned.
     #[non_exhaustive]
