@@ -11013,6 +11013,11 @@ mod _accessor_impls {
                 package_id: None,
                 page_size: None,
                 page_token: None,
+                at_checkpoint: None,
+                options: None,
+                start_version: None,
+                end_version: None,
+                start_checkpoint: None,
             }
         }
         #[doc(hidden)]
@@ -11080,6 +11085,123 @@ mod _accessor_impls {
             self.set_page_token(field.into());
             self
         }
+        ///If `at_checkpoint` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn at_checkpoint_opt_mut(&mut self) -> Option<&mut u64> {
+            self.at_checkpoint.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `at_checkpoint`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn at_checkpoint_mut(&mut self) -> &mut u64 {
+            self.at_checkpoint.get_or_insert_default()
+        }
+        ///If `at_checkpoint` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn at_checkpoint_opt(&self) -> Option<u64> {
+            self.at_checkpoint.as_ref().map(|field| *field)
+        }
+        ///Sets `at_checkpoint` with the provided value.
+        pub fn set_at_checkpoint(&mut self, field: u64) {
+            self.at_checkpoint = Some(field);
+        }
+        ///Sets `at_checkpoint` with the provided value.
+        pub fn with_at_checkpoint(mut self, field: u64) -> Self {
+            self.set_at_checkpoint(field);
+            self
+        }
+        ///Returns the value of `options`, or the default value if `options` is unset.
+        pub fn options(&self) -> &super::QueryOptions {
+            self.options
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::QueryOptions::default_instance() as _)
+        }
+        ///If `options` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn options_opt_mut(&mut self) -> Option<&mut super::QueryOptions> {
+            self.options.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `options`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn options_mut(&mut self) -> &mut super::QueryOptions {
+            self.options.get_or_insert_default()
+        }
+        ///If `options` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn options_opt(&self) -> Option<&super::QueryOptions> {
+            self.options.as_ref().map(|field| field as _)
+        }
+        ///Sets `options` with the provided value.
+        pub fn set_options<T: Into<super::QueryOptions>>(&mut self, field: T) {
+            self.options = Some(field.into().into());
+        }
+        ///Sets `options` with the provided value.
+        pub fn with_options<T: Into<super::QueryOptions>>(mut self, field: T) -> Self {
+            self.set_options(field.into());
+            self
+        }
+        ///If `start_version` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn start_version_opt_mut(&mut self) -> Option<&mut u64> {
+            self.start_version.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `start_version`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn start_version_mut(&mut self) -> &mut u64 {
+            self.start_version.get_or_insert_default()
+        }
+        ///If `start_version` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn start_version_opt(&self) -> Option<u64> {
+            self.start_version.as_ref().map(|field| *field)
+        }
+        ///Sets `start_version` with the provided value.
+        pub fn set_start_version(&mut self, field: u64) {
+            self.start_version = Some(field);
+        }
+        ///Sets `start_version` with the provided value.
+        pub fn with_start_version(mut self, field: u64) -> Self {
+            self.set_start_version(field);
+            self
+        }
+        ///If `end_version` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn end_version_opt_mut(&mut self) -> Option<&mut u64> {
+            self.end_version.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `end_version`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn end_version_mut(&mut self) -> &mut u64 {
+            self.end_version.get_or_insert_default()
+        }
+        ///If `end_version` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn end_version_opt(&self) -> Option<u64> {
+            self.end_version.as_ref().map(|field| *field)
+        }
+        ///Sets `end_version` with the provided value.
+        pub fn set_end_version(&mut self, field: u64) {
+            self.end_version = Some(field);
+        }
+        ///Sets `end_version` with the provided value.
+        pub fn with_end_version(mut self, field: u64) -> Self {
+            self.set_end_version(field);
+            self
+        }
+        ///If `start_checkpoint` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn start_checkpoint_opt_mut(&mut self) -> Option<&mut u64> {
+            self.start_checkpoint.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `start_checkpoint`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn start_checkpoint_mut(&mut self) -> &mut u64 {
+            self.start_checkpoint.get_or_insert_default()
+        }
+        ///If `start_checkpoint` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn start_checkpoint_opt(&self) -> Option<u64> {
+            self.start_checkpoint.as_ref().map(|field| *field)
+        }
+        ///Sets `start_checkpoint` with the provided value.
+        pub fn set_start_checkpoint(&mut self, field: u64) {
+            self.start_checkpoint = Some(field);
+        }
+        ///Sets `start_checkpoint` with the provided value.
+        pub fn with_start_checkpoint(mut self, field: u64) -> Self {
+            self.set_start_checkpoint(field);
+            self
+        }
     }
     impl super::ListPackageVersionsResponse {
         pub const fn const_default() -> Self {
@@ -11125,6 +11247,71 @@ mod _accessor_impls {
             field: T,
         ) -> Self {
             self.set_next_page_token(field.into());
+            self
+        }
+    }
+    impl super::ListSystemPackagesRequest {
+        pub const fn const_default() -> Self {
+            Self { at_checkpoint: None }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::ListSystemPackagesRequest = super::ListSystemPackagesRequest::const_default();
+            &DEFAULT
+        }
+        ///If `at_checkpoint` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn at_checkpoint_opt_mut(&mut self) -> Option<&mut u64> {
+            self.at_checkpoint.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `at_checkpoint`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn at_checkpoint_mut(&mut self) -> &mut u64 {
+            self.at_checkpoint.get_or_insert_default()
+        }
+        ///If `at_checkpoint` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn at_checkpoint_opt(&self) -> Option<u64> {
+            self.at_checkpoint.as_ref().map(|field| *field)
+        }
+        ///Sets `at_checkpoint` with the provided value.
+        pub fn set_at_checkpoint(&mut self, field: u64) {
+            self.at_checkpoint = Some(field);
+        }
+        ///Sets `at_checkpoint` with the provided value.
+        pub fn with_at_checkpoint(mut self, field: u64) -> Self {
+            self.set_at_checkpoint(field);
+            self
+        }
+    }
+    impl super::ListSystemPackagesResponse {
+        pub const fn const_default() -> Self {
+            Self {
+                system_packages: Vec::new(),
+            }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::ListSystemPackagesResponse = super::ListSystemPackagesResponse::const_default();
+            &DEFAULT
+        }
+        ///Returns the value of `system_packages`, or the default value if `system_packages` is unset.
+        pub fn system_packages(&self) -> &[super::PackageVersion] {
+            &self.system_packages
+        }
+        ///Returns a mutable reference to `system_packages`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn system_packages_mut(&mut self) -> &mut Vec<super::PackageVersion> {
+            &mut self.system_packages
+        }
+        ///Sets `system_packages` with the provided value.
+        pub fn set_system_packages(&mut self, field: Vec<super::PackageVersion>) {
+            self.system_packages = field;
+        }
+        ///Sets `system_packages` with the provided value.
+        pub fn with_system_packages(
+            mut self,
+            field: Vec<super::PackageVersion>,
+        ) -> Self {
+            self.set_system_packages(field);
             self
         }
     }
@@ -13628,6 +13815,9 @@ mod _accessor_impls {
             Self {
                 package_id: None,
                 version: None,
+                checkpoint: None,
+                cursor: None,
+                original_id: None,
             }
         }
         #[doc(hidden)]
@@ -13677,6 +13867,63 @@ mod _accessor_impls {
         ///Sets `version` with the provided value.
         pub fn with_version(mut self, field: u64) -> Self {
             self.set_version(field);
+            self
+        }
+        ///If `checkpoint` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn checkpoint_opt_mut(&mut self) -> Option<&mut u64> {
+            self.checkpoint.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `checkpoint`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn checkpoint_mut(&mut self) -> &mut u64 {
+            self.checkpoint.get_or_insert_default()
+        }
+        ///If `checkpoint` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn checkpoint_opt(&self) -> Option<u64> {
+            self.checkpoint.as_ref().map(|field| *field)
+        }
+        ///Sets `checkpoint` with the provided value.
+        pub fn set_checkpoint(&mut self, field: u64) {
+            self.checkpoint = Some(field);
+        }
+        ///Sets `checkpoint` with the provided value.
+        pub fn with_checkpoint(mut self, field: u64) -> Self {
+            self.set_checkpoint(field);
+            self
+        }
+        ///If `cursor` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn cursor_opt(&self) -> Option<&[u8]> {
+            self.cursor.as_ref().map(|field| field as _)
+        }
+        ///Sets `cursor` with the provided value.
+        pub fn set_cursor<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
+            self.cursor = Some(field.into().into());
+        }
+        ///Sets `cursor` with the provided value.
+        pub fn with_cursor<T: Into<::prost::bytes::Bytes>>(mut self, field: T) -> Self {
+            self.set_cursor(field.into());
+            self
+        }
+        ///If `original_id` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn original_id_opt_mut(&mut self) -> Option<&mut String> {
+            self.original_id.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `original_id`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn original_id_mut(&mut self) -> &mut String {
+            self.original_id.get_or_insert_default()
+        }
+        ///If `original_id` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn original_id_opt(&self) -> Option<&str> {
+            self.original_id.as_ref().map(|field| field as _)
+        }
+        ///Sets `original_id` with the provided value.
+        pub fn set_original_id<T: Into<String>>(&mut self, field: T) {
+            self.original_id = Some(field.into().into());
+        }
+        ///Sets `original_id` with the provided value.
+        pub fn with_original_id<T: Into<String>>(mut self, field: T) -> Self {
+            self.set_original_id(field.into());
             self
         }
     }
