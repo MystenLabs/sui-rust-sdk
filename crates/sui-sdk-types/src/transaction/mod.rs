@@ -92,9 +92,9 @@ pub enum TransactionExpiration {
         min_epoch: Option<EpochId>,
         /// Transaction expires after this epoch. Must equal current epoch
         max_epoch: Option<EpochId>,
-        /// Future support for sub-epoch timing (not yet implemented)
+        /// Future support for sub-epoch timing (not yet implemented). Unix time in milliseconds.
         min_timestamp: Option<u64>,
-        /// Future support for sub-epoch timing (not yet implemented)
+        /// Future support for sub-epoch timing (not yet implemented). Unix time in milliseconds.
         max_timestamp: Option<u64>,
         /// Network identifier to prevent cross-chain replay
         chain: Digest,
@@ -109,9 +109,9 @@ pub enum TransactionExpiration {
         min_epoch: Option<EpochId>,
         /// Transaction expires after this epoch. Must equal current epoch
         max_epoch: Option<EpochId>,
-        /// Future support for sub-epoch timing (not yet implemented)
+        /// Future support for sub-epoch timing (not yet implemented). Unix time in milliseconds.
         min_timestamp: Option<u64>,
-        /// Future support for sub-epoch timing (not yet implemented)
+        /// Future support for sub-epoch timing (not yet implemented). Unix time in milliseconds.
         max_timestamp: Option<u64>,
         /// Network identifier to prevent cross-chain replay
         chain: Digest,

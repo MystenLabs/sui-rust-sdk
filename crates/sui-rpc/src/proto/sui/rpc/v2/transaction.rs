@@ -219,14 +219,8 @@ impl From<sui_sdk_types::TransactionExpiration> for TransactionExpiration {
                 message.min_epoch = min_epoch;
                 message.set_chain(chain);
                 message.set_nonce(nonce);
-                message.min_timestamp = min_timestamp.map(|seconds| prost_types::Timestamp {
-                    seconds: seconds as _,
-                    nanos: 0,
-                });
-                message.max_timestamp = max_timestamp.map(|seconds| prost_types::Timestamp {
-                    seconds: seconds as _,
-                    nanos: 0,
-                });
+                message.min_timestamp = min_timestamp.map(crate::proto::timestamp_ms_to_proto);
+                message.max_timestamp = max_timestamp.map(crate::proto::timestamp_ms_to_proto);
                 TransactionExpirationKind::ValidDuring
             }
             Validity {
@@ -242,14 +236,8 @@ impl From<sui_sdk_types::TransactionExpiration> for TransactionExpiration {
                 message.min_epoch = min_epoch;
                 message.set_chain(chain);
                 message.set_nonce(nonce);
-                message.min_timestamp = min_timestamp.map(|seconds| prost_types::Timestamp {
-                    seconds: seconds as _,
-                    nanos: 0,
-                });
-                message.max_timestamp = max_timestamp.map(|seconds| prost_types::Timestamp {
-                    seconds: seconds as _,
-                    nanos: 0,
-                });
+                message.min_timestamp = min_timestamp.map(crate::proto::timestamp_ms_to_proto);
+                message.max_timestamp = max_timestamp.map(crate::proto::timestamp_ms_to_proto);
                 if let Some(allowed_proposers) = allowed_proposers {
                     message.set_allowed_proposers(AllowedProposers::from(allowed_proposers));
                 }
@@ -301,10 +289,14 @@ impl TryFrom<&TransactionExpiration> for sui_sdk_types::TransactionExpiration {
                 max_epoch: value.epoch_opt(),
                 min_timestamp: value
                     .min_timestamp_opt()
-                    .map(|timestamp| timestamp.seconds as _),
+                    .copied()
+                    .map(crate::proto::proto_to_timestamp_ms)
+                    .transpose()?,
                 max_timestamp: value
                     .max_timestamp_opt()
-                    .map(|timestamp| timestamp.seconds as _),
+                    .copied()
+                    .map(crate::proto::proto_to_timestamp_ms)
+                    .transpose()?,
                 chain: value
                     .chain_opt()
                     .ok_or_else(|| TryFromProtoError::missing("chain"))?
@@ -319,10 +311,14 @@ impl TryFrom<&TransactionExpiration> for sui_sdk_types::TransactionExpiration {
                 max_epoch: value.epoch_opt(),
                 min_timestamp: value
                     .min_timestamp_opt()
-                    .map(|timestamp| timestamp.seconds as _),
+                    .copied()
+                    .map(crate::proto::proto_to_timestamp_ms)
+                    .transpose()?,
                 max_timestamp: value
                     .max_timestamp_opt()
-                    .map(|timestamp| timestamp.seconds as _),
+                    .copied()
+                    .map(crate::proto::proto_to_timestamp_ms)
+                    .transpose()?,
                 chain: value
                     .chain_opt()
                     .ok_or_else(|| TryFromProtoError::missing("chain"))?
@@ -2312,5 +2308,43 @@ impl TryFrom<&Upgrade> for sui_sdk_types::Upgrade {
             package,
             ticket,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn expiration_timestamps_are_milliseconds() {
+        let min_ms = 1_700_000_000_123;
+        let max_ms = 1_700_000_060_456;
+        let expiration = sui_sdk_types::TransactionExpiration::ValidDuring {
+            min_epoch: Some(1),
+            max_epoch: Some(1),
+            min_timestamp: Some(min_ms),
+            max_timestamp: Some(max_ms),
+            chain: sui_sdk_types::Digest::ZERO,
+            nonce: 0,
+        };
+
+        let proto = TransactionExpiration::from(expiration.clone());
+        assert_eq!(
+            proto.min_timestamp,
+            Some(prost_types::Timestamp {
+                seconds: 1_700_000_000,
+                nanos: 123_000_000,
+            })
+        );
+        assert_eq!(
+            proto.max_timestamp,
+            Some(prost_types::Timestamp {
+                seconds: 1_700_000_060,
+                nanos: 456_000_000,
+            })
+        );
+
+        let decoded = sui_sdk_types::TransactionExpiration::try_from(&proto).unwrap();
+        assert_eq!(decoded, expiration);
     }
 }
