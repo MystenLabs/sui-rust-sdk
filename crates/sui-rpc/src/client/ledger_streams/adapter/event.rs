@@ -1,16 +1,14 @@
 use prost::bytes::Bytes;
 use tonic::Request;
-use tonic::Status;
 use tonic::codegen::BoxStream;
 
 use super::super::super::Client;
 use super::super::super::Result;
 use super::super::observability::LedgerStreamFamily;
 use super::super::types::EventStreamFrame;
-use super::ListResponseParts;
-use super::ListScanDirection;
-use super::LiveFrame;
-use super::PositionedItem;
+use super::BoundFields;
+use super::KeyGranularity;
+use super::LedgerFrame;
 use super::Progress;
 use super::RpcFuture;
 use super::SubscriptionAdapter;
@@ -28,36 +26,15 @@ pub(in crate::client::ledger_streams) struct EventAdapter;
 
 impl SubscriptionAdapter for EventAdapter {
     const FAMILY: LedgerStreamFamily = LedgerStreamFamily::Event;
-    const REQUIRED_READ_MASK_FIELDS: &'static [&'static str] =
-        &["checkpoint", "transaction_index", "event_index"];
-    const READ_MASK_REQUIREMENT: &'static str = "read_mask must include \"checkpoint\", \"transaction_index\", and \"event_index\" or \"*\"";
+    const GRANULARITY: KeyGranularity = KeyGranularity::Event;
 
-    type Item = PositionedItem<Event, (u64, u64, u32)>;
-    type ItemPosition = (u64, u64, u32);
+    type Item = Event;
     type Cursor = Bytes;
     type Output = EventStreamFrame;
     type ListRequest = ListEventsRequest;
     type ListResponse = ListEventsResponse;
     type SubscribeRequest = SubscribeEventsRequest;
     type SubscribeResponse = SubscribeEventsResponse;
-
-    fn list_read_mask(request: &Self::ListRequest) -> Option<&prost_types::FieldMask> {
-        request.read_mask.as_ref()
-    }
-
-    fn list_request_from_subscribe(request: &Self::SubscribeRequest) -> Self::ListRequest {
-        ListEventsRequest {
-            read_mask: request.read_mask.clone(),
-            filter: request.filter.clone(),
-            start_checkpoint: None,
-            end_checkpoint: None,
-            options: None,
-            start_transaction_index: None,
-            start_event_index: None,
-            end_transaction_index: None,
-            end_event_index: None,
-        }
-    }
 
     fn options(request: &Self::ListRequest) -> Option<&QueryOptions> {
         request.options.as_ref()
@@ -71,49 +48,28 @@ impl SubscriptionAdapter for EventAdapter {
         request.start_checkpoint
     }
 
-    fn set_start_checkpoint(request: &mut Self::ListRequest, checkpoint: Option<u64>) {
-        request.start_checkpoint = checkpoint;
-    }
-
     fn end_checkpoint(request: &Self::ListRequest) -> Option<u64> {
         request.end_checkpoint
     }
 
-    fn set_end_checkpoint(request: &mut Self::ListRequest, checkpoint: Option<u64>) {
-        request.end_checkpoint = checkpoint;
+    fn set_start_fields(request: &mut Self::ListRequest, fields: BoundFields) {
+        request.start_checkpoint = Some(fields.checkpoint);
+        request.start_transaction_index = fields.transaction_index;
+        request.start_event_index = fields.event_index;
     }
 
-    fn set_ascending_resume(
-        request: &mut Self::ListRequest,
-        progress: &Progress<Self::Cursor>,
-    ) -> Result<()> {
-        Self::options_mut(request).after = Some(progress.cursor.clone());
-        Ok(())
+    fn set_end_fields(request: &mut Self::ListRequest, fields: BoundFields) {
+        request.end_checkpoint = Some(fields.checkpoint);
+        request.end_transaction_index = fields.transaction_index;
+        request.end_event_index = fields.event_index;
     }
 
-    fn request_resume_position(request: &Self::ListRequest) -> Option<Progress<Self::Cursor>> {
-        request
-            .options
-            .as_ref()
-            .and_then(|options| options.after.clone())
-            .map(|cursor| Progress {
-                cursor,
-                checkpoint: None,
-            })
-    }
-    fn validate_checkpoint_bound(
-        _request: &Self::ListRequest,
-        _direction: ListScanDirection,
-        _checkpoint: Option<u64>,
-    ) -> Result<()> {
-        Ok(())
-    }
-    fn item_position(item: &Self::Item) -> &Self::ItemPosition {
-        item.position()
+    fn cursor_bytes(cursor: &Self::Cursor) -> Option<Bytes> {
+        Some(cursor.clone())
     }
 
-    fn item_checkpoint(position: &Self::ItemPosition) -> u64 {
-        position.0
+    fn list_cursor(cursor: Bytes) -> Self::Cursor {
+        cursor
     }
 
     fn extract_metadata(
@@ -126,27 +82,22 @@ impl SubscriptionAdapter for EventAdapter {
         )
     }
 
-    fn split_list(response: Self::ListResponse) -> Result<ListResponseParts<Self>> {
-        let item = response.event.map(position_event).transpose()?;
-        Ok(ListResponseParts {
-            item,
-            watermark: response.watermark,
-        })
+    fn into_list_item(response: Self::ListResponse) -> Option<Self::Item> {
+        response.event
     }
 
     fn parse_live(
         response: Self::SubscribeResponse,
         _item_required: bool,
-    ) -> Result<LiveFrame<Self::Item, Progress<Self::Cursor>>> {
-        let item = response.event.map(position_event).transpose()?;
-        parse_opaque_live_frame(item, response.watermark)
+    ) -> Result<LedgerFrame<Self::Item, Self::Cursor>> {
+        parse_opaque_live_frame(response.event, response.watermark, Self::GRANULARITY)
     }
 
     fn into_output(item: Option<Self::Item>, progress: Progress<Self::Cursor>) -> Self::Output {
-        let event = item.map(PositionedItem::into_payload);
         EventStreamFrame {
-            event,
+            event: item,
             cursor: progress.cursor,
+            position: progress.position,
             covered_checkpoint: progress.checkpoint,
         }
     }
@@ -178,20 +129,4 @@ impl SubscriptionAdapter for EventAdapter {
             Ok(Box::pin(stream) as BoxStream<Self::SubscribeResponse>)
         })
     }
-}
-
-fn position_event(event: Event) -> Result<PositionedItem<Event, (u64, u64, u32)>> {
-    let checkpoint = event
-        .checkpoint
-        .ok_or_else(|| Status::data_loss("event item is missing its checkpoint"))?;
-    let transaction_index = event
-        .transaction_index
-        .ok_or_else(|| Status::data_loss("event item is missing its transaction index"))?;
-    let event_index = event
-        .event_index
-        .ok_or_else(|| Status::data_loss("event item is missing its event index"))?;
-    Ok(PositionedItem::new(
-        event,
-        (checkpoint, transaction_index, event_index),
-    ))
 }

@@ -4,9 +4,9 @@ use tonic::Status;
 use tonic::codegen::BoxStream;
 
 use super::super::Result;
-use super::adapter::LiveFrame;
+use super::adapter::LedgerFrame;
+use super::adapter::ListScanDirection;
 use super::adapter::Progress;
-use super::adapter::ProgressAdvance;
 use super::adapter::SubscriptionAdapter;
 use super::list::ListMachine;
 use super::observability::LedgerStreamEvent;
@@ -16,7 +16,8 @@ use super::types::LedgerStreamConfig;
 
 pub(super) struct LiveSubscription<A: SubscriptionAdapter> {
     pub(super) stream: BoxStream<A::SubscribeResponse>,
-    pub(super) last_seen: Progress<A::Cursor>,
+    /// The subscription's furthest position and coverage, which its frames must not contradict.
+    pub(super) furthest: Progress<A::Cursor>,
 }
 
 pub(super) enum BufferedSubscriptionState<A: SubscriptionAdapter> {
@@ -25,11 +26,13 @@ pub(super) enum BufferedSubscriptionState<A: SubscriptionAdapter> {
     DroppedAtBufferLimit,
 }
 
+/// Lists the interval between committed progress and a new subscription's first frame while
+/// buffering that subscription's frames.
 pub(super) struct GapReplay<A: SubscriptionAdapter> {
     pub(super) list_machine: ListMachine<A>,
     pub(super) subscription_state: BufferedSubscriptionState<A>,
     /// Item frames retain payloads; adjacent progress-only frames coalesce once per contiguous run.
-    buffered_subscription_frames: VecDeque<LiveFrame<A::Item, Progress<A::Cursor>>>,
+    buffered_subscription_frames: VecDeque<LedgerFrame<A::Item, A::Cursor>>,
     /// Number of payload-bearing frames currently buffered, bounded by `max_buffered_live_items`
     /// (empty progress-only frames do not count toward this limit).
     buffered_subscription_items: usize,
@@ -37,12 +40,12 @@ pub(super) struct GapReplay<A: SubscriptionAdapter> {
 }
 
 impl<A: SubscriptionAdapter> GapReplay<A> {
+    /// Starts buffering `live` with its first frame, which the replay ends before.
     pub(super) fn new(
         list_machine: ListMachine<A>,
         live: LiveSubscription<A>,
-        first: LiveFrame<A::Item, Progress<A::Cursor>>,
+        first: LedgerFrame<A::Item, A::Cursor>,
         config: &LedgerStreamConfig,
-        replays_boundary_item: bool,
     ) -> Self {
         let observability = list_machine.observability.clone();
         let mut gap = Self {
@@ -52,16 +55,16 @@ impl<A: SubscriptionAdapter> GapReplay<A> {
             buffered_subscription_items: 0,
             observability,
         };
-        if !replays_boundary_item {
-            gap.retain_frame(first, Some(config));
-        }
+        gap.retain_frame(first, config);
         gap
     }
 
+    /// Buffers a frame of the active subscription, dropping the subscription once the buffer holds
+    /// `max_buffered_live_items` items.
     fn retain_frame(
         &mut self,
-        frame: LiveFrame<A::Item, Progress<A::Cursor>>,
-        config: Option<&LedgerStreamConfig>,
+        frame: LedgerFrame<A::Item, A::Cursor>,
+        config: &LedgerStreamConfig,
     ) {
         if frame.item.is_none()
             && let Some(deferred_tail) = self.buffered_subscription_frames.back_mut()
@@ -75,13 +78,7 @@ impl<A: SubscriptionAdapter> GapReplay<A> {
             self.buffered_subscription_items = self.buffered_subscription_items.saturating_add(1);
         }
         self.buffered_subscription_frames.push_back(frame);
-        if let Some(config) = config
-            && self.buffered_subscription_items >= config.max_buffered_live_items.get()
-            && matches!(
-                &self.subscription_state,
-                BufferedSubscriptionState::Active(_)
-            )
-        {
+        if self.buffered_subscription_items >= config.max_buffered_live_items.get() {
             self.subscription_state = BufferedSubscriptionState::DroppedAtBufferLimit;
             let buffered_items = self.buffered_subscription_items;
             let limit = config.max_buffered_live_items.get();
@@ -92,12 +89,6 @@ impl<A: SubscriptionAdapter> GapReplay<A> {
                     limit,
                 });
         }
-    }
-
-    pub(super) fn has_deferred_progress(&self, progress: &Progress<A::Cursor>) -> bool {
-        self.buffered_subscription_frames
-            .iter()
-            .any(|frame| frame.progress.same_position(progress))
     }
 
     /// Returns whether a valid buffered frame advanced subscription progress, controlling retry
@@ -142,18 +133,19 @@ impl<A: SubscriptionAdapter> GapReplay<A> {
             }
         };
 
-        match live
-            .last_seen
-            .classify_consecutive_subscription_progress(&frame.progress, frame.item.is_some())
-        {
+        match live.furthest.advance(
+            &frame.progress,
+            ListScanDirection::Ascending,
+            frame.item.is_some(),
+            "subscription",
+        ) {
             Err(status) => {
                 self.subscription_state = BufferedSubscriptionState::Failed(status);
                 false
             }
-            Ok(ProgressAdvance::Unchanged) => false,
-            Ok(ProgressAdvance::CheckpointCoverageAdvanced | ProgressAdvance::CursorAdvanced) => {
-                live.last_seen = frame.progress.clone();
-                self.retain_frame(frame, Some(config));
+            Ok((false, false)) => false,
+            Ok(_) => {
+                self.retain_frame(frame, config);
                 true
             }
         }
@@ -169,5 +161,5 @@ impl<A: SubscriptionAdapter> GapReplay<A> {
 
 pub(super) struct BufferedSubscriptionDrain<A: SubscriptionAdapter> {
     pub(super) subscription_state: BufferedSubscriptionState<A>,
-    pub(super) buffered_subscription_frames: VecDeque<LiveFrame<A::Item, Progress<A::Cursor>>>,
+    pub(super) buffered_subscription_frames: VecDeque<LedgerFrame<A::Item, A::Cursor>>,
 }

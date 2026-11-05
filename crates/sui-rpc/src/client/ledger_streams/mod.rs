@@ -27,6 +27,7 @@ pub use types::EventStreamRequest;
 pub use types::EventStreamStart;
 pub use types::LedgerStreamConfig;
 pub use types::ListConfig;
+pub use types::Position;
 pub use types::TransactionStreamFrame;
 pub use types::TransactionStreamRequest;
 pub use types::TransactionStreamStart;
