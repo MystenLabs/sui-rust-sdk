@@ -186,23 +186,26 @@ impl Client {
             Err(status) => return Err(ExecuteAndWaitError::RpcError(status)),
         }
 
-        // The stream and the execution future are boxed: their combined state
-        // would otherwise be inlined into this method's future, making it
-        // large enough to threaten a stack overflow in callers that hold it
-        // in deeply nested or spawned futures.
-        let mut transactions = Box::pin(
-            self.stream_transactions(
-                TransactionStreamRequest::new()
-                    .with_read_mask(FieldMask::from_str(
-                        "digest,checkpoint,transaction_index,timestamp",
-                    ))
-                    .with_filter(TransactionFilter::matching(transaction::sender(
-                        transaction.sender,
-                    )))
-                    .with_start(TransactionStreamStart::Checkpoint(start_checkpoint)),
-            ),
+        // The scan (which holds the stream) and the execution future are
+        // boxed: their combined state would otherwise be inlined into this
+        // method's future, making it large enough to threaten a stack overflow
+        // in callers that hold it in deeply nested or spawned futures.
+        let transactions = self.stream_transactions(
+            TransactionStreamRequest::new()
+                .with_read_mask(FieldMask::from_str(
+                    "digest,checkpoint,transaction_index,timestamp",
+                ))
+                .with_filter(TransactionFilter::matching(transaction::sender(
+                    transaction.sender,
+                )))
+                .with_start(TransactionStreamStart::Checkpoint(start_checkpoint)),
         );
-        let mut find_checkpoint = Box::pin(async {
+        // The scan owns the stream, so the subscription closes as soon as the
+        // scan finishes, instead of staying open unread for the rest of the
+        // call and holding flow-control capacity on the shared connection.
+        let digest = &digest;
+        let mut find_checkpoint = Box::pin(async move {
+            let mut transactions = std::pin::pin!(transactions);
             while let Some(frame) = transactions.try_next().await? {
                 if let Some(executed) = frame.transaction
                     && executed.digest() == digest
@@ -235,7 +238,9 @@ impl Client {
                 // Execution can fail for a transaction that nonetheless
                 // committed, for example when a resubmission races the
                 // original submission. Consult the ledger before surfacing
-                // the error.
+                // the error. The scan is never polled again, so close its
+                // stream before the lookup.
+                drop(find_checkpoint);
                 if let Ok(lookup) = self.ledger_client().get_transaction(lookup_request).await
                     && lookup.get_ref().transaction().checkpoint_opt().is_some()
                 {
