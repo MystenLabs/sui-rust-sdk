@@ -97,39 +97,41 @@ fn checkpoint_timestamp(checkpoint: u64) -> prost_types::Timestamp {
     }
 }
 
-/// Watermark covering every checkpoint up to and including `checkpoint`,
-/// with a cursor at the end of that checkpoint.
-fn watermark(checkpoint: u64) -> proto::Watermark {
+/// A boundary in the ledger: the point just before the transaction at
+/// `(checkpoint, transaction_index)`. The mock commits at most one matching
+/// transaction per checkpoint, at index 0, so `(c, 1)` lies just past it and
+/// `(c + 1, 0)` is the start of the next checkpoint.
+type Point = (u64, u64);
+
+/// The watermark at `point`: its cursor names the point, `cursor_position`
+/// carries it in ledger coordinates, and coverage is every checkpoint whose
+/// matching transaction lies before it.
+fn watermark((checkpoint, transaction_index): Point) -> proto::Watermark {
     let mut watermark = proto::Watermark::default();
-    watermark.cursor = Some(Bytes::from(checkpoint.to_string()));
-    watermark.checkpoint = Some(checkpoint);
+    watermark.cursor = Some(Bytes::from(format!("{checkpoint}:{transaction_index}")));
+    watermark.checkpoint = if transaction_index > 0 {
+        Some(checkpoint)
+    } else {
+        checkpoint.checked_sub(1)
+    };
+    watermark.cursor_position = Some(
+        proto::LedgerPosition::default()
+            .with_checkpoint(checkpoint)
+            .with_transaction_index(transaction_index),
+    );
     watermark
 }
 
-/// Watermark for the transaction under test at `checkpoint`, with a cursor
-/// at that transaction. The mock commits at most one matching transaction
-/// per checkpoint, so the frame also covers the whole checkpoint.
-fn item_watermark(checkpoint: u64) -> proto::Watermark {
-    let mut watermark = watermark(checkpoint);
-    watermark.cursor = Some(Bytes::from(format!("{checkpoint}:item")));
-    watermark
-}
-
-/// First checkpoint whose transactions come strictly after `cursor`.
-fn first_checkpoint_after(cursor: &Bytes) -> u64 {
-    let cursor = std::str::from_utf8(cursor).unwrap();
-    let checkpoint = cursor.strip_suffix(":item").unwrap_or(cursor);
-    checkpoint.parse::<u64>().unwrap() + 1
-}
-
-/// End (exclusive) of the checkpoints whose transactions come strictly
-/// before `cursor`.
-fn end_checkpoint_before(cursor: &Bytes) -> u64 {
-    let cursor = std::str::from_utf8(cursor).unwrap();
-    match cursor.strip_suffix(":item") {
-        Some(checkpoint) => checkpoint.parse::<u64>().unwrap(),
-        None => cursor.parse::<u64>().unwrap() + 1,
-    }
+/// The point a cursor minted by [`watermark`] names.
+fn cursor_point(cursor: &Bytes) -> Point {
+    let (checkpoint, transaction_index) = std::str::from_utf8(cursor)
+        .unwrap()
+        .split_once(':')
+        .unwrap();
+    (
+        checkpoint.parse().unwrap(),
+        transaction_index.parse().unwrap(),
+    )
 }
 
 #[tonic::async_trait]
@@ -185,47 +187,50 @@ impl LedgerService for MockLedger {
         let request = request.into_inner();
         let tip = self.tip();
         let options = request.options.unwrap_or_default();
-        let first = match &options.after {
-            Some(cursor) => first_checkpoint_after(cursor),
-            None => request.start_checkpoint.unwrap_or(0),
-        };
-        // The scan stops at the earliest of its bounds; reaching the tip
-        // first ends it with `LedgerTip`.
-        let mut end_exclusive = tip + 1;
+        // Bounds intersect: the scan starts at the latest start and ends at
+        // the earliest end.
+        let mut start = (
+            request.start_checkpoint.unwrap_or(0),
+            request.start_transaction_index.unwrap_or(0),
+        );
+        if let Some(cursor) = &options.after {
+            start = start.max(cursor_point(cursor));
+        }
+        // Reaching the tip first ends the scan with `LedgerTip`.
+        let mut end = (tip + 1, 0);
         let mut reason = proto::QueryEndReason::LedgerTip;
-        let mut end_cursor = None;
-        if let Some(end_checkpoint) = request.end_checkpoint
-            && end_checkpoint <= end_exclusive
-        {
-            end_exclusive = end_checkpoint;
-            reason = proto::QueryEndReason::CheckpointBound;
+        if let Some(end_checkpoint) = request.end_checkpoint {
+            let bound = match request.end_transaction_index {
+                Some(index) => (end_checkpoint - 1, index),
+                None => (end_checkpoint, 0),
+            };
+            if bound <= end {
+                end = bound;
+                reason = proto::QueryEndReason::CheckpointBound;
+            }
         }
         if let Some(cursor) = &options.before
-            && end_checkpoint_before(cursor) <= end_exclusive
+            && cursor_point(cursor) <= end
         {
-            end_exclusive = end_checkpoint_before(cursor);
+            end = cursor_point(cursor);
             reason = proto::QueryEndReason::CursorBound;
-            end_cursor = Some(cursor.clone());
         }
 
         let mut frames = Vec::new();
         if let Some(checkpoint) = self.committed_at
-            && (first..end_exclusive).contains(&checkpoint)
+            && (start..end).contains(&(checkpoint, 0))
         {
             let mut frame = proto::ListTransactionsResponse::default();
             frame.transaction = Some(self.executed_transaction(checkpoint));
-            frame.watermark = Some(item_watermark(checkpoint));
+            frame.watermark = Some(watermark((checkpoint, 1)));
             frames.push(Ok(frame));
         }
-        let mut end = proto::QueryEnd::default();
-        end.reason = Some(reason as i32);
-        let mut watermark = watermark(end_exclusive.max(first).saturating_sub(1));
-        if let Some(cursor) = end_cursor {
-            watermark.cursor = Some(cursor);
-        }
+        let mut query_end = proto::QueryEnd::default();
+        query_end.reason = Some(reason as i32);
+        // The resume point never moves before the request's start.
         let mut frame = proto::ListTransactionsResponse::default();
-        frame.watermark = Some(watermark);
-        frame.end = Some(end);
+        frame.watermark = Some(watermark(end.max(start)));
+        frame.end = Some(query_end);
         frames.push(Ok(frame));
         Ok(tonic::Response::new(Box::pin(futures::stream::iter(
             frames,
@@ -245,7 +250,7 @@ impl SubscriptionService for MockLedger {
         // the current tip and delivers only what lands after it.
         let start = self.tip();
         let mut first = proto::SubscribeTransactionsResponse::default();
-        first.watermark = Some(watermark(start));
+        first.watermark = Some(watermark((start + 1, 0)));
         let ledger = self.clone();
         let later = futures::stream::unfold(start + 1, move |next| {
             let ledger = ledger.clone();
@@ -259,9 +264,9 @@ impl SubscriptionService for MockLedger {
                     .filter(|&checkpoint| checkpoint == next)
                     .map(|checkpoint| ledger.executed_transaction(checkpoint));
                 frame.watermark = Some(if frame.transaction.is_some() {
-                    item_watermark(next)
+                    watermark((next, 1))
                 } else {
-                    watermark(next)
+                    watermark((next + 1, 0))
                 });
                 Some((Ok(frame), next + 1))
             }
