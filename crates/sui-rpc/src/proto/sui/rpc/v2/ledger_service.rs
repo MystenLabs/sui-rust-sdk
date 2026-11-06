@@ -140,7 +140,6 @@ impl GetEpochRequest {
         Self {
             epoch: None,
             read_mask: None,
-            system_state_at: None,
         }
     }
 
@@ -148,7 +147,6 @@ impl GetEpochRequest {
         Self {
             epoch: Some(epoch),
             read_mask: None,
-            system_state_at: None,
         }
     }
 }

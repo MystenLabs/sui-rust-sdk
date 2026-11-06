@@ -9513,87 +9513,6 @@ impl<'de> serde::Deserialize<'de> for Epoch {
         deserializer.deserialize_struct("sui.rpc.v2.Epoch", FIELDS, GeneratedVisitor)
     }
 }
-impl serde::Serialize for EpochStart {
-    #[allow(deprecated)]
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        use serde::ser::SerializeStruct;
-        let len = 0usize;
-        let struct_ser = serializer.serialize_struct("sui.rpc.v2.EpochStart", len)?;
-        struct_ser.end()
-    }
-}
-impl<'de> serde::Deserialize<'de> for EpochStart {
-    #[allow(deprecated)]
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        const FIELDS: &[&str] = &[];
-        #[allow(clippy::enum_variant_names)]
-        enum GeneratedField {
-            __SkipField__,
-        }
-        impl<'de> serde::Deserialize<'de> for GeneratedField {
-            fn deserialize<D>(
-                deserializer: D,
-            ) -> std::result::Result<GeneratedField, D::Error>
-            where
-                D: serde::Deserializer<'de>,
-            {
-                struct GeneratedVisitor;
-                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-                    type Value = GeneratedField;
-                    fn expecting(
-                        &self,
-                        formatter: &mut std::fmt::Formatter<'_>,
-                    ) -> std::fmt::Result {
-                        write!(formatter, "expected one of: {:?}", FIELDS)
-                    }
-                    #[allow(unused_variables)]
-                    fn visit_str<E>(
-                        self,
-                        value: &str,
-                    ) -> std::result::Result<GeneratedField, E>
-                    where
-                        E: serde::de::Error,
-                    {
-                        Ok(GeneratedField::__SkipField__)
-                    }
-                }
-                deserializer.deserialize_identifier(GeneratedVisitor)
-            }
-        }
-        struct GeneratedVisitor;
-        #[allow(clippy::useless_conversion)]
-        #[allow(clippy::unit_arg)]
-        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
-            type Value = EpochStart;
-            fn expecting(
-                &self,
-                formatter: &mut std::fmt::Formatter<'_>,
-            ) -> std::fmt::Result {
-                formatter.write_str("struct sui.rpc.v2.EpochStart")
-            }
-            fn visit_map<V>(
-                self,
-                mut map_: V,
-            ) -> std::result::Result<EpochStart, V::Error>
-            where
-                V: serde::de::MapAccess<'de>,
-            {
-                while map_.next_key::<GeneratedField>()?.is_some() {
-                    let _ = map_.next_value::<serde::de::IgnoredAny>()?;
-                }
-                Ok(EpochStart {})
-            }
-        }
-        deserializer
-            .deserialize_struct("sui.rpc.v2.EpochStart", FIELDS, GeneratedVisitor)
-    }
-}
 impl serde::Serialize for ErrorReason {
     #[allow(deprecated)]
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
@@ -14680,9 +14599,6 @@ impl serde::Serialize for GetEpochRequest {
         if self.read_mask.is_some() {
             len += 1;
         }
-        if self.system_state_at.is_some() {
-            len += 1;
-        }
         let mut struct_ser = serializer
             .serialize_struct("sui.rpc.v2.GetEpochRequest", len)?;
         if let Some(v) = self.epoch.as_ref() {
@@ -14694,22 +14610,6 @@ impl serde::Serialize for GetEpochRequest {
             struct_ser
                 .serialize_field("readMask", &crate::_serde::FieldMaskSerializer(v))?;
         }
-        if let Some(v) = self.system_state_at.as_ref() {
-            match v {
-                get_epoch_request::SystemStateAt::Start(v) => {
-                    struct_ser.serialize_field("start", v)?;
-                }
-                get_epoch_request::SystemStateAt::Checkpoint(v) => {
-                    #[allow(clippy::needless_borrow)]
-                    #[allow(clippy::needless_borrows_for_generic_args)]
-                    struct_ser
-                        .serialize_field(
-                            "checkpoint",
-                            ToString::to_string(&v).as_str(),
-                        )?;
-                }
-            }
-        }
         struct_ser.end()
     }
 }
@@ -14719,19 +14619,11 @@ impl<'de> serde::Deserialize<'de> for GetEpochRequest {
     where
         D: serde::Deserializer<'de>,
     {
-        const FIELDS: &[&str] = &[
-            "epoch",
-            "read_mask",
-            "readMask",
-            "start",
-            "checkpoint",
-        ];
+        const FIELDS: &[&str] = &["epoch", "read_mask", "readMask"];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             Epoch,
             ReadMask,
-            Start,
-            Checkpoint,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -14761,8 +14653,6 @@ impl<'de> serde::Deserialize<'de> for GetEpochRequest {
                         match value {
                             "epoch" => Ok(GeneratedField::Epoch),
                             "readMask" | "read_mask" => Ok(GeneratedField::ReadMask),
-                            "start" => Ok(GeneratedField::Start),
-                            "checkpoint" => Ok(GeneratedField::Checkpoint),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -14790,7 +14680,6 @@ impl<'de> serde::Deserialize<'de> for GetEpochRequest {
             {
                 let mut epoch__ = None;
                 let mut read_mask__ = None;
-                let mut system_state_at__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Epoch => {
@@ -14813,24 +14702,6 @@ impl<'de> serde::Deserialize<'de> for GetEpochRequest {
                                 >()?
                                 .map(|x| x.0.into());
                         }
-                        GeneratedField::Start => {
-                            if system_state_at__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("start"));
-                            }
-                            system_state_at__ = map_
-                                .next_value::<::std::option::Option<_>>()?
-                                .map(get_epoch_request::SystemStateAt::Start);
-                        }
-                        GeneratedField::Checkpoint => {
-                            if system_state_at__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("checkpoint"));
-                            }
-                            system_state_at__ = map_
-                                .next_value::<
-                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
-                                >()?
-                                .map(|x| get_epoch_request::SystemStateAt::Checkpoint(x.0));
-                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -14839,7 +14710,6 @@ impl<'de> serde::Deserialize<'de> for GetEpochRequest {
                 Ok(GetEpochRequest {
                     epoch: epoch__,
                     read_mask: read_mask__,
-                    system_state_at: system_state_at__,
                 })
             }
         }
@@ -30034,9 +29904,6 @@ impl serde::Serialize for SystemState {
         if self.extra_fields.is_some() {
             len += 1;
         }
-        if self.bcs.is_some() {
-            len += 1;
-        }
         let mut struct_ser = serializer.serialize_struct("sui.rpc.v2.SystemState", len)?;
         if let Some(v) = self.version.as_ref() {
             #[allow(clippy::needless_borrow)]
@@ -30130,9 +29997,6 @@ impl serde::Serialize for SystemState {
         if let Some(v) = self.extra_fields.as_ref() {
             struct_ser.serialize_field("extraFields", v)?;
         }
-        if let Some(v) = self.bcs.as_ref() {
-            struct_ser.serialize_field("bcs", v)?;
-        }
         struct_ser.end()
     }
 }
@@ -30171,7 +30035,6 @@ impl<'de> serde::Deserialize<'de> for SystemState {
             "epochStartTimestampMs",
             "extra_fields",
             "extraFields",
-            "bcs",
         ];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
@@ -30191,7 +30054,6 @@ impl<'de> serde::Deserialize<'de> for SystemState {
             SafeModeNonRefundableStorageFee,
             EpochStartTimestampMs,
             ExtraFields,
-            Bcs,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -30259,7 +30121,6 @@ impl<'de> serde::Deserialize<'de> for SystemState {
                             "extraFields" | "extra_fields" => {
                                 Ok(GeneratedField::ExtraFields)
                             }
-                            "bcs" => Ok(GeneratedField::Bcs),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -30301,7 +30162,6 @@ impl<'de> serde::Deserialize<'de> for SystemState {
                 let mut safe_mode_non_refundable_storage_fee__ = None;
                 let mut epoch_start_timestamp_ms__ = None;
                 let mut extra_fields__ = None;
-                let mut bcs__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Version => {
@@ -30462,12 +30322,6 @@ impl<'de> serde::Deserialize<'de> for SystemState {
                             }
                             extra_fields__ = map_.next_value()?;
                         }
-                        GeneratedField::Bcs => {
-                            if bcs__.is_some() {
-                                return Err(serde::de::Error::duplicate_field("bcs"));
-                            }
-                            bcs__ = map_.next_value()?;
-                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -30491,7 +30345,6 @@ impl<'de> serde::Deserialize<'de> for SystemState {
                     safe_mode_non_refundable_storage_fee: safe_mode_non_refundable_storage_fee__,
                     epoch_start_timestamp_ms: epoch_start_timestamp_ms__,
                     extra_fields: extra_fields__,
-                    bcs: bcs__,
                 })
             }
         }
