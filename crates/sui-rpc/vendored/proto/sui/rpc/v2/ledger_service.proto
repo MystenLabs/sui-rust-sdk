@@ -175,50 +175,14 @@ message GetCheckpointResponse {
 message GetEpochRequest {
   // The requested epoch.
   // If no epoch is provided the current epoch will be returned.
+  // An epoch the server has not reached or has not indexed fails with
+  // `NOT_FOUND`.
   optional uint64 epoch = 1;
 
   // Mask specifying which fields to read.
   // If no mask is specified, defaults to `epoch`.
   optional google.protobuf.FieldMask read_mask = 2;
-
-  // Optional. Which state to return in `Epoch.system_state`:
-  //
-  // - `start`: the state at the start of this epoch, right after the
-  //   epoch-change transaction in the previous epoch's last checkpoint, or
-  //   the genesis state for epoch 0. Applies to every epoch, including the
-  //   current one. A server that lacks this snapshot leaves `system_state`
-  //   unset; a fullnode restored mid-epoch lacks it for that epoch.
-  // - `checkpoint`: the state after this checkpoint's transactions. Requires
-  //   `epoch`; without it the request fails with `INVALID_ARGUMENT`. The
-  //   server checks, in order:
-  //   1. The checkpoint is at or above the epoch's first checkpoint and, if
-  //      the epoch has ended at or below the server's latest checkpoint,
-  //      below its last checkpoint; otherwise `INVALID_ARGUMENT`. The last
-  //      checkpoint is excluded because its epoch-change transaction leaves
-  //      the next epoch's state; request that epoch with `start` instead.
-  //   2. The checkpoint is at or below the server's latest checkpoint;
-  //      otherwise `OUT_OF_RANGE` with reason `ABOVE_LATEST_AVAILABLE`. Only
-  //      an epoch that has not ended at the server's height reaches this
-  //      check, so a retry after the server catches up can still fail with
-  //      `INVALID_ARGUMENT` if the epoch ends at or before the checkpoint.
-  //   3. The checkpoint is at or above the lowest checkpoint for which the
-  //      server serves object data (`x-sui-lowest-available-checkpoint-objects`);
-  //      otherwise `OUT_OF_RANGE` with reason `BELOW_EARLIEST_AVAILABLE`.
-  //
-  // If neither is set, `system_state` is as documented on `Epoch.system_state`.
-  // The selector is validated even if `read_mask` excludes `system_state`.
-  //
-  // Servers that predate this field ignore it and return `system_state` as
-  // documented on `Epoch.system_state`.
-  oneof system_state_at {
-    EpochStart start = 3;
-    uint64 checkpoint = 4;
-  }
 }
-
-// Selects the system state at the start of an epoch. See
-// `GetEpochRequest.system_state_at`.
-message EpochStart {}
 
 message GetEpochResponse {
   optional Epoch epoch = 1;

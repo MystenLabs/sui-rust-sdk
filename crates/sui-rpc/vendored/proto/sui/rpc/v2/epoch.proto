@@ -18,11 +18,16 @@ message Epoch {
   optional ValidatorCommittee committee = 2;
 
   // Snapshot of Sui's SystemState (`0x3::sui_system::SystemState`) at the
-  // beginning of the epoch, for past epochs, or the current state for the
-  // current epoch. `GetEpochRequest.system_state_at` selects a different one.
+  // beginning of the epoch, for an epoch that has ended, or the state as of
+  // the latest checkpoint the server has processed, for the running epoch.
+  // Servers that don't serve object history fail with `UNIMPLEMENTED` when
+  // `read_mask` selects it for the running epoch.
   optional SystemState system_state = 3;
 
   optional uint64 first_checkpoint = 4;
+
+  // The epoch's last checkpoint. Set once the server has indexed it, and
+  // unset while the epoch is running.
   optional uint64 last_checkpoint = 5;
 
   optional google.protobuf.Timestamp start = 6;
@@ -37,26 +42,25 @@ message Epoch {
   optional uint64 transaction_start_inclusive = 10;
 
   // One past the sequence number of the epoch's last transaction (exclusive):
-  // the `total_network_transactions` of `last_checkpoint`. Set only once the
-  // epoch has ended at or below the response's checkpoint height, the same
-  // condition under which `last_checkpoint` is set.
+  // the `total_network_transactions` of `last_checkpoint`. Set only when
+  // `last_checkpoint` is.
   optional uint64 transaction_end_exclusive = 11;
 
   // Whether the epoch ended in safe mode: `advance_epoch` failed and
   // `advance_epoch_safe_mode` ran instead, so no `SystemEpochInfoEvent` was
-  // emitted and `system_epoch_info` is unset. Set only once the epoch has
-  // ended, as for `transaction_end_exclusive`.
+  // emitted and `system_epoch_info` is unset. Set only when `last_checkpoint`
+  // is.
   optional bool ended_in_safe_mode = 12;
 
   // Totals from the `0x3::sui_system_state_inner::SystemEpochInfoEvent`
-  // emitted when this epoch ended. Set only once the epoch has ended, as for
-  // `transaction_end_exclusive`, and unset if it ended in safe mode.
+  // emitted when this epoch ended. Set only when `last_checkpoint` is, and
+  // unset if the epoch ended in safe mode.
   optional SystemEpochInfo system_epoch_info = 13;
 
   // Commitments to epoch-specific state (the live object set), from the
-  // `EndOfEpochData` of `last_checkpoint`. Empty until the epoch has ended, as
-  // for `transaction_end_exclusive`, and empty for epochs that ended before
-  // the protocol added epoch commitments.
+  // `EndOfEpochData` of `last_checkpoint`. Empty while `last_checkpoint` is
+  // unset, and for epochs that ended before the protocol added epoch
+  // commitments.
   repeated CheckpointCommitment epoch_commitments = 14;
 }
 

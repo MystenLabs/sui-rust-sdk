@@ -4520,25 +4520,11 @@ pub(crate) mod _field_impls {
             number: 2i32,
             message_fields: None,
         };
-        pub const START_FIELD: &'static MessageField = &MessageField {
-            name: "start",
-            json_name: "start",
-            number: 3i32,
-            message_fields: Some(EpochStart::FIELDS),
-        };
-        pub const CHECKPOINT_FIELD: &'static MessageField = &MessageField {
-            name: "checkpoint",
-            json_name: "checkpoint",
-            number: 4i32,
-            message_fields: None,
-        };
     }
     impl MessageFields for GetEpochRequest {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::EPOCH_FIELD,
             Self::READ_MASK_FIELD,
-            Self::START_FIELD,
-            Self::CHECKPOINT_FIELD,
         ];
     }
     impl GetEpochRequest {
@@ -4568,39 +4554,6 @@ pub(crate) mod _field_impls {
         pub fn read_mask(mut self) -> String {
             self.path.push(GetEpochRequest::READ_MASK_FIELD.name);
             self.finish()
-        }
-        pub fn start(mut self) -> EpochStartFieldPathBuilder {
-            self.path.push(GetEpochRequest::START_FIELD.name);
-            EpochStartFieldPathBuilder::new_with_base(self.path)
-        }
-        pub fn checkpoint(mut self) -> String {
-            self.path.push(GetEpochRequest::CHECKPOINT_FIELD.name);
-            self.finish()
-        }
-    }
-    impl EpochStart {}
-    impl MessageFields for EpochStart {
-        const FIELDS: &'static [&'static MessageField] = &[];
-    }
-    impl EpochStart {
-        pub fn path_builder() -> EpochStartFieldPathBuilder {
-            EpochStartFieldPathBuilder::new()
-        }
-    }
-    pub struct EpochStartFieldPathBuilder {
-        path: Vec<&'static str>,
-    }
-    impl EpochStartFieldPathBuilder {
-        #[allow(clippy::new_without_default)]
-        pub fn new() -> Self {
-            Self { path: Default::default() }
-        }
-        #[doc(hidden)]
-        pub fn new_with_base(base: Vec<&'static str>) -> Self {
-            Self { path: base }
-        }
-        pub fn finish(self) -> String {
-            self.path.join(".")
         }
     }
     impl GetEpochResponse {
@@ -9975,12 +9928,6 @@ pub(crate) mod _field_impls {
             number: 16i32,
             message_fields: Some(MoveTable::FIELDS),
         };
-        pub const BCS_FIELD: &'static MessageField = &MessageField {
-            name: "bcs",
-            json_name: "bcs",
-            number: 17i32,
-            message_fields: Some(Bcs::FIELDS),
-        };
     }
     impl MessageFields for SystemState {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -10000,7 +9947,6 @@ pub(crate) mod _field_impls {
             Self::SAFE_MODE_NON_REFUNDABLE_STORAGE_FEE_FIELD,
             Self::EPOCH_START_TIMESTAMP_MS_FIELD,
             Self::EXTRA_FIELDS_FIELD,
-            Self::BCS_FIELD,
         ];
     }
     impl SystemState {
@@ -10088,10 +10034,6 @@ pub(crate) mod _field_impls {
         pub fn extra_fields(mut self) -> MoveTableFieldPathBuilder {
             self.path.push(SystemState::EXTRA_FIELDS_FIELD.name);
             MoveTableFieldPathBuilder::new_with_base(self.path)
-        }
-        pub fn bcs(mut self) -> BcsFieldPathBuilder {
-            self.path.push(SystemState::BCS_FIELD.name);
-            BcsFieldPathBuilder::new_with_base(self.path)
         }
     }
     impl ValidatorReportRecord {
