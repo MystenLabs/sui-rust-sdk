@@ -23,6 +23,9 @@ message Epoch {
   optional SystemState system_state = 3;
 
   optional uint64 first_checkpoint = 4;
+
+  // The epoch's last checkpoint. Set once the server has indexed it, and
+  // unset while the epoch is running.
   optional uint64 last_checkpoint = 5;
 
   optional google.protobuf.Timestamp start = 6;
@@ -36,24 +39,26 @@ message Epoch {
   // Sequence number of the first transaction in this epoch (inclusive).
   optional uint64 transaction_start_inclusive = 10;
 
-  // The fields below are set only once the epoch has ended at or below the
-  // response's checkpoint height, exactly when `last_checkpoint` is set.
-
   // One past the sequence number of the epoch's last transaction (exclusive):
-  // the `total_network_transactions` of `last_checkpoint`.
+  // the `total_network_transactions` of `last_checkpoint`. Set only when
+  // `last_checkpoint` is.
   optional uint64 transaction_end_exclusive = 11;
 
   // Whether the epoch ended in safe mode: `advance_epoch` failed and
   // `advance_epoch_safe_mode` ran instead, so no `SystemEpochInfoEvent` was
-  // emitted and `system_epoch_info` is unset.
+  // emitted and `system_epoch_info` is unset. Set only when `last_checkpoint`
+  // is.
   optional bool ended_in_safe_mode = 12;
 
   // Totals from the `0x3::sui_system_state_inner::SystemEpochInfoEvent`
-  // emitted when this epoch ended. Unset if the epoch ended in safe mode.
+  // emitted when this epoch ended. Set only when `last_checkpoint` is, and
+  // unset if the epoch ended in safe mode.
   optional SystemEpochInfo system_epoch_info = 13;
 
   // Commitments to epoch-specific state (the live object set), from the
-  // `EndOfEpochData` of `last_checkpoint`.
+  // `EndOfEpochData` of `last_checkpoint`. Empty while `last_checkpoint` is
+  // unset, and for epochs that ended before the protocol added epoch
+  // commitments.
   repeated CheckpointCommitment epoch_commitments = 14;
 }
 
@@ -67,10 +72,12 @@ message SystemEpochInfo {
   // fund.
   optional uint64 storage_fund_reinvestment = 2;
 
-  // Storage fees charged during the epoch.
+  // Storage fees charged during the epoch, plus those deferred from any
+  // preceding epochs that ended in safe mode.
   optional uint64 storage_charge = 3;
 
-  // Storage rebates paid out during the epoch.
+  // Storage rebates paid out during the epoch, plus those deferred from any
+  // preceding epochs that ended in safe mode.
   optional uint64 storage_rebate = 4;
 
   // Balance of the storage fund after the epoch change.
@@ -79,7 +86,8 @@ message SystemEpochInfo {
   // Stake subsidy paid out at the end of the epoch.
   optional uint64 stake_subsidy_amount = 6;
 
-  // Computation gas fees collected during the epoch.
+  // Computation gas fees collected during the epoch, plus those deferred from
+  // any preceding epochs that ended in safe mode.
   optional uint64 total_gas_fees = 7;
 
   // Stake rewards distributed to validators and their stakers.
