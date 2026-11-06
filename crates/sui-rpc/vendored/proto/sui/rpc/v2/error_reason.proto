@@ -125,6 +125,10 @@ enum ErrorReason {
   // checkpoint the chain has not reached, so retrying it can wait
   // indefinitely.
   //
+  // `LedgerService.GetEpoch` returns this with `OUT_OF_RANGE` when
+  // `GetEpochRequest.checkpoint` is above the latest checkpoint this server
+  // has indexed.
+  //
   // Example of an ErrorInfo for a descending query's `before` cursor at
   // checkpoint 1205, sent to a server whose latest indexed checkpoint is 1199:
   //
@@ -140,7 +144,8 @@ enum ErrorReason {
   // Metadata, with checkpoints as decimal strings:
   // - `bound`: what reads above the indexed data: "cursor" for a `before` or
   //   `after` cursor, or the name of the request field, such as
-  //   "start_checkpoint", "end_checkpoint" or "at_checkpoint".
+  //   "start_checkpoint", "end_checkpoint", "at_checkpoint", or "checkpoint"
+  //   for `GetEpochRequest.checkpoint`.
   // - `requestedCheckpoint`: the checkpoint recorded in the cursor, or the
   //   value of the request field.
   // - `firstUnavailableCheckpoint`: the lowest checkpoint this server has not
@@ -156,7 +161,10 @@ enum ErrorReason {
   // reaches it, or when the server prunes data a query has not read yet. A
   // descending query that reaches the lowest checkpoint fails after it
   // streams every item at or above that checkpoint, and its last response
-  // carries a watermark at that checkpoint.
+  // carries a watermark at that checkpoint. `LedgerService.GetEpoch` returns
+  // this with `OUT_OF_RANGE` when `GetEpochRequest.checkpoint` is below the
+  // lowest checkpoint for which this server serves object data, and
+  // `lowestAvailableCheckpoint` is that checkpoint.
   //
   // Requests pinned to a checkpoint, such as `GetObject` or `GetPackage` with
   // `at_checkpoint`, return this with `OUT_OF_RANGE` when that checkpoint is

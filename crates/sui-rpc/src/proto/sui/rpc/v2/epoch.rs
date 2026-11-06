@@ -14,6 +14,11 @@ impl Merge<&Epoch> for Epoch {
             end,
             reference_gas_price,
             protocol_config,
+            transaction_start_inclusive,
+            transaction_end_exclusive,
+            ended_in_safe_mode,
+            system_epoch_info,
+            epoch_commitments,
         } = source;
 
         if mask.contains(Self::EPOCH_FIELD.name) {
@@ -52,6 +57,26 @@ impl Merge<&Epoch> for Epoch {
             self.protocol_config = protocol_config
                 .as_ref()
                 .map(|config| ProtocolConfig::merge_from(config, &submask));
+        }
+
+        if mask.contains(Self::TRANSACTION_START_INCLUSIVE_FIELD.name) {
+            self.transaction_start_inclusive = *transaction_start_inclusive;
+        }
+
+        if mask.contains(Self::TRANSACTION_END_EXCLUSIVE_FIELD.name) {
+            self.transaction_end_exclusive = *transaction_end_exclusive;
+        }
+
+        if mask.contains(Self::ENDED_IN_SAFE_MODE_FIELD.name) {
+            self.ended_in_safe_mode = *ended_in_safe_mode;
+        }
+
+        if mask.contains(Self::SYSTEM_EPOCH_INFO_FIELD.name) {
+            self.system_epoch_info = system_epoch_info.to_owned();
+        }
+
+        if mask.contains(Self::EPOCH_COMMITMENTS_FIELD.name) {
+            self.epoch_commitments = epoch_commitments.to_owned();
         }
     }
 }
