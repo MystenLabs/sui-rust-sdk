@@ -9117,6 +9117,21 @@ impl serde::Serialize for Epoch {
         if self.protocol_config.is_some() {
             len += 1;
         }
+        if self.transaction_start_inclusive.is_some() {
+            len += 1;
+        }
+        if self.transaction_end_exclusive.is_some() {
+            len += 1;
+        }
+        if self.ended_in_safe_mode.is_some() {
+            len += 1;
+        }
+        if self.system_epoch_info.is_some() {
+            len += 1;
+        }
+        if !self.epoch_commitments.is_empty() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("sui.rpc.v2.Epoch", len)?;
         if let Some(v) = self.epoch.as_ref() {
             #[allow(clippy::needless_borrow)]
@@ -9156,6 +9171,33 @@ impl serde::Serialize for Epoch {
         if let Some(v) = self.protocol_config.as_ref() {
             struct_ser.serialize_field("protocolConfig", v)?;
         }
+        if let Some(v) = self.transaction_start_inclusive.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser
+                .serialize_field(
+                    "transactionStartInclusive",
+                    ToString::to_string(&v).as_str(),
+                )?;
+        }
+        if let Some(v) = self.transaction_end_exclusive.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser
+                .serialize_field(
+                    "transactionEndExclusive",
+                    ToString::to_string(&v).as_str(),
+                )?;
+        }
+        if let Some(v) = self.ended_in_safe_mode.as_ref() {
+            struct_ser.serialize_field("endedInSafeMode", v)?;
+        }
+        if let Some(v) = self.system_epoch_info.as_ref() {
+            struct_ser.serialize_field("systemEpochInfo", v)?;
+        }
+        if !self.epoch_commitments.is_empty() {
+            struct_ser.serialize_field("epochCommitments", &self.epoch_commitments)?;
+        }
         struct_ser.end()
     }
 }
@@ -9180,6 +9222,16 @@ impl<'de> serde::Deserialize<'de> for Epoch {
             "referenceGasPrice",
             "protocol_config",
             "protocolConfig",
+            "transaction_start_inclusive",
+            "transactionStartInclusive",
+            "transaction_end_exclusive",
+            "transactionEndExclusive",
+            "ended_in_safe_mode",
+            "endedInSafeMode",
+            "system_epoch_info",
+            "systemEpochInfo",
+            "epoch_commitments",
+            "epochCommitments",
         ];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
@@ -9192,6 +9244,11 @@ impl<'de> serde::Deserialize<'de> for Epoch {
             End,
             ReferenceGasPrice,
             ProtocolConfig,
+            TransactionStartInclusive,
+            TransactionEndExclusive,
+            EndedInSafeMode,
+            SystemEpochInfo,
+            EpochCommitments,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -9238,6 +9295,22 @@ impl<'de> serde::Deserialize<'de> for Epoch {
                             "protocolConfig" | "protocol_config" => {
                                 Ok(GeneratedField::ProtocolConfig)
                             }
+                            "transactionStartInclusive"
+                            | "transaction_start_inclusive" => {
+                                Ok(GeneratedField::TransactionStartInclusive)
+                            }
+                            "transactionEndExclusive" | "transaction_end_exclusive" => {
+                                Ok(GeneratedField::TransactionEndExclusive)
+                            }
+                            "endedInSafeMode" | "ended_in_safe_mode" => {
+                                Ok(GeneratedField::EndedInSafeMode)
+                            }
+                            "systemEpochInfo" | "system_epoch_info" => {
+                                Ok(GeneratedField::SystemEpochInfo)
+                            }
+                            "epochCommitments" | "epoch_commitments" => {
+                                Ok(GeneratedField::EpochCommitments)
+                            }
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -9269,6 +9342,11 @@ impl<'de> serde::Deserialize<'de> for Epoch {
                 let mut end__ = None;
                 let mut reference_gas_price__ = None;
                 let mut protocol_config__ = None;
+                let mut transaction_start_inclusive__ = None;
+                let mut transaction_end_exclusive__ = None;
+                let mut ended_in_safe_mode__ = None;
+                let mut system_epoch_info__ = None;
+                let mut epoch_commitments__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Epoch => {
@@ -9359,6 +9437,56 @@ impl<'de> serde::Deserialize<'de> for Epoch {
                             }
                             protocol_config__ = map_.next_value()?;
                         }
+                        GeneratedField::TransactionStartInclusive => {
+                            if transaction_start_inclusive__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field(
+                                        "transactionStartInclusive",
+                                    ),
+                                );
+                            }
+                            transaction_start_inclusive__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::TransactionEndExclusive => {
+                            if transaction_end_exclusive__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("transactionEndExclusive"),
+                                );
+                            }
+                            transaction_end_exclusive__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::EndedInSafeMode => {
+                            if ended_in_safe_mode__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("endedInSafeMode"),
+                                );
+                            }
+                            ended_in_safe_mode__ = map_.next_value()?;
+                        }
+                        GeneratedField::SystemEpochInfo => {
+                            if system_epoch_info__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("systemEpochInfo"),
+                                );
+                            }
+                            system_epoch_info__ = map_.next_value()?;
+                        }
+                        GeneratedField::EpochCommitments => {
+                            if epoch_commitments__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("epochCommitments"),
+                                );
+                            }
+                            epoch_commitments__ = Some(map_.next_value()?);
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -9374,10 +9502,96 @@ impl<'de> serde::Deserialize<'de> for Epoch {
                     end: end__,
                     reference_gas_price: reference_gas_price__,
                     protocol_config: protocol_config__,
+                    transaction_start_inclusive: transaction_start_inclusive__,
+                    transaction_end_exclusive: transaction_end_exclusive__,
+                    ended_in_safe_mode: ended_in_safe_mode__,
+                    system_epoch_info: system_epoch_info__,
+                    epoch_commitments: epoch_commitments__.unwrap_or_default(),
                 })
             }
         }
         deserializer.deserialize_struct("sui.rpc.v2.Epoch", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for EpochStart {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let len = 0usize;
+        let struct_ser = serializer.serialize_struct("sui.rpc.v2.EpochStart", len)?;
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for EpochStart {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[];
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(
+                deserializer: D,
+            ) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+                    fn expecting(
+                        &self,
+                        formatter: &mut std::fmt::Formatter<'_>,
+                    ) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", FIELDS)
+                    }
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(
+                        self,
+                        value: &str,
+                    ) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        Ok(GeneratedField::__SkipField__)
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = EpochStart;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2.EpochStart")
+            }
+            fn visit_map<V>(
+                self,
+                mut map_: V,
+            ) -> std::result::Result<EpochStart, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                while map_.next_key::<GeneratedField>()?.is_some() {
+                    let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                }
+                Ok(EpochStart {})
+            }
+        }
+        deserializer
+            .deserialize_struct("sui.rpc.v2.EpochStart", FIELDS, GeneratedVisitor)
     }
 }
 impl serde::Serialize for ErrorReason {
@@ -14472,6 +14686,9 @@ impl serde::Serialize for GetEpochRequest {
         if self.read_mask.is_some() {
             len += 1;
         }
+        if self.system_state_at.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer
             .serialize_struct("sui.rpc.v2.GetEpochRequest", len)?;
         if let Some(v) = self.epoch.as_ref() {
@@ -14483,6 +14700,22 @@ impl serde::Serialize for GetEpochRequest {
             struct_ser
                 .serialize_field("readMask", &crate::_serde::FieldMaskSerializer(v))?;
         }
+        if let Some(v) = self.system_state_at.as_ref() {
+            match v {
+                get_epoch_request::SystemStateAt::Start(v) => {
+                    struct_ser.serialize_field("start", v)?;
+                }
+                get_epoch_request::SystemStateAt::Checkpoint(v) => {
+                    #[allow(clippy::needless_borrow)]
+                    #[allow(clippy::needless_borrows_for_generic_args)]
+                    struct_ser
+                        .serialize_field(
+                            "checkpoint",
+                            ToString::to_string(&v).as_str(),
+                        )?;
+                }
+            }
+        }
         struct_ser.end()
     }
 }
@@ -14492,11 +14725,19 @@ impl<'de> serde::Deserialize<'de> for GetEpochRequest {
     where
         D: serde::Deserializer<'de>,
     {
-        const FIELDS: &[&str] = &["epoch", "read_mask", "readMask"];
+        const FIELDS: &[&str] = &[
+            "epoch",
+            "read_mask",
+            "readMask",
+            "start",
+            "checkpoint",
+        ];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             Epoch,
             ReadMask,
+            Start,
+            Checkpoint,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -14526,6 +14767,8 @@ impl<'de> serde::Deserialize<'de> for GetEpochRequest {
                         match value {
                             "epoch" => Ok(GeneratedField::Epoch),
                             "readMask" | "read_mask" => Ok(GeneratedField::ReadMask),
+                            "start" => Ok(GeneratedField::Start),
+                            "checkpoint" => Ok(GeneratedField::Checkpoint),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -14553,6 +14796,7 @@ impl<'de> serde::Deserialize<'de> for GetEpochRequest {
             {
                 let mut epoch__ = None;
                 let mut read_mask__ = None;
+                let mut system_state_at__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Epoch => {
@@ -14575,6 +14819,24 @@ impl<'de> serde::Deserialize<'de> for GetEpochRequest {
                                 >()?
                                 .map(|x| x.0.into());
                         }
+                        GeneratedField::Start => {
+                            if system_state_at__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("start"));
+                            }
+                            system_state_at__ = map_
+                                .next_value::<::std::option::Option<_>>()?
+                                .map(get_epoch_request::SystemStateAt::Start);
+                        }
+                        GeneratedField::Checkpoint => {
+                            if system_state_at__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("checkpoint"));
+                            }
+                            system_state_at__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| get_epoch_request::SystemStateAt::Checkpoint(x.0));
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -14583,6 +14845,7 @@ impl<'de> serde::Deserialize<'de> for GetEpochRequest {
                 Ok(GetEpochRequest {
                     epoch: epoch__,
                     read_mask: read_mask__,
+                    system_state_at: system_state_at__,
                 })
             }
         }
@@ -28851,6 +29114,375 @@ impl<'de> serde::Deserialize<'de> for SubscribeTransactionsResponse {
             )
     }
 }
+impl serde::Serialize for SystemEpochInfo {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0usize;
+        if self.total_stake.is_some() {
+            len += 1;
+        }
+        if self.storage_fund_reinvestment.is_some() {
+            len += 1;
+        }
+        if self.storage_charge.is_some() {
+            len += 1;
+        }
+        if self.storage_rebate.is_some() {
+            len += 1;
+        }
+        if self.storage_fund_balance.is_some() {
+            len += 1;
+        }
+        if self.stake_subsidy_amount.is_some() {
+            len += 1;
+        }
+        if self.total_gas_fees.is_some() {
+            len += 1;
+        }
+        if self.total_stake_rewards_distributed.is_some() {
+            len += 1;
+        }
+        if self.leftover_storage_fund_inflow.is_some() {
+            len += 1;
+        }
+        let mut struct_ser = serializer
+            .serialize_struct("sui.rpc.v2.SystemEpochInfo", len)?;
+        if let Some(v) = self.total_stake.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("totalStake", ToString::to_string(&v).as_str())?;
+        }
+        if let Some(v) = self.storage_fund_reinvestment.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser
+                .serialize_field(
+                    "storageFundReinvestment",
+                    ToString::to_string(&v).as_str(),
+                )?;
+        }
+        if let Some(v) = self.storage_charge.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser
+                .serialize_field("storageCharge", ToString::to_string(&v).as_str())?;
+        }
+        if let Some(v) = self.storage_rebate.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser
+                .serialize_field("storageRebate", ToString::to_string(&v).as_str())?;
+        }
+        if let Some(v) = self.storage_fund_balance.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser
+                .serialize_field(
+                    "storageFundBalance",
+                    ToString::to_string(&v).as_str(),
+                )?;
+        }
+        if let Some(v) = self.stake_subsidy_amount.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser
+                .serialize_field(
+                    "stakeSubsidyAmount",
+                    ToString::to_string(&v).as_str(),
+                )?;
+        }
+        if let Some(v) = self.total_gas_fees.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser
+                .serialize_field("totalGasFees", ToString::to_string(&v).as_str())?;
+        }
+        if let Some(v) = self.total_stake_rewards_distributed.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser
+                .serialize_field(
+                    "totalStakeRewardsDistributed",
+                    ToString::to_string(&v).as_str(),
+                )?;
+        }
+        if let Some(v) = self.leftover_storage_fund_inflow.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser
+                .serialize_field(
+                    "leftoverStorageFundInflow",
+                    ToString::to_string(&v).as_str(),
+                )?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for SystemEpochInfo {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "total_stake",
+            "totalStake",
+            "storage_fund_reinvestment",
+            "storageFundReinvestment",
+            "storage_charge",
+            "storageCharge",
+            "storage_rebate",
+            "storageRebate",
+            "storage_fund_balance",
+            "storageFundBalance",
+            "stake_subsidy_amount",
+            "stakeSubsidyAmount",
+            "total_gas_fees",
+            "totalGasFees",
+            "total_stake_rewards_distributed",
+            "totalStakeRewardsDistributed",
+            "leftover_storage_fund_inflow",
+            "leftoverStorageFundInflow",
+        ];
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            TotalStake,
+            StorageFundReinvestment,
+            StorageCharge,
+            StorageRebate,
+            StorageFundBalance,
+            StakeSubsidyAmount,
+            TotalGasFees,
+            TotalStakeRewardsDistributed,
+            LeftoverStorageFundInflow,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(
+                deserializer: D,
+            ) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+                    fn expecting(
+                        &self,
+                        formatter: &mut std::fmt::Formatter<'_>,
+                    ) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", FIELDS)
+                    }
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(
+                        self,
+                        value: &str,
+                    ) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "totalStake" | "total_stake" => {
+                                Ok(GeneratedField::TotalStake)
+                            }
+                            "storageFundReinvestment" | "storage_fund_reinvestment" => {
+                                Ok(GeneratedField::StorageFundReinvestment)
+                            }
+                            "storageCharge" | "storage_charge" => {
+                                Ok(GeneratedField::StorageCharge)
+                            }
+                            "storageRebate" | "storage_rebate" => {
+                                Ok(GeneratedField::StorageRebate)
+                            }
+                            "storageFundBalance" | "storage_fund_balance" => {
+                                Ok(GeneratedField::StorageFundBalance)
+                            }
+                            "stakeSubsidyAmount" | "stake_subsidy_amount" => {
+                                Ok(GeneratedField::StakeSubsidyAmount)
+                            }
+                            "totalGasFees" | "total_gas_fees" => {
+                                Ok(GeneratedField::TotalGasFees)
+                            }
+                            "totalStakeRewardsDistributed"
+                            | "total_stake_rewards_distributed" => {
+                                Ok(GeneratedField::TotalStakeRewardsDistributed)
+                            }
+                            "leftoverStorageFundInflow"
+                            | "leftover_storage_fund_inflow" => {
+                                Ok(GeneratedField::LeftoverStorageFundInflow)
+                            }
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = SystemEpochInfo;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2.SystemEpochInfo")
+            }
+            fn visit_map<V>(
+                self,
+                mut map_: V,
+            ) -> std::result::Result<SystemEpochInfo, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                let mut total_stake__ = None;
+                let mut storage_fund_reinvestment__ = None;
+                let mut storage_charge__ = None;
+                let mut storage_rebate__ = None;
+                let mut storage_fund_balance__ = None;
+                let mut stake_subsidy_amount__ = None;
+                let mut total_gas_fees__ = None;
+                let mut total_stake_rewards_distributed__ = None;
+                let mut leftover_storage_fund_inflow__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::TotalStake => {
+                            if total_stake__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("totalStake"));
+                            }
+                            total_stake__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::StorageFundReinvestment => {
+                            if storage_fund_reinvestment__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("storageFundReinvestment"),
+                                );
+                            }
+                            storage_fund_reinvestment__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::StorageCharge => {
+                            if storage_charge__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("storageCharge"),
+                                );
+                            }
+                            storage_charge__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::StorageRebate => {
+                            if storage_rebate__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("storageRebate"),
+                                );
+                            }
+                            storage_rebate__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::StorageFundBalance => {
+                            if storage_fund_balance__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("storageFundBalance"),
+                                );
+                            }
+                            storage_fund_balance__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::StakeSubsidyAmount => {
+                            if stake_subsidy_amount__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("stakeSubsidyAmount"),
+                                );
+                            }
+                            stake_subsidy_amount__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::TotalGasFees => {
+                            if total_gas_fees__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("totalGasFees"),
+                                );
+                            }
+                            total_gas_fees__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::TotalStakeRewardsDistributed => {
+                            if total_stake_rewards_distributed__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field(
+                                        "totalStakeRewardsDistributed",
+                                    ),
+                                );
+                            }
+                            total_stake_rewards_distributed__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::LeftoverStorageFundInflow => {
+                            if leftover_storage_fund_inflow__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field(
+                                        "leftoverStorageFundInflow",
+                                    ),
+                                );
+                            }
+                            leftover_storage_fund_inflow__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(SystemEpochInfo {
+                    total_stake: total_stake__,
+                    storage_fund_reinvestment: storage_fund_reinvestment__,
+                    storage_charge: storage_charge__,
+                    storage_rebate: storage_rebate__,
+                    storage_fund_balance: storage_fund_balance__,
+                    stake_subsidy_amount: stake_subsidy_amount__,
+                    total_gas_fees: total_gas_fees__,
+                    total_stake_rewards_distributed: total_stake_rewards_distributed__,
+                    leftover_storage_fund_inflow: leftover_storage_fund_inflow__,
+                })
+            }
+        }
+        deserializer
+            .deserialize_struct("sui.rpc.v2.SystemEpochInfo", FIELDS, GeneratedVisitor)
+    }
+}
 impl serde::Serialize for SystemPackage {
     #[allow(deprecated)]
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
@@ -29437,6 +30069,9 @@ impl serde::Serialize for SystemState {
         if self.extra_fields.is_some() {
             len += 1;
         }
+        if self.bcs.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("sui.rpc.v2.SystemState", len)?;
         if let Some(v) = self.version.as_ref() {
             #[allow(clippy::needless_borrow)]
@@ -29530,6 +30165,9 @@ impl serde::Serialize for SystemState {
         if let Some(v) = self.extra_fields.as_ref() {
             struct_ser.serialize_field("extraFields", v)?;
         }
+        if let Some(v) = self.bcs.as_ref() {
+            struct_ser.serialize_field("bcs", v)?;
+        }
         struct_ser.end()
     }
 }
@@ -29568,6 +30206,7 @@ impl<'de> serde::Deserialize<'de> for SystemState {
             "epochStartTimestampMs",
             "extra_fields",
             "extraFields",
+            "bcs",
         ];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
@@ -29587,6 +30226,7 @@ impl<'de> serde::Deserialize<'de> for SystemState {
             SafeModeNonRefundableStorageFee,
             EpochStartTimestampMs,
             ExtraFields,
+            Bcs,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -29654,6 +30294,7 @@ impl<'de> serde::Deserialize<'de> for SystemState {
                             "extraFields" | "extra_fields" => {
                                 Ok(GeneratedField::ExtraFields)
                             }
+                            "bcs" => Ok(GeneratedField::Bcs),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -29695,6 +30336,7 @@ impl<'de> serde::Deserialize<'de> for SystemState {
                 let mut safe_mode_non_refundable_storage_fee__ = None;
                 let mut epoch_start_timestamp_ms__ = None;
                 let mut extra_fields__ = None;
+                let mut bcs__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Version => {
@@ -29855,6 +30497,12 @@ impl<'de> serde::Deserialize<'de> for SystemState {
                             }
                             extra_fields__ = map_.next_value()?;
                         }
+                        GeneratedField::Bcs => {
+                            if bcs__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("bcs"));
+                            }
+                            bcs__ = map_.next_value()?;
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -29878,6 +30526,7 @@ impl<'de> serde::Deserialize<'de> for SystemState {
                     safe_mode_non_refundable_storage_fee: safe_mode_non_refundable_storage_fee__,
                     epoch_start_timestamp_ms: epoch_start_timestamp_ms__,
                     extra_fields: extra_fields__,
+                    bcs: bcs__,
                 })
             }
         }
