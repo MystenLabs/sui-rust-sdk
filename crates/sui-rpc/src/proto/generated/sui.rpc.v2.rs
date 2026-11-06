@@ -773,6 +773,69 @@ pub struct Epoch {
     pub reference_gas_price: ::core::option::Option<u64>,
     #[prost(message, optional, tag = "9")]
     pub protocol_config: ::core::option::Option<ProtocolConfig>,
+    /// Sequence number of the first transaction in this epoch (inclusive).
+    #[prost(uint64, optional, tag = "10")]
+    pub transaction_start_inclusive: ::core::option::Option<u64>,
+    /// One past the sequence number of the epoch's last transaction (exclusive):
+    /// the `total_network_transactions` of `last_checkpoint`. Set only once the
+    /// epoch has ended at or below the response's checkpoint height, the same
+    /// condition under which `last_checkpoint` is set.
+    #[prost(uint64, optional, tag = "11")]
+    pub transaction_end_exclusive: ::core::option::Option<u64>,
+    /// Whether the epoch ended in safe mode: `advance_epoch` failed and
+    /// `advance_epoch_safe_mode` ran instead, so no `SystemEpochInfoEvent` was
+    /// emitted and `system_epoch_info` is unset. Set only once the epoch has
+    /// ended, as for `transaction_end_exclusive`.
+    #[prost(bool, optional, tag = "12")]
+    pub ended_in_safe_mode: ::core::option::Option<bool>,
+    /// Totals from the `0x3::sui_system_state_inner::SystemEpochInfoEvent`
+    /// emitted when this epoch ended. Set only once the epoch has ended, as for
+    /// `transaction_end_exclusive`, and unset if it ended in safe mode.
+    #[prost(message, optional, tag = "13")]
+    pub system_epoch_info: ::core::option::Option<SystemEpochInfo>,
+    /// Commitments to epoch-specific state (the live object set), from the
+    /// `EndOfEpochData` of `last_checkpoint`. Empty until the epoch has ended, as
+    /// for `transaction_end_exclusive`, and empty for epochs that ended before
+    /// the protocol added epoch commitments.
+    #[prost(message, repeated, tag = "14")]
+    pub epoch_commitments: ::prost::alloc::vec::Vec<CheckpointCommitment>,
+}
+/// Totals reported by `SystemEpochInfoEvent` at the end of an epoch. Amounts
+/// are denominated in MIST.
+#[non_exhaustive]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct SystemEpochInfo {
+    /// Total stake of the validator set for the next epoch.
+    #[prost(uint64, optional, tag = "1")]
+    pub total_stake: ::core::option::Option<u64>,
+    /// Portion of the epoch's computation rewards reinvested into the storage
+    /// fund.
+    #[prost(uint64, optional, tag = "2")]
+    pub storage_fund_reinvestment: ::core::option::Option<u64>,
+    /// Storage fees charged during the epoch, plus those deferred from any
+    /// preceding epochs that ended in safe mode.
+    #[prost(uint64, optional, tag = "3")]
+    pub storage_charge: ::core::option::Option<u64>,
+    /// Storage rebates paid out during the epoch, plus those deferred from any
+    /// preceding epochs that ended in safe mode.
+    #[prost(uint64, optional, tag = "4")]
+    pub storage_rebate: ::core::option::Option<u64>,
+    /// Balance of the storage fund after the epoch change.
+    #[prost(uint64, optional, tag = "5")]
+    pub storage_fund_balance: ::core::option::Option<u64>,
+    /// Stake subsidy paid out at the end of the epoch.
+    #[prost(uint64, optional, tag = "6")]
+    pub stake_subsidy_amount: ::core::option::Option<u64>,
+    /// Computation gas fees collected during the epoch, plus those deferred from
+    /// any preceding epochs that ended in safe mode.
+    #[prost(uint64, optional, tag = "7")]
+    pub total_gas_fees: ::core::option::Option<u64>,
+    /// Stake rewards distributed to validators and their stakers.
+    #[prost(uint64, optional, tag = "8")]
+    pub total_stake_rewards_distributed: ::core::option::Option<u64>,
+    /// Rewards left over after distribution, added to the storage fund.
+    #[prost(uint64, optional, tag = "9")]
+    pub leftover_storage_fund_inflow: ::core::option::Option<u64>,
 }
 /// Error reasons in the `sui.io` error domain, used as the `reason` of a
 /// `google.rpc.ErrorInfo` or of a `google.rpc.BadRequest.FieldViolation`.
