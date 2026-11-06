@@ -11432,6 +11432,7 @@ impl serde::Serialize for execution_error::ExecutionErrorKind {
             Self::NonExclusiveWriteInputObjectModified => {
                 "NON_EXCLUSIVE_WRITE_INPUT_OBJECT_MODIFIED"
             }
+            Self::TransactionExpired => "TRANSACTION_EXPIRED",
         };
         serializer.serialize_str(variant)
     }
@@ -11486,6 +11487,7 @@ impl<'de> serde::Deserialize<'de> for execution_error::ExecutionErrorKind {
             "INVALID_LINKAGE",
             "INSUFFICIENT_FUNDS_FOR_WITHDRAW",
             "NON_EXCLUSIVE_WRITE_INPUT_OBJECT_MODIFIED",
+            "TRANSACTION_EXPIRED",
         ];
         struct GeneratedVisitor;
         impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
@@ -11679,6 +11681,9 @@ impl<'de> serde::Deserialize<'de> for execution_error::ExecutionErrorKind {
                         Ok(
                             execution_error::ExecutionErrorKind::NonExclusiveWriteInputObjectModified,
                         )
+                    }
+                    "TRANSACTION_EXPIRED" => {
+                        Ok(execution_error::ExecutionErrorKind::TransactionExpired)
                     }
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
