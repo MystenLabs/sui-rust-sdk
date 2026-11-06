@@ -18,8 +18,10 @@ message Epoch {
   optional ValidatorCommittee committee = 2;
 
   // Snapshot of Sui's SystemState (`0x3::sui_system::SystemState`) at the
-  // beginning of the epoch, for past epochs, or the current state for the
-  // current epoch. `GetEpochRequest.system_state_at` selects a different one.
+  // beginning of the epoch, for an epoch that has ended, or the state as of
+  // the latest checkpoint the server has processed, for the running epoch.
+  // Servers that don't serve object history fail with `UNIMPLEMENTED` when
+  // `read_mask` selects it for the running epoch.
   optional SystemState system_state = 3;
 
   optional uint64 first_checkpoint = 4;

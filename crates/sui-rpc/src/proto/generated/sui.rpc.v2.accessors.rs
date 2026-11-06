@@ -5391,16 +5391,6 @@ mod _accessor_impls {
             self
         }
     }
-    impl super::EpochStart {
-        pub const fn const_default() -> Self {
-            Self {}
-        }
-        #[doc(hidden)]
-        pub fn default_instance() -> &'static Self {
-            static DEFAULT: super::EpochStart = super::EpochStart::const_default();
-            &DEFAULT
-        }
-    }
     impl super::Event {
         pub const fn const_default() -> Self {
             Self {
@@ -8462,7 +8452,6 @@ mod _accessor_impls {
             Self {
                 epoch: None,
                 read_mask: None,
-                system_state_at: None,
             }
         }
         #[doc(hidden)]
@@ -8515,116 +8504,6 @@ mod _accessor_impls {
             field: T,
         ) -> Self {
             self.set_read_mask(field.into());
-            self
-        }
-        ///Returns the value of `start`, or the default value if `start` is unset.
-        pub fn start(&self) -> &super::EpochStart {
-            if let Some(super::get_epoch_request::SystemStateAt::Start(field)) = &self
-                .system_state_at
-            {
-                field as _
-            } else {
-                super::EpochStart::default_instance() as _
-            }
-        }
-        ///If `start` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn start_opt(&self) -> Option<&super::EpochStart> {
-            if let Some(super::get_epoch_request::SystemStateAt::Start(field)) = &self
-                .system_state_at
-            {
-                Some(field as _)
-            } else {
-                None
-            }
-        }
-        ///If `start` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn start_opt_mut(&mut self) -> Option<&mut super::EpochStart> {
-            if let Some(super::get_epoch_request::SystemStateAt::Start(field)) = &mut self
-                .system_state_at
-            {
-                Some(field as _)
-            } else {
-                None
-            }
-        }
-        ///Returns a mutable reference to `start`.
-        ///If the field is unset, it is first initialized with the default value.
-        ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn start_mut(&mut self) -> &mut super::EpochStart {
-            if self.start_opt_mut().is_none() {
-                self.system_state_at = Some(
-                    super::get_epoch_request::SystemStateAt::Start(
-                        super::EpochStart::default(),
-                    ),
-                );
-            }
-            self.start_opt_mut().unwrap()
-        }
-        ///Sets `start` with the provided value.
-        ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn set_start<T: Into<super::EpochStart>>(&mut self, field: T) {
-            self.system_state_at = Some(
-                super::get_epoch_request::SystemStateAt::Start(field.into().into()),
-            );
-        }
-        ///Sets `start` with the provided value.
-        ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn with_start<T: Into<super::EpochStart>>(mut self, field: T) -> Self {
-            self.set_start(field.into());
-            self
-        }
-        ///Returns the value of `checkpoint`, or the default value if `checkpoint` is unset.
-        pub fn checkpoint(&self) -> u64 {
-            if let Some(super::get_epoch_request::SystemStateAt::Checkpoint(field)) = &self
-                .system_state_at
-            {
-                *field
-            } else {
-                0u64
-            }
-        }
-        ///If `checkpoint` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn checkpoint_opt(&self) -> Option<u64> {
-            if let Some(super::get_epoch_request::SystemStateAt::Checkpoint(field)) = &self
-                .system_state_at
-            {
-                Some(*field)
-            } else {
-                None
-            }
-        }
-        ///If `checkpoint` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn checkpoint_opt_mut(&mut self) -> Option<&mut u64> {
-            if let Some(super::get_epoch_request::SystemStateAt::Checkpoint(field)) = &mut self
-                .system_state_at
-            {
-                Some(field as _)
-            } else {
-                None
-            }
-        }
-        ///Returns a mutable reference to `checkpoint`.
-        ///If the field is unset, it is first initialized with the default value.
-        ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn checkpoint_mut(&mut self) -> &mut u64 {
-            if self.checkpoint_opt_mut().is_none() {
-                self.system_state_at = Some(
-                    super::get_epoch_request::SystemStateAt::Checkpoint(u64::default()),
-                );
-            }
-            self.checkpoint_opt_mut().unwrap()
-        }
-        ///Sets `checkpoint` with the provided value.
-        ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn set_checkpoint(&mut self, field: u64) {
-            self.system_state_at = Some(
-                super::get_epoch_request::SystemStateAt::Checkpoint(field),
-            );
-        }
-        ///Sets `checkpoint` with the provided value.
-        ///If any other oneof field in the same oneof is set, it will be cleared.
-        pub fn with_checkpoint(mut self, field: u64) -> Self {
-            self.set_checkpoint(field);
             self
         }
     }
@@ -16502,7 +16381,6 @@ mod _accessor_impls {
                 safe_mode_non_refundable_storage_fee: None,
                 epoch_start_timestamp_ms: None,
                 extra_fields: None,
-                bcs: None,
             }
         }
         #[doc(hidden)]
@@ -16913,35 +16791,6 @@ mod _accessor_impls {
         ///Sets `extra_fields` with the provided value.
         pub fn with_extra_fields<T: Into<super::MoveTable>>(mut self, field: T) -> Self {
             self.set_extra_fields(field.into());
-            self
-        }
-        ///Returns the value of `bcs`, or the default value if `bcs` is unset.
-        pub fn bcs(&self) -> &super::Bcs {
-            self.bcs
-                .as_ref()
-                .map(|field| field as _)
-                .unwrap_or_else(|| super::Bcs::default_instance() as _)
-        }
-        ///If `bcs` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
-        pub fn bcs_opt_mut(&mut self) -> Option<&mut super::Bcs> {
-            self.bcs.as_mut().map(|field| field as _)
-        }
-        ///Returns a mutable reference to `bcs`.
-        ///If the field is unset, it is first initialized with the default value.
-        pub fn bcs_mut(&mut self) -> &mut super::Bcs {
-            self.bcs.get_or_insert_default()
-        }
-        ///If `bcs` is set, returns [`Some`] with the value; otherwise returns [`None`].
-        pub fn bcs_opt(&self) -> Option<&super::Bcs> {
-            self.bcs.as_ref().map(|field| field as _)
-        }
-        ///Sets `bcs` with the provided value.
-        pub fn set_bcs<T: Into<super::Bcs>>(&mut self, field: T) {
-            self.bcs = Some(field.into().into());
-        }
-        ///Sets `bcs` with the provided value.
-        pub fn with_bcs<T: Into<super::Bcs>>(mut self, field: T) -> Self {
-            self.set_bcs(field.into());
             self
         }
     }

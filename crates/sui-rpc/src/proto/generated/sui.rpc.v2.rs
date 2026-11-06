@@ -756,8 +756,10 @@ pub struct Epoch {
     #[prost(message, optional, tag = "2")]
     pub committee: ::core::option::Option<ValidatorCommittee>,
     /// Snapshot of Sui's SystemState (`0x3::sui_system::SystemState`) at the
-    /// beginning of the epoch, for past epochs, or the current state for the
-    /// current epoch. `GetEpochRequest.system_state_at` selects a different one.
+    /// beginning of the epoch, for an epoch that has ended, or the state as of
+    /// the latest checkpoint the server has processed, for the running epoch.
+    /// Servers that don't serve object history fail with `UNIMPLEMENTED` when
+    /// `read_mask` selects it for the running epoch.
     #[prost(message, optional, boxed, tag = "3")]
     pub system_state: ::core::option::Option<::prost::alloc::boxed::Box<SystemState>>,
     #[prost(uint64, optional, tag = "4")]
@@ -2615,89 +2617,15 @@ pub struct GetCheckpointResponse {
 pub struct GetEpochRequest {
     /// The requested epoch.
     /// If no epoch is provided the current epoch will be returned.
+    /// An epoch the server has not reached or has not indexed fails with
+    /// `NOT_FOUND`.
     #[prost(uint64, optional, tag = "1")]
     pub epoch: ::core::option::Option<u64>,
     /// Mask specifying which fields to read.
     /// If no mask is specified, defaults to `epoch`.
     #[prost(message, optional, tag = "2")]
     pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
-    /// Optional. Which state to return in `Epoch.system_state`:
-    ///
-    /// * `start`: the state at the start of this epoch, right after the
-    ///   epoch-change transaction in the previous epoch's last checkpoint, or
-    ///   the genesis state for epoch 0. Applies to every epoch, including the
-    ///   current one. A server that lacks this snapshot leaves `system_state`
-    ///   unset; a fullnode restored mid-epoch lacks it for that epoch.
-    /// * `checkpoint`: the state after this checkpoint's transactions. Requires
-    ///   `epoch`; without it the request fails with `INVALID_ARGUMENT`. The
-    ///   server checks, in order:
-    ///   1. The checkpoint is at or above the epoch's first checkpoint and, if
-    ///      the epoch has ended at or below the server's latest checkpoint,
-    ///      below its last checkpoint; otherwise `INVALID_ARGUMENT`. The last
-    ///      checkpoint is excluded because its epoch-change transaction leaves
-    ///      the next epoch's state; request that epoch with `start` instead.
-    ///   1. The checkpoint is at or below the server's latest checkpoint;
-    ///      otherwise `OUT_OF_RANGE` with reason `ABOVE_LATEST_AVAILABLE`. Only
-    ///      an epoch that has not ended at the server's height reaches this
-    ///      check, so a retry after the server catches up can still fail with
-    ///      `INVALID_ARGUMENT` if the epoch ends at or before the checkpoint.
-    ///   1. The checkpoint is at or above the lowest checkpoint for which the
-    ///      server serves object data (`x-sui-lowest-available-checkpoint-objects`);
-    ///      otherwise `OUT_OF_RANGE` with reason `BELOW_EARLIEST_AVAILABLE`.
-    ///
-    /// If neither is set, `system_state` is as documented on `Epoch.system_state`.
-    /// The selector is validated even if `read_mask` excludes `system_state`.
-    ///
-    /// Servers that predate this field ignore it and return `system_state` as
-    /// documented on `Epoch.system_state`.
-    #[prost(oneof = "get_epoch_request::SystemStateAt", tags = "3, 4")]
-    pub system_state_at: ::core::option::Option<get_epoch_request::SystemStateAt>,
 }
-/// Nested message and enum types in `GetEpochRequest`.
-pub mod get_epoch_request {
-    /// Optional. Which state to return in `Epoch.system_state`:
-    ///
-    /// * `start`: the state at the start of this epoch, right after the
-    ///   epoch-change transaction in the previous epoch's last checkpoint, or
-    ///   the genesis state for epoch 0. Applies to every epoch, including the
-    ///   current one. A server that lacks this snapshot leaves `system_state`
-    ///   unset; a fullnode restored mid-epoch lacks it for that epoch.
-    /// * `checkpoint`: the state after this checkpoint's transactions. Requires
-    ///   `epoch`; without it the request fails with `INVALID_ARGUMENT`. The
-    ///   server checks, in order:
-    ///   1. The checkpoint is at or above the epoch's first checkpoint and, if
-    ///      the epoch has ended at or below the server's latest checkpoint,
-    ///      below its last checkpoint; otherwise `INVALID_ARGUMENT`. The last
-    ///      checkpoint is excluded because its epoch-change transaction leaves
-    ///      the next epoch's state; request that epoch with `start` instead.
-    ///   1. The checkpoint is at or below the server's latest checkpoint;
-    ///      otherwise `OUT_OF_RANGE` with reason `ABOVE_LATEST_AVAILABLE`. Only
-    ///      an epoch that has not ended at the server's height reaches this
-    ///      check, so a retry after the server catches up can still fail with
-    ///      `INVALID_ARGUMENT` if the epoch ends at or before the checkpoint.
-    ///   1. The checkpoint is at or above the lowest checkpoint for which the
-    ///      server serves object data (`x-sui-lowest-available-checkpoint-objects`);
-    ///      otherwise `OUT_OF_RANGE` with reason `BELOW_EARLIEST_AVAILABLE`.
-    ///
-    /// If neither is set, `system_state` is as documented on `Epoch.system_state`.
-    /// The selector is validated even if `read_mask` excludes `system_state`.
-    ///
-    /// Servers that predate this field ignore it and return `system_state` as
-    /// documented on `Epoch.system_state`.
-    #[non_exhaustive]
-    #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Oneof)]
-    pub enum SystemStateAt {
-        #[prost(message, tag = "3")]
-        Start(super::EpochStart),
-        #[prost(uint64, tag = "4")]
-        Checkpoint(u64),
-    }
-}
-/// Selects the system state at the start of an epoch. See
-/// `GetEpochRequest.system_state_at`.
-#[non_exhaustive]
-#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct EpochStart {}
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetEpochResponse {
@@ -8573,13 +8501,6 @@ pub struct SystemState {
     /// Any extra fields that's not defined statically.
     #[prost(message, optional, tag = "16")]
     pub extra_fields: ::core::option::Option<MoveTable>,
-    /// This SystemState serialized as BCS: the same state the fields above
-    /// describe. `name` is the inner Move type as a canonical `StructTag`:
-    /// `0x0000000000000000000000000000000000000000000000000000000000000003::sui_system_state_inner::SuiSystemStateInner`
-    /// for version 1, or the same with `SuiSystemStateInnerV2` for version 2.
-    /// `value` is the BCS of that struct.
-    #[prost(message, optional, tag = "17")]
-    pub bcs: ::core::option::Option<Bcs>,
 }
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
