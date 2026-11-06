@@ -5,8 +5,6 @@ syntax = "proto3";
 
 package sui.rpc.v2;
 
-import "sui/rpc/v2/bcs.proto";
-
 message SystemState {
   // The version of the system state data structure type.
   optional uint64 version = 1;
@@ -66,13 +64,6 @@ message SystemState {
 
   // Any extra fields that's not defined statically.
   optional MoveTable extra_fields = 16;
-
-  // This SystemState serialized as BCS: the same state the fields above
-  // describe. `name` is the inner Move type as a canonical `StructTag`:
-  // `0x0000000000000000000000000000000000000000000000000000000000000003::sui_system_state_inner::SuiSystemStateInner`
-  // for version 1, or the same with `SuiSystemStateInnerV2` for version 2.
-  // `value` is the BCS of that struct.
-  optional Bcs bcs = 17;
 }
 
 message ValidatorReportRecord {
