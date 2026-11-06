@@ -1,13 +1,17 @@
 use super::Client;
+use super::TransactionStreamRequest;
+use super::TransactionStreamStart;
 use crate::field::FieldMaskUtil;
 use crate::proto::TryFromProtoError;
 use crate::proto::sui::rpc::v2::ExecuteTransactionRequest;
 use crate::proto::sui::rpc::v2::ExecuteTransactionResponse;
 use crate::proto::sui::rpc::v2::ExecutionError;
 use crate::proto::sui::rpc::v2::GetEpochRequest;
+use crate::proto::sui::rpc::v2::GetServiceInfoRequest;
 use crate::proto::sui::rpc::v2::GetTransactionRequest;
 use crate::proto::sui::rpc::v2::GetTransactionResponse;
-use crate::proto::sui::rpc::v2::SubscribeCheckpointsRequest;
+use crate::proto::sui::rpc::v2::TransactionFilter;
+use crate::proto::sui::rpc::v2::filter::transaction;
 use futures::TryStreamExt;
 use prost_types::FieldMask;
 use std::fmt;
@@ -26,7 +30,7 @@ pub enum ExecuteAndWaitError {
     ProtoConversionError(TryFromProtoError),
     /// Transaction executed but checkpoint wait timed out
     CheckpointTimeout(Response<ExecuteTransactionResponse>),
-    /// Transaction executed but checkpoint stream had an error
+    /// Transaction executed but the stream watching for its checkpoint failed
     CheckpointStreamError {
         response: Response<ExecuteTransactionResponse>,
         error: tonic::Status,
@@ -69,31 +73,46 @@ impl std::error::Error for ExecuteAndWaitError {
 impl Client {
     /// Executes a transaction and waits for it to be included in a checkpoint.
     ///
-    /// This method provides "read your writes" consistency by executing the transaction
-    /// and waiting for it to appear in a checkpoint, which gauruntees indexes have been updated on
-    /// this node.
+    /// Returns the execution response with `checkpoint` and `timestamp`
+    /// populated.
     ///
-    /// # Arguments
-    /// * `request` - The transaction execution request (ExecuteTransactionRequest)
-    /// * `timeout` - Maximum time to wait for indexing confirmation
+    /// The method:
+    /// 1. Reads the node's checkpoint height `C` with `GetServiceInfo`.
+    /// 2. Looks the transaction up with `GetTransaction`. A transaction that is
+    ///    already in a checkpoint (a resubmission, or the same transaction sent
+    ///    by someone else) is returned without being executed again.
+    /// 3. Executes the transaction while following the sender's transactions
+    ///    from checkpoint `C` with [`Client::stream_transactions`], and returns
+    ///    once the transaction appears. The stream replays checkpoints it has
+    ///    not seen and reconnects after transient failures, and the sender
+    ///    filter keeps it to the sender's own transactions.
     ///
-    /// # Returns
-    /// A `Result` containing the response if the transaction was executed and checkpoint confirmed,
-    /// or an error that may still include the response if execution succeeded but checkpoint
-    /// confirmation failed.
+    /// `timeout` bounds the wait that starts once execution returns. If it
+    /// expires, or the stream fails, the error still carries the execution
+    /// response.
     ///
-    /// # Duplicate submissions
-    /// Submitting a transaction that has already been executed is handled
-    /// gracefully. While the execution RPC is in flight the ledger is probed
-    /// for the transaction, and a transaction that is already in a checkpoint
-    /// is returned without waiting for execution to finish. Likewise, if
-    /// execution fails but the ledger shows the transaction in a checkpoint
-    /// (for example when a resubmission races the original submission), the
-    /// execution error is discarded and the committed transaction is
-    /// returned. In both cases the response is assembled from
-    /// `GetTransaction` using the request's read mask, so it carries the same
-    /// fields an execution response would, with `digest`, `checkpoint`, and
-    /// `timestamp` always populated.
+    /// If execution fails, the ledger is checked once more: when the
+    /// transaction is in a checkpoint anyway (for example, a resubmission
+    /// raced the original submission), the committed transaction is returned
+    /// instead of the error.
+    ///
+    /// A response answered from the ledger is assembled from `GetTransaction`
+    /// using the request's read mask, so it carries the same fields an
+    /// execution response would, with `digest`, `checkpoint`, and `timestamp`
+    /// always populated.
+    ///
+    /// # Consistency
+    ///
+    /// The transaction being in a checkpoint does not mean every index
+    /// includes it: the List APIs (`ListTransactions`, `ListEvents`, ...) read
+    /// indexes that can trail the latest checkpoint.
+    ///
+    /// Each step can reach a different node when the client sits behind a load
+    /// balancer. If the lookup in step 2 reaches a node that is behind `C` and
+    /// misses a transaction committed at or before `C`, the stream never sees
+    /// it and the call ends in [`ExecuteAndWaitError::CheckpointTimeout`].
+    /// Sending `C` as the `x-sui-min-checkpoint` floor on these requests closes
+    /// that gap on servers that enforce it; this method does not send it yet.
     #[allow(clippy::result_large_err)]
     pub async fn execute_transaction_and_wait_for_checkpoint(
         &mut self,
@@ -102,165 +121,127 @@ impl Client {
     ) -> Result<Response<ExecuteTransactionResponse>, ExecuteAndWaitError> {
         // Calculate digest from the input transaction to avoid relying on response read mask
         let request = request.into_request();
-        let transaction = match request.get_ref().transaction_opt() {
-            Some(tx) => tx,
-            None => return Err(ExecuteAndWaitError::MissingTransaction),
-        };
+        let transaction = request
+            .get_ref()
+            .transaction_opt()
+            .ok_or(ExecuteAndWaitError::MissingTransaction)?;
+        let transaction = sui_sdk_types::Transaction::try_from(transaction)
+            .map_err(ExecuteAndWaitError::ProtoConversionError)?;
+        let digest = transaction.digest().to_string();
 
-        let executed_txn_digest = match sui_sdk_types::Transaction::try_from(transaction) {
-            Ok(tx) => tx.digest().to_string(),
-            Err(e) => return Err(ExecuteAndWaitError::ProtoConversionError(e)),
-        };
-
-        // Read mask for answering from GetTransaction when execution cannot
-        // provide the response: a duplicate submission that already
-        // committed, or an execution error after the transaction landed.
+        // Lookup for answering from the ledger instead of from execution.
         // Both RPCs' masks select fields of `ExecutedTransaction`, so the
         // caller's mask passes through unchanged; when the caller didn't set
         // one, mirror ExecuteTransaction's documented default. `digest`,
         // `checkpoint`, and `timestamp` are always included since this
         // method's contract populates them.
-        let lookup_mask = {
+        let lookup_request = {
             let caller_paths = match &request.get_ref().read_mask {
                 Some(mask) => mask.paths.clone(),
                 None => vec!["effects.status".to_owned()],
             };
-            FieldMask::from_paths(caller_paths.iter().map(String::as_str).chain([
+            let mask = FieldMask::from_paths(caller_paths.iter().map(String::as_str).chain([
                 "digest",
                 "checkpoint",
                 "timestamp",
             ]))
-            .normalize()
+            .normalize();
+            GetTransactionRequest::default()
+                .with_digest(&digest)
+                .with_read_mask(mask)
         };
 
-        // Subscribe to checkpoint stream before execution to avoid missing the transaction.
-        // Uses minimal read mask for efficiency since we only nee digest confirmation.
-        // Once server-side filtering is available, we should filter by transaction digest to
-        // further reduce bandwidth.
-        let mut checkpoint_stream = match self
-            .subscription_client()
-            .subscribe_checkpoints(SubscribeCheckpointsRequest::default().with_read_mask(
-                FieldMask::from_str("transactions.digest,sequence_number,summary.timestamp"),
-            ))
+        // Read the height before the lookup. `GetTransaction` only finds
+        // transactions in checkpoints up to the node's latest checkpoint,
+        // which is the height `GetServiceInfo` reports and which only rises.
+        // So when the lookup finds nothing, the transaction is in no
+        // checkpoint at or below `start_checkpoint`, and a stream starting
+        // there sees it whenever it lands.
+        let start_checkpoint = self
+            .ledger_client()
+            .get_service_info(GetServiceInfoRequest::default())
+            .await
+            .map_err(ExecuteAndWaitError::RpcError)?
+            .into_inner()
+            .checkpoint_height
+            .ok_or_else(|| {
+                ExecuteAndWaitError::RpcError(tonic::Status::data_loss(
+                    "GetServiceInfo response is missing checkpoint_height",
+                ))
+            })?;
+
+        // A transaction submitted before (a retry, or the same transaction
+        // sent by someone else) can already be in a checkpoint the stream
+        // starts after.
+        match self
+            .ledger_client()
+            .get_transaction(lookup_request.clone())
             .await
         {
-            Ok(stream) => stream.into_inner(),
-            Err(e) => return Err(ExecuteAndWaitError::RpcError(e)),
-        };
+            Ok(lookup) if lookup.get_ref().transaction().checkpoint_opt().is_some() => {
+                return Ok(lookup_into_execute_response(lookup));
+            }
+            Ok(_) => {}
+            Err(status) if status.code() == tonic::Code::NotFound => {}
+            Err(status) => return Err(ExecuteAndWaitError::RpcError(status)),
+        }
 
-        // Scan the subscription for the transaction's digest. Every RPC on
-        // this client shares one HTTP/2 connection, so this future must be
-        // polled concurrently with the execution phase below: a subscription
-        // parked while another call is awaited pins its flow-control window
-        // (checkpoints keep arriving whether or not anyone reads them) and,
-        // past the idle timeout, gets reset by the client's body watchdog.
-        //
-        // Both this future and the execution future below are boxed: their
-        // combined state (two full tonic call chains alive at once) would
-        // otherwise be inlined into this method's future, making it large
-        // enough to threaten a stack overflow in callers that hold it in
-        // deeply nested or spawned futures.
-        let mut scan = Box::pin(async {
-            while let Some(response) = checkpoint_stream.try_next().await? {
-                let checkpoint = response.checkpoint();
-
-                for tx in checkpoint.transactions() {
-                    if tx.digest() == executed_txn_digest {
-                        return Ok((checkpoint.sequence_number(), checkpoint.summary().timestamp));
-                    }
+        // The scan (which holds the stream) and the execution future are
+        // boxed: their combined state would otherwise be inlined into this
+        // method's future, making it large enough to threaten a stack overflow
+        // in callers that hold it in deeply nested or spawned futures.
+        let transactions = self.stream_transactions(
+            TransactionStreamRequest::new()
+                .with_read_mask(FieldMask::from_str(
+                    "digest,checkpoint,transaction_index,timestamp",
+                ))
+                .with_filter(TransactionFilter::matching(transaction::sender(
+                    transaction.sender,
+                )))
+                .with_start(TransactionStreamStart::Checkpoint(start_checkpoint)),
+        );
+        // The scan owns the stream, so the subscription closes as soon as the
+        // scan finishes, instead of staying open unread for the rest of the
+        // call and holding flow-control capacity on the shared connection.
+        let digest = &digest;
+        let mut find_checkpoint = Box::pin(async move {
+            let mut transactions = std::pin::pin!(transactions);
+            while let Some(frame) = transactions.try_next().await? {
+                if let Some(executed) = frame.transaction
+                    && executed.digest() == digest
+                {
+                    return Ok((executed.checkpoint(), executed.timestamp));
                 }
             }
             Err(tonic::Status::aborted(
-                "checkpoint stream ended unexpectedly",
+                "transaction stream ended unexpectedly",
             ))
         });
 
-        // The concurrent futures below each need a service client, and a
-        // single `&mut self` cannot back all of them at once, so give each
-        // its own client over the shared channel.
+        // Follow the stream while executing: the transaction can land in a
+        // checkpoint before the execution RPC returns, so remember the
+        // outcome; the guard keeps a completed future from being polled
+        // again.
         let mut execution_client = self.execution_client();
-        let mut post_exec_lookup_client = self.ledger_client();
-        let mut probe_client = self.ledger_client();
-
-        // Execute, then query the fullnode directly to see if it already has
-        // the txn in a checkpoint. This is to handle the case where an
-        // already executed transaction is sent multiple times.
-        let mut exec_and_check = Box::pin(async {
-            let response = execution_client.execute_transaction(request).await?;
-
-            let already_checkpointed = match post_exec_lookup_client
-                .get_transaction(
-                    GetTransactionRequest::default()
-                        .with_digest(&executed_txn_digest)
-                        .with_read_mask(FieldMask::from_str("digest,checkpoint,timestamp")),
-                )
-                .await
-            {
-                Ok(resp) if resp.get_ref().transaction().checkpoint_opt().is_some() => Some((
-                    resp.get_ref().transaction().checkpoint(),
-                    resp.get_ref().transaction().timestamp,
-                )),
-                _ => None,
-            };
-
-            Ok::<_, tonic::Status>((response, already_checkpointed))
-        });
-
-        // Probe the ledger while execution is in flight: a resubmission of a
-        // transaction that already committed can be answered from the ledger
-        // without waiting for, or succeeding at, execution.
-        let mut probe = Box::pin(async {
-            probe_client
-                .get_transaction(
-                    GetTransactionRequest::default()
-                        .with_digest(&executed_txn_digest)
-                        .with_read_mask(lookup_mask.clone()),
-                )
-                .await
-        });
-
-        // Drive execution, the scan, and the probe together. The scan can
-        // complete first (for example, when a duplicate of an already
-        // executed transaction lands in a checkpoint mid-execution), so
-        // remember its outcome; the guards keep completed futures from being
-        // polled again. A probe that finds the transaction in a checkpoint
-        // resolves the call on the spot; any other probe outcome (not found,
-        // not yet checkpointed, or an RPC error) means execution has to
-        // provide the answer.
-        let mut scan_result = None;
-        let mut probe_done = false;
-        let exec_result = loop {
+        let mut execution = Box::pin(execution_client.execute_transaction(request));
+        let mut found = None;
+        let execution_result = loop {
             tokio::select! {
-                exec = &mut exec_and_check => break exec,
-                result = &mut scan, if scan_result.is_none() => {
-                    scan_result = Some(result);
-                }
-                result = &mut probe, if !probe_done => {
-                    probe_done = true;
-                    if let Ok(lookup) = result
-                        && lookup.get_ref().transaction().checkpoint_opt().is_some()
-                    {
-                        return Ok(lookup_into_execute_response(lookup));
-                    }
-                }
+                result = &mut execution => break result,
+                result = &mut find_checkpoint, if found.is_none() => found = Some(result),
             }
         };
 
-        let (mut response, already_checkpointed) = match exec_result {
-            Ok(ok) => ok,
+        let mut response = match execution_result {
+            Ok(response) => response,
             Err(error) => {
                 // Execution can fail for a transaction that nonetheless
                 // committed, for example when a resubmission races the
                 // original submission. Consult the ledger before surfacing
-                // the error.
-                drop(probe);
-                if let Ok(lookup) = probe_client
-                    .get_transaction(
-                        GetTransactionRequest::default()
-                            .with_digest(&executed_txn_digest)
-                            .with_read_mask(lookup_mask),
-                    )
-                    .await
+                // the error. The scan is never polled again, so close its
+                // stream before the lookup.
+                drop(find_checkpoint);
+                if let Ok(lookup) = self.ledger_client().get_transaction(lookup_request).await
                     && lookup.get_ref().transaction().checkpoint_opt().is_some()
                 {
                     return Ok(lookup_into_execute_response(lookup));
@@ -269,29 +250,19 @@ impl Client {
             }
         };
 
-        // Wait for the transaction to appear in a checkpoint, at which point
-        // indexes will have been updated. The direct lookup takes precedence:
-        // when it already places the transaction in a checkpoint there is
-        // nothing to wait for, even if the scan failed in the meantime.
-        let (checkpoint, timestamp) = if let Some(found) = already_checkpointed {
-            found
-        } else {
-            let result = match scan_result {
-                Some(result) => result,
-                None => {
-                    tokio::select! {
-                        result = &mut scan => result,
-                        _ = tokio::time::sleep(timeout) => {
-                            return Err(ExecuteAndWaitError::CheckpointTimeout(response));
-                        }
-                    }
+        let found = match found {
+            Some(result) => result,
+            None => tokio::select! {
+                result = &mut find_checkpoint => result,
+                _ = tokio::time::sleep(timeout) => {
+                    return Err(ExecuteAndWaitError::CheckpointTimeout(response));
                 }
-            };
-            match result {
-                Ok(found) => found,
-                Err(e) => {
-                    return Err(ExecuteAndWaitError::CheckpointStreamError { response, error: e });
-                }
+            },
+        };
+        let (checkpoint, timestamp) = match found {
+            Ok(found) => found,
+            Err(error) => {
+                return Err(ExecuteAndWaitError::CheckpointStreamError { response, error });
             }
         };
 
