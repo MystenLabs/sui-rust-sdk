@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["generate_accessors","resolve_rust_type_path"]};
