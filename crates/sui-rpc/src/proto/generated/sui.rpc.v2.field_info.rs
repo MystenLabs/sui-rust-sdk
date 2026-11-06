@@ -1386,6 +1386,36 @@ pub(crate) mod _field_impls {
             number: 9i32,
             message_fields: Some(ProtocolConfig::FIELDS),
         };
+        pub const TRANSACTION_START_INCLUSIVE_FIELD: &'static MessageField = &MessageField {
+            name: "transaction_start_inclusive",
+            json_name: "transactionStartInclusive",
+            number: 10i32,
+            message_fields: None,
+        };
+        pub const TRANSACTION_END_EXCLUSIVE_FIELD: &'static MessageField = &MessageField {
+            name: "transaction_end_exclusive",
+            json_name: "transactionEndExclusive",
+            number: 11i32,
+            message_fields: None,
+        };
+        pub const ENDED_IN_SAFE_MODE_FIELD: &'static MessageField = &MessageField {
+            name: "ended_in_safe_mode",
+            json_name: "endedInSafeMode",
+            number: 12i32,
+            message_fields: None,
+        };
+        pub const SYSTEM_EPOCH_INFO_FIELD: &'static MessageField = &MessageField {
+            name: "system_epoch_info",
+            json_name: "systemEpochInfo",
+            number: 13i32,
+            message_fields: Some(SystemEpochInfo::FIELDS),
+        };
+        pub const EPOCH_COMMITMENTS_FIELD: &'static MessageField = &MessageField {
+            name: "epoch_commitments",
+            json_name: "epochCommitments",
+            number: 14i32,
+            message_fields: Some(CheckpointCommitment::FIELDS),
+        };
     }
     impl MessageFields for Epoch {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -1398,6 +1428,11 @@ pub(crate) mod _field_impls {
             Self::END_FIELD,
             Self::REFERENCE_GAS_PRICE_FIELD,
             Self::PROTOCOL_CONFIG_FIELD,
+            Self::TRANSACTION_START_INCLUSIVE_FIELD,
+            Self::TRANSACTION_END_EXCLUSIVE_FIELD,
+            Self::ENDED_IN_SAFE_MODE_FIELD,
+            Self::SYSTEM_EPOCH_INFO_FIELD,
+            Self::EPOCH_COMMITMENTS_FIELD,
         ];
     }
     impl Epoch {
@@ -1455,6 +1490,152 @@ pub(crate) mod _field_impls {
         pub fn protocol_config(mut self) -> ProtocolConfigFieldPathBuilder {
             self.path.push(Epoch::PROTOCOL_CONFIG_FIELD.name);
             ProtocolConfigFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn transaction_start_inclusive(mut self) -> String {
+            self.path.push(Epoch::TRANSACTION_START_INCLUSIVE_FIELD.name);
+            self.finish()
+        }
+        pub fn transaction_end_exclusive(mut self) -> String {
+            self.path.push(Epoch::TRANSACTION_END_EXCLUSIVE_FIELD.name);
+            self.finish()
+        }
+        pub fn ended_in_safe_mode(mut self) -> String {
+            self.path.push(Epoch::ENDED_IN_SAFE_MODE_FIELD.name);
+            self.finish()
+        }
+        pub fn system_epoch_info(mut self) -> SystemEpochInfoFieldPathBuilder {
+            self.path.push(Epoch::SYSTEM_EPOCH_INFO_FIELD.name);
+            SystemEpochInfoFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn epoch_commitments(mut self) -> CheckpointCommitmentFieldPathBuilder {
+            self.path.push(Epoch::EPOCH_COMMITMENTS_FIELD.name);
+            CheckpointCommitmentFieldPathBuilder::new_with_base(self.path)
+        }
+    }
+    impl SystemEpochInfo {
+        pub const TOTAL_STAKE_FIELD: &'static MessageField = &MessageField {
+            name: "total_stake",
+            json_name: "totalStake",
+            number: 1i32,
+            message_fields: None,
+        };
+        pub const STORAGE_FUND_REINVESTMENT_FIELD: &'static MessageField = &MessageField {
+            name: "storage_fund_reinvestment",
+            json_name: "storageFundReinvestment",
+            number: 2i32,
+            message_fields: None,
+        };
+        pub const STORAGE_CHARGE_FIELD: &'static MessageField = &MessageField {
+            name: "storage_charge",
+            json_name: "storageCharge",
+            number: 3i32,
+            message_fields: None,
+        };
+        pub const STORAGE_REBATE_FIELD: &'static MessageField = &MessageField {
+            name: "storage_rebate",
+            json_name: "storageRebate",
+            number: 4i32,
+            message_fields: None,
+        };
+        pub const STORAGE_FUND_BALANCE_FIELD: &'static MessageField = &MessageField {
+            name: "storage_fund_balance",
+            json_name: "storageFundBalance",
+            number: 5i32,
+            message_fields: None,
+        };
+        pub const STAKE_SUBSIDY_AMOUNT_FIELD: &'static MessageField = &MessageField {
+            name: "stake_subsidy_amount",
+            json_name: "stakeSubsidyAmount",
+            number: 6i32,
+            message_fields: None,
+        };
+        pub const TOTAL_GAS_FEES_FIELD: &'static MessageField = &MessageField {
+            name: "total_gas_fees",
+            json_name: "totalGasFees",
+            number: 7i32,
+            message_fields: None,
+        };
+        pub const TOTAL_STAKE_REWARDS_DISTRIBUTED_FIELD: &'static MessageField = &MessageField {
+            name: "total_stake_rewards_distributed",
+            json_name: "totalStakeRewardsDistributed",
+            number: 8i32,
+            message_fields: None,
+        };
+        pub const LEFTOVER_STORAGE_FUND_INFLOW_FIELD: &'static MessageField = &MessageField {
+            name: "leftover_storage_fund_inflow",
+            json_name: "leftoverStorageFundInflow",
+            number: 9i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for SystemEpochInfo {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::TOTAL_STAKE_FIELD,
+            Self::STORAGE_FUND_REINVESTMENT_FIELD,
+            Self::STORAGE_CHARGE_FIELD,
+            Self::STORAGE_REBATE_FIELD,
+            Self::STORAGE_FUND_BALANCE_FIELD,
+            Self::STAKE_SUBSIDY_AMOUNT_FIELD,
+            Self::TOTAL_GAS_FEES_FIELD,
+            Self::TOTAL_STAKE_REWARDS_DISTRIBUTED_FIELD,
+            Self::LEFTOVER_STORAGE_FUND_INFLOW_FIELD,
+        ];
+    }
+    impl SystemEpochInfo {
+        pub fn path_builder() -> SystemEpochInfoFieldPathBuilder {
+            SystemEpochInfoFieldPathBuilder::new()
+        }
+    }
+    pub struct SystemEpochInfoFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl SystemEpochInfoFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn total_stake(mut self) -> String {
+            self.path.push(SystemEpochInfo::TOTAL_STAKE_FIELD.name);
+            self.finish()
+        }
+        pub fn storage_fund_reinvestment(mut self) -> String {
+            self.path.push(SystemEpochInfo::STORAGE_FUND_REINVESTMENT_FIELD.name);
+            self.finish()
+        }
+        pub fn storage_charge(mut self) -> String {
+            self.path.push(SystemEpochInfo::STORAGE_CHARGE_FIELD.name);
+            self.finish()
+        }
+        pub fn storage_rebate(mut self) -> String {
+            self.path.push(SystemEpochInfo::STORAGE_REBATE_FIELD.name);
+            self.finish()
+        }
+        pub fn storage_fund_balance(mut self) -> String {
+            self.path.push(SystemEpochInfo::STORAGE_FUND_BALANCE_FIELD.name);
+            self.finish()
+        }
+        pub fn stake_subsidy_amount(mut self) -> String {
+            self.path.push(SystemEpochInfo::STAKE_SUBSIDY_AMOUNT_FIELD.name);
+            self.finish()
+        }
+        pub fn total_gas_fees(mut self) -> String {
+            self.path.push(SystemEpochInfo::TOTAL_GAS_FEES_FIELD.name);
+            self.finish()
+        }
+        pub fn total_stake_rewards_distributed(mut self) -> String {
+            self.path.push(SystemEpochInfo::TOTAL_STAKE_REWARDS_DISTRIBUTED_FIELD.name);
+            self.finish()
+        }
+        pub fn leftover_storage_fund_inflow(mut self) -> String {
+            self.path.push(SystemEpochInfo::LEFTOVER_STORAGE_FUND_INFLOW_FIELD.name);
+            self.finish()
         }
     }
     impl TransactionEvents {
@@ -4339,11 +4520,25 @@ pub(crate) mod _field_impls {
             number: 2i32,
             message_fields: None,
         };
+        pub const START_FIELD: &'static MessageField = &MessageField {
+            name: "start",
+            json_name: "start",
+            number: 3i32,
+            message_fields: Some(EpochStart::FIELDS),
+        };
+        pub const CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "checkpoint",
+            json_name: "checkpoint",
+            number: 4i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for GetEpochRequest {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::EPOCH_FIELD,
             Self::READ_MASK_FIELD,
+            Self::START_FIELD,
+            Self::CHECKPOINT_FIELD,
         ];
     }
     impl GetEpochRequest {
@@ -4373,6 +4568,39 @@ pub(crate) mod _field_impls {
         pub fn read_mask(mut self) -> String {
             self.path.push(GetEpochRequest::READ_MASK_FIELD.name);
             self.finish()
+        }
+        pub fn start(mut self) -> EpochStartFieldPathBuilder {
+            self.path.push(GetEpochRequest::START_FIELD.name);
+            EpochStartFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn checkpoint(mut self) -> String {
+            self.path.push(GetEpochRequest::CHECKPOINT_FIELD.name);
+            self.finish()
+        }
+    }
+    impl EpochStart {}
+    impl MessageFields for EpochStart {
+        const FIELDS: &'static [&'static MessageField] = &[];
+    }
+    impl EpochStart {
+        pub fn path_builder() -> EpochStartFieldPathBuilder {
+            EpochStartFieldPathBuilder::new()
+        }
+    }
+    pub struct EpochStartFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl EpochStartFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
         }
     }
     impl GetEpochResponse {
@@ -9747,6 +9975,12 @@ pub(crate) mod _field_impls {
             number: 16i32,
             message_fields: Some(MoveTable::FIELDS),
         };
+        pub const BCS_FIELD: &'static MessageField = &MessageField {
+            name: "bcs",
+            json_name: "bcs",
+            number: 17i32,
+            message_fields: Some(Bcs::FIELDS),
+        };
     }
     impl MessageFields for SystemState {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -9766,6 +10000,7 @@ pub(crate) mod _field_impls {
             Self::SAFE_MODE_NON_REFUNDABLE_STORAGE_FEE_FIELD,
             Self::EPOCH_START_TIMESTAMP_MS_FIELD,
             Self::EXTRA_FIELDS_FIELD,
+            Self::BCS_FIELD,
         ];
     }
     impl SystemState {
@@ -9853,6 +10088,10 @@ pub(crate) mod _field_impls {
         pub fn extra_fields(mut self) -> MoveTableFieldPathBuilder {
             self.path.push(SystemState::EXTRA_FIELDS_FIELD.name);
             MoveTableFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn bcs(mut self) -> BcsFieldPathBuilder {
+            self.path.push(SystemState::BCS_FIELD.name);
+            BcsFieldPathBuilder::new_with_base(self.path)
         }
     }
     impl ValidatorReportRecord {

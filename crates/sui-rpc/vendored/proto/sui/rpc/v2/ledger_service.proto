@@ -180,7 +180,30 @@ message GetEpochRequest {
   // Mask specifying which fields to read.
   // If no mask is specified, defaults to `epoch`.
   optional google.protobuf.FieldMask read_mask = 2;
+
+  // Optional. Which state to return in `Epoch.system_state`:
+  //
+  // - `start`: the state right after this epoch's epoch-change transaction,
+  //   for every epoch including the current one. A server that lacks this
+  //   snapshot leaves `system_state` unset; a fullnode restored mid-epoch
+  //   lacks it for that epoch.
+  // - `checkpoint`: the state after this checkpoint's transactions. A
+  //   checkpoint outside the requested epoch fails with `INVALID_ARGUMENT`.
+  //   One above the server's latest checkpoint fails with `OUT_OF_RANGE` and
+  //   reason `ABOVE_LATEST_AVAILABLE`; one below a pruning server's lowest
+  //   available checkpoint fails with `OUT_OF_RANGE` and reason
+  //   `BELOW_EARLIEST_AVAILABLE`.
+  //
+  // If neither is set, `system_state` is as documented on `Epoch.system_state`.
+  oneof system_state_at {
+    EpochStart start = 3;
+    uint64 checkpoint = 4;
+  }
 }
+
+// Selects the system state at the start of an epoch. See
+// `GetEpochRequest.system_state_at`.
+message EpochStart {}
 
 message GetEpochResponse {
   optional Epoch epoch = 1;
