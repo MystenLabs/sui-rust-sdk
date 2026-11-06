@@ -122,7 +122,9 @@ enum ErrorReason {
   //
   // `LedgerService.GetEpoch` returns this with `OUT_OF_RANGE` when
   // `GetEpochRequest.checkpoint` is above the latest checkpoint this server
-  // has indexed.
+  // has indexed. Retrying after the server catches up can instead fail with
+  // `INVALID_ARGUMENT` if the requested epoch ends at or before that
+  // checkpoint.
   //
   // Example of an ErrorInfo for a descending query's `before` cursor at
   // checkpoint 1205, sent to a server whose latest indexed checkpoint is 1199:

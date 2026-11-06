@@ -777,20 +777,26 @@ pub struct Epoch {
     #[prost(uint64, optional, tag = "10")]
     pub transaction_start_inclusive: ::core::option::Option<u64>,
     /// One past the sequence number of the epoch's last transaction (exclusive):
-    /// the `total_network_transactions` of `last_checkpoint`.
+    /// the `total_network_transactions` of `last_checkpoint`. Set only once the
+    /// epoch has ended at or below the response's checkpoint height, the same
+    /// condition under which `last_checkpoint` is set.
     #[prost(uint64, optional, tag = "11")]
     pub transaction_end_exclusive: ::core::option::Option<u64>,
     /// Whether the epoch ended in safe mode: `advance_epoch` failed and
     /// `advance_epoch_safe_mode` ran instead, so no `SystemEpochInfoEvent` was
-    /// emitted and `system_epoch_info` is unset.
+    /// emitted and `system_epoch_info` is unset. Set only once the epoch has
+    /// ended, as for `transaction_end_exclusive`.
     #[prost(bool, optional, tag = "12")]
     pub ended_in_safe_mode: ::core::option::Option<bool>,
     /// Totals from the `0x3::sui_system_state_inner::SystemEpochInfoEvent`
-    /// emitted when this epoch ended. Unset if the epoch ended in safe mode.
+    /// emitted when this epoch ended. Set only once the epoch has ended, as for
+    /// `transaction_end_exclusive`, and unset if it ended in safe mode.
     #[prost(message, optional, tag = "13")]
     pub system_epoch_info: ::core::option::Option<SystemEpochInfo>,
     /// Commitments to epoch-specific state (the live object set), from the
-    /// `EndOfEpochData` of `last_checkpoint`.
+    /// `EndOfEpochData` of `last_checkpoint`. Empty until the epoch has ended, as
+    /// for `transaction_end_exclusive`, and empty for epochs that ended before
+    /// the protocol added epoch commitments.
     #[prost(message, repeated, tag = "14")]
     pub epoch_commitments: ::prost::alloc::vec::Vec<CheckpointCommitment>,
 }
@@ -806,10 +812,12 @@ pub struct SystemEpochInfo {
     /// fund.
     #[prost(uint64, optional, tag = "2")]
     pub storage_fund_reinvestment: ::core::option::Option<u64>,
-    /// Storage fees charged during the epoch.
+    /// Storage fees charged during the epoch, plus those deferred from any
+    /// preceding epochs that ended in safe mode.
     #[prost(uint64, optional, tag = "3")]
     pub storage_charge: ::core::option::Option<u64>,
-    /// Storage rebates paid out during the epoch.
+    /// Storage rebates paid out during the epoch, plus those deferred from any
+    /// preceding epochs that ended in safe mode.
     #[prost(uint64, optional, tag = "4")]
     pub storage_rebate: ::core::option::Option<u64>,
     /// Balance of the storage fund after the epoch change.
@@ -818,7 +826,8 @@ pub struct SystemEpochInfo {
     /// Stake subsidy paid out at the end of the epoch.
     #[prost(uint64, optional, tag = "6")]
     pub stake_subsidy_amount: ::core::option::Option<u64>,
-    /// Computation gas fees collected during the epoch.
+    /// Computation gas fees collected during the epoch, plus those deferred from
+    /// any preceding epochs that ended in safe mode.
     #[prost(uint64, optional, tag = "7")]
     pub total_gas_fees: ::core::option::Option<u64>,
     /// Stake rewards distributed to validators and their stakers.
@@ -952,7 +961,9 @@ pub enum ErrorReason {
     ///
     /// `LedgerService.GetEpoch` returns this with `OUT_OF_RANGE` when
     /// `GetEpochRequest.checkpoint` is above the latest checkpoint this server
-    /// has indexed.
+    /// has indexed. Retrying after the server catches up can instead fail with
+    /// `INVALID_ARGUMENT` if the requested epoch ends at or before that
+    /// checkpoint.
     ///
     /// Example of an ErrorInfo for a descending query's `before` cursor at
     /// checkpoint 1205, sent to a server whose latest indexed checkpoint is 1199:
@@ -2516,21 +2527,33 @@ pub struct GetEpochRequest {
     pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
     /// Optional. Which state to return in `Epoch.system_state`:
     ///
-    /// * `start`: the state right after this epoch's epoch-change transaction,
-    ///   for every epoch including the current one. A server that lacks this
-    ///   snapshot leaves `system_state` unset; a fullnode restored mid-epoch
-    ///   lacks it for that epoch.
-    /// * `checkpoint`: the state after this checkpoint's transactions. It must
-    ///   be at or above the epoch's first checkpoint and below its last one,
-    ///   otherwise the request fails with `INVALID_ARGUMENT`. The last
-    ///   checkpoint is excluded because its epoch-change transaction leaves the
-    ///   next epoch's state; request that epoch with `start` instead. One above
-    ///   the server's latest checkpoint fails with `OUT_OF_RANGE` and reason
-    ///   `ABOVE_LATEST_AVAILABLE`. One below the lowest checkpoint for which the
-    ///   server serves object data (`x-sui-lowest-available-checkpoint-objects`)
-    ///   fails with `OUT_OF_RANGE` and reason `BELOW_EARLIEST_AVAILABLE`.
+    /// * `start`: the state at the start of this epoch, right after the
+    ///   epoch-change transaction in the previous epoch's last checkpoint, or
+    ///   the genesis state for epoch 0. Applies to every epoch, including the
+    ///   current one. A server that lacks this snapshot leaves `system_state`
+    ///   unset; a fullnode restored mid-epoch lacks it for that epoch.
+    /// * `checkpoint`: the state after this checkpoint's transactions. Requires
+    ///   `epoch`; without it the request fails with `INVALID_ARGUMENT`. The
+    ///   server checks, in order:
+    ///   1. The checkpoint is at or above the epoch's first checkpoint and, if
+    ///      the epoch has ended at or below the server's latest checkpoint,
+    ///      below its last checkpoint; otherwise `INVALID_ARGUMENT`. The last
+    ///      checkpoint is excluded because its epoch-change transaction leaves
+    ///      the next epoch's state; request that epoch with `start` instead.
+    ///   1. The checkpoint is at or below the server's latest checkpoint;
+    ///      otherwise `OUT_OF_RANGE` with reason `ABOVE_LATEST_AVAILABLE`. Only
+    ///      an epoch that has not ended at the server's height reaches this
+    ///      check, so a retry after the server catches up can still fail with
+    ///      `INVALID_ARGUMENT` if the epoch ends at or before the checkpoint.
+    ///   1. The checkpoint is at or above the lowest checkpoint for which the
+    ///      server serves object data (`x-sui-lowest-available-checkpoint-objects`);
+    ///      otherwise `OUT_OF_RANGE` with reason `BELOW_EARLIEST_AVAILABLE`.
     ///
     /// If neither is set, `system_state` is as documented on `Epoch.system_state`.
+    /// The selector is validated even if `read_mask` excludes `system_state`.
+    ///
+    /// Servers that predate this field ignore it and return `system_state` as
+    /// documented on `Epoch.system_state`.
     #[prost(oneof = "get_epoch_request::SystemStateAt", tags = "3, 4")]
     pub system_state_at: ::core::option::Option<get_epoch_request::SystemStateAt>,
 }
@@ -2538,21 +2561,33 @@ pub struct GetEpochRequest {
 pub mod get_epoch_request {
     /// Optional. Which state to return in `Epoch.system_state`:
     ///
-    /// * `start`: the state right after this epoch's epoch-change transaction,
-    ///   for every epoch including the current one. A server that lacks this
-    ///   snapshot leaves `system_state` unset; a fullnode restored mid-epoch
-    ///   lacks it for that epoch.
-    /// * `checkpoint`: the state after this checkpoint's transactions. It must
-    ///   be at or above the epoch's first checkpoint and below its last one,
-    ///   otherwise the request fails with `INVALID_ARGUMENT`. The last
-    ///   checkpoint is excluded because its epoch-change transaction leaves the
-    ///   next epoch's state; request that epoch with `start` instead. One above
-    ///   the server's latest checkpoint fails with `OUT_OF_RANGE` and reason
-    ///   `ABOVE_LATEST_AVAILABLE`. One below the lowest checkpoint for which the
-    ///   server serves object data (`x-sui-lowest-available-checkpoint-objects`)
-    ///   fails with `OUT_OF_RANGE` and reason `BELOW_EARLIEST_AVAILABLE`.
+    /// * `start`: the state at the start of this epoch, right after the
+    ///   epoch-change transaction in the previous epoch's last checkpoint, or
+    ///   the genesis state for epoch 0. Applies to every epoch, including the
+    ///   current one. A server that lacks this snapshot leaves `system_state`
+    ///   unset; a fullnode restored mid-epoch lacks it for that epoch.
+    /// * `checkpoint`: the state after this checkpoint's transactions. Requires
+    ///   `epoch`; without it the request fails with `INVALID_ARGUMENT`. The
+    ///   server checks, in order:
+    ///   1. The checkpoint is at or above the epoch's first checkpoint and, if
+    ///      the epoch has ended at or below the server's latest checkpoint,
+    ///      below its last checkpoint; otherwise `INVALID_ARGUMENT`. The last
+    ///      checkpoint is excluded because its epoch-change transaction leaves
+    ///      the next epoch's state; request that epoch with `start` instead.
+    ///   1. The checkpoint is at or below the server's latest checkpoint;
+    ///      otherwise `OUT_OF_RANGE` with reason `ABOVE_LATEST_AVAILABLE`. Only
+    ///      an epoch that has not ended at the server's height reaches this
+    ///      check, so a retry after the server catches up can still fail with
+    ///      `INVALID_ARGUMENT` if the epoch ends at or before the checkpoint.
+    ///   1. The checkpoint is at or above the lowest checkpoint for which the
+    ///      server serves object data (`x-sui-lowest-available-checkpoint-objects`);
+    ///      otherwise `OUT_OF_RANGE` with reason `BELOW_EARLIEST_AVAILABLE`.
     ///
     /// If neither is set, `system_state` is as documented on `Epoch.system_state`.
+    /// The selector is validated even if `read_mask` excludes `system_state`.
+    ///
+    /// Servers that predate this field ignore it and return `system_state` as
+    /// documented on `Epoch.system_state`.
     #[non_exhaustive]
     #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Oneof)]
     pub enum SystemStateAt {
@@ -8439,10 +8474,10 @@ pub struct SystemState {
     #[prost(message, optional, tag = "16")]
     pub extra_fields: ::core::option::Option<MoveTable>,
     /// This SystemState serialized as BCS: the same state the fields above
-    /// describe. `name` is the inner Move type as a canonical `StructTag`, with
-    /// the address in full: `0x3::sui_system_state_inner::SuiSystemStateInner`
-    /// (version 1) or `0x3::sui_system_state_inner::SuiSystemStateInnerV2`
-    /// (version 2). `value` is the BCS of that struct.
+    /// describe. `name` is the inner Move type as a canonical `StructTag`:
+    /// `0x0000000000000000000000000000000000000000000000000000000000000003::sui_system_state_inner::SuiSystemStateInner`
+    /// for version 1, or the same with `SuiSystemStateInnerV2` for version 2.
+    /// `value` is the BCS of that struct.
     #[prost(message, optional, tag = "17")]
     pub bcs: ::core::option::Option<Bcs>,
 }
