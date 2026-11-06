@@ -157,7 +157,8 @@ enum ErrorReason {
   // streams every item at or above that checkpoint, and its last response
   // carries a watermark at that checkpoint. `LedgerService.GetEpoch` returns
   // this with `OUT_OF_RANGE` when `GetEpochRequest.checkpoint` is below the
-  // lowest checkpoint this server serves.
+  // lowest checkpoint for which this server serves object data, and
+  // `lowestAvailableCheckpoint` is that checkpoint.
   //
   // Pruned data does not come back, so the same request fails the same way
   // on this server. A client can send it to a server that retains the data,

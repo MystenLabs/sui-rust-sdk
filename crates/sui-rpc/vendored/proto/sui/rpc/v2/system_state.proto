@@ -68,9 +68,10 @@ message SystemState {
   optional MoveTable extra_fields = 16;
 
   // This SystemState serialized as BCS: the same state the fields above
-  // describe. `name` is the inner Move type
-  // (`0x3::sui_system_state_inner::SuiSystemStateInnerV1` or `...V2`) and
-  // `value` is the BCS of that struct.
+  // describe. `name` is the inner Move type as a canonical `StructTag`, with
+  // the address in full: `0x3::sui_system_state_inner::SuiSystemStateInner`
+  // (version 1) or `0x3::sui_system_state_inner::SuiSystemStateInnerV2`
+  // (version 2). `value` is the BCS of that struct.
   optional Bcs bcs = 17;
 }
 

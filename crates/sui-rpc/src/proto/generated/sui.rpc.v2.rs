@@ -989,7 +989,8 @@ pub enum ErrorReason {
     /// streams every item at or above that checkpoint, and its last response
     /// carries a watermark at that checkpoint. `LedgerService.GetEpoch` returns
     /// this with `OUT_OF_RANGE` when `GetEpochRequest.checkpoint` is below the
-    /// lowest checkpoint this server serves.
+    /// lowest checkpoint for which this server serves object data, and
+    /// `lowestAvailableCheckpoint` is that checkpoint.
     ///
     /// Pruned data does not come back, so the same request fails the same way
     /// on this server. A client can send it to a server that retains the data,
@@ -2519,12 +2520,15 @@ pub struct GetEpochRequest {
     ///   for every epoch including the current one. A server that lacks this
     ///   snapshot leaves `system_state` unset; a fullnode restored mid-epoch
     ///   lacks it for that epoch.
-    /// * `checkpoint`: the state after this checkpoint's transactions. A
-    ///   checkpoint outside the requested epoch fails with `INVALID_ARGUMENT`.
-    ///   One above the server's latest checkpoint fails with `OUT_OF_RANGE` and
-    ///   reason `ABOVE_LATEST_AVAILABLE`; one below a pruning server's lowest
-    ///   available checkpoint fails with `OUT_OF_RANGE` and reason
-    ///   `BELOW_EARLIEST_AVAILABLE`.
+    /// * `checkpoint`: the state after this checkpoint's transactions. It must
+    ///   be at or above the epoch's first checkpoint and below its last one,
+    ///   otherwise the request fails with `INVALID_ARGUMENT`. The last
+    ///   checkpoint is excluded because its epoch-change transaction leaves the
+    ///   next epoch's state; request that epoch with `start` instead. One above
+    ///   the server's latest checkpoint fails with `OUT_OF_RANGE` and reason
+    ///   `ABOVE_LATEST_AVAILABLE`. One below the lowest checkpoint for which the
+    ///   server serves object data (`x-sui-lowest-available-checkpoint-objects`)
+    ///   fails with `OUT_OF_RANGE` and reason `BELOW_EARLIEST_AVAILABLE`.
     ///
     /// If neither is set, `system_state` is as documented on `Epoch.system_state`.
     #[prost(oneof = "get_epoch_request::SystemStateAt", tags = "3, 4")]
@@ -2538,12 +2542,15 @@ pub mod get_epoch_request {
     ///   for every epoch including the current one. A server that lacks this
     ///   snapshot leaves `system_state` unset; a fullnode restored mid-epoch
     ///   lacks it for that epoch.
-    /// * `checkpoint`: the state after this checkpoint's transactions. A
-    ///   checkpoint outside the requested epoch fails with `INVALID_ARGUMENT`.
-    ///   One above the server's latest checkpoint fails with `OUT_OF_RANGE` and
-    ///   reason `ABOVE_LATEST_AVAILABLE`; one below a pruning server's lowest
-    ///   available checkpoint fails with `OUT_OF_RANGE` and reason
-    ///   `BELOW_EARLIEST_AVAILABLE`.
+    /// * `checkpoint`: the state after this checkpoint's transactions. It must
+    ///   be at or above the epoch's first checkpoint and below its last one,
+    ///   otherwise the request fails with `INVALID_ARGUMENT`. The last
+    ///   checkpoint is excluded because its epoch-change transaction leaves the
+    ///   next epoch's state; request that epoch with `start` instead. One above
+    ///   the server's latest checkpoint fails with `OUT_OF_RANGE` and reason
+    ///   `ABOVE_LATEST_AVAILABLE`. One below the lowest checkpoint for which the
+    ///   server serves object data (`x-sui-lowest-available-checkpoint-objects`)
+    ///   fails with `OUT_OF_RANGE` and reason `BELOW_EARLIEST_AVAILABLE`.
     ///
     /// If neither is set, `system_state` is as documented on `Epoch.system_state`.
     #[non_exhaustive]
@@ -8432,9 +8439,10 @@ pub struct SystemState {
     #[prost(message, optional, tag = "16")]
     pub extra_fields: ::core::option::Option<MoveTable>,
     /// This SystemState serialized as BCS: the same state the fields above
-    /// describe. `name` is the inner Move type
-    /// (`0x3::sui_system_state_inner::SuiSystemStateInnerV1` or `...V2`) and
-    /// `value` is the BCS of that struct.
+    /// describe. `name` is the inner Move type as a canonical `StructTag`, with
+    /// the address in full: `0x3::sui_system_state_inner::SuiSystemStateInner`
+    /// (version 1) or `0x3::sui_system_state_inner::SuiSystemStateInnerV2`
+    /// (version 2). `value` is the BCS of that struct.
     #[prost(message, optional, tag = "17")]
     pub bcs: ::core::option::Option<Bcs>,
 }

@@ -187,12 +187,15 @@ message GetEpochRequest {
   //   for every epoch including the current one. A server that lacks this
   //   snapshot leaves `system_state` unset; a fullnode restored mid-epoch
   //   lacks it for that epoch.
-  // - `checkpoint`: the state after this checkpoint's transactions. A
-  //   checkpoint outside the requested epoch fails with `INVALID_ARGUMENT`.
-  //   One above the server's latest checkpoint fails with `OUT_OF_RANGE` and
-  //   reason `ABOVE_LATEST_AVAILABLE`; one below a pruning server's lowest
-  //   available checkpoint fails with `OUT_OF_RANGE` and reason
-  //   `BELOW_EARLIEST_AVAILABLE`.
+  // - `checkpoint`: the state after this checkpoint's transactions. It must
+  //   be at or above the epoch's first checkpoint and below its last one,
+  //   otherwise the request fails with `INVALID_ARGUMENT`. The last
+  //   checkpoint is excluded because its epoch-change transaction leaves the
+  //   next epoch's state; request that epoch with `start` instead. One above
+  //   the server's latest checkpoint fails with `OUT_OF_RANGE` and reason
+  //   `ABOVE_LATEST_AVAILABLE`. One below the lowest checkpoint for which the
+  //   server serves object data (`x-sui-lowest-available-checkpoint-objects`)
+  //   fails with `OUT_OF_RANGE` and reason `BELOW_EARLIEST_AVAILABLE`.
   //
   // If neither is set, `system_state` is as documented on `Epoch.system_state`.
   oneof system_state_at {
