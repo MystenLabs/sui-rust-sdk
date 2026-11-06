@@ -36,24 +36,27 @@ message Epoch {
   // Sequence number of the first transaction in this epoch (inclusive).
   optional uint64 transaction_start_inclusive = 10;
 
-  // The fields below are set only once the epoch has ended at or below the
-  // response's checkpoint height, exactly when `last_checkpoint` is set.
-
   // One past the sequence number of the epoch's last transaction (exclusive):
-  // the `total_network_transactions` of `last_checkpoint`.
+  // the `total_network_transactions` of `last_checkpoint`. Set only once the
+  // epoch has ended at or below the response's checkpoint height, the same
+  // condition under which `last_checkpoint` is set.
   optional uint64 transaction_end_exclusive = 11;
 
   // Whether the epoch ended in safe mode: `advance_epoch` failed and
   // `advance_epoch_safe_mode` ran instead, so no `SystemEpochInfoEvent` was
-  // emitted and `system_epoch_info` is unset.
+  // emitted and `system_epoch_info` is unset. Set only once the epoch has
+  // ended, as for `transaction_end_exclusive`.
   optional bool ended_in_safe_mode = 12;
 
   // Totals from the `0x3::sui_system_state_inner::SystemEpochInfoEvent`
-  // emitted when this epoch ended. Unset if the epoch ended in safe mode.
+  // emitted when this epoch ended. Set only once the epoch has ended, as for
+  // `transaction_end_exclusive`, and unset if it ended in safe mode.
   optional SystemEpochInfo system_epoch_info = 13;
 
   // Commitments to epoch-specific state (the live object set), from the
-  // `EndOfEpochData` of `last_checkpoint`.
+  // `EndOfEpochData` of `last_checkpoint`. Empty until the epoch has ended, as
+  // for `transaction_end_exclusive`, and empty for epochs that ended before
+  // the protocol added epoch commitments.
   repeated CheckpointCommitment epoch_commitments = 14;
 }
 
@@ -67,10 +70,12 @@ message SystemEpochInfo {
   // fund.
   optional uint64 storage_fund_reinvestment = 2;
 
-  // Storage fees charged during the epoch.
+  // Storage fees charged during the epoch, plus those deferred from any
+  // preceding epochs that ended in safe mode.
   optional uint64 storage_charge = 3;
 
-  // Storage rebates paid out during the epoch.
+  // Storage rebates paid out during the epoch, plus those deferred from any
+  // preceding epochs that ended in safe mode.
   optional uint64 storage_rebate = 4;
 
   // Balance of the storage fund after the epoch change.
@@ -79,7 +84,8 @@ message SystemEpochInfo {
   // Stake subsidy paid out at the end of the epoch.
   optional uint64 stake_subsidy_amount = 6;
 
-  // Computation gas fees collected during the epoch.
+  // Computation gas fees collected during the epoch, plus those deferred from
+  // any preceding epochs that ended in safe mode.
   optional uint64 total_gas_fees = 7;
 
   // Stake rewards distributed to validators and their stakers.
