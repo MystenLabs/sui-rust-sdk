@@ -197,12 +197,4 @@ impl ListScanDirection {
             Self::Descending => options.before.is_some(),
         }
     }
-
-    /// Whether `options` carries an opaque cursor in the slot that ends a scan in this direction.
-    pub(super) fn has_far_cursor(self, options: &QueryOptions) -> bool {
-        match self {
-            Self::Ascending => options.before.is_some(),
-            Self::Descending => options.after.is_some(),
-        }
-    }
 }

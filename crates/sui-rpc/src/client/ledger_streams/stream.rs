@@ -14,7 +14,6 @@ use super::adapter::Position;
 use super::adapter::Progress;
 use super::adapter::RecoveryGap;
 use super::adapter::SubscriptionAdapter;
-use super::adapter::missing_cursor_position;
 use super::adapter::set_start;
 use super::list::ExpectedEnd;
 use super::list::LedgerTipPolicy;
@@ -41,8 +40,8 @@ use super::types::LedgerStreamConfig;
 use crate::proto::sui::rpc::v2::GetServiceInfoRequest;
 
 enum Phase<A: SubscriptionAdapter> {
-    /// Lists from a bare resume cursor until a frame reports a position, then resumes there.
-    ResolveCursor(Box<CursorResolution<A>>),
+    /// Lists one match after a bare resume cursor to learn its position, then resumes there.
+    ResolveCursor(Box<ListMachine<A>>),
     /// Waits until the ledger reaches the start checkpoint, then lists history through its tip.
     ReadInitialTip,
     /// Lists through a tip, then follows the ledger with the stream's delivery.
@@ -66,38 +65,27 @@ pub(super) enum Start {
     AfterCursor(Bytes),
 }
 
-/// Lists one match after a bare resume cursor, sent as `options.after`, to learn a position.
-struct CursorResolution<A: SubscriptionAdapter> {
+/// Lists one match after a bare resume `cursor`, sent as `options.after`, to learn its position.
+fn cursor_resolution<A: SubscriptionAdapter>(
+    client: &Client,
+    list_template: &A::ListRequest,
     cursor: Bytes,
-    list_machine: ListMachine<A>,
-}
-
-impl<A: SubscriptionAdapter> CursorResolution<A> {
-    fn new(
-        client: &Client,
-        list_template: &A::ListRequest,
-        cursor: Bytes,
-        observability: &LedgerStreamObservability,
-    ) -> Box<Self> {
-        let mut payload = list_template.clone();
-        let options = A::options_mut(&mut payload);
-        options.after = Some(cursor.clone());
-        options.limit = Some(1);
-        let expected_end = determine_expected_end::<A>(&payload, ListScanDirection::Ascending);
-        let list_machine = ListMachine::new(
-            client.clone(),
-            payload,
-            expected_end,
-            ListScanDirection::Ascending,
-            LedgerTipPolicy::WaitForExpectedBound,
-            observability.clone(),
-            LedgerStreamStage::InitialReplay,
-        );
-        Box::new(Self {
-            cursor,
-            list_machine,
-        })
-    }
+    observability: &LedgerStreamObservability,
+) -> Box<ListMachine<A>> {
+    let mut payload = list_template.clone();
+    let options = A::options_mut(&mut payload);
+    options.after = Some(cursor);
+    options.limit = Some(1);
+    let expected_end = determine_expected_end::<A>(&payload, ListScanDirection::Ascending);
+    Box::new(ListMachine::new(
+        client.clone(),
+        payload,
+        expected_end,
+        ListScanDirection::Ascending,
+        LedgerTipPolicy::WaitForExpectedBound,
+        observability.clone(),
+        LedgerStreamStage::InitialReplay,
+    ))
 }
 
 struct Replay<A: SubscriptionAdapter> {
@@ -134,16 +122,16 @@ fn terminal<A: SubscriptionAdapter>(status: Status) -> Step<A> {
     Step::Next(Phase::Terminal(status))
 }
 
-/// Keys a List response from its progress, which an ascending stream scan always carries.
+/// Keys a List response by its frame's progress.
 fn list_frame<A: SubscriptionAdapter>(
     response: A::ListResponse,
-    progress: Option<Progress<Bytes>>,
+    progress: Progress<Bytes>,
 ) -> Result<LedgerFrame<A::Item, A::Cursor>> {
     let Progress {
         position,
         cursor,
         checkpoint,
-    } = progress.ok_or_else(|| missing_cursor_position("List"))?;
+    } = progress;
     LedgerFrame::new(
         A::into_list_item(response),
         Progress {
@@ -253,7 +241,7 @@ impl<A: SubscriptionAdapter> Driver<A> {
                 });
                 Phase::ReadInitialTip
             }
-            Start::AfterCursor(cursor) => Phase::ResolveCursor(CursorResolution::new(
+            Start::AfterCursor(cursor) => Phase::ResolveCursor(cursor_resolution(
                 &client,
                 &list_template,
                 cursor,
@@ -356,20 +344,15 @@ impl<A: SubscriptionAdapter> Driver<A> {
         }
     }
 
-    /// Resumes at the first frame of a bare cursor's List request that reports a position:
-    /// delivers that frame, then starts the stream there.
-    async fn step_resolve_cursor(&mut self, mut resolution: Box<CursorResolution<A>>) -> Step<A> {
-        let rpc_event = resolution.list_machine.poll_rpc().await;
-        match resolution
-            .list_machine
-            .process_event(rpc_event, &self.config)
-        {
+    /// Resumes at the first frame of a bare cursor's List request: delivers that frame, then
+    /// starts the stream at its position.
+    async fn step_resolve_cursor(&mut self, mut list_machine: Box<ListMachine<A>>) -> Step<A> {
+        let rpc_event = list_machine.poll_rpc().await;
+        match list_machine.process_event(rpc_event, &self.config) {
             ListAction::Frame {
-                response,
-                progress: Some(progress),
-                ..
+                response, progress, ..
             } => {
-                let frame = match list_frame::<A>(response, Some(progress)) {
+                let frame = match list_frame::<A>(response, progress) {
                     Ok(frame) => frame,
                     Err(status) => return terminal(status),
                 };
@@ -380,22 +363,7 @@ impl<A: SubscriptionAdapter> Driver<A> {
                 );
                 self.deliver(Phase::ReadInitialTip, frame)
             }
-            // Only a final frame, after a scan that passed nothing beyond a cursor minted without a
-            // position, lacks one. A `LedgerTip` end leaves the machine waiting to list from the
-            // cursor again; a `CursorBound` end completes it, so a new request follows.
-            ListAction::Frame {
-                complete: false, ..
-            }
-            | ListAction::Continue => Step::Next(Phase::ResolveCursor(resolution)),
-            ListAction::Frame { complete: true, .. } => {
-                tokio::time::sleep(self.config.ledger_tip_poll_interval).await;
-                Step::Next(Phase::ResolveCursor(CursorResolution::new(
-                    &self.client,
-                    &self.list_template,
-                    resolution.cursor,
-                    &self.observability,
-                )))
-            }
+            ListAction::Continue => Step::Next(Phase::ResolveCursor(list_machine)),
             ListAction::Terminal(status) => terminal(status),
         }
     }

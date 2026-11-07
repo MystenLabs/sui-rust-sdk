@@ -1078,208 +1078,39 @@ async fn list_rejects_frames_without_cursor_position() {
             5,
             Some(proto::QueryEndReason::ScanLimit),
         )))]),
+        StreamScript::frames([Ok(without_position(event_list_frame(
+            None,
+            20,
+            Some(proto::QueryEndReason::LedgerTip),
+        )))]),
+        StreamScript::frames([Ok(without_position(event_list_frame(
+            None,
+            9,
+            Some(proto::QueryEndReason::CursorBound),
+        )))]),
     ]);
     let address = spawn_server(server.clone()).await;
     let (client, _observations) = observed_client(address);
 
-    // An item frame, a LedgerTip end of a request without a cursor, and a ScanLimit end of a
-    // request with `after` all must carry a position.
+    // An item frame, a LedgerTip end of a request without a cursor, a ScanLimit end of a request
+    // with `after`, and item-free final frames at a bare `after` or `before` cursor all must carry
+    // a position.
     for request_body in [
         bounded_event_request(),
         proto::ListEventsRequest::default(),
         proto::ListEventsRequest::default()
             .with_end_checkpoint(6)
             .with_options(proto::QueryOptions::default().with_after(bytes(1))),
+        proto::ListEventsRequest::default()
+            .with_options(proto::QueryOptions::default().with_after(bytes(20))),
+        proto::ListEventsRequest::default()
+            .with_options(proto::QueryOptions::default().with_before(bytes(9))),
     ] {
         let status = first_list_event_error(&client, request_body, fast_list_config()).await;
         assert_eq!(status.code(), tonic::Code::DataLoss);
         assert_eq!(status.message(), MISSING_LIST_CURSOR_POSITION);
     }
-    assert_eq!(server.state.lock().unwrap().event_requests.len(), 3);
-}
-
-#[tokio::test]
-async fn list_accepts_an_unpositioned_ledger_tip_echo_of_a_bare_after_cursor() {
-    let (server, _calls) = ScriptedStreamServer::new();
-    server.push_event_lists([StreamScript::frames([Ok(without_position(
-        event_list_frame(None, 20, Some(proto::QueryEndReason::LedgerTip)),
-    ))])]);
-    let address = spawn_server(server.clone()).await;
-    let (client, _observations) = observed_client(address);
-
-    let frames = client
-        .list_events(
-            proto::ListEventsRequest::default()
-                .with_options(proto::QueryOptions::default().with_after(bytes(20))),
-        )
-        .try_collect::<Vec<_>>()
-        .await
-        .unwrap();
-
-    assert_eq!(frames.len(), 1);
-    assert!(frames[0].event.is_none());
-    let watermark = frames[0].watermark.as_ref().unwrap();
-    assert_eq!(watermark.cursor, Some(bytes(20)));
-    assert!(watermark.cursor_position.is_none());
-    assert_eq!(
-        frames[0].end.as_ref().unwrap().reason,
-        Some(proto::QueryEndReason::LedgerTip as i32)
-    );
-    assert_eq!(server.state.lock().unwrap().event_requests.len(), 1);
-}
-
-#[tokio::test]
-async fn list_accepts_an_unpositioned_cursor_bound_end_at_a_bare_before_cursor() {
-    let (server, _calls) = ScriptedStreamServer::new();
-    server.push_event_lists([StreamScript::frames([
-        Ok(event_list_frame(Some(3), 3, None)),
-        Ok(without_position(event_list_frame(
-            None,
-            9,
-            Some(proto::QueryEndReason::CursorBound),
-        ))),
-    ])]);
-    let address = spawn_server(server.clone()).await;
-    let (client, _observations) = observed_client(address);
-
-    // The caller's bare `before` cursor carries no position, so the page's final frame names that
-    // cursor without one.
-    let frames = client
-        .list_events(
-            proto::ListEventsRequest::default()
-                .with_options(proto::QueryOptions::default().with_before(bytes(9))),
-        )
-        .try_collect::<Vec<_>>()
-        .await
-        .unwrap();
-
-    assert_eq!(frames.len(), 2);
-    assert!(frames[0].event.is_some());
-    assert!(frames[1].event.is_none());
-    let watermark = frames[1].watermark.as_ref().unwrap();
-    assert_eq!(watermark.cursor, Some(bytes(9)));
-    assert!(watermark.cursor_position.is_none());
-    assert_eq!(
-        frames[1].end.as_ref().unwrap().reason,
-        Some(proto::QueryEndReason::CursorBound as i32)
-    );
-    assert_eq!(server.state.lock().unwrap().event_requests.len(), 1);
-}
-
-#[tokio::test]
-async fn list_accepts_an_unpositioned_cursor_bound_end_of_a_continuation_at_the_callers_before() {
-    let (server, _calls) = ScriptedStreamServer::new();
-    server.push_transaction_lists([
-        StreamScript::frames([
-            Ok(transaction_list_frame(Some(2), 2, None)),
-            Ok(transaction_list_frame(
-                Some(3),
-                3,
-                Some(proto::QueryEndReason::ItemLimit),
-            )),
-        ]),
-        StreamScript::frames([
-            Ok(transaction_list_frame(Some(5), 5, None)),
-            Ok(without_position(transaction_list_frame(
-                None,
-                9,
-                Some(proto::QueryEndReason::CursorBound),
-            ))),
-        ]),
-    ]);
-    let address = spawn_server(server.clone()).await;
-    let (client, _observations) = observed_client(address);
-
-    // The continuation keeps the caller's bare `before`, which carries no position, so the last
-    // page ends at it without one.
-    let responses = tokio::time::timeout(
-        Duration::from_secs(2),
-        client
-            .list_transactions_with_config(
-                proto::ListTransactionsRequest::default()
-                    .with_options(proto::QueryOptions::default().with_before(bytes(9))),
-                fast_list_config(),
-            )
-            .try_collect::<Vec<_>>(),
-    )
-    .await
-    .expect("List stalled at the caller's before cursor")
-    .unwrap();
-
-    assert_eq!(responses.len(), 4);
-    let end = responses.last().unwrap();
-    assert!(end.watermark.as_ref().unwrap().cursor_position.is_none());
-    assert_eq!(
-        end.end.as_ref().unwrap().reason,
-        Some(proto::QueryEndReason::CursorBound as i32)
-    );
-    let state = server.state.lock().unwrap();
-    assert_eq!(state.transaction_requests.len(), 2);
-    let continuation = &state.transaction_requests[1].body;
-    assert_eq!(continuation.start_checkpoint, Some(3));
-    assert_eq!(continuation.start_transaction_index, Some(1));
-    assert_eq!(continuation.end_checkpoint, None);
-    let options = continuation.options.as_ref().unwrap();
-    assert_eq!(options.after, Some(bytes(3)));
-    assert_eq!(options.before, Some(bytes(9)));
-}
-
-#[tokio::test]
-async fn list_rejects_an_unpositioned_ledger_tip_end_of_a_continuation() {
-    let (server, _calls) = ScriptedStreamServer::new();
-    server.push_event_lists([
-        StreamScript::frames([Ok(event_list_frame(
-            Some(21),
-            21,
-            Some(proto::QueryEndReason::ItemLimit),
-        ))]),
-        StreamScript::frames([Ok(without_position(event_list_frame(
-            None,
-            21,
-            Some(proto::QueryEndReason::LedgerTip),
-        )))]),
-    ]);
-    let address = spawn_server(server.clone()).await;
-    let (client, _observations) = observed_client(address);
-
-    // The continuation sends start fields with its `after` cursor, so the server can always
-    // place its resume point.
-    let stream = client.list_events_with_config(
-        proto::ListEventsRequest::default()
-            .with_options(proto::QueryOptions::default().with_after(bytes(20))),
-        fast_list_config(),
-    );
-    futures::pin_mut!(stream);
-    let first_page = tokio::time::timeout(Duration::from_secs(2), stream.next())
-        .await
-        .expect("timed out waiting for the first page")
-        .unwrap()
-        .unwrap();
-    assert!(first_page.event.is_some());
-    let status = tokio::time::timeout(Duration::from_secs(2), stream.next())
-        .await
-        .expect("timed out waiting for terminal List error")
-        .unwrap()
-        .unwrap_err();
-    assert_eq!(status.code(), tonic::Code::DataLoss);
-    assert_eq!(status.message(), MISSING_LIST_CURSOR_POSITION);
-    assert!(
-        tokio::time::timeout(Duration::from_secs(2), stream.next())
-            .await
-            .expect("timed out waiting for List termination")
-            .is_none()
-    );
-
-    let state = server.state.lock().unwrap();
-    assert_eq!(state.event_requests.len(), 2);
-    let continuation = &state.event_requests[1].body;
-    assert_eq!(continuation.start_checkpoint, Some(21));
-    assert_eq!(continuation.start_transaction_index, Some(0));
-    assert_eq!(continuation.start_event_index, Some(1));
-    assert_eq!(
-        continuation.options.as_ref().unwrap().after,
-        Some(bytes(21))
-    );
+    assert_eq!(server.state.lock().unwrap().event_requests.len(), 5);
 }
 
 #[tokio::test]
