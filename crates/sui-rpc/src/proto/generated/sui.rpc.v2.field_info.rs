@@ -3800,12 +3800,19 @@ pub(crate) mod _field_impls {
             number: 3i32,
             message_fields: None,
         };
+        pub const AT_CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "at_checkpoint",
+            json_name: "atCheckpoint",
+            number: 4i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for GetObjectRequest {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::OBJECT_ID_FIELD,
             Self::VERSION_FIELD,
             Self::READ_MASK_FIELD,
+            Self::AT_CHECKPOINT_FIELD,
         ];
     }
     impl GetObjectRequest {
@@ -3838,6 +3845,10 @@ pub(crate) mod _field_impls {
         }
         pub fn read_mask(mut self) -> String {
             self.path.push(GetObjectRequest::READ_MASK_FIELD.name);
+            self.finish()
+        }
+        pub fn at_checkpoint(mut self) -> String {
+            self.path.push(GetObjectRequest::AT_CHECKPOINT_FIELD.name);
             self.finish()
         }
     }
