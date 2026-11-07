@@ -23,6 +23,13 @@ service LedgerService {
   rpc GetObject(GetObjectRequest) returns (GetObjectResponse);
   rpc BatchGetObjects(BatchGetObjectsRequest) returns (BatchGetObjectsResponse);
 
+  // List one object's live versions, in ascending or descending version
+  // order, paged by cursor.
+  //
+  // Servers that keep no object version history, such as fullnodes, fail with
+  // `UNIMPLEMENTED`.
+  rpc ListObjectVersions(ListObjectVersionsRequest) returns (ListObjectVersionsResponse);
+
   rpc GetTransaction(GetTransactionRequest) returns (GetTransactionResponse);
   rpc BatchGetTransactions(BatchGetTransactionsRequest) returns (BatchGetTransactionsResponse);
 
@@ -87,14 +94,60 @@ message GetObjectRequest {
   // Required. The `ObjectId` of the requested object.
   optional string object_id = 1;
 
-  // Request a specific version of the object.
-  // If no version is specified, and the object is live, then the latest
-  // version of the object is returned.
+  // Optional. Request a specific version of the object.
+  //
+  // Mutually exclusive with `max_version`; servers reject a request that sets
+  // both with `INVALID_ARGUMENT`. If none of `version`, `max_version` and
+  // `at_checkpoint` is set and the object is live, the latest version of the
+  // object is returned.
+  //
+  // Servers that prune history may fail with `NOT_FOUND` for versions that
+  // were superseded before their lowest available checkpoint.
   optional uint64 version = 2;
 
   // Mask specifying which fields to read.
   // If no mask is specified, defaults to `object_id,version,digest`.
   optional google.protobuf.FieldMask read_mask = 3;
+
+  // Optional. Set alone, return the object's state at the end of this
+  // checkpoint: a successful response is exact as of `at_checkpoint`, and an
+  // object that was deleted or wrapped at or before this checkpoint (and not
+  // since unwrapped) is `NOT_FOUND`.
+  //
+  // Combined with `version`, `at_checkpoint` instead bounds which versions are
+  // visible: the server fails with `NOT_FOUND` if `version` was written in a
+  // checkpoint after `at_checkpoint`. It returns a visible version even if the
+  // object was deleted or wrapped by the end of `at_checkpoint`.
+  //
+  // Combined with `max_version`, the server selects the object's newest
+  // version at or below `max_version` among the versions written in
+  // checkpoints at or before `at_checkpoint`, so the result does not depend on
+  // anything written after `at_checkpoint`. It fails with `NOT_FOUND` if the
+  // object has no such version, or if the selected version deleted or wrapped
+  // the object. A live selected version is returned even if the object was
+  // deleted or wrapped later, including by the end of `at_checkpoint` at a
+  // version above `max_version`.
+  //
+  // In every case, the checkpoint must be at or below the highest checkpoint
+  // the server has indexed; larger values fail with `OUT_OF_RANGE` and reason
+  // `ABOVE_LATEST_AVAILABLE`, because the server cannot answer for them yet.
+  // Servers that prune history may also fail with `OUT_OF_RANGE` and reason
+  // `BELOW_EARLIEST_AVAILABLE` for checkpoints below their lowest available
+  // one, and servers still backfilling history may fail with `UNAVAILABLE`.
+  optional uint64 at_checkpoint = 4;
+
+  // Optional. Return the object's newest version at or below `max_version`.
+  // When `at_checkpoint` is also set, only versions written in checkpoints at
+  // or before `at_checkpoint` are considered.
+  //
+  // Fails with `NOT_FOUND` if the object has no such version, or if it was
+  // deleted or wrapped at the selected version.
+  //
+  // Mutually exclusive with `version`; servers reject a request that sets
+  // both with `INVALID_ARGUMENT`. Servers that prune history may fail with
+  // `NOT_FOUND` when the newest version at or below `max_version` was
+  // superseded before their lowest available checkpoint.
+  optional uint64 max_version = 5;
 }
 
 message GetObjectResponse {
@@ -102,6 +155,12 @@ message GetObjectResponse {
 }
 
 message BatchGetObjectsRequest {
+  // The objects to fetch. Each request carries its own `version`,
+  // `max_version` or `at_checkpoint`, so a single batch may read different
+  // objects at different versions or checkpoints. Errors for individual
+  // objects, such as `NOT_FOUND`, are reported per item in the response. A
+  // malformed request, such as one that sets both `version` and
+  // `max_version`, fails the whole batch with `INVALID_ARGUMENT`.
   repeated GetObjectRequest requests = 1;
 
   // Mask specifying which fields to read.
@@ -118,6 +177,98 @@ message GetObjectResult {
     Object object = 1;
     google.rpc.Status error = 2;
   }
+}
+
+// Request message for LedgerService.ListObjectVersions.
+//
+// Lists only the object's live versions: versions at which the object was
+// deleted or wrapped have no contents, are skipped, and do not count toward
+// `options.limit`. Versions are bounded by the intersection of `start_version`
+// and `end_version`, `options.after` and `options.before`, and
+// `at_checkpoint` (or, when it is unset, the highest checkpoint the server has
+// indexed). When no live version falls within those bounds, including when the
+// object does not exist, the response lists no versions rather than failing
+// with `NOT_FOUND`.
+//
+// Servers that keep no object version history, such as fullnodes, fail with
+// `UNIMPLEMENTED`.
+message ListObjectVersionsRequest {
+  // Required. The `ObjectId` of the object whose versions to list.
+  optional string object_id = 1;
+
+  // Mask specifying which fields of each version's `object` to read.
+  // If no mask is specified, defaults to `object_id,version,digest`.
+  optional google.protobuf.FieldMask read_mask = 2;
+
+  // Optional. Cursor-bounded paging.
+  //
+  // This listing's order is ascending version.
+  //
+  // - `limit`: the maximum number of versions to return. Defaults to `50`
+  //   when unset; the maximum is `1000`, and larger values are coerced to
+  //   `1000` (and `0` to `1`). The response holds that coerced number of
+  //   versions unless the requested range has fewer left in the requested
+  //   ordering, so a shorter response is the last page in that direction.
+  // - `after` / `before`: exclusive bounds in this listing's order, taken
+  //   from the `cursor` of versions in earlier responses. Their meaning does
+  //   not depend on `ordering`. Either or both may be set, and they
+  //   intersect with `start_version`, `end_version`, and `at_checkpoint`. A
+  //   malformed cursor, or one for another object, fails with
+  //   `INVALID_ARGUMENT`.
+  // - `ordering`: `ORDERING_ASCENDING` (the default) returns versions in
+  //   this listing's order, and `ORDERING_DESCENDING` in reverse.
+  //
+  // To continue in the same direction, pass the `cursor` of the last
+  // version received as `after` (ascending) or `before` (descending). To
+  // page backward from the versions already received, request
+  // `ORDERING_DESCENDING` with `before` set to the `cursor` of the first
+  // version in this listing's order.
+  //
+  // Responses carry no `Watermark` or `QueryEnd`: resume from
+  // `ObjectVersion.cursor`, and treat a response holding fewer versions than
+  // the coerced `limit` as the last page in that direction.
+  optional QueryOptions options = 3;
+
+  // Optional. Start of the version range to list (inclusive). Intersects with
+  // every other bound.
+  optional uint64 start_version = 4;
+
+  // Optional. End of the version range to list (exclusive). Intersects with
+  // every other bound.
+  optional uint64 end_version = 5;
+
+  // Optional. List only the versions written at or before this checkpoint.
+  // Intersects with every other bound.
+  //
+  // If unset, the server lists only the versions written at or before the
+  // highest checkpoint it has indexed, so that paging never skips a version
+  // that was still being indexed when a later version was listed.
+  //
+  // The checkpoint must be at or below the highest checkpoint the server has
+  // indexed; larger values fail with `OUT_OF_RANGE` and reason
+  // `ABOVE_LATEST_AVAILABLE`, because the server cannot answer for them yet.
+  // Servers that prune history may also fail with `OUT_OF_RANGE` and reason
+  // `BELOW_EARLIEST_AVAILABLE` for checkpoints below their lowest available
+  // one, and servers still backfilling history may fail with `UNAVAILABLE`.
+  optional uint64 at_checkpoint = 6;
+}
+
+// Response message for LedgerService.ListObjectVersions.
+message ListObjectVersionsResponse {
+  // The object's live versions in this listing's order (ascending version),
+  // or in reverse when `options.ordering` is `ORDERING_DESCENDING`.
+  repeated ObjectVersion versions = 1;
+}
+
+// One live version of an object, listed by `ListObjectVersions`.
+message ObjectVersion {
+  // The object at this version, with the fields selected by
+  // `ListObjectVersionsRequest.read_mask`.
+  optional Object object = 1;
+
+  // The opaque position of this version in the listing, for use as
+  // `ListObjectVersionsRequest.options.after` or `options.before`.
+  optional bytes cursor = 2;
 }
 
 message GetTransactionRequest {
