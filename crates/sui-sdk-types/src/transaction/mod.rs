@@ -382,6 +382,9 @@ pub enum EndOfEpochTransactionKind {
 
     /// Create and initialize the forwarding address registry object
     ForwardingAddressRegistryCreate,
+
+    /// Create and initialize the coin regulation freeze list object
+    FreezeListCreate,
 }
 
 /// Set of Execution Time Observations from the committee.
@@ -1132,10 +1135,12 @@ impl FundsWithdrawal {
 /// withdraw-from =  withdraw-from-sender
 ///               =/ withdraw-from-sponsor
 ///               =/ withdraw-from-sender-allowance
+///               =/ withdraw-from-frozen-address
 ///
 /// withdraw-from-sender           = %x00
 /// withdraw-from-sponsor          = %x01
 /// withdraw-from-sender-allowance = %x02 address address
+/// withdraw-from-frozen-address   = %x03 address address
 /// ```
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 #[cfg_attr(
@@ -1155,6 +1160,14 @@ pub enum WithdrawFrom {
         funder: Address,
         /// The `ObjectId` of the allowance object authorizing the withdrawal.
         allowance: Address,
+    },
+    /// Seize funds from the balance of `seized_from`, a frozen address, under a seize
+    /// authorization owned by the sender of the transaction.
+    FrozenAddress {
+        /// The frozen address whose balance is debited.
+        seized_from: Address,
+        /// The `ObjectId` of the seize authorization object authorizing the withdrawal.
+        seize_auth: Address,
     },
 }
 

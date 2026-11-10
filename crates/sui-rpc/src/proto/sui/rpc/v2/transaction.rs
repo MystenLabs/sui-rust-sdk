@@ -1277,6 +1277,7 @@ impl From<sui_sdk_types::EndOfEpochTransactionKind> for EndOfEpochTransactionKin
             K::ForwardingAddressRegistryCreate => {
                 message.with_kind(Kind::ForwardingAddressRegistryCreate)
             }
+            K::FreezeListCreate => message.with_kind(Kind::FreezeListCreate),
             _ => message,
         }
     }
@@ -1323,6 +1324,7 @@ impl TryFrom<&EndOfEpochTransactionKind> for sui_sdk_types::EndOfEpochTransactio
                 })?,
             },
             Kind::ForwardingAddressRegistryCreate => Self::ForwardingAddressRegistryCreate,
+            Kind::FreezeListCreate => Self::FreezeListCreate,
         }
         .pipe(Ok)
     }
@@ -1762,9 +1764,19 @@ impl From<sui_sdk_types::FundsWithdrawal> for FundsWithdrawal {
         let mut message = Self::default();
         message.set_coin_type(value.coin_type());
         message.set_source(value.source().into());
-        if let sui_sdk_types::WithdrawFrom::SenderAllowance { funder, allowance } = value.source() {
-            message.set_funder(funder.to_string());
-            message.set_allowance(allowance.to_string());
+        match value.source() {
+            sui_sdk_types::WithdrawFrom::SenderAllowance { funder, allowance } => {
+                message.set_funder(funder.to_string());
+                message.set_allowance(allowance.to_string());
+            }
+            sui_sdk_types::WithdrawFrom::FrozenAddress {
+                seized_from,
+                seize_auth,
+            } => {
+                message.set_seized_from(seized_from.to_string());
+                message.set_seize_auth(seize_auth.to_string());
+            }
+            _ => {}
         }
         message.amount = value.amount();
         message
@@ -1802,6 +1814,26 @@ impl TryFrom<&FundsWithdrawal> for sui_sdk_types::FundsWithdrawal {
                     .map_err(|e| TryFromProtoError::invalid(FundsWithdrawal::ALLOWANCE_FIELD, e))?;
                 sui_sdk_types::WithdrawFrom::SenderAllowance { funder, allowance }
             }
+            Source::FrozenAddress => {
+                let seized_from = value
+                    .seized_from_opt()
+                    .ok_or_else(|| TryFromProtoError::missing("seized_from"))?
+                    .parse()
+                    .map_err(|e| {
+                        TryFromProtoError::invalid(FundsWithdrawal::SEIZED_FROM_FIELD, e)
+                    })?;
+                let seize_auth = value
+                    .seize_auth_opt()
+                    .ok_or_else(|| TryFromProtoError::missing("seize_auth"))?
+                    .parse()
+                    .map_err(|e| {
+                        TryFromProtoError::invalid(FundsWithdrawal::SEIZE_AUTH_FIELD, e)
+                    })?;
+                sui_sdk_types::WithdrawFrom::FrozenAddress {
+                    seized_from,
+                    seize_auth,
+                }
+            }
         };
 
         Ok(Self::new(amount, coin_type, source))
@@ -1814,6 +1846,7 @@ impl From<sui_sdk_types::WithdrawFrom> for funds_withdrawal::Source {
             sui_sdk_types::WithdrawFrom::Sender => Self::Sender,
             sui_sdk_types::WithdrawFrom::Sponsor => Self::Sponsor,
             sui_sdk_types::WithdrawFrom::SenderAllowance { .. } => Self::SenderAllowance,
+            sui_sdk_types::WithdrawFrom::FrozenAddress { .. } => Self::FrozenAddress,
             _ => Self::Unknown,
         }
     }

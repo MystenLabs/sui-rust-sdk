@@ -3465,6 +3465,18 @@ pub(crate) mod _field_impls {
             number: 5i32,
             message_fields: None,
         };
+        pub const SEIZED_FROM_FIELD: &'static MessageField = &MessageField {
+            name: "seized_from",
+            json_name: "seizedFrom",
+            number: 6i32,
+            message_fields: None,
+        };
+        pub const SEIZE_AUTH_FIELD: &'static MessageField = &MessageField {
+            name: "seize_auth",
+            json_name: "seizeAuth",
+            number: 7i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for FundsWithdrawal {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -3473,6 +3485,8 @@ pub(crate) mod _field_impls {
             Self::SOURCE_FIELD,
             Self::FUNDER_FIELD,
             Self::ALLOWANCE_FIELD,
+            Self::SEIZED_FROM_FIELD,
+            Self::SEIZE_AUTH_FIELD,
         ];
     }
     impl FundsWithdrawal {
@@ -3513,6 +3527,14 @@ pub(crate) mod _field_impls {
         }
         pub fn allowance(mut self) -> String {
             self.path.push(FundsWithdrawal::ALLOWANCE_FIELD.name);
+            self.finish()
+        }
+        pub fn seized_from(mut self) -> String {
+            self.path.push(FundsWithdrawal::SEIZED_FROM_FIELD.name);
+            self.finish()
+        }
+        pub fn seize_auth(mut self) -> String {
+            self.path.push(FundsWithdrawal::SEIZE_AUTH_FIELD.name);
             self.finish()
         }
     }

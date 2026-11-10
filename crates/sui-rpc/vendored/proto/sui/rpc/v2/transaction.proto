@@ -532,6 +532,9 @@ message EndOfEpochTransactionKind {
 
     // Create and initialize the Forwarding Address Registry object.
     FORWARDING_ADDRESS_REGISTRY_CREATE = 14;
+
+    // Create and initialize the coin regulation Freeze List object.
+    FREEZE_LIST_CREATE = 15;
   }
 
   optional Kind kind = 1;

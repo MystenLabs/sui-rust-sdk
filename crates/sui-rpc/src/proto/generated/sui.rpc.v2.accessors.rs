@@ -7405,6 +7405,8 @@ mod _accessor_impls {
                 source: None,
                 funder: None,
                 allowance: None,
+                seized_from: None,
+                seize_auth: None,
             }
         }
         #[doc(hidden)]
@@ -7506,6 +7508,50 @@ mod _accessor_impls {
         ///Sets `allowance` with the provided value.
         pub fn with_allowance<T: Into<String>>(mut self, field: T) -> Self {
             self.set_allowance(field.into());
+            self
+        }
+        ///If `seized_from` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn seized_from_opt_mut(&mut self) -> Option<&mut String> {
+            self.seized_from.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `seized_from`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn seized_from_mut(&mut self) -> &mut String {
+            self.seized_from.get_or_insert_default()
+        }
+        ///If `seized_from` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn seized_from_opt(&self) -> Option<&str> {
+            self.seized_from.as_ref().map(|field| field as _)
+        }
+        ///Sets `seized_from` with the provided value.
+        pub fn set_seized_from<T: Into<String>>(&mut self, field: T) {
+            self.seized_from = Some(field.into().into());
+        }
+        ///Sets `seized_from` with the provided value.
+        pub fn with_seized_from<T: Into<String>>(mut self, field: T) -> Self {
+            self.set_seized_from(field.into());
+            self
+        }
+        ///If `seize_auth` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn seize_auth_opt_mut(&mut self) -> Option<&mut String> {
+            self.seize_auth.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `seize_auth`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn seize_auth_mut(&mut self) -> &mut String {
+            self.seize_auth.get_or_insert_default()
+        }
+        ///If `seize_auth` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn seize_auth_opt(&self) -> Option<&str> {
+            self.seize_auth.as_ref().map(|field| field as _)
+        }
+        ///Sets `seize_auth` with the provided value.
+        pub fn set_seize_auth<T: Into<String>>(&mut self, field: T) {
+            self.seize_auth = Some(field.into().into());
+        }
+        ///Sets `seize_auth` with the provided value.
+        pub fn with_seize_auth<T: Into<String>>(mut self, field: T) -> Self {
+            self.set_seize_auth(field.into());
             self
         }
     }

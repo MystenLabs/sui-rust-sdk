@@ -2188,6 +2188,14 @@ pub struct FundsWithdrawal {
     /// is `SENDER_ALLOWANCE`.
     #[prost(string, optional, tag = "5")]
     pub allowance: ::core::option::Option<::prost::alloc::string::String>,
+    /// The frozen address whose balance is seized if `source` is
+    /// `FROZEN_ADDRESS`.
+    #[prost(string, optional, tag = "6")]
+    pub seized_from: ::core::option::Option<::prost::alloc::string::String>,
+    /// `ObjectId` of the seize authorization object authorizing the withdrawal
+    /// if `source` is `FROZEN_ADDRESS`.
+    #[prost(string, optional, tag = "7")]
+    pub seize_auth: ::core::option::Option<::prost::alloc::string::String>,
 }
 /// Nested message and enum types in `FundsWithdrawal`.
 pub mod funds_withdrawal {
@@ -2211,6 +2219,9 @@ pub mod funds_withdrawal {
         /// Withdraw from `funder`'s balance under the `allowance` object, granted
         /// to the sender of the transaction.
         SenderAllowance = 3,
+        /// Seize funds from the balance of `seized_from`, a frozen address, under
+        /// the `seize_auth` object owned by the sender of the transaction.
+        FrozenAddress = 4,
     }
     impl Source {
         /// String value of the enum field names used in the ProtoBuf definition.
@@ -2223,6 +2234,7 @@ pub mod funds_withdrawal {
                 Self::Sender => "SENDER",
                 Self::Sponsor => "SPONSOR",
                 Self::SenderAllowance => "SENDER_ALLOWANCE",
+                Self::FrozenAddress => "FROZEN_ADDRESS",
             }
         }
         /// Creates an enum from field names used in the ProtoBuf definition.
@@ -2232,6 +2244,7 @@ pub mod funds_withdrawal {
                 "SENDER" => Some(Self::Sender),
                 "SPONSOR" => Some(Self::Sponsor),
                 "SENDER_ALLOWANCE" => Some(Self::SenderAllowance),
+                "FROZEN_ADDRESS" => Some(Self::FrozenAddress),
                 _ => None,
             }
         }
@@ -9328,6 +9341,8 @@ pub mod end_of_epoch_transaction_kind {
         WriteAccumulatorStorageCost = 13,
         /// Create and initialize the Forwarding Address Registry object.
         ForwardingAddressRegistryCreate = 14,
+        /// Create and initialize the coin regulation Freeze List object.
+        FreezeListCreate = 15,
     }
     impl Kind {
         /// String value of the enum field names used in the ProtoBuf definition.
@@ -9355,6 +9370,7 @@ pub mod end_of_epoch_transaction_kind {
                 Self::ForwardingAddressRegistryCreate => {
                     "FORWARDING_ADDRESS_REGISTRY_CREATE"
                 }
+                Self::FreezeListCreate => "FREEZE_LIST_CREATE",
             }
         }
         /// Creates an enum from field names used in the ProtoBuf definition.
@@ -9381,6 +9397,7 @@ pub mod end_of_epoch_transaction_kind {
                 "FORWARDING_ADDRESS_REGISTRY_CREATE" => {
                     Some(Self::ForwardingAddressRegistryCreate)
                 }
+                "FREEZE_LIST_CREATE" => Some(Self::FreezeListCreate),
                 _ => None,
             }
         }
