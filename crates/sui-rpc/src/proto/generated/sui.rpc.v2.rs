@@ -949,9 +949,15 @@ pub enum ErrorReason {
     ///   cursor past it ends an empty response with `LEDGER_TIP` at the position
     ///   that cursor resumes from.
     ///
-    /// Requests pinned to a checkpoint, such as `GetPackage` with
+    /// `ListObjectVersions`, which has no checkpoint range, returns this with
+    /// `OUT_OF_RANGE` in either ordering when, without `at_checkpoint`, its
+    /// `before` or `after` cursor is above the object's version at the latest
+    /// indexed checkpoint; see `ListObjectVersionsRequest`.
+    ///
+    /// Requests pinned to a checkpoint, such as `GetObject` or `GetPackage` with
     /// `at_checkpoint`, return this with `OUT_OF_RANGE` when that checkpoint is
-    /// above the latest indexed checkpoint.
+    /// above the latest indexed checkpoint. In `BatchGetObjects`, the error is
+    /// reported for that item only.
     ///
     /// Such a cursor comes from a newer view of the ledger than this server's,
     /// for example from another replica behind the same load balancer. The data
@@ -998,9 +1004,16 @@ pub enum ErrorReason {
     /// streams every item at or above that checkpoint, and its last response
     /// carries a watermark at that checkpoint.
     ///
-    /// Requests pinned to a checkpoint, such as `GetPackage` with
+    /// Requests pinned to a checkpoint, such as `GetObject` or `GetPackage` with
     /// `at_checkpoint`, return this with `OUT_OF_RANGE` when that checkpoint is
-    /// below the lowest checkpoint this server serves.
+    /// below the lowest checkpoint this server serves. In `BatchGetObjects`, the
+    /// error is reported for that item only.
+    ///
+    /// `ListObjectVersions` returns this with `OUT_OF_RANGE` when the object's
+    /// older versions were pruned and the request's bounds admit versions below
+    /// its oldest retained version: an ascending listing before streaming
+    /// anything, and a descending one after streaming every retained version
+    /// within its bounds.
     ///
     /// Pruned data does not come back, so the same request fails the same way
     /// on this server. A client can send it to a server that retains the data,
@@ -1018,10 +1031,11 @@ pub enum ErrorReason {
     /// }
     /// ```
     ///
-    /// Metadata:
+    /// Metadata, as decimal strings:
     ///
-    /// * `lowestAvailableCheckpoint`: the lowest checkpoint this server serves,
-    ///   as a decimal string.
+    /// * `lowestAvailableCheckpoint`: the lowest checkpoint this server serves.
+    /// * `lowestAvailableVersion`: set only by `ListObjectVersions`, the
+    ///   object's oldest retained version.
     BelowEarliestAvailable = 6,
 }
 impl ErrorReason {
@@ -2382,15 +2396,64 @@ pub struct GetObjectRequest {
     /// Required. The `ObjectId` of the requested object.
     #[prost(string, optional, tag = "1")]
     pub object_id: ::core::option::Option<::prost::alloc::string::String>,
-    /// Request a specific version of the object.
-    /// If no version is specified, and the object is live, then the latest
-    /// version of the object is returned.
+    /// Optional. Request a specific version of the object.
+    ///
+    /// Mutually exclusive with `max_version`; servers reject a request that sets
+    /// both with `INVALID_ARGUMENT`. If none of `version`, `max_version` and
+    /// `at_checkpoint` is set and the object is live, the latest version of the
+    /// object is returned.
+    ///
+    /// Servers that prune history may fail with `NOT_FOUND` for versions that
+    /// were superseded before their lowest available checkpoint.
     #[prost(uint64, optional, tag = "2")]
     pub version: ::core::option::Option<u64>,
     /// Mask specifying which fields to read.
     /// If no mask is specified, defaults to `object_id,version,digest`.
     #[prost(message, optional, tag = "3")]
     pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
+    /// Optional. Set alone, return the object's state at the end of this
+    /// checkpoint: a successful response is exact as of `at_checkpoint`, and an
+    /// object that was deleted or wrapped at or before this checkpoint (and not
+    /// since unwrapped) is `NOT_FOUND`.
+    ///
+    /// Combined with `version` or `max_version`, `at_checkpoint` instead bounds
+    /// which versions are visible: the server first resolves the version that
+    /// `version` or `max_version` selects, then fails with `NOT_FOUND` if that
+    /// version was written in a checkpoint after `at_checkpoint`. `max_version`
+    /// selects among every version the server has indexed, including versions
+    /// written after `at_checkpoint` (see `max_version`). The server does not
+    /// fall back to an older version that was visible at `at_checkpoint`, and it
+    /// returns a visible version even if the object was deleted or wrapped by
+    /// the end of `at_checkpoint`. For example, if version 5 was written in
+    /// checkpoint 10 and version 8 in checkpoint 20, `max_version: 8` with
+    /// `at_checkpoint: 15` is `NOT_FOUND`, and with `at_checkpoint: 25` returns
+    /// version 8.
+    ///
+    /// Either way, the checkpoint must be at or below the highest checkpoint the
+    /// server has indexed; larger values fail with `OUT_OF_RANGE` and reason
+    /// `ABOVE_LATEST_AVAILABLE`, because the server cannot answer for them yet.
+    /// Servers that prune history may also fail with `OUT_OF_RANGE` and reason
+    /// `BELOW_EARLIEST_AVAILABLE` for checkpoints below their lowest available
+    /// one, and servers still backfilling history may fail with `UNAVAILABLE`.
+    #[prost(uint64, optional, tag = "4")]
+    pub at_checkpoint: ::core::option::Option<u64>,
+    /// Optional. Return the object's newest version at or below `max_version`.
+    ///
+    /// The server selects only among the object's versions at or below its
+    /// version at the highest checkpoint the server has indexed, so the answer
+    /// to the same request changes only as the server indexes further.
+    ///
+    /// Fails with `NOT_FOUND` if the object has no version at or below
+    /// `max_version`, or if it was deleted or wrapped at that newest version.
+    /// With `at_checkpoint`, that newest version must also have been written at
+    /// or before `at_checkpoint`; see `at_checkpoint`.
+    ///
+    /// Mutually exclusive with `version`; servers reject a request that sets
+    /// both with `INVALID_ARGUMENT`. Servers that prune history may fail with
+    /// `NOT_FOUND` when the newest version at or below `max_version` was
+    /// superseded before their lowest available checkpoint.
+    #[prost(uint64, optional, tag = "5")]
+    pub max_version: ::core::option::Option<u64>,
 }
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -2401,6 +2464,12 @@ pub struct GetObjectResponse {
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct BatchGetObjectsRequest {
+    /// The objects to fetch. Each request carries its own `version`,
+    /// `max_version` or `at_checkpoint`, so a single batch may read different
+    /// objects at different versions or checkpoints. Errors for individual
+    /// objects, such as `NOT_FOUND`, are reported per item in the response. A
+    /// malformed request, such as one that sets both `version` and
+    /// `max_version`, fails the whole batch with `INVALID_ARGUMENT`.
     #[prost(message, repeated, tag = "1")]
     pub requests: ::prost::alloc::vec::Vec<GetObjectRequest>,
     /// Mask specifying which fields to read.
@@ -2430,6 +2499,164 @@ pub mod get_object_result {
         #[prost(message, tag = "2")]
         Error(super::super::super::super::google::rpc::Status),
     }
+}
+/// Request message for LedgerService.ListObjectVersions.
+///
+/// Lists only the object's live versions: versions at which the object was
+/// deleted or wrapped have no contents, are skipped, and do not count toward
+/// `options.limit`. Versions are bounded by the intersection of `start_version`
+/// and `end_version`, `options.after` and `options.before`, and
+/// `at_checkpoint` (or, when it is unset, the highest checkpoint the server has
+/// indexed). When no live version falls within those bounds, including when the
+/// object does not exist, the stream delivers no versions and ends with
+/// `QueryEnd` rather than failing with `NOT_FOUND`.
+///
+/// Without `at_checkpoint`, an `options.after` or `options.before` cursor above
+/// the object's version at the highest checkpoint the server has indexed, or
+/// any cursor for an object with no version there, fails with `OUT_OF_RANGE`
+/// and reason `ABOVE_LATEST_AVAILABLE` (`bound` "cursor"), whatever the
+/// ordering and version range. Such a cursor comes from a server that has
+/// indexed further, for example another replica behind the same load
+/// balancer, and listing from this server's view would skip versions or end
+/// early. A version cursor records no checkpoint, so the error's
+/// `requestedCheckpoint` is its `firstUnavailableCheckpoint`. With
+/// `at_checkpoint` set, the listing stops at that checkpoint whatever the
+/// cursors.
+///
+/// Servers that prune history, such as fullnodes, list the versions they
+/// retain. Such a server keeps object state from the end of one checkpoint on,
+/// the checkpoint its `BELOW_EARLIEST_AVAILABLE` errors name as
+/// `lowestAvailableCheckpoint`. Pruning removes the versions of an object
+/// that were superseded at or before the end of that checkpoint, including
+/// versions written and superseded within it, and keeps the object's version
+/// at the end of it. An object created after that checkpoint keeps its whole
+/// history. A listing never starts or ends inside pruned history without
+/// saying so: when the object's older versions were pruned and the request's
+/// bounds admit versions below its oldest retained version (including when
+/// neither `start_version` nor `options.after` is set), the request fails with
+/// `OUT_OF_RANGE` and reason `BELOW_EARLIEST_AVAILABLE`. The error's metadata
+/// carries `lowestAvailableVersion`, the object's oldest retained version, as
+/// well as `lowestAvailableCheckpoint`.
+///
+/// * Ascending, the request fails before streaming anything. Setting
+///   `start_version` to `lowestAvailableVersion` lists the retained versions.
+/// * Descending, the stream delivers every retained version within the
+///   request's bounds and then, unless it reached `options.limit` first,
+///   fails with that error instead of ending with `QueryEnd`.
+///
+/// Servers that keep no object version history, or are still restoring it,
+/// fail with `UNAVAILABLE`.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ListObjectVersionsRequest {
+    /// Required. The `ObjectId` of the object whose versions to list.
+    #[prost(string, optional, tag = "1")]
+    pub object_id: ::core::option::Option<::prost::alloc::string::String>,
+    /// Mask specifying which fields of each version's `object` to read.
+    /// If no mask is specified, defaults to `object_id,version,digest`.
+    #[prost(message, optional, tag = "2")]
+    pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
+    /// Optional. Cursor-bounded paging.
+    ///
+    /// This listing's order is ascending version.
+    ///
+    /// * `limit`: the maximum number of versions to stream. Defaults to `50`
+    ///   when unset; the maximum is `1000`, and larger values are coerced to
+    ///   `1000` (and `0` to `1`).
+    /// * `after` / `before`: exclusive bounds in this listing's order, taken
+    ///   from `ListObjectVersionsResponse.cursor` in earlier streams. Their
+    ///   meaning does not depend on `ordering`. Either or both may be set, and
+    ///   they intersect with `start_version`, `end_version`, and
+    ///   `at_checkpoint`. A malformed cursor, or one for another object, fails
+    ///   with `INVALID_ARGUMENT`.
+    /// * `ordering`: `ORDERING_ASCENDING` (the default) returns versions in
+    ///   this listing's order, and `ORDERING_DESCENDING` in reverse.
+    ///
+    /// Responses carry no `Watermark`: resume from the `cursor` of the last
+    /// version received, and read the stream's `QueryEnd` to tell whether
+    /// versions remain (see `ListObjectVersionsResponse`). To page backward from
+    /// the versions already received, request `ORDERING_DESCENDING` with
+    /// `before` set to the `cursor` of the first version in this listing's
+    /// order.
+    #[prost(message, optional, tag = "3")]
+    pub options: ::core::option::Option<QueryOptions>,
+    /// Optional. Start of the version range to list (inclusive). Intersects with
+    /// every other bound.
+    #[prost(uint64, optional, tag = "4")]
+    pub start_version: ::core::option::Option<u64>,
+    /// Optional. End of the version range to list (exclusive). Intersects with
+    /// every other bound.
+    #[prost(uint64, optional, tag = "5")]
+    pub end_version: ::core::option::Option<u64>,
+    /// Optional. List only the versions written at or before this checkpoint.
+    /// Intersects with every other bound.
+    ///
+    /// If unset, the server lists only the versions written at or before the
+    /// highest checkpoint it has indexed, so that paging never skips a version
+    /// that was still being indexed when a later version was listed.
+    ///
+    /// The checkpoint must be at or below the highest checkpoint the server has
+    /// indexed; larger values fail with `OUT_OF_RANGE` and reason
+    /// `ABOVE_LATEST_AVAILABLE`, because the server cannot answer for them yet.
+    /// Servers that prune history may also fail with `OUT_OF_RANGE` and reason
+    /// `BELOW_EARLIEST_AVAILABLE` for checkpoints below their lowest available
+    /// one, and servers still backfilling history may fail with `UNAVAILABLE`.
+    #[prost(uint64, optional, tag = "6")]
+    pub at_checkpoint: ::core::option::Option<u64>,
+}
+/// Response message for LedgerService.ListObjectVersions.
+///
+/// A frame with `object` set delivers one live version, in this listing's
+/// order (ascending version), or in reverse when `options.ordering` is
+/// `ORDERING_DESCENDING`, and carries that version's `cursor`. Frames carry no
+/// `Watermark`: a version listing has no filter, so there is no scan progress
+/// to report.
+///
+/// `end` is set exactly once, on the final frame of a successful stream, with
+/// one of these reasons:
+///
+/// * `QUERY_END_REASON_ITEM_LIMIT`: the stream delivered the coerced
+///   `options.limit` versions. The frame that delivers the last of them
+///   carries `end`, even when no further versions remain.
+/// * `QUERY_END_REASON_CURSOR_BOUND`: the listing reached `options.before`
+///   (ascending) or `options.after` (descending).
+/// * `QUERY_END_REASON_CHECKPOINT_BOUND`: the listing reached the edge of the
+///   window the request set: `end_version` or the object's newest version at
+///   `at_checkpoint` (ascending), or `start_version` or the object's first
+///   version (descending).
+/// * `QUERY_END_REASON_LEDGER_TIP`: an ascending listing with `at_checkpoint`
+///   unset reached the object's newest version at the highest checkpoint the
+///   server has indexed, before reaching `end_version` or `options.before`.
+///   Versions written later may extend the listing.
+///
+/// For every reason other than `QUERY_END_REASON_ITEM_LIMIT`, the final frame
+/// has no `object` or `cursor`.
+///
+/// To continue in the same direction, keep the request's other fields and pass
+/// the `cursor` of the last version received as `options.after` (ascending)
+/// or `options.before` (descending). After `QUERY_END_REASON_ITEM_LIMIT` that
+/// reads the next page, and after `QUERY_END_REASON_LEDGER_TIP` it lists
+/// versions written since. `QUERY_END_REASON_CURSOR_BOUND` and
+/// `QUERY_END_REASON_CHECKPOINT_BOUND` mean no version within the request's
+/// bounds remains in that direction.
+///
+/// A stream that fails or is cancelled terminates with a gRPC status and does
+/// not send `QueryEnd`.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListObjectVersionsResponse {
+    /// One live version of the object, with the fields selected by
+    /// `ListObjectVersionsRequest.read_mask`.
+    #[prost(message, optional, tag = "1")]
+    pub object: ::core::option::Option<Object>,
+    /// The opaque position of this version in the listing, for use as
+    /// `ListObjectVersionsRequest.options.after` or `options.before`. Set on
+    /// every frame that carries `object`.
+    #[prost(bytes = "bytes", optional, tag = "2")]
+    pub cursor: ::core::option::Option<::prost::bytes::Bytes>,
+    /// Set exactly once, on the final frame of a successful stream.
+    #[prost(message, optional, tag = "3")]
+    pub end: ::core::option::Option<QueryEnd>,
 }
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
@@ -2951,6 +3178,37 @@ pub mod ledger_service_client {
                 .insert(GrpcMethod::new("sui.rpc.v2.LedgerService", "BatchGetObjects"));
             self.inner.unary(req, path, codec).await
         }
+        /// List one object's live versions, in ascending or descending version
+        /// order, one version per response frame, paged by cursor.
+        ///
+        /// Servers that prune history, such as fullnodes, list the versions they
+        /// retain; see `ListObjectVersionsRequest`.
+        pub async fn list_object_versions(
+            &mut self,
+            request: impl tonic::IntoRequest<super::ListObjectVersionsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<tonic::codec::Streaming<super::ListObjectVersionsResponse>>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/sui.rpc.v2.LedgerService/ListObjectVersions",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new("sui.rpc.v2.LedgerService", "ListObjectVersions"),
+                );
+            self.inner.server_streaming(req, path, codec).await
+        }
         pub async fn get_transaction(
             &mut self,
             request: impl tonic::IntoRequest<super::GetTransactionRequest>,
@@ -3173,6 +3431,20 @@ pub mod ledger_service_server {
             request: tonic::Request<super::BatchGetObjectsRequest>,
         ) -> std::result::Result<
             tonic::Response<super::BatchGetObjectsResponse>,
+            tonic::Status,
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
+        /// List one object's live versions, in ascending or descending version
+        /// order, one version per response frame, paged by cursor.
+        ///
+        /// Servers that prune history, such as fullnodes, list the versions they
+        /// retain; see `ListObjectVersionsRequest`.
+        async fn list_object_versions(
+            &self,
+            request: tonic::Request<super::ListObjectVersionsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<BoxStream<super::ListObjectVersionsResponse>>,
             tonic::Status,
         > {
             Err(tonic::Status::unimplemented("Not yet implemented"))
@@ -3463,6 +3735,56 @@ pub mod ledger_service_server {
                                 max_encoding_message_size,
                             );
                         let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/sui.rpc.v2.LedgerService/ListObjectVersions" => {
+                    #[allow(non_camel_case_types)]
+                    struct ListObjectVersionsSvc<T: LedgerService>(pub Arc<T>);
+                    impl<
+                        T: LedgerService,
+                    > tonic::server::ServerStreamingService<
+                        super::ListObjectVersionsRequest,
+                    > for ListObjectVersionsSvc<T> {
+                        type Response = super::ListObjectVersionsResponse;
+                        type ResponseStream = BoxStream<
+                            super::ListObjectVersionsResponse,
+                        >;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::ResponseStream>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::ListObjectVersionsRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as LedgerService>::list_object_versions(&inner, request)
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = ListObjectVersionsSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.server_streaming(method, req).await;
                         Ok(res)
                     };
                     Box::pin(fut)
@@ -5822,38 +6144,33 @@ pub struct ProtocolConfig {
         ::prost_types::Value,
     >,
 }
-/// Cursor-bounded query options.
+/// Cursor-bounded options for a listing request.
 ///
-/// `after` and `before` are canonical ledger-position bounds, not
-/// ordering-relative cursors. `after` always excludes items at or below that
-/// cursor, and `before` always excludes items at or above that cursor. Ordering
-/// only controls the order of returned items within the resulting open interval.
+/// `after` and `before` are opaque, exclusive bounds in the listing's canonical
+/// order. `after` always excludes items at or below that cursor, and `before`
+/// always excludes items at or above that cursor. Their meaning does not depend
+/// on `ordering`, which only sets the order of results within the bounded
+/// interval.
 ///
-/// When a request also specifies a checkpoint range, cursor bounds and
-/// checkpoint bounds compose by intersection: results come only from ledger
-/// positions inside both. Checkpoint bounds are likewise canonical and
-/// ordering-independent.
+/// Other range fields on the request, such as checkpoint or version bounds,
+/// compose with the cursor bounds by intersection: results come only from
+/// inside both.
 ///
-/// For example, with `after = A`, `before = B`, `ordering = DESCENDING`, and
-/// `limit = N`, the response contains up to N matching items in descending
-/// order from the interval `(A, B)`. If the response ends with
-/// `QUERY_END_REASON_ITEM_LIMIT`, resume by keeping `after = A` and setting
-/// `before` to the last `Watermark.cursor` received. That cursor is the
-/// lowest position reached in ledger order, so it becomes the next exclusive
-/// upper bound.
+/// Each method documents its own `limit` default and maximum, how to resume,
+/// and how to detect the last page.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct QueryOptions {
     /// The maximum number of items to return. Each method applies its own default
-    /// and maximum. QueryEnd does not count against this limit.
+    /// and maximum.
     #[prost(uint32, optional, tag = "1")]
     pub limit: ::core::option::Option<u32>,
     /// Opaque exclusive lower bound. Results must be strictly after this cursor in
-    /// canonical ledger order.
+    /// the listing's canonical order.
     #[prost(bytes = "bytes", optional, tag = "2")]
     pub after: ::core::option::Option<::prost::bytes::Bytes>,
     /// Opaque exclusive upper bound. Results must be strictly before this cursor
-    /// in canonical ledger order.
+    /// in the listing's canonical order.
     #[prost(bytes = "bytes", optional, tag = "3")]
     pub before: ::core::option::Option<::prost::bytes::Bytes>,
     /// Ordering for returned results. Defaults to ASCENDING.
@@ -5922,6 +6239,14 @@ pub struct LedgerPosition {
 /// index incremented, or end a page before it at its key. In both cases pass
 /// `cursor` as `options.after` with a start and as `options.before` with an
 /// end.
+///
+/// For example, with `after = A`, `before = B`, `ordering = DESCENDING`, and
+/// `limit = N`, the response contains up to N matching items in descending
+/// order from the interval `(A, B)`. If the response ends with
+/// `QUERY_END_REASON_ITEM_LIMIT`, resume by keeping `after = A` and setting
+/// `before` to the last `Watermark.cursor` received. That cursor is the
+/// lowest position reached in ledger order, so it becomes the next exclusive
+/// upper bound.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Watermark {
@@ -5972,11 +6297,15 @@ pub struct Watermark {
 }
 /// Marker for the final frame of a successful query stream. Every successful
 /// stream sets `QueryEnd` on exactly one frame, after which no further frames
-/// are sent. That frame always carries the final watermark. For `ItemLimit`, it
-/// also carries the final matching item; for every other reason it carries no
-/// item. A ScanLimit terminal watermark may repeat the previous frame's cursor
-/// when its authoritative scan frontier was already emitted; this does not
-/// repeat an item.
+/// are sent. On streams whose frames carry a `Watermark`, that frame always
+/// carries the final watermark. For `ItemLimit`, it also carries the final
+/// matching item; for every other reason it carries no item. A ScanLimit
+/// terminal watermark may repeat the previous frame's cursor when its
+/// authoritative scan frontier was already emitted; this does not repeat an
+/// item.
+///
+/// `QueryEnd` marks a frame; it is not an item, and it does not count against
+/// `QueryOptions.limit`.
 ///
 /// A stream that fails or is cancelled terminates with a gRPC status and does
 /// not send `QueryEnd`.
@@ -6025,8 +6354,10 @@ pub enum QueryEndReason {
     /// The stop reason was not specified.
     Unknown = 0,
     /// The response reached the requested item limit. The final matching item's
-    /// frame carries `QueryEnd` and the final watermark. Resume from that frame's
-    /// `Watermark.cursor` to continue reading the same effective interval.
+    /// frame carries `QueryEnd`, plus the final watermark on streams whose frames
+    /// carry one. Resume from that frame's `Watermark.cursor`, or from the
+    /// item's own cursor on streams without watermarks, to continue reading the
+    /// same effective interval.
     ItemLimit = 1,
     /// The response reached the server's per-request bucket-fetch budget for
     /// filtered scans before reaching the effective interval bound. The terminal
@@ -6034,13 +6365,15 @@ pub enum QueryEndReason {
     /// frontier from which to resume.
     ScanLimit = 2,
     /// The scan reached the edge of the window the request set: its checkpoint
-    /// range bound, or a start or end position the request set within a
+    /// range bound, a start or end position the request set within a
     /// checkpoint at that range's edge (for example `end_transaction_index` on
-    /// `ListTransactionsRequest`). The terminal frame carries no item.
+    /// `ListTransactionsRequest`), or the version range or `at_checkpoint` of
+    /// `ListObjectVersionsRequest`. The terminal frame carries no item.
     CheckpointBound = 3,
     /// The scan reached an exclusive cursor bound. The terminal frame carries no
-    /// item. Its watermark cursor represents that resolved bound without claiming
-    /// that its containing checkpoint was fully covered.
+    /// item. On streams whose frames carry a watermark, its cursor represents
+    /// that resolved bound without claiming that its containing checkpoint was
+    /// fully covered.
     CursorBound = 4,
     /// The scan reached the currently indexed ledger tip. The terminal frame
     /// carries no item.
