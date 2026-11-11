@@ -23,6 +23,13 @@ service LedgerService {
   rpc GetObject(GetObjectRequest) returns (GetObjectResponse);
   rpc BatchGetObjects(BatchGetObjectsRequest) returns (BatchGetObjectsResponse);
 
+  // List one object's live versions, in ascending or descending version
+  // order, one version per response frame, paged by cursor.
+  //
+  // Servers that prune history, such as fullnodes, list the versions they
+  // retain; see `ListObjectVersionsRequest`.
+  rpc ListObjectVersions(ListObjectVersionsRequest) returns (stream ListObjectVersionsResponse);
+
   rpc GetTransaction(GetTransactionRequest) returns (GetTransactionResponse);
   rpc BatchGetTransactions(BatchGetTransactionsRequest) returns (BatchGetTransactionsResponse);
 
@@ -173,6 +180,160 @@ message GetObjectResult {
     Object object = 1;
     google.rpc.Status error = 2;
   }
+}
+
+// Request message for LedgerService.ListObjectVersions.
+//
+// Lists only the object's live versions: versions at which the object was
+// deleted or wrapped have no contents, are skipped, and do not count toward
+// `options.limit`. Versions are bounded by the intersection of `start_version`
+// and `end_version`, `options.after` and `options.before`, and
+// `at_checkpoint` (or, when it is unset, the highest checkpoint the server has
+// indexed). When no live version falls within those bounds, including when the
+// object does not exist, the stream delivers no versions and ends with
+// `QueryEnd` rather than failing with `NOT_FOUND`.
+//
+// Without `at_checkpoint`, an `options.after` or `options.before` cursor above
+// the object's version at the highest checkpoint the server has indexed, or
+// any cursor for an object with no version there, fails with `OUT_OF_RANGE`
+// and reason `ABOVE_LATEST_AVAILABLE` (`bound` "cursor"), whatever the
+// ordering and version range. Such a cursor comes from a server that has
+// indexed further, for example another replica behind the same load
+// balancer, and listing from this server's view would skip versions or end
+// early. A version cursor records no checkpoint, so the error's
+// `requestedCheckpoint` is its `firstUnavailableCheckpoint`. With
+// `at_checkpoint` set, the listing stops at that checkpoint whatever the
+// cursors.
+//
+// Servers that prune history, such as fullnodes, list the versions they
+// retain. Such a server keeps object state from the end of one checkpoint on,
+// the checkpoint its `BELOW_EARLIEST_AVAILABLE` errors name as
+// `lowestAvailableCheckpoint`. Pruning removes the versions of an object
+// that were superseded at or before the end of that checkpoint, including
+// versions written and superseded within it, and keeps the object's version
+// at the end of it. An object created after that checkpoint keeps its whole
+// history. A listing never starts or ends inside pruned history without
+// saying so: when the object's older versions were pruned and the request's
+// bounds admit versions below its oldest retained version (including when
+// neither `start_version` nor `options.after` is set), the request fails with
+// `OUT_OF_RANGE` and reason `BELOW_EARLIEST_AVAILABLE`. The error's metadata
+// carries `lowestAvailableVersion`, the object's oldest retained version, as
+// well as `lowestAvailableCheckpoint`.
+//
+// - Ascending, the request fails before streaming anything. Setting
+//   `start_version` to `lowestAvailableVersion` lists the retained versions.
+// - Descending, the stream delivers every retained version within the
+//   request's bounds and then, unless it reached `options.limit` first,
+//   fails with that error instead of ending with `QueryEnd`.
+//
+// Servers that keep no object version history, or are still restoring it,
+// fail with `UNAVAILABLE`.
+message ListObjectVersionsRequest {
+  // Required. The `ObjectId` of the object whose versions to list.
+  optional string object_id = 1;
+
+  // Mask specifying which fields of each version's `object` to read.
+  // If no mask is specified, defaults to `object_id,version,digest`.
+  optional google.protobuf.FieldMask read_mask = 2;
+
+  // Optional. Cursor-bounded paging.
+  //
+  // This listing's order is ascending version.
+  //
+  // - `limit`: the maximum number of versions to stream. Defaults to `50`
+  //   when unset; the maximum is `1000`, and larger values are coerced to
+  //   `1000` (and `0` to `1`).
+  // - `after` / `before`: exclusive bounds in this listing's order, taken
+  //   from `ListObjectVersionsResponse.cursor` in earlier streams. Their
+  //   meaning does not depend on `ordering`. Either or both may be set, and
+  //   they intersect with `start_version`, `end_version`, and
+  //   `at_checkpoint`. A malformed cursor, or one for another object, fails
+  //   with `INVALID_ARGUMENT`.
+  // - `ordering`: `ORDERING_ASCENDING` (the default) returns versions in
+  //   this listing's order, and `ORDERING_DESCENDING` in reverse.
+  //
+  // Responses carry no `Watermark`: resume from the `cursor` of the last
+  // version received, and read the stream's `QueryEnd` to tell whether
+  // versions remain (see `ListObjectVersionsResponse`). To page backward from
+  // the versions already received, request `ORDERING_DESCENDING` with
+  // `before` set to the `cursor` of the first version in this listing's
+  // order.
+  optional QueryOptions options = 3;
+
+  // Optional. Start of the version range to list (inclusive). Intersects with
+  // every other bound.
+  optional uint64 start_version = 4;
+
+  // Optional. End of the version range to list (exclusive). Intersects with
+  // every other bound.
+  optional uint64 end_version = 5;
+
+  // Optional. List only the versions written at or before this checkpoint.
+  // Intersects with every other bound.
+  //
+  // If unset, the server lists only the versions written at or before the
+  // highest checkpoint it has indexed, so that paging never skips a version
+  // that was still being indexed when a later version was listed.
+  //
+  // The checkpoint must be at or below the highest checkpoint the server has
+  // indexed; larger values fail with `OUT_OF_RANGE` and reason
+  // `ABOVE_LATEST_AVAILABLE`, because the server cannot answer for them yet.
+  // Servers that prune history may also fail with `OUT_OF_RANGE` and reason
+  // `BELOW_EARLIEST_AVAILABLE` for checkpoints below their lowest available
+  // one, and servers still backfilling history may fail with `UNAVAILABLE`.
+  optional uint64 at_checkpoint = 6;
+}
+
+// Response message for LedgerService.ListObjectVersions.
+//
+// A frame with `object` set delivers one live version, in this listing's
+// order (ascending version), or in reverse when `options.ordering` is
+// `ORDERING_DESCENDING`, and carries that version's `cursor`. Frames carry no
+// `Watermark`: a version listing has no filter, so there is no scan progress
+// to report.
+//
+// `end` is set exactly once, on the final frame of a successful stream, with
+// one of these reasons:
+//
+// - `QUERY_END_REASON_ITEM_LIMIT`: the stream delivered the coerced
+//   `options.limit` versions. The frame that delivers the last of them
+//   carries `end`, even when no further versions remain.
+// - `QUERY_END_REASON_CURSOR_BOUND`: the listing reached `options.before`
+//   (ascending) or `options.after` (descending).
+// - `QUERY_END_REASON_CHECKPOINT_BOUND`: the listing reached the edge of the
+//   window the request set: `end_version` or the object's newest version at
+//   `at_checkpoint` (ascending), or `start_version` or the object's first
+//   version (descending).
+// - `QUERY_END_REASON_LEDGER_TIP`: an ascending listing with `at_checkpoint`
+//   unset reached the object's newest version at the highest checkpoint the
+//   server has indexed, before reaching `end_version` or `options.before`.
+//   Versions written later may extend the listing.
+//
+// For every reason other than `QUERY_END_REASON_ITEM_LIMIT`, the final frame
+// has no `object` or `cursor`.
+//
+// To continue in the same direction, keep the request's other fields and pass
+// the `cursor` of the last version received as `options.after` (ascending)
+// or `options.before` (descending). After `QUERY_END_REASON_ITEM_LIMIT` that
+// reads the next page, and after `QUERY_END_REASON_LEDGER_TIP` it lists
+// versions written since. `QUERY_END_REASON_CURSOR_BOUND` and
+// `QUERY_END_REASON_CHECKPOINT_BOUND` mean no version within the request's
+// bounds remains in that direction.
+//
+// A stream that fails or is cancelled terminates with a gRPC status and does
+// not send `QueryEnd`.
+message ListObjectVersionsResponse {
+  // One live version of the object, with the fields selected by
+  // `ListObjectVersionsRequest.read_mask`.
+  optional Object object = 1;
+
+  // The opaque position of this version in the listing, for use as
+  // `ListObjectVersionsRequest.options.after` or `options.before`. Set on
+  // every frame that carries `object`.
+  optional bytes cursor = 2;
+
+  // Set exactly once, on the final frame of a successful stream.
+  optional QueryEnd end = 3;
 }
 
 message GetTransactionRequest {
