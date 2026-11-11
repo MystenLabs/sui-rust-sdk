@@ -110,6 +110,10 @@ enum ErrorReason {
   // cursor past it ends an empty response with `LEDGER_TIP` at the position
   // that cursor resumes from.
   //
+  // Requests pinned to a checkpoint, such as `GetPackage` with
+  // `at_checkpoint`, return this with `OUT_OF_RANGE` when that checkpoint is
+  // above the latest indexed checkpoint.
+  //
   // Such a cursor comes from a newer view of the ledger than this server's,
   // for example from another replica behind the same load balancer. The data
   // is not indexed here yet, so the same request becomes servable once this
@@ -134,8 +138,8 @@ enum ErrorReason {
   //
   // Metadata, with checkpoints as decimal strings:
   // - `bound`: what reads above the indexed data: "cursor" for a `before` or
-  //   `after` cursor, or the name of the request field, "start_checkpoint"
-  //   or "end_checkpoint".
+  //   `after` cursor, or the name of the request field, such as
+  //   "start_checkpoint", "end_checkpoint" or "at_checkpoint".
   // - `requestedCheckpoint`: the checkpoint recorded in the cursor, or the
   //   value of the request field.
   // - `firstUnavailableCheckpoint`: the lowest checkpoint this server has not
@@ -152,6 +156,10 @@ enum ErrorReason {
   // descending query that reaches the lowest checkpoint fails after it
   // streams every item at or above that checkpoint, and its last response
   // carries a watermark at that checkpoint.
+  //
+  // Requests pinned to a checkpoint, such as `GetPackage` with
+  // `at_checkpoint`, return this with `OUT_OF_RANGE` when that checkpoint is
+  // below the lowest checkpoint this server serves.
   //
   // Pruned data does not come back, so the same request fails the same way
   // on this server. A client can send it to a server that retains the data,
