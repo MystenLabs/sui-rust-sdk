@@ -6183,12 +6183,47 @@ pub(crate) mod _field_impls {
             number: 3i32,
             message_fields: None,
         };
+        pub const AT_CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "at_checkpoint",
+            json_name: "atCheckpoint",
+            number: 4i32,
+            message_fields: None,
+        };
+        pub const OPTIONS_FIELD: &'static MessageField = &MessageField {
+            name: "options",
+            json_name: "options",
+            number: 5i32,
+            message_fields: Some(QueryOptions::FIELDS),
+        };
+        pub const START_VERSION_FIELD: &'static MessageField = &MessageField {
+            name: "start_version",
+            json_name: "startVersion",
+            number: 6i32,
+            message_fields: None,
+        };
+        pub const END_VERSION_FIELD: &'static MessageField = &MessageField {
+            name: "end_version",
+            json_name: "endVersion",
+            number: 7i32,
+            message_fields: None,
+        };
+        pub const START_CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "start_checkpoint",
+            json_name: "startCheckpoint",
+            number: 8i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for ListPackageVersionsRequest {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::PACKAGE_ID_FIELD,
             Self::PAGE_SIZE_FIELD,
             Self::PAGE_TOKEN_FIELD,
+            Self::AT_CHECKPOINT_FIELD,
+            Self::OPTIONS_FIELD,
+            Self::START_VERSION_FIELD,
+            Self::END_VERSION_FIELD,
+            Self::START_CHECKPOINT_FIELD,
         ];
     }
     impl ListPackageVersionsRequest {
@@ -6221,6 +6256,26 @@ pub(crate) mod _field_impls {
         }
         pub fn page_token(mut self) -> String {
             self.path.push(ListPackageVersionsRequest::PAGE_TOKEN_FIELD.name);
+            self.finish()
+        }
+        pub fn at_checkpoint(mut self) -> String {
+            self.path.push(ListPackageVersionsRequest::AT_CHECKPOINT_FIELD.name);
+            self.finish()
+        }
+        pub fn options(mut self) -> QueryOptionsFieldPathBuilder {
+            self.path.push(ListPackageVersionsRequest::OPTIONS_FIELD.name);
+            QueryOptionsFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn start_version(mut self) -> String {
+            self.path.push(ListPackageVersionsRequest::START_VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn end_version(mut self) -> String {
+            self.path.push(ListPackageVersionsRequest::END_VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn start_checkpoint(mut self) -> String {
+            self.path.push(ListPackageVersionsRequest::START_CHECKPOINT_FIELD.name);
             self.finish()
         }
     }
@@ -6273,6 +6328,78 @@ pub(crate) mod _field_impls {
             self.finish()
         }
     }
+    impl ListSystemPackagesRequest {
+        pub const AT_CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "at_checkpoint",
+            json_name: "atCheckpoint",
+            number: 1i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for ListSystemPackagesRequest {
+        const FIELDS: &'static [&'static MessageField] = &[Self::AT_CHECKPOINT_FIELD];
+    }
+    impl ListSystemPackagesRequest {
+        pub fn path_builder() -> ListSystemPackagesRequestFieldPathBuilder {
+            ListSystemPackagesRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct ListSystemPackagesRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ListSystemPackagesRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn at_checkpoint(mut self) -> String {
+            self.path.push(ListSystemPackagesRequest::AT_CHECKPOINT_FIELD.name);
+            self.finish()
+        }
+    }
+    impl ListSystemPackagesResponse {
+        pub const SYSTEM_PACKAGES_FIELD: &'static MessageField = &MessageField {
+            name: "system_packages",
+            json_name: "systemPackages",
+            number: 1i32,
+            message_fields: Some(PackageVersion::FIELDS),
+        };
+    }
+    impl MessageFields for ListSystemPackagesResponse {
+        const FIELDS: &'static [&'static MessageField] = &[Self::SYSTEM_PACKAGES_FIELD];
+    }
+    impl ListSystemPackagesResponse {
+        pub fn path_builder() -> ListSystemPackagesResponseFieldPathBuilder {
+            ListSystemPackagesResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct ListSystemPackagesResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ListSystemPackagesResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn system_packages(mut self) -> PackageVersionFieldPathBuilder {
+            self.path.push(ListSystemPackagesResponse::SYSTEM_PACKAGES_FIELD.name);
+            PackageVersionFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl PackageVersion {
         pub const PACKAGE_ID_FIELD: &'static MessageField = &MessageField {
             name: "package_id",
@@ -6286,11 +6413,32 @@ pub(crate) mod _field_impls {
             number: 2i32,
             message_fields: None,
         };
+        pub const CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "checkpoint",
+            json_name: "checkpoint",
+            number: 3i32,
+            message_fields: None,
+        };
+        pub const CURSOR_FIELD: &'static MessageField = &MessageField {
+            name: "cursor",
+            json_name: "cursor",
+            number: 4i32,
+            message_fields: None,
+        };
+        pub const ORIGINAL_ID_FIELD: &'static MessageField = &MessageField {
+            name: "original_id",
+            json_name: "originalId",
+            number: 5i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for PackageVersion {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::PACKAGE_ID_FIELD,
             Self::VERSION_FIELD,
+            Self::CHECKPOINT_FIELD,
+            Self::CURSOR_FIELD,
+            Self::ORIGINAL_ID_FIELD,
         ];
     }
     impl PackageVersion {
@@ -6319,6 +6467,18 @@ pub(crate) mod _field_impls {
         }
         pub fn version(mut self) -> String {
             self.path.push(PackageVersion::VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn checkpoint(mut self) -> String {
+            self.path.push(PackageVersion::CHECKPOINT_FIELD.name);
+            self.finish()
+        }
+        pub fn cursor(mut self) -> String {
+            self.path.push(PackageVersion::CURSOR_FIELD.name);
+            self.finish()
+        }
+        pub fn original_id(mut self) -> String {
+            self.path.push(PackageVersion::ORIGINAL_ID_FIELD.name);
             self.finish()
         }
     }
