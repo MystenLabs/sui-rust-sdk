@@ -23,6 +23,14 @@ service LedgerService {
   rpc GetObject(GetObjectRequest) returns (GetObjectResponse);
   rpc BatchGetObjects(BatchGetObjectsRequest) returns (BatchGetObjectsResponse);
 
+  // List one object's history: its live versions and the versions at which it
+  // was deleted or wrapped, in ascending or descending version order, one per
+  // response frame, paged by cursor.
+  //
+  // Servers that prune history, such as fullnodes, list the versions they
+  // retain; see `ListObjectVersionsRequest`.
+  rpc ListObjectVersions(ListObjectVersionsRequest) returns (stream ListObjectVersionsResponse);
+
   rpc GetTransaction(GetTransactionRequest) returns (GetTransactionResponse);
   rpc BatchGetTransactions(BatchGetTransactionsRequest) returns (BatchGetTransactionsResponse);
 
@@ -87,14 +95,63 @@ message GetObjectRequest {
   // Required. The `ObjectId` of the requested object.
   optional string object_id = 1;
 
-  // Request a specific version of the object.
-  // If no version is specified, and the object is live, then the latest
-  // version of the object is returned.
+  // Optional. Request a specific version of the object.
+  //
+  // Mutually exclusive with `max_version`; servers reject a request that sets
+  // both with `INVALID_ARGUMENT`. If none of `version`, `max_version` and
+  // `at_checkpoint` is set and the object is live, the latest version of the
+  // object is returned.
+  //
+  // Servers that prune history may fail with `NOT_FOUND` for versions that
+  // were superseded before their lowest available checkpoint.
   optional uint64 version = 2;
 
   // Mask specifying which fields to read.
   // If no mask is specified, defaults to `object_id,version,digest`.
   optional google.protobuf.FieldMask read_mask = 3;
+
+  // Optional. Set alone, return the object's state at the end of this
+  // checkpoint: a successful response is exact as of `at_checkpoint`, and an
+  // object that was deleted or wrapped at or before this checkpoint (and not
+  // since unwrapped) is `NOT_FOUND`.
+  //
+  // Combined with `version` or `max_version`, `at_checkpoint` instead bounds
+  // which versions are visible: the server first resolves the version that
+  // `version` or `max_version` selects, then fails with `NOT_FOUND` if that
+  // version was written in a checkpoint after `at_checkpoint`. `max_version`
+  // selects among every version the server has indexed, including versions
+  // written after `at_checkpoint` (see `max_version`). The server does not
+  // fall back to an older version that was visible at `at_checkpoint`, and it
+  // returns a visible version even if the object was deleted or wrapped by
+  // the end of `at_checkpoint`. For example, if version 5 was written in
+  // checkpoint 10 and version 8 in checkpoint 20, `max_version: 8` with
+  // `at_checkpoint: 15` is `NOT_FOUND`, and with `at_checkpoint: 25` returns
+  // version 8.
+  //
+  // Either way, the checkpoint must be at or below the highest checkpoint the
+  // server has indexed; larger values fail with `OUT_OF_RANGE` and reason
+  // `ABOVE_LATEST_AVAILABLE`, because the server cannot answer for them yet.
+  // Servers that prune history may also fail with `OUT_OF_RANGE` and reason
+  // `BELOW_EARLIEST_AVAILABLE` for checkpoints below their lowest available
+  // one, and servers still backfilling history may fail with `UNAVAILABLE`.
+  optional uint64 at_checkpoint = 4;
+
+  // Optional. Return the object's newest version at or below `max_version`.
+  //
+  // The server selects only among the object's versions at or below its
+  // version at the highest checkpoint the server has indexed, so the answer
+  // to the same request changes only as the server indexes further.
+  //
+  // Fails with `NOT_FOUND` if the object has no version at or below
+  // `max_version`, or if it was deleted or wrapped at that newest version.
+  // With `at_checkpoint`, that newest version must also have been written at
+  // or before `at_checkpoint`; see `at_checkpoint`.
+  //
+  // Mutually exclusive with `version`; servers reject a request that sets
+  // both with `INVALID_ARGUMENT`. Servers that prune history may fail with
+  // `NOT_FOUND` when the newest version at or below `max_version` was
+  // superseded before their lowest available checkpoint.
+  optional uint64 max_version = 5;
 }
 
 message GetObjectResponse {
@@ -102,6 +159,12 @@ message GetObjectResponse {
 }
 
 message BatchGetObjectsRequest {
+  // The objects to fetch. Each request carries its own `version`,
+  // `max_version` or `at_checkpoint`, so a single batch may read different
+  // objects at different versions or checkpoints. Errors for individual
+  // objects, such as `NOT_FOUND`, are reported per item in the response. A
+  // malformed request, such as one that sets both `version` and
+  // `max_version`, fails the whole batch with `INVALID_ARGUMENT`.
   repeated GetObjectRequest requests = 1;
 
   // Mask specifying which fields to read.
@@ -118,6 +181,244 @@ message GetObjectResult {
     Object object = 1;
     google.rpc.Status error = 2;
   }
+}
+
+// Request message for LedgerService.ListObjectVersions.
+//
+// Lists the object's history as items, one per version: a live version
+// (`ListObjectVersionsResponse.object`), or a removal
+// (`ListObjectVersionsResponse.removal`) at a version where the object was
+// deleted or wrapped. Removals count toward `options.limit` like live
+// versions, and every bound below applies to them the same way. Items are
+// bounded by the intersection of `start_version` and `end_version`,
+// `options.after` and `options.before`, and `at_checkpoint` (or, when it is
+// unset, the highest checkpoint the server has indexed). When no item falls
+// within those bounds, including when the object does not exist, the stream
+// delivers no items and ends with `QueryEnd` rather than failing with
+// `NOT_FOUND`, except on servers that prune history (see below).
+//
+// An object's history ends at a `DELETED` removal, because object IDs are
+// never reused. After a `WRAPPED` removal the object can be unwrapped at a
+// higher version, and the listing continues from there. A transaction that
+// unwraps and deletes an object shows as a `DELETED` removal, which can follow
+// a `WRAPPED` removal with no live version between them, or be the object's
+// only item: an object created already wrapped, then unwrapped and deleted in
+// one transaction, never had a live version. An object that has stayed
+// wrapped since its creation has no items.
+//
+// Without `at_checkpoint`, a cursor can name a version above the object's
+// version at the highest checkpoint the server has indexed, or name any
+// version of an object with no version there. Such a cursor comes from a
+// server that has indexed further, for example another replica behind the
+// same load balancer. As in the other `List*` RPCs:
+//
+// - A descending listing with such an `options.after` or `options.before`
+//   cursor fails with `OUT_OF_RANGE` and reason `ABOVE_LATEST_AVAILABLE`
+//   (`bound` "cursor"), whatever the version range, because listing from
+//   this server's view would skip versions below the cursor that it has not
+//   indexed. A version cursor records no checkpoint, so the error's
+//   `requestedCheckpoint` is its `firstUnavailableCheckpoint`.
+// - An ascending listing is served from this server's view: it ends at the
+//   object's version at the highest checkpoint the server has indexed with
+//   `QUERY_END_REASON_LEDGER_TIP`, unless `end_version`, or a `before`
+//   cursor at or below `after`, ends it first, as it would on a server that
+//   has caught up. With such an `after` cursor it lists nothing, and the
+//   client resumes with that same cursor once the server has caught up.
+//
+// A server that prunes history may instead fail the request for an object it
+// retains nothing of (see below). With `at_checkpoint` set, the listing stops
+// at that checkpoint whatever the cursors.
+//
+// Servers that prune history, such as fullnodes, list the items they retain.
+// Such a server keeps object state from the end of one checkpoint on, the
+// checkpoint its `BELOW_EARLIEST_AVAILABLE` errors name as
+// `lowestAvailableCheckpoint`. Pruning removes an object's live versions and
+// removals at or before the end of that checkpoint, including those written
+// and superseded within it, except a live version that is the object's state
+// at the end of it. Removals written after that checkpoint are retained and
+// count as retained versions below, so an object's oldest retained version
+// can be a removal. A listing never starts or ends inside pruned history
+// without saying so: when the object's older versions were pruned and the
+// request's bounds admit versions below its oldest retained version
+// (including when neither `start_version` nor `options.after` is set), the
+// request fails with `OUT_OF_RANGE` and reason `BELOW_EARLIEST_AVAILABLE`.
+// The error's metadata carries `lowestAvailableVersion`, the object's oldest
+// retained version, as well as `lowestAvailableCheckpoint`.
+//
+// - Ascending, the request fails before streaming anything. Setting
+//   `start_version` to `lowestAvailableVersion` lists the retained items.
+// - Descending, the stream delivers every retained item within the
+//   request's bounds and then, unless it reached `options.limit` first,
+//   fails with that error instead of ending with `QueryEnd`.
+//
+// An object created after `lowestAvailableCheckpoint` usually keeps its whole
+// history. An object that was wrapped at or before that checkpoint and
+// unwrapped after it has lost its earlier history, including that `WRAPPED`
+// removal: its oldest retained version is the version it was unwrapped at (a
+// `DELETED` removal if the same transaction deleted it), and the rule above
+// applies there. The server cannot always tell an unwrap from a creation,
+// because the effects that would show it may be pruned, and when it cannot
+// it applies the rule anyway. So the server may refuse versions below an
+// object's oldest retained version even for an object created after that
+// checkpoint.
+//
+// On a server that has pruned history, a request for an object it retains no
+// item of, neither a live version nor a removal, fails with `OUT_OF_RANGE`
+// and reason `BELOW_EARLIEST_AVAILABLE`, with only
+// `lowestAvailableCheckpoint` in its metadata, rather than listing no items.
+// Such an object was deleted, or wrapped and not since unwrapped, at or
+// before that checkpoint, or never existed, and the server cannot tell which.
+// This error takes precedence over the `ABOVE_LATEST_AVAILABLE` error for a
+// cursor, but not over the errors for `at_checkpoint`.
+//
+// Servers that do not offer this method fail with `UNIMPLEMENTED`; for
+// example, kv-rpc without object-at-checkpoint indexing, which fails its
+// `GetObject` reads with `at_checkpoint` or `max_version` the same way.
+// Fullnodes fail with `UNAVAILABLE` when they run without RPC indexes, run
+// the objects compactor, or are still restoring history.
+message ListObjectVersionsRequest {
+  // Required. The `ObjectId` of the object whose versions to list.
+  optional string object_id = 1;
+
+  // Mask specifying which fields of each live version's `object` to read.
+  // If no mask is specified, defaults to `object_id,version,digest`. It does
+  // not apply to `removal`, which always carries all of its fields that the
+  // server has.
+  optional google.protobuf.FieldMask read_mask = 2;
+
+  // Optional. Cursor-bounded paging.
+  //
+  // This listing's order is ascending version.
+  //
+  // - `limit`: the maximum number of items, live versions and removals, to
+  //   stream. Defaults to `50` when unset; the maximum is `1000`, and larger
+  //   values are coerced to `1000` (and `0` to `1`).
+  // - `after` / `before`: exclusive bounds in this listing's order, taken
+  //   from `ListObjectVersionsResponse.cursor` in earlier streams. Their
+  //   meaning does not depend on `ordering`. Either or both may be set, and
+  //   they intersect with `start_version`, `end_version`, and
+  //   `at_checkpoint`. A malformed cursor, or one for another object, fails
+  //   with `INVALID_ARGUMENT`.
+  // - `ordering`: `ORDERING_ASCENDING` (the default) returns items in this
+  //   listing's order, and `ORDERING_DESCENDING` in reverse.
+  //
+  // Responses carry no `Watermark`: resume from the `cursor` of the last
+  // item received, and read the stream's `QueryEnd` to tell whether items
+  // remain (see `ListObjectVersionsResponse`). To page backward from the
+  // items already received, request `ORDERING_DESCENDING` with `before` set
+  // to the `cursor` of the first item in this listing's order.
+  optional QueryOptions options = 3;
+
+  // Optional. Start of the version range to list (inclusive). Intersects with
+  // every other bound.
+  optional uint64 start_version = 4;
+
+  // Optional. End of the version range to list (exclusive). Intersects with
+  // every other bound.
+  optional uint64 end_version = 5;
+
+  // Optional. List only the versions, live or removed, written at or before
+  // this checkpoint. Intersects with every other bound.
+  //
+  // If unset, the server lists only the versions written at or before the
+  // highest checkpoint it has indexed, so that paging never skips a version
+  // that was still being indexed when a later version was listed.
+  //
+  // The checkpoint must be at or below the highest checkpoint the server has
+  // indexed; larger values fail with `OUT_OF_RANGE` and reason
+  // `ABOVE_LATEST_AVAILABLE`, because the server cannot answer for them yet.
+  // Servers that prune history may also fail with `OUT_OF_RANGE` and reason
+  // `BELOW_EARLIEST_AVAILABLE` for checkpoints below their lowest available
+  // one, and servers still backfilling history may fail with `UNAVAILABLE`.
+  optional uint64 at_checkpoint = 6;
+}
+
+// Response message for LedgerService.ListObjectVersions.
+//
+// A frame that delivers an item sets exactly one of `object`, for a live
+// version, and `removal`, for a version at which the object was deleted or
+// wrapped, and carries that item's `cursor`. Items come in this listing's
+// order (ascending version), or in reverse when `options.ordering` is
+// `ORDERING_DESCENDING`. Frames carry no `Watermark`: a version listing has
+// no filter, so there is no scan progress to report.
+//
+// `end` is set exactly once, on the final frame of a successful stream, with
+// one of these reasons:
+//
+// - `QUERY_END_REASON_ITEM_LIMIT`: the stream delivered the coerced
+//   `options.limit` items. The frame that delivers the last of them, a live
+//   version or a removal, carries `end`, even when no further items remain.
+// - `QUERY_END_REASON_CURSOR_BOUND`: the listing reached `options.before`
+//   (ascending) or `options.after` (descending).
+// - `QUERY_END_REASON_CHECKPOINT_BOUND`: the listing reached the edge of the
+//   window the request set: `end_version` or the object's newest version at
+//   `at_checkpoint` (ascending), or `start_version` or the object's first
+//   version (descending).
+// - `QUERY_END_REASON_LEDGER_TIP`: an ascending listing with `at_checkpoint`
+//   unset reached the object's newest version at the highest checkpoint the
+//   server has indexed, or started past it from an `options.after` cursor,
+//   before reaching `end_version` or `options.before`. Versions written later
+//   may extend the listing, unless its last item is a `DELETED` removal.
+//
+// For every reason other than `QUERY_END_REASON_ITEM_LIMIT`, the final frame
+// has no `object`, `removal` or `cursor`.
+//
+// To continue in the same direction, keep the request's other fields and pass
+// the `cursor` of the last item received as `options.after` (ascending) or
+// `options.before` (descending). After `QUERY_END_REASON_ITEM_LIMIT` that
+// reads the next page, and after `QUERY_END_REASON_LEDGER_TIP` it lists
+// versions written since. `QUERY_END_REASON_CURSOR_BOUND` and
+// `QUERY_END_REASON_CHECKPOINT_BOUND` mean no item within the request's
+// bounds remains in that direction.
+//
+// A stream that fails or is cancelled terminates with a gRPC status and does
+// not send `QueryEnd`.
+message ListObjectVersionsResponse {
+  // One live version of the object, with the fields selected by
+  // `ListObjectVersionsRequest.read_mask`.
+  optional Object object = 1;
+
+  // The opaque position of this frame's item in the listing, for use as
+  // `ListObjectVersionsRequest.options.after` or `options.before`. Set on
+  // every frame that carries `object` or `removal`.
+  optional bytes cursor = 2;
+
+  // Set exactly once, on the final frame of a successful stream.
+  optional QueryEnd end = 3;
+
+  // A version at which the object was deleted or wrapped.
+  optional ObjectRemoval removal = 4;
+}
+
+// A version at which an object was deleted or wrapped, listed by
+// `ListObjectVersions`. The object has no contents at this version:
+// `GetObject` for this `version`, or with a `max_version` whose newest version
+// at or below it is this one, fails with `NOT_FOUND`.
+message ObjectRemoval {
+  // How the object was removed.
+  enum Kind {
+    KIND_UNKNOWN = 0;
+
+    // The object was deleted. Object IDs are never reused, so this is the
+    // object's last version. A transaction that unwraps and deletes an object
+    // also shows as `DELETED`.
+    DELETED = 1;
+
+    // The object was wrapped in another object. It can later be unwrapped at
+    // a higher version.
+    WRAPPED = 2;
+  }
+
+  // The version the transaction that removed the object assigned it.
+  optional uint64 version = 1;
+
+  // How the object was removed.
+  optional Kind kind = 2;
+
+  // The digest of the transaction that deleted or wrapped the object. Unset
+  // when the server does not have it, for example a fullnode after pruning,
+  // or kv-rpc for removals indexed before it recorded their transactions.
+  optional string transaction = 3;
 }
 
 message GetTransactionRequest {
