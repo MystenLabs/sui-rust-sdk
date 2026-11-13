@@ -105,10 +105,10 @@ enum ErrorReason {
   // - its `end_checkpoint`, which is exclusive, is above
   //   `firstUnavailableCheckpoint`, or, with `end_checkpoint` unset, its
   //   `start_checkpoint` is at or above `firstUnavailableCheckpoint`.
-  // An ascending query never gets this error. Its `before` cursor and its
-  // checkpoint range end at the latest indexed checkpoint, and an `after`
-  // cursor past it ends an empty response with `LEDGER_TIP` at the position
-  // that cursor resumes from.
+  // An ascending query never gets this error for its cursors or checkpoint
+  // range. Its `before` cursor and its checkpoint range end at the latest
+  // indexed checkpoint, and an `after` cursor past it ends an empty response
+  // with `LEDGER_TIP` at the position that cursor resumes from.
   //
   // Such a cursor comes from a newer view of the ledger than this server's,
   // for example from another replica behind the same load balancer. The data
@@ -116,9 +116,14 @@ enum ErrorReason {
   // server catches up, and a client may resend it unchanged after a delay. A
   // cursor comes from a server that had indexed its position, so a request
   // rejected for its cursor (`bound` is "cursor") is servable within the time
-  // replicas take to catch up with each other. A checkpoint bound may name a
-  // checkpoint the chain has not reached, so retrying it can wait
-  // indefinitely.
+  // replicas take to catch up with each other. Any other `bound` names a
+  // checkpoint the caller chose, which the chain may not have reached, so it
+  // is not retried automatically.
+  //
+  // A server also returns this with `UNAVAILABLE` and `bound`
+  // "min_checkpoint" when it does not reach the checkpoint in the request's
+  // `x-sui-min-checkpoint` header in time. Another replica has reached it, so
+  // a client may retry at once, preferably on another replica.
   //
   // Example of an ErrorInfo for a descending query's `before` cursor at
   // checkpoint 1205, sent to a server whose latest indexed checkpoint is 1199:
@@ -134,10 +139,11 @@ enum ErrorReason {
   //
   // Metadata, with checkpoints as decimal strings:
   // - `bound`: what reads above the indexed data: "cursor" for a `before` or
-  //   `after` cursor, or the name of the request field, "start_checkpoint"
-  //   or "end_checkpoint".
+  //   `after` cursor, "min_checkpoint" for the `x-sui-min-checkpoint` header,
+  //   or the name of the request field, "start_checkpoint" or
+  //   "end_checkpoint".
   // - `requestedCheckpoint`: the checkpoint recorded in the cursor, or the
-  //   value of the request field.
+  //   value of the header or request field.
   // - `firstUnavailableCheckpoint`: the lowest checkpoint this server has not
   //   indexed, one above its latest indexed checkpoint, or "0" if it has
   //   indexed none.
@@ -171,4 +177,48 @@ enum ErrorReason {
   // - `lowestAvailableCheckpoint`: the lowest checkpoint this server serves,
   //   as a decimal string.
   BELOW_EARLIEST_AVAILABLE = 6;
+
+  // This server is not set up for the method, or for this kind of request on
+  // a method it otherwise serves, for example a read at a past checkpoint on a
+  // server that keeps only the latest version of each object. Returned with
+  // `UNIMPLEMENTED`. The same request to the same server always fails the
+  // same way: do not retry it there, send it to a server configured to serve
+  // it. `UNIMPLEMENTED` without this reason means the server does not have
+  // the method at all.
+  //
+  // Example of an ErrorInfo from a server without object version history:
+  //
+  //     { "reason": "NOT_SERVED_HERE",
+  //       "domain": "sui.io",
+  //       "metadata": {
+  //         "cause": "no_object_history"
+  //       }
+  //     }
+  //
+  // Metadata:
+  // - `cause`: what this server lacks: "no_rpc_indexes" (it does not keep
+  //   the RPC indexes the request needs), "no_object_history" (it keeps only
+  //   the latest version of each object), or "disabled_by_config" (its
+  //   configuration turns the method or this kind of request off).
+  NOT_SERVED_HERE = 8;
+
+  // This server cannot serve the request now but will be able to, for example
+  // while it starts or backfills history. Returned with `UNAVAILABLE`. Retry,
+  // preferably on another replica.
+  //
+  // Example of an ErrorInfo from a server backfilling history restored from a
+  // snapshot:
+  //
+  //     { "reason": "NOT_READY",
+  //       "domain": "sui.io",
+  //       "metadata": {
+  //         "cause": "restore_backfill"
+  //       }
+  //     }
+  //
+  // Metadata:
+  // - `cause`: the temporary state that stops the server: "starting",
+  //   "history_catching_up", "restore_backfill", "index_empty",
+  //   "snapshot_missing", "pruning_race" or "retention_above_fleet_floor".
+  NOT_READY = 9;
 }

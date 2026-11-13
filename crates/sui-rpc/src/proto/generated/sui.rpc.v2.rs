@@ -756,12 +756,26 @@ pub struct Epoch {
     #[prost(message, optional, tag = "2")]
     pub committee: ::core::option::Option<ValidatorCommittee>,
     /// Snapshot of Sui's SystemState (`0x3::sui_system::SystemState`) at the
-    /// beginning of the epoch, for past epochs, or the current state for the
-    /// current epoch.
+    /// beginning of the epoch, for an epoch that has ended. For the running
+    /// epoch, the state at the checkpoint the server serves the request at, or
+    /// at the checkpoint before it when that is the epoch's last checkpoint;
+    /// servers without RPC indexes return the live state. Servers that keep only
+    /// the latest version of each object fail with `UNIMPLEMENTED` and reason
+    /// `NOT_SERVED_HERE` when `read_mask` selects it for the running epoch.
+    ///
+    /// The state at an epoch's start, including the running epoch's, can be read
+    /// with `GetObject` of `0x5` at `at_checkpoint` = `first_checkpoint` - 1
+    /// (checkpoint 0 for epoch 0), and then its inner dynamic field at the same
+    /// checkpoint.
     #[prost(message, optional, boxed, tag = "3")]
     pub system_state: ::core::option::Option<::prost::alloc::boxed::Box<SystemState>>,
+    /// The epoch's first checkpoint. Servers without RPC indexes leave it unset
+    /// for the running epoch.
     #[prost(uint64, optional, tag = "4")]
     pub first_checkpoint: ::core::option::Option<u64>,
+    /// The epoch's last checkpoint. Set only when the epoch ended at or before
+    /// the checkpoint the server serves the request at, so it is unset while
+    /// the epoch is running.
     #[prost(uint64, optional, tag = "5")]
     pub last_checkpoint: ::core::option::Option<u64>,
     #[prost(message, optional, tag = "6")]
@@ -773,6 +787,69 @@ pub struct Epoch {
     pub reference_gas_price: ::core::option::Option<u64>,
     #[prost(message, optional, tag = "9")]
     pub protocol_config: ::core::option::Option<ProtocolConfig>,
+    /// Sequence number of the first transaction in this epoch (inclusive).
+    /// Servers without RPC indexes leave it unset for the running epoch.
+    #[prost(uint64, optional, tag = "10")]
+    pub transaction_start_inclusive: ::core::option::Option<u64>,
+    /// One past the sequence number of the epoch's last transaction (exclusive):
+    /// the `total_network_transactions` of `last_checkpoint`. Set only when
+    /// `last_checkpoint` is.
+    #[prost(uint64, optional, tag = "11")]
+    pub transaction_end_exclusive: ::core::option::Option<u64>,
+    /// Whether the epoch ended in safe mode: `advance_epoch` failed and
+    /// `advance_epoch_safe_mode` ran instead, so no `SystemEpochInfoEvent` was
+    /// emitted and `system_epoch_info` is unset. Set only when `last_checkpoint`
+    /// is.
+    #[prost(bool, optional, tag = "12")]
+    pub ended_in_safe_mode: ::core::option::Option<bool>,
+    /// Totals from the `0x3::sui_system_state_inner::SystemEpochInfoEvent`
+    /// emitted when this epoch ended. Set only when `last_checkpoint` is, and
+    /// unset if the epoch ended in safe mode.
+    #[prost(message, optional, tag = "13")]
+    pub system_epoch_info: ::core::option::Option<SystemEpochInfo>,
+    /// Commitments to epoch-specific state (the live object set), from the
+    /// `EndOfEpochData` of `last_checkpoint`. Empty while `last_checkpoint` is
+    /// unset, and for epochs that ended before the protocol added epoch
+    /// commitments.
+    #[prost(message, repeated, tag = "14")]
+    pub epoch_commitments: ::prost::alloc::vec::Vec<CheckpointCommitment>,
+}
+/// Totals reported by `SystemEpochInfoEvent` at the end of an epoch. Amounts
+/// are denominated in MIST.
+#[non_exhaustive]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct SystemEpochInfo {
+    /// Total stake of the validator set for the next epoch.
+    #[prost(uint64, optional, tag = "1")]
+    pub total_stake: ::core::option::Option<u64>,
+    /// Portion of the epoch's computation rewards reinvested into the storage
+    /// fund.
+    #[prost(uint64, optional, tag = "2")]
+    pub storage_fund_reinvestment: ::core::option::Option<u64>,
+    /// Storage fees charged during the epoch, plus those deferred from any
+    /// preceding epochs that ended in safe mode.
+    #[prost(uint64, optional, tag = "3")]
+    pub storage_charge: ::core::option::Option<u64>,
+    /// Storage rebates paid out during the epoch, plus those deferred from any
+    /// preceding epochs that ended in safe mode.
+    #[prost(uint64, optional, tag = "4")]
+    pub storage_rebate: ::core::option::Option<u64>,
+    /// Balance of the storage fund after the epoch change.
+    #[prost(uint64, optional, tag = "5")]
+    pub storage_fund_balance: ::core::option::Option<u64>,
+    /// Stake subsidy paid out at the end of the epoch.
+    #[prost(uint64, optional, tag = "6")]
+    pub stake_subsidy_amount: ::core::option::Option<u64>,
+    /// Computation gas fees collected during the epoch, plus those deferred from
+    /// any preceding epochs that ended in safe mode.
+    #[prost(uint64, optional, tag = "7")]
+    pub total_gas_fees: ::core::option::Option<u64>,
+    /// Stake rewards distributed to validators and their stakers.
+    #[prost(uint64, optional, tag = "8")]
+    pub total_stake_rewards_distributed: ::core::option::Option<u64>,
+    /// Rewards left over after distribution, added to the storage fund.
+    #[prost(uint64, optional, tag = "9")]
+    pub leftover_storage_fund_inflow: ::core::option::Option<u64>,
 }
 /// Error reasons in the `sui.io` error domain, used as the `reason` of a
 /// `google.rpc.ErrorInfo` or of a `google.rpc.BadRequest.FieldViolation`.
@@ -881,10 +958,10 @@ pub enum ErrorReason {
     /// * its `end_checkpoint`, which is exclusive, is above
     ///   `firstUnavailableCheckpoint`, or, with `end_checkpoint` unset, its
     ///   `start_checkpoint` is at or above `firstUnavailableCheckpoint`.
-    ///   An ascending query never gets this error. Its `before` cursor and its
-    ///   checkpoint range end at the latest indexed checkpoint, and an `after`
-    ///   cursor past it ends an empty response with `LEDGER_TIP` at the position
-    ///   that cursor resumes from.
+    ///   An ascending query never gets this error for its cursors or checkpoint
+    ///   range. Its `before` cursor and its checkpoint range end at the latest
+    ///   indexed checkpoint, and an `after` cursor past it ends an empty response
+    ///   with `LEDGER_TIP` at the position that cursor resumes from.
     ///
     /// Such a cursor comes from a newer view of the ledger than this server's,
     /// for example from another replica behind the same load balancer. The data
@@ -892,9 +969,14 @@ pub enum ErrorReason {
     /// server catches up, and a client may resend it unchanged after a delay. A
     /// cursor comes from a server that had indexed its position, so a request
     /// rejected for its cursor (`bound` is "cursor") is servable within the time
-    /// replicas take to catch up with each other. A checkpoint bound may name a
-    /// checkpoint the chain has not reached, so retrying it can wait
-    /// indefinitely.
+    /// replicas take to catch up with each other. Any other `bound` names a
+    /// checkpoint the caller chose, which the chain may not have reached, so it
+    /// is not retried automatically.
+    ///
+    /// A server also returns this with `UNAVAILABLE` and `bound`
+    /// "min_checkpoint" when it does not reach the checkpoint in the request's
+    /// `x-sui-min-checkpoint` header in time. Another replica has reached it, so
+    /// a client may retry at once, preferably on another replica.
     ///
     /// Example of an ErrorInfo for a descending query's `before` cursor at
     /// checkpoint 1205, sent to a server whose latest indexed checkpoint is 1199:
@@ -913,10 +995,11 @@ pub enum ErrorReason {
     /// Metadata, with checkpoints as decimal strings:
     ///
     /// * `bound`: what reads above the indexed data: "cursor" for a `before` or
-    ///   `after` cursor, or the name of the request field, "start_checkpoint"
-    ///   or "end_checkpoint".
+    ///   `after` cursor, "min_checkpoint" for the `x-sui-min-checkpoint` header,
+    ///   or the name of the request field, "start_checkpoint" or
+    ///   "end_checkpoint".
     /// * `requestedCheckpoint`: the checkpoint recorded in the cursor, or the
-    ///   value of the request field.
+    ///   value of the header or request field.
     /// * `firstUnavailableCheckpoint`: the lowest checkpoint this server has not
     ///   indexed, one above its latest indexed checkpoint, or "0" if it has
     ///   indexed none.
@@ -952,6 +1035,54 @@ pub enum ErrorReason {
     /// * `lowestAvailableCheckpoint`: the lowest checkpoint this server serves,
     ///   as a decimal string.
     BelowEarliestAvailable = 6,
+    /// This server is not set up for the method, or for this kind of request on
+    /// a method it otherwise serves, for example a read at a past checkpoint on a
+    /// server that keeps only the latest version of each object. Returned with
+    /// `UNIMPLEMENTED`. The same request to the same server always fails the
+    /// same way: do not retry it there, send it to a server configured to serve
+    /// it. `UNIMPLEMENTED` without this reason means the server does not have
+    /// the method at all.
+    ///
+    /// Example of an ErrorInfo from a server without object version history:
+    ///
+    /// ```text
+    /// { "reason": "NOT_SERVED_HERE",
+    ///    "domain": "sui.io",
+    ///    "metadata": {
+    ///      "cause": "no_object_history"
+    ///    }
+    /// }
+    /// ```
+    ///
+    /// Metadata:
+    ///
+    /// * `cause`: what this server lacks: "no_rpc_indexes" (it does not keep
+    ///   the RPC indexes the request needs), "no_object_history" (it keeps only
+    ///   the latest version of each object), or "disabled_by_config" (its
+    ///   configuration turns the method or this kind of request off).
+    NotServedHere = 8,
+    /// This server cannot serve the request now but will be able to, for example
+    /// while it starts or backfills history. Returned with `UNAVAILABLE`. Retry,
+    /// preferably on another replica.
+    ///
+    /// Example of an ErrorInfo from a server backfilling history restored from a
+    /// snapshot:
+    ///
+    /// ```text
+    /// { "reason": "NOT_READY",
+    ///    "domain": "sui.io",
+    ///    "metadata": {
+    ///      "cause": "restore_backfill"
+    ///    }
+    /// }
+    /// ```
+    ///
+    /// Metadata:
+    ///
+    /// * `cause`: the temporary state that stops the server: "starting",
+    ///   "history_catching_up", "restore_backfill", "index_empty",
+    ///   "snapshot_missing", "pruning_race" or "retention_above_fleet_floor".
+    NotReady = 9,
 }
 impl ErrorReason {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -967,6 +1098,8 @@ impl ErrorReason {
             Self::TransactionExecutionFailed => "TRANSACTION_EXECUTION_FAILED",
             Self::AboveLatestAvailable => "ABOVE_LATEST_AVAILABLE",
             Self::BelowEarliestAvailable => "BELOW_EARLIEST_AVAILABLE",
+            Self::NotServedHere => "NOT_SERVED_HERE",
+            Self::NotReady => "NOT_READY",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -979,6 +1112,8 @@ impl ErrorReason {
             "TRANSACTION_EXECUTION_FAILED" => Some(Self::TransactionExecutionFailed),
             "ABOVE_LATEST_AVAILABLE" => Some(Self::AboveLatestAvailable),
             "BELOW_EARLIEST_AVAILABLE" => Some(Self::BelowEarliestAvailable),
+            "NOT_SERVED_HERE" => Some(Self::NotServedHere),
+            "NOT_READY" => Some(Self::NotReady),
             _ => None,
         }
     }
@@ -2445,8 +2580,11 @@ pub struct GetCheckpointResponse {
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetEpochRequest {
-    /// The requested epoch.
-    /// If no epoch is provided the current epoch will be returned.
+    /// The requested epoch. If unset, the epoch of the checkpoint the server
+    /// serves the request at, or of the live system state on servers without
+    /// RPC indexes. An epoch the server has not reached or has not indexed fails
+    /// with `NOT_FOUND`. Servers without RPC indexes fail a request for a past
+    /// epoch with `UNIMPLEMENTED` and reason `NOT_SERVED_HERE`.
     #[prost(uint64, optional, tag = "1")]
     pub epoch: ::core::option::Option<u64>,
     /// Mask specifying which fields to read.

@@ -6,6 +6,7 @@ syntax = "proto3";
 package sui.rpc.v2;
 
 import "google/protobuf/timestamp.proto";
+import "sui/rpc/v2/checkpoint_summary.proto";
 import "sui/rpc/v2/protocol_config.proto";
 import "sui/rpc/v2/signature.proto";
 import "sui/rpc/v2/system_state.proto";
@@ -17,11 +18,26 @@ message Epoch {
   optional ValidatorCommittee committee = 2;
 
   // Snapshot of Sui's SystemState (`0x3::sui_system::SystemState`) at the
-  // beginning of the epoch, for past epochs, or the current state for the
-  // current epoch.
+  // beginning of the epoch, for an epoch that has ended. For the running
+  // epoch, the state at the checkpoint the server serves the request at, or
+  // at the checkpoint before it when that is the epoch's last checkpoint;
+  // servers without RPC indexes return the live state. Servers that keep only
+  // the latest version of each object fail with `UNIMPLEMENTED` and reason
+  // `NOT_SERVED_HERE` when `read_mask` selects it for the running epoch.
+  //
+  // The state at an epoch's start, including the running epoch's, can be read
+  // with `GetObject` of `0x5` at `at_checkpoint` = `first_checkpoint` - 1
+  // (checkpoint 0 for epoch 0), and then its inner dynamic field at the same
+  // checkpoint.
   optional SystemState system_state = 3;
 
+  // The epoch's first checkpoint. Servers without RPC indexes leave it unset
+  // for the running epoch.
   optional uint64 first_checkpoint = 4;
+
+  // The epoch's last checkpoint. Set only when the epoch ended at or before
+  // the checkpoint the server serves the request at, so it is unset while
+  // the epoch is running.
   optional uint64 last_checkpoint = 5;
 
   optional google.protobuf.Timestamp start = 6;
@@ -31,4 +47,65 @@ message Epoch {
   optional uint64 reference_gas_price = 8;
 
   optional ProtocolConfig protocol_config = 9;
+
+  // Sequence number of the first transaction in this epoch (inclusive).
+  // Servers without RPC indexes leave it unset for the running epoch.
+  optional uint64 transaction_start_inclusive = 10;
+
+  // One past the sequence number of the epoch's last transaction (exclusive):
+  // the `total_network_transactions` of `last_checkpoint`. Set only when
+  // `last_checkpoint` is.
+  optional uint64 transaction_end_exclusive = 11;
+
+  // Whether the epoch ended in safe mode: `advance_epoch` failed and
+  // `advance_epoch_safe_mode` ran instead, so no `SystemEpochInfoEvent` was
+  // emitted and `system_epoch_info` is unset. Set only when `last_checkpoint`
+  // is.
+  optional bool ended_in_safe_mode = 12;
+
+  // Totals from the `0x3::sui_system_state_inner::SystemEpochInfoEvent`
+  // emitted when this epoch ended. Set only when `last_checkpoint` is, and
+  // unset if the epoch ended in safe mode.
+  optional SystemEpochInfo system_epoch_info = 13;
+
+  // Commitments to epoch-specific state (the live object set), from the
+  // `EndOfEpochData` of `last_checkpoint`. Empty while `last_checkpoint` is
+  // unset, and for epochs that ended before the protocol added epoch
+  // commitments.
+  repeated CheckpointCommitment epoch_commitments = 14;
+}
+
+// Totals reported by `SystemEpochInfoEvent` at the end of an epoch. Amounts
+// are denominated in MIST.
+message SystemEpochInfo {
+  // Total stake of the validator set for the next epoch.
+  optional uint64 total_stake = 1;
+
+  // Portion of the epoch's computation rewards reinvested into the storage
+  // fund.
+  optional uint64 storage_fund_reinvestment = 2;
+
+  // Storage fees charged during the epoch, plus those deferred from any
+  // preceding epochs that ended in safe mode.
+  optional uint64 storage_charge = 3;
+
+  // Storage rebates paid out during the epoch, plus those deferred from any
+  // preceding epochs that ended in safe mode.
+  optional uint64 storage_rebate = 4;
+
+  // Balance of the storage fund after the epoch change.
+  optional uint64 storage_fund_balance = 5;
+
+  // Stake subsidy paid out at the end of the epoch.
+  optional uint64 stake_subsidy_amount = 6;
+
+  // Computation gas fees collected during the epoch, plus those deferred from
+  // any preceding epochs that ended in safe mode.
+  optional uint64 total_gas_fees = 7;
+
+  // Stake rewards distributed to validators and their stakers.
+  optional uint64 total_stake_rewards_distributed = 8;
+
+  // Rewards left over after distribution, added to the storage fund.
+  optional uint64 leftover_storage_fund_inflow = 9;
 }
