@@ -173,10 +173,11 @@ message GetCheckpointResponse {
 }
 
 message GetEpochRequest {
-  // The requested epoch.
-  // If no epoch is provided the current epoch will be returned.
-  // An epoch the server has not reached or has not indexed fails with
-  // `NOT_FOUND`.
+  // The requested epoch. If unset, the epoch of the checkpoint the server
+  // serves the request at, or of the live system state on servers without
+  // RPC indexes. An epoch the server has not reached or has not indexed fails
+  // with `NOT_FOUND`. Servers without RPC indexes fail a request for a past
+  // epoch with `UNIMPLEMENTED` and reason `NOT_SERVED_HERE`.
   optional uint64 epoch = 1;
 
   // Mask specifying which fields to read.

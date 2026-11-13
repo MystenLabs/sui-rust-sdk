@@ -756,16 +756,26 @@ pub struct Epoch {
     #[prost(message, optional, tag = "2")]
     pub committee: ::core::option::Option<ValidatorCommittee>,
     /// Snapshot of Sui's SystemState (`0x3::sui_system::SystemState`) at the
-    /// beginning of the epoch, for an epoch that has ended, or the state as of
-    /// the latest checkpoint the server has processed, for the running epoch.
-    /// Servers that don't serve object history fail with `UNIMPLEMENTED` when
-    /// `read_mask` selects it for the running epoch.
+    /// beginning of the epoch, for an epoch that has ended. For the running
+    /// epoch, the state at the checkpoint the server serves the request at, or
+    /// at the checkpoint before it when that is the epoch's last checkpoint;
+    /// servers without RPC indexes return the live state. Servers that keep only
+    /// the latest version of each object fail with `UNIMPLEMENTED` and reason
+    /// `NOT_SERVED_HERE` when `read_mask` selects it for the running epoch.
+    ///
+    /// The state at an epoch's start, including the running epoch's, can be read
+    /// with `GetObject` of `0x5` at `at_checkpoint` = `first_checkpoint` - 1
+    /// (checkpoint 0 for epoch 0), and then its inner dynamic field at the same
+    /// checkpoint.
     #[prost(message, optional, boxed, tag = "3")]
     pub system_state: ::core::option::Option<::prost::alloc::boxed::Box<SystemState>>,
+    /// The epoch's first checkpoint. Servers without RPC indexes leave it unset
+    /// for the running epoch.
     #[prost(uint64, optional, tag = "4")]
     pub first_checkpoint: ::core::option::Option<u64>,
-    /// The epoch's last checkpoint. Set once the server has indexed it, and
-    /// unset while the epoch is running.
+    /// The epoch's last checkpoint. Set only when the epoch ended at or before
+    /// the checkpoint the server serves the request at, so it is unset while
+    /// the epoch is running.
     #[prost(uint64, optional, tag = "5")]
     pub last_checkpoint: ::core::option::Option<u64>,
     #[prost(message, optional, tag = "6")]
@@ -778,6 +788,7 @@ pub struct Epoch {
     #[prost(message, optional, tag = "9")]
     pub protocol_config: ::core::option::Option<ProtocolConfig>,
     /// Sequence number of the first transaction in this epoch (inclusive).
+    /// Servers without RPC indexes leave it unset for the running epoch.
     #[prost(uint64, optional, tag = "10")]
     pub transaction_start_inclusive: ::core::option::Option<u64>,
     /// One past the sequence number of the epoch's last transaction (exclusive):
@@ -2569,10 +2580,11 @@ pub struct GetCheckpointResponse {
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetEpochRequest {
-    /// The requested epoch.
-    /// If no epoch is provided the current epoch will be returned.
-    /// An epoch the server has not reached or has not indexed fails with
-    /// `NOT_FOUND`.
+    /// The requested epoch. If unset, the epoch of the checkpoint the server
+    /// serves the request at, or of the live system state on servers without
+    /// RPC indexes. An epoch the server has not reached or has not indexed fails
+    /// with `NOT_FOUND`. Servers without RPC indexes fail a request for a past
+    /// epoch with `UNIMPLEMENTED` and reason `NOT_SERVED_HERE`.
     #[prost(uint64, optional, tag = "1")]
     pub epoch: ::core::option::Option<u64>,
     /// Mask specifying which fields to read.
