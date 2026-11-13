@@ -9394,6 +9394,8 @@ impl serde::Serialize for ErrorReason {
             Self::TransactionExecutionFailed => "TRANSACTION_EXECUTION_FAILED",
             Self::AboveLatestAvailable => "ABOVE_LATEST_AVAILABLE",
             Self::BelowEarliestAvailable => "BELOW_EARLIEST_AVAILABLE",
+            Self::NotServedHere => "NOT_SERVED_HERE",
+            Self::NotReady => "NOT_READY",
         };
         serializer.serialize_str(variant)
     }
@@ -9412,6 +9414,8 @@ impl<'de> serde::Deserialize<'de> for ErrorReason {
             "TRANSACTION_EXECUTION_FAILED",
             "ABOVE_LATEST_AVAILABLE",
             "BELOW_EARLIEST_AVAILABLE",
+            "NOT_SERVED_HERE",
+            "NOT_READY",
         ];
         struct GeneratedVisitor;
         impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
@@ -9464,6 +9468,8 @@ impl<'de> serde::Deserialize<'de> for ErrorReason {
                     }
                     "ABOVE_LATEST_AVAILABLE" => Ok(ErrorReason::AboveLatestAvailable),
                     "BELOW_EARLIEST_AVAILABLE" => Ok(ErrorReason::BelowEarliestAvailable),
+                    "NOT_SERVED_HERE" => Ok(ErrorReason::NotServedHere),
+                    "NOT_READY" => Ok(ErrorReason::NotReady),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }
