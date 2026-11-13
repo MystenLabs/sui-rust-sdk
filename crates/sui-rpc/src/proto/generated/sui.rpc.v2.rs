@@ -972,6 +972,45 @@ pub enum ErrorReason {
     /// * `lowestAvailableVersion`: set only by `ListObjectVersions`, when this
     ///   server retains a version of the object: the oldest one it retains.
     BelowEarliestAvailable = 6,
+    /// The object was deleted or wrapped at the version the request resolved to.
+    /// `GetObject` returns this with `NOT_FOUND`, and `BatchGetObjects` in that
+    /// item's `error`. A request resolves to a removal when:
+    ///
+    /// * it sets none of `version`, `max_version` and `at_checkpoint`, and the
+    ///   object's latest state is a removal;
+    /// * `version` is a removal's version;
+    /// * the newest version at or below `max_version` is a removal;
+    /// * it sets only `at_checkpoint`, and the object's state at the end of that
+    ///   checkpoint is a removal.
+    ///   With `version` or `max_version`, `at_checkpoint` also requires the removal
+    ///   to be written at or before that checkpoint; a removal written after it
+    ///   fails with `NOT_FOUND` and no reason.
+    ///
+    /// The object can come back at a higher version, by an unwrap or by being
+    /// created again under the same ID. The error describes the version the
+    /// request resolved to, not what happened to the object after it.
+    ///
+    /// Example of an ErrorInfo for an object deleted at version 42:
+    ///
+    /// ```text
+    /// { "reason": "OBJECT_REMOVED",
+    ///    "domain": "sui.io",
+    ///    "metadata": {
+    ///      "removedVersion": "42",
+    ///      "removalKind": "DELETED",
+    ///      "transaction": "7Lp2xbCSCqJ9TzJgRwNpKbhiUdDKCRfqbaDnDvfsbdYL"
+    ///    }
+    /// }
+    /// ```
+    ///
+    /// Metadata:
+    ///
+    /// * `removedVersion`: the removal's version, as a decimal string.
+    /// * `removalKind`: `DELETED` or `WRAPPED`, an `ObjectRemoval.Kind` name.
+    /// * `transaction`: the digest of the transaction that deleted or wrapped
+    ///   the object. Unset when the server doesn't have it, as for
+    ///   `ObjectRemoval.transaction`.
+    ObjectRemoved = 7,
 }
 impl ErrorReason {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -987,6 +1026,7 @@ impl ErrorReason {
             Self::TransactionExecutionFailed => "TRANSACTION_EXECUTION_FAILED",
             Self::AboveLatestAvailable => "ABOVE_LATEST_AVAILABLE",
             Self::BelowEarliestAvailable => "BELOW_EARLIEST_AVAILABLE",
+            Self::ObjectRemoved => "OBJECT_REMOVED",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -999,6 +1039,7 @@ impl ErrorReason {
             "TRANSACTION_EXECUTION_FAILED" => Some(Self::TransactionExecutionFailed),
             "ABOVE_LATEST_AVAILABLE" => Some(Self::AboveLatestAvailable),
             "BELOW_EARLIEST_AVAILABLE" => Some(Self::BelowEarliestAvailable),
+            "OBJECT_REMOVED" => Some(Self::ObjectRemoved),
             _ => None,
         }
     }
@@ -2325,6 +2366,8 @@ pub struct GetServiceInfoResponse {
     #[prost(string, optional, tag = "8")]
     pub server: ::core::option::Option<::prost::alloc::string::String>,
 }
+/// A request that resolves to a version where the object was deleted or
+/// wrapped fails with `NOT_FOUND` and reason `OBJECT_REMOVED`.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetObjectRequest {

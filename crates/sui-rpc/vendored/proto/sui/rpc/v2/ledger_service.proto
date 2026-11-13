@@ -91,6 +91,8 @@ message GetServiceInfoResponse {
   optional string server = 8;
 }
 
+// A request that resolves to a version where the object was deleted or
+// wrapped fails with `NOT_FOUND` and reason `OBJECT_REMOVED`.
 message GetObjectRequest {
   // Required. The `ObjectId` of the requested object.
   optional string object_id = 1;
