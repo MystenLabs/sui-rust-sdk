@@ -126,6 +126,17 @@ enum ErrorReason {
   //
   // `BatchGetObjects` reports it only for the item with that `at_checkpoint`.
   //
+  // `ListObjectVersions` handles its `start_checkpoint` and `end_checkpoint`
+  // as the other `List*` RPCs do. With `end_checkpoint` unset, it also
+  // returns this for a descending listing whose `after` cursor is at or above
+  // one past the object's newest version at the highest checkpoint the server
+  // has indexed, or whose `before` cursor is above that. When the range
+  // reaches that checkpoint (`end_checkpoint` unset or above
+  // `firstUnavailableCheckpoint`), a server that prunes history and retains
+  // nothing of the object also returns this, in either order, when every
+  // cursor in the request records a checkpoint above that one; see
+  // `ListObjectVersionsRequest`.
+  //
   // A server also returns this with `UNAVAILABLE` and `bound`
   // "min_checkpoint" when it does not reach the checkpoint in the request's
   // `x-sui-min-checkpoint` header in time. Another replica has reached it, so
@@ -149,7 +160,10 @@ enum ErrorReason {
   //   or the name of the request field, such as "start_checkpoint",
   //   "end_checkpoint" or "at_checkpoint".
   // - `requestedCheckpoint`: the checkpoint recorded in the cursor, or the
-  //   value of the header or request field.
+  //   value of the header or request field. For a cursor refused without its
+  //   checkpoint (a `ListObjectVersions` cursor refused by its version), it is
+  //   `firstUnavailableCheckpoint`. For `ListObjectVersions` cursors refused
+  //   by the checkpoints they record, it is the lowest of those checkpoints.
   // - `firstUnavailableCheckpoint`: the lowest checkpoint this server has not
   //   indexed, one above its latest indexed checkpoint, or "0" if it has
   //   indexed none.
@@ -170,6 +184,22 @@ enum ErrorReason {
   // server serves.
   //
   // `BatchGetObjects` reports it only for the item with that `at_checkpoint`.
+  //
+  // `ListObjectVersions` returns this with `OUT_OF_RANGE`, unless its range
+  // is empty, when its `start_checkpoint` is below the lowest one the server
+  // accepts (one above the lowest checkpoint whose object state it keeps) and
+  // no `after` cursor bounds the listing at or above that lowest start, when
+  // its `end_checkpoint` is at or below that lowest start and the request has
+  // no `start_checkpoint` or `after` cursor, when a listing is bounded below
+  // by an `after` cursor whose next version is below the object's oldest
+  // retained version, or when a request with an `after` cursor names an
+  // object of which the server retains nothing (for a cursor that marks the
+  // edge of an earlier listing, only if the object may have had a version
+  // after that edge that this server pruned). Its `lowestAvailableCheckpoint`
+  // is the lowest `start_checkpoint` the server accepts. A descending listing
+  // without `start_checkpoint` that reaches the object's oldest retained
+  // version ends normally; with `start_checkpoint`, a listing that pruning
+  // overtakes fails. See `ListObjectVersionsRequest`.
   //
   // Pruned data does not come back, so the same request fails the same way
   // on this server. A client can send it to a server that retains the data,
