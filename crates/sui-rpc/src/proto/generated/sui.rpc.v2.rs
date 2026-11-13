@@ -999,6 +999,36 @@ pub enum ErrorReason {
     ///
     /// * `lowestAvailableCheckpoint`: the lowest checkpoint this server serves.
     BelowEarliestAvailable = 6,
+    /// The object was deleted or wrapped at the version a `GetObject` request, or
+    /// a `BatchGetObjects` item, resolved to (see `GetObjectRequest`). Reported
+    /// with `NOT_FOUND`. Best effort: a server that cannot find the removal, for
+    /// example because it pruned it or keeps no record of removals, answers
+    /// `NOT_FOUND` without this reason, so its absence does not mean the object
+    /// never existed. A removal written after the request's `at_checkpoint` is
+    /// not visible to it. The object can come back at a higher version, by an
+    /// unwrap or by being created again under the same ID; the error describes
+    /// only the version the request resolved to.
+    ///
+    /// Example of an ErrorInfo for an object deleted at version 42:
+    ///
+    /// ```text
+    /// { "reason": "OBJECT_REMOVED",
+    ///    "domain": "sui.io",
+    ///    "metadata": {
+    ///      "removedVersion": "42",
+    ///      "removalKind": "DELETED",
+    ///      "transaction": "7Lp2xbCSCqJ9TzJgRwNpKbhiUdDKCRfqbaDnDvfsbdYL"
+    ///    }
+    /// }
+    /// ```
+    ///
+    /// Metadata:
+    ///
+    /// * `removedVersion`: the removal's version, as a decimal string.
+    /// * `removalKind`: `DELETED` or `WRAPPED`, an `ObjectRemoval.Kind` name.
+    /// * `transaction`: the digest of the transaction that deleted or wrapped
+    ///   the object. Unset when the server doesn't have it.
+    ObjectRemoved = 7,
     /// This server is not set up for the method, or for this kind of request on
     /// a method it otherwise serves, for example a read at a checkpoint
     /// (`GetObject` with `at_checkpoint`) on a server without RPC indexes.
@@ -1083,6 +1113,7 @@ impl ErrorReason {
             Self::TransactionExecutionFailed => "TRANSACTION_EXECUTION_FAILED",
             Self::AboveLatestAvailable => "ABOVE_LATEST_AVAILABLE",
             Self::BelowEarliestAvailable => "BELOW_EARLIEST_AVAILABLE",
+            Self::ObjectRemoved => "OBJECT_REMOVED",
             Self::NotServedHere => "NOT_SERVED_HERE",
             Self::NotReady => "NOT_READY",
             Self::VersionNotRetained => "VERSION_NOT_RETAINED",
@@ -1098,6 +1129,7 @@ impl ErrorReason {
             "TRANSACTION_EXECUTION_FAILED" => Some(Self::TransactionExecutionFailed),
             "ABOVE_LATEST_AVAILABLE" => Some(Self::AboveLatestAvailable),
             "BELOW_EARLIEST_AVAILABLE" => Some(Self::BelowEarliestAvailable),
+            "OBJECT_REMOVED" => Some(Self::ObjectRemoved),
             "NOT_SERVED_HERE" => Some(Self::NotServedHere),
             "NOT_READY" => Some(Self::NotReady),
             "VERSION_NOT_RETAINED" => Some(Self::VersionNotRetained),
@@ -2427,6 +2459,9 @@ pub struct GetServiceInfoResponse {
     #[prost(string, optional, tag = "8")]
     pub server: ::core::option::Option<::prost::alloc::string::String>,
 }
+/// A request that resolves to a version where the object was deleted or
+/// wrapped fails with `NOT_FOUND`, with reason `OBJECT_REMOVED` when the server
+/// can find the removal.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetObjectRequest {
@@ -2444,8 +2479,11 @@ pub struct GetObjectRequest {
     /// `BELOW_EARLIEST_AVAILABLE` for a version they no longer hold. A version
     /// above the object's latest version is `NOT_FOUND`.
     ///
-    /// Servers that keep only each object's latest version fail with
-    /// `OUT_OF_RANGE` and reason `VERSION_NOT_RETAINED` for any other version.
+    /// Without `at_checkpoint`, servers that keep only each object's latest
+    /// version answer requests for that version, even if the object was deleted
+    /// or wrapped at it (`NOT_FOUND`, as described on `GetObjectRequest`), and
+    /// fail with `OUT_OF_RANGE` and reason `VERSION_NOT_RETAINED` for any older
+    /// version. An object they have no entry for at all is `NOT_FOUND`.
     #[prost(uint64, optional, tag = "2")]
     pub version: ::core::option::Option<u64>,
     /// Mask specifying which fields to read.

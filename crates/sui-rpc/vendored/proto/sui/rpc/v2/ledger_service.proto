@@ -91,6 +91,9 @@ message GetServiceInfoResponse {
   optional string server = 8;
 }
 
+// A request that resolves to a version where the object was deleted or
+// wrapped fails with `NOT_FOUND`, with reason `OBJECT_REMOVED` when the server
+// can find the removal.
 message GetObjectRequest {
   // Required. The `ObjectId` of the requested object.
   optional string object_id = 1;
@@ -106,8 +109,11 @@ message GetObjectRequest {
   // `BELOW_EARLIEST_AVAILABLE` for a version they no longer hold. A version
   // above the object's latest version is `NOT_FOUND`.
   //
-  // Servers that keep only each object's latest version fail with
-  // `OUT_OF_RANGE` and reason `VERSION_NOT_RETAINED` for any other version.
+  // Without `at_checkpoint`, servers that keep only each object's latest
+  // version answer requests for that version, even if the object was deleted
+  // or wrapped at it (`NOT_FOUND`, as described on `GetObjectRequest`), and
+  // fail with `OUT_OF_RANGE` and reason `VERSION_NOT_RETAINED` for any older
+  // version. An object they have no entry for at all is `NOT_FOUND`.
   optional uint64 version = 2;
 
   // Mask specifying which fields to read.
