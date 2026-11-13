@@ -3981,12 +3981,26 @@ pub(crate) mod _field_impls {
             number: 3i32,
             message_fields: None,
         };
+        pub const AT_CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "at_checkpoint",
+            json_name: "atCheckpoint",
+            number: 4i32,
+            message_fields: None,
+        };
+        pub const MAX_VERSION_FIELD: &'static MessageField = &MessageField {
+            name: "max_version",
+            json_name: "maxVersion",
+            number: 5i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for GetObjectRequest {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::OBJECT_ID_FIELD,
             Self::VERSION_FIELD,
             Self::READ_MASK_FIELD,
+            Self::AT_CHECKPOINT_FIELD,
+            Self::MAX_VERSION_FIELD,
         ];
     }
     impl GetObjectRequest {
@@ -4019,6 +4033,14 @@ pub(crate) mod _field_impls {
         }
         pub fn read_mask(mut self) -> String {
             self.path.push(GetObjectRequest::READ_MASK_FIELD.name);
+            self.finish()
+        }
+        pub fn at_checkpoint(mut self) -> String {
+            self.path.push(GetObjectRequest::AT_CHECKPOINT_FIELD.name);
+            self.finish()
+        }
+        pub fn max_version(mut self) -> String {
+            self.path.push(GetObjectRequest::MAX_VERSION_FIELD.name);
             self.finish()
         }
     }
@@ -4189,6 +4211,230 @@ pub(crate) mod _field_impls {
         }
         pub fn error(mut self) -> String {
             self.path.push(GetObjectResult::ERROR_FIELD.name);
+            self.finish()
+        }
+    }
+    impl ListObjectVersionsRequest {
+        pub const OBJECT_ID_FIELD: &'static MessageField = &MessageField {
+            name: "object_id",
+            json_name: "objectId",
+            number: 1i32,
+            message_fields: None,
+        };
+        pub const READ_MASK_FIELD: &'static MessageField = &MessageField {
+            name: "read_mask",
+            json_name: "readMask",
+            number: 2i32,
+            message_fields: None,
+        };
+        pub const OPTIONS_FIELD: &'static MessageField = &MessageField {
+            name: "options",
+            json_name: "options",
+            number: 3i32,
+            message_fields: Some(QueryOptions::FIELDS),
+        };
+        pub const START_VERSION_FIELD: &'static MessageField = &MessageField {
+            name: "start_version",
+            json_name: "startVersion",
+            number: 4i32,
+            message_fields: None,
+        };
+        pub const END_VERSION_FIELD: &'static MessageField = &MessageField {
+            name: "end_version",
+            json_name: "endVersion",
+            number: 5i32,
+            message_fields: None,
+        };
+        pub const AT_CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "at_checkpoint",
+            json_name: "atCheckpoint",
+            number: 6i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for ListObjectVersionsRequest {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::OBJECT_ID_FIELD,
+            Self::READ_MASK_FIELD,
+            Self::OPTIONS_FIELD,
+            Self::START_VERSION_FIELD,
+            Self::END_VERSION_FIELD,
+            Self::AT_CHECKPOINT_FIELD,
+        ];
+    }
+    impl ListObjectVersionsRequest {
+        pub fn path_builder() -> ListObjectVersionsRequestFieldPathBuilder {
+            ListObjectVersionsRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct ListObjectVersionsRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ListObjectVersionsRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn object_id(mut self) -> String {
+            self.path.push(ListObjectVersionsRequest::OBJECT_ID_FIELD.name);
+            self.finish()
+        }
+        pub fn read_mask(mut self) -> String {
+            self.path.push(ListObjectVersionsRequest::READ_MASK_FIELD.name);
+            self.finish()
+        }
+        pub fn options(mut self) -> QueryOptionsFieldPathBuilder {
+            self.path.push(ListObjectVersionsRequest::OPTIONS_FIELD.name);
+            QueryOptionsFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn start_version(mut self) -> String {
+            self.path.push(ListObjectVersionsRequest::START_VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn end_version(mut self) -> String {
+            self.path.push(ListObjectVersionsRequest::END_VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn at_checkpoint(mut self) -> String {
+            self.path.push(ListObjectVersionsRequest::AT_CHECKPOINT_FIELD.name);
+            self.finish()
+        }
+    }
+    impl ListObjectVersionsResponse {
+        pub const OBJECT_FIELD: &'static MessageField = &MessageField {
+            name: "object",
+            json_name: "object",
+            number: 1i32,
+            message_fields: Some(Object::FIELDS),
+        };
+        pub const CURSOR_FIELD: &'static MessageField = &MessageField {
+            name: "cursor",
+            json_name: "cursor",
+            number: 2i32,
+            message_fields: None,
+        };
+        pub const END_FIELD: &'static MessageField = &MessageField {
+            name: "end",
+            json_name: "end",
+            number: 3i32,
+            message_fields: Some(QueryEnd::FIELDS),
+        };
+        pub const REMOVAL_FIELD: &'static MessageField = &MessageField {
+            name: "removal",
+            json_name: "removal",
+            number: 4i32,
+            message_fields: Some(ObjectRemoval::FIELDS),
+        };
+    }
+    impl MessageFields for ListObjectVersionsResponse {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::OBJECT_FIELD,
+            Self::CURSOR_FIELD,
+            Self::END_FIELD,
+            Self::REMOVAL_FIELD,
+        ];
+    }
+    impl ListObjectVersionsResponse {
+        pub fn path_builder() -> ListObjectVersionsResponseFieldPathBuilder {
+            ListObjectVersionsResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct ListObjectVersionsResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ListObjectVersionsResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn object(mut self) -> ObjectFieldPathBuilder {
+            self.path.push(ListObjectVersionsResponse::OBJECT_FIELD.name);
+            ObjectFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn cursor(mut self) -> String {
+            self.path.push(ListObjectVersionsResponse::CURSOR_FIELD.name);
+            self.finish()
+        }
+        pub fn end(mut self) -> QueryEndFieldPathBuilder {
+            self.path.push(ListObjectVersionsResponse::END_FIELD.name);
+            QueryEndFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn removal(mut self) -> ObjectRemovalFieldPathBuilder {
+            self.path.push(ListObjectVersionsResponse::REMOVAL_FIELD.name);
+            ObjectRemovalFieldPathBuilder::new_with_base(self.path)
+        }
+    }
+    impl ObjectRemoval {
+        pub const VERSION_FIELD: &'static MessageField = &MessageField {
+            name: "version",
+            json_name: "version",
+            number: 1i32,
+            message_fields: None,
+        };
+        pub const KIND_FIELD: &'static MessageField = &MessageField {
+            name: "kind",
+            json_name: "kind",
+            number: 2i32,
+            message_fields: None,
+        };
+        pub const TRANSACTION_FIELD: &'static MessageField = &MessageField {
+            name: "transaction",
+            json_name: "transaction",
+            number: 3i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for ObjectRemoval {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::VERSION_FIELD,
+            Self::KIND_FIELD,
+            Self::TRANSACTION_FIELD,
+        ];
+    }
+    impl ObjectRemoval {
+        pub fn path_builder() -> ObjectRemovalFieldPathBuilder {
+            ObjectRemovalFieldPathBuilder::new()
+        }
+    }
+    pub struct ObjectRemovalFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ObjectRemovalFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn version(mut self) -> String {
+            self.path.push(ObjectRemoval::VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn kind(mut self) -> String {
+            self.path.push(ObjectRemoval::KIND_FIELD.name);
+            self.finish()
+        }
+        pub fn transaction(mut self) -> String {
+            self.path.push(ObjectRemoval::TRANSACTION_FIELD.name);
             self.finish()
         }
     }
