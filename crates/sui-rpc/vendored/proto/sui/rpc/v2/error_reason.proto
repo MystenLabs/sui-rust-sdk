@@ -200,6 +200,34 @@ enum ErrorReason {
   //   retains a version of the object: the oldest one it retains.
   BELOW_EARLIEST_AVAILABLE = 6;
 
+  // The object was deleted or wrapped at the version a `GetObject` request, or
+  // a `BatchGetObjects` item, resolved to (see `GetObjectRequest`). Reported
+  // with `NOT_FOUND`. Best effort: a server that cannot find the removal, for
+  // example because it pruned it or keeps no record of removals, answers
+  // `NOT_FOUND` without this reason, so its absence does not mean the object
+  // never existed. A removal written after the request's `at_checkpoint` is
+  // not visible to it. The object can come back at a higher version, by an
+  // unwrap or by being created again under the same ID; the error describes
+  // only the version the request resolved to.
+  //
+  // Example of an ErrorInfo for an object deleted at version 42:
+  //
+  //     { "reason": "OBJECT_REMOVED",
+  //       "domain": "sui.io",
+  //       "metadata": {
+  //         "removedVersion": "42",
+  //         "removalKind": "DELETED",
+  //         "transaction": "7Lp2xbCSCqJ9TzJgRwNpKbhiUdDKCRfqbaDnDvfsbdYL"
+  //       }
+  //     }
+  //
+  // Metadata:
+  // - `removedVersion`: the removal's version, as a decimal string.
+  // - `removalKind`: `DELETED` or `WRAPPED`, an `ObjectRemoval.Kind` name.
+  // - `transaction`: the digest of the transaction that deleted or wrapped
+  //   the object. Unset when the server doesn't have it.
+  OBJECT_REMOVED = 7;
+
   // This server is not set up for the method, or for this kind of request on
   // a method it otherwise serves, for example a read at a past checkpoint on a
   // server that keeps only the latest version of each object. Returned with
