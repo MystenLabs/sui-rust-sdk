@@ -23,6 +23,14 @@ service LedgerService {
   rpc GetObject(GetObjectRequest) returns (GetObjectResponse);
   rpc BatchGetObjects(BatchGetObjectsRequest) returns (BatchGetObjectsResponse);
 
+  // List one object's history: its live versions and the versions at which it
+  // was deleted or wrapped, in ascending or descending version order, one per
+  // response frame, paged by cursor.
+  //
+  // Servers that prune history, such as fullnodes, list the versions they
+  // retain; see `ListObjectVersionsRequest`.
+  rpc ListObjectVersions(ListObjectVersionsRequest) returns (stream ListObjectVersionsResponse);
+
   rpc GetTransaction(GetTransactionRequest) returns (GetTransactionResponse);
   rpc BatchGetTransactions(BatchGetTransactionsRequest) returns (BatchGetTransactionsResponse);
 
@@ -177,6 +185,145 @@ message GetObjectResult {
     Object object = 1;
     google.rpc.Status error = 2;
   }
+}
+
+// Request message for LedgerService.ListObjectVersions.
+//
+// Lists the object's history, one item per version: a live version or a
+// removal (a version where it was deleted or wrapped). Both count toward
+// `options.limit`, and every bound applies to both. The bounds intersect. An
+// empty result, including for an object that does not exist, ends with
+// `QueryEnd` rather than `NOT_FOUND`, except on a server that has pruned
+// history (see below). After a removal the object can come back at a higher
+// version, by an unwrap or by being created again under the same ID (dynamic
+// fields, derived objects), and the listing continues with it.
+//
+// Without `at_checkpoint`, a cursor above the object's version at the highest
+// checkpoint this server has indexed is handled as in the other `List*` RPCs:
+// a descending listing fails with `OUT_OF_RANGE` / `ABOVE_LATEST_AVAILABLE`;
+// an ascending one is served from this server's view and, unless
+// `end_version` or `before` ends it first, ends with
+// `QUERY_END_REASON_LEDGER_TIP`.
+//
+// `start_version` and `end_version` may be above the object's newest version
+// without error: a descending listing whose `end_version` is above it starts
+// at the newest version, and a range entirely above it lists nothing.
+//
+// A server that prunes history keeps each object's history from its state at
+// the end of `lowestAvailableCheckpoint` on. A request whose bounds reach
+// below the object's oldest retained version fails with `OUT_OF_RANGE` /
+// `BELOW_EARLIEST_AVAILABLE`, whose metadata adds `lowestAvailableVersion`:
+// ascending before streaming anything, descending after streaming the
+// retained items. To list them, set `start_version` to
+// `lowestAvailableVersion`. The server may return this error even when no
+// older version exists, if it cannot tell. A request for an object of which
+// it retains nothing fails with the same error, with only
+// `lowestAvailableCheckpoint` in its metadata.
+//
+// With `transaction` in `removal_read_mask`, these rules apply from the higher
+// of that checkpoint and the last checkpoint before this server's removal
+// transactions start, if any, and `lowestAvailableCheckpoint` reports that
+// higher checkpoint. Above it, a removal whose transaction the server cannot
+// find fails the listing with `INTERNAL`.
+//
+// Servers that are not set up for this method, for example without the
+// indexes it needs, fail with `UNIMPLEMENTED` and reason `NOT_SERVED_HERE`.
+// Servers that cannot serve it yet, for example while they backfill those
+// indexes, fail with `UNAVAILABLE` and reason `NOT_READY`.
+message ListObjectVersionsRequest {
+  // Required. The `ObjectId` of the object whose versions to list.
+  optional string object_id = 1;
+
+  // Mask for each live version's `object`. Defaults to
+  // `object_id,version,digest`. Does not apply to `removal`.
+  optional google.protobuf.FieldMask read_mask = 2;
+
+  // Optional. The listing's order is ascending version. The server sets the
+  // default and maximum `limit`; larger values are coerced to the maximum,
+  // and `0` to `1`. Cursors come from `ListObjectVersionsResponse.cursor` and
+  // are per object: a malformed cursor, or one for another object, fails with
+  // `INVALID_ARGUMENT`. Responses carry no `Watermark`; resume from the
+  // `cursor` of the last item received.
+  optional QueryOptions options = 3;
+
+  // Optional. Start of the version range to list (inclusive).
+  optional uint64 start_version = 4;
+
+  // Optional. End of the version range to list (exclusive). Below
+  // `start_version` it fails with `INVALID_ARGUMENT`; equal to it, the range
+  // lists nothing.
+  optional uint64 end_version = 5;
+
+  // Optional. List only versions written at or before this checkpoint. If
+  // unset, the highest checkpoint the server has indexed. Its errors are those
+  // of `GetObjectRequest.at_checkpoint`.
+  optional uint64 at_checkpoint = 6;
+
+  // Mask for each `removal`, with paths `version`, `kind` and `transaction`.
+  // Defaults to `version,kind`.
+  optional google.protobuf.FieldMask removal_read_mask = 7;
+}
+
+// Response message for LedgerService.ListObjectVersions.
+//
+// A frame that delivers an item sets exactly one of `object` and `removal`,
+// plus its `cursor`, in ascending version order or in reverse for
+// `ORDERING_DESCENDING`. `end` is set exactly once, on the last frame; with
+// `QUERY_END_REASON_ITEM_LIMIT` it rides on the last item's frame, and
+// otherwise the last frame carries no item. In this listing:
+//
+// - `QUERY_END_REASON_CHECKPOINT_BOUND`: reached `end_version`,
+//   `start_version`, the object's newest version at `at_checkpoint`, or its
+//   first version.
+// - `QUERY_END_REASON_CURSOR_BOUND`: reached the far cursor (`before`
+//   ascending, `after` descending).
+// - `QUERY_END_REASON_LEDGER_TIP`: an ascending listing without
+//   `at_checkpoint` reached the highest checkpoint the server has indexed;
+//   resume later from the last cursor received.
+message ListObjectVersionsResponse {
+  // A live version, with the fields selected by `read_mask`.
+  optional Object object = 1;
+
+  // The item's position, for use as `options.after` or `options.before`. Set
+  // on every frame with `object` or `removal`.
+  optional bytes cursor = 2;
+
+  // Set exactly once, on the final frame of a successful stream.
+  optional QueryEnd end = 3;
+
+  // A version at which the object was deleted or wrapped, with the fields
+  // selected by `removal_read_mask`.
+  optional ObjectRemoval removal = 4;
+}
+
+// A version at which an object was deleted or wrapped, listed by
+// `ListObjectVersions`. The object has no contents at this version.
+message ObjectRemoval {
+  // How the object was removed.
+  enum Kind {
+    KIND_UNKNOWN = 0;
+
+    // The object was deleted. An object with the same ID can be created again
+    // at a higher version, as a dynamic field is when a field with the same
+    // name is added again. A transaction that unwraps and deletes an object
+    // also shows as `DELETED`.
+    DELETED = 1;
+
+    // The object was wrapped in another object. It can later be unwrapped at
+    // a higher version.
+    WRAPPED = 2;
+  }
+
+  // The version the removing transaction assigned the object.
+  optional uint64 version = 1;
+
+  // How the object was removed.
+  optional Kind kind = 2;
+
+  // The digest of the transaction that deleted or wrapped the object. Set
+  // only when `ListObjectVersionsRequest.removal_read_mask` selects it, and
+  // then always set.
+  optional string transaction = 3;
 }
 
 message GetTransactionRequest {
