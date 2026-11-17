@@ -756,16 +756,28 @@ pub struct Epoch {
     #[prost(message, optional, tag = "2")]
     pub committee: ::core::option::Option<ValidatorCommittee>,
     /// Snapshot of Sui's SystemState (`0x3::sui_system::SystemState`) at the
-    /// beginning of the epoch, for an epoch that has ended, or the state as of
-    /// the latest checkpoint the server has processed, for the running epoch.
-    /// Servers that don't serve object history fail with `UNIMPLEMENTED` when
-    /// `read_mask` selects it for the running epoch.
+    /// beginning of the epoch, for an epoch that has ended. For the running
+    /// epoch, fullnodes return their live state; kv-rpc returns the state at the
+    /// highest checkpoint it has indexed, or at the checkpoint before it when
+    /// that is the epoch's last checkpoint. kv-rpc instances that are not set up
+    /// for reads at a checkpoint fail with `UNIMPLEMENTED` and reason
+    /// `NOT_SERVED_HERE` when `read_mask` selects it for the running epoch.
+    ///
+    /// The state at an epoch's start, including the running epoch's, can be read
+    /// with `GetObject` of `0x5` at `at_checkpoint` = `first_checkpoint` - 1
+    /// (checkpoint 0 for epoch 0), and then its inner dynamic field at the same
+    /// checkpoint.
     #[prost(message, optional, boxed, tag = "3")]
     pub system_state: ::core::option::Option<::prost::alloc::boxed::Box<SystemState>>,
+    /// The epoch's first checkpoint. For the running epoch, servers without RPC
+    /// indexes leave it unset, and fullnodes leave it unset until their RPC
+    /// index records the epoch's start, shortly after the epoch begins.
     #[prost(uint64, optional, tag = "4")]
     pub first_checkpoint: ::core::option::Option<u64>,
-    /// The epoch's last checkpoint. Set once the server has indexed it, and
-    /// unset while the epoch is running.
+    /// The epoch's last checkpoint, unset while the epoch is running. Fullnodes
+    /// set it as soon as their RPC index records the epoch's end; kv-rpc sets it
+    /// only when the epoch ended at or before the highest checkpoint it has
+    /// indexed.
     #[prost(uint64, optional, tag = "5")]
     pub last_checkpoint: ::core::option::Option<u64>,
     #[prost(message, optional, tag = "6")]
@@ -777,7 +789,8 @@ pub struct Epoch {
     pub reference_gas_price: ::core::option::Option<u64>,
     #[prost(message, optional, tag = "9")]
     pub protocol_config: ::core::option::Option<ProtocolConfig>,
-    /// Sequence number of the first transaction in this epoch (inclusive).
+    /// Sequence number of the first transaction in this epoch (inclusive). Unset
+    /// for the running epoch in the same cases as `first_checkpoint`.
     #[prost(uint64, optional, tag = "10")]
     pub transaction_start_inclusive: ::core::option::Option<u64>,
     /// One past the sequence number of the epoch's last transaction (exclusive):
@@ -2592,10 +2605,13 @@ pub struct GetCheckpointResponse {
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetEpochRequest {
-    /// The requested epoch.
-    /// If no epoch is provided the current epoch will be returned.
-    /// An epoch the server has not reached or has not indexed fails with
-    /// `NOT_FOUND`.
+    /// The requested epoch. If unset, the current epoch: on fullnodes the epoch
+    /// of their live state, and on kv-rpc the epoch of the highest checkpoint it
+    /// has indexed. Apart from a fullnode's live epoch, which it answers even
+    /// before its RPC index records it, an epoch the server has not reached or
+    /// has not indexed fails with `NOT_FOUND`. Servers without RPC indexes fail
+    /// a request for a past epoch with `UNIMPLEMENTED` and reason
+    /// `NOT_SERVED_HERE`.
     #[prost(uint64, optional, tag = "1")]
     pub epoch: ::core::option::Option<u64>,
     /// Mask specifying which fields to read.
