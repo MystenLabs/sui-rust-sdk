@@ -62,6 +62,11 @@ impl ListPackageVersionsRequest {
             package_id: Some(package_id.to_string()),
             page_size: None,
             page_token: None,
+            options: None,
+            start_version: None,
+            end_version: None,
+            start_checkpoint: None,
+            end_checkpoint: None,
         }
     }
 }
@@ -71,7 +76,22 @@ impl ListPackageVersionsResponse {
         Self {
             versions,
             next_page_token,
+            end: None,
         }
+    }
+}
+
+impl ListSystemPackagesRequest {
+    pub fn new(at_checkpoint: u64) -> Self {
+        Self {
+            at_checkpoint: Some(at_checkpoint),
+        }
+    }
+}
+
+impl ListSystemPackagesResponse {
+    pub fn new(system_packages: Vec<PackageVersion>) -> Self {
+        Self { system_packages }
     }
 }
 
@@ -80,6 +100,9 @@ impl PackageVersion {
         Self {
             package_id: Some(package_id.to_string()),
             version: Some(version),
+            checkpoint: None,
+            cursor: None,
+            original_id: None,
         }
     }
 }
