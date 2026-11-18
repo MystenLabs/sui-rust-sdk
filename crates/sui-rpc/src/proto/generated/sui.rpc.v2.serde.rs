@@ -8957,6 +8957,7 @@ impl serde::Serialize for end_of_epoch_transaction_kind::Kind {
             Self::AddressAliasStateCreate => "ADDRESS_ALIAS_STATE_CREATE",
             Self::WriteAccumulatorStorageCost => "WRITE_ACCUMULATOR_STORAGE_COST",
             Self::ForwardingAddressRegistryCreate => "FORWARDING_ADDRESS_REGISTRY_CREATE",
+            Self::FreezeListCreate => "FREEZE_LIST_CREATE",
         };
         serializer.serialize_str(variant)
     }
@@ -8983,6 +8984,7 @@ impl<'de> serde::Deserialize<'de> for end_of_epoch_transaction_kind::Kind {
             "ADDRESS_ALIAS_STATE_CREATE",
             "WRITE_ACCUMULATOR_STORAGE_COST",
             "FORWARDING_ADDRESS_REGISTRY_CREATE",
+            "FREEZE_LIST_CREATE",
         ];
         struct GeneratedVisitor;
         impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
@@ -9074,6 +9076,9 @@ impl<'de> serde::Deserialize<'de> for end_of_epoch_transaction_kind::Kind {
                         Ok(
                             end_of_epoch_transaction_kind::Kind::ForwardingAddressRegistryCreate,
                         )
+                    }
+                    "FREEZE_LIST_CREATE" => {
+                        Ok(end_of_epoch_transaction_kind::Kind::FreezeListCreate)
                     }
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
@@ -12681,6 +12686,12 @@ impl serde::Serialize for FundsWithdrawal {
         if self.allowance.is_some() {
             len += 1;
         }
+        if self.seized_from.is_some() {
+            len += 1;
+        }
+        if self.seize_auth.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer
             .serialize_struct("sui.rpc.v2.FundsWithdrawal", len)?;
         if let Some(v) = self.amount.as_ref() {
@@ -12704,6 +12715,12 @@ impl serde::Serialize for FundsWithdrawal {
         if let Some(v) = self.allowance.as_ref() {
             struct_ser.serialize_field("allowance", v)?;
         }
+        if let Some(v) = self.seized_from.as_ref() {
+            struct_ser.serialize_field("seizedFrom", v)?;
+        }
+        if let Some(v) = self.seize_auth.as_ref() {
+            struct_ser.serialize_field("seizeAuth", v)?;
+        }
         struct_ser.end()
     }
 }
@@ -12720,6 +12737,10 @@ impl<'de> serde::Deserialize<'de> for FundsWithdrawal {
             "source",
             "funder",
             "allowance",
+            "seized_from",
+            "seizedFrom",
+            "seize_auth",
+            "seizeAuth",
         ];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
@@ -12728,6 +12749,8 @@ impl<'de> serde::Deserialize<'de> for FundsWithdrawal {
             Source,
             Funder,
             Allowance,
+            SeizedFrom,
+            SeizeAuth,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -12760,6 +12783,10 @@ impl<'de> serde::Deserialize<'de> for FundsWithdrawal {
                             "source" => Ok(GeneratedField::Source),
                             "funder" => Ok(GeneratedField::Funder),
                             "allowance" => Ok(GeneratedField::Allowance),
+                            "seizedFrom" | "seized_from" => {
+                                Ok(GeneratedField::SeizedFrom)
+                            }
+                            "seizeAuth" | "seize_auth" => Ok(GeneratedField::SeizeAuth),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -12790,6 +12817,8 @@ impl<'de> serde::Deserialize<'de> for FundsWithdrawal {
                 let mut source__ = None;
                 let mut funder__ = None;
                 let mut allowance__ = None;
+                let mut seized_from__ = None;
+                let mut seize_auth__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Amount => {
@@ -12830,6 +12859,18 @@ impl<'de> serde::Deserialize<'de> for FundsWithdrawal {
                             }
                             allowance__ = map_.next_value()?;
                         }
+                        GeneratedField::SeizedFrom => {
+                            if seized_from__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("seizedFrom"));
+                            }
+                            seized_from__ = map_.next_value()?;
+                        }
+                        GeneratedField::SeizeAuth => {
+                            if seize_auth__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("seizeAuth"));
+                            }
+                            seize_auth__ = map_.next_value()?;
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -12841,6 +12882,8 @@ impl<'de> serde::Deserialize<'de> for FundsWithdrawal {
                     source: source__,
                     funder: funder__,
                     allowance: allowance__,
+                    seized_from: seized_from__,
+                    seize_auth: seize_auth__,
                 })
             }
         }
@@ -12859,6 +12902,7 @@ impl serde::Serialize for funds_withdrawal::Source {
             Self::Sender => "SENDER",
             Self::Sponsor => "SPONSOR",
             Self::SenderAllowance => "SENDER_ALLOWANCE",
+            Self::FrozenAddress => "FROZEN_ADDRESS",
         };
         serializer.serialize_str(variant)
     }
@@ -12874,6 +12918,7 @@ impl<'de> serde::Deserialize<'de> for funds_withdrawal::Source {
             "SENDER",
             "SPONSOR",
             "SENDER_ALLOWANCE",
+            "FROZEN_ADDRESS",
         ];
         struct GeneratedVisitor;
         impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
@@ -12921,6 +12966,7 @@ impl<'de> serde::Deserialize<'de> for funds_withdrawal::Source {
                     "SENDER" => Ok(funds_withdrawal::Source::Sender),
                     "SPONSOR" => Ok(funds_withdrawal::Source::Sponsor),
                     "SENDER_ALLOWANCE" => Ok(funds_withdrawal::Source::SenderAllowance),
+                    "FROZEN_ADDRESS" => Ok(funds_withdrawal::Source::FrozenAddress),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }

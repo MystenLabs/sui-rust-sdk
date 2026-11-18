@@ -89,6 +89,10 @@ message FundsWithdrawal {
     // Withdraw from `funder`'s balance under the `allowance` object, granted
     // to the sender of the transaction.
     SENDER_ALLOWANCE = 3;
+
+    // Seize funds from the balance of `seized_from`, a frozen address, under
+    // the `seize_auth` object owned by the sender of the transaction.
+    FROZEN_ADDRESS = 4;
   }
 
   optional Source source = 3;
@@ -99,4 +103,12 @@ message FundsWithdrawal {
   // `ObjectId` of the allowance object authorizing the withdrawal if `source`
   // is `SENDER_ALLOWANCE`.
   optional string allowance = 5;
+
+  // The frozen address whose balance is seized if `source` is
+  // `FROZEN_ADDRESS`.
+  optional string seized_from = 6;
+
+  // `ObjectId` of the seize authorization object authorizing the withdrawal
+  // if `source` is `FROZEN_ADDRESS`.
+  optional string seize_auth = 7;
 }
