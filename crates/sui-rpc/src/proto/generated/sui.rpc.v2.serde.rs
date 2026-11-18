@@ -19308,6 +19308,21 @@ impl serde::Serialize for ListPackageVersionsRequest {
         if self.page_token.is_some() {
             len += 1;
         }
+        if self.options.is_some() {
+            len += 1;
+        }
+        if self.start_version.is_some() {
+            len += 1;
+        }
+        if self.end_version.is_some() {
+            len += 1;
+        }
+        if self.start_checkpoint.is_some() {
+            len += 1;
+        }
+        if self.end_checkpoint.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer
             .serialize_struct("sui.rpc.v2.ListPackageVersionsRequest", len)?;
         if let Some(v) = self.package_id.as_ref() {
@@ -19325,6 +19340,32 @@ impl serde::Serialize for ListPackageVersionsRequest {
                     crate::_serde::base64::encode(&v).as_str(),
                 )?;
         }
+        if let Some(v) = self.options.as_ref() {
+            struct_ser.serialize_field("options", v)?;
+        }
+        if let Some(v) = self.start_version.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser
+                .serialize_field("startVersion", ToString::to_string(&v).as_str())?;
+        }
+        if let Some(v) = self.end_version.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("endVersion", ToString::to_string(&v).as_str())?;
+        }
+        if let Some(v) = self.start_checkpoint.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser
+                .serialize_field("startCheckpoint", ToString::to_string(&v).as_str())?;
+        }
+        if let Some(v) = self.end_checkpoint.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser
+                .serialize_field("endCheckpoint", ToString::to_string(&v).as_str())?;
+        }
         struct_ser.end()
     }
 }
@@ -19341,12 +19382,26 @@ impl<'de> serde::Deserialize<'de> for ListPackageVersionsRequest {
             "pageSize",
             "page_token",
             "pageToken",
+            "options",
+            "start_version",
+            "startVersion",
+            "end_version",
+            "endVersion",
+            "start_checkpoint",
+            "startCheckpoint",
+            "end_checkpoint",
+            "endCheckpoint",
         ];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             PackageId,
             PageSize,
             PageToken,
+            Options,
+            StartVersion,
+            EndVersion,
+            StartCheckpoint,
+            EndCheckpoint,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -19377,6 +19432,19 @@ impl<'de> serde::Deserialize<'de> for ListPackageVersionsRequest {
                             "packageId" | "package_id" => Ok(GeneratedField::PackageId),
                             "pageSize" | "page_size" => Ok(GeneratedField::PageSize),
                             "pageToken" | "page_token" => Ok(GeneratedField::PageToken),
+                            "options" => Ok(GeneratedField::Options),
+                            "startVersion" | "start_version" => {
+                                Ok(GeneratedField::StartVersion)
+                            }
+                            "endVersion" | "end_version" => {
+                                Ok(GeneratedField::EndVersion)
+                            }
+                            "startCheckpoint" | "start_checkpoint" => {
+                                Ok(GeneratedField::StartCheckpoint)
+                            }
+                            "endCheckpoint" | "end_checkpoint" => {
+                                Ok(GeneratedField::EndCheckpoint)
+                            }
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -19405,6 +19473,11 @@ impl<'de> serde::Deserialize<'de> for ListPackageVersionsRequest {
                 let mut package_id__ = None;
                 let mut page_size__ = None;
                 let mut page_token__ = None;
+                let mut options__ = None;
+                let mut start_version__ = None;
+                let mut end_version__ = None;
+                let mut start_checkpoint__ = None;
+                let mut end_checkpoint__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::PackageId => {
@@ -19433,6 +19506,58 @@ impl<'de> serde::Deserialize<'de> for ListPackageVersionsRequest {
                                 >()?
                                 .map(|x| x.0);
                         }
+                        GeneratedField::Options => {
+                            if options__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("options"));
+                            }
+                            options__ = map_.next_value()?;
+                        }
+                        GeneratedField::StartVersion => {
+                            if start_version__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("startVersion"),
+                                );
+                            }
+                            start_version__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::EndVersion => {
+                            if end_version__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("endVersion"));
+                            }
+                            end_version__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::StartCheckpoint => {
+                            if start_checkpoint__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("startCheckpoint"),
+                                );
+                            }
+                            start_checkpoint__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::EndCheckpoint => {
+                            if end_checkpoint__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("endCheckpoint"),
+                                );
+                            }
+                            end_checkpoint__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -19442,6 +19567,11 @@ impl<'de> serde::Deserialize<'de> for ListPackageVersionsRequest {
                     package_id: package_id__,
                     page_size: page_size__,
                     page_token: page_token__,
+                    options: options__,
+                    start_version: start_version__,
+                    end_version: end_version__,
+                    start_checkpoint: start_checkpoint__,
+                    end_checkpoint: end_checkpoint__,
                 })
             }
         }
@@ -19467,6 +19597,9 @@ impl serde::Serialize for ListPackageVersionsResponse {
         if self.next_page_token.is_some() {
             len += 1;
         }
+        if self.end.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer
             .serialize_struct("sui.rpc.v2.ListPackageVersionsResponse", len)?;
         if !self.versions.is_empty() {
@@ -19481,6 +19614,9 @@ impl serde::Serialize for ListPackageVersionsResponse {
                     crate::_serde::base64::encode(&v).as_str(),
                 )?;
         }
+        if let Some(v) = self.end.as_ref() {
+            struct_ser.serialize_field("end", v)?;
+        }
         struct_ser.end()
     }
 }
@@ -19490,11 +19626,12 @@ impl<'de> serde::Deserialize<'de> for ListPackageVersionsResponse {
     where
         D: serde::Deserializer<'de>,
     {
-        const FIELDS: &[&str] = &["versions", "next_page_token", "nextPageToken"];
+        const FIELDS: &[&str] = &["versions", "next_page_token", "nextPageToken", "end"];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             Versions,
             NextPageToken,
+            End,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -19526,6 +19663,7 @@ impl<'de> serde::Deserialize<'de> for ListPackageVersionsResponse {
                             "nextPageToken" | "next_page_token" => {
                                 Ok(GeneratedField::NextPageToken)
                             }
+                            "end" => Ok(GeneratedField::End),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -19553,6 +19691,7 @@ impl<'de> serde::Deserialize<'de> for ListPackageVersionsResponse {
             {
                 let mut versions__ = None;
                 let mut next_page_token__ = None;
+                let mut end__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Versions => {
@@ -19573,6 +19712,12 @@ impl<'de> serde::Deserialize<'de> for ListPackageVersionsResponse {
                                 >()?
                                 .map(|x| x.0);
                         }
+                        GeneratedField::End => {
+                            if end__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("end"));
+                            }
+                            end__ = map_.next_value()?;
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -19581,12 +19726,246 @@ impl<'de> serde::Deserialize<'de> for ListPackageVersionsResponse {
                 Ok(ListPackageVersionsResponse {
                     versions: versions__.unwrap_or_default(),
                     next_page_token: next_page_token__,
+                    end: end__,
                 })
             }
         }
         deserializer
             .deserialize_struct(
                 "sui.rpc.v2.ListPackageVersionsResponse",
+                FIELDS,
+                GeneratedVisitor,
+            )
+    }
+}
+impl serde::Serialize for ListSystemPackagesRequest {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0usize;
+        if self.at_checkpoint.is_some() {
+            len += 1;
+        }
+        let mut struct_ser = serializer
+            .serialize_struct("sui.rpc.v2.ListSystemPackagesRequest", len)?;
+        if let Some(v) = self.at_checkpoint.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser
+                .serialize_field("atCheckpoint", ToString::to_string(&v).as_str())?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for ListSystemPackagesRequest {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &["at_checkpoint", "atCheckpoint"];
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            AtCheckpoint,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(
+                deserializer: D,
+            ) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+                    fn expecting(
+                        &self,
+                        formatter: &mut std::fmt::Formatter<'_>,
+                    ) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", FIELDS)
+                    }
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(
+                        self,
+                        value: &str,
+                    ) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "atCheckpoint" | "at_checkpoint" => {
+                                Ok(GeneratedField::AtCheckpoint)
+                            }
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = ListSystemPackagesRequest;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2.ListSystemPackagesRequest")
+            }
+            fn visit_map<V>(
+                self,
+                mut map_: V,
+            ) -> std::result::Result<ListSystemPackagesRequest, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                let mut at_checkpoint__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::AtCheckpoint => {
+                            if at_checkpoint__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("atCheckpoint"),
+                                );
+                            }
+                            at_checkpoint__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(ListSystemPackagesRequest {
+                    at_checkpoint: at_checkpoint__,
+                })
+            }
+        }
+        deserializer
+            .deserialize_struct(
+                "sui.rpc.v2.ListSystemPackagesRequest",
+                FIELDS,
+                GeneratedVisitor,
+            )
+    }
+}
+impl serde::Serialize for ListSystemPackagesResponse {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0usize;
+        if !self.system_packages.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer
+            .serialize_struct("sui.rpc.v2.ListSystemPackagesResponse", len)?;
+        if !self.system_packages.is_empty() {
+            struct_ser.serialize_field("systemPackages", &self.system_packages)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for ListSystemPackagesResponse {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &["system_packages", "systemPackages"];
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            SystemPackages,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(
+                deserializer: D,
+            ) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+                    fn expecting(
+                        &self,
+                        formatter: &mut std::fmt::Formatter<'_>,
+                    ) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", FIELDS)
+                    }
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(
+                        self,
+                        value: &str,
+                    ) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "systemPackages" | "system_packages" => {
+                                Ok(GeneratedField::SystemPackages)
+                            }
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = ListSystemPackagesResponse;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2.ListSystemPackagesResponse")
+            }
+            fn visit_map<V>(
+                self,
+                mut map_: V,
+            ) -> std::result::Result<ListSystemPackagesResponse, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                let mut system_packages__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::SystemPackages => {
+                            if system_packages__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("systemPackages"),
+                                );
+                            }
+                            system_packages__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(ListSystemPackagesResponse {
+                    system_packages: system_packages__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer
+            .deserialize_struct(
+                "sui.rpc.v2.ListSystemPackagesResponse",
                 FIELDS,
                 GeneratedVisitor,
             )
@@ -24281,6 +24660,15 @@ impl serde::Serialize for PackageVersion {
         if self.version.is_some() {
             len += 1;
         }
+        if self.checkpoint.is_some() {
+            len += 1;
+        }
+        if self.cursor.is_some() {
+            len += 1;
+        }
+        if self.original_id.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer
             .serialize_struct("sui.rpc.v2.PackageVersion", len)?;
         if let Some(v) = self.package_id.as_ref() {
@@ -24291,6 +24679,20 @@ impl serde::Serialize for PackageVersion {
             #[allow(clippy::needless_borrows_for_generic_args)]
             struct_ser.serialize_field("version", ToString::to_string(&v).as_str())?;
         }
+        if let Some(v) = self.checkpoint.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("checkpoint", ToString::to_string(&v).as_str())?;
+        }
+        if let Some(v) = self.cursor.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser
+                .serialize_field("cursor", crate::_serde::base64::encode(&v).as_str())?;
+        }
+        if let Some(v) = self.original_id.as_ref() {
+            struct_ser.serialize_field("originalId", v)?;
+        }
         struct_ser.end()
     }
 }
@@ -24300,11 +24702,22 @@ impl<'de> serde::Deserialize<'de> for PackageVersion {
     where
         D: serde::Deserializer<'de>,
     {
-        const FIELDS: &[&str] = &["package_id", "packageId", "version"];
+        const FIELDS: &[&str] = &[
+            "package_id",
+            "packageId",
+            "version",
+            "checkpoint",
+            "cursor",
+            "original_id",
+            "originalId",
+        ];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             PackageId,
             Version,
+            Checkpoint,
+            Cursor,
+            OriginalId,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -24334,6 +24747,11 @@ impl<'de> serde::Deserialize<'de> for PackageVersion {
                         match value {
                             "packageId" | "package_id" => Ok(GeneratedField::PackageId),
                             "version" => Ok(GeneratedField::Version),
+                            "checkpoint" => Ok(GeneratedField::Checkpoint),
+                            "cursor" => Ok(GeneratedField::Cursor),
+                            "originalId" | "original_id" => {
+                                Ok(GeneratedField::OriginalId)
+                            }
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -24361,6 +24779,9 @@ impl<'de> serde::Deserialize<'de> for PackageVersion {
             {
                 let mut package_id__ = None;
                 let mut version__ = None;
+                let mut checkpoint__ = None;
+                let mut cursor__ = None;
+                let mut original_id__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::PackageId => {
@@ -24379,6 +24800,32 @@ impl<'de> serde::Deserialize<'de> for PackageVersion {
                                 >()?
                                 .map(|x| x.0);
                         }
+                        GeneratedField::Checkpoint => {
+                            if checkpoint__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("checkpoint"));
+                            }
+                            checkpoint__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::Cursor => {
+                            if cursor__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("cursor"));
+                            }
+                            cursor__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::BytesDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::OriginalId => {
+                            if original_id__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("originalId"));
+                            }
+                            original_id__ = map_.next_value()?;
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -24387,6 +24834,9 @@ impl<'de> serde::Deserialize<'de> for PackageVersion {
                 Ok(PackageVersion {
                     package_id: package_id__,
                     version: version__,
+                    checkpoint: checkpoint__,
+                    cursor: cursor__,
+                    original_id: original_id__,
                 })
             }
         }
