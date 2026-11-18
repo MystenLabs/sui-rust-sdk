@@ -132,6 +132,9 @@ enum ErrorReason {
   // `firstUnavailableCheckpoint`; for a cursor from the listing of every
   // package, it is the publish checkpoint the cursor names.
   //
+  // `ListObjectVersions` follows these rules for its checkpoint range and
+  // cursors; see `ListObjectVersionsRequest`.
+  //
   // Example of an ErrorInfo for a descending query's `before` cursor at
   // checkpoint 1205, sent to a server whose latest indexed checkpoint is 1199:
   //
@@ -149,7 +152,10 @@ enum ErrorReason {
   //   `after` cursor, or the name of the request field, such as
   //   "start_checkpoint", "end_checkpoint" or "at_checkpoint".
   // - `requestedCheckpoint`: the checkpoint recorded in the cursor, or the
-  //   value of the request field.
+  //   value of the request field. For a `ListObjectVersions` cursor refused
+  //   by its version, it is `firstUnavailableCheckpoint`; for
+  //   `ListObjectVersions` cursors refused by the checkpoints they record, it
+  //   is the lowest of those checkpoints.
   // - `firstUnavailableCheckpoint`: the lowest checkpoint this server has not
   //   indexed, one above its latest indexed checkpoint, or "0" if it has
   //   indexed none.
@@ -185,6 +191,11 @@ enum ErrorReason {
   // `ListPackageVersions` also returns this with `OUT_OF_RANGE` on servers
   // that prune history; see `ListPackageVersionsRequest`. Its
   // `lowestAvailableCheckpoint` is the lowest `start_checkpoint` it accepts.
+  //
+  // `ListObjectVersions` returns this with `OUT_OF_RANGE` on servers that
+  // prune history; see `ListObjectVersionsRequest`. Its
+  // `lowestAvailableCheckpoint` is the lowest `start_checkpoint` the server
+  // accepts.
   //
   // Pruned data does not come back, so the same request fails the same way
   // on this server. A client can send it to a server that retains the data,
