@@ -4009,6 +4009,12 @@ pub(crate) mod _field_impls {
             number: 4i32,
             message_fields: None,
         };
+        pub const MAX_VERSION_FIELD: &'static MessageField = &MessageField {
+            name: "max_version",
+            json_name: "maxVersion",
+            number: 5i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for GetObjectRequest {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -4016,6 +4022,7 @@ pub(crate) mod _field_impls {
             Self::VERSION_FIELD,
             Self::READ_MASK_FIELD,
             Self::AT_CHECKPOINT_FIELD,
+            Self::MAX_VERSION_FIELD,
         ];
     }
     impl GetObjectRequest {
@@ -4052,6 +4059,10 @@ pub(crate) mod _field_impls {
         }
         pub fn at_checkpoint(mut self) -> String {
             self.path.push(GetObjectRequest::AT_CHECKPOINT_FIELD.name);
+            self.finish()
+        }
+        pub fn max_version(mut self) -> String {
+            self.path.push(GetObjectRequest::MAX_VERSION_FIELD.name);
             self.finish()
         }
     }
