@@ -965,15 +965,23 @@ pub enum ErrorReason {
     ///   indexed checkpoint, and an `after` cursor past it ends an empty response
     ///   with `LEDGER_TIP` at the position that cursor resumes from.
     ///
-    /// Such a cursor comes from a newer view of the ledger than this server's,
-    /// for example from another replica behind the same load balancer. The data
-    /// is not indexed here yet, so the same request becomes servable once this
-    /// server catches up, and a client may resend it unchanged after a delay. A
-    /// cursor comes from a server that had indexed its position, so a request
-    /// rejected for its cursor (`bound` is "cursor") is servable within the time
-    /// replicas take to catch up with each other. Any other `bound` names a
-    /// checkpoint the caller chose, which the chain may not have reached, so it
-    /// is not retried automatically.
+    /// A cursor rejected this way comes from a newer view of the ledger than
+    /// this server's, for example from another replica behind the same load
+    /// balancer. The data is not indexed here yet, so the same request becomes
+    /// servable once this server catches up, and a client may resend it
+    /// unchanged after a delay. A cursor comes from a server that had indexed
+    /// its position, so a request rejected for its cursor (`bound` is "cursor")
+    /// is servable within the time replicas take to catch up with each other.
+    /// Any other `bound` names a checkpoint the caller chose, which the chain
+    /// may not have reached, so it is not retried automatically.
+    ///
+    /// Requests pinned to a checkpoint by `at_checkpoint` return this with
+    /// `OUT_OF_RANGE` when that checkpoint is above the latest indexed
+    /// checkpoint.
+    ///
+    /// `ListPackageVersions` handles its cursors, `start_checkpoint` and
+    /// `end_checkpoint` as the `LedgerService` `List*` RPCs do. Its cursors
+    /// record the highest checkpoint the server that returned them had indexed.
     ///
     /// A server also returns this with `UNAVAILABLE` and `bound`
     /// "min_checkpoint" when it does not reach the checkpoint in the request's
@@ -998,8 +1006,8 @@ pub enum ErrorReason {
     ///
     /// * `bound`: what reads above the indexed data: "cursor" for a `before` or
     ///   `after` cursor, "min_checkpoint" for the `x-sui-min-checkpoint` header,
-    ///   or the name of the request field, "start_checkpoint" or
-    ///   "end_checkpoint".
+    ///   or the name of the request field, such as "start_checkpoint",
+    ///   "end_checkpoint" or "at_checkpoint".
     /// * `requestedCheckpoint`: the checkpoint recorded in the cursor, or the
     ///   value of the header or request field.
     /// * `firstUnavailableCheckpoint`: the lowest checkpoint this server has not
@@ -1016,9 +1024,33 @@ pub enum ErrorReason {
     /// streams every item at or above that checkpoint, and its last response
     /// carries a watermark at that checkpoint.
     ///
+    /// Requests pinned to a checkpoint by `at_checkpoint` return this with
+    /// `OUT_OF_RANGE` when that checkpoint is below the lowest checkpoint this
+    /// server serves.
+    ///
+    /// `GetPackage` also returns this with `OUT_OF_RANGE` for a `version` this
+    /// server has pruned.
+    ///
+    /// `ListPackageVersions` also returns this with `OUT_OF_RANGE`, unless its
+    /// checkpoint range is empty, for a `start_checkpoint` below the lowest
+    /// checkpoint the server can list every publish from, when no `after` cursor
+    /// bounds the listing at or above that checkpoint, or an `end_checkpoint` at
+    /// or below it in a request with no `start_checkpoint` or `after` cursor,
+    /// and for a request, in either ordering, that continues a listing from an
+    /// `after` cursor or a `page_token` and would otherwise skip versions this
+    /// server does not retain: below the oldest version of the package this
+    /// server stores, or, for a listing of every package with `start_checkpoint`
+    /// unset, below the lowest checkpoint it can list every publish from. Other
+    /// listings with `start_checkpoint` unset that reach below what this server
+    /// retains cover only what it retains: one package's in cursor paging and
+    /// every package's. Every `BELOW_EARLIEST_AVAILABLE` from
+    /// `ListPackageVersions` reports the lowest `start_checkpoint` it accepts as
+    /// `lowestAvailableCheckpoint`.
+    ///
     /// Pruned data does not come back, so the same request fails the same way
     /// on this server. A client can send it to a server that retains the data,
-    /// or resume at or above `lowestAvailableCheckpoint`.
+    /// or, where the request takes a checkpoint, resume at or above
+    /// `lowestAvailableCheckpoint`.
     ///
     /// Example of an ErrorInfo from a server whose lowest available checkpoint
     /// is 5000:
@@ -1032,10 +1064,9 @@ pub enum ErrorReason {
     /// }
     /// ```
     ///
-    /// Metadata:
+    /// Metadata, as decimal strings:
     ///
-    /// * `lowestAvailableCheckpoint`: the lowest checkpoint this server serves,
-    ///   as a decimal string.
+    /// * `lowestAvailableCheckpoint`: the lowest checkpoint this server serves.
     BelowEarliestAvailable = 6,
     /// This server is not set up for the method, or for this kind of request on
     /// a method it otherwise serves, for example a read at a checkpoint
@@ -4389,13 +4420,25 @@ pub struct GetPackageRequest {
     /// Optional. Return the package in `package_id`'s upgrade lineage that
     /// matches one of the following:
     ///
-    /// * `version`: the package with exactly this version.
+    /// * `version`: the package with exactly this version. A server that has
+    ///   pruned this version fails with `OUT_OF_RANGE` (see
+    ///   `ErrorReason.BELOW_EARLIEST_AVAILABLE`). While it rebuilds history
+    ///   after restoring from a snapshot, a version it may still store fails
+    ///   with `UNAVAILABLE` and reason `NOT_READY` instead. A server that keeps
+    ///   only the latest version of each object fails an older version of a
+    ///   system package with `OUT_OF_RANGE` and reason
+    ///   `ErrorReason.VERSION_NOT_RETAINED`.
     /// * `at_checkpoint`: the latest package that existed at or before this
-    ///   checkpoint. The checkpoint must be at or below the highest checkpoint
-    ///   the server has indexed; larger values fail with `NOT_FOUND` instead of
-    ///   resolving to the latest known version, so a successful response is
-    ///   exact as of `at_checkpoint`. Servers that prune history may also fail
-    ///   with `NOT_FOUND` for checkpoints below their lowest available one.
+    ///   checkpoint, so a successful response is exact as of `at_checkpoint`. A
+    ///   lineage first published after this checkpoint is `NOT_FOUND`. Outside
+    ///   the checkpoints the server has indexed, it fails as a request pinned to
+    ///   a checkpoint (see `ErrorReason.ABOVE_LATEST_AVAILABLE` and
+    ///   `BELOW_EARLIEST_AVAILABLE`). Servers may fail it with `UNAVAILABLE`
+    ///   and reason `NOT_READY` while they rebuild history after restoring from
+    ///   a snapshot.
+    ///
+    /// Servers without RPC indexes may fail a selector with `UNIMPLEMENTED` and
+    /// reason `NOT_SERVED_HERE`.
     ///
     /// If neither is set, the package stored at `package_id` is returned.
     #[prost(oneof = "get_package_request::Selector", tags = "2, 3")]
@@ -4406,13 +4449,25 @@ pub mod get_package_request {
     /// Optional. Return the package in `package_id`'s upgrade lineage that
     /// matches one of the following:
     ///
-    /// * `version`: the package with exactly this version.
+    /// * `version`: the package with exactly this version. A server that has
+    ///   pruned this version fails with `OUT_OF_RANGE` (see
+    ///   `ErrorReason.BELOW_EARLIEST_AVAILABLE`). While it rebuilds history
+    ///   after restoring from a snapshot, a version it may still store fails
+    ///   with `UNAVAILABLE` and reason `NOT_READY` instead. A server that keeps
+    ///   only the latest version of each object fails an older version of a
+    ///   system package with `OUT_OF_RANGE` and reason
+    ///   `ErrorReason.VERSION_NOT_RETAINED`.
     /// * `at_checkpoint`: the latest package that existed at or before this
-    ///   checkpoint. The checkpoint must be at or below the highest checkpoint
-    ///   the server has indexed; larger values fail with `NOT_FOUND` instead of
-    ///   resolving to the latest known version, so a successful response is
-    ///   exact as of `at_checkpoint`. Servers that prune history may also fail
-    ///   with `NOT_FOUND` for checkpoints below their lowest available one.
+    ///   checkpoint, so a successful response is exact as of `at_checkpoint`. A
+    ///   lineage first published after this checkpoint is `NOT_FOUND`. Outside
+    ///   the checkpoints the server has indexed, it fails as a request pinned to
+    ///   a checkpoint (see `ErrorReason.ABOVE_LATEST_AVAILABLE` and
+    ///   `BELOW_EARLIEST_AVAILABLE`). Servers may fail it with `UNAVAILABLE`
+    ///   and reason `NOT_READY` while they rebuild history after restoring from
+    ///   a snapshot.
+    ///
+    /// Servers without RPC indexes may fail a selector with `UNIMPLEMENTED` and
+    /// reason `NOT_SERVED_HERE`.
     ///
     /// If neither is set, the package stored at `package_id` is returned.
     #[non_exhaustive]
@@ -4471,15 +4526,25 @@ pub struct GetFunctionResponse {
     #[prost(message, optional, tag = "1")]
     pub function: ::core::option::Option<FunctionDescriptor>,
 }
+/// Servers without the indexes this method needs fail it with `UNIMPLEMENTED`
+/// and reason `NOT_SERVED_HERE`. Servers may fail any `ListPackageVersions`
+/// request with `UNAVAILABLE` and reason `NOT_READY` while they rebuild history
+/// after restoring from a snapshot.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ListPackageVersionsRequest {
-    /// Required. The `storage_id` of any version of the package.
+    /// The `storage_id` of any version of a package, to list the versions of
+    /// that package's upgrade lineage. When unset, the request lists the
+    /// versions of every package by publish checkpoint (see `options`).
     #[prost(string, optional, tag = "1")]
     pub package_id: ::core::option::Option<::prost::alloc::string::String>,
     /// The maximum number of versions to return. The service may return fewer than this value.
     /// If unspecified, at most `1000` entries will be returned.
     /// The maximum value is `10000`; values above `10000` will be coerced to `10000`.
+    ///
+    /// New clients use `options`. Must be unset when `options`,
+    /// `start_checkpoint` or `end_checkpoint` is set, or `package_id` is
+    /// unset.
     #[prost(uint32, optional, tag = "2")]
     pub page_size: ::core::option::Option<u32>,
     /// A page token, received from a previous `ListPackageVersions` call.
@@ -4487,19 +4552,194 @@ pub struct ListPackageVersionsRequest {
     ///
     /// When paginating, all other parameters provided to `ListPackageVersions` must
     /// match the call that provided the page token.
+    ///
+    /// A page token names the first version of the next page, so the client
+    /// holds the version below it. A page token naming a version past what this
+    /// server has indexed gets an empty page without `next_page_token`. A page
+    /// token whose next page would skip versions the server does not retain
+    /// fails with `OUT_OF_RANGE` (see `options`).
+    ///
+    /// New clients use `options`. Must be unset when `options`,
+    /// `start_checkpoint` or `end_checkpoint` is set, or `package_id` is
+    /// unset.
     #[prost(bytes = "bytes", optional, tag = "3")]
     pub page_token: ::core::option::Option<::prost::bytes::Bytes>,
+    /// Optional. Cursor paging (see `QueryOptions`). `page_size` and
+    /// `page_token` must then be unset (`INVALID_ARGUMENT` otherwise), and
+    /// `next_page_token` is never set. A request with `package_id` unset, or
+    /// with `start_checkpoint` or `end_checkpoint` set, always pages this way,
+    /// whether or not it sets `options`.
+    ///
+    /// With `package_id` set, this listing is ordered by ascending version. With
+    /// `package_id` unset, it is ordered by ascending publish checkpoint, then
+    /// `original_id`, then version. `limit` defaults to `1000` and is coerced to
+    /// at most `10000`. Cursors come from `PackageVersion.cursor`. A malformed
+    /// cursor, or one from another listing (of another package, or of every
+    /// package when `package_id` is set, or vice versa), fails with
+    /// `INVALID_ARGUMENT`. A cursor also records the highest checkpoint the
+    /// server that returned it had indexed. A cursor from a server that has
+    /// indexed further, naming a version this server has not indexed yet, is
+    /// handled as a cursor past the tip (see below). With `package_id` set, a
+    /// request without an `after` or `before` cursor for a package this server
+    /// has not indexed fails with `NOT_FOUND`, as `GetPackage` does.
+    ///
+    /// Past what this server has indexed, the listing follows the
+    /// `LedgerService` `List*` RPCs (see `ErrorReason.ABOVE_LATEST_AVAILABLE`).
+    /// A descending listing fails with `OUT_OF_RANGE` when its `end_checkpoint`
+    /// is above `firstUnavailableCheckpoint` (one above the highest checkpoint
+    /// the server has indexed), or, with `end_checkpoint` unset, when its
+    /// `start_checkpoint` is at or above `firstUnavailableCheckpoint` or a
+    /// cursor names a version this server has not indexed. An ascending listing
+    /// is never refused for these: unless `end_version` or a `before` cursor
+    /// ends it first, it lists through the highest indexed checkpoint and ends
+    /// with `QUERY_END_REASON_LEDGER_TIP`.
+    ///
+    /// On a server that prunes history, a listing of one package in cursor
+    /// paging with `start_checkpoint` unset covers only the versions the server
+    /// stores: a version range that starts below the oldest of them starts at
+    /// it, so a descending listing without an `after` cursor ends there with a
+    /// short last page, and one with only a `before` cursor at or below that
+    /// version lists nothing. Nothing marks that version as different from a
+    /// package's first version.
+    ///
+    /// A request that continues a listing names a version the client already
+    /// holds: the version an `after` cursor names, or the version below a
+    /// `page_token`'s. When the range starts just above that version (no higher
+    /// `start_version` or `start_checkpoint` bounds it) and versions between it
+    /// and the oldest version the server stores are gone, the request fails with
+    /// `OUT_OF_RANGE` and reason `BELOW_EARLIEST_AVAILABLE` in either ordering
+    /// rather than skip them. Such a listing can only be completed from a server
+    /// that retains those versions.
+    ///
+    /// Every response sets `end` (see `ListPackageVersionsResponse.end`) and
+    /// carries no `Watermark`. Every page but the last holds `limit` versions,
+    /// so a response with fewer is the last page in that direction. Resume from
+    /// the last version's `cursor`, as `after` when ascending or `before` when
+    /// descending.
+    ///
+    /// Servers that predate this field ignore it, so clients must check that
+    /// versions carry `PackageVersion.cursor`.
+    #[prost(message, optional, tag = "5")]
+    pub options: ::core::option::Option<QueryOptions>,
+    /// Optional. Start of the version range to list (inclusive). Applies with
+    /// or without `options`, and intersects with every other bound. Must be
+    /// unset when `package_id` is unset.
+    ///
+    /// Servers that predate this field ignore it, as for `options`.
+    #[prost(uint64, optional, tag = "6")]
+    pub start_version: ::core::option::Option<u64>,
+    /// Optional. End of the version range to list (exclusive). Applies with or
+    /// without `options`, and intersects with every other bound. Below
+    /// `start_version` it fails with `INVALID_ARGUMENT`; equal to it, the range
+    /// lists nothing. Must be unset when `package_id` is unset.
+    ///
+    /// Servers that predate this field ignore it, as for `options`.
+    #[prost(uint64, optional, tag = "7")]
+    pub end_version: ::core::option::Option<u64>,
+    /// Optional. Start of the checkpoint range to list (inclusive): only
+    /// versions published in this checkpoint or later. The listing covers the
+    /// versions published in the range, not the packages' state at one
+    /// checkpoint. Intersects with every other bound. Unless the range is
+    /// empty, servers that prune history fail with `OUT_OF_RANGE` and reason
+    /// `BELOW_EARLIEST_AVAILABLE` for a checkpoint below the lowest one they can
+    /// list every publish from, unless an `after` cursor bounds the listing at
+    /// or above that checkpoint.
+    ///
+    /// In a listing of every package, if unset, the listing starts at that
+    /// checkpoint, which is genesis on servers that keep full history, and
+    /// covers the publishes from that checkpoint on: a descending listing
+    /// without an `after` cursor at or above that checkpoint ends there with a
+    /// short last page. With `start_checkpoint` unset, a listing in either
+    /// order after an `after` cursor below that checkpoint fails with
+    /// `OUT_OF_RANGE` and reason `BELOW_EARLIEST_AVAILABLE` rather than skip
+    /// the publishes in between. A `before` cursor below that checkpoint leaves
+    /// nothing to list.
+    ///
+    /// Servers that predate this field ignore it when `package_id` is set, as
+    /// for `end_checkpoint`, and fail requests with `package_id` unset with
+    /// `INVALID_ARGUMENT`.
+    #[prost(uint64, optional, tag = "8")]
+    pub start_checkpoint: ::core::option::Option<u64>,
+    /// Optional. End of the checkpoint range to list (exclusive): only versions
+    /// published before this checkpoint. Below `start_checkpoint` it fails with
+    /// `INVALID_ARGUMENT`; equal to it, the range lists nothing and is never
+    /// refused as pruned. If unset, the range ends at the highest checkpoint the
+    /// server has indexed. In a request with no lower bound of its own (no
+    /// `start_checkpoint` and no `after` cursor), an `end_checkpoint` at or
+    /// below the lowest checkpoint the server can list every publish from fails
+    /// with `OUT_OF_RANGE` and reason `BELOW_EARLIEST_AVAILABLE`.
+    ///
+    /// With `end_checkpoint` set, only `QUERY_END_REASON_CHECKPOINT_BOUND` means
+    /// the range is complete: the server ends with it only once it has indexed
+    /// `end_checkpoint - 1` or reached `end_version`.
+    /// `QUERY_END_REASON_LEDGER_TIP` means the listing stopped at the highest
+    /// checkpoint the server has indexed, short of the range's end; retry later
+    /// or on another replica. A response with fewer than `limit` versions does
+    /// not show that the range is complete.
+    ///
+    /// Servers that predate this field ignore it and never set `end`, so
+    /// clients must check that responses set `ListPackageVersionsResponse.end`.
+    #[prost(uint64, optional, tag = "9")]
+    pub end_checkpoint: ::core::option::Option<u64>,
 }
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListPackageVersionsResponse {
-    /// List of all package versions, ordered by version.
+    /// The listed versions in this listing's order (see
+    /// `ListPackageVersionsRequest.options`), or in reverse when
+    /// `options.ordering` is `ORDERING_DESCENDING`.
     #[prost(message, repeated, tag = "1")]
     pub versions: ::prost::alloc::vec::Vec<PackageVersion>,
     /// A token, which can be sent as `page_token` to retrieve the next page.
-    /// If this field is omitted, there are no subsequent pages.
+    /// If this field is omitted, there are no subsequent pages. Never set in
+    /// cursor paging (see `ListPackageVersionsRequest.options`).
     #[prost(bytes = "bytes", optional, tag = "2")]
     pub next_page_token: ::core::option::Option<::prost::bytes::Bytes>,
+    /// Set on every response in cursor paging (see
+    /// `ListPackageVersionsRequest.options`), and never otherwise. A full page
+    /// ends with `QUERY_END_REASON_ITEM_LIMIT`; a shorter one, the last, with:
+    ///
+    /// * `QUERY_END_REASON_CHECKPOINT_BOUND`: reached `end_version` or
+    ///   `start_version`, the end of the checkpoint range, or, descending, the
+    ///   package's first version (on a server that prunes history, the oldest
+    ///   version it stores) or, listing every package, the lowest checkpoint
+    ///   the server can list every publish from.
+    /// * `QUERY_END_REASON_CURSOR_BOUND`: reached the far cursor (`before`
+    ///   ascending, `after` descending).
+    /// * `QUERY_END_REASON_LEDGER_TIP`: an ascending listing reached the highest
+    ///   checkpoint the server has indexed, below `end_checkpoint` if set; later
+    ///   publishes can extend it.
+    #[prost(message, optional, tag = "3")]
+    pub end: ::core::option::Option<QueryEnd>,
+}
+#[non_exhaustive]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ListSystemPackagesRequest {
+    /// Optional. Return the system packages as of the end of this checkpoint.
+    /// If unset, return the latest set as of the highest checkpoint the server
+    /// has indexed.
+    ///
+    /// Outside the checkpoints the server has indexed, it fails as a request
+    /// pinned to a checkpoint (see `ErrorReason.ABOVE_LATEST_AVAILABLE` and
+    /// `BELOW_EARLIEST_AVAILABLE`). Servers without RPC indexes fail the request
+    /// with `UNIMPLEMENTED` and reason `NOT_SERVED_HERE`, with or without
+    /// `at_checkpoint`. Servers may fail it with `UNAVAILABLE` and reason
+    /// `NOT_READY` while their index is empty or they rebuild history after
+    /// restoring from a snapshot. Any of these fails the whole request, so a
+    /// successful response is the complete set.
+    #[prost(uint64, optional, tag = "1")]
+    pub at_checkpoint: ::core::option::Option<u64>,
+}
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListSystemPackagesResponse {
+    /// The system packages that existed at the end of `at_checkpoint`, or of the
+    /// highest checkpoint the server has indexed if it is unset, ordered by
+    /// `package_id`, each at its latest version by then. System packages are
+    /// upgraded in place, so `original_id` equals `package_id`. `checkpoint` may
+    /// be unset as `PackageVersion.checkpoint` describes; `cursor` is never set.
+    #[prost(message, repeated, tag = "1")]
+    pub system_packages: ::prost::alloc::vec::Vec<PackageVersion>,
 }
 /// A simplified representation of a package version
 #[non_exhaustive]
@@ -4511,6 +4751,23 @@ pub struct PackageVersion {
     /// The version number
     #[prost(uint64, optional, tag = "2")]
     pub version: ::core::option::Option<u64>,
+    /// The checkpoint in which this version was published. Servers that prune
+    /// history may leave this unset for versions published before their lowest
+    /// available checkpoint.
+    #[prost(uint64, optional, tag = "3")]
+    pub checkpoint: ::core::option::Option<u64>,
+    /// The opaque position of this version in the listing, for use as
+    /// `ListPackageVersionsRequest.options.after` or `options.before`. A server
+    /// that supports `options` sets this on every version, with or without
+    /// `options`, so versions without a cursor mean the server ignored
+    /// `options`, `start_version`, `end_version`, `start_checkpoint` and
+    /// `end_checkpoint`.
+    #[prost(bytes = "bytes", optional, tag = "4")]
+    pub cursor: ::core::option::Option<::prost::bytes::Bytes>,
+    /// The `original_id` of this version's package: the `storage_id` of its
+    /// first version, shared by every version in its upgrade lineage.
+    #[prost(string, optional, tag = "5")]
+    pub original_id: ::core::option::Option<::prost::alloc::string::String>,
 }
 /// Generated client implementations.
 pub mod move_package_service_client {
@@ -4704,6 +4961,37 @@ pub mod move_package_service_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        /// List the system packages as of a checkpoint, or the latest set, each at
+        /// its latest version then.
+        pub async fn list_system_packages(
+            &mut self,
+            request: impl tonic::IntoRequest<super::ListSystemPackagesRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::ListSystemPackagesResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/sui.rpc.v2.MovePackageService/ListSystemPackages",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "sui.rpc.v2.MovePackageService",
+                        "ListSystemPackages",
+                    ),
+                );
+            self.inner.unary(req, path, codec).await
+        }
     }
 }
 /// Generated server implementations.
@@ -4751,6 +5039,17 @@ pub mod move_package_service_server {
             request: tonic::Request<super::ListPackageVersionsRequest>,
         ) -> std::result::Result<
             tonic::Response<super::ListPackageVersionsResponse>,
+            tonic::Status,
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
+        /// List the system packages as of a checkpoint, or the latest set, each at
+        /// its latest version then.
+        async fn list_system_packages(
+            &self,
+            request: tonic::Request<super::ListSystemPackagesRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::ListSystemPackagesResponse>,
             tonic::Status,
         > {
             Err(tonic::Status::unimplemented("Not yet implemented"))
@@ -5004,6 +5303,55 @@ pub mod move_package_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = ListPackageVersionsSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/sui.rpc.v2.MovePackageService/ListSystemPackages" => {
+                    #[allow(non_camel_case_types)]
+                    struct ListSystemPackagesSvc<T: MovePackageService>(pub Arc<T>);
+                    impl<
+                        T: MovePackageService,
+                    > tonic::server::UnaryService<super::ListSystemPackagesRequest>
+                    for ListSystemPackagesSvc<T> {
+                        type Response = super::ListSystemPackagesResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::ListSystemPackagesRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as MovePackageService>::list_system_packages(
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = ListSystemPackagesSvc(inner);
                         let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
