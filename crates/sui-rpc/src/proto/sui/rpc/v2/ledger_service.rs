@@ -9,6 +9,8 @@ impl GetObjectRequest {
             object_id: Some(object_id.to_string()),
             version: None,
             read_mask: None,
+            at_checkpoint: None,
+            max_version: None,
         }
     }
 }

@@ -124,6 +124,19 @@ enum ErrorReason {
   // `OUT_OF_RANGE` when that checkpoint is above the latest indexed
   // checkpoint.
   //
+  // `BatchGetObjects` reports it only for the item with that `at_checkpoint`.
+  //
+  // `ListObjectVersions` handles its `start_checkpoint` and `end_checkpoint`
+  // as the other `List*` RPCs do. With `end_checkpoint` unset, it also
+  // returns this for a descending listing whose `after` cursor is at or above
+  // one past the object's newest version at the highest checkpoint the server
+  // has indexed, or whose `before` cursor is above that. When the range
+  // reaches that checkpoint (`end_checkpoint` unset or above
+  // `firstUnavailableCheckpoint`), a server that prunes history and retains
+  // nothing of the object also returns this, in either order, when every
+  // cursor in the request records a checkpoint above that one; see
+  // `ListObjectVersionsRequest`.
+  //
   // `ListPackageVersions` handles its cursors, `start_checkpoint` and
   // `end_checkpoint` as the `LedgerService` `List*` RPCs do. Its cursors
   // record the highest checkpoint the server that returned them had indexed.
@@ -151,7 +164,10 @@ enum ErrorReason {
   //   or the name of the request field, such as "start_checkpoint",
   //   "end_checkpoint" or "at_checkpoint".
   // - `requestedCheckpoint`: the checkpoint recorded in the cursor, or the
-  //   value of the header or request field.
+  //   value of the header or request field. For a cursor refused without its
+  //   checkpoint (a `ListObjectVersions` cursor refused by its version), it is
+  //   `firstUnavailableCheckpoint`. For `ListObjectVersions` cursors refused
+  //   by the checkpoints they record, it is the lowest of those checkpoints.
   // - `firstUnavailableCheckpoint`: the lowest checkpoint this server has not
   //   indexed, one above its latest indexed checkpoint, or "0" if it has
   //   indexed none.
@@ -170,6 +186,24 @@ enum ErrorReason {
   // Requests pinned to a checkpoint by `at_checkpoint` return this with
   // `OUT_OF_RANGE` when that checkpoint is below the lowest checkpoint this
   // server serves.
+  //
+  // `BatchGetObjects` reports it only for the item with that `at_checkpoint`.
+  //
+  // `ListObjectVersions` returns this with `OUT_OF_RANGE`, unless its range
+  // is empty, when its `start_checkpoint` is below the lowest one the server
+  // accepts (one above the lowest checkpoint whose object state it keeps) and
+  // no `after` cursor bounds the listing at or above that lowest start, when
+  // its `end_checkpoint` is at or below that lowest start and the request has
+  // no `start_checkpoint` or `after` cursor, when a listing is bounded below
+  // by an `after` cursor whose next version is below the object's oldest
+  // retained version, or when a request with an `after` cursor names an
+  // object of which the server retains nothing (for a cursor that marks the
+  // edge of an earlier listing, only if the object may have had a version
+  // after that edge that this server pruned). Its `lowestAvailableCheckpoint`
+  // is the lowest `start_checkpoint` the server accepts. A descending listing
+  // without `start_checkpoint` that reaches the object's oldest retained
+  // version ends normally; with `start_checkpoint`, a listing that pruning
+  // overtakes fails. See `ListObjectVersionsRequest`.
   //
   // `GetPackage` also returns this with `OUT_OF_RANGE` for a `version` this
   // server has pruned.
@@ -208,6 +242,34 @@ enum ErrorReason {
   // Metadata, as decimal strings:
   // - `lowestAvailableCheckpoint`: the lowest checkpoint this server serves.
   BELOW_EARLIEST_AVAILABLE = 6;
+
+  // The object was deleted or wrapped at the version a `GetObject` request, or
+  // a `BatchGetObjects` item, resolved to (see `GetObjectRequest`). Reported
+  // with `NOT_FOUND`. Best effort: a server that cannot find the removal, for
+  // example because it pruned it or keeps no record of removals, answers
+  // `NOT_FOUND` without this reason, so its absence does not mean the object
+  // never existed. A removal written after the request's `at_checkpoint` is
+  // not visible to it. The object can come back at a higher version, by an
+  // unwrap or by being created again under the same ID; the error describes
+  // only the version the request resolved to.
+  //
+  // Example of an ErrorInfo for an object deleted at version 42:
+  //
+  //     { "reason": "OBJECT_REMOVED",
+  //       "domain": "sui.io",
+  //       "metadata": {
+  //         "removedVersion": "42",
+  //         "removalKind": "DELETED",
+  //         "transaction": "7Lp2xbCSCqJ9TzJgRwNpKbhiUdDKCRfqbaDnDvfsbdYL"
+  //       }
+  //     }
+  //
+  // Metadata:
+  // - `removedVersion`: the removal's version, as a decimal string.
+  // - `removalKind`: `DELETED` or `WRAPPED`, an `ObjectRemoval.Kind` name.
+  // - `transaction`: the digest of the transaction that deleted or wrapped
+  //   the object. Unset when the server doesn't have it.
+  OBJECT_REMOVED = 7;
 
   // This server is not set up for the method, or for this kind of request on
   // a method it otherwise serves, for example a read at a checkpoint
