@@ -756,12 +756,30 @@ pub struct Epoch {
     #[prost(message, optional, tag = "2")]
     pub committee: ::core::option::Option<ValidatorCommittee>,
     /// Snapshot of Sui's SystemState (`0x3::sui_system::SystemState`) at the
-    /// beginning of the epoch, for past epochs, or the current state for the
-    /// current epoch.
+    /// beginning of the epoch, except for the current epoch (see
+    /// `GetEpochRequest.epoch`). For the current epoch, fullnodes return their
+    /// live state; kv-rpc returns the state at the highest checkpoint it has
+    /// indexed, or at the checkpoint before it when that is the epoch's last
+    /// checkpoint, even though `last_checkpoint` is then set. kv-rpc instances
+    /// that are not set up for reads at a checkpoint fail with `UNIMPLEMENTED`
+    /// and reason `NOT_SERVED_HERE` when `read_mask` selects it for the current
+    /// epoch.
+    ///
+    /// The state at an epoch's start, including the running epoch's, can be read
+    /// with `GetObject` of `0x5` at `at_checkpoint` = `first_checkpoint` - 1
+    /// (checkpoint 0 for epoch 0), and then its inner dynamic field at the same
+    /// checkpoint.
     #[prost(message, optional, boxed, tag = "3")]
     pub system_state: ::core::option::Option<::prost::alloc::boxed::Box<SystemState>>,
+    /// The epoch's first checkpoint. For the running epoch, servers without RPC
+    /// indexes leave it unset, and fullnodes leave it unset until their RPC
+    /// index records the epoch's start, shortly after the epoch begins.
     #[prost(uint64, optional, tag = "4")]
     pub first_checkpoint: ::core::option::Option<u64>,
+    /// The epoch's last checkpoint, unset while the epoch is running. Fullnodes
+    /// set it as soon as their RPC index records the epoch's end; kv-rpc sets it
+    /// only when the epoch ended at or before the highest checkpoint it has
+    /// indexed.
     #[prost(uint64, optional, tag = "5")]
     pub last_checkpoint: ::core::option::Option<u64>,
     #[prost(message, optional, tag = "6")]
@@ -773,6 +791,69 @@ pub struct Epoch {
     pub reference_gas_price: ::core::option::Option<u64>,
     #[prost(message, optional, tag = "9")]
     pub protocol_config: ::core::option::Option<ProtocolConfig>,
+    /// Sequence number of the first transaction in this epoch (inclusive). Unset
+    /// for the running epoch in the same cases as `first_checkpoint`.
+    #[prost(uint64, optional, tag = "10")]
+    pub transaction_start_inclusive: ::core::option::Option<u64>,
+    /// One past the sequence number of the epoch's last transaction (exclusive):
+    /// the `total_network_transactions` of `last_checkpoint`. Set only when
+    /// `last_checkpoint` is.
+    #[prost(uint64, optional, tag = "11")]
+    pub transaction_end_exclusive: ::core::option::Option<u64>,
+    /// Whether the epoch ended in safe mode: `advance_epoch` failed and
+    /// `advance_epoch_safe_mode` ran instead, so no `SystemEpochInfoEvent` was
+    /// emitted and `system_epoch_info` is unset. Set only when `last_checkpoint`
+    /// is.
+    #[prost(bool, optional, tag = "12")]
+    pub ended_in_safe_mode: ::core::option::Option<bool>,
+    /// Totals from the `0x3::sui_system_state_inner::SystemEpochInfoEvent`
+    /// emitted when this epoch ended. Set only when `last_checkpoint` is, and
+    /// unset if the epoch ended in safe mode.
+    #[prost(message, optional, tag = "13")]
+    pub system_epoch_info: ::core::option::Option<SystemEpochInfo>,
+    /// Commitments to epoch-specific state (the live object set), from the
+    /// `EndOfEpochData` of `last_checkpoint`. Empty while `last_checkpoint` is
+    /// unset, and for epochs that ended before the protocol added epoch
+    /// commitments.
+    #[prost(message, repeated, tag = "14")]
+    pub epoch_commitments: ::prost::alloc::vec::Vec<CheckpointCommitment>,
+}
+/// Totals reported by `SystemEpochInfoEvent` at the end of an epoch. Amounts
+/// are denominated in MIST.
+#[non_exhaustive]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct SystemEpochInfo {
+    /// Total stake of the validator set for the next epoch.
+    #[prost(uint64, optional, tag = "1")]
+    pub total_stake: ::core::option::Option<u64>,
+    /// Portion of the epoch's computation rewards reinvested into the storage
+    /// fund.
+    #[prost(uint64, optional, tag = "2")]
+    pub storage_fund_reinvestment: ::core::option::Option<u64>,
+    /// Storage fees charged during the epoch, plus those deferred from any
+    /// preceding epochs that ended in safe mode.
+    #[prost(uint64, optional, tag = "3")]
+    pub storage_charge: ::core::option::Option<u64>,
+    /// Storage rebates paid out during the epoch, plus those deferred from any
+    /// preceding epochs that ended in safe mode.
+    #[prost(uint64, optional, tag = "4")]
+    pub storage_rebate: ::core::option::Option<u64>,
+    /// Balance of the storage fund after the epoch change.
+    #[prost(uint64, optional, tag = "5")]
+    pub storage_fund_balance: ::core::option::Option<u64>,
+    /// Stake subsidy paid out at the end of the epoch.
+    #[prost(uint64, optional, tag = "6")]
+    pub stake_subsidy_amount: ::core::option::Option<u64>,
+    /// Computation gas fees collected during the epoch, plus those deferred from
+    /// any preceding epochs that ended in safe mode.
+    #[prost(uint64, optional, tag = "7")]
+    pub total_gas_fees: ::core::option::Option<u64>,
+    /// Stake rewards distributed to validators and their stakers.
+    #[prost(uint64, optional, tag = "8")]
+    pub total_stake_rewards_distributed: ::core::option::Option<u64>,
+    /// Rewards left over after distribution, added to the storage fund.
+    #[prost(uint64, optional, tag = "9")]
+    pub leftover_storage_fund_inflow: ::core::option::Option<u64>,
 }
 /// Error reasons in the `sui.io` error domain, used as the `reason` of a
 /// `google.rpc.ErrorInfo` or of a `google.rpc.BadRequest.FieldViolation`.
@@ -2571,12 +2652,18 @@ pub struct GetCheckpointResponse {
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetEpochRequest {
-    /// The requested epoch.
-    /// If no epoch is provided the current epoch will be returned.
+    /// The requested epoch. If unset, the current epoch: on fullnodes the epoch
+    /// of their live state, and on kv-rpc the epoch of the highest checkpoint it
+    /// has indexed. Apart from a fullnode's live epoch, which it answers even
+    /// before its RPC index records it, an epoch the server has not reached or
+    /// has not indexed fails with `NOT_FOUND`. Servers without RPC indexes fail
+    /// a request for a past epoch with `UNIMPLEMENTED` and reason
+    /// `NOT_SERVED_HERE`.
     #[prost(uint64, optional, tag = "1")]
     pub epoch: ::core::option::Option<u64>,
-    /// Mask specifying which fields to read.
-    /// If no mask is specified, defaults to `epoch`.
+    /// Mask specifying which fields to read. If no mask is specified, defaults
+    /// to `epoch`, `first_checkpoint`, `last_checkpoint`, `start`, `end`,
+    /// `reference_gas_price` and `protocol_config.protocol_version`.
     #[prost(message, optional, tag = "2")]
     pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
 }
