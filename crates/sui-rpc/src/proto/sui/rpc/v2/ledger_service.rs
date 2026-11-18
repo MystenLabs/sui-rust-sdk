@@ -156,3 +156,27 @@ impl GetEpochResponse {
         Self { epoch: Some(epoch) }
     }
 }
+
+impl GetProtocolConfigRequest {
+    pub fn latest() -> Self {
+        Self {
+            version: None,
+            read_mask: None,
+        }
+    }
+
+    pub fn new(version: u64) -> Self {
+        Self {
+            version: Some(version),
+            read_mask: None,
+        }
+    }
+}
+
+impl GetProtocolConfigResponse {
+    pub fn new(protocol_config: ProtocolConfig) -> Self {
+        Self {
+            protocol_config: Some(protocol_config),
+        }
+    }
+}
