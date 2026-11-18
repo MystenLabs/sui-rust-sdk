@@ -895,6 +895,12 @@ pub enum ErrorReason {
     /// replicas take to catch up with each other. Any other `bound` names a
     /// checkpoint the caller chose, which the chain may not have reached.
     ///
+    /// Requests pinned to a checkpoint by `at_checkpoint` return this with
+    /// `OUT_OF_RANGE` when that checkpoint is above the latest indexed
+    /// checkpoint.
+    ///
+    /// `BatchGetObjects` reports it only for the item with that `at_checkpoint`.
+    ///
     /// Example of an ErrorInfo for a descending query's `before` cursor at
     /// checkpoint 1205, sent to a server whose latest indexed checkpoint is 1199:
     ///
@@ -912,8 +918,8 @@ pub enum ErrorReason {
     /// Metadata, with checkpoints as decimal strings:
     ///
     /// * `bound`: what reads above the indexed data: "cursor" for a `before` or
-    ///   `after` cursor, or the name of the request field, "start_checkpoint" or
-    ///   "end_checkpoint".
+    ///   `after` cursor, or the name of the request field, such as
+    ///   "start_checkpoint", "end_checkpoint" or "at_checkpoint".
     /// * `requestedCheckpoint`: the checkpoint recorded in the cursor, or the
     ///   value of the request field.
     /// * `firstUnavailableCheckpoint`: the lowest checkpoint this server has not
@@ -938,6 +944,12 @@ pub enum ErrorReason {
     /// serves; see their request docs. So do point reads whose request docs say
     /// so.
     ///
+    /// Requests pinned to a checkpoint by `at_checkpoint` return this with
+    /// `OUT_OF_RANGE` when that checkpoint is below the lowest checkpoint this
+    /// server serves.
+    ///
+    /// `BatchGetObjects` reports it only for the item with that `at_checkpoint`.
+    ///
     /// Pruned data does not come back, so the same request fails the same way
     /// on this server. A client can send it to a server that retains the data,
     /// or resume at or above `lowestAvailableCheckpoint`.
@@ -954,10 +966,9 @@ pub enum ErrorReason {
     /// }
     /// ```
     ///
-    /// Metadata:
+    /// Metadata, as decimal strings:
     ///
-    /// * `lowestAvailableCheckpoint`: the lowest checkpoint this server serves,
-    ///   as a decimal string.
+    /// * `lowestAvailableCheckpoint`: the lowest checkpoint this server serves.
     BelowEarliestAvailable = 6,
     /// This server is not set up for the method, or for this kind of request on
     /// a method it otherwise serves, for example a read at a checkpoint
@@ -2394,15 +2405,41 @@ pub struct GetObjectRequest {
     /// Required. The `ObjectId` of the requested object.
     #[prost(string, optional, tag = "1")]
     pub object_id: ::core::option::Option<::prost::alloc::string::String>,
-    /// Request a specific version of the object.
-    /// If no version is specified, and the object is live, then the latest
-    /// version of the object is returned.
+    /// Optional. Request a specific version of the object.
+    ///
+    /// Mutually exclusive with `at_checkpoint`; servers reject a request that
+    /// sets both with `INVALID_ARGUMENT`. If neither is set and the object is
+    /// live, the latest version of the object is returned.
+    ///
+    /// Servers that keep only each object's latest version fail with
+    /// `OUT_OF_RANGE` and reason `VERSION_NOT_RETAINED` for any other version.
     #[prost(uint64, optional, tag = "2")]
     pub version: ::core::option::Option<u64>,
     /// Mask specifying which fields to read.
     /// If no mask is specified, defaults to `object_id,version,digest`.
     #[prost(message, optional, tag = "3")]
     pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
+    /// Optional. Return the object's state at the end of this checkpoint.
+    ///
+    /// The checkpoint must be at or below the highest checkpoint the server has
+    /// indexed; larger values fail with `OUT_OF_RANGE` and reason
+    /// `ABOVE_LATEST_AVAILABLE` instead of resolving to the latest version, so a
+    /// successful response is exact as of `at_checkpoint`. Servers that prune
+    /// history may also fail with `OUT_OF_RANGE` and reason
+    /// `BELOW_EARLIEST_AVAILABLE` for checkpoints below their lowest available
+    /// one. An object that was deleted or wrapped at or before this checkpoint
+    /// (and not since unwrapped) is `NOT_FOUND`.
+    ///
+    /// Mutually exclusive with `version`; servers reject a request that sets
+    /// both with `INVALID_ARGUMENT`.
+    ///
+    /// Servers that are not set up for reads at a checkpoint fail with
+    /// `UNIMPLEMENTED` and reason `NOT_SERVED_HERE`. Servers that cannot serve
+    /// them yet, for example while they backfill history, fail with
+    /// `UNAVAILABLE` and reason `NOT_READY`. Servers that predate this field
+    /// ignore it and answer as if it were unset.
+    #[prost(uint64, optional, tag = "4")]
+    pub at_checkpoint: ::core::option::Option<u64>,
 }
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -2413,6 +2450,14 @@ pub struct GetObjectResponse {
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct BatchGetObjectsRequest {
+    /// The objects to fetch. Each request carries its own `version` or
+    /// `at_checkpoint`, so a single batch may read different objects at
+    /// different versions or checkpoints. Errors for individual objects, such
+    /// as `NOT_FOUND`, are reported per item in the response. A malformed
+    /// request, such as one that sets both `version` and `at_checkpoint`, fails
+    /// the whole batch with `INVALID_ARGUMENT`. If any request sets
+    /// `at_checkpoint` and the server cannot serve reads at a checkpoint, the
+    /// whole batch fails as `GetObjectRequest.at_checkpoint` describes.
     #[prost(message, repeated, tag = "1")]
     pub requests: ::prost::alloc::vec::Vec<GetObjectRequest>,
     /// Mask specifying which fields to read.
