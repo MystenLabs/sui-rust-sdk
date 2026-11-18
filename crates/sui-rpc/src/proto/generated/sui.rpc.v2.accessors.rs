@@ -8541,6 +8541,7 @@ mod _accessor_impls {
                 version: None,
                 read_mask: None,
                 at_checkpoint: None,
+                max_version: None,
             }
         }
         #[doc(hidden)]
@@ -8637,6 +8638,28 @@ mod _accessor_impls {
         ///Sets `at_checkpoint` with the provided value.
         pub fn with_at_checkpoint(mut self, field: u64) -> Self {
             self.set_at_checkpoint(field);
+            self
+        }
+        ///If `max_version` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn max_version_opt_mut(&mut self) -> Option<&mut u64> {
+            self.max_version.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `max_version`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn max_version_mut(&mut self) -> &mut u64 {
+            self.max_version.get_or_insert_default()
+        }
+        ///If `max_version` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn max_version_opt(&self) -> Option<u64> {
+            self.max_version.as_ref().map(|field| *field)
+        }
+        ///Sets `max_version` with the provided value.
+        pub fn set_max_version(&mut self, field: u64) {
+            self.max_version = Some(field);
+        }
+        ///Sets `max_version` with the provided value.
+        pub fn with_max_version(mut self, field: u64) -> Self {
+            self.set_max_version(field);
             self
         }
     }

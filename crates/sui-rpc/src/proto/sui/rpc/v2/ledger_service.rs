@@ -10,6 +10,7 @@ impl GetObjectRequest {
             version: None,
             read_mask: None,
             at_checkpoint: None,
+            max_version: None,
         }
     }
 }
