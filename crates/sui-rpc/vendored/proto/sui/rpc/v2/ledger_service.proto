@@ -120,6 +120,10 @@ message GetObjectResult {
   }
 }
 
+// A server that prunes history refuses a transaction it can place in a
+// checkpoint below its lowest available checkpoint with `OUT_OF_RANGE` and
+// reason `BELOW_EARLIEST_AVAILABLE`. A transaction it can no longer find, or
+// one above its latest checkpoint, is `NOT_FOUND`.
 message GetTransactionRequest {
   // Required. The digest of the requested transaction.
   optional string digest = 1;
@@ -133,6 +137,7 @@ message GetTransactionResponse {
   optional ExecutedTransaction transaction = 1;
 }
 
+// Each transaction is answered as by `GetTransaction`, in its own result.
 message BatchGetTransactionsRequest {
   // Required. The digests of the requested transactions.
   repeated string digests = 1;
@@ -153,6 +158,11 @@ message GetTransactionResult {
   }
 }
 
+// A server that prunes history refuses a checkpoint below its lowest
+// available checkpoint with `OUT_OF_RANGE` and reason
+// `BELOW_EARLIEST_AVAILABLE`: by `sequence_number` always, by `digest` while
+// it can still find the checkpoint. A digest it can no longer find is
+// `NOT_FOUND`.
 message GetCheckpointRequest {
   // If neither is provided, return the latest
   oneof checkpoint_id {
@@ -173,12 +183,18 @@ message GetCheckpointResponse {
 }
 
 message GetEpochRequest {
-  // The requested epoch.
-  // If no epoch is provided the current epoch will be returned.
+  // The requested epoch. If unset, the current epoch: on fullnodes the epoch
+  // of their live state, and on kv-rpc the epoch of the highest checkpoint it
+  // has indexed. Apart from a fullnode's live epoch, which it answers even
+  // before its RPC index records it, an epoch the server has not reached or
+  // has not indexed fails with `NOT_FOUND`. Servers without RPC indexes fail
+  // a request for a past epoch with `UNIMPLEMENTED` and reason
+  // `NOT_SERVED_HERE`.
   optional uint64 epoch = 1;
 
-  // Mask specifying which fields to read.
-  // If no mask is specified, defaults to `epoch`.
+  // Mask specifying which fields to read. If no mask is specified, defaults
+  // to `epoch`, `first_checkpoint`, `last_checkpoint`, `start`, `end`,
+  // `reference_gas_price` and `protocol_config.protocol_version`.
   optional google.protobuf.FieldMask read_mask = 2;
 }
 
