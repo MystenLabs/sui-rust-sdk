@@ -468,12 +468,18 @@ message GetCheckpointResponse {
 }
 
 message GetEpochRequest {
-  // The requested epoch.
-  // If no epoch is provided the current epoch will be returned.
+  // The requested epoch. If unset, the current epoch: on fullnodes the epoch
+  // of their live state, and on kv-rpc the epoch of the highest checkpoint it
+  // has indexed. Apart from a fullnode's live epoch, which it answers even
+  // before its RPC index records it, an epoch the server has not reached or
+  // has not indexed fails with `NOT_FOUND`. Servers without RPC indexes fail
+  // a request for a past epoch with `UNIMPLEMENTED` and reason
+  // `NOT_SERVED_HERE`.
   optional uint64 epoch = 1;
 
-  // Mask specifying which fields to read.
-  // If no mask is specified, defaults to `epoch`.
+  // Mask specifying which fields to read. If no mask is specified, defaults
+  // to `epoch`, `first_checkpoint`, `last_checkpoint`, `start`, `end`,
+  // `reference_gas_price` and `protocol_config.protocol_version`.
   optional google.protobuf.FieldMask read_mask = 2;
 }
 
