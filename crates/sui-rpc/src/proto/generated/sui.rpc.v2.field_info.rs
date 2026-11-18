@@ -4882,6 +4882,91 @@ pub(crate) mod _field_impls {
             EpochFieldPathBuilder::new_with_base(self.path)
         }
     }
+    impl GetProtocolConfigRequest {
+        pub const VERSION_FIELD: &'static MessageField = &MessageField {
+            name: "version",
+            json_name: "version",
+            number: 1i32,
+            message_fields: None,
+        };
+        pub const READ_MASK_FIELD: &'static MessageField = &MessageField {
+            name: "read_mask",
+            json_name: "readMask",
+            number: 2i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for GetProtocolConfigRequest {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::VERSION_FIELD,
+            Self::READ_MASK_FIELD,
+        ];
+    }
+    impl GetProtocolConfigRequest {
+        pub fn path_builder() -> GetProtocolConfigRequestFieldPathBuilder {
+            GetProtocolConfigRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct GetProtocolConfigRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GetProtocolConfigRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn version(mut self) -> String {
+            self.path.push(GetProtocolConfigRequest::VERSION_FIELD.name);
+            self.finish()
+        }
+        pub fn read_mask(mut self) -> String {
+            self.path.push(GetProtocolConfigRequest::READ_MASK_FIELD.name);
+            self.finish()
+        }
+    }
+    impl GetProtocolConfigResponse {
+        pub const PROTOCOL_CONFIG_FIELD: &'static MessageField = &MessageField {
+            name: "protocol_config",
+            json_name: "protocolConfig",
+            number: 1i32,
+            message_fields: Some(ProtocolConfig::FIELDS),
+        };
+    }
+    impl MessageFields for GetProtocolConfigResponse {
+        const FIELDS: &'static [&'static MessageField] = &[Self::PROTOCOL_CONFIG_FIELD];
+    }
+    impl GetProtocolConfigResponse {
+        pub fn path_builder() -> GetProtocolConfigResponseFieldPathBuilder {
+            GetProtocolConfigResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct GetProtocolConfigResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl GetProtocolConfigResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn protocol_config(mut self) -> ProtocolConfigFieldPathBuilder {
+            self.path.push(GetProtocolConfigResponse::PROTOCOL_CONFIG_FIELD.name);
+            ProtocolConfigFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl ListCheckpointsRequest {
         pub const READ_MASK_FIELD: &'static MessageField = &MessageField {
             name: "read_mask",

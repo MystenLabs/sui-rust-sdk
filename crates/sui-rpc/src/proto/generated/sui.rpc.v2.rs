@@ -3044,6 +3044,24 @@ pub struct GetEpochResponse {
     #[prost(message, optional, tag = "1")]
     pub epoch: ::core::option::Option<Epoch>,
 }
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetProtocolConfigRequest {
+    /// The requested protocol version. If unset, the current version (see
+    /// `LedgerService.GetProtocolConfig`).
+    #[prost(uint64, optional, tag = "1")]
+    pub version: ::core::option::Option<u64>,
+    /// Mask specifying which fields to read.
+    /// If no mask is specified, defaults to `protocol_version`.
+    #[prost(message, optional, tag = "2")]
+    pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
+}
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetProtocolConfigResponse {
+    #[prost(message, optional, tag = "1")]
+    pub protocol_config: ::core::option::Option<ProtocolConfig>,
+}
 /// Request message for LedgerService.ListCheckpoints.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -3594,6 +3612,45 @@ pub mod ledger_service_client {
                 .insert(GrpcMethod::new("sui.rpc.v2.LedgerService", "GetEpoch"));
             self.inner.unary(req, path, codec).await
         }
+        /// Get the protocol config of a protocol version.
+        ///
+        /// With `version` unset, it returns the config of the current protocol
+        /// version: on fullnodes, the version of their live system state; on kv-rpc,
+        /// the version in force at the highest checkpoint it has indexed. A
+        /// `version` above the current one fails with `NOT_FOUND`. kv-rpc also
+        /// answers `NOT_FOUND` for a version the chain skipped: a protocol upgrade
+        /// can advance the version by more than one, and a skipped version has no
+        /// config. Fullnodes compute configs from their own binary and serve every
+        /// version up to the current one.
+        ///
+        /// A server not set up to serve this method fails with `UNIMPLEMENTED` and
+        /// reason `NOT_SERVED_HERE`.
+        pub async fn get_protocol_config(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetProtocolConfigRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::GetProtocolConfigResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/sui.rpc.v2.LedgerService/GetProtocolConfig",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new("sui.rpc.v2.LedgerService", "GetProtocolConfig"),
+                );
+            self.inner.unary(req, path, codec).await
+        }
         /// List checkpoints matching the provided filters.
         ///
         /// Checkpoints are returned in ascending or descending checkpoint sequence
@@ -3769,6 +3826,28 @@ pub mod ledger_service_server {
             request: tonic::Request<super::GetEpochRequest>,
         ) -> std::result::Result<
             tonic::Response<super::GetEpochResponse>,
+            tonic::Status,
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
+        /// Get the protocol config of a protocol version.
+        ///
+        /// With `version` unset, it returns the config of the current protocol
+        /// version: on fullnodes, the version of their live system state; on kv-rpc,
+        /// the version in force at the highest checkpoint it has indexed. A
+        /// `version` above the current one fails with `NOT_FOUND`. kv-rpc also
+        /// answers `NOT_FOUND` for a version the chain skipped: a protocol upgrade
+        /// can advance the version by more than one, and a skipped version has no
+        /// config. Fullnodes compute configs from their own binary and serve every
+        /// version up to the current one.
+        ///
+        /// A server not set up to serve this method fails with `UNIMPLEMENTED` and
+        /// reason `NOT_SERVED_HERE`.
+        async fn get_protocol_config(
+            &self,
+            request: tonic::Request<super::GetProtocolConfigRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::GetProtocolConfigResponse>,
             tonic::Status,
         > {
             Err(tonic::Status::unimplemented("Not yet implemented"))
@@ -4246,6 +4325,52 @@ pub mod ledger_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetEpochSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/sui.rpc.v2.LedgerService/GetProtocolConfig" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetProtocolConfigSvc<T: LedgerService>(pub Arc<T>);
+                    impl<
+                        T: LedgerService,
+                    > tonic::server::UnaryService<super::GetProtocolConfigRequest>
+                    for GetProtocolConfigSvc<T> {
+                        type Response = super::GetProtocolConfigResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::GetProtocolConfigRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as LedgerService>::get_protocol_config(&inner, request)
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = GetProtocolConfigSvc(inner);
                         let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
