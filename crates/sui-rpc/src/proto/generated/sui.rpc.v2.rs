@@ -1126,9 +1126,14 @@ pub enum ErrorReason {
     ///
     /// Metadata:
     ///
-    /// * `cause`: what this server lacks: "no_rpc_indexes" (it does not keep the
-    ///   RPC indexes the request needs) or "disabled_by_config" (its
-    ///   configuration turns the method or this kind of request off).
+    /// * `cause`: why this server does not serve the request: "no_rpc_indexes"
+    ///   (it does not keep the RPC indexes the request needs),
+    ///   "disabled_by_config" (its configuration turns the method or this kind
+    ///   of request off) or "uncertified_live_state" (its live state includes
+    ///   data the network has not certified yet, so it cannot serve the request
+    ///   at the requested finality level; send `x-sui-finality-level: executed`,
+    ///   or use a server whose live state is certified). More causes may be
+    ///   added.
     NotServedHere = 8,
     /// This server cannot serve the request now but will be able to, for example
     /// while it starts or backfills history. Returned with `UNAVAILABLE`. Retry,
