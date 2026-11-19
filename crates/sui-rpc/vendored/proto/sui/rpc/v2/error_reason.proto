@@ -124,6 +124,8 @@ enum ErrorReason {
   // `OUT_OF_RANGE` when that checkpoint is above the latest indexed
   // checkpoint.
   //
+  // `BatchGetObjects` reports it only for the item with that `at_checkpoint`.
+  //
   // `ListPackageVersions` follows these rules for its checkpoint range and
   // cursors; see `ListPackageVersionsRequest.options`. When it refuses a
   // cursor for the version the cursor names, `requestedCheckpoint` is
@@ -174,6 +176,8 @@ enum ErrorReason {
   // Requests pinned to a checkpoint by `at_checkpoint` return this with
   // `OUT_OF_RANGE` when that checkpoint is below the lowest checkpoint this
   // server serves.
+  //
+  // `BatchGetObjects` reports it only for the item with that `at_checkpoint`.
   //
   // `GetPackage` also returns this with `OUT_OF_RANGE` for a `version` this
   // server has pruned.
