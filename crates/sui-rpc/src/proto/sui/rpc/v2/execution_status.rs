@@ -252,6 +252,7 @@ impl From<sui_sdk_types::ExecutionError> for ExecutionError {
                 message.set_object_id(object);
                 ExecutionErrorKind::NonExclusiveWriteInputObjectModified
             }
+            E::TransactionExpired => ExecutionErrorKind::TransactionExpired,
             _ => ExecutionErrorKind::Unknown,
         };
 
@@ -523,6 +524,7 @@ impl TryFrom<&ExecutionError> for sui_sdk_types::ExecutionError {
             K::NonExclusiveWriteInputObjectModified => Self::NonExclusiveWriteInputObjectModified {
                 object: value.object_id().parse().map_err(|e| TryFromProtoError::invalid("object_id", e))?
             },
+            K::TransactionExpired => Self::TransactionExpired,
         }
         .pipe(Ok)
     }
