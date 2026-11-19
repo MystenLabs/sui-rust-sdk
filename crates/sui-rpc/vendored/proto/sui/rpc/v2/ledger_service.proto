@@ -14,6 +14,7 @@ import "sui/rpc/v2/event.proto";
 import "sui/rpc/v2/executed_transaction.proto";
 import "sui/rpc/v2/filter.proto";
 import "sui/rpc/v2/object.proto";
+import "sui/rpc/v2/protocol_config.proto";
 import "sui/rpc/v2/query_options.proto";
 
 service LedgerService {
@@ -23,12 +24,35 @@ service LedgerService {
   rpc GetObject(GetObjectRequest) returns (GetObjectResponse);
   rpc BatchGetObjects(BatchGetObjectsRequest) returns (BatchGetObjectsResponse);
 
+  // List one object's history: its live versions and the versions at which it
+  // was deleted or wrapped, in ascending or descending version order, one per
+  // response frame, paged by cursor.
+  //
+  // Servers that prune history, such as fullnodes, list the versions they
+  // retain; see `ListObjectVersionsRequest`.
+  rpc ListObjectVersions(ListObjectVersionsRequest) returns (stream ListObjectVersionsResponse);
+
   rpc GetTransaction(GetTransactionRequest) returns (GetTransactionResponse);
   rpc BatchGetTransactions(BatchGetTransactionsRequest) returns (BatchGetTransactionsResponse);
 
   rpc GetCheckpoint(GetCheckpointRequest) returns (GetCheckpointResponse);
 
   rpc GetEpoch(GetEpochRequest) returns (GetEpochResponse);
+
+  // Get the protocol config of a protocol version.
+  //
+  // With `version` unset, it returns the config of the current protocol
+  // version: on fullnodes, the version of their live system state; on kv-rpc,
+  // the version in force at the highest checkpoint it has indexed. A
+  // `version` above the current one fails with `NOT_FOUND`. kv-rpc also
+  // answers `NOT_FOUND` for a version the chain skipped: a protocol upgrade
+  // can advance the version by more than one, and a skipped version has no
+  // config. Fullnodes compute configs from their own binary and serve every
+  // version up to the current one.
+  //
+  // A server not set up to serve this method fails with `UNIMPLEMENTED` and
+  // reason `NOT_SERVED_HERE`.
+  rpc GetProtocolConfig(GetProtocolConfigRequest) returns (GetProtocolConfigResponse);
 
   // List checkpoints matching the provided filters.
   //
@@ -83,18 +107,78 @@ message GetServiceInfoResponse {
   optional string server = 8;
 }
 
+// A request that resolves to a version where the object was deleted or
+// wrapped fails with `NOT_FOUND`, with reason `OBJECT_REMOVED` when the server
+// can find the removal.
 message GetObjectRequest {
   // Required. The `ObjectId` of the requested object.
   optional string object_id = 1;
 
-  // Request a specific version of the object.
-  // If no version is specified, and the object is live, then the latest
-  // version of the object is returned.
+  // Optional. Request a specific version of the object.
+  //
+  // Mutually exclusive with `max_version`; servers reject a request that sets
+  // both with `INVALID_ARGUMENT`. If none of `version`, `max_version` and
+  // `at_checkpoint` is set and the object is live, the latest version of the
+  // object is returned.
+  //
+  // Servers that prune object history fail with `OUT_OF_RANGE` and reason
+  // `BELOW_EARLIEST_AVAILABLE` for a version they no longer hold. A version
+  // above the object's latest version is `NOT_FOUND`.
+  //
+  // Without `at_checkpoint`, servers that keep only each object's latest
+  // version answer requests for that version, even if the object was deleted
+  // or wrapped at it (`NOT_FOUND`, as described on `GetObjectRequest`), and
+  // fail with `OUT_OF_RANGE` and reason `VERSION_NOT_RETAINED` for any older
+  // version. An object they have no entry for at all is `NOT_FOUND`.
   optional uint64 version = 2;
 
   // Mask specifying which fields to read.
   // If no mask is specified, defaults to `object_id,version,digest`.
   optional google.protobuf.FieldMask read_mask = 3;
+
+  // Optional. Set alone, return the object's state at the end of this
+  // checkpoint. An object deleted or wrapped at or before it (and not since
+  // unwrapped or re-created) is `NOT_FOUND`.
+  //
+  // Combined with `version` or `max_version`, it bounds which versions are
+  // visible: the server resolves the selected version first, then fails with
+  // `NOT_FOUND` if that version was written after `at_checkpoint`, without
+  // falling back to an older visible version. A visible version is returned
+  // even if the object was deleted or wrapped by the end of `at_checkpoint`.
+  // For example, if version 5 was written in checkpoint 10 and version 8 in
+  // checkpoint 20, then on a server that has indexed checkpoint 25,
+  // `max_version: 8` with `at_checkpoint: 15` is `NOT_FOUND`, and with
+  // `at_checkpoint: 25` returns version 8. A server that has indexed only up
+  // to checkpoint 19 selects version 5 and returns it for `at_checkpoint: 15`.
+  //
+  // Outside the checkpoints the server has indexed, it fails as a request
+  // pinned to a checkpoint (see `ErrorReason.ABOVE_LATEST_AVAILABLE` and
+  // `BELOW_EARLIEST_AVAILABLE`).
+  //
+  // Servers that are not set up for reads at a checkpoint fail with
+  // `UNIMPLEMENTED` and reason `NOT_SERVED_HERE`. Servers that cannot serve
+  // them yet, for example while they backfill history, fail with
+  // `UNAVAILABLE` and reason `NOT_READY`. Servers that predate this field
+  // ignore it and answer as if it were unset.
+  optional uint64 at_checkpoint = 4;
+
+  // Optional. Return the object's newest version at or below `max_version`.
+  // Without `at_checkpoint`, fullnodes read it from their live state and
+  // kv-rpc reads it at the highest checkpoint it has indexed; with it, both
+  // select among the versions up to the highest checkpoint they have indexed.
+  // Fails with `NOT_FOUND` if there is none, or if the object was deleted or
+  // wrapped at that version. Mutually exclusive with `version`; a request
+  // that sets both fails with `INVALID_ARGUMENT`. Servers that prune object
+  // history fail with `OUT_OF_RANGE` and reason `BELOW_EARLIEST_AVAILABLE`
+  // for a version they no longer hold.
+  //
+  // Servers that are not set up for `max_version` reads, such as fullnodes
+  // without RPC indexes, fail with `UNIMPLEMENTED` and reason
+  // `NOT_SERVED_HERE`. Servers that cannot serve them yet, for example while
+  // they backfill their indexes, fail with `UNAVAILABLE` and reason
+  // `NOT_READY`. Servers that predate this field ignore it and answer as if
+  // it were unset.
+  optional uint64 max_version = 5;
 }
 
 message GetObjectResponse {
@@ -102,6 +186,15 @@ message GetObjectResponse {
 }
 
 message BatchGetObjectsRequest {
+  // The objects to fetch. Each request carries its own `version`,
+  // `max_version` or `at_checkpoint`, so a single batch may read different
+  // objects at different versions or checkpoints. Errors for individual
+  // objects, such as `NOT_FOUND`, are reported per item in the response. A
+  // malformed request, such as one that sets both `version` and
+  // `max_version`, fails the whole batch with `INVALID_ARGUMENT`. If any
+  // request sets `at_checkpoint` or `max_version` and the server cannot serve
+  // such reads, the whole batch fails as `GetObjectRequest` describes for
+  // that field.
   repeated GetObjectRequest requests = 1;
 
   // Mask specifying which fields to read.
@@ -120,6 +213,218 @@ message GetObjectResult {
   }
 }
 
+// Request message for LedgerService.ListObjectVersions.
+//
+// Lists the object's history, one item per version: a live version or a
+// removal (a version where it was deleted or wrapped). Both count toward
+// `options.limit`, and every bound applies to both. The bounds intersect. An
+// empty result, including for an object that does not exist, ends with
+// `QueryEnd` rather than `NOT_FOUND`. After a removal the object can come back
+// at a higher version, by an unwrap or by being created again under the same
+// ID (dynamic fields, derived objects), and the listing continues with it.
+//
+// Past what this server has indexed, the listing follows the other `List*`
+// RPCs (see `ErrorReason.ABOVE_LATEST_AVAILABLE`). A descending listing fails
+// with `OUT_OF_RANGE` / `ABOVE_LATEST_AVAILABLE` when its `end_checkpoint` is
+// above `firstUnavailableCheckpoint` (one above the highest checkpoint the
+// server has indexed); with `end_checkpoint` unset, when its
+// `start_checkpoint` is at or above `firstUnavailableCheckpoint`, its `after`
+// cursor is at or above one past the object's newest version at the highest
+// indexed checkpoint, or its `before` cursor is above that. An ascending
+// listing is never refused for these: it is served from this server's view
+// and, unless `end_version` or `before` ends it first, ends with
+// `QUERY_END_REASON_LEDGER_TIP`; an `after` cursor past the highest indexed
+// checkpoint comes back unchanged as its last `cursor`. A server that prunes
+// history and retains nothing of the object compares the checkpoints the
+// cursors record instead; see below.
+//
+// `start_version` and `end_version` may be above the object's newest version
+// without error: a descending listing whose `end_version` is above it starts
+// at the newest version, and a range entirely above it lists nothing.
+//
+// A server that prunes history lists only the versions it retains: each
+// object's history from its state at the end of the lowest checkpoint whose
+// object state it keeps. A listing whose version bounds reach below the
+// object's oldest retained version starts there, in either order, and ends as
+// it would if that were the object's first version; nothing in the response
+// marks the difference. An object of which the server retains nothing lists
+// nothing. A client that needs an object's complete history uses a server
+// that does not prune it.
+//
+// The lowest `start_checkpoint` this server accepts is one above that lowest
+// checkpoint. An empty range (`end_checkpoint` equal to `start_checkpoint`)
+// lists nothing and is never refused as pruned. Otherwise a lower
+// `start_checkpoint` fails with `OUT_OF_RANGE` / `BELOW_EARLIEST_AVAILABLE`
+// (unless an `after` cursor bounds the listing at or above that lowest
+// start), and so does an `end_checkpoint` at or below it in a request with no
+// lower bound of its own (no `start_checkpoint` and no `after` cursor). Every
+// `BELOW_EARLIEST_AVAILABLE` error of this method reports that lowest
+// `start_checkpoint` as `lowestAvailableCheckpoint`. With `start_checkpoint`
+// set, a listing that pruning overtakes while it streams fails the same way
+// rather than end at the object's oldest retained version.
+//
+// A descending listing that resumes from a `before` cursor below the object's
+// oldest retained version gets an empty page that ends normally, as at the
+// object's oldest retained version. So does one for an object of which the
+// server retains nothing.
+//
+// A listing bounded below by an `after` cursor, in either order, starts right
+// after the position the cursor names: the item the client holds, or the edge
+// of an earlier listing that returned nothing past it. When that is below the
+// object's oldest retained version, listing from there could leave a gap, so
+// the request fails with `OUT_OF_RANGE` / `BELOW_EARLIEST_AVAILABLE`. So does
+// a request with an `after` cursor for an object of which the server retains
+// nothing. A cursor that marks the edge of an earlier listing, rather than an
+// item, is served instead only when the server can tell that the object had
+// no version after that edge at or below the lowest checkpoint whose object
+// state it keeps, so nothing after it was pruned. The server may return this
+// error even when no version existed between the cursor and the oldest
+// retained one, if it cannot tell. An ascending listing that pruning
+// overtakes while it streams may fail the same way.
+//
+// When the range reaches this server's tip (`end_checkpoint` unset or above
+// `firstUnavailableCheckpoint`), a request for an object this server retains
+// nothing of whose cursors all come from a server that has indexed further
+// than this one fails with `OUT_OF_RANGE` / `ABOVE_LATEST_AVAILABLE` (bound
+// "cursor"), in either order, until the server catches up: the object may be
+// newer than this server's tip, or pruned here.
+//
+// With `transaction` in `removal_read_mask`, the retained versions start from
+// the higher of that checkpoint and the last checkpoint before this server's
+// removal transactions start, if any, and that higher checkpoint takes its
+// place in the rules above. Above it, a removal whose transaction the server
+// cannot find fails the listing with `INTERNAL`.
+//
+// Servers that are not set up for this method, for example without the
+// indexes it needs, fail with `UNIMPLEMENTED` and reason `NOT_SERVED_HERE`.
+// Servers that cannot serve it yet, for example while they backfill those
+// indexes, fail with `UNAVAILABLE` and reason `NOT_READY`.
+message ListObjectVersionsRequest {
+  // Required. The `ObjectId` of the object whose versions to list.
+  optional string object_id = 1;
+
+  // Mask for each live version's `object`. Defaults to
+  // `object_id,version,digest`. Does not apply to `removal`.
+  optional google.protobuf.FieldMask read_mask = 2;
+
+  // Optional. The listing's order is ascending version. The server sets the
+  // default and maximum `limit`; larger values are coerced to the maximum,
+  // and `0` to `1`. Cursors come from `ListObjectVersionsResponse.cursor` and
+  // are per object: a malformed cursor, or one for another object, fails with
+  // `INVALID_ARGUMENT`. Resume from the last `cursor` received.
+  // A cursor also records the listing's bounding checkpoint: the last
+  // checkpoint of the range when `end_checkpoint` is set and that checkpoint
+  // is indexed, else the highest checkpoint the server that returned it had
+  // indexed.
+  optional QueryOptions options = 3;
+
+  // Optional. Start of the version range to list (inclusive).
+  optional uint64 start_version = 4;
+
+  // Optional. End of the version range to list (exclusive). Below
+  // `start_version` it fails with `INVALID_ARGUMENT`; equal to it, the range
+  // lists nothing.
+  optional uint64 end_version = 5;
+
+  reserved 6;
+
+  // Mask for each `removal`, with paths `version`, `kind` and `transaction`.
+  // Defaults to `version,kind`.
+  optional google.protobuf.FieldMask removal_read_mask = 7;
+
+  // Optional. Start of the checkpoint range to list (inclusive): only
+  // versions written in this checkpoint or later. The listing covers the
+  // history written in the range, not the object's state at one checkpoint.
+  // If unset, the listing starts at the object's first version (on a server
+  // that prunes history, its oldest retained version).
+  optional uint64 start_checkpoint = 8;
+
+  // Optional. End of the checkpoint range to list (exclusive): only versions
+  // written before this checkpoint. Below `start_checkpoint` it fails with
+  // `INVALID_ARGUMENT`; equal to it, the range lists nothing. If unset, the
+  // range ends at the highest checkpoint the server has indexed.
+  //
+  // With `end_checkpoint` set, `QUERY_END_REASON_LEDGER_TIP` means the server
+  // stopped at its highest indexed checkpoint, short of `end_checkpoint`:
+  // retry later or on another replica.
+  optional uint64 end_checkpoint = 9;
+}
+
+// Response message for LedgerService.ListObjectVersions.
+//
+// Every frame carries a `cursor`. A frame that delivers an item sets `item`,
+// in ascending version order or in reverse for `ORDERING_DESCENDING`. `end`
+// is set exactly once, on the last frame; with `QUERY_END_REASON_ITEM_LIMIT`
+// it rides on the last item's frame, and otherwise the last frame leaves
+// `item` unset. In this listing:
+//
+// - `QUERY_END_REASON_CHECKPOINT_BOUND`: reached `end_version` or
+//   `start_version`, the end of the checkpoint range, or the object's first
+//   version (on a server that prunes history, its oldest retained version).
+// - `QUERY_END_REASON_CURSOR_BOUND`: reached the far cursor (`before`
+//   ascending, `after` descending).
+// - `QUERY_END_REASON_LEDGER_TIP`: an ascending listing reached the highest
+//   checkpoint the server has indexed, below `end_checkpoint` if set; resume
+//   later from the last cursor received.
+message ListObjectVersionsResponse {
+  // The item a frame delivers. Unset on a frame that carries only `end`.
+  oneof item {
+    // A live version, with the fields selected by `read_mask`.
+    Object object = 1;
+
+    // A version at which the object was deleted or wrapped, with the fields
+    // selected by `removal_read_mask`.
+    ObjectRemoval removal = 4;
+  }
+
+  // The opaque resume position as of this frame, for use as `options.after`
+  // or `options.before`. Set on every frame, including the last. On a frame
+  // that sets `item`, it is that item's position; the last frame carries the
+  // position where the listing stopped, so a listing with no items still
+  // returns a resume cursor, and with `QUERY_END_REASON_CURSOR_BOUND` it is
+  // the far cursor. It records the listing's bounding checkpoint (see
+  // `ListObjectVersionsRequest.options`), not how far the listing has
+  // covered the ledger.
+  optional bytes cursor = 2;
+
+  // Set exactly once, on the final frame of a successful stream.
+  optional QueryEnd end = 3;
+}
+
+// A version at which an object was deleted or wrapped, listed by
+// `ListObjectVersions`. The object has no contents at this version.
+message ObjectRemoval {
+  // How the object was removed.
+  enum Kind {
+    KIND_UNKNOWN = 0;
+
+    // The object was deleted. An object with the same ID can be created again
+    // at a higher version, as a dynamic field is when a field with the same
+    // name is added again. A transaction that unwraps and deletes an object
+    // also shows as `DELETED`.
+    DELETED = 1;
+
+    // The object was wrapped in another object. It can later be unwrapped at
+    // a higher version.
+    WRAPPED = 2;
+  }
+
+  // The version the removing transaction assigned the object.
+  optional uint64 version = 1;
+
+  // How the object was removed.
+  optional Kind kind = 2;
+
+  // The digest of the transaction that deleted or wrapped the object. Set
+  // only when `ListObjectVersionsRequest.removal_read_mask` selects it, and
+  // then always set.
+  optional string transaction = 3;
+}
+
+// A server that prunes history refuses a transaction it can place in a
+// checkpoint below its lowest available checkpoint with `OUT_OF_RANGE` and
+// reason `BELOW_EARLIEST_AVAILABLE`. A transaction it can no longer find, or
+// one above its latest checkpoint, is `NOT_FOUND`.
 message GetTransactionRequest {
   // Required. The digest of the requested transaction.
   optional string digest = 1;
@@ -133,6 +438,7 @@ message GetTransactionResponse {
   optional ExecutedTransaction transaction = 1;
 }
 
+// Each transaction is answered as by `GetTransaction`, in its own result.
 message BatchGetTransactionsRequest {
   // Required. The digests of the requested transactions.
   repeated string digests = 1;
@@ -153,6 +459,11 @@ message GetTransactionResult {
   }
 }
 
+// A server that prunes history refuses a checkpoint below its lowest
+// available checkpoint with `OUT_OF_RANGE` and reason
+// `BELOW_EARLIEST_AVAILABLE`: by `sequence_number` always, by `digest` while
+// it can still find the checkpoint. A digest it can no longer find is
+// `NOT_FOUND`.
 message GetCheckpointRequest {
   // If neither is provided, return the latest
   oneof checkpoint_id {
@@ -173,17 +484,37 @@ message GetCheckpointResponse {
 }
 
 message GetEpochRequest {
-  // The requested epoch.
-  // If no epoch is provided the current epoch will be returned.
+  // The requested epoch. If unset, the current epoch: on fullnodes the epoch
+  // of their live state, and on kv-rpc the epoch of the highest checkpoint it
+  // has indexed. Apart from a fullnode's live epoch, which it answers even
+  // before its RPC index records it, an epoch the server has not reached or
+  // has not indexed fails with `NOT_FOUND`. Servers without RPC indexes fail
+  // a request for a past epoch with `UNIMPLEMENTED` and reason
+  // `NOT_SERVED_HERE`.
   optional uint64 epoch = 1;
 
-  // Mask specifying which fields to read.
-  // If no mask is specified, defaults to `epoch`.
+  // Mask specifying which fields to read. If no mask is specified, defaults
+  // to `epoch`, `first_checkpoint`, `last_checkpoint`, `start`, `end`,
+  // `reference_gas_price` and `protocol_config.protocol_version`.
   optional google.protobuf.FieldMask read_mask = 2;
 }
 
 message GetEpochResponse {
   optional Epoch epoch = 1;
+}
+
+message GetProtocolConfigRequest {
+  // The requested protocol version. If unset, the current version (see
+  // `LedgerService.GetProtocolConfig`).
+  optional uint64 version = 1;
+
+  // Mask specifying which fields to read.
+  // If no mask is specified, defaults to `protocol_version`.
+  optional google.protobuf.FieldMask read_mask = 2;
+}
+
+message GetProtocolConfigResponse {
+  optional ProtocolConfig protocol_config = 1;
 }
 
 // Request message for LedgerService.ListCheckpoints.

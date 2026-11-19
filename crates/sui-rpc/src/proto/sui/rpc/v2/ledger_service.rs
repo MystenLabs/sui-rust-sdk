@@ -9,6 +9,8 @@ impl GetObjectRequest {
             object_id: Some(object_id.to_string()),
             version: None,
             read_mask: None,
+            at_checkpoint: None,
+            max_version: None,
         }
     }
 }
@@ -154,5 +156,29 @@ impl GetEpochRequest {
 impl GetEpochResponse {
     pub fn new(epoch: Epoch) -> Self {
         Self { epoch: Some(epoch) }
+    }
+}
+
+impl GetProtocolConfigRequest {
+    pub fn latest() -> Self {
+        Self {
+            version: None,
+            read_mask: None,
+        }
+    }
+
+    pub fn new(version: u64) -> Self {
+        Self {
+            version: Some(version),
+            read_mask: None,
+        }
+    }
+}
+
+impl GetProtocolConfigResponse {
+    pub fn new(protocol_config: ProtocolConfig) -> Self {
+        Self {
+            protocol_config: Some(protocol_config),
+        }
     }
 }
