@@ -120,6 +120,10 @@ message GetObjectResult {
   }
 }
 
+// A server that prunes history refuses a transaction it can place in a
+// checkpoint below its lowest available checkpoint with `OUT_OF_RANGE` and
+// reason `BELOW_EARLIEST_AVAILABLE`. A transaction it can no longer find, or
+// one above its latest checkpoint, is `NOT_FOUND`.
 message GetTransactionRequest {
   // Required. The digest of the requested transaction.
   optional string digest = 1;
@@ -133,6 +137,7 @@ message GetTransactionResponse {
   optional ExecutedTransaction transaction = 1;
 }
 
+// Each transaction is answered as by `GetTransaction`, in its own result.
 message BatchGetTransactionsRequest {
   // Required. The digests of the requested transactions.
   repeated string digests = 1;
@@ -153,6 +158,11 @@ message GetTransactionResult {
   }
 }
 
+// A server that prunes history refuses a checkpoint below its lowest
+// available checkpoint with `OUT_OF_RANGE` and reason
+// `BELOW_EARLIEST_AVAILABLE`: by `sequence_number` always, by `digest` while
+// it can still find the checkpoint. A digest it can no longer find is
+// `NOT_FOUND`.
 message GetCheckpointRequest {
   // If neither is provided, return the latest
   oneof checkpoint_id {

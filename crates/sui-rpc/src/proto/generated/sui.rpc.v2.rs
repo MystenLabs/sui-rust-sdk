@@ -873,18 +873,18 @@ pub enum ErrorReason {
     ///   "" if no single command failed.
     TransactionExecutionFailed = 4,
     /// The request reads ledger data above what this server has indexed. The
-    /// `LedgerService` `List*` RPCs return this with `OUT_OF_RANGE` for a
-    /// descending query when:
-    ///
-    /// * its `before` or `after` cursor names a position this server has not
-    ///   indexed.
-    /// * its `end_checkpoint`, which is exclusive, is above
-    ///   `firstUnavailableCheckpoint`, or, with `end_checkpoint` unset, its
-    ///   `start_checkpoint` is at or above `firstUnavailableCheckpoint`.
-    ///   An ascending query never gets this error. Its `before` cursor and its
-    ///   checkpoint range end at the latest indexed checkpoint, and an `after`
-    ///   cursor past it ends an empty response with `LEDGER_TIP` at the position
-    ///   that cursor resumes from.
+    /// `LedgerService` `ListCheckpoints`, `ListTransactions` and `ListEvents`
+    /// RPCs return this with `OUT_OF_RANGE` for a descending query when its
+    /// `end_checkpoint`, which is exclusive, is above
+    /// `firstUnavailableCheckpoint`; when, with `end_checkpoint` unset, its
+    /// `start_checkpoint` is at or above `firstUnavailableCheckpoint`; or when
+    /// its range reaches the latest indexed checkpoint (`end_checkpoint` unset
+    /// or above `firstUnavailableCheckpoint`) and its `before` or `after` cursor
+    /// names a position this server has not indexed. An ascending query never
+    /// gets this error for its cursors or checkpoint range. Its range ends at
+    /// the latest indexed checkpoint, and when the range reaches it, an `after`
+    /// cursor past it ends an empty response with `LEDGER_TIP` at the position
+    /// that cursor resumes from.
     ///
     /// Such a cursor comes from a newer view of the ledger than this server's,
     /// for example from another replica behind the same load balancer. The data
@@ -892,9 +892,8 @@ pub enum ErrorReason {
     /// server catches up, and a client may resend it unchanged after a delay. A
     /// cursor comes from a server that had indexed its position, so a request
     /// rejected for its cursor (`bound` is "cursor") is servable within the time
-    /// replicas take to catch up with each other. A checkpoint bound may name a
-    /// checkpoint the chain has not reached, so retrying it can wait
-    /// indefinitely.
+    /// replicas take to catch up with each other. Any other `bound` names a
+    /// checkpoint the caller chose, which the chain may not have reached.
     ///
     /// Example of an ErrorInfo for a descending query's `before` cursor at
     /// checkpoint 1205, sent to a server whose latest indexed checkpoint is 1199:
@@ -913,23 +912,31 @@ pub enum ErrorReason {
     /// Metadata, with checkpoints as decimal strings:
     ///
     /// * `bound`: what reads above the indexed data: "cursor" for a `before` or
-    ///   `after` cursor, or the name of the request field, "start_checkpoint"
-    ///   or "end_checkpoint".
+    ///   `after` cursor, or the name of the request field, "start_checkpoint" or
+    ///   "end_checkpoint".
     /// * `requestedCheckpoint`: the checkpoint recorded in the cursor, or the
     ///   value of the request field.
     /// * `firstUnavailableCheckpoint`: the lowest checkpoint this server has not
     ///   indexed, one above its latest indexed checkpoint, or "0" if it has
     ///   indexed none.
     AboveLatestAvailable = 5,
-    /// The request needs ledger data this server has pruned. The
-    /// `LedgerService` `List*` RPCs return this with `OUT_OF_RANGE` when the
-    /// request's `start_checkpoint` or `after` cursor is below the lowest
-    /// checkpoint this server serves, when its checkpoint range ends at or below
-    /// that checkpoint, when a descending query with no lower bound of its own
-    /// reaches it, or when the server prunes data a query has not read yet. A
-    /// descending query that reaches the lowest checkpoint fails after it
-    /// streams every item at or above that checkpoint, and its last response
-    /// carries a watermark at that checkpoint.
+    /// The request needs ledger data this server has pruned. The `LedgerService`
+    /// `ListCheckpoints`, `ListTransactions` and `ListEvents` RPCs return this
+    /// with `OUT_OF_RANGE` when the start of their scan, set by
+    /// `start_checkpoint` or an `after` cursor, whichever is later, is below the
+    /// lowest checkpoint this server serves; when a request with neither has a
+    /// non-empty checkpoint range that ends at or below that checkpoint, or a
+    /// `before` cursor at or below it; when a descending query with no lower
+    /// bound of its own reaches it; or when the server prunes data a query has
+    /// not read yet. A descending query that reaches the lowest checkpoint fails
+    /// after it streams every item at or above that checkpoint, and its last
+    /// response carries a watermark at that checkpoint.
+    ///
+    /// `GetCheckpoint`, `GetTransaction` and `BatchGetTransactions` (for each
+    /// item) return this with `OUT_OF_RANGE` for a checkpoint, or a transaction
+    /// in a checkpoint, that the server can place below the lowest checkpoint it
+    /// serves; see their request docs. So do point reads whose request docs say
+    /// so.
     ///
     /// Pruned data does not come back, so the same request fails the same way
     /// on this server. A client can send it to a server that retains the data,
@@ -952,6 +959,76 @@ pub enum ErrorReason {
     /// * `lowestAvailableCheckpoint`: the lowest checkpoint this server serves,
     ///   as a decimal string.
     BelowEarliestAvailable = 6,
+    /// This server is not set up for the method, or for this kind of request on
+    /// a method it otherwise serves, for example a read at a checkpoint
+    /// (`GetObject` with `at_checkpoint`) on a server without RPC indexes.
+    /// Returned with `UNIMPLEMENTED`. The same request to the same server always
+    /// fails the same way: do not retry it there, send it to a server configured
+    /// to serve it. `UNIMPLEMENTED` without this reason comes from a server that
+    /// lacks the method, predates this reason, or does not attach it.
+    ///
+    /// Example of an ErrorInfo from a server without RPC indexes:
+    ///
+    /// ```text
+    /// { "reason": "NOT_SERVED_HERE",
+    ///    "domain": "sui.io",
+    ///    "metadata": {
+    ///      "cause": "no_rpc_indexes"
+    ///    }
+    /// }
+    /// ```
+    ///
+    /// Metadata:
+    ///
+    /// * `cause`: what this server lacks: "no_rpc_indexes" (it does not keep the
+    ///   RPC indexes the request needs) or "disabled_by_config" (its
+    ///   configuration turns the method or this kind of request off).
+    NotServedHere = 8,
+    /// This server cannot serve the request now but will be able to, for example
+    /// while it starts or backfills history. Returned with `UNAVAILABLE`. Retry,
+    /// preferably on another replica.
+    ///
+    /// Example of an ErrorInfo from a server backfilling history restored from a
+    /// snapshot:
+    ///
+    /// ```text
+    /// { "reason": "NOT_READY",
+    ///    "domain": "sui.io",
+    ///    "metadata": {
+    ///      "cause": "restore_backfill"
+    ///    }
+    /// }
+    /// ```
+    ///
+    /// Metadata:
+    ///
+    /// * `cause`: the temporary state that stops the server, such as
+    ///   "index_empty" (its index holds no data yet), "restore_backfill" (it is
+    ///   backfilling history restored from a snapshot) or "history_catching_up"
+    ///   (its indexes trail its live state). More causes may be added.
+    NotReady = 9,
+    /// The request needs an older version of an object that this server no
+    /// longer holds: the server keeps only the latest version of each object,
+    /// and a newer version has replaced the one requested. Returned with
+    /// `OUT_OF_RANGE`, for example by `GetObject` with a `version` below the
+    /// object's latest version and no `at_checkpoint`.
+    ///
+    /// The server has no checkpoint below which data is gone, so the error
+    /// carries no `lowestAvailableCheckpoint`. The version does not come back,
+    /// so the same request fails the same way on this server. A server that
+    /// keeps every version of each object, such as kv-rpc, may serve it.
+    ///
+    /// Example of an ErrorInfo for `GetObject` with `version` 5 of an object
+    /// whose latest version on this server is 8:
+    ///
+    /// ```text
+    /// { "reason": "VERSION_NOT_RETAINED",
+    ///    "domain": "sui.io"
+    /// }
+    /// ```
+    ///
+    /// It carries no metadata.
+    VersionNotRetained = 10,
 }
 impl ErrorReason {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -967,6 +1044,9 @@ impl ErrorReason {
             Self::TransactionExecutionFailed => "TRANSACTION_EXECUTION_FAILED",
             Self::AboveLatestAvailable => "ABOVE_LATEST_AVAILABLE",
             Self::BelowEarliestAvailable => "BELOW_EARLIEST_AVAILABLE",
+            Self::NotServedHere => "NOT_SERVED_HERE",
+            Self::NotReady => "NOT_READY",
+            Self::VersionNotRetained => "VERSION_NOT_RETAINED",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -979,6 +1059,9 @@ impl ErrorReason {
             "TRANSACTION_EXECUTION_FAILED" => Some(Self::TransactionExecutionFailed),
             "ABOVE_LATEST_AVAILABLE" => Some(Self::AboveLatestAvailable),
             "BELOW_EARLIEST_AVAILABLE" => Some(Self::BelowEarliestAvailable),
+            "NOT_SERVED_HERE" => Some(Self::NotServedHere),
+            "NOT_READY" => Some(Self::NotReady),
+            "VERSION_NOT_RETAINED" => Some(Self::VersionNotRetained),
             _ => None,
         }
     }
@@ -2373,6 +2456,10 @@ pub mod get_object_result {
         Error(super::super::super::super::google::rpc::Status),
     }
 }
+/// A server that prunes history refuses a transaction it can place in a
+/// checkpoint below its lowest available checkpoint with `OUT_OF_RANGE` and
+/// reason `BELOW_EARLIEST_AVAILABLE`. A transaction it can no longer find, or
+/// one above its latest checkpoint, is `NOT_FOUND`.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetTransactionRequest {
@@ -2390,6 +2477,7 @@ pub struct GetTransactionResponse {
     #[prost(message, optional, tag = "1")]
     pub transaction: ::core::option::Option<ExecutedTransaction>,
 }
+/// Each transaction is answered as by `GetTransaction`, in its own result.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct BatchGetTransactionsRequest {
@@ -2424,6 +2512,11 @@ pub mod get_transaction_result {
         Error(super::super::super::super::google::rpc::Status),
     }
 }
+/// A server that prunes history refuses a checkpoint below its lowest
+/// available checkpoint with `OUT_OF_RANGE` and reason
+/// `BELOW_EARLIEST_AVAILABLE`: by `sequence_number` always, by `digest` while
+/// it can still find the checkpoint. A digest it can no longer find is
+/// `NOT_FOUND`.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetCheckpointRequest {
@@ -5536,38 +5629,33 @@ pub struct ProtocolConfig {
         ::prost_types::Value,
     >,
 }
-/// Cursor-bounded query options.
+/// Cursor-bounded options for a listing request.
 ///
-/// `after` and `before` are canonical ledger-position bounds, not
-/// ordering-relative cursors. `after` always excludes items at or below that
-/// cursor, and `before` always excludes items at or above that cursor. Ordering
-/// only controls the order of returned items within the resulting open interval.
+/// `after` and `before` are opaque, exclusive bounds in the listing's canonical
+/// order. `after` always excludes items at or below that cursor, and `before`
+/// always excludes items at or above that cursor. Their meaning does not depend
+/// on `ordering`, which only sets the order of results within the bounded
+/// interval.
 ///
-/// When a request also specifies a checkpoint range, cursor bounds and
-/// checkpoint bounds compose by intersection: results come only from ledger
-/// positions inside both. Checkpoint bounds are likewise canonical and
-/// ordering-independent.
+/// Other range fields on the request, such as checkpoint or version bounds,
+/// compose with the cursor bounds by intersection: results come only from
+/// inside both.
 ///
-/// For example, with `after = A`, `before = B`, `ordering = DESCENDING`, and
-/// `limit = N`, the response contains up to N matching items in descending
-/// order from the interval `(A, B)`. If the response ends with
-/// `QUERY_END_REASON_ITEM_LIMIT`, resume by keeping `after = A` and setting
-/// `before` to the last `Watermark.cursor` received. That cursor is the
-/// lowest position reached in ledger order, so it becomes the next exclusive
-/// upper bound.
+/// Each method sets its own `limit` default and maximum and documents how to
+/// resume.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct QueryOptions {
     /// The maximum number of items to return. Each method applies its own default
-    /// and maximum. QueryEnd does not count against this limit.
+    /// and maximum.
     #[prost(uint32, optional, tag = "1")]
     pub limit: ::core::option::Option<u32>,
     /// Opaque exclusive lower bound. Results must be strictly after this cursor in
-    /// canonical ledger order.
+    /// the listing's canonical order.
     #[prost(bytes = "bytes", optional, tag = "2")]
     pub after: ::core::option::Option<::prost::bytes::Bytes>,
     /// Opaque exclusive upper bound. Results must be strictly before this cursor
-    /// in canonical ledger order.
+    /// in the listing's canonical order.
     #[prost(bytes = "bytes", optional, tag = "3")]
     pub before: ::core::option::Option<::prost::bytes::Bytes>,
     /// Ordering for returned results. Defaults to ASCENDING.
@@ -5636,6 +5724,14 @@ pub struct LedgerPosition {
 /// index incremented, or end a page before it at its key. In both cases pass
 /// `cursor` as `options.after` with a start and as `options.before` with an
 /// end.
+///
+/// For example, with `after = A`, `before = B`, `ordering = DESCENDING`, and
+/// `limit = N`, the response contains up to N matching items in descending
+/// order from the interval `(A, B)`. If the response ends with
+/// `QUERY_END_REASON_ITEM_LIMIT`, resume by keeping `after = A` and setting
+/// `before` to the last `Watermark.cursor` received. That cursor is the
+/// lowest position reached in ledger order, so it becomes the next exclusive
+/// upper bound.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Watermark {
@@ -5656,10 +5752,12 @@ pub struct Watermark {
     /// interval at checkpoints `>= checkpoint`. This boundary never regresses in
     /// the scan direction, but it may repeat while the cursor advances.
     ///
-    /// Unset until the scan's first checkpoint is fully covered. For example, a
-    /// scan resumed from a cursor that lands mid-checkpoint leaves this unset
-    /// until the next checkpoint boundary in the scan direction is fully covered.
-    /// A watermark still has a valid resume cursor while this field is unset.
+    /// A starting cursor vouches for what precedes it: a scan resumed from an
+    /// `after` cursor in checkpoint `c` may report `c - 1` from its first frame,
+    /// and a descending scan resumed from a `before` cursor in `c` may report
+    /// `c + 1`. Otherwise this is unset until the scan's first checkpoint is
+    /// fully covered. A watermark still has a valid resume cursor while this
+    /// field is unset.
     #[prost(uint64, optional, tag = "2")]
     pub checkpoint: ::core::option::Option<u64>,
     /// The resume point in ledger coordinates. Set on every watermark by servers
@@ -5686,11 +5784,17 @@ pub struct Watermark {
 }
 /// Marker for the final frame of a successful query stream. Every successful
 /// stream sets `QueryEnd` on exactly one frame, after which no further frames
-/// are sent. That frame always carries the final watermark. For `ItemLimit`, it
-/// also carries the final matching item; for every other reason it carries no
-/// item. A ScanLimit terminal watermark may repeat the previous frame's cursor
-/// when its authoritative scan frontier was already emitted; this does not
-/// repeat an item.
+/// are sent. On streams whose frames carry a `Watermark`, that frame always
+/// carries the final watermark. For `ItemLimit`, it also carries the final
+/// matching item; for every other reason it carries no item. A ScanLimit
+/// terminal watermark may repeat the previous frame's cursor when its
+/// authoritative scan frontier was already emitted; this does not repeat an
+/// item.
+///
+/// `QueryEnd` marks a frame; it is not an item, and it does not count against
+/// `QueryOptions.limit`. A paged unary listing sets `QueryEnd` on every
+/// response, alongside that page's items; the rules above about the final
+/// frame and its item apply to streams.
 ///
 /// A stream that fails or is cancelled terminates with a gRPC status and does
 /// not send `QueryEnd`.
@@ -5739,8 +5843,10 @@ pub enum QueryEndReason {
     /// The stop reason was not specified.
     Unknown = 0,
     /// The response reached the requested item limit. The final matching item's
-    /// frame carries `QueryEnd` and the final watermark. Resume from that frame's
-    /// `Watermark.cursor` to continue reading the same effective interval.
+    /// frame carries `QueryEnd`, plus the final watermark where frames carry
+    /// one. Resume from that frame's `Watermark.cursor`, or, where frames carry
+    /// no watermark, from the cursor the method returns with that item, to
+    /// continue reading the same effective interval.
     ItemLimit = 1,
     /// The response reached the server's per-request bucket-fetch budget for
     /// filtered scans before reaching the effective interval bound. The terminal
@@ -5748,16 +5854,19 @@ pub enum QueryEndReason {
     /// frontier from which to resume.
     ScanLimit = 2,
     /// The scan reached the edge of the window the request set: its checkpoint
-    /// range bound, or a start or end position the request set within a
+    /// range bound, a start or end position the request set within a
     /// checkpoint at that range's edge (for example `end_transaction_index` on
-    /// `ListTransactionsRequest`). The terminal frame carries no item.
+    /// `ListTransactionsRequest`), or a version range. Despite its name, it
+    /// applies to any request window. A stream's terminal frame carries no
+    /// item.
     CheckpointBound = 3,
-    /// The scan reached an exclusive cursor bound. The terminal frame carries no
-    /// item. Its watermark cursor represents that resolved bound without claiming
-    /// that its containing checkpoint was fully covered.
+    /// The scan reached an exclusive cursor bound. A stream's terminal frame
+    /// carries no item. Where frames carry a watermark, its cursor represents
+    /// that resolved bound without claiming that its containing checkpoint was
+    /// fully covered.
     CursorBound = 4,
-    /// The scan reached the currently indexed ledger tip. The terminal frame
-    /// carries no item.
+    /// The scan reached the currently indexed ledger tip. A stream's terminal
+    /// frame carries no item.
     LedgerTip = 5,
 }
 impl QueryEndReason {
