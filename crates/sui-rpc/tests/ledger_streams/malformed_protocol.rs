@@ -413,7 +413,7 @@ async fn event_subscription_frame_without_cursor_position_is_terminal_data_loss(
 }
 
 /// A stream's prologue List frames must carry `cursor_position`, even the item-free `LedgerTip`
-/// echo of a request that resumes past a replica's tip, which `list_*` accepts without one.
+/// echo of a request that resumes past a replica's tip.
 #[tokio::test]
 async fn transaction_prologue_list_frame_without_cursor_position_is_terminal_data_loss() {
     let (server, _calls) = ScriptedStreamServer::new();
@@ -446,6 +446,30 @@ async fn transaction_prologue_list_frame_without_cursor_position_is_terminal_dat
     assert_eq!(resumed.start_checkpoint, Some(6));
     assert_eq!(resumed.start_transaction_index, Some(1));
     assert_eq!(resumed.options.as_ref().unwrap().after, Some(bytes(50)));
+}
+
+/// A stream resumed from a bare cursor ends with `DataLoss` when the List frame it reads to learn a
+/// position lacks `cursor_position`, as a server answers a cursor minted before cursor positions.
+#[tokio::test]
+async fn transaction_cursor_resume_frame_without_cursor_position_is_terminal_data_loss() {
+    let (server, _calls) = ScriptedStreamServer::new();
+    server.push_transaction_lists([StreamScript::frames([Ok(without_position(
+        transaction_list_frame(None, 50, Some(proto::QueryEndReason::LedgerTip)),
+    ))])]);
+    let address = spawn_server(server.clone()).await;
+    let (client, _observations) = observed_client(address);
+
+    #[allow(deprecated)]
+    let start = TransactionStreamStart::Resume(bytes(50));
+    let (frames, status) = transaction_frames_until_error(client.stream_transactions_with_config(
+        TransactionStreamRequest::new().with_start(start),
+        fast_config(),
+    ))
+    .await;
+    assert!(frames.is_empty());
+    assert_eq!(status.code(), tonic::Code::DataLoss);
+    assert_eq!(status.message(), MISSING_LIST_CURSOR_POSITION);
+    assert_eq!(server.state.lock().unwrap().calls, ["list_transactions"]);
 }
 
 /// An ascending item frame's position is the boundary just after its item, so its finest index is

@@ -12,17 +12,16 @@
 
 - ledger streams order, deduplicate, and resume frames by
   `Watermark.cursor_position` instead of comparing opaque cursors and
-  checkpoint coverage, and require it on every List and Subscribe frame
-  (servers that predate cursor positions do not send it); a frame without it
-  ends the stream with `DataLoss`. `list_*` accepts one exception: a page's
-  final frame may omit it when the page names its bound by a bare
-  `options.after` or `options.before` cursor minted by such a server.
-  Internally built requests and `list_*` pagination send each resume point
-  as start or end fields together with its cursor
+  checkpoint coverage, and require it on every List and Subscribe frame; a
+  frame without it ends the stream with `DataLoss`. Internally built requests
+  and `list_*` pagination send each resume point as start or end fields
+  together with its cursor
 - `TransactionStreamStart::Resume` and `EventStreamStart::Resume` first
   list one match after their cursor to learn a position, deliver that List
-  frame, and continue from it; a cursor from a server that predates cursor
-  positions waits until the server scans past it
+  frame, and continue from it; a server's rejection of the cursor, as sui
+  1.84 and later reject a cursor minted without a position, ends the stream
+  with that error, and a List frame without `cursor_position` ends it with
+  `DataLoss`
 - `stream_*` read masks no longer need to include the item's position
   fields
 - `list_*` retries `OUT_OF_RANGE` with `ABOVE_LATEST_AVAILABLE` for any

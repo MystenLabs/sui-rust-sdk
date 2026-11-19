@@ -25,7 +25,6 @@ use super::support::transaction_position;
 use super::support::transaction_positioned_list_frame;
 use super::support::transaction_positioned_live_frame;
 use super::support::with_position;
-use super::support::without_position;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use std::time::Duration;
@@ -1370,27 +1369,14 @@ async fn transaction_cursor_resume_delivers_the_first_match_then_lists_from_its_
     assert_eq!(options.limit, None);
 }
 
-/// An event stream resumed from a bare cursor lists from that cursor again until a frame reports a
-/// position: after a lagging replica's `OutOfRange`, and after `LedgerTip` and `CursorBound` ends
-/// that echo a cursor minted without a position. It resumes from the first positioned frame.
+/// An event stream resumed from a bare cursor retries its List request after a lagging replica's
+/// `OutOfRange`, then resumes from the first frame, an item-free `LedgerTip` end.
 #[tokio::test]
-async fn event_cursor_resume_lists_from_the_cursor_until_a_frame_reports_a_position() {
+async fn event_cursor_resume_retries_a_lagging_replica_then_resumes_from_its_first_frame() {
     let (server, _calls) = ScriptedStreamServer::new();
     server.push_service_infos([Ok(service_info(7)), Ok(service_info(8))]);
     server.push_event_lists([
         StreamScript::DispatchError(above_latest_available("cursor")),
-        StreamScript::frames([Ok(without_position(event_positioned_list_frame(
-            None,
-            70,
-            6,
-            Some(proto::QueryEndReason::LedgerTip),
-        )))]),
-        StreamScript::frames([Ok(without_position(event_positioned_list_frame(
-            None,
-            70,
-            6,
-            Some(proto::QueryEndReason::CursorBound),
-        )))]),
         StreamScript::frames([Ok(event_positioned_list_frame(
             None,
             71,
@@ -1458,14 +1444,12 @@ async fn event_cursor_resume_lists_from_the_cursor_until_a_frame_reports_a_posit
         [
             "list_events",
             "list_events",
-            "list_events",
-            "list_events",
             "get_service_info",
             "get_service_info",
             "list_events"
         ]
     );
-    for request in &state.event_requests[..4] {
+    for request in &state.event_requests[..2] {
         assert_eq!(request.body.start_checkpoint, None);
         assert_eq!(request.body.end_checkpoint, None);
         let options = request.body.options.as_ref().unwrap();
@@ -1473,7 +1457,7 @@ async fn event_cursor_resume_lists_from_the_cursor_until_a_frame_reports_a_posit
         assert_eq!(options.before, None);
         assert_eq!(options.limit, Some(1));
     }
-    let replay = &state.event_requests[4].body;
+    let replay = &state.event_requests[2].body;
     assert_eq!(replay.start_checkpoint, Some(8));
     assert_eq!(replay.start_transaction_index, None);
     assert_eq!(replay.start_event_index, None);
