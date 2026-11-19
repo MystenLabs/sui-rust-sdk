@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["FaucetResponse"],"struct":["CoinInfo","FaucetClient","FaucetError","PowChallenge","PowSolution","V3FaucetResponse"]};
