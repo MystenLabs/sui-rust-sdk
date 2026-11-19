@@ -9186,6 +9186,108 @@ mod _accessor_impls {
             self
         }
     }
+    impl super::GetProtocolConfigRequest {
+        pub const fn const_default() -> Self {
+            Self {
+                version: None,
+                read_mask: None,
+            }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::GetProtocolConfigRequest = super::GetProtocolConfigRequest::const_default();
+            &DEFAULT
+        }
+        ///If `version` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn version_opt_mut(&mut self) -> Option<&mut u64> {
+            self.version.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `version`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn version_mut(&mut self) -> &mut u64 {
+            self.version.get_or_insert_default()
+        }
+        ///If `version` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn version_opt(&self) -> Option<u64> {
+            self.version.as_ref().map(|field| *field)
+        }
+        ///Sets `version` with the provided value.
+        pub fn set_version(&mut self, field: u64) {
+            self.version = Some(field);
+        }
+        ///Sets `version` with the provided value.
+        pub fn with_version(mut self, field: u64) -> Self {
+            self.set_version(field);
+            self
+        }
+        ///If `read_mask` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn read_mask_opt_mut(&mut self) -> Option<&mut ::prost_types::FieldMask> {
+            self.read_mask.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `read_mask`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn read_mask_mut(&mut self) -> &mut ::prost_types::FieldMask {
+            self.read_mask.get_or_insert_default()
+        }
+        ///If `read_mask` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn read_mask_opt(&self) -> Option<&::prost_types::FieldMask> {
+            self.read_mask.as_ref().map(|field| field as _)
+        }
+        ///Sets `read_mask` with the provided value.
+        pub fn set_read_mask<T: Into<::prost_types::FieldMask>>(&mut self, field: T) {
+            self.read_mask = Some(field.into().into());
+        }
+        ///Sets `read_mask` with the provided value.
+        pub fn with_read_mask<T: Into<::prost_types::FieldMask>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_read_mask(field.into());
+            self
+        }
+    }
+    impl super::GetProtocolConfigResponse {
+        pub const fn const_default() -> Self {
+            Self { protocol_config: None }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::GetProtocolConfigResponse = super::GetProtocolConfigResponse::const_default();
+            &DEFAULT
+        }
+        ///Returns the value of `protocol_config`, or the default value if `protocol_config` is unset.
+        pub fn protocol_config(&self) -> &super::ProtocolConfig {
+            self.protocol_config
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::ProtocolConfig::default_instance() as _)
+        }
+        ///If `protocol_config` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn protocol_config_opt_mut(&mut self) -> Option<&mut super::ProtocolConfig> {
+            self.protocol_config.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `protocol_config`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn protocol_config_mut(&mut self) -> &mut super::ProtocolConfig {
+            self.protocol_config.get_or_insert_default()
+        }
+        ///If `protocol_config` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn protocol_config_opt(&self) -> Option<&super::ProtocolConfig> {
+            self.protocol_config.as_ref().map(|field| field as _)
+        }
+        ///Sets `protocol_config` with the provided value.
+        pub fn set_protocol_config<T: Into<super::ProtocolConfig>>(&mut self, field: T) {
+            self.protocol_config = Some(field.into().into());
+        }
+        ///Sets `protocol_config` with the provided value.
+        pub fn with_protocol_config<T: Into<super::ProtocolConfig>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_protocol_config(field.into());
+            self
+        }
+    }
     impl super::GetServiceInfoRequest {
         pub const fn const_default() -> Self {
             Self {}
