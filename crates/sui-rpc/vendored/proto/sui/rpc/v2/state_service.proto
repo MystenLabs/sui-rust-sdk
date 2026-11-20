@@ -7,6 +7,7 @@ package sui.rpc.v2;
 
 import "google/protobuf/field_mask.proto";
 import "sui/rpc/v2/bcs.proto";
+import "sui/rpc/v2/filter.proto";
 import "sui/rpc/v2/object.proto";
 
 service StateService {
@@ -213,6 +214,15 @@ message ListDynamicFieldsRequest {
   // Mask specifying which fields to read.
   // If no mask is specified, defaults to `parent,field_id`.
   optional google.protobuf.FieldMask read_mask = 4;
+
+  // Optional. DNF filter over the parent's dynamic fields, e.g. a single
+  // `name_type` literal `0x2::kiosk::Item` lists only the items in a kiosk.
+  // Matching fields are returned in the same order as without a filter. If
+  // absent, all dynamic fields of the parent are returned.
+  //
+  // The service rejects a filter with more literals in total than it allows
+  // with `INVALID_ARGUMENT`.
+  optional DynamicFieldFilter filter = 5;
 }
 
 // Response message for `NodeService.ListDynamicFields`
@@ -295,7 +305,21 @@ message ListOwnedObjectsRequest {
   // with a type param will restrict the returned objects to only those objects
   // that match the provided type parameters, e.g.
   // `0x2::coin::Coin<0x2::sui::SUI>` will only return `Coin<SUI>` objects.
+  //
+  // Equivalent to a `filter` with a single `object_type` literal. Must not be
+  // set together with `filter`.
   optional string object_type = 5;
+
+  // Optional. DNF filter over the owner's objects, e.g. a single term with
+  // the negated `object_type` literals `0x2::coin::Coin` and
+  // `0x2::kiosk::KioskOwnerCap` lists everything except coins and kiosk owner
+  // caps. Matching objects are returned in the same order as without a
+  // filter. If absent, all objects of the owner are returned. Must not be set
+  // together with `object_type`.
+  //
+  // The service rejects a filter with more literals in total than it allows
+  // with `INVALID_ARGUMENT`.
+  optional ObjectFilter filter = 6;
 }
 
 message ListOwnedObjectsResponse {
