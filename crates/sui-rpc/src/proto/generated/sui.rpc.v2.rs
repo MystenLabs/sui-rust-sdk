@@ -2249,9 +2249,10 @@ pub struct EventStreamHeadFilter {
 pub struct PackageWriteFilter {}
 /// DNF filter for objects: any term may match, and each term is an AND of
 /// signed literals. Every predicate constrains the object's Move type, which
-/// is the leading sort key of the index the service lists from, so objects
-/// that do not match are skipped without being read. A term may contain only
-/// negated literals, e.g. "every type except `0x2::coin::Coin`".
+/// is the leading sort key of the index the service lists from, so the
+/// service seeks past runs of non-matching objects instead of reading them.
+/// A term may contain only negated literals, e.g. "every type except
+/// `0x2::coin::Coin`".
 /// An absent filter matches everything. A present filter must have at least one
 /// term, and every term at least one literal.
 #[non_exhaustive]
@@ -2313,11 +2314,13 @@ pub struct ObjectTypeFilter {
 /// DNF filter for the dynamic fields of a parent: any term may match, and each
 /// term is an AND of signed literals. Every predicate constrains the type of
 /// the field object (`0x2::dynamic_field::Field<Name, Value>`), which is the
-/// leading sort key of the index the service lists from, so fields that do not
-/// match are skipped without being read. A term may contain only negated
-/// literals.
-/// An absent filter matches everything. A present filter must have at least one
-/// term, and every term at least one literal.
+/// leading sort key of the index the service lists from, so the service seeks
+/// past runs of non-matching fields instead of reading them. A term may
+/// contain only negated literals.
+/// An absent filter matches everything the parent owns. A present filter
+/// matches only `Field` objects: it excludes the value object of a dynamic
+/// object field, which that field's `Field` object owns. A present filter must
+/// have at least one term, and every term at least one literal.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct DynamicFieldFilter {
