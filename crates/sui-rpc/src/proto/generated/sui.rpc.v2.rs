@@ -2317,10 +2317,10 @@ pub struct ObjectTypeFilter {
 /// leading sort key of the index the service lists from, so the service seeks
 /// past runs of non-matching fields instead of reading them. A term may
 /// contain only negated literals.
-/// An absent filter matches everything the parent owns. A present filter
-/// matches only `Field` objects: it excludes the value object of a dynamic
-/// object field, which that field's `Field` object owns. A present filter must
-/// have at least one term, and every term at least one literal.
+/// An absent filter matches every object the parent owns; when the parent is
+/// the `Field` object of a dynamic object field, that includes the field's
+/// value object. A present filter matches only `Field` objects, and must have
+/// at least one term, and every term at least one literal.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct DynamicFieldFilter {
