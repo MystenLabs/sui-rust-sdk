@@ -3418,6 +3418,358 @@ pub(crate) mod _field_impls {
             self.path.join(".")
         }
     }
+    impl ObjectFilter {
+        pub const TERMS_FIELD: &'static MessageField = &MessageField {
+            name: "terms",
+            json_name: "terms",
+            number: 1i32,
+            message_fields: Some(ObjectTerm::FIELDS),
+        };
+    }
+    impl MessageFields for ObjectFilter {
+        const FIELDS: &'static [&'static MessageField] = &[Self::TERMS_FIELD];
+    }
+    impl ObjectFilter {
+        pub fn path_builder() -> ObjectFilterFieldPathBuilder {
+            ObjectFilterFieldPathBuilder::new()
+        }
+    }
+    pub struct ObjectFilterFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ObjectFilterFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn terms(mut self) -> ObjectTermFieldPathBuilder {
+            self.path.push(ObjectFilter::TERMS_FIELD.name);
+            ObjectTermFieldPathBuilder::new_with_base(self.path)
+        }
+    }
+    impl ObjectTerm {
+        pub const LITERALS_FIELD: &'static MessageField = &MessageField {
+            name: "literals",
+            json_name: "literals",
+            number: 1i32,
+            message_fields: Some(ObjectLiteral::FIELDS),
+        };
+    }
+    impl MessageFields for ObjectTerm {
+        const FIELDS: &'static [&'static MessageField] = &[Self::LITERALS_FIELD];
+    }
+    impl ObjectTerm {
+        pub fn path_builder() -> ObjectTermFieldPathBuilder {
+            ObjectTermFieldPathBuilder::new()
+        }
+    }
+    pub struct ObjectTermFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ObjectTermFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn literals(mut self) -> ObjectLiteralFieldPathBuilder {
+            self.path.push(ObjectTerm::LITERALS_FIELD.name);
+            ObjectLiteralFieldPathBuilder::new_with_base(self.path)
+        }
+    }
+    impl ObjectLiteral {
+        pub const NEGATED_FIELD: &'static MessageField = &MessageField {
+            name: "negated",
+            json_name: "negated",
+            number: 1i32,
+            message_fields: None,
+        };
+        pub const OBJECT_TYPE_FIELD: &'static MessageField = &MessageField {
+            name: "object_type",
+            json_name: "objectType",
+            number: 2i32,
+            message_fields: Some(ObjectTypeFilter::FIELDS),
+        };
+    }
+    impl MessageFields for ObjectLiteral {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::NEGATED_FIELD,
+            Self::OBJECT_TYPE_FIELD,
+        ];
+    }
+    impl ObjectLiteral {
+        pub fn path_builder() -> ObjectLiteralFieldPathBuilder {
+            ObjectLiteralFieldPathBuilder::new()
+        }
+    }
+    pub struct ObjectLiteralFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ObjectLiteralFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn negated(mut self) -> String {
+            self.path.push(ObjectLiteral::NEGATED_FIELD.name);
+            self.finish()
+        }
+        pub fn object_type(mut self) -> ObjectTypeFilterFieldPathBuilder {
+            self.path.push(ObjectLiteral::OBJECT_TYPE_FIELD.name);
+            ObjectTypeFilterFieldPathBuilder::new_with_base(self.path)
+        }
+    }
+    impl ObjectTypeFilter {
+        pub const OBJECT_TYPE_FIELD: &'static MessageField = &MessageField {
+            name: "object_type",
+            json_name: "objectType",
+            number: 1i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for ObjectTypeFilter {
+        const FIELDS: &'static [&'static MessageField] = &[Self::OBJECT_TYPE_FIELD];
+    }
+    impl ObjectTypeFilter {
+        pub fn path_builder() -> ObjectTypeFilterFieldPathBuilder {
+            ObjectTypeFilterFieldPathBuilder::new()
+        }
+    }
+    pub struct ObjectTypeFilterFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ObjectTypeFilterFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn object_type(mut self) -> String {
+            self.path.push(ObjectTypeFilter::OBJECT_TYPE_FIELD.name);
+            self.finish()
+        }
+    }
+    impl DynamicFieldFilter {
+        pub const TERMS_FIELD: &'static MessageField = &MessageField {
+            name: "terms",
+            json_name: "terms",
+            number: 1i32,
+            message_fields: Some(DynamicFieldTerm::FIELDS),
+        };
+    }
+    impl MessageFields for DynamicFieldFilter {
+        const FIELDS: &'static [&'static MessageField] = &[Self::TERMS_FIELD];
+    }
+    impl DynamicFieldFilter {
+        pub fn path_builder() -> DynamicFieldFilterFieldPathBuilder {
+            DynamicFieldFilterFieldPathBuilder::new()
+        }
+    }
+    pub struct DynamicFieldFilterFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl DynamicFieldFilterFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn terms(mut self) -> DynamicFieldTermFieldPathBuilder {
+            self.path.push(DynamicFieldFilter::TERMS_FIELD.name);
+            DynamicFieldTermFieldPathBuilder::new_with_base(self.path)
+        }
+    }
+    impl DynamicFieldTerm {
+        pub const LITERALS_FIELD: &'static MessageField = &MessageField {
+            name: "literals",
+            json_name: "literals",
+            number: 1i32,
+            message_fields: Some(DynamicFieldLiteral::FIELDS),
+        };
+    }
+    impl MessageFields for DynamicFieldTerm {
+        const FIELDS: &'static [&'static MessageField] = &[Self::LITERALS_FIELD];
+    }
+    impl DynamicFieldTerm {
+        pub fn path_builder() -> DynamicFieldTermFieldPathBuilder {
+            DynamicFieldTermFieldPathBuilder::new()
+        }
+    }
+    pub struct DynamicFieldTermFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl DynamicFieldTermFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn literals(mut self) -> DynamicFieldLiteralFieldPathBuilder {
+            self.path.push(DynamicFieldTerm::LITERALS_FIELD.name);
+            DynamicFieldLiteralFieldPathBuilder::new_with_base(self.path)
+        }
+    }
+    impl DynamicFieldLiteral {
+        pub const NEGATED_FIELD: &'static MessageField = &MessageField {
+            name: "negated",
+            json_name: "negated",
+            number: 1i32,
+            message_fields: None,
+        };
+        pub const NAME_TYPE_FIELD: &'static MessageField = &MessageField {
+            name: "name_type",
+            json_name: "nameType",
+            number: 2i32,
+            message_fields: Some(DynamicFieldNameTypeFilter::FIELDS),
+        };
+        pub const DYNAMIC_OBJECT_FIELD_FIELD: &'static MessageField = &MessageField {
+            name: "dynamic_object_field",
+            json_name: "dynamicObjectField",
+            number: 3i32,
+            message_fields: Some(DynamicObjectFieldFilter::FIELDS),
+        };
+    }
+    impl MessageFields for DynamicFieldLiteral {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::NEGATED_FIELD,
+            Self::NAME_TYPE_FIELD,
+            Self::DYNAMIC_OBJECT_FIELD_FIELD,
+        ];
+    }
+    impl DynamicFieldLiteral {
+        pub fn path_builder() -> DynamicFieldLiteralFieldPathBuilder {
+            DynamicFieldLiteralFieldPathBuilder::new()
+        }
+    }
+    pub struct DynamicFieldLiteralFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl DynamicFieldLiteralFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn negated(mut self) -> String {
+            self.path.push(DynamicFieldLiteral::NEGATED_FIELD.name);
+            self.finish()
+        }
+        pub fn name_type(mut self) -> DynamicFieldNameTypeFilterFieldPathBuilder {
+            self.path.push(DynamicFieldLiteral::NAME_TYPE_FIELD.name);
+            DynamicFieldNameTypeFilterFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn dynamic_object_field(
+            mut self,
+        ) -> DynamicObjectFieldFilterFieldPathBuilder {
+            self.path.push(DynamicFieldLiteral::DYNAMIC_OBJECT_FIELD_FIELD.name);
+            DynamicObjectFieldFilterFieldPathBuilder::new_with_base(self.path)
+        }
+    }
+    impl DynamicFieldNameTypeFilter {
+        pub const NAME_TYPE_FIELD: &'static MessageField = &MessageField {
+            name: "name_type",
+            json_name: "nameType",
+            number: 1i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for DynamicFieldNameTypeFilter {
+        const FIELDS: &'static [&'static MessageField] = &[Self::NAME_TYPE_FIELD];
+    }
+    impl DynamicFieldNameTypeFilter {
+        pub fn path_builder() -> DynamicFieldNameTypeFilterFieldPathBuilder {
+            DynamicFieldNameTypeFilterFieldPathBuilder::new()
+        }
+    }
+    pub struct DynamicFieldNameTypeFilterFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl DynamicFieldNameTypeFilterFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn name_type(mut self) -> String {
+            self.path.push(DynamicFieldNameTypeFilter::NAME_TYPE_FIELD.name);
+            self.finish()
+        }
+    }
+    impl DynamicObjectFieldFilter {}
+    impl MessageFields for DynamicObjectFieldFilter {
+        const FIELDS: &'static [&'static MessageField] = &[];
+    }
+    impl DynamicObjectFieldFilter {
+        pub fn path_builder() -> DynamicObjectFieldFilterFieldPathBuilder {
+            DynamicObjectFieldFilterFieldPathBuilder::new()
+        }
+    }
+    pub struct DynamicObjectFieldFilterFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl DynamicObjectFieldFilterFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+    }
     impl GasCostSummary {
         pub const COMPUTATION_COST_FIELD: &'static MessageField = &MessageField {
             name: "computation_cost",
@@ -9731,6 +10083,12 @@ pub(crate) mod _field_impls {
             number: 4i32,
             message_fields: None,
         };
+        pub const FILTER_FIELD: &'static MessageField = &MessageField {
+            name: "filter",
+            json_name: "filter",
+            number: 5i32,
+            message_fields: Some(DynamicFieldFilter::FIELDS),
+        };
     }
     impl MessageFields for ListDynamicFieldsRequest {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -9738,6 +10096,7 @@ pub(crate) mod _field_impls {
             Self::PAGE_SIZE_FIELD,
             Self::PAGE_TOKEN_FIELD,
             Self::READ_MASK_FIELD,
+            Self::FILTER_FIELD,
         ];
     }
     impl ListDynamicFieldsRequest {
@@ -9775,6 +10134,10 @@ pub(crate) mod _field_impls {
         pub fn read_mask(mut self) -> String {
             self.path.push(ListDynamicFieldsRequest::READ_MASK_FIELD.name);
             self.finish()
+        }
+        pub fn filter(mut self) -> DynamicFieldFilterFieldPathBuilder {
+            self.path.push(ListDynamicFieldsRequest::FILTER_FIELD.name);
+            DynamicFieldFilterFieldPathBuilder::new_with_base(self.path)
         }
     }
     impl ListDynamicFieldsResponse {
@@ -9983,6 +10346,12 @@ pub(crate) mod _field_impls {
             number: 5i32,
             message_fields: None,
         };
+        pub const FILTER_FIELD: &'static MessageField = &MessageField {
+            name: "filter",
+            json_name: "filter",
+            number: 6i32,
+            message_fields: Some(ObjectFilter::FIELDS),
+        };
     }
     impl MessageFields for ListOwnedObjectsRequest {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -9991,6 +10360,7 @@ pub(crate) mod _field_impls {
             Self::PAGE_TOKEN_FIELD,
             Self::READ_MASK_FIELD,
             Self::OBJECT_TYPE_FIELD,
+            Self::FILTER_FIELD,
         ];
     }
     impl ListOwnedObjectsRequest {
@@ -10032,6 +10402,10 @@ pub(crate) mod _field_impls {
         pub fn object_type(mut self) -> String {
             self.path.push(ListOwnedObjectsRequest::OBJECT_TYPE_FIELD.name);
             self.finish()
+        }
+        pub fn filter(mut self) -> ObjectFilterFieldPathBuilder {
+            self.path.push(ListOwnedObjectsRequest::FILTER_FIELD.name);
+            ObjectFilterFieldPathBuilder::new_with_base(self.path)
         }
     }
     impl ListOwnedObjectsResponse {

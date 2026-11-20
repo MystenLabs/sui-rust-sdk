@@ -2247,6 +2247,150 @@ pub struct EventStreamHeadFilter {
 #[non_exhaustive]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct PackageWriteFilter {}
+/// DNF filter for objects: any term may match, and each term is an AND of
+/// signed literals. Every predicate constrains the object's Move type, which
+/// is the leading sort key of the index the service lists from, so the
+/// service seeks past runs of non-matching objects instead of reading them.
+/// A term may contain only negated literals, e.g. "every type except
+/// `0x2::coin::Coin`".
+/// An absent filter matches everything. A present filter must have at least one
+/// term, and every term at least one literal.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ObjectFilter {
+    /// Terms are ORed together.
+    #[prost(message, repeated, tag = "1")]
+    pub terms: ::prost::alloc::vec::Vec<ObjectTerm>,
+}
+/// One conjunction in an object DNF filter.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ObjectTerm {
+    /// Literals are ANDed together.
+    #[prost(message, repeated, tag = "1")]
+    pub literals: ::prost::alloc::vec::Vec<ObjectLiteral>,
+}
+/// One signed object predicate literal: a predicate, optionally negated.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ObjectLiteral {
+    /// When true, the literal matches objects that the predicate does *not*
+    /// match.
+    #[prost(bool, tag = "1")]
+    pub negated: bool,
+    /// The object predicate to match.
+    #[prost(oneof = "object_literal::Predicate", tags = "2")]
+    pub predicate: ::core::option::Option<object_literal::Predicate>,
+}
+/// Nested message and enum types in `ObjectLiteral`.
+pub mod object_literal {
+    /// The object predicate to match.
+    #[non_exhaustive]
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
+    pub enum Predicate {
+        /// Match objects whose Move type matches the specified filter.
+        #[prost(message, tag = "2")]
+        ObjectType(super::ObjectTypeFilter),
+    }
+}
+/// Match by an object's Move struct type, specified as a Move type string.
+///
+/// Specificity levels:
+/// "0xaddr"                              -> matches objects whose type is defined at this address
+/// "0xaddr::module"                      -> matches objects whose type is in this module
+/// "0xaddr::module::Name"                -> matches objects with this type name (any instantiation)
+/// "0xaddr::module::Name\<T1, T2>"        -> matches objects with this exact generic instantiation
+///
+/// The address is the one in the type's canonical form: the package that first
+/// defined the type, not the package version that created the object.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ObjectTypeFilter {
+    /// Required. Move type string of the form
+    /// `address\[::module[::Name[<type_params>]\]]`.
+    #[prost(string, optional, tag = "1")]
+    pub object_type: ::core::option::Option<::prost::alloc::string::String>,
+}
+/// DNF filter for the dynamic fields of a parent: any term may match, and each
+/// term is an AND of signed literals. Every predicate constrains the type of
+/// the field object (`0x2::dynamic_field::Field<Name, Value>`), which is the
+/// leading sort key of the index the service lists from, so the service seeks
+/// past runs of non-matching fields instead of reading them. A term may
+/// contain only negated literals.
+/// An absent filter matches every object the parent owns; when the parent is
+/// the `Field` object of a dynamic object field, that includes the field's
+/// value object. A present filter matches only `Field` objects, and must have
+/// at least one term, and every term at least one literal.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct DynamicFieldFilter {
+    /// Terms are ORed together.
+    #[prost(message, repeated, tag = "1")]
+    pub terms: ::prost::alloc::vec::Vec<DynamicFieldTerm>,
+}
+/// One conjunction in a dynamic field DNF filter.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct DynamicFieldTerm {
+    /// Literals are ANDed together.
+    #[prost(message, repeated, tag = "1")]
+    pub literals: ::prost::alloc::vec::Vec<DynamicFieldLiteral>,
+}
+/// One signed dynamic field predicate literal: a predicate, optionally negated.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DynamicFieldLiteral {
+    /// When true, the literal matches dynamic fields that the predicate does
+    /// *not* match.
+    #[prost(bool, tag = "1")]
+    pub negated: bool,
+    /// The dynamic field predicate to match.
+    #[prost(oneof = "dynamic_field_literal::Predicate", tags = "2, 3")]
+    pub predicate: ::core::option::Option<dynamic_field_literal::Predicate>,
+}
+/// Nested message and enum types in `DynamicFieldLiteral`.
+pub mod dynamic_field_literal {
+    /// The dynamic field predicate to match.
+    #[non_exhaustive]
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
+    pub enum Predicate {
+        /// Match dynamic fields whose name type matches the specified filter.
+        #[prost(message, tag = "2")]
+        NameType(super::DynamicFieldNameTypeFilter),
+        /// Match dynamic object fields (added with `0x2::dynamic_object_field`).
+        /// Negate it to match only dynamic fields whose value is stored inline
+        /// (added with `0x2::dynamic_field`).
+        #[prost(message, tag = "3")]
+        DynamicObjectField(super::DynamicObjectFieldFilter),
+    }
+}
+/// Match by the type of a dynamic field's name: the type reported in
+/// `DynamicField.name.name`. For a dynamic object field this is the name type
+/// passed to `0x2::dynamic_object_field::add`, not the
+/// `0x2::dynamic_object_field::Wrapper` it is stored in, so one filter matches
+/// both kinds of field.
+///
+/// A struct type accepts the specificity levels of `ObjectTypeFilter`:
+/// "0xaddr"                              -> matches names whose type is defined at this address
+/// "0xaddr::module"                      -> matches names whose type is in this module
+/// "0xaddr::module::Name"                -> matches names with this type name (any instantiation)
+/// "0xaddr::module::Name\<T1, T2>"        -> matches names with this exact generic instantiation
+/// Any other type, e.g. `u64`, `address` or `vector<u8>`, matches exactly.
+///
+/// There is no filter on the value type: a dynamic object field's value type
+/// is the type of its child object, which the index does not record.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DynamicFieldNameTypeFilter {
+    /// Required. Move type string: a struct type at one of the levels above, or
+    /// a complete non-struct type.
+    #[prost(string, optional, tag = "1")]
+    pub name_type: ::core::option::Option<::prost::alloc::string::String>,
+}
+/// Match dynamic object fields.
+#[non_exhaustive]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DynamicObjectFieldFilter {}
 /// Summary of gas charges.
 #[non_exhaustive]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
@@ -7935,7 +8079,7 @@ pub struct Balance {
 }
 /// Request message for `NodeService.ListDynamicFields`
 #[non_exhaustive]
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListDynamicFieldsRequest {
     /// Required. The `UID` of the parent, which owns the collections of dynamic fields.
     #[prost(string, optional, tag = "1")]
@@ -7956,6 +8100,15 @@ pub struct ListDynamicFieldsRequest {
     /// If no mask is specified, defaults to `parent,field_id`.
     #[prost(message, optional, tag = "4")]
     pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
+    /// Optional. DNF filter over the parent's dynamic fields, e.g. a single
+    /// `name_type` literal `0x2::kiosk::Item` lists only the items in a kiosk.
+    /// Matching fields are returned in the same order as without a filter. If
+    /// absent, all dynamic fields of the parent are returned.
+    ///
+    /// The service rejects a filter with more literals in total than it allows
+    /// with `INVALID_ARGUMENT`.
+    #[prost(message, optional, tag = "5")]
+    pub filter: ::core::option::Option<DynamicFieldFilter>,
 }
 /// Response message for `NodeService.ListDynamicFields`
 #[non_exhaustive]
@@ -8051,7 +8204,7 @@ pub mod dynamic_field {
     }
 }
 #[non_exhaustive]
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListOwnedObjectsRequest {
     /// Required. The address of the account that owns the objects.
     #[prost(string, optional, tag = "1")]
@@ -8080,8 +8233,22 @@ pub struct ListOwnedObjectsRequest {
     /// with a type param will restrict the returned objects to only those objects
     /// that match the provided type parameters, e.g.
     /// `0x2::coin::Coin<0x2::sui::SUI>` will only return `Coin<SUI>` objects.
+    ///
+    /// Equivalent to a `filter` with a single `object_type` literal. Must not be
+    /// set together with `filter`.
     #[prost(string, optional, tag = "5")]
     pub object_type: ::core::option::Option<::prost::alloc::string::String>,
+    /// Optional. DNF filter over the owner's objects, e.g. a single term with
+    /// the negated `object_type` literals `0x2::coin::Coin` and
+    /// `0x2::kiosk::KioskOwnerCap` lists everything except coins and kiosk owner
+    /// caps. Matching objects are returned in the same order as without a
+    /// filter. If absent, all objects of the owner are returned. Must not be set
+    /// together with `object_type`.
+    ///
+    /// The service rejects a filter with more literals in total than it allows
+    /// with `INVALID_ARGUMENT`.
+    #[prost(message, optional, tag = "6")]
+    pub filter: ::core::option::Option<ObjectFilter>,
 }
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]

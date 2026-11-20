@@ -163,3 +163,114 @@ message EventStreamHeadFilter {
 
 // Match transactions that wrote a Move package.
 message PackageWriteFilter {}
+
+// DNF filter for objects: any term may match, and each term is an AND of
+// signed literals. Every predicate constrains the object's Move type, which
+// is the leading sort key of the index the service lists from, so the
+// service seeks past runs of non-matching objects instead of reading them.
+// A term may contain only negated literals, e.g. "every type except
+// `0x2::coin::Coin`".
+// An absent filter matches everything. A present filter must have at least one
+// term, and every term at least one literal.
+message ObjectFilter {
+  // Terms are ORed together.
+  repeated ObjectTerm terms = 1;
+}
+
+// One conjunction in an object DNF filter.
+message ObjectTerm {
+  // Literals are ANDed together.
+  repeated ObjectLiteral literals = 1;
+}
+
+// One signed object predicate literal: a predicate, optionally negated.
+message ObjectLiteral {
+  // When true, the literal matches objects that the predicate does *not*
+  // match.
+  bool negated = 1;
+
+  // The object predicate to match.
+  oneof predicate {
+    // Match objects whose Move type matches the specified filter.
+    ObjectTypeFilter object_type = 2;
+  }
+}
+
+// Match by an object's Move struct type, specified as a Move type string.
+//
+// Specificity levels:
+//   "0xaddr"                              -> matches objects whose type is defined at this address
+//   "0xaddr::module"                      -> matches objects whose type is in this module
+//   "0xaddr::module::Name"                -> matches objects with this type name (any instantiation)
+//   "0xaddr::module::Name<T1, T2>"        -> matches objects with this exact generic instantiation
+//
+// The address is the one in the type's canonical form: the package that first
+// defined the type, not the package version that created the object.
+message ObjectTypeFilter {
+  // Required. Move type string of the form
+  // `address[::module[::Name[<type_params>]]]`.
+  optional string object_type = 1;
+}
+
+// DNF filter for the dynamic fields of a parent: any term may match, and each
+// term is an AND of signed literals. Every predicate constrains the type of
+// the field object (`0x2::dynamic_field::Field<Name, Value>`), which is the
+// leading sort key of the index the service lists from, so the service seeks
+// past runs of non-matching fields instead of reading them. A term may
+// contain only negated literals.
+// An absent filter matches every object the parent owns; when the parent is
+// the `Field` object of a dynamic object field, that includes the field's
+// value object. A present filter matches only `Field` objects, and must have
+// at least one term, and every term at least one literal.
+message DynamicFieldFilter {
+  // Terms are ORed together.
+  repeated DynamicFieldTerm terms = 1;
+}
+
+// One conjunction in a dynamic field DNF filter.
+message DynamicFieldTerm {
+  // Literals are ANDed together.
+  repeated DynamicFieldLiteral literals = 1;
+}
+
+// One signed dynamic field predicate literal: a predicate, optionally negated.
+message DynamicFieldLiteral {
+  // When true, the literal matches dynamic fields that the predicate does
+  // *not* match.
+  bool negated = 1;
+
+  // The dynamic field predicate to match.
+  oneof predicate {
+    // Match dynamic fields whose name type matches the specified filter.
+    DynamicFieldNameTypeFilter name_type = 2;
+
+    // Match dynamic object fields (added with `0x2::dynamic_object_field`).
+    // Negate it to match only dynamic fields whose value is stored inline
+    // (added with `0x2::dynamic_field`).
+    DynamicObjectFieldFilter dynamic_object_field = 3;
+  }
+}
+
+// Match by the type of a dynamic field's name: the type reported in
+// `DynamicField.name.name`. For a dynamic object field this is the name type
+// passed to `0x2::dynamic_object_field::add`, not the
+// `0x2::dynamic_object_field::Wrapper` it is stored in, so one filter matches
+// both kinds of field.
+//
+// A struct type accepts the specificity levels of `ObjectTypeFilter`:
+//   "0xaddr"                              -> matches names whose type is defined at this address
+//   "0xaddr::module"                      -> matches names whose type is in this module
+//   "0xaddr::module::Name"                -> matches names with this type name (any instantiation)
+//   "0xaddr::module::Name<T1, T2>"        -> matches names with this exact generic instantiation
+// Any other type, e.g. `u64`, `address` or `vector<u8>`, matches exactly.
+//
+// There is no filter on the value type: a dynamic object field's value type
+// is the type of its child object, which the index does not record.
+message DynamicFieldNameTypeFilter {
+  // Required. Move type string: a struct type at one of the levels above, or
+  // a complete non-struct type.
+  optional string name_type = 1;
+}
+
+// Match dynamic object fields.
+message DynamicObjectFieldFilter {}
