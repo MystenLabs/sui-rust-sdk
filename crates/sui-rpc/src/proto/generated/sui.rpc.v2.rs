@@ -2255,6 +2255,7 @@ pub struct PackageWriteFilter {}
 /// `0x2::coin::Coin`".
 /// An absent filter matches everything. A present filter must have at least one
 /// term, and every term at least one literal.
+#[derive(Eq, Hash)]
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ObjectFilter {
@@ -2263,6 +2264,7 @@ pub struct ObjectFilter {
     pub terms: ::prost::alloc::vec::Vec<ObjectTerm>,
 }
 /// One conjunction in an object DNF filter.
+#[derive(Eq, Hash)]
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ObjectTerm {
@@ -2321,6 +2323,7 @@ pub struct ObjectTypeFilter {
 /// the `Field` object of a dynamic object field, that includes the field's
 /// value object. A present filter matches only `Field` objects, and must have
 /// at least one term, and every term at least one literal.
+#[derive(Eq, Hash)]
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct DynamicFieldFilter {
@@ -2329,6 +2332,7 @@ pub struct DynamicFieldFilter {
     pub terms: ::prost::alloc::vec::Vec<DynamicFieldTerm>,
 }
 /// One conjunction in a dynamic field DNF filter.
+#[derive(Eq, Hash)]
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct DynamicFieldTerm {
@@ -8078,6 +8082,7 @@ pub struct Balance {
     pub coin_balance: ::core::option::Option<u64>,
 }
 /// Request message for `NodeService.ListDynamicFields`
+#[derive(Eq, Hash)]
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListDynamicFieldsRequest {
@@ -8203,6 +8208,7 @@ pub mod dynamic_field {
         }
     }
 }
+#[derive(Eq, Hash)]
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListOwnedObjectsRequest {
