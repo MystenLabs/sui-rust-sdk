@@ -824,6 +824,62 @@ mod _accessor_impls {
             self
         }
     }
+    impl super::BatchGetBalancesRequest {
+        pub const fn const_default() -> Self {
+            Self { requests: Vec::new() }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::BatchGetBalancesRequest = super::BatchGetBalancesRequest::const_default();
+            &DEFAULT
+        }
+        ///Returns the value of `requests`, or the default value if `requests` is unset.
+        pub fn requests(&self) -> &[super::GetBalanceRequest] {
+            &self.requests
+        }
+        ///Returns a mutable reference to `requests`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn requests_mut(&mut self) -> &mut Vec<super::GetBalanceRequest> {
+            &mut self.requests
+        }
+        ///Sets `requests` with the provided value.
+        pub fn set_requests(&mut self, field: Vec<super::GetBalanceRequest>) {
+            self.requests = field;
+        }
+        ///Sets `requests` with the provided value.
+        pub fn with_requests(mut self, field: Vec<super::GetBalanceRequest>) -> Self {
+            self.set_requests(field);
+            self
+        }
+    }
+    impl super::BatchGetBalancesResponse {
+        pub const fn const_default() -> Self {
+            Self { balances: Vec::new() }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::BatchGetBalancesResponse = super::BatchGetBalancesResponse::const_default();
+            &DEFAULT
+        }
+        ///Returns the value of `balances`, or the default value if `balances` is unset.
+        pub fn balances(&self) -> &[super::Balance] {
+            &self.balances
+        }
+        ///Returns a mutable reference to `balances`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn balances_mut(&mut self) -> &mut Vec<super::Balance> {
+            &mut self.balances
+        }
+        ///Sets `balances` with the provided value.
+        pub fn set_balances(&mut self, field: Vec<super::Balance>) {
+            self.balances = field;
+        }
+        ///Sets `balances` with the provided value.
+        pub fn with_balances(mut self, field: Vec<super::Balance>) -> Self {
+            self.set_balances(field);
+            self
+        }
+    }
     impl super::BatchGetObjectsRequest {
         pub const fn const_default() -> Self {
             Self {
@@ -8186,6 +8242,7 @@ mod _accessor_impls {
             Self {
                 owner: None,
                 coin_type: None,
+                at_checkpoint: None,
             }
         }
         #[doc(hidden)]
@@ -8235,6 +8292,28 @@ mod _accessor_impls {
         ///Sets `coin_type` with the provided value.
         pub fn with_coin_type<T: Into<String>>(mut self, field: T) -> Self {
             self.set_coin_type(field.into());
+            self
+        }
+        ///If `at_checkpoint` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn at_checkpoint_opt_mut(&mut self) -> Option<&mut u64> {
+            self.at_checkpoint.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `at_checkpoint`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn at_checkpoint_mut(&mut self) -> &mut u64 {
+            self.at_checkpoint.get_or_insert_default()
+        }
+        ///If `at_checkpoint` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn at_checkpoint_opt(&self) -> Option<u64> {
+            self.at_checkpoint.as_ref().map(|field| *field)
+        }
+        ///Sets `at_checkpoint` with the provided value.
+        pub fn set_at_checkpoint(&mut self, field: u64) {
+            self.at_checkpoint = Some(field);
+        }
+        ///Sets `at_checkpoint` with the provided value.
+        pub fn with_at_checkpoint(mut self, field: u64) -> Self {
+            self.set_at_checkpoint(field);
             self
         }
     }
@@ -10582,6 +10661,8 @@ mod _accessor_impls {
                 owner: None,
                 page_size: None,
                 page_token: None,
+                options: None,
+                at_checkpoint: None,
             }
         }
         #[doc(hidden)]
@@ -10649,12 +10730,65 @@ mod _accessor_impls {
             self.set_page_token(field.into());
             self
         }
+        ///Returns the value of `options`, or the default value if `options` is unset.
+        pub fn options(&self) -> &super::QueryOptions {
+            self.options
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::QueryOptions::default_instance() as _)
+        }
+        ///If `options` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn options_opt_mut(&mut self) -> Option<&mut super::QueryOptions> {
+            self.options.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `options`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn options_mut(&mut self) -> &mut super::QueryOptions {
+            self.options.get_or_insert_default()
+        }
+        ///If `options` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn options_opt(&self) -> Option<&super::QueryOptions> {
+            self.options.as_ref().map(|field| field as _)
+        }
+        ///Sets `options` with the provided value.
+        pub fn set_options<T: Into<super::QueryOptions>>(&mut self, field: T) {
+            self.options = Some(field.into().into());
+        }
+        ///Sets `options` with the provided value.
+        pub fn with_options<T: Into<super::QueryOptions>>(mut self, field: T) -> Self {
+            self.set_options(field.into());
+            self
+        }
+        ///If `at_checkpoint` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn at_checkpoint_opt_mut(&mut self) -> Option<&mut u64> {
+            self.at_checkpoint.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `at_checkpoint`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn at_checkpoint_mut(&mut self) -> &mut u64 {
+            self.at_checkpoint.get_or_insert_default()
+        }
+        ///If `at_checkpoint` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn at_checkpoint_opt(&self) -> Option<u64> {
+            self.at_checkpoint.as_ref().map(|field| *field)
+        }
+        ///Sets `at_checkpoint` with the provided value.
+        pub fn set_at_checkpoint(&mut self, field: u64) {
+            self.at_checkpoint = Some(field);
+        }
+        ///Sets `at_checkpoint` with the provided value.
+        pub fn with_at_checkpoint(mut self, field: u64) -> Self {
+            self.set_at_checkpoint(field);
+            self
+        }
     }
     impl super::ListBalancesResponse {
         pub const fn const_default() -> Self {
             Self {
                 balances: Vec::new(),
                 next_page_token: None,
+                cursors: Vec::new(),
+                end: None,
             }
         }
         #[doc(hidden)]
@@ -10694,6 +10828,53 @@ mod _accessor_impls {
             field: T,
         ) -> Self {
             self.set_next_page_token(field.into());
+            self
+        }
+        ///Returns the value of `cursors`, or the default value if `cursors` is unset.
+        pub fn cursors(&self) -> &[::prost::bytes::Bytes] {
+            &self.cursors
+        }
+        ///Returns a mutable reference to `cursors`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn cursors_mut(&mut self) -> &mut Vec<::prost::bytes::Bytes> {
+            &mut self.cursors
+        }
+        ///Sets `cursors` with the provided value.
+        pub fn set_cursors(&mut self, field: Vec<::prost::bytes::Bytes>) {
+            self.cursors = field;
+        }
+        ///Sets `cursors` with the provided value.
+        pub fn with_cursors(mut self, field: Vec<::prost::bytes::Bytes>) -> Self {
+            self.set_cursors(field);
+            self
+        }
+        ///Returns the value of `end`, or the default value if `end` is unset.
+        pub fn end(&self) -> &super::QueryEnd {
+            self.end
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::QueryEnd::default_instance() as _)
+        }
+        ///If `end` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn end_opt_mut(&mut self) -> Option<&mut super::QueryEnd> {
+            self.end.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `end`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn end_mut(&mut self) -> &mut super::QueryEnd {
+            self.end.get_or_insert_default()
+        }
+        ///If `end` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn end_opt(&self) -> Option<&super::QueryEnd> {
+            self.end.as_ref().map(|field| field as _)
+        }
+        ///Sets `end` with the provided value.
+        pub fn set_end<T: Into<super::QueryEnd>>(&mut self, field: T) {
+            self.end = Some(field.into().into());
+        }
+        ///Sets `end` with the provided value.
+        pub fn with_end<T: Into<super::QueryEnd>>(mut self, field: T) -> Self {
+            self.set_end(field.into());
             self
         }
     }
@@ -10952,6 +11133,8 @@ mod _accessor_impls {
                 page_token: None,
                 read_mask: None,
                 filter: None,
+                options: None,
+                at_checkpoint: None,
             }
         }
         #[doc(hidden)]
@@ -11076,12 +11259,65 @@ mod _accessor_impls {
             self.set_filter(field.into());
             self
         }
+        ///Returns the value of `options`, or the default value if `options` is unset.
+        pub fn options(&self) -> &super::QueryOptions {
+            self.options
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::QueryOptions::default_instance() as _)
+        }
+        ///If `options` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn options_opt_mut(&mut self) -> Option<&mut super::QueryOptions> {
+            self.options.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `options`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn options_mut(&mut self) -> &mut super::QueryOptions {
+            self.options.get_or_insert_default()
+        }
+        ///If `options` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn options_opt(&self) -> Option<&super::QueryOptions> {
+            self.options.as_ref().map(|field| field as _)
+        }
+        ///Sets `options` with the provided value.
+        pub fn set_options<T: Into<super::QueryOptions>>(&mut self, field: T) {
+            self.options = Some(field.into().into());
+        }
+        ///Sets `options` with the provided value.
+        pub fn with_options<T: Into<super::QueryOptions>>(mut self, field: T) -> Self {
+            self.set_options(field.into());
+            self
+        }
+        ///If `at_checkpoint` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn at_checkpoint_opt_mut(&mut self) -> Option<&mut u64> {
+            self.at_checkpoint.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `at_checkpoint`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn at_checkpoint_mut(&mut self) -> &mut u64 {
+            self.at_checkpoint.get_or_insert_default()
+        }
+        ///If `at_checkpoint` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn at_checkpoint_opt(&self) -> Option<u64> {
+            self.at_checkpoint.as_ref().map(|field| *field)
+        }
+        ///Sets `at_checkpoint` with the provided value.
+        pub fn set_at_checkpoint(&mut self, field: u64) {
+            self.at_checkpoint = Some(field);
+        }
+        ///Sets `at_checkpoint` with the provided value.
+        pub fn with_at_checkpoint(mut self, field: u64) -> Self {
+            self.set_at_checkpoint(field);
+            self
+        }
     }
     impl super::ListDynamicFieldsResponse {
         pub const fn const_default() -> Self {
             Self {
                 dynamic_fields: Vec::new(),
                 next_page_token: None,
+                cursors: Vec::new(),
+                end: None,
             }
         }
         #[doc(hidden)]
@@ -11121,6 +11357,53 @@ mod _accessor_impls {
             field: T,
         ) -> Self {
             self.set_next_page_token(field.into());
+            self
+        }
+        ///Returns the value of `cursors`, or the default value if `cursors` is unset.
+        pub fn cursors(&self) -> &[::prost::bytes::Bytes] {
+            &self.cursors
+        }
+        ///Returns a mutable reference to `cursors`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn cursors_mut(&mut self) -> &mut Vec<::prost::bytes::Bytes> {
+            &mut self.cursors
+        }
+        ///Sets `cursors` with the provided value.
+        pub fn set_cursors(&mut self, field: Vec<::prost::bytes::Bytes>) {
+            self.cursors = field;
+        }
+        ///Sets `cursors` with the provided value.
+        pub fn with_cursors(mut self, field: Vec<::prost::bytes::Bytes>) -> Self {
+            self.set_cursors(field);
+            self
+        }
+        ///Returns the value of `end`, or the default value if `end` is unset.
+        pub fn end(&self) -> &super::QueryEnd {
+            self.end
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::QueryEnd::default_instance() as _)
+        }
+        ///If `end` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn end_opt_mut(&mut self) -> Option<&mut super::QueryEnd> {
+            self.end.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `end`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn end_mut(&mut self) -> &mut super::QueryEnd {
+            self.end.get_or_insert_default()
+        }
+        ///If `end` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn end_opt(&self) -> Option<&super::QueryEnd> {
+            self.end.as_ref().map(|field| field as _)
+        }
+        ///Sets `end` with the provided value.
+        pub fn set_end<T: Into<super::QueryEnd>>(&mut self, field: T) {
+            self.end = Some(field.into().into());
+        }
+        ///Sets `end` with the provided value.
+        pub fn with_end<T: Into<super::QueryEnd>>(mut self, field: T) -> Self {
+            self.set_end(field.into());
             self
         }
     }
@@ -11841,6 +12124,211 @@ mod _accessor_impls {
             self
         }
     }
+    impl super::ListObjectsRequest {
+        pub const fn const_default() -> Self {
+            Self {
+                filter: None,
+                read_mask: None,
+                options: None,
+                at_checkpoint: None,
+            }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::ListObjectsRequest = super::ListObjectsRequest::const_default();
+            &DEFAULT
+        }
+        ///Returns the value of `filter`, or the default value if `filter` is unset.
+        pub fn filter(&self) -> &super::ObjectFilter {
+            self.filter
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::ObjectFilter::default_instance() as _)
+        }
+        ///If `filter` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn filter_opt_mut(&mut self) -> Option<&mut super::ObjectFilter> {
+            self.filter.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `filter`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn filter_mut(&mut self) -> &mut super::ObjectFilter {
+            self.filter.get_or_insert_default()
+        }
+        ///If `filter` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn filter_opt(&self) -> Option<&super::ObjectFilter> {
+            self.filter.as_ref().map(|field| field as _)
+        }
+        ///Sets `filter` with the provided value.
+        pub fn set_filter<T: Into<super::ObjectFilter>>(&mut self, field: T) {
+            self.filter = Some(field.into().into());
+        }
+        ///Sets `filter` with the provided value.
+        pub fn with_filter<T: Into<super::ObjectFilter>>(mut self, field: T) -> Self {
+            self.set_filter(field.into());
+            self
+        }
+        ///If `read_mask` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn read_mask_opt_mut(&mut self) -> Option<&mut ::prost_types::FieldMask> {
+            self.read_mask.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `read_mask`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn read_mask_mut(&mut self) -> &mut ::prost_types::FieldMask {
+            self.read_mask.get_or_insert_default()
+        }
+        ///If `read_mask` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn read_mask_opt(&self) -> Option<&::prost_types::FieldMask> {
+            self.read_mask.as_ref().map(|field| field as _)
+        }
+        ///Sets `read_mask` with the provided value.
+        pub fn set_read_mask<T: Into<::prost_types::FieldMask>>(&mut self, field: T) {
+            self.read_mask = Some(field.into().into());
+        }
+        ///Sets `read_mask` with the provided value.
+        pub fn with_read_mask<T: Into<::prost_types::FieldMask>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_read_mask(field.into());
+            self
+        }
+        ///Returns the value of `options`, or the default value if `options` is unset.
+        pub fn options(&self) -> &super::QueryOptions {
+            self.options
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::QueryOptions::default_instance() as _)
+        }
+        ///If `options` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn options_opt_mut(&mut self) -> Option<&mut super::QueryOptions> {
+            self.options.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `options`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn options_mut(&mut self) -> &mut super::QueryOptions {
+            self.options.get_or_insert_default()
+        }
+        ///If `options` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn options_opt(&self) -> Option<&super::QueryOptions> {
+            self.options.as_ref().map(|field| field as _)
+        }
+        ///Sets `options` with the provided value.
+        pub fn set_options<T: Into<super::QueryOptions>>(&mut self, field: T) {
+            self.options = Some(field.into().into());
+        }
+        ///Sets `options` with the provided value.
+        pub fn with_options<T: Into<super::QueryOptions>>(mut self, field: T) -> Self {
+            self.set_options(field.into());
+            self
+        }
+        ///If `at_checkpoint` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn at_checkpoint_opt_mut(&mut self) -> Option<&mut u64> {
+            self.at_checkpoint.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `at_checkpoint`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn at_checkpoint_mut(&mut self) -> &mut u64 {
+            self.at_checkpoint.get_or_insert_default()
+        }
+        ///If `at_checkpoint` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn at_checkpoint_opt(&self) -> Option<u64> {
+            self.at_checkpoint.as_ref().map(|field| *field)
+        }
+        ///Sets `at_checkpoint` with the provided value.
+        pub fn set_at_checkpoint(&mut self, field: u64) {
+            self.at_checkpoint = Some(field);
+        }
+        ///Sets `at_checkpoint` with the provided value.
+        pub fn with_at_checkpoint(mut self, field: u64) -> Self {
+            self.set_at_checkpoint(field);
+            self
+        }
+    }
+    impl super::ListObjectsResponse {
+        pub const fn const_default() -> Self {
+            Self {
+                object: None,
+                cursor: None,
+                end: None,
+            }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::ListObjectsResponse = super::ListObjectsResponse::const_default();
+            &DEFAULT
+        }
+        ///Returns the value of `object`, or the default value if `object` is unset.
+        pub fn object(&self) -> &super::Object {
+            self.object
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::Object::default_instance() as _)
+        }
+        ///If `object` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn object_opt_mut(&mut self) -> Option<&mut super::Object> {
+            self.object.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `object`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn object_mut(&mut self) -> &mut super::Object {
+            self.object.get_or_insert_default()
+        }
+        ///If `object` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn object_opt(&self) -> Option<&super::Object> {
+            self.object.as_ref().map(|field| field as _)
+        }
+        ///Sets `object` with the provided value.
+        pub fn set_object<T: Into<super::Object>>(&mut self, field: T) {
+            self.object = Some(field.into().into());
+        }
+        ///Sets `object` with the provided value.
+        pub fn with_object<T: Into<super::Object>>(mut self, field: T) -> Self {
+            self.set_object(field.into());
+            self
+        }
+        ///If `cursor` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn cursor_opt(&self) -> Option<&[u8]> {
+            self.cursor.as_ref().map(|field| field as _)
+        }
+        ///Sets `cursor` with the provided value.
+        pub fn set_cursor<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
+            self.cursor = Some(field.into().into());
+        }
+        ///Sets `cursor` with the provided value.
+        pub fn with_cursor<T: Into<::prost::bytes::Bytes>>(mut self, field: T) -> Self {
+            self.set_cursor(field.into());
+            self
+        }
+        ///Returns the value of `end`, or the default value if `end` is unset.
+        pub fn end(&self) -> &super::QueryEnd {
+            self.end
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::QueryEnd::default_instance() as _)
+        }
+        ///If `end` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn end_opt_mut(&mut self) -> Option<&mut super::QueryEnd> {
+            self.end.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `end`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn end_mut(&mut self) -> &mut super::QueryEnd {
+            self.end.get_or_insert_default()
+        }
+        ///If `end` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn end_opt(&self) -> Option<&super::QueryEnd> {
+            self.end.as_ref().map(|field| field as _)
+        }
+        ///Sets `end` with the provided value.
+        pub fn set_end<T: Into<super::QueryEnd>>(&mut self, field: T) {
+            self.end = Some(field.into().into());
+        }
+        ///Sets `end` with the provided value.
+        pub fn with_end<T: Into<super::QueryEnd>>(mut self, field: T) -> Self {
+            self.set_end(field.into());
+            self
+        }
+    }
     impl super::ListOwnedObjectsRequest {
         pub const fn const_default() -> Self {
             Self {
@@ -11850,6 +12338,9 @@ mod _accessor_impls {
                 read_mask: None,
                 object_type: None,
                 filter: None,
+                options: None,
+                at_checkpoint: None,
+                owner_kind: None,
             }
         }
         #[doc(hidden)]
@@ -11993,12 +12484,73 @@ mod _accessor_impls {
             self.set_filter(field.into());
             self
         }
+        ///Returns the value of `options`, or the default value if `options` is unset.
+        pub fn options(&self) -> &super::QueryOptions {
+            self.options
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::QueryOptions::default_instance() as _)
+        }
+        ///If `options` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn options_opt_mut(&mut self) -> Option<&mut super::QueryOptions> {
+            self.options.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `options`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn options_mut(&mut self) -> &mut super::QueryOptions {
+            self.options.get_or_insert_default()
+        }
+        ///If `options` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn options_opt(&self) -> Option<&super::QueryOptions> {
+            self.options.as_ref().map(|field| field as _)
+        }
+        ///Sets `options` with the provided value.
+        pub fn set_options<T: Into<super::QueryOptions>>(&mut self, field: T) {
+            self.options = Some(field.into().into());
+        }
+        ///Sets `options` with the provided value.
+        pub fn with_options<T: Into<super::QueryOptions>>(mut self, field: T) -> Self {
+            self.set_options(field.into());
+            self
+        }
+        ///If `at_checkpoint` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn at_checkpoint_opt_mut(&mut self) -> Option<&mut u64> {
+            self.at_checkpoint.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `at_checkpoint`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn at_checkpoint_mut(&mut self) -> &mut u64 {
+            self.at_checkpoint.get_or_insert_default()
+        }
+        ///If `at_checkpoint` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn at_checkpoint_opt(&self) -> Option<u64> {
+            self.at_checkpoint.as_ref().map(|field| *field)
+        }
+        ///Sets `at_checkpoint` with the provided value.
+        pub fn set_at_checkpoint(&mut self, field: u64) {
+            self.at_checkpoint = Some(field);
+        }
+        ///Sets `at_checkpoint` with the provided value.
+        pub fn with_at_checkpoint(mut self, field: u64) -> Self {
+            self.set_at_checkpoint(field);
+            self
+        }
+        ///Sets `owner_kind` with the provided value.
+        pub fn with_owner_kind<T: Into<super::owner::OwnerKind>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_owner_kind(field.into());
+            self
+        }
     }
     impl super::ListOwnedObjectsResponse {
         pub const fn const_default() -> Self {
             Self {
                 objects: Vec::new(),
                 next_page_token: None,
+                cursors: Vec::new(),
+                end: None,
             }
         }
         #[doc(hidden)]
@@ -12038,6 +12590,53 @@ mod _accessor_impls {
             field: T,
         ) -> Self {
             self.set_next_page_token(field.into());
+            self
+        }
+        ///Returns the value of `cursors`, or the default value if `cursors` is unset.
+        pub fn cursors(&self) -> &[::prost::bytes::Bytes] {
+            &self.cursors
+        }
+        ///Returns a mutable reference to `cursors`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn cursors_mut(&mut self) -> &mut Vec<::prost::bytes::Bytes> {
+            &mut self.cursors
+        }
+        ///Sets `cursors` with the provided value.
+        pub fn set_cursors(&mut self, field: Vec<::prost::bytes::Bytes>) {
+            self.cursors = field;
+        }
+        ///Sets `cursors` with the provided value.
+        pub fn with_cursors(mut self, field: Vec<::prost::bytes::Bytes>) -> Self {
+            self.set_cursors(field);
+            self
+        }
+        ///Returns the value of `end`, or the default value if `end` is unset.
+        pub fn end(&self) -> &super::QueryEnd {
+            self.end
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::QueryEnd::default_instance() as _)
+        }
+        ///If `end` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn end_opt_mut(&mut self) -> Option<&mut super::QueryEnd> {
+            self.end.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `end`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn end_mut(&mut self) -> &mut super::QueryEnd {
+            self.end.get_or_insert_default()
+        }
+        ///If `end` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn end_opt(&self) -> Option<&super::QueryEnd> {
+            self.end.as_ref().map(|field| field as _)
+        }
+        ///Sets `end` with the provided value.
+        pub fn set_end<T: Into<super::QueryEnd>>(&mut self, field: T) {
+            self.end = Some(field.into().into());
+        }
+        ///Sets `end` with the provided value.
+        pub fn with_end<T: Into<super::QueryEnd>>(mut self, field: T) -> Self {
+            self.set_end(field.into());
             self
         }
     }
