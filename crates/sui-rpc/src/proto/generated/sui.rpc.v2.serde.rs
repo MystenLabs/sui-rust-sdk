@@ -8278,6 +8278,569 @@ impl<'de> serde::Deserialize<'de> for dynamic_field::DynamicFieldKind {
         deserializer.deserialize_any(GeneratedVisitor)
     }
 }
+impl serde::Serialize for DynamicFieldFilter {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0usize;
+        if !self.terms.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer
+            .serialize_struct("sui.rpc.v2.DynamicFieldFilter", len)?;
+        if !self.terms.is_empty() {
+            struct_ser.serialize_field("terms", &self.terms)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for DynamicFieldFilter {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &["terms"];
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Terms,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(
+                deserializer: D,
+            ) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+                    fn expecting(
+                        &self,
+                        formatter: &mut std::fmt::Formatter<'_>,
+                    ) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", FIELDS)
+                    }
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(
+                        self,
+                        value: &str,
+                    ) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "terms" => Ok(GeneratedField::Terms),
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = DynamicFieldFilter;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2.DynamicFieldFilter")
+            }
+            fn visit_map<V>(
+                self,
+                mut map_: V,
+            ) -> std::result::Result<DynamicFieldFilter, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                let mut terms__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Terms => {
+                            if terms__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("terms"));
+                            }
+                            terms__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(DynamicFieldFilter {
+                    terms: terms__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer
+            .deserialize_struct(
+                "sui.rpc.v2.DynamicFieldFilter",
+                FIELDS,
+                GeneratedVisitor,
+            )
+    }
+}
+impl serde::Serialize for DynamicFieldLiteral {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0usize;
+        if self.negated {
+            len += 1;
+        }
+        if self.predicate.is_some() {
+            len += 1;
+        }
+        let mut struct_ser = serializer
+            .serialize_struct("sui.rpc.v2.DynamicFieldLiteral", len)?;
+        if self.negated {
+            struct_ser.serialize_field("negated", &self.negated)?;
+        }
+        if let Some(v) = self.predicate.as_ref() {
+            match v {
+                dynamic_field_literal::Predicate::NameType(v) => {
+                    struct_ser.serialize_field("nameType", v)?;
+                }
+                dynamic_field_literal::Predicate::DynamicObjectField(v) => {
+                    struct_ser.serialize_field("dynamicObjectField", v)?;
+                }
+            }
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for DynamicFieldLiteral {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "negated",
+            "name_type",
+            "nameType",
+            "dynamic_object_field",
+            "dynamicObjectField",
+        ];
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Negated,
+            NameType,
+            DynamicObjectField,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(
+                deserializer: D,
+            ) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+                    fn expecting(
+                        &self,
+                        formatter: &mut std::fmt::Formatter<'_>,
+                    ) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", FIELDS)
+                    }
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(
+                        self,
+                        value: &str,
+                    ) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "negated" => Ok(GeneratedField::Negated),
+                            "nameType" | "name_type" => Ok(GeneratedField::NameType),
+                            "dynamicObjectField" | "dynamic_object_field" => {
+                                Ok(GeneratedField::DynamicObjectField)
+                            }
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = DynamicFieldLiteral;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2.DynamicFieldLiteral")
+            }
+            fn visit_map<V>(
+                self,
+                mut map_: V,
+            ) -> std::result::Result<DynamicFieldLiteral, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                let mut negated__ = None;
+                let mut predicate__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Negated => {
+                            if negated__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("negated"));
+                            }
+                            negated__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::NameType => {
+                            if predicate__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("nameType"));
+                            }
+                            predicate__ = map_
+                                .next_value::<::std::option::Option<_>>()?
+                                .map(dynamic_field_literal::Predicate::NameType);
+                        }
+                        GeneratedField::DynamicObjectField => {
+                            if predicate__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("dynamicObjectField"),
+                                );
+                            }
+                            predicate__ = map_
+                                .next_value::<::std::option::Option<_>>()?
+                                .map(dynamic_field_literal::Predicate::DynamicObjectField);
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(DynamicFieldLiteral {
+                    negated: negated__.unwrap_or_default(),
+                    predicate: predicate__,
+                })
+            }
+        }
+        deserializer
+            .deserialize_struct(
+                "sui.rpc.v2.DynamicFieldLiteral",
+                FIELDS,
+                GeneratedVisitor,
+            )
+    }
+}
+impl serde::Serialize for DynamicFieldNameTypeFilter {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0usize;
+        if self.name_type.is_some() {
+            len += 1;
+        }
+        let mut struct_ser = serializer
+            .serialize_struct("sui.rpc.v2.DynamicFieldNameTypeFilter", len)?;
+        if let Some(v) = self.name_type.as_ref() {
+            struct_ser.serialize_field("nameType", v)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for DynamicFieldNameTypeFilter {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &["name_type", "nameType"];
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            NameType,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(
+                deserializer: D,
+            ) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+                    fn expecting(
+                        &self,
+                        formatter: &mut std::fmt::Formatter<'_>,
+                    ) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", FIELDS)
+                    }
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(
+                        self,
+                        value: &str,
+                    ) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "nameType" | "name_type" => Ok(GeneratedField::NameType),
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = DynamicFieldNameTypeFilter;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2.DynamicFieldNameTypeFilter")
+            }
+            fn visit_map<V>(
+                self,
+                mut map_: V,
+            ) -> std::result::Result<DynamicFieldNameTypeFilter, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                let mut name_type__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::NameType => {
+                            if name_type__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("nameType"));
+                            }
+                            name_type__ = map_.next_value()?;
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(DynamicFieldNameTypeFilter {
+                    name_type: name_type__,
+                })
+            }
+        }
+        deserializer
+            .deserialize_struct(
+                "sui.rpc.v2.DynamicFieldNameTypeFilter",
+                FIELDS,
+                GeneratedVisitor,
+            )
+    }
+}
+impl serde::Serialize for DynamicFieldTerm {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0usize;
+        if !self.literals.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer
+            .serialize_struct("sui.rpc.v2.DynamicFieldTerm", len)?;
+        if !self.literals.is_empty() {
+            struct_ser.serialize_field("literals", &self.literals)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for DynamicFieldTerm {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &["literals"];
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Literals,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(
+                deserializer: D,
+            ) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+                    fn expecting(
+                        &self,
+                        formatter: &mut std::fmt::Formatter<'_>,
+                    ) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", FIELDS)
+                    }
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(
+                        self,
+                        value: &str,
+                    ) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "literals" => Ok(GeneratedField::Literals),
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = DynamicFieldTerm;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2.DynamicFieldTerm")
+            }
+            fn visit_map<V>(
+                self,
+                mut map_: V,
+            ) -> std::result::Result<DynamicFieldTerm, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                let mut literals__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Literals => {
+                            if literals__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("literals"));
+                            }
+                            literals__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(DynamicFieldTerm {
+                    literals: literals__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer
+            .deserialize_struct("sui.rpc.v2.DynamicFieldTerm", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for DynamicObjectFieldFilter {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let len = 0usize;
+        let struct_ser = serializer
+            .serialize_struct("sui.rpc.v2.DynamicObjectFieldFilter", len)?;
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for DynamicObjectFieldFilter {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[];
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(
+                deserializer: D,
+            ) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+                    fn expecting(
+                        &self,
+                        formatter: &mut std::fmt::Formatter<'_>,
+                    ) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", FIELDS)
+                    }
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(
+                        self,
+                        value: &str,
+                    ) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        Ok(GeneratedField::__SkipField__)
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = DynamicObjectFieldFilter;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2.DynamicObjectFieldFilter")
+            }
+            fn visit_map<V>(
+                self,
+                mut map_: V,
+            ) -> std::result::Result<DynamicObjectFieldFilter, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                while map_.next_key::<GeneratedField>()?.is_some() {
+                    let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                }
+                Ok(DynamicObjectFieldFilter {})
+            }
+        }
+        deserializer
+            .deserialize_struct(
+                "sui.rpc.v2.DynamicObjectFieldFilter",
+                FIELDS,
+                GeneratedVisitor,
+            )
+    }
+}
 impl serde::Serialize for EmitModuleFilter {
     #[allow(deprecated)]
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
@@ -18665,6 +19228,9 @@ impl serde::Serialize for ListDynamicFieldsRequest {
         if self.read_mask.is_some() {
             len += 1;
         }
+        if self.filter.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer
             .serialize_struct("sui.rpc.v2.ListDynamicFieldsRequest", len)?;
         if let Some(v) = self.parent.as_ref() {
@@ -18686,6 +19252,9 @@ impl serde::Serialize for ListDynamicFieldsRequest {
             struct_ser
                 .serialize_field("readMask", &crate::_serde::FieldMaskSerializer(v))?;
         }
+        if let Some(v) = self.filter.as_ref() {
+            struct_ser.serialize_field("filter", v)?;
+        }
         struct_ser.end()
     }
 }
@@ -18703,6 +19272,7 @@ impl<'de> serde::Deserialize<'de> for ListDynamicFieldsRequest {
             "pageToken",
             "read_mask",
             "readMask",
+            "filter",
         ];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
@@ -18710,6 +19280,7 @@ impl<'de> serde::Deserialize<'de> for ListDynamicFieldsRequest {
             PageSize,
             PageToken,
             ReadMask,
+            Filter,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -18741,6 +19312,7 @@ impl<'de> serde::Deserialize<'de> for ListDynamicFieldsRequest {
                             "pageSize" | "page_size" => Ok(GeneratedField::PageSize),
                             "pageToken" | "page_token" => Ok(GeneratedField::PageToken),
                             "readMask" | "read_mask" => Ok(GeneratedField::ReadMask),
+                            "filter" => Ok(GeneratedField::Filter),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -18770,6 +19342,7 @@ impl<'de> serde::Deserialize<'de> for ListDynamicFieldsRequest {
                 let mut page_size__ = None;
                 let mut page_token__ = None;
                 let mut read_mask__ = None;
+                let mut filter__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Parent => {
@@ -18808,6 +19381,12 @@ impl<'de> serde::Deserialize<'de> for ListDynamicFieldsRequest {
                                 >()?
                                 .map(|x| x.0.into());
                         }
+                        GeneratedField::Filter => {
+                            if filter__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("filter"));
+                            }
+                            filter__ = map_.next_value()?;
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -18818,6 +19397,7 @@ impl<'de> serde::Deserialize<'de> for ListDynamicFieldsRequest {
                     page_size: page_size__,
                     page_token: page_token__,
                     read_mask: read_mask__,
+                    filter: filter__,
                 })
             }
         }
@@ -19924,6 +20504,9 @@ impl serde::Serialize for ListOwnedObjectsRequest {
         if self.object_type.is_some() {
             len += 1;
         }
+        if self.filter.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer
             .serialize_struct("sui.rpc.v2.ListOwnedObjectsRequest", len)?;
         if let Some(v) = self.owner.as_ref() {
@@ -19948,6 +20531,9 @@ impl serde::Serialize for ListOwnedObjectsRequest {
         if let Some(v) = self.object_type.as_ref() {
             struct_ser.serialize_field("objectType", v)?;
         }
+        if let Some(v) = self.filter.as_ref() {
+            struct_ser.serialize_field("filter", v)?;
+        }
         struct_ser.end()
     }
 }
@@ -19967,6 +20553,7 @@ impl<'de> serde::Deserialize<'de> for ListOwnedObjectsRequest {
             "readMask",
             "object_type",
             "objectType",
+            "filter",
         ];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
@@ -19975,6 +20562,7 @@ impl<'de> serde::Deserialize<'de> for ListOwnedObjectsRequest {
             PageToken,
             ReadMask,
             ObjectType,
+            Filter,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -20009,6 +20597,7 @@ impl<'de> serde::Deserialize<'de> for ListOwnedObjectsRequest {
                             "objectType" | "object_type" => {
                                 Ok(GeneratedField::ObjectType)
                             }
+                            "filter" => Ok(GeneratedField::Filter),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -20039,6 +20628,7 @@ impl<'de> serde::Deserialize<'de> for ListOwnedObjectsRequest {
                 let mut page_token__ = None;
                 let mut read_mask__ = None;
                 let mut object_type__ = None;
+                let mut filter__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Owner => {
@@ -20083,6 +20673,12 @@ impl<'de> serde::Deserialize<'de> for ListOwnedObjectsRequest {
                             }
                             object_type__ = map_.next_value()?;
                         }
+                        GeneratedField::Filter => {
+                            if filter__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("filter"));
+                            }
+                            filter__ = map_.next_value()?;
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -20094,6 +20690,7 @@ impl<'de> serde::Deserialize<'de> for ListOwnedObjectsRequest {
                     page_token: page_token__,
                     read_mask: read_mask__,
                     object_type: object_type__,
+                    filter: filter__,
                 })
             }
         }
@@ -24047,6 +24644,240 @@ impl<'de> serde::Deserialize<'de> for Object {
         deserializer.deserialize_struct("sui.rpc.v2.Object", FIELDS, GeneratedVisitor)
     }
 }
+impl serde::Serialize for ObjectFilter {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0usize;
+        if !self.terms.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer
+            .serialize_struct("sui.rpc.v2.ObjectFilter", len)?;
+        if !self.terms.is_empty() {
+            struct_ser.serialize_field("terms", &self.terms)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for ObjectFilter {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &["terms"];
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Terms,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(
+                deserializer: D,
+            ) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+                    fn expecting(
+                        &self,
+                        formatter: &mut std::fmt::Formatter<'_>,
+                    ) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", FIELDS)
+                    }
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(
+                        self,
+                        value: &str,
+                    ) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "terms" => Ok(GeneratedField::Terms),
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = ObjectFilter;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2.ObjectFilter")
+            }
+            fn visit_map<V>(
+                self,
+                mut map_: V,
+            ) -> std::result::Result<ObjectFilter, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                let mut terms__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Terms => {
+                            if terms__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("terms"));
+                            }
+                            terms__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(ObjectFilter {
+                    terms: terms__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer
+            .deserialize_struct("sui.rpc.v2.ObjectFilter", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for ObjectLiteral {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0usize;
+        if self.negated {
+            len += 1;
+        }
+        if self.predicate.is_some() {
+            len += 1;
+        }
+        let mut struct_ser = serializer
+            .serialize_struct("sui.rpc.v2.ObjectLiteral", len)?;
+        if self.negated {
+            struct_ser.serialize_field("negated", &self.negated)?;
+        }
+        if let Some(v) = self.predicate.as_ref() {
+            match v {
+                object_literal::Predicate::ObjectType(v) => {
+                    struct_ser.serialize_field("objectType", v)?;
+                }
+            }
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for ObjectLiteral {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &["negated", "object_type", "objectType"];
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Negated,
+            ObjectType,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(
+                deserializer: D,
+            ) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+                    fn expecting(
+                        &self,
+                        formatter: &mut std::fmt::Formatter<'_>,
+                    ) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", FIELDS)
+                    }
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(
+                        self,
+                        value: &str,
+                    ) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "negated" => Ok(GeneratedField::Negated),
+                            "objectType" | "object_type" => {
+                                Ok(GeneratedField::ObjectType)
+                            }
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = ObjectLiteral;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2.ObjectLiteral")
+            }
+            fn visit_map<V>(
+                self,
+                mut map_: V,
+            ) -> std::result::Result<ObjectLiteral, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                let mut negated__ = None;
+                let mut predicate__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Negated => {
+                            if negated__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("negated"));
+                            }
+                            negated__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::ObjectType => {
+                            if predicate__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("objectType"));
+                            }
+                            predicate__ = map_
+                                .next_value::<::std::option::Option<_>>()?
+                                .map(object_literal::Predicate::ObjectType);
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(ObjectLiteral {
+                    negated: negated__.unwrap_or_default(),
+                    predicate: predicate__,
+                })
+            }
+        }
+        deserializer
+            .deserialize_struct("sui.rpc.v2.ObjectLiteral", FIELDS, GeneratedVisitor)
+    }
+}
 impl serde::Serialize for ObjectReference {
     #[allow(deprecated)]
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
@@ -24517,6 +25348,217 @@ impl<'de> serde::Deserialize<'de> for ObjectSet {
             }
         }
         deserializer.deserialize_struct("sui.rpc.v2.ObjectSet", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for ObjectTerm {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0usize;
+        if !self.literals.is_empty() {
+            len += 1;
+        }
+        let mut struct_ser = serializer.serialize_struct("sui.rpc.v2.ObjectTerm", len)?;
+        if !self.literals.is_empty() {
+            struct_ser.serialize_field("literals", &self.literals)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for ObjectTerm {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &["literals"];
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Literals,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(
+                deserializer: D,
+            ) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+                    fn expecting(
+                        &self,
+                        formatter: &mut std::fmt::Formatter<'_>,
+                    ) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", FIELDS)
+                    }
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(
+                        self,
+                        value: &str,
+                    ) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "literals" => Ok(GeneratedField::Literals),
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = ObjectTerm;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2.ObjectTerm")
+            }
+            fn visit_map<V>(
+                self,
+                mut map_: V,
+            ) -> std::result::Result<ObjectTerm, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                let mut literals__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Literals => {
+                            if literals__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("literals"));
+                            }
+                            literals__ = Some(map_.next_value()?);
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(ObjectTerm {
+                    literals: literals__.unwrap_or_default(),
+                })
+            }
+        }
+        deserializer
+            .deserialize_struct("sui.rpc.v2.ObjectTerm", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for ObjectTypeFilter {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0usize;
+        if self.object_type.is_some() {
+            len += 1;
+        }
+        let mut struct_ser = serializer
+            .serialize_struct("sui.rpc.v2.ObjectTypeFilter", len)?;
+        if let Some(v) = self.object_type.as_ref() {
+            struct_ser.serialize_field("objectType", v)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for ObjectTypeFilter {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &["object_type", "objectType"];
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            ObjectType,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(
+                deserializer: D,
+            ) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+                    fn expecting(
+                        &self,
+                        formatter: &mut std::fmt::Formatter<'_>,
+                    ) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", FIELDS)
+                    }
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(
+                        self,
+                        value: &str,
+                    ) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "objectType" | "object_type" => {
+                                Ok(GeneratedField::ObjectType)
+                            }
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = ObjectTypeFilter;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2.ObjectTypeFilter")
+            }
+            fn visit_map<V>(
+                self,
+                mut map_: V,
+            ) -> std::result::Result<ObjectTypeFilter, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                let mut object_type__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::ObjectType => {
+                            if object_type__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("objectType"));
+                            }
+                            object_type__ = map_.next_value()?;
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(ObjectTypeFilter {
+                    object_type: object_type__,
+                })
+            }
+        }
+        deserializer
+            .deserialize_struct("sui.rpc.v2.ObjectTypeFilter", FIELDS, GeneratedVisitor)
     }
 }
 impl serde::Serialize for OpenSignature {

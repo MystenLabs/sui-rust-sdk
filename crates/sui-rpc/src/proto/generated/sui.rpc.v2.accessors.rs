@@ -4433,6 +4433,268 @@ mod _accessor_impls {
             self
         }
     }
+    impl super::DynamicFieldFilter {
+        pub const fn const_default() -> Self {
+            Self { terms: Vec::new() }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::DynamicFieldFilter = super::DynamicFieldFilter::const_default();
+            &DEFAULT
+        }
+        ///Returns the value of `terms`, or the default value if `terms` is unset.
+        pub fn terms(&self) -> &[super::DynamicFieldTerm] {
+            &self.terms
+        }
+        ///Returns a mutable reference to `terms`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn terms_mut(&mut self) -> &mut Vec<super::DynamicFieldTerm> {
+            &mut self.terms
+        }
+        ///Sets `terms` with the provided value.
+        pub fn set_terms(&mut self, field: Vec<super::DynamicFieldTerm>) {
+            self.terms = field;
+        }
+        ///Sets `terms` with the provided value.
+        pub fn with_terms(mut self, field: Vec<super::DynamicFieldTerm>) -> Self {
+            self.set_terms(field);
+            self
+        }
+    }
+    impl super::DynamicFieldLiteral {
+        pub const fn const_default() -> Self {
+            Self {
+                negated: false,
+                predicate: None,
+            }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::DynamicFieldLiteral = super::DynamicFieldLiteral::const_default();
+            &DEFAULT
+        }
+        ///Returns a mutable reference to `negated`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn negated_mut(&mut self) -> &mut bool {
+            &mut self.negated
+        }
+        ///Sets `negated` with the provided value.
+        pub fn set_negated(&mut self, field: bool) {
+            self.negated = field;
+        }
+        ///Sets `negated` with the provided value.
+        pub fn with_negated(mut self, field: bool) -> Self {
+            self.set_negated(field);
+            self
+        }
+        ///Returns the value of `name_type`, or the default value if `name_type` is unset.
+        pub fn name_type(&self) -> &super::DynamicFieldNameTypeFilter {
+            if let Some(super::dynamic_field_literal::Predicate::NameType(field)) = &self
+                .predicate
+            {
+                field as _
+            } else {
+                super::DynamicFieldNameTypeFilter::default_instance() as _
+            }
+        }
+        ///If `name_type` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn name_type_opt(&self) -> Option<&super::DynamicFieldNameTypeFilter> {
+            if let Some(super::dynamic_field_literal::Predicate::NameType(field)) = &self
+                .predicate
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///If `name_type` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn name_type_opt_mut(
+            &mut self,
+        ) -> Option<&mut super::DynamicFieldNameTypeFilter> {
+            if let Some(super::dynamic_field_literal::Predicate::NameType(field)) = &mut self
+                .predicate
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///Returns a mutable reference to `name_type`.
+        ///If the field is unset, it is first initialized with the default value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn name_type_mut(&mut self) -> &mut super::DynamicFieldNameTypeFilter {
+            if self.name_type_opt_mut().is_none() {
+                self.predicate = Some(
+                    super::dynamic_field_literal::Predicate::NameType(
+                        super::DynamicFieldNameTypeFilter::default(),
+                    ),
+                );
+            }
+            self.name_type_opt_mut().unwrap()
+        }
+        ///Sets `name_type` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn set_name_type<T: Into<super::DynamicFieldNameTypeFilter>>(
+            &mut self,
+            field: T,
+        ) {
+            self.predicate = Some(
+                super::dynamic_field_literal::Predicate::NameType(field.into().into()),
+            );
+        }
+        ///Sets `name_type` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn with_name_type<T: Into<super::DynamicFieldNameTypeFilter>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_name_type(field.into());
+            self
+        }
+        ///Returns the value of `dynamic_object_field`, or the default value if `dynamic_object_field` is unset.
+        pub fn dynamic_object_field(&self) -> &super::DynamicObjectFieldFilter {
+            if let Some(
+                super::dynamic_field_literal::Predicate::DynamicObjectField(field),
+            ) = &self.predicate
+            {
+                field as _
+            } else {
+                super::DynamicObjectFieldFilter::default_instance() as _
+            }
+        }
+        ///If `dynamic_object_field` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn dynamic_object_field_opt(
+            &self,
+        ) -> Option<&super::DynamicObjectFieldFilter> {
+            if let Some(
+                super::dynamic_field_literal::Predicate::DynamicObjectField(field),
+            ) = &self.predicate
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///If `dynamic_object_field` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn dynamic_object_field_opt_mut(
+            &mut self,
+        ) -> Option<&mut super::DynamicObjectFieldFilter> {
+            if let Some(
+                super::dynamic_field_literal::Predicate::DynamicObjectField(field),
+            ) = &mut self.predicate
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///Returns a mutable reference to `dynamic_object_field`.
+        ///If the field is unset, it is first initialized with the default value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn dynamic_object_field_mut(
+            &mut self,
+        ) -> &mut super::DynamicObjectFieldFilter {
+            if self.dynamic_object_field_opt_mut().is_none() {
+                self.predicate = Some(
+                    super::dynamic_field_literal::Predicate::DynamicObjectField(
+                        super::DynamicObjectFieldFilter::default(),
+                    ),
+                );
+            }
+            self.dynamic_object_field_opt_mut().unwrap()
+        }
+        ///Sets `dynamic_object_field` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn set_dynamic_object_field<T: Into<super::DynamicObjectFieldFilter>>(
+            &mut self,
+            field: T,
+        ) {
+            self.predicate = Some(
+                super::dynamic_field_literal::Predicate::DynamicObjectField(
+                    field.into().into(),
+                ),
+            );
+        }
+        ///Sets `dynamic_object_field` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn with_dynamic_object_field<T: Into<super::DynamicObjectFieldFilter>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_dynamic_object_field(field.into());
+            self
+        }
+    }
+    impl super::DynamicFieldNameTypeFilter {
+        pub const fn const_default() -> Self {
+            Self { name_type: None }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::DynamicFieldNameTypeFilter = super::DynamicFieldNameTypeFilter::const_default();
+            &DEFAULT
+        }
+        ///If `name_type` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn name_type_opt_mut(&mut self) -> Option<&mut String> {
+            self.name_type.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `name_type`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn name_type_mut(&mut self) -> &mut String {
+            self.name_type.get_or_insert_default()
+        }
+        ///If `name_type` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn name_type_opt(&self) -> Option<&str> {
+            self.name_type.as_ref().map(|field| field as _)
+        }
+        ///Sets `name_type` with the provided value.
+        pub fn set_name_type<T: Into<String>>(&mut self, field: T) {
+            self.name_type = Some(field.into().into());
+        }
+        ///Sets `name_type` with the provided value.
+        pub fn with_name_type<T: Into<String>>(mut self, field: T) -> Self {
+            self.set_name_type(field.into());
+            self
+        }
+    }
+    impl super::DynamicFieldTerm {
+        pub const fn const_default() -> Self {
+            Self { literals: Vec::new() }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::DynamicFieldTerm = super::DynamicFieldTerm::const_default();
+            &DEFAULT
+        }
+        ///Returns the value of `literals`, or the default value if `literals` is unset.
+        pub fn literals(&self) -> &[super::DynamicFieldLiteral] {
+            &self.literals
+        }
+        ///Returns a mutable reference to `literals`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn literals_mut(&mut self) -> &mut Vec<super::DynamicFieldLiteral> {
+            &mut self.literals
+        }
+        ///Sets `literals` with the provided value.
+        pub fn set_literals(&mut self, field: Vec<super::DynamicFieldLiteral>) {
+            self.literals = field;
+        }
+        ///Sets `literals` with the provided value.
+        pub fn with_literals(mut self, field: Vec<super::DynamicFieldLiteral>) -> Self {
+            self.set_literals(field);
+            self
+        }
+    }
+    impl super::DynamicObjectFieldFilter {
+        pub const fn const_default() -> Self {
+            Self {}
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::DynamicObjectFieldFilter = super::DynamicObjectFieldFilter::const_default();
+            &DEFAULT
+        }
+    }
     impl super::EmitModuleFilter {
         pub const fn const_default() -> Self {
             Self { module: None }
@@ -10689,6 +10951,7 @@ mod _accessor_impls {
                 page_size: None,
                 page_token: None,
                 read_mask: None,
+                filter: None,
             }
         }
         #[doc(hidden)]
@@ -10779,6 +11042,38 @@ mod _accessor_impls {
             field: T,
         ) -> Self {
             self.set_read_mask(field.into());
+            self
+        }
+        ///Returns the value of `filter`, or the default value if `filter` is unset.
+        pub fn filter(&self) -> &super::DynamicFieldFilter {
+            self.filter
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::DynamicFieldFilter::default_instance() as _)
+        }
+        ///If `filter` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn filter_opt_mut(&mut self) -> Option<&mut super::DynamicFieldFilter> {
+            self.filter.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `filter`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn filter_mut(&mut self) -> &mut super::DynamicFieldFilter {
+            self.filter.get_or_insert_default()
+        }
+        ///If `filter` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn filter_opt(&self) -> Option<&super::DynamicFieldFilter> {
+            self.filter.as_ref().map(|field| field as _)
+        }
+        ///Sets `filter` with the provided value.
+        pub fn set_filter<T: Into<super::DynamicFieldFilter>>(&mut self, field: T) {
+            self.filter = Some(field.into().into());
+        }
+        ///Sets `filter` with the provided value.
+        pub fn with_filter<T: Into<super::DynamicFieldFilter>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_filter(field.into());
             self
         }
     }
@@ -11554,6 +11849,7 @@ mod _accessor_impls {
                 page_token: None,
                 read_mask: None,
                 object_type: None,
+                filter: None,
             }
         }
         #[doc(hidden)]
@@ -11666,6 +11962,35 @@ mod _accessor_impls {
         ///Sets `object_type` with the provided value.
         pub fn with_object_type<T: Into<String>>(mut self, field: T) -> Self {
             self.set_object_type(field.into());
+            self
+        }
+        ///Returns the value of `filter`, or the default value if `filter` is unset.
+        pub fn filter(&self) -> &super::ObjectFilter {
+            self.filter
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::ObjectFilter::default_instance() as _)
+        }
+        ///If `filter` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn filter_opt_mut(&mut self) -> Option<&mut super::ObjectFilter> {
+            self.filter.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `filter`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn filter_mut(&mut self) -> &mut super::ObjectFilter {
+            self.filter.get_or_insert_default()
+        }
+        ///If `filter` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn filter_opt(&self) -> Option<&super::ObjectFilter> {
+            self.filter.as_ref().map(|field| field as _)
+        }
+        ///Sets `filter` with the provided value.
+        pub fn set_filter<T: Into<super::ObjectFilter>>(&mut self, field: T) {
+            self.filter = Some(field.into().into());
+        }
+        ///Sets `filter` with the provided value.
+        pub fn with_filter<T: Into<super::ObjectFilter>>(mut self, field: T) -> Self {
+            self.set_filter(field.into());
             self
         }
     }
@@ -13986,6 +14311,120 @@ mod _accessor_impls {
             self
         }
     }
+    impl super::ObjectFilter {
+        pub const fn const_default() -> Self {
+            Self { terms: Vec::new() }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::ObjectFilter = super::ObjectFilter::const_default();
+            &DEFAULT
+        }
+        ///Returns the value of `terms`, or the default value if `terms` is unset.
+        pub fn terms(&self) -> &[super::ObjectTerm] {
+            &self.terms
+        }
+        ///Returns a mutable reference to `terms`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn terms_mut(&mut self) -> &mut Vec<super::ObjectTerm> {
+            &mut self.terms
+        }
+        ///Sets `terms` with the provided value.
+        pub fn set_terms(&mut self, field: Vec<super::ObjectTerm>) {
+            self.terms = field;
+        }
+        ///Sets `terms` with the provided value.
+        pub fn with_terms(mut self, field: Vec<super::ObjectTerm>) -> Self {
+            self.set_terms(field);
+            self
+        }
+    }
+    impl super::ObjectLiteral {
+        pub const fn const_default() -> Self {
+            Self {
+                negated: false,
+                predicate: None,
+            }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::ObjectLiteral = super::ObjectLiteral::const_default();
+            &DEFAULT
+        }
+        ///Returns a mutable reference to `negated`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn negated_mut(&mut self) -> &mut bool {
+            &mut self.negated
+        }
+        ///Sets `negated` with the provided value.
+        pub fn set_negated(&mut self, field: bool) {
+            self.negated = field;
+        }
+        ///Sets `negated` with the provided value.
+        pub fn with_negated(mut self, field: bool) -> Self {
+            self.set_negated(field);
+            self
+        }
+        ///Returns the value of `object_type`, or the default value if `object_type` is unset.
+        pub fn object_type(&self) -> &super::ObjectTypeFilter {
+            if let Some(super::object_literal::Predicate::ObjectType(field)) = &self
+                .predicate
+            {
+                field as _
+            } else {
+                super::ObjectTypeFilter::default_instance() as _
+            }
+        }
+        ///If `object_type` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn object_type_opt(&self) -> Option<&super::ObjectTypeFilter> {
+            if let Some(super::object_literal::Predicate::ObjectType(field)) = &self
+                .predicate
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///If `object_type` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn object_type_opt_mut(&mut self) -> Option<&mut super::ObjectTypeFilter> {
+            if let Some(super::object_literal::Predicate::ObjectType(field)) = &mut self
+                .predicate
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///Returns a mutable reference to `object_type`.
+        ///If the field is unset, it is first initialized with the default value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn object_type_mut(&mut self) -> &mut super::ObjectTypeFilter {
+            if self.object_type_opt_mut().is_none() {
+                self.predicate = Some(
+                    super::object_literal::Predicate::ObjectType(
+                        super::ObjectTypeFilter::default(),
+                    ),
+                );
+            }
+            self.object_type_opt_mut().unwrap()
+        }
+        ///Sets `object_type` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn set_object_type<T: Into<super::ObjectTypeFilter>>(&mut self, field: T) {
+            self.predicate = Some(
+                super::object_literal::Predicate::ObjectType(field.into().into()),
+            );
+        }
+        ///Sets `object_type` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn with_object_type<T: Into<super::ObjectTypeFilter>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_object_type(field.into());
+            self
+        }
+    }
     impl super::ObjectReference {
         pub const fn const_default() -> Self {
             Self {
@@ -14157,6 +14596,66 @@ mod _accessor_impls {
         ///Sets `objects` with the provided value.
         pub fn with_objects(mut self, field: Vec<super::Object>) -> Self {
             self.set_objects(field);
+            self
+        }
+    }
+    impl super::ObjectTerm {
+        pub const fn const_default() -> Self {
+            Self { literals: Vec::new() }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::ObjectTerm = super::ObjectTerm::const_default();
+            &DEFAULT
+        }
+        ///Returns the value of `literals`, or the default value if `literals` is unset.
+        pub fn literals(&self) -> &[super::ObjectLiteral] {
+            &self.literals
+        }
+        ///Returns a mutable reference to `literals`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn literals_mut(&mut self) -> &mut Vec<super::ObjectLiteral> {
+            &mut self.literals
+        }
+        ///Sets `literals` with the provided value.
+        pub fn set_literals(&mut self, field: Vec<super::ObjectLiteral>) {
+            self.literals = field;
+        }
+        ///Sets `literals` with the provided value.
+        pub fn with_literals(mut self, field: Vec<super::ObjectLiteral>) -> Self {
+            self.set_literals(field);
+            self
+        }
+    }
+    impl super::ObjectTypeFilter {
+        pub const fn const_default() -> Self {
+            Self { object_type: None }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::ObjectTypeFilter = super::ObjectTypeFilter::const_default();
+            &DEFAULT
+        }
+        ///If `object_type` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn object_type_opt_mut(&mut self) -> Option<&mut String> {
+            self.object_type.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `object_type`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn object_type_mut(&mut self) -> &mut String {
+            self.object_type.get_or_insert_default()
+        }
+        ///If `object_type` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn object_type_opt(&self) -> Option<&str> {
+            self.object_type.as_ref().map(|field| field as _)
+        }
+        ///Sets `object_type` with the provided value.
+        pub fn set_object_type<T: Into<String>>(&mut self, field: T) {
+            self.object_type = Some(field.into().into());
+        }
+        ///Sets `object_type` with the provided value.
+        pub fn with_object_type<T: Into<String>>(mut self, field: T) -> Self {
+            self.set_object_type(field.into());
             self
         }
     }
