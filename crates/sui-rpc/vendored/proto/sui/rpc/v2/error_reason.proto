@@ -135,6 +135,11 @@ enum ErrorReason {
   // `ListObjectVersions` follows these rules for its checkpoint range and
   // cursors; see `ListObjectVersionsRequest`.
   //
+  // `StateService` requests pinned to a checkpoint by `at_checkpoint` or by a
+  // cursor return this with `OUT_OF_RANGE` when that checkpoint is above the
+  // highest checkpoint the server can serve for state reads (`bound` is
+  // "at_checkpoint" or "cursor").
+  //
   // Example of an ErrorInfo for a descending query's `before` cursor at
   // checkpoint 1205, sent to a server whose latest indexed checkpoint is 1199:
   //
@@ -196,6 +201,12 @@ enum ErrorReason {
   // prune history; see `ListObjectVersionsRequest`. Its
   // `lowestAvailableCheckpoint` is the lowest `start_checkpoint` the server
   // accepts.
+  //
+  // `StateService` requests pinned to a checkpoint by `at_checkpoint` or by a
+  // cursor return this with `OUT_OF_RANGE` when that checkpoint is below the
+  // server's retained checkpoint range for state reads, or, for methods that
+  // load objects (`ListOwnedObjects`, `ListObjects`, `ListDynamicFields`),
+  // below the server's object pruning floor.
   //
   // Pruned data does not come back, so the same request fails the same way
   // on this server. A client can send it to a server that retains the data,
@@ -288,8 +299,13 @@ enum ErrorReason {
   // Metadata:
   // - `cause`: the temporary state that stops the server, such as
   //   "index_empty" (its index holds no data yet), "restore_backfill" (it is
-  //   backfilling history restored from a snapshot) or "history_catching_up"
-  //   (its indexes trail its live state). More causes may be added.
+  //   backfilling history restored from a snapshot), "history_catching_up"
+  //   (its indexes trail its live state), "checkpoint_unavailable" (the
+  //   requested checkpoint lies within the server's retained checkpoint range
+  //   for state reads, but this replica cannot serve it yet, for example while
+  //   refilling after a restart), or "pruning_race" (an indexed object version
+  //   could not be loaded during a checkpoint-pinned read). More causes may be
+  //   added.
   NOT_READY = 9;
 
   // The request needs an older version of an object that this server no

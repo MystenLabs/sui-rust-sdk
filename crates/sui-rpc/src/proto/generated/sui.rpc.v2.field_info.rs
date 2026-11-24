@@ -9806,11 +9806,18 @@ pub(crate) mod _field_impls {
             number: 2i32,
             message_fields: None,
         };
+        pub const AT_CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "at_checkpoint",
+            json_name: "atCheckpoint",
+            number: 3i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for GetBalanceRequest {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::OWNER_FIELD,
             Self::COIN_TYPE_FIELD,
+            Self::AT_CHECKPOINT_FIELD,
         ];
     }
     impl GetBalanceRequest {
@@ -9839,6 +9846,10 @@ pub(crate) mod _field_impls {
         }
         pub fn coin_type(mut self) -> String {
             self.path.push(GetBalanceRequest::COIN_TYPE_FIELD.name);
+            self.finish()
+        }
+        pub fn at_checkpoint(mut self) -> String {
+            self.path.push(GetBalanceRequest::AT_CHECKPOINT_FIELD.name);
             self.finish()
         }
     }
@@ -9878,6 +9889,78 @@ pub(crate) mod _field_impls {
             BalanceFieldPathBuilder::new_with_base(self.path)
         }
     }
+    impl BatchGetBalancesRequest {
+        pub const REQUESTS_FIELD: &'static MessageField = &MessageField {
+            name: "requests",
+            json_name: "requests",
+            number: 1i32,
+            message_fields: Some(GetBalanceRequest::FIELDS),
+        };
+    }
+    impl MessageFields for BatchGetBalancesRequest {
+        const FIELDS: &'static [&'static MessageField] = &[Self::REQUESTS_FIELD];
+    }
+    impl BatchGetBalancesRequest {
+        pub fn path_builder() -> BatchGetBalancesRequestFieldPathBuilder {
+            BatchGetBalancesRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct BatchGetBalancesRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl BatchGetBalancesRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn requests(mut self) -> GetBalanceRequestFieldPathBuilder {
+            self.path.push(BatchGetBalancesRequest::REQUESTS_FIELD.name);
+            GetBalanceRequestFieldPathBuilder::new_with_base(self.path)
+        }
+    }
+    impl BatchGetBalancesResponse {
+        pub const BALANCES_FIELD: &'static MessageField = &MessageField {
+            name: "balances",
+            json_name: "balances",
+            number: 1i32,
+            message_fields: Some(Balance::FIELDS),
+        };
+    }
+    impl MessageFields for BatchGetBalancesResponse {
+        const FIELDS: &'static [&'static MessageField] = &[Self::BALANCES_FIELD];
+    }
+    impl BatchGetBalancesResponse {
+        pub fn path_builder() -> BatchGetBalancesResponseFieldPathBuilder {
+            BatchGetBalancesResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct BatchGetBalancesResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl BatchGetBalancesResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn balances(mut self) -> BalanceFieldPathBuilder {
+            self.path.push(BatchGetBalancesResponse::BALANCES_FIELD.name);
+            BalanceFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl ListBalancesRequest {
         pub const OWNER_FIELD: &'static MessageField = &MessageField {
             name: "owner",
@@ -9897,12 +9980,26 @@ pub(crate) mod _field_impls {
             number: 3i32,
             message_fields: None,
         };
+        pub const OPTIONS_FIELD: &'static MessageField = &MessageField {
+            name: "options",
+            json_name: "options",
+            number: 4i32,
+            message_fields: Some(QueryOptions::FIELDS),
+        };
+        pub const AT_CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "at_checkpoint",
+            json_name: "atCheckpoint",
+            number: 5i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for ListBalancesRequest {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::OWNER_FIELD,
             Self::PAGE_SIZE_FIELD,
             Self::PAGE_TOKEN_FIELD,
+            Self::OPTIONS_FIELD,
+            Self::AT_CHECKPOINT_FIELD,
         ];
     }
     impl ListBalancesRequest {
@@ -9937,6 +10034,14 @@ pub(crate) mod _field_impls {
             self.path.push(ListBalancesRequest::PAGE_TOKEN_FIELD.name);
             self.finish()
         }
+        pub fn options(mut self) -> QueryOptionsFieldPathBuilder {
+            self.path.push(ListBalancesRequest::OPTIONS_FIELD.name);
+            QueryOptionsFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn at_checkpoint(mut self) -> String {
+            self.path.push(ListBalancesRequest::AT_CHECKPOINT_FIELD.name);
+            self.finish()
+        }
     }
     impl ListBalancesResponse {
         pub const BALANCES_FIELD: &'static MessageField = &MessageField {
@@ -9951,11 +10056,25 @@ pub(crate) mod _field_impls {
             number: 2i32,
             message_fields: None,
         };
+        pub const CURSORS_FIELD: &'static MessageField = &MessageField {
+            name: "cursors",
+            json_name: "cursors",
+            number: 3i32,
+            message_fields: None,
+        };
+        pub const END_FIELD: &'static MessageField = &MessageField {
+            name: "end",
+            json_name: "end",
+            number: 4i32,
+            message_fields: Some(QueryEnd::FIELDS),
+        };
     }
     impl MessageFields for ListBalancesResponse {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::BALANCES_FIELD,
             Self::NEXT_PAGE_TOKEN_FIELD,
+            Self::CURSORS_FIELD,
+            Self::END_FIELD,
         ];
     }
     impl ListBalancesResponse {
@@ -9985,6 +10104,14 @@ pub(crate) mod _field_impls {
         pub fn next_page_token(mut self) -> String {
             self.path.push(ListBalancesResponse::NEXT_PAGE_TOKEN_FIELD.name);
             self.finish()
+        }
+        pub fn cursors(mut self) -> String {
+            self.path.push(ListBalancesResponse::CURSORS_FIELD.name);
+            self.finish()
+        }
+        pub fn end(mut self) -> QueryEndFieldPathBuilder {
+            self.path.push(ListBalancesResponse::END_FIELD.name);
+            QueryEndFieldPathBuilder::new_with_base(self.path)
         }
     }
     impl Balance {
@@ -10089,6 +10216,18 @@ pub(crate) mod _field_impls {
             number: 5i32,
             message_fields: Some(DynamicFieldFilter::FIELDS),
         };
+        pub const OPTIONS_FIELD: &'static MessageField = &MessageField {
+            name: "options",
+            json_name: "options",
+            number: 6i32,
+            message_fields: Some(QueryOptions::FIELDS),
+        };
+        pub const AT_CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "at_checkpoint",
+            json_name: "atCheckpoint",
+            number: 7i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for ListDynamicFieldsRequest {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -10097,6 +10236,8 @@ pub(crate) mod _field_impls {
             Self::PAGE_TOKEN_FIELD,
             Self::READ_MASK_FIELD,
             Self::FILTER_FIELD,
+            Self::OPTIONS_FIELD,
+            Self::AT_CHECKPOINT_FIELD,
         ];
     }
     impl ListDynamicFieldsRequest {
@@ -10139,6 +10280,14 @@ pub(crate) mod _field_impls {
             self.path.push(ListDynamicFieldsRequest::FILTER_FIELD.name);
             DynamicFieldFilterFieldPathBuilder::new_with_base(self.path)
         }
+        pub fn options(mut self) -> QueryOptionsFieldPathBuilder {
+            self.path.push(ListDynamicFieldsRequest::OPTIONS_FIELD.name);
+            QueryOptionsFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn at_checkpoint(mut self) -> String {
+            self.path.push(ListDynamicFieldsRequest::AT_CHECKPOINT_FIELD.name);
+            self.finish()
+        }
     }
     impl ListDynamicFieldsResponse {
         pub const DYNAMIC_FIELDS_FIELD: &'static MessageField = &MessageField {
@@ -10153,11 +10302,25 @@ pub(crate) mod _field_impls {
             number: 2i32,
             message_fields: None,
         };
+        pub const CURSORS_FIELD: &'static MessageField = &MessageField {
+            name: "cursors",
+            json_name: "cursors",
+            number: 3i32,
+            message_fields: None,
+        };
+        pub const END_FIELD: &'static MessageField = &MessageField {
+            name: "end",
+            json_name: "end",
+            number: 4i32,
+            message_fields: Some(QueryEnd::FIELDS),
+        };
     }
     impl MessageFields for ListDynamicFieldsResponse {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::DYNAMIC_FIELDS_FIELD,
             Self::NEXT_PAGE_TOKEN_FIELD,
+            Self::CURSORS_FIELD,
+            Self::END_FIELD,
         ];
     }
     impl ListDynamicFieldsResponse {
@@ -10187,6 +10350,14 @@ pub(crate) mod _field_impls {
         pub fn next_page_token(mut self) -> String {
             self.path.push(ListDynamicFieldsResponse::NEXT_PAGE_TOKEN_FIELD.name);
             self.finish()
+        }
+        pub fn cursors(mut self) -> String {
+            self.path.push(ListDynamicFieldsResponse::CURSORS_FIELD.name);
+            self.finish()
+        }
+        pub fn end(mut self) -> QueryEndFieldPathBuilder {
+            self.path.push(ListDynamicFieldsResponse::END_FIELD.name);
+            QueryEndFieldPathBuilder::new_with_base(self.path)
         }
     }
     impl DynamicField {
@@ -10352,6 +10523,24 @@ pub(crate) mod _field_impls {
             number: 6i32,
             message_fields: Some(ObjectFilter::FIELDS),
         };
+        pub const OPTIONS_FIELD: &'static MessageField = &MessageField {
+            name: "options",
+            json_name: "options",
+            number: 7i32,
+            message_fields: Some(QueryOptions::FIELDS),
+        };
+        pub const AT_CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "at_checkpoint",
+            json_name: "atCheckpoint",
+            number: 8i32,
+            message_fields: None,
+        };
+        pub const OWNER_KIND_FIELD: &'static MessageField = &MessageField {
+            name: "owner_kind",
+            json_name: "ownerKind",
+            number: 9i32,
+            message_fields: None,
+        };
     }
     impl MessageFields for ListOwnedObjectsRequest {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -10361,6 +10550,9 @@ pub(crate) mod _field_impls {
             Self::READ_MASK_FIELD,
             Self::OBJECT_TYPE_FIELD,
             Self::FILTER_FIELD,
+            Self::OPTIONS_FIELD,
+            Self::AT_CHECKPOINT_FIELD,
+            Self::OWNER_KIND_FIELD,
         ];
     }
     impl ListOwnedObjectsRequest {
@@ -10407,6 +10599,18 @@ pub(crate) mod _field_impls {
             self.path.push(ListOwnedObjectsRequest::FILTER_FIELD.name);
             ObjectFilterFieldPathBuilder::new_with_base(self.path)
         }
+        pub fn options(mut self) -> QueryOptionsFieldPathBuilder {
+            self.path.push(ListOwnedObjectsRequest::OPTIONS_FIELD.name);
+            QueryOptionsFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn at_checkpoint(mut self) -> String {
+            self.path.push(ListOwnedObjectsRequest::AT_CHECKPOINT_FIELD.name);
+            self.finish()
+        }
+        pub fn owner_kind(mut self) -> String {
+            self.path.push(ListOwnedObjectsRequest::OWNER_KIND_FIELD.name);
+            self.finish()
+        }
     }
     impl ListOwnedObjectsResponse {
         pub const OBJECTS_FIELD: &'static MessageField = &MessageField {
@@ -10421,11 +10625,25 @@ pub(crate) mod _field_impls {
             number: 2i32,
             message_fields: None,
         };
+        pub const CURSORS_FIELD: &'static MessageField = &MessageField {
+            name: "cursors",
+            json_name: "cursors",
+            number: 3i32,
+            message_fields: None,
+        };
+        pub const END_FIELD: &'static MessageField = &MessageField {
+            name: "end",
+            json_name: "end",
+            number: 4i32,
+            message_fields: Some(QueryEnd::FIELDS),
+        };
     }
     impl MessageFields for ListOwnedObjectsResponse {
         const FIELDS: &'static [&'static MessageField] = &[
             Self::OBJECTS_FIELD,
             Self::NEXT_PAGE_TOKEN_FIELD,
+            Self::CURSORS_FIELD,
+            Self::END_FIELD,
         ];
     }
     impl ListOwnedObjectsResponse {
@@ -10455,6 +10673,145 @@ pub(crate) mod _field_impls {
         pub fn next_page_token(mut self) -> String {
             self.path.push(ListOwnedObjectsResponse::NEXT_PAGE_TOKEN_FIELD.name);
             self.finish()
+        }
+        pub fn cursors(mut self) -> String {
+            self.path.push(ListOwnedObjectsResponse::CURSORS_FIELD.name);
+            self.finish()
+        }
+        pub fn end(mut self) -> QueryEndFieldPathBuilder {
+            self.path.push(ListOwnedObjectsResponse::END_FIELD.name);
+            QueryEndFieldPathBuilder::new_with_base(self.path)
+        }
+    }
+    impl ListObjectsRequest {
+        pub const FILTER_FIELD: &'static MessageField = &MessageField {
+            name: "filter",
+            json_name: "filter",
+            number: 1i32,
+            message_fields: Some(ObjectFilter::FIELDS),
+        };
+        pub const READ_MASK_FIELD: &'static MessageField = &MessageField {
+            name: "read_mask",
+            json_name: "readMask",
+            number: 2i32,
+            message_fields: None,
+        };
+        pub const OPTIONS_FIELD: &'static MessageField = &MessageField {
+            name: "options",
+            json_name: "options",
+            number: 3i32,
+            message_fields: Some(QueryOptions::FIELDS),
+        };
+        pub const AT_CHECKPOINT_FIELD: &'static MessageField = &MessageField {
+            name: "at_checkpoint",
+            json_name: "atCheckpoint",
+            number: 4i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for ListObjectsRequest {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::FILTER_FIELD,
+            Self::READ_MASK_FIELD,
+            Self::OPTIONS_FIELD,
+            Self::AT_CHECKPOINT_FIELD,
+        ];
+    }
+    impl ListObjectsRequest {
+        pub fn path_builder() -> ListObjectsRequestFieldPathBuilder {
+            ListObjectsRequestFieldPathBuilder::new()
+        }
+    }
+    pub struct ListObjectsRequestFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ListObjectsRequestFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn filter(mut self) -> ObjectFilterFieldPathBuilder {
+            self.path.push(ListObjectsRequest::FILTER_FIELD.name);
+            ObjectFilterFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn read_mask(mut self) -> String {
+            self.path.push(ListObjectsRequest::READ_MASK_FIELD.name);
+            self.finish()
+        }
+        pub fn options(mut self) -> QueryOptionsFieldPathBuilder {
+            self.path.push(ListObjectsRequest::OPTIONS_FIELD.name);
+            QueryOptionsFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn at_checkpoint(mut self) -> String {
+            self.path.push(ListObjectsRequest::AT_CHECKPOINT_FIELD.name);
+            self.finish()
+        }
+    }
+    impl ListObjectsResponse {
+        pub const OBJECT_FIELD: &'static MessageField = &MessageField {
+            name: "object",
+            json_name: "object",
+            number: 1i32,
+            message_fields: Some(Object::FIELDS),
+        };
+        pub const CURSOR_FIELD: &'static MessageField = &MessageField {
+            name: "cursor",
+            json_name: "cursor",
+            number: 2i32,
+            message_fields: None,
+        };
+        pub const END_FIELD: &'static MessageField = &MessageField {
+            name: "end",
+            json_name: "end",
+            number: 3i32,
+            message_fields: Some(QueryEnd::FIELDS),
+        };
+    }
+    impl MessageFields for ListObjectsResponse {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::OBJECT_FIELD,
+            Self::CURSOR_FIELD,
+            Self::END_FIELD,
+        ];
+    }
+    impl ListObjectsResponse {
+        pub fn path_builder() -> ListObjectsResponseFieldPathBuilder {
+            ListObjectsResponseFieldPathBuilder::new()
+        }
+    }
+    pub struct ListObjectsResponseFieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ListObjectsResponseFieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn object(mut self) -> ObjectFieldPathBuilder {
+            self.path.push(ListObjectsResponse::OBJECT_FIELD.name);
+            ObjectFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn cursor(mut self) -> String {
+            self.path.push(ListObjectsResponse::CURSOR_FIELD.name);
+            self.finish()
+        }
+        pub fn end(mut self) -> QueryEndFieldPathBuilder {
+            self.path.push(ListObjectsResponse::END_FIELD.name);
+            QueryEndFieldPathBuilder::new_with_base(self.path)
         }
     }
     impl SubscribeCheckpointsRequest {

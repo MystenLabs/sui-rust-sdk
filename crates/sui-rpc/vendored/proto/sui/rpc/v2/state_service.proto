@@ -9,12 +9,16 @@ import "google/protobuf/field_mask.proto";
 import "sui/rpc/v2/bcs.proto";
 import "sui/rpc/v2/filter.proto";
 import "sui/rpc/v2/object.proto";
+import "sui/rpc/v2/owner.proto";
+import "sui/rpc/v2/query_options.proto";
 
 service StateService {
   rpc ListDynamicFields(ListDynamicFieldsRequest) returns (ListDynamicFieldsResponse);
   rpc ListOwnedObjects(ListOwnedObjectsRequest) returns (ListOwnedObjectsResponse);
+  rpc ListObjects(ListObjectsRequest) returns (stream ListObjectsResponse);
   rpc GetCoinInfo(GetCoinInfoRequest) returns (GetCoinInfoResponse);
   rpc GetBalance(GetBalanceRequest) returns (GetBalanceResponse);
+  rpc BatchGetBalances(BatchGetBalancesRequest) returns (BatchGetBalancesResponse);
   rpc ListBalances(ListBalancesRequest) returns (ListBalancesResponse);
 }
 
@@ -139,6 +143,26 @@ message GetBalanceRequest {
 
   // Required. The type names for the coin (e.g., 0x2::sui::SUI).
   optional string coin_type = 2;
+
+  // Optional. Read the balance at the end of this checkpoint, within the
+  // checkpoints the server retains for state reads. When unset, reads current
+  // state.
+  //
+  // Refusals:
+  // - Below the server's retained checkpoint range for state reads:
+  //   `OUT_OF_RANGE` with reason `BELOW_EARLIEST_AVAILABLE`.
+  // - Within the retained checkpoint range, but not yet servable on this
+  //   replica (for example while refilling after a restart): `UNAVAILABLE`
+  //   with reason `NOT_READY` (`cause`: `"checkpoint_unavailable"`); retry,
+  //   preferably on another replica.
+  // - Above the highest checkpoint the server can serve for state reads:
+  //   `OUT_OF_RANGE` with reason `ABOVE_LATEST_AVAILABLE` (`bound`:
+  //   `"at_checkpoint"`).
+  // - Server not set up for checkpoint-pinned state reads: `UNIMPLEMENTED`
+  //   with reason `NOT_SERVED_HERE`.
+  // - Before the server's state indexes have any checkpoint ready:
+  //   `UNAVAILABLE` with reason `NOT_READY` (`cause`: `"index_empty"`).
+  optional uint64 at_checkpoint = 3;
 }
 
 // Response message for `LiveDataService.GetBalance`.
@@ -146,6 +170,26 @@ message GetBalanceRequest {
 message GetBalanceResponse {
   // The balance information for the requested coin type.
   optional Balance balance = 1;
+}
+
+// Request message for `StateService.BatchGetBalances`.
+message BatchGetBalancesRequest {
+  // The balance requests to look up. Each request carries its own
+  // `at_checkpoint`, so a batch may read balances at one checkpoint, across
+  // different checkpoints, or from current state (when unset).
+  //
+  // Servers accept at least `200` requests per batch and reject any batch
+  // above their configured limit with `INVALID_ARGUMENT`. A malformed `owner`
+  // or `coin_type`, or any per-item `at_checkpoint` refusal (see
+  // `GetBalanceRequest.at_checkpoint`), fails the whole batch.
+  repeated GetBalanceRequest requests = 1;
+}
+
+// Response message for `StateService.BatchGetBalances`.
+message BatchGetBalancesResponse {
+  // One balance entry per element of `BatchGetBalancesRequest.requests`, in
+  // request order. Keys with no balance are returned with zero amounts.
+  repeated Balance balances = 1;
 }
 
 // Request message for `LiveDataService.ListBalances`.
@@ -156,25 +200,92 @@ message ListBalancesRequest {
   // The maximum number of balance entries to return. The service may return fewer than this value.
   // If unspecified, at most `50` entries will be returned.
   // The maximum value is `1000`; values above `1000` will be coerced to `1000`.
+  //
+  // Must be unset when `options` is set (`INVALID_ARGUMENT` otherwise).
   optional uint32 page_size = 2;
 
   // A page token, received from a previous `ListBalances` call.
   // Provide this to retrieve the subsequent page.
   //
   // When paginating, all other parameters provided to `ListBalances` must
-  // match the call that provided the page token.
+  // match the call that provided the page token. A checkpoint-pinned page
+  // token carries its checkpoint; setting `at_checkpoint` to a different
+  // checkpoint fails with `INVALID_ARGUMENT`.
+  //
+  // Must be unset when `options` is set (`INVALID_ARGUMENT` otherwise).
   optional bytes page_token = 3;
+
+  // Optional. Cursor paging (see `QueryOptions`). `page_size` and `page_token`
+  // must be unset when `options` is set (`INVALID_ARGUMENT` otherwise). Every
+  // response in cursor paging sets `cursors` and `end` and never sets
+  // `next_page_token`.
+  //
+  // Canonical order is ascending by `coin_type`, ordered by the BCS encoding
+  // of its Move `TypeTag` (not its string form). With `options.ordering` set
+  // to `ORDERING_DESCENDING`, items are returned in reverse order. `limit`
+  // defaults to `50` and is coerced to at most `1000`. Resume from the last
+  // item's entry in `ListBalancesResponse.cursors`, as `after` when ascending
+  // or `before` when descending.
+  //
+  // Every cursor records the checkpoint of the listing's first page, so every
+  // page of one listing reads the state as of the same checkpoint. A cursor
+  // whose checkpoint differs from `at_checkpoint`, `after` and `before`
+  // cursors from different checkpoints, a malformed cursor, or a cursor from
+  // another listing or owner fails with `INVALID_ARGUMENT`.
+  optional QueryOptions options = 4;
+
+  // Optional. Read balances at the end of this checkpoint, within the
+  // checkpoints the server retains for state reads. When `options` is set
+  // without `at_checkpoint` or a cursor, the server reads as of the highest
+  // checkpoint it can serve for state reads (or, when reading under a
+  // checkpoint floor, the admitted checkpoint) and records that checkpoint in
+  // the returned cursors. When `at_checkpoint`, `options`, and a
+  // checkpoint-pinned `page_token` are all unset, reads current state.
+  //
+  // Refusals for `at_checkpoint` or a cursor's checkpoint:
+  // - Below the server's retained checkpoint range for state reads:
+  //   `OUT_OF_RANGE` with reason `BELOW_EARLIEST_AVAILABLE`.
+  // - Within the retained checkpoint range, but not yet servable on this
+  //   replica (for example while refilling after a restart): `UNAVAILABLE`
+  //   with reason `NOT_READY` (`cause`: `"checkpoint_unavailable"`); retry,
+  //   preferably on another replica.
+  // - Above the highest checkpoint the server can serve for state reads:
+  //   `OUT_OF_RANGE` with reason `ABOVE_LATEST_AVAILABLE` (`bound`:
+  //   `"at_checkpoint"` or `"cursor"`).
+  // - Server not set up for checkpoint-pinned state reads: `UNIMPLEMENTED`
+  //   with reason `NOT_SERVED_HERE`.
+  // - Before the server's state indexes have any checkpoint ready:
+  //   `UNAVAILABLE` with reason `NOT_READY` (`cause`: `"index_empty"`).
+  optional uint64 at_checkpoint = 5;
 }
 
 // Response message for `LiveDataService.ListBalances`.
 // Return the total coin balance for all coin types, owned by the address owner.
 message ListBalancesResponse {
-  // The list of coin types and their respective balances.
+  // The list of coin types and their respective balances, in canonical order
+  // (see `ListBalancesRequest.options`), or in reverse when `options.ordering`
+  // is `ORDERING_DESCENDING`.
   repeated Balance balances = 1;
 
   // A token, which can be sent as `page_token` to retrieve the next page.
-  // If this field is omitted, there are no subsequent pages.
+  // If this field is omitted, there are no subsequent pages. Never set when
+  // `ListBalancesRequest.options` is set.
   optional bytes next_page_token = 2;
+
+  // Opaque cursor for each entry in `balances`, in matching index order, for
+  // use as `ListBalancesRequest.options.after` or `options.before`. Set only
+  // when `ListBalancesRequest.options` is set.
+  repeated bytes cursors = 3;
+
+  // Set on every response when `ListBalancesRequest.options` is set, and never
+  // otherwise. A full page ends with `QUERY_END_REASON_ITEM_LIMIT`; a shorter
+  // page, the last, with:
+  //
+  // - `QUERY_END_REASON_CHECKPOINT_BOUND`: reached the end of the owner's
+  //   balances.
+  // - `QUERY_END_REASON_CURSOR_BOUND`: reached the far cursor (`before`
+  //   ascending, `after` descending).
+  optional QueryEnd end = 4;
 }
 
 // Balance information for a specific coin type.
@@ -202,13 +313,19 @@ message ListDynamicFieldsRequest {
   // The maximum number of dynamic fields to return. The service may return fewer than this value.
   // If unspecified, at most `50` entries will be returned.
   // The maximum value is `1000`; values above `1000` will be coerced to `1000`.
+  //
+  // Must be unset when `options` is set (`INVALID_ARGUMENT` otherwise).
   optional uint32 page_size = 2;
 
   // A page token, received from a previous `ListDynamicFields` call.
   // Provide this to retrieve the subsequent page.
   //
   // When paginating, all other parameters provided to `ListDynamicFields` must
-  // match the call that provided the page token.
+  // match the call that provided the page token. A checkpoint-pinned page
+  // token carries its checkpoint; setting `at_checkpoint` to a different
+  // checkpoint fails with `INVALID_ARGUMENT`.
+  //
+  // Must be unset when `options` is set (`INVALID_ARGUMENT` otherwise).
   optional bytes page_token = 3;
 
   // Mask specifying which fields to read.
@@ -223,16 +340,89 @@ message ListDynamicFieldsRequest {
   // The service rejects a filter with more literals in total than it allows
   // with `INVALID_ARGUMENT`.
   optional DynamicFieldFilter filter = 5;
+
+  // Optional. Cursor paging (see `QueryOptions`). `page_size` and `page_token`
+  // must be unset when `options` is set (`INVALID_ARGUMENT` otherwise). Every
+  // response in cursor paging sets `cursors` and `end` and never sets
+  // `next_page_token`.
+  //
+  // Canonical order is ascending by the field object's Move type
+  // (`0x2::dynamic_field::Field<Name, Value>`), ordered by the BCS encoding of
+  // its `StructTag` (not its string form), then by the field object's
+  // `ObjectId` bytes. With `options.ordering` set to `ORDERING_DESCENDING`,
+  // items are returned in reverse order. `limit` defaults to `50` and is
+  // coerced to at most `1000`. Resume from the last item's entry in
+  // `ListDynamicFieldsResponse.cursors`, as `after` when ascending or `before`
+  // when descending.
+  //
+  // Every cursor records the checkpoint of the listing's first page, so every
+  // page of one listing reads the state as of the same checkpoint. A cursor
+  // whose checkpoint differs from `at_checkpoint`, `after` and `before`
+  // cursors from different checkpoints, a malformed cursor, or a cursor from
+  // another listing or parent fails with `INVALID_ARGUMENT`.
+  optional QueryOptions options = 6;
+
+  // Optional. Read dynamic fields at the end of this checkpoint, within the
+  // checkpoints the server retains for state reads. When `options` is set
+  // without `at_checkpoint` or a cursor, the server reads as of the highest
+  // checkpoint it can serve for state reads (or, when reading under a
+  // checkpoint floor, the admitted checkpoint) and records that checkpoint in
+  // the returned cursors. When the read is pinned to a checkpoint
+  // (`at_checkpoint`, `options`, or a checkpoint-pinned `page_token`), the
+  // field object and any dynamic object field's child object are loaded at the
+  // exact versions as of that checkpoint. When none of these is set, reads
+  // current state, where an entry whose object is removed between the index
+  // read and the object load may be skipped.
+  //
+  // Refusals for `at_checkpoint` or a cursor's checkpoint:
+  // - Below the server's retained checkpoint range for state reads or object
+  //   pruning floor: `OUT_OF_RANGE` with reason `BELOW_EARLIEST_AVAILABLE`.
+  // - Within the retained checkpoint range, but not yet servable on this
+  //   replica (for example while refilling after a restart): `UNAVAILABLE`
+  //   with reason `NOT_READY` (`cause`: `"checkpoint_unavailable"`); retry,
+  //   preferably on another replica.
+  // - Indexed object version missing during a checkpoint-pinned read:
+  //   `UNAVAILABLE` with reason `NOT_READY` (`cause`: `"pruning_race"`, never
+  //   silently skipped).
+  // - Above the highest checkpoint the server can serve for state reads:
+  //   `OUT_OF_RANGE` with reason `ABOVE_LATEST_AVAILABLE` (`bound`:
+  //   `"at_checkpoint"` or `"cursor"`).
+  // - Server not set up for checkpoint-pinned state reads: `UNIMPLEMENTED`
+  //   with reason `NOT_SERVED_HERE`.
+  // - Before the server's state indexes have any checkpoint ready:
+  //   `UNAVAILABLE` with reason `NOT_READY` (`cause`: `"index_empty"`).
+  optional uint64 at_checkpoint = 7;
 }
 
 // Response message for `NodeService.ListDynamicFields`
 message ListDynamicFieldsResponse {
-  // Page of dynamic fields owned by the specified parent.
+  // Page of dynamic fields owned by the specified parent, in canonical order
+  // (see `ListDynamicFieldsRequest.options`), or in reverse when
+  // `options.ordering` is `ORDERING_DESCENDING`.
   repeated DynamicField dynamic_fields = 1;
 
   // A token, which can be sent as `page_token` to retrieve the next page.
-  // If this field is omitted, there are no subsequent pages.
+  // If this field is omitted, there are no subsequent pages. Never set when
+  // `ListDynamicFieldsRequest.options` is set.
   optional bytes next_page_token = 2;
+
+  // Opaque cursor for each entry in `dynamic_fields`, in matching index order,
+  // for use as `ListDynamicFieldsRequest.options.after` or `options.before`.
+  // Set only when `ListDynamicFieldsRequest.options` is set.
+  repeated bytes cursors = 3;
+
+  // Set on every response when `ListDynamicFieldsRequest.options` is set, and
+  // never otherwise. A page that stops at `options.limit` or the server's
+  // response-size limit ends with `QUERY_END_REASON_ITEM_LIMIT` (so a page
+  // shorter than `options.limit` can still end with
+  // `QUERY_END_REASON_ITEM_LIMIT`). A page that exhausts its interval ends
+  // with:
+  //
+  // - `QUERY_END_REASON_CHECKPOINT_BOUND`: reached the end of the matching
+  //   dynamic fields.
+  // - `QUERY_END_REASON_CURSOR_BOUND`: reached the far cursor (`before`
+  //   ascending, `after` descending).
+  optional QueryEnd end = 4;
 }
 
 message DynamicField {
@@ -278,33 +468,41 @@ message DynamicField {
 }
 
 message ListOwnedObjectsRequest {
-  // Required. The address of the account that owns the objects.
+  // The address of the account (when `owner_kind` is unset or `ADDRESS`) or
+  // parent `ObjectId` (when `owner_kind` is `OBJECT`) that owns the objects.
+  // Required for `ADDRESS` and `OBJECT`; must be unset for `SHARED` and
+  // `IMMUTABLE` (`INVALID_ARGUMENT` otherwise).
   optional string owner = 1;
 
   // The maximum number of entries return. The service may return fewer than this value.
   // If unspecified, at most `50` entries will be returned.
   // The maximum value is `1000`; values above `1000` will be coerced to `1000`.
+  //
+  // Must be unset when `options` is set (`INVALID_ARGUMENT` otherwise).
   optional uint32 page_size = 2;
 
   // A page token, received from a previous `ListOwnedObjects` call.
   // Provide this to retrieve the subsequent page.
   //
   // When paginating, all other parameters provided to `ListOwnedObjects` must
-  // match the call that provided the page token.
+  // match the call that provided the page token. A checkpoint-pinned page
+  // token carries its checkpoint; setting `at_checkpoint` to a different
+  // checkpoint fails with `INVALID_ARGUMENT`.
+  //
+  // Must be unset when `options` is set (`INVALID_ARGUMENT` otherwise).
   optional bytes page_token = 3;
 
   // Mask specifying which fields to read.
   // If no mask is specified, defaults to `object_id,version,object_type`.
   optional google.protobuf.FieldMask read_mask = 4;
 
-  // Optional type filter to limit the types of objects listed.
+  // Optional type filter to limit the types of objects listed, accepting the
+  // specificity levels of `ObjectTypeFilter`:
   //
-  // Providing an object type with no type params will return objects of that
-  // type with any type parameter, e.g. `0x2::coin::Coin` will return all
-  // `Coin<T>` objects regardless of the type parameter `T`. Providing a type
-  // with a type param will restrict the returned objects to only those objects
-  // that match the provided type parameters, e.g.
-  // `0x2::coin::Coin<0x2::sui::SUI>` will only return `Coin<SUI>` objects.
+  //   "0xaddr"                       -> objects whose type is defined at this address
+  //   "0xaddr::module"               -> objects whose type is in this module
+  //   "0xaddr::module::Name"         -> objects with this type name (any instantiation)
+  //   "0xaddr::module::Name<T1, T2>" -> objects with this exact generic instantiation
   //
   // Equivalent to a `filter` with a single `object_type` literal. Must not be
   // set together with `filter`.
@@ -320,13 +518,190 @@ message ListOwnedObjectsRequest {
   // The service rejects a filter with more literals in total than it allows
   // with `INVALID_ARGUMENT`.
   optional ObjectFilter filter = 6;
+
+  // Optional. Cursor paging (see `QueryOptions`). `page_size` and `page_token`
+  // must be unset when `options` is set (`INVALID_ARGUMENT` otherwise). Every
+  // response in cursor paging sets `cursors` and `end` and never sets
+  // `next_page_token`.
+  //
+  // Canonical order is ascending by owner (`owner_kind` and `owner`), then by
+  // Move type (ordered by the BCS encoding of its `StructTag`, not its string
+  // form), then for coin objects (`0x2::coin::Coin<T>`) by balance descending,
+  // then by `ObjectId` bytes. With `options.ordering` set to
+  // `ORDERING_DESCENDING`, items are returned in reverse order. `limit`
+  // defaults to `50` and is coerced to at most `1000`. Resume from the last
+  // item's entry in `ListOwnedObjectsResponse.cursors`, as `after` when
+  // ascending or `before` when descending.
+  //
+  // Every cursor records the checkpoint of the listing's first page, so every
+  // page of one listing reads the state as of the same checkpoint. A cursor
+  // whose checkpoint differs from `at_checkpoint`, `after` and `before`
+  // cursors from different checkpoints, a malformed cursor, or a cursor from
+  // another listing or owner fails with `INVALID_ARGUMENT`.
+  optional QueryOptions options = 7;
+
+  // Optional. Read objects at the end of this checkpoint, within the
+  // checkpoints the server retains for state reads. When `options` is set
+  // without `at_checkpoint` or a cursor, the server reads as of the highest
+  // checkpoint it can serve for state reads (or, when reading under a
+  // checkpoint floor, the admitted checkpoint) and records that checkpoint in
+  // the returned cursors. When the read is pinned to a checkpoint
+  // (`at_checkpoint`, `options`, or a checkpoint-pinned `page_token`), each
+  // object is loaded at the exact version as of that checkpoint. When none of
+  // these is set, reads current state, where an entry whose object is removed
+  // between the index read and the object load may be skipped.
+  //
+  // Refusals for `at_checkpoint` or a cursor's checkpoint:
+  // - Below the server's retained checkpoint range for state reads or object
+  //   pruning floor: `OUT_OF_RANGE` with reason `BELOW_EARLIEST_AVAILABLE`.
+  // - Within the retained checkpoint range, but not yet servable on this
+  //   replica (for example while refilling after a restart): `UNAVAILABLE`
+  //   with reason `NOT_READY` (`cause`: `"checkpoint_unavailable"`); retry,
+  //   preferably on another replica.
+  // - Indexed object version missing during a checkpoint-pinned read:
+  //   `UNAVAILABLE` with reason `NOT_READY` (`cause`: `"pruning_race"`, never
+  //   silently skipped).
+  // - Above the highest checkpoint the server can serve for state reads:
+  //   `OUT_OF_RANGE` with reason `ABOVE_LATEST_AVAILABLE` (`bound`:
+  //   `"at_checkpoint"` or `"cursor"`).
+  // - Server not set up for checkpoint-pinned state reads: `UNIMPLEMENTED`
+  //   with reason `NOT_SERVED_HERE`.
+  // - Before the server's state indexes have any checkpoint ready:
+  //   `UNAVAILABLE` with reason `NOT_READY` (`cause`: `"index_empty"`).
+  optional uint64 at_checkpoint = 8;
+
+  // Optional. Ownership category to list. When unset, defaults to
+  // `Owner.OwnerKind.ADDRESS`.
+  //
+  // Supported values:
+  // - `ADDRESS`: objects owned by the `owner` address, including
+  //   consensus-address-owned (`CONSENSUS_ADDRESS`) objects. Requires `owner`.
+  // - `OBJECT`: objects owned by the `owner` parent `ObjectId` (usable with
+  //   `object_type` or `filter`). Requires `owner`.
+  // - `SHARED`: shared objects. `owner` must be unset.
+  // - `IMMUTABLE`: immutable objects. `owner` must be unset.
+  //
+  // `OBJECT`, `SHARED`, and `IMMUTABLE` require `options`, `at_checkpoint`, or
+  // a checkpoint-pinned `page_token`; plain `page_size` / `page_token` paging
+  // for those kinds fails with `INVALID_ARGUMENT`.
+  //
+  // `OWNER_KIND_UNKNOWN` and `CONSENSUS_ADDRESS` fail with `INVALID_ARGUMENT`
+  // (`ADDRESS` already includes consensus-address-owned objects).
+  optional Owner.OwnerKind owner_kind = 9;
 }
 
 message ListOwnedObjectsResponse {
-  // Page of dynamic fields owned by the specified parent.
+  // Page of matching objects, in canonical order (see
+  // `ListOwnedObjectsRequest.options`), or in reverse when `options.ordering`
+  // is `ORDERING_DESCENDING`.
   repeated Object objects = 1;
 
   // A token, which can be sent as `page_token` to retrieve the next page.
-  // If this field is omitted, there are no subsequent pages.
+  // If this field is omitted, there are no subsequent pages. Never set when
+  // `ListOwnedObjectsRequest.options` is set.
   optional bytes next_page_token = 2;
+
+  // Opaque cursor for each entry in `objects`, in matching index order, for
+  // use as `ListOwnedObjectsRequest.options.after` or `options.before`. Set
+  // only when `ListOwnedObjectsRequest.options` is set.
+  repeated bytes cursors = 3;
+
+  // Set on every response when `ListOwnedObjectsRequest.options` is set, and
+  // never otherwise. A page that stops at `options.limit` or the server's
+  // response-size limit ends with `QUERY_END_REASON_ITEM_LIMIT` (so a page
+  // shorter than `options.limit` can still end with
+  // `QUERY_END_REASON_ITEM_LIMIT`). A page that exhausts its interval ends
+  // with:
+  //
+  // - `QUERY_END_REASON_CHECKPOINT_BOUND`: reached the end of the matching
+  //   objects.
+  // - `QUERY_END_REASON_CURSOR_BOUND`: reached the far cursor (`before`
+  //   ascending, `after` descending).
+  optional QueryEnd end = 4;
+}
+
+// Request message for `StateService.ListObjects`.
+message ListObjectsRequest {
+  // Optional. DNF filter over live Move struct objects (see `ObjectFilter`).
+  // Matching objects are returned in the same order as without a filter. If
+  // absent, all live Move struct objects as of the checkpoint are listed
+  // (packages are not Move struct objects; use
+  // `MovePackageService.ListPackageVersions` for packages).
+  //
+  // The service rejects a filter with more literals in total than it allows
+  // with `INVALID_ARGUMENT`.
+  optional ObjectFilter filter = 1;
+
+  // Mask specifying which fields to read on each `Object`.
+  // If no mask is specified, defaults to `object_id,version,object_type`.
+  optional google.protobuf.FieldMask read_mask = 2;
+
+  // Optional. Cursor paging (see `QueryOptions`).
+  //
+  // Canonical order is ascending by Move type (ordered by the BCS encoding of
+  // its `StructTag`, not its string form), then by `ObjectId` bytes. With
+  // `options.ordering` set to `ORDERING_DESCENDING`, items are returned in
+  // reverse order. `limit` defaults to `50` and is coerced to at most `1000`.
+  // Resume from the last item frame's `ListObjectsResponse.cursor`, as `after`
+  // when ascending or `before` when descending.
+  //
+  // Every cursor records the checkpoint of the listing's first page, so every
+  // page of one listing reads the state as of the same checkpoint. A cursor
+  // whose checkpoint differs from `at_checkpoint`, `after` and `before`
+  // cursors from different checkpoints, a malformed cursor, or a cursor from
+  // another listing fails with `INVALID_ARGUMENT`.
+  optional QueryOptions options = 3;
+
+  // Optional. Read objects at the end of this checkpoint, within the
+  // checkpoints the server retains for state reads. When unset on a first page
+  // without cursors, the server reads as of the highest checkpoint it can
+  // serve for state reads (or, when reading under a checkpoint floor, the
+  // admitted checkpoint) and records that checkpoint in the returned cursors.
+  // Each object is loaded at the exact version as of that checkpoint.
+  //
+  // Refusals for `at_checkpoint` or a cursor's checkpoint:
+  // - Below the server's retained checkpoint range for state reads or object
+  //   pruning floor: `OUT_OF_RANGE` with reason `BELOW_EARLIEST_AVAILABLE`.
+  // - Within the retained checkpoint range, but not yet servable on this
+  //   replica (for example while refilling after a restart): `UNAVAILABLE`
+  //   with reason `NOT_READY` (`cause`: `"checkpoint_unavailable"`); retry,
+  //   preferably on another replica.
+  // - Indexed object version missing during a checkpoint-pinned read:
+  //   `UNAVAILABLE` with reason `NOT_READY` (`cause`: `"pruning_race"`, never
+  //   silently skipped).
+  // - Above the highest checkpoint the server can serve for state reads:
+  //   `OUT_OF_RANGE` with reason `ABOVE_LATEST_AVAILABLE` (`bound`:
+  //   `"at_checkpoint"` or `"cursor"`).
+  // - Server not set up for checkpoint-pinned state reads: `UNIMPLEMENTED`
+  //   with reason `NOT_SERVED_HERE`.
+  // - Before the server's state indexes have any checkpoint ready:
+  //   `UNAVAILABLE` with reason `NOT_READY` (`cause`: `"index_empty"`).
+  optional uint64 at_checkpoint = 4;
+}
+
+// Response frame for `StateService.ListObjects`.
+//
+// A frame that delivers an item sets `object` and `cursor`, in canonical order
+// (see `ListObjectsRequest.options`) or in reverse for `ORDERING_DESCENDING`.
+// `end` is set exactly once, on the final frame of a successful stream: with
+// `QUERY_END_REASON_ITEM_LIMIT` it rides on the last item's frame, and
+// otherwise the final frame leaves `object` and `cursor` unset. In this
+// listing:
+//
+// - `QUERY_END_REASON_CHECKPOINT_BOUND`: reached the end of the matching
+//   objects.
+// - `QUERY_END_REASON_CURSOR_BOUND`: reached the far cursor (`before`
+//   ascending, `after` descending).
+message ListObjectsResponse {
+  // The matching object, with the fields selected by `read_mask`. Unset on a
+  // final frame that carries only `end`.
+  optional Object object = 1;
+
+  // Opaque position of this object in the listing, for use as
+  // `ListObjectsRequest.options.after` or `options.before`. Set on every frame
+  // that delivers an `object`; unset on a final frame without an `object`.
+  optional bytes cursor = 2;
+
+  // Set exactly once, on the final frame of a successful stream.
+  optional QueryEnd end = 3;
 }

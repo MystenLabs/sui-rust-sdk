@@ -991,6 +991,11 @@ pub enum ErrorReason {
     /// `ListObjectVersions` follows these rules for its checkpoint range and
     /// cursors; see `ListObjectVersionsRequest`.
     ///
+    /// `StateService` requests pinned to a checkpoint by `at_checkpoint` or by a
+    /// cursor return this with `OUT_OF_RANGE` when that checkpoint is above the
+    /// highest checkpoint the server can serve for state reads (`bound` is
+    /// "at_checkpoint" or "cursor").
+    ///
     /// Example of an ErrorInfo for a descending query's `before` cursor at
     /// checkpoint 1205, sent to a server whose latest indexed checkpoint is 1199:
     ///
@@ -1054,6 +1059,12 @@ pub enum ErrorReason {
     /// prune history; see `ListObjectVersionsRequest`. Its
     /// `lowestAvailableCheckpoint` is the lowest `start_checkpoint` the server
     /// accepts.
+    ///
+    /// `StateService` requests pinned to a checkpoint by `at_checkpoint` or by a
+    /// cursor return this with `OUT_OF_RANGE` when that checkpoint is below the
+    /// server's retained checkpoint range for state reads, or, for methods that
+    /// load objects (`ListOwnedObjects`, `ListObjects`, `ListDynamicFields`),
+    /// below the server's object pruning floor.
     ///
     /// Pruned data does not come back, so the same request fails the same way
     /// on this server. A client can send it to a server that retains the data,
@@ -1155,8 +1166,13 @@ pub enum ErrorReason {
     ///
     /// * `cause`: the temporary state that stops the server, such as
     ///   "index_empty" (its index holds no data yet), "restore_backfill" (it is
-    ///   backfilling history restored from a snapshot) or "history_catching_up"
-    ///   (its indexes trail its live state). More causes may be added.
+    ///   backfilling history restored from a snapshot), "history_catching_up"
+    ///   (its indexes trail its live state), "checkpoint_unavailable" (the
+    ///   requested checkpoint lies within the server's retained checkpoint range
+    ///   for state reads, but this replica cannot serve it yet, for example while
+    ///   refilling after a restart), or "pruning_race" (an indexed object version
+    ///   could not be loaded during a checkpoint-pinned read). More causes may be
+    ///   added.
     NotReady = 9,
     /// The request needs an older version of an object that this server no
     /// longer holds: the server keeps only the latest version of each object,
@@ -7006,9 +7022,9 @@ pub enum QueryEndReason {
     /// The scan reached the edge of the window the request set: its checkpoint
     /// range bound, a start or end position the request set within a
     /// checkpoint at that range's edge (for example `end_transaction_index` on
-    /// `ListTransactionsRequest`), or a version range. Despite its name, it
-    /// applies to any request window. A stream's terminal frame carries no
-    /// item.
+    /// `ListTransactionsRequest`), a version range, or the end of a listing's
+    /// entries. Despite its name, it applies to any request window. A stream's
+    /// terminal frame carries no item.
     CheckpointBound = 3,
     /// The scan reached an exclusive cursor bound. A stream's terminal frame
     /// carries no item. Where frames carry a watermark, its cursor represents
@@ -8019,6 +8035,27 @@ pub struct GetBalanceRequest {
     /// Required. The type names for the coin (e.g., 0x2::sui::SUI).
     #[prost(string, optional, tag = "2")]
     pub coin_type: ::core::option::Option<::prost::alloc::string::String>,
+    /// Optional. Read the balance at the end of this checkpoint, within the
+    /// checkpoints the server retains for state reads. When unset, reads current
+    /// state.
+    ///
+    /// Refusals:
+    ///
+    /// * Below the server's retained checkpoint range for state reads:
+    ///   `OUT_OF_RANGE` with reason `BELOW_EARLIEST_AVAILABLE`.
+    /// * Within the retained checkpoint range, but not yet servable on this
+    ///   replica (for example while refilling after a restart): `UNAVAILABLE`
+    ///   with reason `NOT_READY` (`cause`: `"checkpoint_unavailable"`); retry,
+    ///   preferably on another replica.
+    /// * Above the highest checkpoint the server can serve for state reads:
+    ///   `OUT_OF_RANGE` with reason `ABOVE_LATEST_AVAILABLE` (`bound`:
+    ///   `"at_checkpoint"`).
+    /// * Server not set up for checkpoint-pinned state reads: `UNIMPLEMENTED`
+    ///   with reason `NOT_SERVED_HERE`.
+    /// * Before the server's state indexes have any checkpoint ready:
+    ///   `UNAVAILABLE` with reason `NOT_READY` (`cause`: `"index_empty"`).
+    #[prost(uint64, optional, tag = "3")]
+    pub at_checkpoint: ::core::option::Option<u64>,
 }
 /// Response message for `LiveDataService.GetBalance`.
 /// Return the total coin balance for one coin type, owned by the address owner.
@@ -8028,6 +8065,30 @@ pub struct GetBalanceResponse {
     /// The balance information for the requested coin type.
     #[prost(message, optional, tag = "1")]
     pub balance: ::core::option::Option<Balance>,
+}
+/// Request message for `StateService.BatchGetBalances`.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct BatchGetBalancesRequest {
+    /// The balance requests to look up. Each request carries its own
+    /// `at_checkpoint`, so a batch may read balances at one checkpoint, across
+    /// different checkpoints, or from current state (when unset).
+    ///
+    /// Servers accept at least `200` requests per batch and reject any batch
+    /// above their configured limit with `INVALID_ARGUMENT`. A malformed `owner`
+    /// or `coin_type`, or any per-item `at_checkpoint` refusal (see
+    /// `GetBalanceRequest.at_checkpoint`), fails the whole batch.
+    #[prost(message, repeated, tag = "1")]
+    pub requests: ::prost::alloc::vec::Vec<GetBalanceRequest>,
+}
+/// Response message for `StateService.BatchGetBalances`.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct BatchGetBalancesResponse {
+    /// One balance entry per element of `BatchGetBalancesRequest.requests`, in
+    /// request order. Keys with no balance are returned with zero amounts.
+    #[prost(message, repeated, tag = "1")]
+    pub balances: ::prost::alloc::vec::Vec<Balance>,
 }
 /// Request message for `LiveDataService.ListBalances`.
 #[non_exhaustive]
@@ -8039,28 +8100,96 @@ pub struct ListBalancesRequest {
     /// The maximum number of balance entries to return. The service may return fewer than this value.
     /// If unspecified, at most `50` entries will be returned.
     /// The maximum value is `1000`; values above `1000` will be coerced to `1000`.
+    ///
+    /// Must be unset when `options` is set (`INVALID_ARGUMENT` otherwise).
     #[prost(uint32, optional, tag = "2")]
     pub page_size: ::core::option::Option<u32>,
     /// A page token, received from a previous `ListBalances` call.
     /// Provide this to retrieve the subsequent page.
     ///
     /// When paginating, all other parameters provided to `ListBalances` must
-    /// match the call that provided the page token.
+    /// match the call that provided the page token. A checkpoint-pinned page
+    /// token carries its checkpoint; setting `at_checkpoint` to a different
+    /// checkpoint fails with `INVALID_ARGUMENT`.
+    ///
+    /// Must be unset when `options` is set (`INVALID_ARGUMENT` otherwise).
     #[prost(bytes = "bytes", optional, tag = "3")]
     pub page_token: ::core::option::Option<::prost::bytes::Bytes>,
+    /// Optional. Cursor paging (see `QueryOptions`). `page_size` and `page_token`
+    /// must be unset when `options` is set (`INVALID_ARGUMENT` otherwise). Every
+    /// response in cursor paging sets `cursors` and `end` and never sets
+    /// `next_page_token`.
+    ///
+    /// Canonical order is ascending by `coin_type`, ordered by the BCS encoding
+    /// of its Move `TypeTag` (not its string form). With `options.ordering` set
+    /// to `ORDERING_DESCENDING`, items are returned in reverse order. `limit`
+    /// defaults to `50` and is coerced to at most `1000`. Resume from the last
+    /// item's entry in `ListBalancesResponse.cursors`, as `after` when ascending
+    /// or `before` when descending.
+    ///
+    /// Every cursor records the checkpoint of the listing's first page, so every
+    /// page of one listing reads the state as of the same checkpoint. A cursor
+    /// whose checkpoint differs from `at_checkpoint`, `after` and `before`
+    /// cursors from different checkpoints, a malformed cursor, or a cursor from
+    /// another listing or owner fails with `INVALID_ARGUMENT`.
+    #[prost(message, optional, tag = "4")]
+    pub options: ::core::option::Option<QueryOptions>,
+    /// Optional. Read balances at the end of this checkpoint, within the
+    /// checkpoints the server retains for state reads. When `options` is set
+    /// without `at_checkpoint` or a cursor, the server reads as of the highest
+    /// checkpoint it can serve for state reads (or, when reading under a
+    /// checkpoint floor, the admitted checkpoint) and records that checkpoint in
+    /// the returned cursors. When `at_checkpoint`, `options`, and a
+    /// checkpoint-pinned `page_token` are all unset, reads current state.
+    ///
+    /// Refusals for `at_checkpoint` or a cursor's checkpoint:
+    ///
+    /// * Below the server's retained checkpoint range for state reads:
+    ///   `OUT_OF_RANGE` with reason `BELOW_EARLIEST_AVAILABLE`.
+    /// * Within the retained checkpoint range, but not yet servable on this
+    ///   replica (for example while refilling after a restart): `UNAVAILABLE`
+    ///   with reason `NOT_READY` (`cause`: `"checkpoint_unavailable"`); retry,
+    ///   preferably on another replica.
+    /// * Above the highest checkpoint the server can serve for state reads:
+    ///   `OUT_OF_RANGE` with reason `ABOVE_LATEST_AVAILABLE` (`bound`:
+    ///   `"at_checkpoint"` or `"cursor"`).
+    /// * Server not set up for checkpoint-pinned state reads: `UNIMPLEMENTED`
+    ///   with reason `NOT_SERVED_HERE`.
+    /// * Before the server's state indexes have any checkpoint ready:
+    ///   `UNAVAILABLE` with reason `NOT_READY` (`cause`: `"index_empty"`).
+    #[prost(uint64, optional, tag = "5")]
+    pub at_checkpoint: ::core::option::Option<u64>,
 }
 /// Response message for `LiveDataService.ListBalances`.
 /// Return the total coin balance for all coin types, owned by the address owner.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListBalancesResponse {
-    /// The list of coin types and their respective balances.
+    /// The list of coin types and their respective balances, in canonical order
+    /// (see `ListBalancesRequest.options`), or in reverse when `options.ordering`
+    /// is `ORDERING_DESCENDING`.
     #[prost(message, repeated, tag = "1")]
     pub balances: ::prost::alloc::vec::Vec<Balance>,
     /// A token, which can be sent as `page_token` to retrieve the next page.
-    /// If this field is omitted, there are no subsequent pages.
+    /// If this field is omitted, there are no subsequent pages. Never set when
+    /// `ListBalancesRequest.options` is set.
     #[prost(bytes = "bytes", optional, tag = "2")]
     pub next_page_token: ::core::option::Option<::prost::bytes::Bytes>,
+    /// Opaque cursor for each entry in `balances`, in matching index order, for
+    /// use as `ListBalancesRequest.options.after` or `options.before`. Set only
+    /// when `ListBalancesRequest.options` is set.
+    #[prost(bytes = "bytes", repeated, tag = "3")]
+    pub cursors: ::prost::alloc::vec::Vec<::prost::bytes::Bytes>,
+    /// Set on every response when `ListBalancesRequest.options` is set, and never
+    /// otherwise. A full page ends with `QUERY_END_REASON_ITEM_LIMIT`; a shorter
+    /// page, the last, with:
+    ///
+    /// * `QUERY_END_REASON_CHECKPOINT_BOUND`: reached the end of the owner's
+    ///   balances.
+    /// * `QUERY_END_REASON_CURSOR_BOUND`: reached the far cursor (`before`
+    ///   ascending, `after` descending).
+    #[prost(message, optional, tag = "4")]
+    pub end: ::core::option::Option<QueryEnd>,
 }
 /// Balance information for a specific coin type.
 #[non_exhaustive]
@@ -8092,13 +8221,19 @@ pub struct ListDynamicFieldsRequest {
     /// The maximum number of dynamic fields to return. The service may return fewer than this value.
     /// If unspecified, at most `50` entries will be returned.
     /// The maximum value is `1000`; values above `1000` will be coerced to `1000`.
+    ///
+    /// Must be unset when `options` is set (`INVALID_ARGUMENT` otherwise).
     #[prost(uint32, optional, tag = "2")]
     pub page_size: ::core::option::Option<u32>,
     /// A page token, received from a previous `ListDynamicFields` call.
     /// Provide this to retrieve the subsequent page.
     ///
     /// When paginating, all other parameters provided to `ListDynamicFields` must
-    /// match the call that provided the page token.
+    /// match the call that provided the page token. A checkpoint-pinned page
+    /// token carries its checkpoint; setting `at_checkpoint` to a different
+    /// checkpoint fails with `INVALID_ARGUMENT`.
+    ///
+    /// Must be unset when `options` is set (`INVALID_ARGUMENT` otherwise).
     #[prost(bytes = "bytes", optional, tag = "3")]
     pub page_token: ::core::option::Option<::prost::bytes::Bytes>,
     /// Mask specifying which fields to read.
@@ -8114,18 +8249,92 @@ pub struct ListDynamicFieldsRequest {
     /// with `INVALID_ARGUMENT`.
     #[prost(message, optional, tag = "5")]
     pub filter: ::core::option::Option<DynamicFieldFilter>,
+    /// Optional. Cursor paging (see `QueryOptions`). `page_size` and `page_token`
+    /// must be unset when `options` is set (`INVALID_ARGUMENT` otherwise). Every
+    /// response in cursor paging sets `cursors` and `end` and never sets
+    /// `next_page_token`.
+    ///
+    /// Canonical order is ascending by the field object's Move type
+    /// (`0x2::dynamic_field::Field<Name, Value>`), ordered by the BCS encoding of
+    /// its `StructTag` (not its string form), then by the field object's
+    /// `ObjectId` bytes. With `options.ordering` set to `ORDERING_DESCENDING`,
+    /// items are returned in reverse order. `limit` defaults to `50` and is
+    /// coerced to at most `1000`. Resume from the last item's entry in
+    /// `ListDynamicFieldsResponse.cursors`, as `after` when ascending or `before`
+    /// when descending.
+    ///
+    /// Every cursor records the checkpoint of the listing's first page, so every
+    /// page of one listing reads the state as of the same checkpoint. A cursor
+    /// whose checkpoint differs from `at_checkpoint`, `after` and `before`
+    /// cursors from different checkpoints, a malformed cursor, or a cursor from
+    /// another listing or parent fails with `INVALID_ARGUMENT`.
+    #[prost(message, optional, tag = "6")]
+    pub options: ::core::option::Option<QueryOptions>,
+    /// Optional. Read dynamic fields at the end of this checkpoint, within the
+    /// checkpoints the server retains for state reads. When `options` is set
+    /// without `at_checkpoint` or a cursor, the server reads as of the highest
+    /// checkpoint it can serve for state reads (or, when reading under a
+    /// checkpoint floor, the admitted checkpoint) and records that checkpoint in
+    /// the returned cursors. When the read is pinned to a checkpoint
+    /// (`at_checkpoint`, `options`, or a checkpoint-pinned `page_token`), the
+    /// field object and any dynamic object field's child object are loaded at the
+    /// exact versions as of that checkpoint. When none of these is set, reads
+    /// current state, where an entry whose object is removed between the index
+    /// read and the object load may be skipped.
+    ///
+    /// Refusals for `at_checkpoint` or a cursor's checkpoint:
+    ///
+    /// * Below the server's retained checkpoint range for state reads or object
+    ///   pruning floor: `OUT_OF_RANGE` with reason `BELOW_EARLIEST_AVAILABLE`.
+    /// * Within the retained checkpoint range, but not yet servable on this
+    ///   replica (for example while refilling after a restart): `UNAVAILABLE`
+    ///   with reason `NOT_READY` (`cause`: `"checkpoint_unavailable"`); retry,
+    ///   preferably on another replica.
+    /// * Indexed object version missing during a checkpoint-pinned read:
+    ///   `UNAVAILABLE` with reason `NOT_READY` (`cause`: `"pruning_race"`, never
+    ///   silently skipped).
+    /// * Above the highest checkpoint the server can serve for state reads:
+    ///   `OUT_OF_RANGE` with reason `ABOVE_LATEST_AVAILABLE` (`bound`:
+    ///   `"at_checkpoint"` or `"cursor"`).
+    /// * Server not set up for checkpoint-pinned state reads: `UNIMPLEMENTED`
+    ///   with reason `NOT_SERVED_HERE`.
+    /// * Before the server's state indexes have any checkpoint ready:
+    ///   `UNAVAILABLE` with reason `NOT_READY` (`cause`: `"index_empty"`).
+    #[prost(uint64, optional, tag = "7")]
+    pub at_checkpoint: ::core::option::Option<u64>,
 }
 /// Response message for `NodeService.ListDynamicFields`
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListDynamicFieldsResponse {
-    /// Page of dynamic fields owned by the specified parent.
+    /// Page of dynamic fields owned by the specified parent, in canonical order
+    /// (see `ListDynamicFieldsRequest.options`), or in reverse when
+    /// `options.ordering` is `ORDERING_DESCENDING`.
     #[prost(message, repeated, tag = "1")]
     pub dynamic_fields: ::prost::alloc::vec::Vec<DynamicField>,
     /// A token, which can be sent as `page_token` to retrieve the next page.
-    /// If this field is omitted, there are no subsequent pages.
+    /// If this field is omitted, there are no subsequent pages. Never set when
+    /// `ListDynamicFieldsRequest.options` is set.
     #[prost(bytes = "bytes", optional, tag = "2")]
     pub next_page_token: ::core::option::Option<::prost::bytes::Bytes>,
+    /// Opaque cursor for each entry in `dynamic_fields`, in matching index order,
+    /// for use as `ListDynamicFieldsRequest.options.after` or `options.before`.
+    /// Set only when `ListDynamicFieldsRequest.options` is set.
+    #[prost(bytes = "bytes", repeated, tag = "3")]
+    pub cursors: ::prost::alloc::vec::Vec<::prost::bytes::Bytes>,
+    /// Set on every response when `ListDynamicFieldsRequest.options` is set, and
+    /// never otherwise. A page that stops at `options.limit` or the server's
+    /// response-size limit ends with `QUERY_END_REASON_ITEM_LIMIT` (so a page
+    /// shorter than `options.limit` can still end with
+    /// `QUERY_END_REASON_ITEM_LIMIT`). A page that exhausts its interval ends
+    /// with:
+    ///
+    /// * `QUERY_END_REASON_CHECKPOINT_BOUND`: reached the end of the matching
+    ///   dynamic fields.
+    /// * `QUERY_END_REASON_CURSOR_BOUND`: reached the far cursor (`before`
+    ///   ascending, `after` descending).
+    #[prost(message, optional, tag = "4")]
+    pub end: ::core::option::Option<QueryEnd>,
 }
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -8212,33 +8421,41 @@ pub mod dynamic_field {
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListOwnedObjectsRequest {
-    /// Required. The address of the account that owns the objects.
+    /// The address of the account (when `owner_kind` is unset or `ADDRESS`) or
+    /// parent `ObjectId` (when `owner_kind` is `OBJECT`) that owns the objects.
+    /// Required for `ADDRESS` and `OBJECT`; must be unset for `SHARED` and
+    /// `IMMUTABLE` (`INVALID_ARGUMENT` otherwise).
     #[prost(string, optional, tag = "1")]
     pub owner: ::core::option::Option<::prost::alloc::string::String>,
     /// The maximum number of entries return. The service may return fewer than this value.
     /// If unspecified, at most `50` entries will be returned.
     /// The maximum value is `1000`; values above `1000` will be coerced to `1000`.
+    ///
+    /// Must be unset when `options` is set (`INVALID_ARGUMENT` otherwise).
     #[prost(uint32, optional, tag = "2")]
     pub page_size: ::core::option::Option<u32>,
     /// A page token, received from a previous `ListOwnedObjects` call.
     /// Provide this to retrieve the subsequent page.
     ///
     /// When paginating, all other parameters provided to `ListOwnedObjects` must
-    /// match the call that provided the page token.
+    /// match the call that provided the page token. A checkpoint-pinned page
+    /// token carries its checkpoint; setting `at_checkpoint` to a different
+    /// checkpoint fails with `INVALID_ARGUMENT`.
+    ///
+    /// Must be unset when `options` is set (`INVALID_ARGUMENT` otherwise).
     #[prost(bytes = "bytes", optional, tag = "3")]
     pub page_token: ::core::option::Option<::prost::bytes::Bytes>,
     /// Mask specifying which fields to read.
     /// If no mask is specified, defaults to `object_id,version,object_type`.
     #[prost(message, optional, tag = "4")]
     pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
-    /// Optional type filter to limit the types of objects listed.
+    /// Optional type filter to limit the types of objects listed, accepting the
+    /// specificity levels of `ObjectTypeFilter`:
     ///
-    /// Providing an object type with no type params will return objects of that
-    /// type with any type parameter, e.g. `0x2::coin::Coin` will return all
-    /// `Coin<T>` objects regardless of the type parameter `T`. Providing a type
-    /// with a type param will restrict the returned objects to only those objects
-    /// that match the provided type parameters, e.g.
-    /// `0x2::coin::Coin<0x2::sui::SUI>` will only return `Coin<SUI>` objects.
+    /// "0xaddr"                       -> objects whose type is defined at this address
+    /// "0xaddr::module"               -> objects whose type is in this module
+    /// "0xaddr::module::Name"         -> objects with this type name (any instantiation)
+    /// "0xaddr::module::Name\<T1, T2>" -> objects with this exact generic instantiation
     ///
     /// Equivalent to a `filter` with a single `object_type` literal. Must not be
     /// set together with `filter`.
@@ -8255,17 +8472,201 @@ pub struct ListOwnedObjectsRequest {
     /// with `INVALID_ARGUMENT`.
     #[prost(message, optional, tag = "6")]
     pub filter: ::core::option::Option<ObjectFilter>,
+    /// Optional. Cursor paging (see `QueryOptions`). `page_size` and `page_token`
+    /// must be unset when `options` is set (`INVALID_ARGUMENT` otherwise). Every
+    /// response in cursor paging sets `cursors` and `end` and never sets
+    /// `next_page_token`.
+    ///
+    /// Canonical order is ascending by owner (`owner_kind` and `owner`), then by
+    /// Move type (ordered by the BCS encoding of its `StructTag`, not its string
+    /// form), then for coin objects (`0x2::coin::Coin<T>`) by balance descending,
+    /// then by `ObjectId` bytes. With `options.ordering` set to
+    /// `ORDERING_DESCENDING`, items are returned in reverse order. `limit`
+    /// defaults to `50` and is coerced to at most `1000`. Resume from the last
+    /// item's entry in `ListOwnedObjectsResponse.cursors`, as `after` when
+    /// ascending or `before` when descending.
+    ///
+    /// Every cursor records the checkpoint of the listing's first page, so every
+    /// page of one listing reads the state as of the same checkpoint. A cursor
+    /// whose checkpoint differs from `at_checkpoint`, `after` and `before`
+    /// cursors from different checkpoints, a malformed cursor, or a cursor from
+    /// another listing or owner fails with `INVALID_ARGUMENT`.
+    #[prost(message, optional, tag = "7")]
+    pub options: ::core::option::Option<QueryOptions>,
+    /// Optional. Read objects at the end of this checkpoint, within the
+    /// checkpoints the server retains for state reads. When `options` is set
+    /// without `at_checkpoint` or a cursor, the server reads as of the highest
+    /// checkpoint it can serve for state reads (or, when reading under a
+    /// checkpoint floor, the admitted checkpoint) and records that checkpoint in
+    /// the returned cursors. When the read is pinned to a checkpoint
+    /// (`at_checkpoint`, `options`, or a checkpoint-pinned `page_token`), each
+    /// object is loaded at the exact version as of that checkpoint. When none of
+    /// these is set, reads current state, where an entry whose object is removed
+    /// between the index read and the object load may be skipped.
+    ///
+    /// Refusals for `at_checkpoint` or a cursor's checkpoint:
+    ///
+    /// * Below the server's retained checkpoint range for state reads or object
+    ///   pruning floor: `OUT_OF_RANGE` with reason `BELOW_EARLIEST_AVAILABLE`.
+    /// * Within the retained checkpoint range, but not yet servable on this
+    ///   replica (for example while refilling after a restart): `UNAVAILABLE`
+    ///   with reason `NOT_READY` (`cause`: `"checkpoint_unavailable"`); retry,
+    ///   preferably on another replica.
+    /// * Indexed object version missing during a checkpoint-pinned read:
+    ///   `UNAVAILABLE` with reason `NOT_READY` (`cause`: `"pruning_race"`, never
+    ///   silently skipped).
+    /// * Above the highest checkpoint the server can serve for state reads:
+    ///   `OUT_OF_RANGE` with reason `ABOVE_LATEST_AVAILABLE` (`bound`:
+    ///   `"at_checkpoint"` or `"cursor"`).
+    /// * Server not set up for checkpoint-pinned state reads: `UNIMPLEMENTED`
+    ///   with reason `NOT_SERVED_HERE`.
+    /// * Before the server's state indexes have any checkpoint ready:
+    ///   `UNAVAILABLE` with reason `NOT_READY` (`cause`: `"index_empty"`).
+    #[prost(uint64, optional, tag = "8")]
+    pub at_checkpoint: ::core::option::Option<u64>,
+    /// Optional. Ownership category to list. When unset, defaults to
+    /// `Owner.OwnerKind.ADDRESS`.
+    ///
+    /// Supported values:
+    ///
+    /// * `ADDRESS`: objects owned by the `owner` address, including
+    ///   consensus-address-owned (`CONSENSUS_ADDRESS`) objects. Requires `owner`.
+    /// * `OBJECT`: objects owned by the `owner` parent `ObjectId` (usable with
+    ///   `object_type` or `filter`). Requires `owner`.
+    /// * `SHARED`: shared objects. `owner` must be unset.
+    /// * `IMMUTABLE`: immutable objects. `owner` must be unset.
+    ///
+    /// `OBJECT`, `SHARED`, and `IMMUTABLE` require `options`, `at_checkpoint`, or
+    /// a checkpoint-pinned `page_token`; plain `page_size` / `page_token` paging
+    /// for those kinds fails with `INVALID_ARGUMENT`.
+    ///
+    /// `OWNER_KIND_UNKNOWN` and `CONSENSUS_ADDRESS` fail with `INVALID_ARGUMENT`
+    /// (`ADDRESS` already includes consensus-address-owned objects).
+    #[prost(enumeration = "owner::OwnerKind", optional, tag = "9")]
+    pub owner_kind: ::core::option::Option<i32>,
 }
 #[non_exhaustive]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListOwnedObjectsResponse {
-    /// Page of dynamic fields owned by the specified parent.
+    /// Page of matching objects, in canonical order (see
+    /// `ListOwnedObjectsRequest.options`), or in reverse when `options.ordering`
+    /// is `ORDERING_DESCENDING`.
     #[prost(message, repeated, tag = "1")]
     pub objects: ::prost::alloc::vec::Vec<Object>,
     /// A token, which can be sent as `page_token` to retrieve the next page.
-    /// If this field is omitted, there are no subsequent pages.
+    /// If this field is omitted, there are no subsequent pages. Never set when
+    /// `ListOwnedObjectsRequest.options` is set.
     #[prost(bytes = "bytes", optional, tag = "2")]
     pub next_page_token: ::core::option::Option<::prost::bytes::Bytes>,
+    /// Opaque cursor for each entry in `objects`, in matching index order, for
+    /// use as `ListOwnedObjectsRequest.options.after` or `options.before`. Set
+    /// only when `ListOwnedObjectsRequest.options` is set.
+    #[prost(bytes = "bytes", repeated, tag = "3")]
+    pub cursors: ::prost::alloc::vec::Vec<::prost::bytes::Bytes>,
+    /// Set on every response when `ListOwnedObjectsRequest.options` is set, and
+    /// never otherwise. A page that stops at `options.limit` or the server's
+    /// response-size limit ends with `QUERY_END_REASON_ITEM_LIMIT` (so a page
+    /// shorter than `options.limit` can still end with
+    /// `QUERY_END_REASON_ITEM_LIMIT`). A page that exhausts its interval ends
+    /// with:
+    ///
+    /// * `QUERY_END_REASON_CHECKPOINT_BOUND`: reached the end of the matching
+    ///   objects.
+    /// * `QUERY_END_REASON_CURSOR_BOUND`: reached the far cursor (`before`
+    ///   ascending, `after` descending).
+    #[prost(message, optional, tag = "4")]
+    pub end: ::core::option::Option<QueryEnd>,
+}
+/// Request message for `StateService.ListObjects`.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListObjectsRequest {
+    /// Optional. DNF filter over live Move struct objects (see `ObjectFilter`).
+    /// Matching objects are returned in the same order as without a filter. If
+    /// absent, all live Move struct objects as of the checkpoint are listed
+    /// (packages are not Move struct objects; use
+    /// `MovePackageService.ListPackageVersions` for packages).
+    ///
+    /// The service rejects a filter with more literals in total than it allows
+    /// with `INVALID_ARGUMENT`.
+    #[prost(message, optional, tag = "1")]
+    pub filter: ::core::option::Option<ObjectFilter>,
+    /// Mask specifying which fields to read on each `Object`.
+    /// If no mask is specified, defaults to `object_id,version,object_type`.
+    #[prost(message, optional, tag = "2")]
+    pub read_mask: ::core::option::Option<::prost_types::FieldMask>,
+    /// Optional. Cursor paging (see `QueryOptions`).
+    ///
+    /// Canonical order is ascending by Move type (ordered by the BCS encoding of
+    /// its `StructTag`, not its string form), then by `ObjectId` bytes. With
+    /// `options.ordering` set to `ORDERING_DESCENDING`, items are returned in
+    /// reverse order. `limit` defaults to `50` and is coerced to at most `1000`.
+    /// Resume from the last item frame's `ListObjectsResponse.cursor`, as `after`
+    /// when ascending or `before` when descending.
+    ///
+    /// Every cursor records the checkpoint of the listing's first page, so every
+    /// page of one listing reads the state as of the same checkpoint. A cursor
+    /// whose checkpoint differs from `at_checkpoint`, `after` and `before`
+    /// cursors from different checkpoints, a malformed cursor, or a cursor from
+    /// another listing fails with `INVALID_ARGUMENT`.
+    #[prost(message, optional, tag = "3")]
+    pub options: ::core::option::Option<QueryOptions>,
+    /// Optional. Read objects at the end of this checkpoint, within the
+    /// checkpoints the server retains for state reads. When unset on a first page
+    /// without cursors, the server reads as of the highest checkpoint it can
+    /// serve for state reads (or, when reading under a checkpoint floor, the
+    /// admitted checkpoint) and records that checkpoint in the returned cursors.
+    /// Each object is loaded at the exact version as of that checkpoint.
+    ///
+    /// Refusals for `at_checkpoint` or a cursor's checkpoint:
+    ///
+    /// * Below the server's retained checkpoint range for state reads or object
+    ///   pruning floor: `OUT_OF_RANGE` with reason `BELOW_EARLIEST_AVAILABLE`.
+    /// * Within the retained checkpoint range, but not yet servable on this
+    ///   replica (for example while refilling after a restart): `UNAVAILABLE`
+    ///   with reason `NOT_READY` (`cause`: `"checkpoint_unavailable"`); retry,
+    ///   preferably on another replica.
+    /// * Indexed object version missing during a checkpoint-pinned read:
+    ///   `UNAVAILABLE` with reason `NOT_READY` (`cause`: `"pruning_race"`, never
+    ///   silently skipped).
+    /// * Above the highest checkpoint the server can serve for state reads:
+    ///   `OUT_OF_RANGE` with reason `ABOVE_LATEST_AVAILABLE` (`bound`:
+    ///   `"at_checkpoint"` or `"cursor"`).
+    /// * Server not set up for checkpoint-pinned state reads: `UNIMPLEMENTED`
+    ///   with reason `NOT_SERVED_HERE`.
+    /// * Before the server's state indexes have any checkpoint ready:
+    ///   `UNAVAILABLE` with reason `NOT_READY` (`cause`: `"index_empty"`).
+    #[prost(uint64, optional, tag = "4")]
+    pub at_checkpoint: ::core::option::Option<u64>,
+}
+/// Response frame for `StateService.ListObjects`.
+///
+/// A frame that delivers an item sets `object` and `cursor`, in canonical order
+/// (see `ListObjectsRequest.options`) or in reverse for `ORDERING_DESCENDING`.
+/// `end` is set exactly once, on the final frame of a successful stream: with
+/// `QUERY_END_REASON_ITEM_LIMIT` it rides on the last item's frame, and
+/// otherwise the final frame leaves `object` and `cursor` unset. In this
+/// listing:
+///
+/// * `QUERY_END_REASON_CHECKPOINT_BOUND`: reached the end of the matching
+///   objects.
+/// * `QUERY_END_REASON_CURSOR_BOUND`: reached the far cursor (`before`
+///   ascending, `after` descending).
+#[non_exhaustive]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListObjectsResponse {
+    /// The matching object, with the fields selected by `read_mask`. Unset on a
+    /// final frame that carries only `end`.
+    #[prost(message, optional, tag = "1")]
+    pub object: ::core::option::Option<Object>,
+    /// Opaque position of this object in the listing, for use as
+    /// `ListObjectsRequest.options.after` or `options.before`. Set on every frame
+    /// that delivers an `object`; unset on a final frame without an `object`.
+    #[prost(bytes = "bytes", optional, tag = "2")]
+    pub cursor: ::core::option::Option<::prost::bytes::Bytes>,
+    /// Set exactly once, on the final frame of a successful stream.
+    #[prost(message, optional, tag = "3")]
+    pub end: ::core::option::Option<QueryEnd>,
 }
 /// Generated client implementations.
 pub mod state_service_client {
@@ -8406,6 +8807,30 @@ pub mod state_service_client {
                 .insert(GrpcMethod::new("sui.rpc.v2.StateService", "ListOwnedObjects"));
             self.inner.unary(req, path, codec).await
         }
+        pub async fn list_objects(
+            &mut self,
+            request: impl tonic::IntoRequest<super::ListObjectsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<tonic::codec::Streaming<super::ListObjectsResponse>>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/sui.rpc.v2.StateService/ListObjects",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("sui.rpc.v2.StateService", "ListObjects"));
+            self.inner.server_streaming(req, path, codec).await
+        }
         pub async fn get_coin_info(
             &mut self,
             request: impl tonic::IntoRequest<super::GetCoinInfoRequest>,
@@ -8452,6 +8877,30 @@ pub mod state_service_client {
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(GrpcMethod::new("sui.rpc.v2.StateService", "GetBalance"));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn batch_get_balances(
+            &mut self,
+            request: impl tonic::IntoRequest<super::BatchGetBalancesRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::BatchGetBalancesResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/sui.rpc.v2.StateService/BatchGetBalances",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("sui.rpc.v2.StateService", "BatchGetBalances"));
             self.inner.unary(req, path, codec).await
         }
         pub async fn list_balances(
@@ -8511,6 +8960,15 @@ pub mod state_service_server {
         > {
             Err(tonic::Status::unimplemented("Not yet implemented"))
         }
+        async fn list_objects(
+            &self,
+            request: tonic::Request<super::ListObjectsRequest>,
+        ) -> std::result::Result<
+            tonic::Response<BoxStream<super::ListObjectsResponse>>,
+            tonic::Status,
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
         async fn get_coin_info(
             &self,
             request: tonic::Request<super::GetCoinInfoRequest>,
@@ -8525,6 +8983,15 @@ pub mod state_service_server {
             request: tonic::Request<super::GetBalanceRequest>,
         ) -> std::result::Result<
             tonic::Response<super::GetBalanceResponse>,
+            tonic::Status,
+        > {
+            Err(tonic::Status::unimplemented("Not yet implemented"))
+        }
+        async fn batch_get_balances(
+            &self,
+            request: tonic::Request<super::BatchGetBalancesRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::BatchGetBalancesResponse>,
             tonic::Status,
         > {
             Err(tonic::Status::unimplemented("Not yet implemented"))
@@ -8707,6 +9174,52 @@ pub mod state_service_server {
                     };
                     Box::pin(fut)
                 }
+                "/sui.rpc.v2.StateService/ListObjects" => {
+                    #[allow(non_camel_case_types)]
+                    struct ListObjectsSvc<T: StateService>(pub Arc<T>);
+                    impl<
+                        T: StateService,
+                    > tonic::server::ServerStreamingService<super::ListObjectsRequest>
+                    for ListObjectsSvc<T> {
+                        type Response = super::ListObjectsResponse;
+                        type ResponseStream = BoxStream<super::ListObjectsResponse>;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::ResponseStream>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::ListObjectsRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as StateService>::list_objects(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = ListObjectsSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.server_streaming(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
                 "/sui.rpc.v2.StateService/GetCoinInfo" => {
                     #[allow(non_camel_case_types)]
                     struct GetCoinInfoSvc<T: StateService>(pub Arc<T>);
@@ -8782,6 +9295,52 @@ pub mod state_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let method = GetBalanceSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/sui.rpc.v2.StateService/BatchGetBalances" => {
+                    #[allow(non_camel_case_types)]
+                    struct BatchGetBalancesSvc<T: StateService>(pub Arc<T>);
+                    impl<
+                        T: StateService,
+                    > tonic::server::UnaryService<super::BatchGetBalancesRequest>
+                    for BatchGetBalancesSvc<T> {
+                        type Response = super::BatchGetBalancesResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::BatchGetBalancesRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as StateService>::batch_get_balances(&inner, request)
+                                    .await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = BatchGetBalancesSvc(inner);
                         let codec = tonic_prost::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(

@@ -69,9 +69,9 @@ enum QueryEndReason {
   // The scan reached the edge of the window the request set: its checkpoint
   // range bound, a start or end position the request set within a
   // checkpoint at that range's edge (for example `end_transaction_index` on
-  // `ListTransactionsRequest`), or a version range. Despite its name, it
-  // applies to any request window. A stream's terminal frame carries no
-  // item.
+  // `ListTransactionsRequest`), a version range, or the end of a listing's
+  // entries. Despite its name, it applies to any request window. A stream's
+  // terminal frame carries no item.
   QUERY_END_REASON_CHECKPOINT_BOUND = 3;
 
   // The scan reached an exclusive cursor bound. A stream's terminal frame
