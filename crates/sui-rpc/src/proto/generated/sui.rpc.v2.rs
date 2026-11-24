@@ -8536,6 +8536,10 @@ pub struct ListOwnedObjectsRequest {
     /// * `SHARED`: shared objects. `owner` must be unset.
     /// * `IMMUTABLE`: immutable objects. `owner` must be unset.
     ///
+    /// `OBJECT`, `SHARED`, and `IMMUTABLE` require `options`, `at_checkpoint`, or
+    /// a checkpoint-pinned `page_token`; plain `page_size` / `page_token` paging
+    /// for those kinds fails with `INVALID_ARGUMENT`.
+    ///
     /// `OWNER_KIND_UNKNOWN` and `CONSENSUS_ADDRESS` fail with `INVALID_ARGUMENT`
     /// (`ADDRESS` already includes consensus-address-owned objects).
     #[prost(enumeration = "owner::OwnerKind", optional, tag = "9")]
