@@ -1,3 +1,4 @@
+use super::SignatureScheme;
 use super::SimpleSignature;
 use crate::checkpoint::EpochId;
 use crate::u256::U256;
@@ -31,6 +32,45 @@ pub struct ZkLoginAuthenticator {
 
     /// User signature with the pubkey attested to by the provided proof.
     pub signature: SimpleSignature,
+}
+
+/// A zkLogin v2 authenticator.
+///
+/// In BCS, the authenticator is a length-prefixed byte array containing scheme
+/// byte `0x08` followed by the authenticator payload.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+pub struct ZkLoginAuthenticatorV2 {
+    pub inputs: VersionedZkLoginInputs,
+    pub max_epoch: EpochId,
+    pub user_signature: SimpleSignature,
+}
+
+impl ZkLoginAuthenticatorV2 {
+    pub fn scheme(&self) -> SignatureScheme {
+        SignatureScheme::ZkLoginV2
+    }
+
+    /// Returns the issuer and full address seed used to identify this multisig member.
+    pub fn public_identifier(&self) -> ZkLoginPublicIdentifier {
+        let VersionedZkLoginInputs::V2(inputs) = &self.inputs;
+        ZkLoginPublicIdentifier {
+            iss: inputs.iss().to_owned(),
+            address_seed: Bn254FieldElement::new(inputs.fields.address_seed.into_inner()),
+        }
+    }
+}
+
+/// Versioned proof inputs in a zkLogin v2 authenticator.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
+#[non_exhaustive]
+pub enum VersionedZkLoginInputs {
+    V2(ZkLoginInputsV2),
 }
 
 /// A zklogin groth16 proof and the required inputs to perform proof verification.
@@ -146,6 +186,145 @@ impl proptest::arbitrary::Arbitrary for ZkLoginInputs {
                     iss_base64_details,
                     header_base64,
                     address_seed,
+                )
+                .unwrap()
+            })
+            .boxed()
+    }
+}
+
+/// Proof inputs for the zkLogin v2 circuit.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ZkLoginInputsV2 {
+    fields: ZkLoginInputsV2Fields,
+    jwk_id: JwkId,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde_derive::Serialize, serde_derive::Deserialize)
+)]
+#[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
+struct ZkLoginInputsV2Fields {
+    proof_points: ZkLoginProof,
+    ext_iss: String,
+    header_base64: String,
+    #[cfg_attr(feature = "serde", serde(with = "v2_address_seed_serde"))]
+    address_seed: crate::Address,
+}
+
+#[cfg(feature = "serde")]
+mod v2_address_seed_serde {
+    use crate::Address;
+    use serde::Deserialize;
+    use serde::de::Error;
+
+    pub(super) fn serialize<S: serde::Serializer>(
+        seed: &Address,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        serializer.collect_str(seed)
+    }
+
+    pub(super) fn deserialize<'de, D: serde::Deserializer<'de>>(
+        deserializer: D,
+    ) -> Result<Address, D::Error> {
+        let encoded = String::deserialize(deserializer)?;
+        let seed: Address = encoded.parse().map_err(D::Error::custom)?;
+        if seed.to_string() != encoded {
+            return Err(D::Error::custom("non-canonical zkLogin v2 address seed"));
+        }
+        Ok(seed)
+    }
+}
+
+impl ZkLoginInputsV2 {
+    #[cfg(feature = "serde")]
+    pub fn new(
+        proof_points: ZkLoginProof,
+        ext_iss: String,
+        header_base64: String,
+        address_seed: [u8; 32],
+    ) -> Result<Self, InvalidZkLoginAuthenticatorError> {
+        Self::from_fields(ZkLoginInputsV2Fields {
+            proof_points,
+            ext_iss,
+            header_base64,
+            address_seed: crate::Address::new(address_seed),
+        })
+    }
+
+    pub fn proof_points(&self) -> &ZkLoginProof {
+        &self.fields.proof_points
+    }
+
+    pub fn ext_iss(&self) -> &str {
+        &self.fields.ext_iss
+    }
+
+    pub fn header_base64(&self) -> &str {
+        &self.fields.header_base64
+    }
+
+    pub fn address_seed(&self) -> &[u8] {
+        self.fields.address_seed.as_bytes()
+    }
+
+    pub fn iss(&self) -> &str {
+        &self.jwk_id.iss
+    }
+
+    pub fn jwk_id(&self) -> &JwkId {
+        &self.jwk_id
+    }
+
+    #[cfg(feature = "serde")]
+    fn from_fields(
+        fields: ZkLoginInputsV2Fields,
+    ) -> Result<Self, InvalidZkLoginAuthenticatorError> {
+        #[derive(serde_derive::Deserialize)]
+        #[serde(deny_unknown_fields)]
+        struct IssuerClaim {
+            iss: String,
+        }
+
+        let ext_iss = &fields.ext_iss;
+        if !ext_iss.is_ascii() || ext_iss.len() > 174 || fields.header_base64.len() > 317 {
+            return Err(InvalidZkLoginAuthenticatorError::new("invalid v2 inputs"));
+        }
+        let body = ext_iss
+            .strip_suffix(',')
+            .or_else(|| ext_iss.strip_suffix('}'))
+            .ok_or_else(|| InvalidZkLoginAuthenticatorError::new("invalid extended issuer"))?;
+        let claim: IssuerClaim = serde_json::from_str(&format!("{{{body}}}"))
+            .map_err(|e| InvalidZkLoginAuthenticatorError::new(e.to_string()))?;
+        let header = JwtHeader::from_base64(&fields.header_base64)?;
+        Ok(Self {
+            fields,
+            jwk_id: JwkId {
+                iss: claim.iss,
+                kid: header.kid,
+            },
+        })
+    }
+}
+
+#[cfg(feature = "proptest")]
+impl proptest::arbitrary::Arbitrary for ZkLoginInputsV2 {
+    type Parameters = ();
+    type Strategy = proptest::strategy::BoxedStrategy<Self>;
+
+    fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
+        use proptest::prelude::*;
+
+        (any::<ZkLoginProof>(), any::<[u8; 32]>())
+            .prop_map(|(proof, seed)| {
+                Self::new(
+                    proof,
+                    r#""iss":"https://id.twitch.tv/oauth2","#.to_owned(),
+                    "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjEifQ".to_owned(),
+                    seed,
                 )
                 .unwrap()
             })
@@ -901,6 +1080,76 @@ mod serialization {
         }
     }
 
+    #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct AuthenticatorV2Payload<Inputs, Signature> {
+        inputs: Inputs,
+        max_epoch: EpochId,
+        user_signature: Signature,
+    }
+
+    impl From<AuthenticatorV2Payload<VersionedZkLoginInputs, SimpleSignature>>
+        for ZkLoginAuthenticatorV2
+    {
+        fn from(payload: AuthenticatorV2Payload<VersionedZkLoginInputs, SimpleSignature>) -> Self {
+            Self {
+                inputs: payload.inputs,
+                max_epoch: payload.max_epoch,
+                user_signature: payload.user_signature,
+            }
+        }
+    }
+
+    impl Serialize for ZkLoginAuthenticatorV2 {
+        fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+            if serializer.is_human_readable() {
+                self.payload().serialize(serializer)
+            } else {
+                serializer.serialize_bytes(&self.to_bytes())
+            }
+        }
+    }
+
+    impl<'de> Deserialize<'de> for ZkLoginAuthenticatorV2 {
+        fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+            if deserializer.is_human_readable() {
+                AuthenticatorV2Payload::deserialize(deserializer).map(Into::into)
+            } else {
+                let bytes: Cow<'de, [u8]> = Bytes::deserialize_as(deserializer)?;
+                Self::from_bytes(&bytes).map_err(serde::de::Error::custom)
+            }
+        }
+    }
+
+    impl ZkLoginAuthenticatorV2 {
+        fn payload(&self) -> AuthenticatorV2Payload<&VersionedZkLoginInputs, &SimpleSignature> {
+            AuthenticatorV2Payload {
+                inputs: &self.inputs,
+                max_epoch: self.max_epoch,
+                user_signature: &self.user_signature,
+            }
+        }
+
+        pub fn to_bytes(&self) -> Vec<u8> {
+            let mut bytes = vec![self.scheme().to_u8()];
+            bcs::serialize_into(&mut bytes, &self.payload())
+                .expect("zkLogin v2 serialization cannot fail");
+            bytes
+        }
+
+        pub fn from_bytes(bytes: &[u8]) -> Result<Self, bcs::Error> {
+            use serde::de::Error;
+
+            let payload = bytes
+                .strip_prefix(&[SignatureScheme::ZkLoginV2.to_u8()])
+                .ok_or_else(|| bcs::Error::custom("invalid zkLogin v2 flag"))?;
+            bcs::from_bytes::<AuthenticatorV2Payload<VersionedZkLoginInputs, SimpleSignature>>(
+                payload,
+            )
+            .map(Into::into)
+        }
+    }
+
     impl Serialize for ZkLoginInputs {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
@@ -950,6 +1199,19 @@ mod serialization {
                 address_seed,
             )
             .map_err(serde::de::Error::custom)
+        }
+    }
+
+    impl serde::Serialize for ZkLoginInputsV2 {
+        fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+            serde::Serialize::serialize(&self.fields, serializer)
+        }
+    }
+
+    impl<'de> serde::Deserialize<'de> for ZkLoginInputsV2 {
+        fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+            Self::from_fields(serde::Deserialize::deserialize(deserializer)?)
+                .map_err(serde::de::Error::custom)
         }
     }
 

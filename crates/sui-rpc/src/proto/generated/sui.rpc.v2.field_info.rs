@@ -8178,6 +8178,12 @@ pub(crate) mod _field_impls {
             number: 6i32,
             message_fields: Some(PasskeyAuthenticator::FIELDS),
         };
+        pub const ZKLOGIN_V2_FIELD: &'static MessageField = &MessageField {
+            name: "zklogin_v2",
+            json_name: "zkloginV2",
+            number: 7i32,
+            message_fields: Some(ZkLoginAuthenticatorV2::FIELDS),
+        };
     }
     impl MessageFields for UserSignature {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -8187,6 +8193,7 @@ pub(crate) mod _field_impls {
             Self::MULTISIG_FIELD,
             Self::ZKLOGIN_FIELD,
             Self::PASSKEY_FIELD,
+            Self::ZKLOGIN_V2_FIELD,
         ];
     }
     impl UserSignature {
@@ -8232,6 +8239,10 @@ pub(crate) mod _field_impls {
         pub fn passkey(mut self) -> PasskeyAuthenticatorFieldPathBuilder {
             self.path.push(UserSignature::PASSKEY_FIELD.name);
             PasskeyAuthenticatorFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn zklogin_v2(mut self) -> ZkLoginAuthenticatorV2FieldPathBuilder {
+            self.path.push(UserSignature::ZKLOGIN_V2_FIELD.name);
+            ZkLoginAuthenticatorV2FieldPathBuilder::new_with_base(self.path)
         }
     }
     impl SimpleSignature {
@@ -8597,6 +8608,12 @@ pub(crate) mod _field_impls {
             number: 4i32,
             message_fields: Some(PasskeyAuthenticator::FIELDS),
         };
+        pub const ZKLOGIN_V2_FIELD: &'static MessageField = &MessageField {
+            name: "zklogin_v2",
+            json_name: "zkloginV2",
+            number: 5i32,
+            message_fields: Some(ZkLoginAuthenticatorV2::FIELDS),
+        };
     }
     impl MessageFields for MultisigMemberSignature {
         const FIELDS: &'static [&'static MessageField] = &[
@@ -8604,6 +8621,7 @@ pub(crate) mod _field_impls {
             Self::SIGNATURE_FIELD,
             Self::ZKLOGIN_FIELD,
             Self::PASSKEY_FIELD,
+            Self::ZKLOGIN_V2_FIELD,
         ];
     }
     impl MultisigMemberSignature {
@@ -8641,6 +8659,10 @@ pub(crate) mod _field_impls {
         pub fn passkey(mut self) -> PasskeyAuthenticatorFieldPathBuilder {
             self.path.push(MultisigMemberSignature::PASSKEY_FIELD.name);
             PasskeyAuthenticatorFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn zklogin_v2(mut self) -> ZkLoginAuthenticatorV2FieldPathBuilder {
+            self.path.push(MultisigMemberSignature::ZKLOGIN_V2_FIELD.name);
+            ZkLoginAuthenticatorV2FieldPathBuilder::new_with_base(self.path)
         }
     }
     impl ZkLoginAuthenticator {
@@ -8725,6 +8747,88 @@ pub(crate) mod _field_impls {
             JwkIdFieldPathBuilder::new_with_base(self.path)
         }
     }
+    impl ZkLoginAuthenticatorV2 {
+        pub const INPUTS_FIELD: &'static MessageField = &MessageField {
+            name: "inputs",
+            json_name: "inputs",
+            number: 1i32,
+            message_fields: Some(ZkLoginInputsV2::FIELDS),
+        };
+        pub const MAX_EPOCH_FIELD: &'static MessageField = &MessageField {
+            name: "max_epoch",
+            json_name: "maxEpoch",
+            number: 2i32,
+            message_fields: None,
+        };
+        pub const SIGNATURE_FIELD: &'static MessageField = &MessageField {
+            name: "signature",
+            json_name: "signature",
+            number: 3i32,
+            message_fields: Some(SimpleSignature::FIELDS),
+        };
+        pub const PUBLIC_IDENTIFIER_FIELD: &'static MessageField = &MessageField {
+            name: "public_identifier",
+            json_name: "publicIdentifier",
+            number: 4i32,
+            message_fields: Some(ZkLoginPublicIdentifier::FIELDS),
+        };
+        pub const JWK_ID_FIELD: &'static MessageField = &MessageField {
+            name: "jwk_id",
+            json_name: "jwkId",
+            number: 5i32,
+            message_fields: Some(JwkId::FIELDS),
+        };
+    }
+    impl MessageFields for ZkLoginAuthenticatorV2 {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::INPUTS_FIELD,
+            Self::MAX_EPOCH_FIELD,
+            Self::SIGNATURE_FIELD,
+            Self::PUBLIC_IDENTIFIER_FIELD,
+            Self::JWK_ID_FIELD,
+        ];
+    }
+    impl ZkLoginAuthenticatorV2 {
+        pub fn path_builder() -> ZkLoginAuthenticatorV2FieldPathBuilder {
+            ZkLoginAuthenticatorV2FieldPathBuilder::new()
+        }
+    }
+    pub struct ZkLoginAuthenticatorV2FieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ZkLoginAuthenticatorV2FieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn inputs(mut self) -> ZkLoginInputsV2FieldPathBuilder {
+            self.path.push(ZkLoginAuthenticatorV2::INPUTS_FIELD.name);
+            ZkLoginInputsV2FieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn max_epoch(mut self) -> String {
+            self.path.push(ZkLoginAuthenticatorV2::MAX_EPOCH_FIELD.name);
+            self.finish()
+        }
+        pub fn signature(mut self) -> SimpleSignatureFieldPathBuilder {
+            self.path.push(ZkLoginAuthenticatorV2::SIGNATURE_FIELD.name);
+            SimpleSignatureFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn public_identifier(mut self) -> ZkLoginPublicIdentifierFieldPathBuilder {
+            self.path.push(ZkLoginAuthenticatorV2::PUBLIC_IDENTIFIER_FIELD.name);
+            ZkLoginPublicIdentifierFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn jwk_id(mut self) -> JwkIdFieldPathBuilder {
+            self.path.push(ZkLoginAuthenticatorV2::JWK_ID_FIELD.name);
+            JwkIdFieldPathBuilder::new_with_base(self.path)
+        }
+    }
     impl ZkLoginInputs {
         pub const PROOF_POINTS_FIELD: &'static MessageField = &MessageField {
             name: "proof_points",
@@ -8793,6 +8897,77 @@ pub(crate) mod _field_impls {
         }
         pub fn address_seed(mut self) -> String {
             self.path.push(ZkLoginInputs::ADDRESS_SEED_FIELD.name);
+            self.finish()
+        }
+    }
+    impl ZkLoginInputsV2 {
+        pub const PROOF_POINTS_FIELD: &'static MessageField = &MessageField {
+            name: "proof_points",
+            json_name: "proofPoints",
+            number: 1i32,
+            message_fields: Some(ZkLoginProof::FIELDS),
+        };
+        pub const EXT_ISS_FIELD: &'static MessageField = &MessageField {
+            name: "ext_iss",
+            json_name: "extIss",
+            number: 2i32,
+            message_fields: None,
+        };
+        pub const HEADER_BASE64_FIELD: &'static MessageField = &MessageField {
+            name: "header_base64",
+            json_name: "headerBase64",
+            number: 3i32,
+            message_fields: None,
+        };
+        pub const ADDRESS_SEED_FIELD: &'static MessageField = &MessageField {
+            name: "address_seed",
+            json_name: "addressSeed",
+            number: 4i32,
+            message_fields: None,
+        };
+    }
+    impl MessageFields for ZkLoginInputsV2 {
+        const FIELDS: &'static [&'static MessageField] = &[
+            Self::PROOF_POINTS_FIELD,
+            Self::EXT_ISS_FIELD,
+            Self::HEADER_BASE64_FIELD,
+            Self::ADDRESS_SEED_FIELD,
+        ];
+    }
+    impl ZkLoginInputsV2 {
+        pub fn path_builder() -> ZkLoginInputsV2FieldPathBuilder {
+            ZkLoginInputsV2FieldPathBuilder::new()
+        }
+    }
+    pub struct ZkLoginInputsV2FieldPathBuilder {
+        path: Vec<&'static str>,
+    }
+    impl ZkLoginInputsV2FieldPathBuilder {
+        #[allow(clippy::new_without_default)]
+        pub fn new() -> Self {
+            Self { path: Default::default() }
+        }
+        #[doc(hidden)]
+        pub fn new_with_base(base: Vec<&'static str>) -> Self {
+            Self { path: base }
+        }
+        pub fn finish(self) -> String {
+            self.path.join(".")
+        }
+        pub fn proof_points(mut self) -> ZkLoginProofFieldPathBuilder {
+            self.path.push(ZkLoginInputsV2::PROOF_POINTS_FIELD.name);
+            ZkLoginProofFieldPathBuilder::new_with_base(self.path)
+        }
+        pub fn ext_iss(mut self) -> String {
+            self.path.push(ZkLoginInputsV2::EXT_ISS_FIELD.name);
+            self.finish()
+        }
+        pub fn header_base64(mut self) -> String {
+            self.path.push(ZkLoginInputsV2::HEADER_BASE64_FIELD.name);
+            self.finish()
+        }
+        pub fn address_seed(mut self) -> String {
+            self.path.push(ZkLoginInputsV2::ADDRESS_SEED_FIELD.name);
             self.finish()
         }
     }

@@ -342,6 +342,49 @@ impl TryFrom<&ZkLoginInputs> for sui_sdk_types::ZkLoginInputs {
     }
 }
 
+impl From<&sui_sdk_types::ZkLoginInputsV2> for ZkLoginInputsV2 {
+    fn from(value: &sui_sdk_types::ZkLoginInputsV2) -> Self {
+        Self {
+            proof_points: Some(value.proof_points().clone().into()),
+            ext_iss: Some(value.ext_iss().into()),
+            header_base64: Some(value.header_base64().into()),
+            address_seed: Some(value.address_seed().to_vec().into()),
+        }
+    }
+}
+
+impl TryFrom<&ZkLoginInputsV2> for sui_sdk_types::ZkLoginInputsV2 {
+    type Error = TryFromProtoError;
+
+    fn try_from(value: &ZkLoginInputsV2) -> Result<Self, Self::Error> {
+        let proof_points = value
+            .proof_points
+            .as_ref()
+            .ok_or_else(|| TryFromProtoError::missing(ZkLoginInputsV2::PROOF_POINTS_FIELD))?
+            .try_into()?;
+        let ext_iss = value
+            .ext_iss
+            .clone()
+            .ok_or_else(|| TryFromProtoError::missing(ZkLoginInputsV2::EXT_ISS_FIELD))?;
+        let header_base64 = value
+            .header_base64
+            .clone()
+            .ok_or_else(|| TryFromProtoError::missing(ZkLoginInputsV2::HEADER_BASE64_FIELD))?;
+        let address_seed = value
+            .address_seed
+            .as_deref()
+            .ok_or_else(|| TryFromProtoError::missing(ZkLoginInputsV2::ADDRESS_SEED_FIELD))?
+            .try_into()
+            .map_err(|error| {
+                TryFromProtoError::invalid(ZkLoginInputsV2::ADDRESS_SEED_FIELD, error)
+            })?;
+
+        Self::new(proof_points, ext_iss, header_base64, address_seed).map_err(|error| {
+            TryFromProtoError::invalid(ZkLoginAuthenticatorV2::INPUTS_FIELD, error)
+        })
+    }
+}
+
 //
 // ZkLoginAuthenticator
 //
@@ -382,6 +425,51 @@ impl TryFrom<&ZkLoginAuthenticator> for sui_sdk_types::ZkLoginAuthenticator {
             inputs,
             max_epoch,
             signature,
+        })
+    }
+}
+
+impl From<&sui_sdk_types::ZkLoginAuthenticatorV2> for ZkLoginAuthenticatorV2 {
+    fn from(value: &sui_sdk_types::ZkLoginAuthenticatorV2) -> Self {
+        use sui_sdk_types::VersionedZkLoginInputs;
+        let (inputs, jwk_id) = match &value.inputs {
+            VersionedZkLoginInputs::V2(inputs) => {
+                (Some(inputs.into()), Some(inputs.jwk_id().into()))
+            }
+            _ => (None, None),
+        };
+        Self {
+            inputs,
+            max_epoch: Some(value.max_epoch),
+            signature: Some((&value.user_signature).into()),
+            public_identifier: Some((&value.public_identifier()).into()),
+            jwk_id,
+        }
+    }
+}
+
+impl TryFrom<&ZkLoginAuthenticatorV2> for sui_sdk_types::ZkLoginAuthenticatorV2 {
+    type Error = TryFromProtoError;
+
+    fn try_from(value: &ZkLoginAuthenticatorV2) -> Result<Self, Self::Error> {
+        let inputs = value
+            .inputs
+            .as_ref()
+            .ok_or_else(|| TryFromProtoError::missing(ZkLoginAuthenticatorV2::INPUTS_FIELD))?
+            .try_into()?;
+        let max_epoch = value
+            .max_epoch
+            .ok_or_else(|| TryFromProtoError::missing(ZkLoginAuthenticatorV2::MAX_EPOCH_FIELD))?;
+        let user_signature = value
+            .signature
+            .as_ref()
+            .ok_or_else(|| TryFromProtoError::missing(ZkLoginAuthenticatorV2::SIGNATURE_FIELD))?
+            .try_into()?;
+
+        Ok(Self {
+            inputs: sui_sdk_types::VersionedZkLoginInputs::V2(inputs),
+            max_epoch,
+            user_signature,
         })
     }
 }
@@ -442,6 +530,7 @@ impl TryFrom<&SignatureScheme> for sui_sdk_types::SignatureScheme {
             Multisig => Self::Multisig,
             Bls12381 => Self::Bls12381,
             Zklogin => Self::ZkLogin,
+            ZkloginV2 => Self::ZkLoginV2,
             Passkey => Self::Passkey,
             Mldsa65 => Self::MlDsa65,
         }
@@ -455,7 +544,13 @@ impl TryFrom<&SignatureScheme> for sui_sdk_types::SignatureScheme {
 
 impl From<sui_sdk_types::SimpleSignature> for SimpleSignature {
     fn from(value: sui_sdk_types::SimpleSignature) -> Self {
-        let (signature, public_key) = match &value {
+        Self::from(&value)
+    }
+}
+
+impl From<&sui_sdk_types::SimpleSignature> for SimpleSignature {
+    fn from(value: &sui_sdk_types::SimpleSignature) -> Self {
+        let (signature, public_key) = match value {
             sui_sdk_types::SimpleSignature::Ed25519 {
                 signature,
                 public_key,
@@ -546,6 +641,7 @@ impl TryFrom<&SimpleSignature> for sui_sdk_types::SimpleSignature {
             SignatureScheme::Multisig
             | SignatureScheme::Bls12381
             | SignatureScheme::Zklogin
+            | SignatureScheme::ZkloginV2
             | SignatureScheme::Passkey => {
                 return Err(TryFromProtoError::invalid(
                     SimpleSignature::SCHEME_FIELD,
@@ -628,6 +724,10 @@ impl From<&sui_sdk_types::MultisigMemberPublicKey> for MultisigMemberPublicKey {
                 message.zklogin = Some(zklogin_id.into());
                 SignatureScheme::Zklogin
             }
+            ZkLoginV2(zklogin_id) => {
+                message.zklogin = Some(zklogin_id.into());
+                SignatureScheme::ZkloginV2
+            }
             Passkey(public_key) => {
                 message.public_key = Some(public_key.inner().as_bytes().to_vec().into());
                 SignatureScheme::Passkey
@@ -669,6 +769,13 @@ impl TryFrom<&MultisigMemberPublicKey> for sui_sdk_types::MultisigMemberPublicKe
                 )?)
             }
             SignatureScheme::Zklogin => Self::ZkLogin(
+                value
+                    .zklogin
+                    .as_ref()
+                    .ok_or_else(|| TryFromProtoError::missing("zklogin"))?
+                    .try_into()?,
+            ),
+            SignatureScheme::ZkloginV2 => Self::ZkLoginV2(
                 value
                     .zklogin
                     .as_ref()
@@ -787,6 +894,10 @@ impl From<&sui_sdk_types::MultisigMemberSignature> for MultisigMemberSignature {
                 message.zklogin = Some((**zklogin_id).clone().into());
                 SignatureScheme::Zklogin
             }
+            ZkLoginV2(authenticator) => {
+                message.zklogin_v2 = Some(authenticator.as_ref().into());
+                SignatureScheme::ZkloginV2
+            }
             Passkey(p) => {
                 message.passkey = Some(p.clone().into());
                 SignatureScheme::Passkey
@@ -832,6 +943,15 @@ impl TryFrom<&MultisigMemberSignature> for sui_sdk_types::MultisigMemberSignatur
                     .zklogin
                     .as_ref()
                     .ok_or_else(|| TryFromProtoError::missing("zklogin"))?
+                    .try_into()?,
+            )),
+            SignatureScheme::ZkloginV2 => Self::ZkLoginV2(Box::new(
+                value
+                    .zklogin_v2
+                    .as_ref()
+                    .ok_or_else(|| {
+                        TryFromProtoError::missing(MultisigMemberSignature::ZKLOGIN_V2_FIELD)
+                    })?
                     .try_into()?,
             )),
             SignatureScheme::Passkey => Self::Passkey(
@@ -952,6 +1072,9 @@ impl Merge<sui_sdk_types::UserSignature> for UserSignature {
             ZkLogin(zklogin) if mask.contains(Self::ZKLOGIN_FIELD.name) => {
                 self.signature = Some(Signature::Zklogin((*zklogin).into()));
             }
+            ZkLoginV2(zklogin) if mask.contains(Self::ZKLOGIN_V2_FIELD.name) => {
+                self.signature = Some(Signature::ZkloginV2(zklogin.as_ref().into()));
+            }
             Passkey(passkey) if mask.contains(Self::PASSKEY_FIELD.name) => {
                 self.signature = Some(Signature::Passkey(passkey.into()));
             }
@@ -983,6 +1106,8 @@ impl Merge<&UserSignature> for UserSignature {
                 && mask.contains(Self::MULTISIG_FIELD.name)
             || matches!(signature, Some(Signature::Zklogin(_)))
                 && mask.contains(Self::ZKLOGIN_FIELD.name)
+            || matches!(signature, Some(Signature::ZkloginV2(_)))
+                && mask.contains(Self::ZKLOGIN_V2_FIELD.name)
             || matches!(signature, Some(Signature::Passkey(_)))
                 && mask.contains(Self::PASSKEY_FIELD.name)
         {
@@ -1017,6 +1142,7 @@ impl TryFrom<&UserSignature> for sui_sdk_types::UserSignature {
             Some(Signature::Simple(simple)) => Self::Simple(simple.try_into()?),
             Some(Signature::Multisig(multisig)) => Self::Multisig(multisig.try_into()?),
             Some(Signature::Zklogin(zklogin)) => Self::ZkLogin(Box::new(zklogin.try_into()?)),
+            Some(Signature::ZkloginV2(zklogin)) => Self::ZkLoginV2(Box::new(zklogin.try_into()?)),
             Some(Signature::Passkey(passkey)) => Self::Passkey(passkey.try_into()?),
             None => {
                 return Err(TryFromProtoError::invalid(
@@ -1032,6 +1158,139 @@ impl TryFrom<&UserSignature> for sui_sdk_types::UserSignature {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn zklogin_scheme_roundtrips_in_protobuf_json() {
+        for (scheme, sdk_scheme, wire_value, json_name) in [
+            (
+                SignatureScheme::Zklogin,
+                sui_sdk_types::SignatureScheme::ZkLogin,
+                5,
+                "ZKLOGIN",
+            ),
+            (
+                SignatureScheme::ZkloginV2,
+                sui_sdk_types::SignatureScheme::ZkLoginV2,
+                8,
+                "ZKLOGIN_V2",
+            ),
+        ] {
+            assert_eq!(i32::from(scheme), wire_value);
+            assert_eq!(
+                sui_sdk_types::SignatureScheme::try_from(&scheme).unwrap(),
+                sdk_scheme
+            );
+
+            let mut signature = UserSignature::default();
+            signature.set_scheme(scheme);
+            let json = serde_json::to_value(&signature).unwrap();
+            assert_eq!(json["scheme"], json_name);
+            let decoded: UserSignature = serde_json::from_value(json).unwrap();
+            assert_eq!(decoded.scheme, Some(wire_value));
+        }
+    }
+
+    #[test]
+    fn zklogin_protobuf_roundtrip() {
+        use sui_sdk_types::Bn254FieldElement;
+        use sui_sdk_types::CircomG1;
+        use sui_sdk_types::CircomG2;
+        use sui_sdk_types::Ed25519PublicKey;
+        use sui_sdk_types::Ed25519Signature;
+        use sui_sdk_types::VersionedZkLoginInputs;
+        use sui_sdk_types::ZkLoginAuthenticator;
+        use sui_sdk_types::ZkLoginAuthenticatorV2;
+        use sui_sdk_types::ZkLoginClaim;
+        use sui_sdk_types::ZkLoginInputs;
+        use sui_sdk_types::ZkLoginInputsV2;
+        use sui_sdk_types::ZkLoginProof;
+
+        const HEADER: &str = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjEifQ";
+        let coordinate = Bn254FieldElement::new([0; 32]);
+        let proof = ZkLoginProof {
+            a: CircomG1(std::array::from_fn(|_| coordinate.clone())),
+            b: CircomG2(std::array::from_fn(|_| {
+                std::array::from_fn(|_| coordinate.clone())
+            })),
+            c: CircomG1(std::array::from_fn(|_| coordinate.clone())),
+        };
+        let signature = sui_sdk_types::SimpleSignature::Ed25519 {
+            signature: Ed25519Signature::new([0; 64]),
+            public_key: Ed25519PublicKey::new([0; 32]),
+        };
+
+        let v1 = ZkLoginAuthenticator {
+            inputs: ZkLoginInputs::new(
+                proof.clone(),
+                ZkLoginClaim {
+                    value: "wiaXNzIjoiaHR0cHM6Ly9pZC50d2l0Y2gudHYvb2F1dGgyIiw".to_owned(),
+                    index_mod_4: 2,
+                },
+                HEADER.to_owned(),
+                Bn254FieldElement::new([1; 32]),
+            )
+            .unwrap(),
+            max_epoch: 10,
+            signature: signature.clone(),
+        };
+        let v2 = ZkLoginAuthenticatorV2 {
+            inputs: VersionedZkLoginInputs::V2(
+                ZkLoginInputsV2::new(
+                    proof,
+                    r#""iss":"https://id.twitch.tv/oauth2","#.to_owned(),
+                    HEADER.to_owned(),
+                    [1; 32],
+                )
+                .unwrap(),
+            ),
+            max_epoch: 10,
+            user_signature: signature,
+        };
+
+        use sui_sdk_types::MultisigMemberPublicKey as MemberKey;
+        use sui_sdk_types::MultisigMemberSignature as MemberSignature;
+        for (scheme, field, user_signature, member_key, member_signature) in [
+            (
+                SignatureScheme::Zklogin,
+                UserSignature::ZKLOGIN_FIELD.name,
+                sui_sdk_types::UserSignature::ZkLogin(Box::new(v1.clone())),
+                MemberKey::ZkLogin(v1.inputs.public_identifier().clone()),
+                MemberSignature::ZkLogin(Box::new(v1)),
+            ),
+            (
+                SignatureScheme::ZkloginV2,
+                UserSignature::ZKLOGIN_V2_FIELD.name,
+                sui_sdk_types::UserSignature::ZkLoginV2(Box::new(v2.clone())),
+                MemberKey::ZkLoginV2(v2.public_identifier()),
+                MemberSignature::ZkLoginV2(Box::new(v2)),
+            ),
+        ] {
+            let mut mask = FieldMaskTree::default();
+            mask.add_field_path(UserSignature::SCHEME_FIELD.name);
+            mask.add_field_path(field);
+            let masked = UserSignature::merge_from(user_signature.clone(), &mask);
+            assert!(masked.bcs.is_none());
+            assert_eq!(masked.scheme(), scheme);
+            assert_eq!(
+                sui_sdk_types::UserSignature::try_from(&masked).unwrap(),
+                user_signature
+            );
+            let full = UserSignature::from(user_signature);
+            assert_eq!(UserSignature::merge_from(&full, &mask), masked);
+
+            let proto_key = MultisigMemberPublicKey::from(&member_key);
+            assert_eq!(proto_key.scheme(), scheme);
+            assert_eq!(MemberKey::try_from(&proto_key).unwrap(), member_key);
+
+            let proto_signature = MultisigMemberSignature::from(&member_signature);
+            assert_eq!(proto_signature.scheme(), scheme);
+            assert!(proto_signature.signature.is_none());
+            assert_eq!(
+                MemberSignature::try_from(&proto_signature).unwrap(),
+                member_signature
+            );
+        }
+    }
 
     fn legacy_bitmap_bytes(indices: &[u32]) -> prost::bytes::Bytes {
         let bitmap: sui_sdk_types::Bitmap = indices.iter().copied().collect();

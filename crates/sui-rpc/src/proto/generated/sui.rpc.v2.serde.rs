@@ -23910,6 +23910,9 @@ impl serde::Serialize for MultisigMemberSignature {
         if self.passkey.is_some() {
             len += 1;
         }
+        if self.zklogin_v2.is_some() {
+            len += 1;
+        }
         let mut struct_ser = serializer
             .serialize_struct("sui.rpc.v2.MultisigMemberSignature", len)?;
         if let Some(v) = self.scheme.as_ref() {
@@ -23934,6 +23937,9 @@ impl serde::Serialize for MultisigMemberSignature {
         if let Some(v) = self.passkey.as_ref() {
             struct_ser.serialize_field("passkey", v)?;
         }
+        if let Some(v) = self.zklogin_v2.as_ref() {
+            struct_ser.serialize_field("zkloginV2", v)?;
+        }
         struct_ser.end()
     }
 }
@@ -23943,13 +23949,21 @@ impl<'de> serde::Deserialize<'de> for MultisigMemberSignature {
     where
         D: serde::Deserializer<'de>,
     {
-        const FIELDS: &[&str] = &["scheme", "signature", "zklogin", "passkey"];
+        const FIELDS: &[&str] = &[
+            "scheme",
+            "signature",
+            "zklogin",
+            "passkey",
+            "zklogin_v2",
+            "zkloginV2",
+        ];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
             Scheme,
             Signature,
             Zklogin,
             Passkey,
+            ZkloginV2,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -23981,6 +23995,7 @@ impl<'de> serde::Deserialize<'de> for MultisigMemberSignature {
                             "signature" => Ok(GeneratedField::Signature),
                             "zklogin" => Ok(GeneratedField::Zklogin),
                             "passkey" => Ok(GeneratedField::Passkey),
+                            "zkloginV2" | "zklogin_v2" => Ok(GeneratedField::ZkloginV2),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -24010,6 +24025,7 @@ impl<'de> serde::Deserialize<'de> for MultisigMemberSignature {
                 let mut signature__ = None;
                 let mut zklogin__ = None;
                 let mut passkey__ = None;
+                let mut zklogin_v2__ = None;
                 while let Some(k) = map_.next_key()? {
                     match k {
                         GeneratedField::Scheme => {
@@ -24042,6 +24058,12 @@ impl<'de> serde::Deserialize<'de> for MultisigMemberSignature {
                             }
                             passkey__ = map_.next_value()?;
                         }
+                        GeneratedField::ZkloginV2 => {
+                            if zklogin_v2__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("zkloginV2"));
+                            }
+                            zklogin_v2__ = map_.next_value()?;
+                        }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
                         }
@@ -24052,6 +24074,7 @@ impl<'de> serde::Deserialize<'de> for MultisigMemberSignature {
                     signature: signature__,
                     zklogin: zklogin__,
                     passkey: passkey__,
+                    zklogin_v2: zklogin_v2__,
                 })
             }
         }
@@ -28999,6 +29022,7 @@ impl serde::Serialize for SignatureScheme {
             Self::Zklogin => "ZKLOGIN",
             Self::Passkey => "PASSKEY",
             Self::Mldsa65 => "MLDSA65",
+            Self::ZkloginV2 => "ZKLOGIN_V2",
         };
         serializer.serialize_str(variant)
     }
@@ -29018,6 +29042,7 @@ impl<'de> serde::Deserialize<'de> for SignatureScheme {
             "ZKLOGIN",
             "PASSKEY",
             "MLDSA65",
+            "ZKLOGIN_V2",
         ];
         struct GeneratedVisitor;
         impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
@@ -29069,6 +29094,7 @@ impl<'de> serde::Deserialize<'de> for SignatureScheme {
                     "ZKLOGIN" => Ok(SignatureScheme::Zklogin),
                     "PASSKEY" => Ok(SignatureScheme::Passkey),
                     "MLDSA65" => Ok(SignatureScheme::Mldsa65),
+                    "ZKLOGIN_V2" => Ok(SignatureScheme::ZkloginV2),
                     _ => Err(serde::de::Error::unknown_variant(value, FIELDS)),
                 }
             }
@@ -36047,6 +36073,9 @@ impl serde::Serialize for UserSignature {
                 user_signature::Signature::Passkey(v) => {
                     struct_ser.serialize_field("passkey", v)?;
                 }
+                user_signature::Signature::ZkloginV2(v) => {
+                    struct_ser.serialize_field("zkloginV2", v)?;
+                }
             }
         }
         struct_ser.end()
@@ -36065,6 +36094,8 @@ impl<'de> serde::Deserialize<'de> for UserSignature {
             "multisig",
             "zklogin",
             "passkey",
+            "zklogin_v2",
+            "zkloginV2",
         ];
         #[allow(clippy::enum_variant_names)]
         enum GeneratedField {
@@ -36074,6 +36105,7 @@ impl<'de> serde::Deserialize<'de> for UserSignature {
             Multisig,
             Zklogin,
             Passkey,
+            ZkloginV2,
             __SkipField__,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
@@ -36107,6 +36139,7 @@ impl<'de> serde::Deserialize<'de> for UserSignature {
                             "multisig" => Ok(GeneratedField::Multisig),
                             "zklogin" => Ok(GeneratedField::Zklogin),
                             "passkey" => Ok(GeneratedField::Passkey),
+                            "zkloginV2" | "zklogin_v2" => Ok(GeneratedField::ZkloginV2),
                             _ => Ok(GeneratedField::__SkipField__),
                         }
                     }
@@ -36182,6 +36215,14 @@ impl<'de> serde::Deserialize<'de> for UserSignature {
                             signature__ = map_
                                 .next_value::<::std::option::Option<_>>()?
                                 .map(user_signature::Signature::Passkey);
+                        }
+                        GeneratedField::ZkloginV2 => {
+                            if signature__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("zkloginV2"));
+                            }
+                            signature__ = map_
+                                .next_value::<::std::option::Option<_>>()?
+                                .map(user_signature::Signature::ZkloginV2);
                         }
                         GeneratedField::__SkipField__ => {
                             let _ = map_.next_value::<serde::de::IgnoredAny>()?;
@@ -39088,6 +39129,198 @@ impl<'de> serde::Deserialize<'de> for ZkLoginAuthenticator {
             )
     }
 }
+impl serde::Serialize for ZkLoginAuthenticatorV2 {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0usize;
+        if self.inputs.is_some() {
+            len += 1;
+        }
+        if self.max_epoch.is_some() {
+            len += 1;
+        }
+        if self.signature.is_some() {
+            len += 1;
+        }
+        if self.public_identifier.is_some() {
+            len += 1;
+        }
+        if self.jwk_id.is_some() {
+            len += 1;
+        }
+        let mut struct_ser = serializer
+            .serialize_struct("sui.rpc.v2.ZkLoginAuthenticatorV2", len)?;
+        if let Some(v) = self.inputs.as_ref() {
+            struct_ser.serialize_field("inputs", v)?;
+        }
+        if let Some(v) = self.max_epoch.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser.serialize_field("maxEpoch", ToString::to_string(&v).as_str())?;
+        }
+        if let Some(v) = self.signature.as_ref() {
+            struct_ser.serialize_field("signature", v)?;
+        }
+        if let Some(v) = self.public_identifier.as_ref() {
+            struct_ser.serialize_field("publicIdentifier", v)?;
+        }
+        if let Some(v) = self.jwk_id.as_ref() {
+            struct_ser.serialize_field("jwkId", v)?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for ZkLoginAuthenticatorV2 {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "inputs",
+            "max_epoch",
+            "maxEpoch",
+            "signature",
+            "public_identifier",
+            "publicIdentifier",
+            "jwk_id",
+            "jwkId",
+        ];
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            Inputs,
+            MaxEpoch,
+            Signature,
+            PublicIdentifier,
+            JwkId,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(
+                deserializer: D,
+            ) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+                    fn expecting(
+                        &self,
+                        formatter: &mut std::fmt::Formatter<'_>,
+                    ) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", FIELDS)
+                    }
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(
+                        self,
+                        value: &str,
+                    ) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "inputs" => Ok(GeneratedField::Inputs),
+                            "maxEpoch" | "max_epoch" => Ok(GeneratedField::MaxEpoch),
+                            "signature" => Ok(GeneratedField::Signature),
+                            "publicIdentifier" | "public_identifier" => {
+                                Ok(GeneratedField::PublicIdentifier)
+                            }
+                            "jwkId" | "jwk_id" => Ok(GeneratedField::JwkId),
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = ZkLoginAuthenticatorV2;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2.ZkLoginAuthenticatorV2")
+            }
+            fn visit_map<V>(
+                self,
+                mut map_: V,
+            ) -> std::result::Result<ZkLoginAuthenticatorV2, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                let mut inputs__ = None;
+                let mut max_epoch__ = None;
+                let mut signature__ = None;
+                let mut public_identifier__ = None;
+                let mut jwk_id__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::Inputs => {
+                            if inputs__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("inputs"));
+                            }
+                            inputs__ = map_.next_value()?;
+                        }
+                        GeneratedField::MaxEpoch => {
+                            if max_epoch__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("maxEpoch"));
+                            }
+                            max_epoch__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::NumberDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::Signature => {
+                            if signature__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("signature"));
+                            }
+                            signature__ = map_.next_value()?;
+                        }
+                        GeneratedField::PublicIdentifier => {
+                            if public_identifier__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("publicIdentifier"),
+                                );
+                            }
+                            public_identifier__ = map_.next_value()?;
+                        }
+                        GeneratedField::JwkId => {
+                            if jwk_id__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("jwkId"));
+                            }
+                            jwk_id__ = map_.next_value()?;
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(ZkLoginAuthenticatorV2 {
+                    inputs: inputs__,
+                    max_epoch: max_epoch__,
+                    signature: signature__,
+                    public_identifier: public_identifier__,
+                    jwk_id: jwk_id__,
+                })
+            }
+        }
+        deserializer
+            .deserialize_struct(
+                "sui.rpc.v2.ZkLoginAuthenticatorV2",
+                FIELDS,
+                GeneratedVisitor,
+            )
+    }
+}
 impl serde::Serialize for ZkLoginClaim {
     #[allow(deprecated)]
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
@@ -39389,6 +39622,190 @@ impl<'de> serde::Deserialize<'de> for ZkLoginInputs {
         }
         deserializer
             .deserialize_struct("sui.rpc.v2.ZkLoginInputs", FIELDS, GeneratedVisitor)
+    }
+}
+impl serde::Serialize for ZkLoginInputsV2 {
+    #[allow(deprecated)]
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut len = 0usize;
+        if self.proof_points.is_some() {
+            len += 1;
+        }
+        if self.ext_iss.is_some() {
+            len += 1;
+        }
+        if self.header_base64.is_some() {
+            len += 1;
+        }
+        if self.address_seed.is_some() {
+            len += 1;
+        }
+        let mut struct_ser = serializer
+            .serialize_struct("sui.rpc.v2.ZkLoginInputsV2", len)?;
+        if let Some(v) = self.proof_points.as_ref() {
+            struct_ser.serialize_field("proofPoints", v)?;
+        }
+        if let Some(v) = self.ext_iss.as_ref() {
+            struct_ser.serialize_field("extIss", v)?;
+        }
+        if let Some(v) = self.header_base64.as_ref() {
+            struct_ser.serialize_field("headerBase64", v)?;
+        }
+        if let Some(v) = self.address_seed.as_ref() {
+            #[allow(clippy::needless_borrow)]
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            struct_ser
+                .serialize_field(
+                    "addressSeed",
+                    crate::_serde::base64::encode(&v).as_str(),
+                )?;
+        }
+        struct_ser.end()
+    }
+}
+impl<'de> serde::Deserialize<'de> for ZkLoginInputsV2 {
+    #[allow(deprecated)]
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        const FIELDS: &[&str] = &[
+            "proof_points",
+            "proofPoints",
+            "ext_iss",
+            "extIss",
+            "header_base64",
+            "headerBase64",
+            "address_seed",
+            "addressSeed",
+        ];
+        #[allow(clippy::enum_variant_names)]
+        enum GeneratedField {
+            ProofPoints,
+            ExtIss,
+            HeaderBase64,
+            AddressSeed,
+            __SkipField__,
+        }
+        impl<'de> serde::Deserialize<'de> for GeneratedField {
+            fn deserialize<D>(
+                deserializer: D,
+            ) -> std::result::Result<GeneratedField, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                struct GeneratedVisitor;
+                impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+                    type Value = GeneratedField;
+                    fn expecting(
+                        &self,
+                        formatter: &mut std::fmt::Formatter<'_>,
+                    ) -> std::fmt::Result {
+                        write!(formatter, "expected one of: {:?}", FIELDS)
+                    }
+                    #[allow(unused_variables)]
+                    fn visit_str<E>(
+                        self,
+                        value: &str,
+                    ) -> std::result::Result<GeneratedField, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        match value {
+                            "proofPoints" | "proof_points" => {
+                                Ok(GeneratedField::ProofPoints)
+                            }
+                            "extIss" | "ext_iss" => Ok(GeneratedField::ExtIss),
+                            "headerBase64" | "header_base64" => {
+                                Ok(GeneratedField::HeaderBase64)
+                            }
+                            "addressSeed" | "address_seed" => {
+                                Ok(GeneratedField::AddressSeed)
+                            }
+                            _ => Ok(GeneratedField::__SkipField__),
+                        }
+                    }
+                }
+                deserializer.deserialize_identifier(GeneratedVisitor)
+            }
+        }
+        struct GeneratedVisitor;
+        #[allow(clippy::useless_conversion)]
+        #[allow(clippy::unit_arg)]
+        impl<'de> serde::de::Visitor<'de> for GeneratedVisitor {
+            type Value = ZkLoginInputsV2;
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter<'_>,
+            ) -> std::fmt::Result {
+                formatter.write_str("struct sui.rpc.v2.ZkLoginInputsV2")
+            }
+            fn visit_map<V>(
+                self,
+                mut map_: V,
+            ) -> std::result::Result<ZkLoginInputsV2, V::Error>
+            where
+                V: serde::de::MapAccess<'de>,
+            {
+                let mut proof_points__ = None;
+                let mut ext_iss__ = None;
+                let mut header_base64__ = None;
+                let mut address_seed__ = None;
+                while let Some(k) = map_.next_key()? {
+                    match k {
+                        GeneratedField::ProofPoints => {
+                            if proof_points__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("proofPoints"),
+                                );
+                            }
+                            proof_points__ = map_.next_value()?;
+                        }
+                        GeneratedField::ExtIss => {
+                            if ext_iss__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("extIss"));
+                            }
+                            ext_iss__ = map_.next_value()?;
+                        }
+                        GeneratedField::HeaderBase64 => {
+                            if header_base64__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("headerBase64"),
+                                );
+                            }
+                            header_base64__ = map_.next_value()?;
+                        }
+                        GeneratedField::AddressSeed => {
+                            if address_seed__.is_some() {
+                                return Err(
+                                    serde::de::Error::duplicate_field("addressSeed"),
+                                );
+                            }
+                            address_seed__ = map_
+                                .next_value::<
+                                    ::std::option::Option<crate::_serde::BytesDeserialize<_>>,
+                                >()?
+                                .map(|x| x.0);
+                        }
+                        GeneratedField::__SkipField__ => {
+                            let _ = map_.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(ZkLoginInputsV2 {
+                    proof_points: proof_points__,
+                    ext_iss: ext_iss__,
+                    header_base64: header_base64__,
+                    address_seed: address_seed__,
+                })
+            }
+        }
+        deserializer
+            .deserialize_struct("sui.rpc.v2.ZkLoginInputsV2", FIELDS, GeneratedVisitor)
     }
 }
 impl serde::Serialize for ZkLoginProof {

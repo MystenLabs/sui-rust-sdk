@@ -9,6 +9,7 @@ use super::Secp256k1Signature;
 use super::Secp256r1PublicKey;
 use super::Secp256r1Signature;
 use super::ZkLoginAuthenticator;
+use super::ZkLoginAuthenticatorV2;
 
 /// A basic signature
 ///
@@ -193,6 +194,7 @@ impl SimpleSignature {
             SignatureScheme::Multisig
             | SignatureScheme::Bls12381
             | SignatureScheme::ZkLogin
+            | SignatureScheme::ZkLoginV2
             | SignatureScheme::Passkey => Err(serde::de::Error::custom("invalid signature scheme")),
         }
     }
@@ -378,7 +380,8 @@ impl<'de> serde::Deserialize<'de> for SimpleSignature {
 /// ```text
 /// signature-scheme = ed25519-flag / secp256k1-flag / secp256r1-flag /
 ///                    multisig-flag / bls-flag / zklogin-flag / passkey-flag /
-///                    mldsa65-flag
+///                    mldsa65-flag /
+///                    zklogin-v2-flag
 /// ed25519-flag     = %x00
 /// secp256k1-flag   = %x01
 /// secp256r1-flag   = %x02
@@ -387,6 +390,7 @@ impl<'de> serde::Deserialize<'de> for SimpleSignature {
 /// zklogin-flag     = %x05
 /// passkey-flag     = %x06
 /// mldsa65-flag     = %x07
+/// zklogin-v2-flag  = %x08
 /// ```
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
@@ -401,6 +405,7 @@ pub enum SignatureScheme {
     ZkLogin = 0x05,
     Passkey = 0x06,
     MlDsa65 = 0x07,
+    ZkLoginV2 = 0x08,
 }
 
 impl SignatureScheme {
@@ -413,6 +418,7 @@ impl SignatureScheme {
             SignatureScheme::Multisig => "multisig",
             SignatureScheme::Bls12381 => "bls12381",
             SignatureScheme::ZkLogin => "zklogin",
+            SignatureScheme::ZkLoginV2 => "zkloginv2",
             SignatureScheme::Passkey => "passkey",
             SignatureScheme::MlDsa65 => "mldsa65",
         }
@@ -429,6 +435,7 @@ impl SignatureScheme {
             0x05 => Ok(Self::ZkLogin),
             0x06 => Ok(Self::Passkey),
             0x07 => Ok(Self::MlDsa65),
+            0x08 => Ok(Self::ZkLoginV2),
             invalid => Err(InvalidSignatureScheme(invalid)),
         }
     }
@@ -501,7 +508,7 @@ impl std::fmt::Display for InvalidSignatureScheme {
 ///
 /// ```text
 /// user-signature-bcs = bytes ; where the contents of the bytes are defined by <user-signature>
-/// user-signature = simple-signature / multisig / multisig-legacy / zklogin / passkey
+/// user-signature = simple-signature / multisig / multisig-legacy / zklogin / passkey / zklogin-v2
 /// ```
 ///
 /// Note: Due to historical reasons, signatures are serialized slightly different from the majority
@@ -515,6 +522,7 @@ pub enum UserSignature {
     Simple(SimpleSignature),
     Multisig(MultisigAggregatedSignature),
     ZkLogin(Box<ZkLoginAuthenticator>),
+    ZkLoginV2(Box<ZkLoginAuthenticatorV2>),
     Passkey(PasskeyAuthenticator),
 }
 
@@ -525,6 +533,7 @@ impl UserSignature {
             UserSignature::Simple(simple) => simple.scheme(),
             UserSignature::Multisig(_) => SignatureScheme::Multisig,
             UserSignature::ZkLogin(_) => SignatureScheme::ZkLogin,
+            UserSignature::ZkLoginV2(_) => SignatureScheme::ZkLoginV2,
             UserSignature::Passkey(_) => SignatureScheme::Passkey,
         }
     }
@@ -541,6 +550,7 @@ mod serialization {
                 UserSignature::Simple(s) => s.to_bytes(),
                 UserSignature::Multisig(m) => m.to_bytes(),
                 UserSignature::ZkLogin(z) => z.to_bytes(),
+                UserSignature::ZkLoginV2(z) => z.to_bytes(),
                 UserSignature::Passkey(p) => p.to_bytes(),
             }
         }
@@ -579,6 +589,9 @@ mod serialization {
                     let zklogin = ZkLoginAuthenticator::from_serialized_bytes(bytes)?;
                     Ok(Self::ZkLogin(Box::new(zklogin)))
                 }
+                SignatureScheme::ZkLoginV2 => ZkLoginAuthenticatorV2::from_bytes(bytes)
+                    .map(|zklogin| Self::ZkLoginV2(Box::new(zklogin)))
+                    .map_err(serde::de::Error::custom),
                 SignatureScheme::Passkey => {
                     let passkey = PasskeyAuthenticator::from_serialized_bytes(bytes)?;
                     Ok(Self::Passkey(passkey))
@@ -620,6 +633,7 @@ mod serialization {
         },
         Multisig(&'a MultisigAggregatedSignature),
         ZkLogin(&'a ZkLoginAuthenticator),
+        ZkLoginV2(&'a ZkLoginAuthenticatorV2),
         Passkey(&'a PasskeyAuthenticator),
     }
 
@@ -645,6 +659,7 @@ mod serialization {
         },
         Multisig(MultisigAggregatedSignature),
         ZkLogin(Box<ZkLoginAuthenticator>),
+        ZkLoginV2(Box<ZkLoginAuthenticatorV2>),
         Passkey(PasskeyAuthenticator),
     }
 
@@ -680,6 +695,9 @@ mod serialization {
                         ReadableUserSignatureRef::Multisig(multisig)
                     }
                     UserSignature::ZkLogin(zklogin) => ReadableUserSignatureRef::ZkLogin(zklogin),
+                    UserSignature::ZkLoginV2(zklogin) => {
+                        ReadableUserSignatureRef::ZkLoginV2(zklogin)
+                    }
                     UserSignature::Passkey(passkey) => ReadableUserSignatureRef::Passkey(passkey),
                     UserSignature::Simple(SimpleSignature::MlDsa65 {
                         signature,
@@ -695,6 +713,7 @@ mod serialization {
                     UserSignature::Simple(simple) => simple.serialize(serializer),
                     UserSignature::Multisig(multisig) => multisig.serialize(serializer),
                     UserSignature::ZkLogin(zklogin) => zklogin.serialize(serializer),
+                    UserSignature::ZkLoginV2(zklogin) => zklogin.serialize(serializer),
                     UserSignature::Passkey(passkey) => passkey.serialize(serializer),
                 }
             }
@@ -744,6 +763,7 @@ mod serialization {
                         }),
                         ReadableUserSignature::Multisig(multisig) => Self::Multisig(multisig),
                         ReadableUserSignature::ZkLogin(zklogin) => Self::ZkLogin(zklogin),
+                        ReadableUserSignature::ZkLoginV2(zklogin) => Self::ZkLoginV2(zklogin),
                         ReadableUserSignature::Passkey(passkey) => Self::Passkey(passkey),
                         ReadableUserSignature::MlDsa65 {
                             signature,
@@ -767,8 +787,12 @@ mod serialization {
     #[cfg(test)]
     mod test {
         use super::*;
+        use crate::CheckpointContents;
+        use crate::CheckpointTransactionInfo;
+        use crate::Digest;
         use base64ct::Base64;
         use base64ct::Encoding;
+
         use test_strategy::proptest;
 
         #[cfg(target_arch = "wasm32")]
@@ -879,20 +903,65 @@ mod serialization {
             }
         }
 
+        fn zklogin_v2_multisig_fixture() -> UserSignature {
+            use crate::MultisigAggregatedSignature;
+            use crate::MultisigCommittee;
+            use crate::MultisigMember;
+            use crate::MultisigMemberPublicKey;
+            use crate::MultisigMemberSignature;
+
+            let encoded = include_str!("fixtures/zklogin-v2-signature").trim();
+            let crate::UserSignature::ZkLoginV2(authenticator) =
+                crate::UserSignature::from_base64(encoded).unwrap()
+            else {
+                panic!("expected zkLogin v2");
+            };
+
+            let public_key = MultisigMemberPublicKey::ZkLoginV2(authenticator.public_identifier());
+            let authenticator_bytes = authenticator.to_bytes();
+            let signature = MultisigMemberSignature::ZkLoginV2(authenticator);
+            assert_eq!(bcs::to_bytes(&public_key).unwrap()[0], 6);
+            let mut expected_signature = vec![6];
+            bcs::serialize_into(&mut expected_signature, &authenticator_bytes).unwrap();
+            assert_eq!(bcs::to_bytes(&signature).unwrap(), expected_signature);
+
+            let committee = MultisigCommittee::new(vec![MultisigMember::new(public_key, 1)], 1);
+            assert!(committee.is_valid());
+            #[cfg(feature = "hash")]
+            assert_eq!(
+                committee.derive_address().to_string(),
+                "0xc20bbe4bc694ff8ee605e746440270b1f12120b90d2a06eb7d19b51b74840122",
+            );
+
+            let mut multisig = MultisigAggregatedSignature::new(committee, vec![signature], 1);
+            assert!(
+                multisig
+                    .try_with_legacy_bitmap([0].into_iter().collect())
+                    .is_err()
+            );
+            UserSignature::Multisig(multisig)
+        }
+
         #[test]
-        fn mutisig_with_zklogin() {
+        fn multisig_with_zklogin() {
             const FIXTURE: &str = "xwgDAQOWBwUDTDYyNzM5OTI5NDQyODI2NTYyNDE2NDMyNDk5Njc1NDY0MzY0MTU2ODM1MzgzMzAwNzMzMDkwMzgyOTUwOTAwMjA0MzcwMzI3MzQ0MTdNMTM5MjUxMzE5MTUzODM4NDMwOTkzODU1NTU2MjYyNzIwMzI5NjE5MjM3MjY1ODAyMjY2OTcwMTUzMTkxOTcxMzIxODkxMTg2MDUyNTcBMQMCTDc3MDQwMDc2MTQxMjAyNDQ0MjgyMDMyMzQwMzI3NzQ2ODkwODEwNzg2Mzg4NjkzMTcyNDM1NTEyNTMwMTA3MjYzMzg1MTA0MzYxMjdMNDczMzY5MTU2NjAwODE5MTIwNDAxMjcwNTc5OTA2MjI3NTk2MjY0NzMwMTUyNDU3MDIxMjM0MzczMjc1MTE3MTQyMjY2MzEzNTc1MgJMOTYzMjExNjUzNzQxMTQ3Mjk4MTQ2NDE0NzY0MDM5MzkxNzQxODQyMDI4NzgwOTUxODYyMTk5OTM0MjIwNjc2ODgzMjg0NzY5NTg5Nkw4NDM2Mjg3MTUwMzIxMjE2NTUwOTIxNTQ4ODg0MjI2MDM4MjczMTk0MjAyNDQwNTc0NzI5MDM4MTk2NDAxNDAzMDI0Mzg0MTEzODk4AgExATADTDUxNzIxODQyMDU0ODkxNDg4MzEwNTgxODkxNDIwNjI3Njc1NTM3MjMxMDkzNzIyMDk4NzI0NDAxMzA1MTg0MzYzODQxNzUxMjY1MjRMNTE1MTQzMjA2NjEzODc0NzIwOTEyMDY4NzUyMjIwODU1NDA0MTU2NDgyNzA4MDc5NzA1MDcxNjkyNzc2OTY0MzQ0NzQyMjEyMzI3MAExMXdpYVhOeklqb2lhSFIwY0hNNkx5OXBaQzUwZDJsMFkyZ3VkSFl2YjJGMWRHZ3lJaXcCMmV5SmhiR2NpT2lKU1V6STFOaUlzSW5SNWNDSTZJa3BYVkNJc0ltdHBaQ0k2SWpFaWZRTTIwNjg3NjQyNTE3NjMwNzMzMjczNjg3Nzk1NDc2MjQ3NDM3NzQzODM0NjAxMTAxNTY2Njg0OTY3OTY3NzA1ODA5OTg1MjQxMDY1NTM5CgAAAAAAAABhANFnRWP0VWDZA6kp8ltYtndCLMp70+CQMkW4CKPMOF5fGqTuUIKzqHJysBK8jS3rgHHBc5ZDqn0YUG0W2SH5gQC5xu4WMO8+cRFEpkjbBruyKE9ydM++5T/87lA8waSSAAgABAANfas1jI2tqk76AEmnWwdDZVWxCjaCGbtoD3BXE0nXdQEBAg4XzVk55GsZZkGWjNdZkQuiV34n+nP944dtub7FvOsrAQIDR/uvI/A4q8TDCKJxEXoqTP+u3bxf+Bx1F7xsdKfttDABAzwbaHR0cHM6Ly9pZC50d2l0Y2gudHYvb2F1dGgyLbzKbLI5Mq4c7y9X5gf73CthASNbTN9llO2Okr5TqEMBAQA=";
 
-            let bcs = Base64::decode_vec(FIXTURE).unwrap();
+            let v1_bytes = Base64::decode_vec(FIXTURE).unwrap();
+            let v2 = zklogin_v2_multisig_fixture();
+            let v2_bytes = bcs::to_bytes(&v2).unwrap();
 
-            let sig: UserSignature = bcs::from_bytes(&bcs).unwrap();
-            assert_eq!(SignatureScheme::Multisig, sig.scheme());
-            let bytes = bcs::to_bytes(&sig).unwrap();
-            assert_eq!(bcs, bytes);
+            for bytes in [v1_bytes, v2_bytes] {
+                let signature: UserSignature = bcs::from_bytes(&bytes).unwrap();
+                assert_eq!(signature.scheme(), SignatureScheme::Multisig);
+                assert_eq!(bcs::to_bytes(&signature).unwrap(), bytes);
 
-            let json = serde_json::to_string_pretty(&sig).unwrap();
-            println!("{json}");
-            assert_eq!(sig, serde_json::from_str(&json).unwrap());
+                let json = serde_json::to_string(&signature).unwrap();
+                assert_eq!(
+                    serde_json::from_str::<UserSignature>(&json).unwrap(),
+                    signature
+                );
+            }
+            assert_eq!(UserSignature::from_bytes(&v2.to_bytes()).unwrap(), v2);
         }
 
         #[test]
@@ -905,17 +974,60 @@ mod serialization {
                 "lgcFA0w2MjczOTkyOTQ0MjgyNjU2MjQxNjQzMjQ5OTY3NTQ2NDM2NDE1NjgzNTM4MzMwMDczMzA5MDM4Mjk1MDkwMDIwNDM3MDMyNzM0NDE3TTEzOTI1MTMxOTE1MzgzODQzMDk5Mzg1NTU1NjI2MjcyMDMyOTYxOTIzNzI2NTgwMjI2Njk3MDE1MzE5MTk3MTMyMTg5MTE4NjA1MjU3ATEDAkw3NzA0MDA3NjE0MTIwMjQ0NDI4MjAzMjM0MDMyNzc0Njg5MDgxMDc4NjM4ODY5MzE3MjQzNTUxMjUzMDEwNzI2MzM4NTEwNDM2MTI3TDQ3MzM2OTE1NjYwMDgxOTEyMDQwMTI3MDU3OTkwNjIyNzU5NjI2NDczMDE1MjQ1NzAyMTIzNDM3MzI3NTExNzE0MjI2NjMxMzU3NTICTDk2MzIxMTY1Mzc0MTE0NzI5ODE0NjQxNDc2NDAzOTM5MTc0MTg0MjAyODc4MDk1MTg2MjE5OTkzNDIyMDY3Njg4MzI4NDc2OTU4OTZMODQzNjI4NzE1MDMyMTIxNjU1MDkyMTU0ODg4NDIyNjAzODI3MzE5NDIwMjQ0MDU3NDcyOTAzODE5NjQwMTQwMzAyNDM4NDExMzg5OAIBMQEwA0w1MTcyMTg0MjA1NDg5MTQ4ODMxMDU4MTg5MTQyMDYyNzY3NTUzNzIzMTA5MzcyMjA5ODcyNDQwMTMwNTE4NDM2Mzg0MTc1MTI2NTI0TDUxNTE0MzIwNjYxMzg3NDcyMDkxMjA2ODc1MjIyMDg1NTQwNDE1NjQ4MjcwODA3OTcwNTA3MTY5Mjc3Njk2NDM0NDc0MjIxMjMyNzABMTF3aWFYTnpJam9pYUhSMGNITTZMeTlwWkM1MGQybDBZMmd1ZEhZdmIyRjFkR2d5SWl3AjJleUpoYkdjaU9pSlNVekkxTmlJc0luUjVjQ0k2SWtwWFZDSXNJbXRwWkNJNklqRWlmUU0yMDY4NzY0MjUxNzYzMDczMzI3MzY4Nzc5NTQ3NjI0NzQzNzc0MzgzNDYwMTEwMTU2NjY4NDk2Nzk2NzcwNTgwOTk4NTI0MTA2NTUzOQoAAAAAAAAAYQBn1v6x7RD9EyaiubLQ8qQkJSNI2Mr1GFHXZyOUJ+eCphFkwjYKBo44TMAbryd405BY+MHYTFLZOD06UTycKHgKucbuFjDvPnERRKZI2wa7sihPcnTPvuU//O5QPMGkkgA=",
             ];
 
-            for fixture in FIXTURES {
-                let bcs = Base64::decode_vec(fixture).unwrap();
+            let v2_fixture = include_str!("fixtures/zklogin-v2-signature").trim();
+            let v2_bytes = bcs::to_bytes(&Base64::decode_vec(v2_fixture).unwrap()).unwrap();
+            let fixtures = FIXTURES
+                .iter()
+                .map(|fixture| {
+                    (
+                        SignatureScheme::ZkLogin,
+                        Base64::decode_vec(fixture).unwrap(),
+                    )
+                })
+                .chain([(SignatureScheme::ZkLoginV2, v2_bytes)]);
 
-                let sig: UserSignature = bcs::from_bytes(&bcs).unwrap();
-                assert_eq!(SignatureScheme::ZkLogin, sig.scheme());
-                let bytes = bcs::to_bytes(&sig).unwrap();
-                assert_eq!(bcs, bytes);
+            for (scheme, bytes) in fixtures {
+                let signature: UserSignature = bcs::from_bytes(&bytes).unwrap();
+                assert_eq!(signature.scheme(), scheme);
+                assert_eq!(bcs::to_bytes(&signature).unwrap(), bytes);
 
-                let json = serde_json::to_string_pretty(&sig).unwrap();
-                println!("{json}");
-                assert_eq!(sig, serde_json::from_str(&json).unwrap());
+                if let UserSignature::ZkLoginV2(v2) = &signature {
+                    assert_eq!(signature.to_base64(), v2_fixture);
+                    assert_eq!(
+                        bcs::from_bytes::<ZkLoginAuthenticatorV2>(&bytes).unwrap(),
+                        **v2,
+                    );
+                    assert_eq!(v2.max_epoch, 10);
+                    let crate::VersionedZkLoginInputs::V2(inputs) = &v2.inputs;
+                    assert_eq!(inputs.iss(), "https://jwt-tester.mystenlabs.com");
+
+                    #[cfg(feature = "hash")]
+                    {
+                        let mut addresses = signature.derive_addresses();
+                        assert_eq!(
+                            addresses.next().unwrap().to_string(),
+                            "0xe707c321903df628ef59dd6e94ddf1cd06bad7900fe3ea3fcdde683ba207734d",
+                        );
+                        assert!(addresses.next().is_none());
+                    }
+                }
+
+                let json = serde_json::to_string(&signature).unwrap();
+                assert_eq!(
+                    serde_json::from_str::<UserSignature>(&json).unwrap(),
+                    signature
+                );
+
+                let contents = CheckpointContents::new_v2(vec![CheckpointTransactionInfo::new(
+                    Digest::ZERO,
+                    Digest::ZERO,
+                    vec![signature],
+                )]);
+                let bytes = bcs::to_bytes(&contents).unwrap();
+                assert_eq!(
+                    bcs::from_bytes::<CheckpointContents>(&bytes).unwrap(),
+                    contents
+                );
             }
         }
 

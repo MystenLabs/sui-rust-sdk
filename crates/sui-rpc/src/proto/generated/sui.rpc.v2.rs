@@ -7060,7 +7060,7 @@ pub struct UserSignature {
     /// The signature scheme of this signature.
     #[prost(enumeration = "SignatureScheme", optional, tag = "2")]
     pub scheme: ::core::option::Option<i32>,
-    #[prost(oneof = "user_signature::Signature", tags = "3, 4, 5, 6")]
+    #[prost(oneof = "user_signature::Signature", tags = "3, 4, 5, 6, 7")]
     pub signature: ::core::option::Option<user_signature::Signature>,
 }
 /// Nested message and enum types in `UserSignature`.
@@ -7080,6 +7080,9 @@ pub mod user_signature {
         /// The passkey authenticator if scheme is `PASSKEY`.
         #[prost(message, tag = "6")]
         Passkey(super::PasskeyAuthenticator),
+        /// The zkLogin V2 authenticator if scheme is `ZKLOGIN_V2`.
+        #[prost(message, tag = "7")]
+        ZkloginV2(super::ZkLoginAuthenticatorV2),
     }
 }
 /// Either an ed25519, secp256k1, secp256r1 or mldsa65 signature
@@ -7116,7 +7119,7 @@ pub struct MultisigMemberPublicKey {
     /// Public key bytes if scheme is ed25519 | secp256k1 | secp256r1 | passkey | mldsa65.
     #[prost(bytes = "bytes", optional, tag = "2")]
     pub public_key: ::core::option::Option<::prost::bytes::Bytes>,
-    /// A zklogin public identifier if scheme is zklogin.
+    /// A zkLogin public identifier for `ZKLOGIN` or `ZKLOGIN_V2`.
     #[prost(message, optional, tag = "3")]
     pub zklogin: ::core::option::Option<ZkLoginPublicIdentifier>,
 }
@@ -7180,6 +7183,9 @@ pub struct MultisigMemberSignature {
     /// The passkey authenticator if scheme is `PASSKEY`.
     #[prost(message, optional, tag = "4")]
     pub passkey: ::core::option::Option<PasskeyAuthenticator>,
+    /// The zkLogin V2 authenticator if scheme is `ZKLOGIN_V2`.
+    #[prost(message, optional, tag = "5")]
+    pub zklogin_v2: ::core::option::Option<ZkLoginAuthenticatorV2>,
 }
 /// A zklogin authenticator.
 #[non_exhaustive]
@@ -7201,6 +7207,26 @@ pub struct ZkLoginAuthenticator {
     #[prost(message, optional, tag = "5")]
     pub jwk_id: ::core::option::Option<JwkId>,
 }
+/// A zkLogin V2 authenticator.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ZkLoginAuthenticatorV2 {
+    /// Proof and inputs required for verification.
+    #[prost(message, optional, tag = "1")]
+    pub inputs: ::core::option::Option<ZkLoginInputsV2>,
+    /// Maximum epoch for which the proof is valid.
+    #[prost(uint64, optional, tag = "2")]
+    pub max_epoch: ::core::option::Option<u64>,
+    /// User signature with the public key attested to by the proof.
+    #[prost(message, optional, tag = "3")]
+    pub signature: ::core::option::Option<SimpleSignature>,
+    /// The authenticator's public identifier.
+    #[prost(message, optional, tag = "4")]
+    pub public_identifier: ::core::option::Option<ZkLoginPublicIdentifier>,
+    /// The ID of the JWK used to authorize this authenticator.
+    #[prost(message, optional, tag = "5")]
+    pub jwk_id: ::core::option::Option<JwkId>,
+}
 /// A zklogin groth16 proof and the required inputs to perform proof verification.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
@@ -7214,6 +7240,21 @@ pub struct ZkLoginInputs {
     /// base10 encoded Bn254FieldElement
     #[prost(string, optional, tag = "4")]
     pub address_seed: ::core::option::Option<::prost::alloc::string::String>,
+}
+/// Proof and inputs for the zkLogin V2 circuit.
+#[non_exhaustive]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ZkLoginInputsV2 {
+    #[prost(message, optional, tag = "1")]
+    pub proof_points: ::core::option::Option<ZkLoginProof>,
+    /// The decoded extended issuer claim.
+    #[prost(string, optional, tag = "2")]
+    pub ext_iss: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(string, optional, tag = "3")]
+    pub header_base64: ::core::option::Option<::prost::alloc::string::String>,
+    /// The full 32-byte address seed.
+    #[prost(bytes = "bytes", optional, tag = "4")]
+    pub address_seed: ::core::option::Option<::prost::bytes::Bytes>,
 }
 /// A zklogin groth16 proof.
 #[non_exhaustive]
@@ -7355,6 +7396,7 @@ pub enum SignatureScheme {
     Zklogin = 5,
     Passkey = 6,
     Mldsa65 = 7,
+    ZkloginV2 = 8,
 }
 impl SignatureScheme {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -7371,6 +7413,7 @@ impl SignatureScheme {
             Self::Zklogin => "ZKLOGIN",
             Self::Passkey => "PASSKEY",
             Self::Mldsa65 => "MLDSA65",
+            Self::ZkloginV2 => "ZKLOGIN_V2",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -7384,6 +7427,7 @@ impl SignatureScheme {
             "ZKLOGIN" => Some(Self::Zklogin),
             "PASSKEY" => Some(Self::Passkey),
             "MLDSA65" => Some(Self::Mldsa65),
+            "ZKLOGIN_V2" => Some(Self::ZkloginV2),
             _ => None,
         }
     }

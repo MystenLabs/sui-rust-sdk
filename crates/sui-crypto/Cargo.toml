@@ -44,6 +44,7 @@ zklogin = [
     "dep:serde",
     "dep:serde_derive",
     "dep:serde_json",
+    "dep:sha2",
     "signature/std",
 ]
 pem = [

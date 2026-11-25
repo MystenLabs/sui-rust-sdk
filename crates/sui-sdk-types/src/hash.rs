@@ -158,6 +158,17 @@ impl crate::Secp256r1PublicKey {
     }
 }
 
+fn write_zklogin_identifier(
+    hasher: &mut Hasher,
+    scheme: crate::SignatureScheme,
+    issuer: &str,
+    address_seed: &[u8],
+) {
+    hasher.update([scheme.to_u8(), issuer.len() as u8]);
+    hasher.update(issuer);
+    hasher.update(address_seed);
+}
+
 impl crate::ZkLoginPublicIdentifier {
     /// Derive an `Address` from this `ZkLoginPublicIdentifier` by hashing the byte length of the
     /// `iss` followed by the `iss` bytes themselves and the full 32 byte `address_seed` value, all
@@ -172,10 +183,12 @@ impl crate::ZkLoginPublicIdentifier {
     }
 
     fn write_into_hasher_padded(&self, hasher: &mut Hasher) {
-        hasher.update([self.scheme().to_u8()]);
-        hasher.update([self.iss().len() as u8]); // TODO enforce iss is less than 255 bytes
-        hasher.update(self.iss());
-        hasher.update(self.address_seed().padded());
+        write_zklogin_identifier(
+            hasher,
+            self.scheme(),
+            self.iss(),
+            self.address_seed().padded(),
+        );
     }
 
     /// Derive an `Address` from this `ZkLoginPublicIdentifier` by hashing the byte length of the
@@ -185,10 +198,12 @@ impl crate::ZkLoginPublicIdentifier {
     /// `hash( 0x05 || iss_bytes_len || iss_bytes || unpadded_32_byte_address_seed )`
     pub fn derive_address_unpadded(&self) -> Address {
         let mut hasher = Hasher::new();
-        hasher.update([self.scheme().to_u8()]);
-        hasher.update([self.iss().len() as u8]); // TODO enforce iss is less than 255 bytes
-        hasher.update(self.iss());
-        hasher.update(self.address_seed().unpadded());
+        write_zklogin_identifier(
+            &mut hasher,
+            self.scheme(),
+            self.iss(),
+            self.address_seed().unpadded(),
+        );
         let digest = hasher.finalize();
         Address::new(digest.into_inner())
     }
@@ -230,6 +245,20 @@ impl crate::ZkLoginAuthenticator {
 
     pub fn derive_address(&self) -> impl ExactSizeIterator<Item = Address> {
         self.inputs.public_identifier().derive_address()
+    }
+}
+
+impl crate::ZkLoginAuthenticatorV2 {
+    pub fn derive_address(&self) -> Address {
+        let crate::VersionedZkLoginInputs::V2(inputs) = &self.inputs;
+        let mut hasher = Hasher::new();
+        write_zklogin_identifier(
+            &mut hasher,
+            self.scheme(),
+            inputs.iss(),
+            inputs.address_seed(),
+        );
+        Address::new(hasher.finalize().into_inner())
     }
 }
 
@@ -308,6 +337,12 @@ impl crate::MultisigCommittee {
                 Secp256k1(p) => p.write_into_hasher(&mut hasher),
                 Secp256r1(p) => p.write_into_hasher(&mut hasher),
                 ZkLogin(p) => p.write_into_hasher_padded(&mut hasher),
+                ZkLoginV2(p) => write_zklogin_identifier(
+                    &mut hasher,
+                    crate::SignatureScheme::ZkLoginV2,
+                    p.iss(),
+                    p.address_seed().padded(),
+                ),
                 Passkey(p) => p.write_into_hasher(&mut hasher),
                 MlDsa65(p) => p.write_into_hasher(&mut hasher),
             }
@@ -353,6 +388,7 @@ impl crate::UserSignature {
             crate::UserSignature::ZkLogin(zk) => {
                 zk.inputs.public_identifier().internal_derive_addresses()
             }
+            crate::UserSignature::ZkLoginV2(zk) => DerivedAddressIter::new(zk.derive_address()),
             crate::UserSignature::Passkey(passkey) => {
                 DerivedAddressIter::new(passkey.derive_address())
             }

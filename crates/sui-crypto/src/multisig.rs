@@ -58,27 +58,32 @@ impl MultisigVerifier {
                 .verify(message, r1_signature),
 
             #[cfg(not(feature = "zklogin"))]
-            (MultisigMemberPublicKey::ZkLogin(_), MultisigMemberSignature::ZkLogin(_)) => Err(
-                SignatureError::from_source("support for zklogin is not enabled"),
-            ),
+            (MultisigMemberPublicKey::ZkLogin(_), MultisigMemberSignature::ZkLogin(_))
+            | (MultisigMemberPublicKey::ZkLoginV2(_), MultisigMemberSignature::ZkLoginV2(_)) => {
+                Err(SignatureError::from_source(
+                    "support for zklogin is not enabled",
+                ))
+            }
             #[cfg(feature = "zklogin")]
             (
                 MultisigMemberPublicKey::ZkLogin(zklogin_identifier),
                 MultisigMemberSignature::ZkLogin(zklogin_authenticator),
-            ) => {
-                let zklogin_verifier = self
-                    .zklogin_verifier()
-                    .ok_or_else(|| SignatureError::from_source("no zklogin verifier provided"))?;
-
-                // verify that the member identifier and the authenticator match
-                if zklogin_identifier != zklogin_authenticator.inputs.public_identifier() {
-                    return Err(SignatureError::from_source(
-                        "member zklogin identifier does not match signature",
-                    ));
-                }
-
-                zklogin_verifier.verify(message, zklogin_authenticator.as_ref())
-            }
+            ) => self
+                .zklogin_member_verifier(
+                    zklogin_identifier,
+                    zklogin_authenticator.inputs.public_identifier(),
+                )?
+                .verify(message, zklogin_authenticator.as_ref()),
+            #[cfg(feature = "zklogin")]
+            (
+                MultisigMemberPublicKey::ZkLoginV2(zklogin_identifier),
+                MultisigMemberSignature::ZkLoginV2(zklogin_authenticator),
+            ) => self
+                .zklogin_member_verifier(
+                    zklogin_identifier,
+                    &zklogin_authenticator.public_identifier(),
+                )?
+                .verify(message, zklogin_authenticator.as_ref()),
 
             #[cfg(not(feature = "passkey"))]
             (MultisigMemberPublicKey::Passkey(_), MultisigMemberSignature::Passkey(_)) => Err(
@@ -129,6 +134,22 @@ impl MultisigVerifier {
 
     pub fn zklogin_verifier_mut(&mut self) -> Option<&mut crate::zklogin::ZkloginVerifier> {
         self.zklogin_verifier.as_mut()
+    }
+
+    fn zklogin_member_verifier(
+        &self,
+        member: &sui_sdk_types::ZkLoginPublicIdentifier,
+        authenticator: &sui_sdk_types::ZkLoginPublicIdentifier,
+    ) -> Result<&crate::zklogin::ZkloginVerifier, SignatureError> {
+        let verifier = self
+            .zklogin_verifier()
+            .ok_or_else(|| SignatureError::from_source("no zklogin verifier provided"))?;
+        if member != authenticator {
+            return Err(SignatureError::from_source(
+                "member zklogin identifier does not match signature",
+            ));
+        }
+        Ok(verifier)
     }
 }
 
@@ -257,16 +278,16 @@ impl Verifier<UserSignature> for UserSignatureVerifier {
             }
             UserSignature::Multisig(multisig) => self.inner.verify(message, multisig),
             #[cfg(not(feature = "zklogin"))]
-            UserSignature::ZkLogin(_) => Err(SignatureError::from_source(
-                "support for zklogin is not enabled",
-            )),
+            UserSignature::ZkLogin(_) | UserSignature::ZkLoginV2(_) => Err(
+                SignatureError::from_source("support for zklogin is not enabled"),
+            ),
             #[cfg(feature = "zklogin")]
-            UserSignature::ZkLogin(zklogin_authenticator) => {
+            UserSignature::ZkLogin(_) | UserSignature::ZkLoginV2(_) => {
                 let zklogin_verifier = self
                     .zklogin_verifier()
                     .ok_or_else(|| SignatureError::from_source("no zklogin verifier provided"))?;
 
-                zklogin_verifier.verify(message, zklogin_authenticator.as_ref())
+                zklogin_verifier.verify(message, signature)
             }
             #[cfg(not(feature = "passkey"))]
             UserSignature::Passkey(_) => Err(SignatureError::from_source(
@@ -418,9 +439,9 @@ fn multisig_pubkey_and_signature_from_user_signature(
         )),
 
         #[cfg(not(feature = "zklogin"))]
-        UserSignature::ZkLogin(_) => Err(SignatureError::from_source(
-            "support for zklogin is not enabled",
-        )),
+        UserSignature::ZkLogin(_) | UserSignature::ZkLoginV2(_) => Err(
+            SignatureError::from_source("support for zklogin is not enabled"),
+        ),
         #[cfg(feature = "zklogin")]
         UserSignature::ZkLogin(zklogin_authenticator) => {
             let zklogin_identifier = zklogin_authenticator.inputs.public_identifier().to_owned();
@@ -429,6 +450,11 @@ fn multisig_pubkey_and_signature_from_user_signature(
                 MultisigMemberSignature::ZkLogin(zklogin_authenticator),
             ))
         }
+        #[cfg(feature = "zklogin")]
+        UserSignature::ZkLoginV2(zklogin_authenticator) => Ok((
+            MultisigMemberPublicKey::ZkLoginV2(zklogin_authenticator.public_identifier()),
+            MultisigMemberSignature::ZkLoginV2(zklogin_authenticator),
+        )),
 
         #[cfg(not(feature = "passkey"))]
         UserSignature::Passkey(_) => Err(SignatureError::from_source(

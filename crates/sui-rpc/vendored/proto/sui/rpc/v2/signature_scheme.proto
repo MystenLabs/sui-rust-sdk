@@ -20,4 +20,5 @@ enum SignatureScheme {
   ZKLOGIN = 5;
   PASSKEY = 6;
   MLDSA65 = 7;
+  ZKLOGIN_V2 = 8;
 }
