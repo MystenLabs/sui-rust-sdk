@@ -45,9 +45,12 @@ pub use zklogin::CircomG2;
 pub use zklogin::InvalidZkLoginAuthenticatorError;
 pub use zklogin::Jwk;
 pub use zklogin::JwkId;
+pub use zklogin::VersionedZkLoginInputs;
 pub use zklogin::ZkLoginAuthenticator;
+pub use zklogin::ZkLoginAuthenticatorV2;
 pub use zklogin::ZkLoginClaim;
 pub use zklogin::ZkLoginInputs;
+pub use zklogin::ZkLoginInputsV2;
 pub use zklogin::ZkLoginProof;
 pub use zklogin::ZkLoginPublicIdentifier;
 

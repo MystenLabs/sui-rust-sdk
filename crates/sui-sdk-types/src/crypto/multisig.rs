@@ -10,6 +10,7 @@ use super::Secp256r1PublicKey;
 use super::Secp256r1Signature;
 use super::SignatureScheme;
 use super::zklogin::ZkLoginAuthenticator;
+use super::zklogin::ZkLoginAuthenticatorV2;
 use super::zklogin::ZkLoginPublicIdentifier;
 
 pub type WeightUnit = u8;
@@ -30,12 +31,14 @@ const MAX_COMMITTEE_SIZE: usize = 10;
 /// multisig-member-public-key = ed25519-multisig-member-public-key /
 ///                              secp256k1-multisig-member-public-key /
 ///                              secp256r1-multisig-member-public-key /
-///                              zklogin-multisig-member-public-key
+///                              zklogin-multisig-member-public-key /
+///                              zklogin-v2-multisig-member-public-key
 ///
 /// ed25519-multisig-member-public-key   = %x00 ed25519-public-key
 /// secp256k1-multisig-member-public-key = %x01 secp256k1-public-key
 /// secp256r1-multisig-member-public-key = %x02 secp256r1-public-key
 /// zklogin-multisig-member-public-key   = %x03 zklogin-public-identifier
+/// zklogin-v2-multisig-member-public-key = %x06 zklogin-public-identifier
 /// ```
 ///
 /// There is also a legacy encoding for this type defined as:
@@ -56,6 +59,7 @@ pub enum MultisigMemberPublicKey {
     Secp256k1(Secp256k1PublicKey),
     Secp256r1(Secp256r1PublicKey),
     ZkLogin(ZkLoginPublicIdentifier),
+    ZkLoginV2(ZkLoginPublicIdentifier),
     Passkey(PasskeyPublicKey),
     MlDsa65(Box<MlDsa65PublicKey>),
 }
@@ -380,7 +384,7 @@ fn validate_legacy_bitmap(
             MultisigMemberPublicKey::Ed25519(_)
             | MultisigMemberPublicKey::Secp256k1(_)
             | MultisigMemberPublicKey::Secp256r1(_) => continue,
-            MultisigMemberPublicKey::ZkLogin(_) => {
+            MultisigMemberPublicKey::ZkLogin(_) | MultisigMemberPublicKey::ZkLoginV2(_) => {
                 "zklogin member is not representable in legacy multisig"
             }
             MultisigMemberPublicKey::Passkey(_) => {
@@ -419,12 +423,14 @@ impl std::error::Error for InvalidLegacyBitmapError {}
 /// multisig-member-signature = ed25519-multisig-member-signature /
 ///                             secp256k1-multisig-member-signature /
 ///                             secp256r1-multisig-member-signature /
-///                             zklogin-multisig-member-signature
+///                             zklogin-multisig-member-signature /
+///                             zklogin-v2-multisig-member-signature
 ///
 /// ed25519-multisig-member-signature   = %x00 ed25519-signature
 /// secp256k1-multisig-member-signature = %x01 secp256k1-signature
 /// secp256r1-multisig-member-signature = %x02 secp256r1-signature
 /// zklogin-multisig-member-signature   = %x03 zklogin-authenticator
+/// zklogin-v2-multisig-member-signature = %x06 bytes ; length-prefixed 0x08 authenticator
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
@@ -434,6 +440,7 @@ pub enum MultisigMemberSignature {
     Secp256k1(Secp256k1Signature),
     Secp256r1(Secp256r1Signature),
     ZkLogin(Box<ZkLoginAuthenticator>),
+    ZkLoginV2(Box<ZkLoginAuthenticatorV2>),
     Passkey(PasskeyAuthenticator),
     MlDsa65(Box<MlDsa65Signature>),
 }
@@ -489,9 +496,9 @@ mod serialization {
                     buf[1..].copy_from_slice(public_key.as_ref());
                     Base64Array34::serialize_as(&buf, serializer)
                 }
-                MultisigMemberPublicKey::ZkLogin(_) => Err(serde::ser::Error::custom(
-                    "zklogin not supported in legacy multisig",
-                )),
+                MultisigMemberPublicKey::ZkLogin(_) | MultisigMemberPublicKey::ZkLoginV2(_) => Err(
+                    serde::ser::Error::custom("zklogin not supported in legacy multisig"),
+                ),
                 MultisigMemberPublicKey::Passkey(_) => Err(serde::ser::Error::custom(
                     "passkey not supported in legacy multisig",
                 )),
@@ -535,6 +542,7 @@ mod serialization {
                 SignatureScheme::Multisig
                 | SignatureScheme::Bls12381
                 | SignatureScheme::ZkLogin
+                | SignatureScheme::ZkLoginV2
                 | SignatureScheme::Passkey
                 | SignatureScheme::MlDsa65 => {
                     Err(serde::de::Error::custom("invalid public key type"))
@@ -772,6 +780,8 @@ mod serialization {
         ZkLogin(ZkLoginPublicIdentifier),
         Passkey(PasskeyPublicKey),
         MlDsa65(Box<MlDsa65PublicKey>),
+        // BCS uses declaration order as the variant index.
+        ZkLoginV2(ZkLoginPublicIdentifier),
     }
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
@@ -782,6 +792,7 @@ mod serialization {
         Secp256k1 { public_key: Secp256k1PublicKey },
         Secp256r1 { public_key: Secp256r1PublicKey },
         ZkLogin(ZkLoginPublicIdentifier),
+        ZkLoginV2(ZkLoginPublicIdentifier),
         Passkey { public_key: PasskeyPublicKey },
         MlDsa65 { public_key: Box<MlDsa65PublicKey> },
     }
@@ -811,6 +822,9 @@ mod serialization {
                     MultisigMemberPublicKey::ZkLogin(public_id) => {
                         ReadableMemberPublicKey::ZkLogin(public_id.clone())
                     }
+                    MultisigMemberPublicKey::ZkLoginV2(public_id) => {
+                        ReadableMemberPublicKey::ZkLoginV2(public_id.clone())
+                    }
                     MultisigMemberPublicKey::Passkey(public_key) => {
                         ReadableMemberPublicKey::Passkey {
                             public_key: *public_key,
@@ -836,6 +850,9 @@ mod serialization {
                     }
                     MultisigMemberPublicKey::ZkLogin(public_id) => {
                         MemberPublicKey::ZkLogin(public_id.clone())
+                    }
+                    MultisigMemberPublicKey::ZkLoginV2(public_id) => {
+                        MemberPublicKey::ZkLoginV2(public_id.clone())
                     }
                     MultisigMemberPublicKey::Passkey(public_key) => {
                         MemberPublicKey::Passkey(*public_key)
@@ -865,6 +882,7 @@ mod serialization {
                         Self::Secp256r1(public_key)
                     }
                     ReadableMemberPublicKey::ZkLogin(public_id) => Self::ZkLogin(public_id),
+                    ReadableMemberPublicKey::ZkLoginV2(public_id) => Self::ZkLoginV2(public_id),
                     ReadableMemberPublicKey::Passkey { public_key } => Self::Passkey(public_key),
                     ReadableMemberPublicKey::MlDsa65 { public_key } => Self::MlDsa65(public_key),
                 })
@@ -875,6 +893,7 @@ mod serialization {
                     MemberPublicKey::Secp256k1(public_key) => Self::Secp256k1(public_key),
                     MemberPublicKey::Secp256r1(public_key) => Self::Secp256r1(public_key),
                     MemberPublicKey::ZkLogin(public_id) => Self::ZkLogin(public_id),
+                    MemberPublicKey::ZkLoginV2(public_id) => Self::ZkLoginV2(public_id),
                     MemberPublicKey::Passkey(public_key) => Self::Passkey(public_key),
                     MemberPublicKey::MlDsa65(public_key) => Self::MlDsa65(public_key),
                 })
@@ -890,6 +909,8 @@ mod serialization {
         ZkLogin(Box<ZkLoginAuthenticator>),
         Passkey(PasskeyAuthenticator),
         MlDsa65(Box<MlDsa65Signature>),
+        // BCS uses declaration order as the variant index.
+        ZkLoginV2(Box<ZkLoginAuthenticatorV2>),
     }
 
     #[derive(serde_derive::Serialize, serde_derive::Deserialize)]
@@ -900,6 +921,7 @@ mod serialization {
         Secp256k1 { signature: Secp256k1Signature },
         Secp256r1 { signature: Secp256r1Signature },
         ZkLogin(Box<ZkLoginAuthenticator>),
+        ZkLoginV2(Box<ZkLoginAuthenticatorV2>),
         Passkey(PasskeyAuthenticator),
         MlDsa65 { signature: Box<MlDsa65Signature> },
     }
@@ -929,6 +951,9 @@ mod serialization {
                     MultisigMemberSignature::ZkLogin(authenticator) => {
                         ReadableMemberSignature::ZkLogin(authenticator.clone())
                     }
+                    MultisigMemberSignature::ZkLoginV2(authenticator) => {
+                        ReadableMemberSignature::ZkLoginV2(authenticator.clone())
+                    }
                     MultisigMemberSignature::Passkey(authenticator) => {
                         ReadableMemberSignature::Passkey(authenticator.clone())
                     }
@@ -952,6 +977,9 @@ mod serialization {
                     }
                     MultisigMemberSignature::ZkLogin(authenticator) => {
                         MemberSignature::ZkLogin(authenticator.clone())
+                    }
+                    MultisigMemberSignature::ZkLoginV2(authenticator) => {
+                        MemberSignature::ZkLoginV2(authenticator.clone())
                     }
                     MultisigMemberSignature::Passkey(authenticator) => {
                         MemberSignature::Passkey(authenticator.clone())
@@ -977,6 +1005,9 @@ mod serialization {
                     ReadableMemberSignature::Secp256k1 { signature } => Self::Secp256k1(signature),
                     ReadableMemberSignature::Secp256r1 { signature } => Self::Secp256r1(signature),
                     ReadableMemberSignature::ZkLogin(authenticator) => Self::ZkLogin(authenticator),
+                    ReadableMemberSignature::ZkLoginV2(authenticator) => {
+                        Self::ZkLoginV2(authenticator)
+                    }
                     ReadableMemberSignature::Passkey(authenticator) => Self::Passkey(authenticator),
                     ReadableMemberSignature::MlDsa65 { signature } => Self::MlDsa65(signature),
                 })
@@ -987,6 +1018,7 @@ mod serialization {
                     MemberSignature::Secp256k1(signature) => Self::Secp256k1(signature),
                     MemberSignature::Secp256r1(signature) => Self::Secp256r1(signature),
                     MemberSignature::ZkLogin(authenticator) => Self::ZkLogin(authenticator),
+                    MemberSignature::ZkLoginV2(authenticator) => Self::ZkLoginV2(authenticator),
                     MemberSignature::Passkey(authenticator) => Self::Passkey(authenticator),
                     MemberSignature::MlDsa65(signature) => Self::MlDsa65(signature),
                 })

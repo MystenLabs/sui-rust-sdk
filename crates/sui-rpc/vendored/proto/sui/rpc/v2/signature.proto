@@ -32,6 +32,9 @@ message UserSignature {
 
     // The passkey authenticator if scheme is `PASSKEY`.
     PasskeyAuthenticator passkey = 6;
+
+    // The zkLogin V2 authenticator if scheme is `ZKLOGIN_V2`.
+    ZkLoginAuthenticatorV2 zklogin_v2 = 7;
   }
 }
 
@@ -62,7 +65,7 @@ message MultisigMemberPublicKey {
   // Public key bytes if scheme is ed25519 | secp256k1 | secp256r1 | passkey | mldsa65.
   optional bytes public_key = 2;
 
-  // A zklogin public identifier if scheme is zklogin.
+  // A zkLogin public identifier for `ZKLOGIN` or `ZKLOGIN_V2`.
   optional ZkLoginPublicIdentifier zklogin = 3;
 }
 
@@ -113,6 +116,9 @@ message MultisigMemberSignature {
 
   // The passkey authenticator if scheme is `PASSKEY`.
   optional PasskeyAuthenticator passkey = 4;
+
+  // The zkLogin V2 authenticator if scheme is `ZKLOGIN_V2`.
+  optional ZkLoginAuthenticatorV2 zklogin_v2 = 5;
 }
 
 // A zklogin authenticator.
@@ -130,6 +136,20 @@ message ZkLoginAuthenticator {
   optional JwkId jwk_id = 5;
 }
 
+// A zkLogin V2 authenticator.
+message ZkLoginAuthenticatorV2 {
+  // Proof and inputs required for verification.
+  optional ZkLoginInputsV2 inputs = 1;
+  // Maximum epoch for which the proof is valid.
+  optional uint64 max_epoch = 2;
+  // User signature with the public key attested to by the proof.
+  optional SimpleSignature signature = 3;
+  // The authenticator's public identifier.
+  optional ZkLoginPublicIdentifier public_identifier = 4;
+  // The ID of the JWK used to authorize this authenticator.
+  optional JwkId jwk_id = 5;
+}
+
 // A zklogin groth16 proof and the required inputs to perform proof verification.
 message ZkLoginInputs {
   optional ZkLoginProof proof_points = 1;
@@ -137,6 +157,16 @@ message ZkLoginInputs {
   optional string header_base64 = 3;
   // base10 encoded Bn254FieldElement
   optional string address_seed = 4;
+}
+
+// Proof and inputs for the zkLogin V2 circuit.
+message ZkLoginInputsV2 {
+  optional ZkLoginProof proof_points = 1;
+  // The decoded extended issuer claim.
+  optional string ext_iss = 2;
+  optional string header_base64 = 3;
+  // The full 32-byte address seed.
+  optional bytes address_seed = 4;
 }
 
 // A zklogin groth16 proof.

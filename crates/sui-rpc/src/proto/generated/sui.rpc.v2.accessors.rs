@@ -13694,6 +13694,7 @@ mod _accessor_impls {
                 signature: None,
                 zklogin: None,
                 passkey: None,
+                zklogin_v2: None,
             }
         }
         #[doc(hidden)]
@@ -13784,6 +13785,45 @@ mod _accessor_impls {
             field: T,
         ) -> Self {
             self.set_passkey(field.into());
+            self
+        }
+        ///Returns the value of `zklogin_v2`, or the default value if `zklogin_v2` is unset.
+        pub fn zklogin_v2(&self) -> &super::ZkLoginAuthenticatorV2 {
+            self.zklogin_v2
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| {
+                    super::ZkLoginAuthenticatorV2::default_instance() as _
+                })
+        }
+        ///If `zklogin_v2` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn zklogin_v2_opt_mut(
+            &mut self,
+        ) -> Option<&mut super::ZkLoginAuthenticatorV2> {
+            self.zklogin_v2.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `zklogin_v2`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn zklogin_v2_mut(&mut self) -> &mut super::ZkLoginAuthenticatorV2 {
+            self.zklogin_v2.get_or_insert_default()
+        }
+        ///If `zklogin_v2` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn zklogin_v2_opt(&self) -> Option<&super::ZkLoginAuthenticatorV2> {
+            self.zklogin_v2.as_ref().map(|field| field as _)
+        }
+        ///Sets `zklogin_v2` with the provided value.
+        pub fn set_zklogin_v2<T: Into<super::ZkLoginAuthenticatorV2>>(
+            &mut self,
+            field: T,
+        ) {
+            self.zklogin_v2 = Some(field.into().into());
+        }
+        ///Sets `zklogin_v2` with the provided value.
+        pub fn with_zklogin_v2<T: Into<super::ZkLoginAuthenticatorV2>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_zklogin_v2(field.into());
             self
         }
     }
@@ -20841,6 +20881,70 @@ mod _accessor_impls {
             self.set_passkey(field.into());
             self
         }
+        ///Returns the value of `zklogin_v2`, or the default value if `zklogin_v2` is unset.
+        pub fn zklogin_v2(&self) -> &super::ZkLoginAuthenticatorV2 {
+            if let Some(super::user_signature::Signature::ZkloginV2(field)) = &self
+                .signature
+            {
+                field as _
+            } else {
+                super::ZkLoginAuthenticatorV2::default_instance() as _
+            }
+        }
+        ///If `zklogin_v2` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn zklogin_v2_opt(&self) -> Option<&super::ZkLoginAuthenticatorV2> {
+            if let Some(super::user_signature::Signature::ZkloginV2(field)) = &self
+                .signature
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///If `zklogin_v2` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn zklogin_v2_opt_mut(
+            &mut self,
+        ) -> Option<&mut super::ZkLoginAuthenticatorV2> {
+            if let Some(super::user_signature::Signature::ZkloginV2(field)) = &mut self
+                .signature
+            {
+                Some(field as _)
+            } else {
+                None
+            }
+        }
+        ///Returns a mutable reference to `zklogin_v2`.
+        ///If the field is unset, it is first initialized with the default value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn zklogin_v2_mut(&mut self) -> &mut super::ZkLoginAuthenticatorV2 {
+            if self.zklogin_v2_opt_mut().is_none() {
+                self.signature = Some(
+                    super::user_signature::Signature::ZkloginV2(
+                        super::ZkLoginAuthenticatorV2::default(),
+                    ),
+                );
+            }
+            self.zklogin_v2_opt_mut().unwrap()
+        }
+        ///Sets `zklogin_v2` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn set_zklogin_v2<T: Into<super::ZkLoginAuthenticatorV2>>(
+            &mut self,
+            field: T,
+        ) {
+            self.signature = Some(
+                super::user_signature::Signature::ZkloginV2(field.into().into()),
+            );
+        }
+        ///Sets `zklogin_v2` with the provided value.
+        ///If any other oneof field in the same oneof is set, it will be cleared.
+        pub fn with_zklogin_v2<T: Into<super::ZkLoginAuthenticatorV2>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_zklogin_v2(field.into());
+            self
+        }
     }
     impl super::Validator {
         pub const fn const_default() -> Self {
@@ -22756,6 +22860,173 @@ mod _accessor_impls {
             self
         }
     }
+    impl super::ZkLoginAuthenticatorV2 {
+        pub const fn const_default() -> Self {
+            Self {
+                inputs: None,
+                max_epoch: None,
+                signature: None,
+                public_identifier: None,
+                jwk_id: None,
+            }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::ZkLoginAuthenticatorV2 = super::ZkLoginAuthenticatorV2::const_default();
+            &DEFAULT
+        }
+        ///Returns the value of `inputs`, or the default value if `inputs` is unset.
+        pub fn inputs(&self) -> &super::ZkLoginInputsV2 {
+            self.inputs
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::ZkLoginInputsV2::default_instance() as _)
+        }
+        ///If `inputs` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn inputs_opt_mut(&mut self) -> Option<&mut super::ZkLoginInputsV2> {
+            self.inputs.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `inputs`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn inputs_mut(&mut self) -> &mut super::ZkLoginInputsV2 {
+            self.inputs.get_or_insert_default()
+        }
+        ///If `inputs` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn inputs_opt(&self) -> Option<&super::ZkLoginInputsV2> {
+            self.inputs.as_ref().map(|field| field as _)
+        }
+        ///Sets `inputs` with the provided value.
+        pub fn set_inputs<T: Into<super::ZkLoginInputsV2>>(&mut self, field: T) {
+            self.inputs = Some(field.into().into());
+        }
+        ///Sets `inputs` with the provided value.
+        pub fn with_inputs<T: Into<super::ZkLoginInputsV2>>(mut self, field: T) -> Self {
+            self.set_inputs(field.into());
+            self
+        }
+        ///If `max_epoch` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn max_epoch_opt_mut(&mut self) -> Option<&mut u64> {
+            self.max_epoch.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `max_epoch`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn max_epoch_mut(&mut self) -> &mut u64 {
+            self.max_epoch.get_or_insert_default()
+        }
+        ///If `max_epoch` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn max_epoch_opt(&self) -> Option<u64> {
+            self.max_epoch.as_ref().map(|field| *field)
+        }
+        ///Sets `max_epoch` with the provided value.
+        pub fn set_max_epoch(&mut self, field: u64) {
+            self.max_epoch = Some(field);
+        }
+        ///Sets `max_epoch` with the provided value.
+        pub fn with_max_epoch(mut self, field: u64) -> Self {
+            self.set_max_epoch(field);
+            self
+        }
+        ///Returns the value of `signature`, or the default value if `signature` is unset.
+        pub fn signature(&self) -> &super::SimpleSignature {
+            self.signature
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::SimpleSignature::default_instance() as _)
+        }
+        ///If `signature` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn signature_opt_mut(&mut self) -> Option<&mut super::SimpleSignature> {
+            self.signature.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `signature`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn signature_mut(&mut self) -> &mut super::SimpleSignature {
+            self.signature.get_or_insert_default()
+        }
+        ///If `signature` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn signature_opt(&self) -> Option<&super::SimpleSignature> {
+            self.signature.as_ref().map(|field| field as _)
+        }
+        ///Sets `signature` with the provided value.
+        pub fn set_signature<T: Into<super::SimpleSignature>>(&mut self, field: T) {
+            self.signature = Some(field.into().into());
+        }
+        ///Sets `signature` with the provided value.
+        pub fn with_signature<T: Into<super::SimpleSignature>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_signature(field.into());
+            self
+        }
+        ///Returns the value of `public_identifier`, or the default value if `public_identifier` is unset.
+        pub fn public_identifier(&self) -> &super::ZkLoginPublicIdentifier {
+            self.public_identifier
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| {
+                    super::ZkLoginPublicIdentifier::default_instance() as _
+                })
+        }
+        ///If `public_identifier` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn public_identifier_opt_mut(
+            &mut self,
+        ) -> Option<&mut super::ZkLoginPublicIdentifier> {
+            self.public_identifier.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `public_identifier`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn public_identifier_mut(&mut self) -> &mut super::ZkLoginPublicIdentifier {
+            self.public_identifier.get_or_insert_default()
+        }
+        ///If `public_identifier` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn public_identifier_opt(&self) -> Option<&super::ZkLoginPublicIdentifier> {
+            self.public_identifier.as_ref().map(|field| field as _)
+        }
+        ///Sets `public_identifier` with the provided value.
+        pub fn set_public_identifier<T: Into<super::ZkLoginPublicIdentifier>>(
+            &mut self,
+            field: T,
+        ) {
+            self.public_identifier = Some(field.into().into());
+        }
+        ///Sets `public_identifier` with the provided value.
+        pub fn with_public_identifier<T: Into<super::ZkLoginPublicIdentifier>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_public_identifier(field.into());
+            self
+        }
+        ///Returns the value of `jwk_id`, or the default value if `jwk_id` is unset.
+        pub fn jwk_id(&self) -> &super::JwkId {
+            self.jwk_id
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::JwkId::default_instance() as _)
+        }
+        ///If `jwk_id` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn jwk_id_opt_mut(&mut self) -> Option<&mut super::JwkId> {
+            self.jwk_id.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `jwk_id`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn jwk_id_mut(&mut self) -> &mut super::JwkId {
+            self.jwk_id.get_or_insert_default()
+        }
+        ///If `jwk_id` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn jwk_id_opt(&self) -> Option<&super::JwkId> {
+            self.jwk_id.as_ref().map(|field| field as _)
+        }
+        ///Sets `jwk_id` with the provided value.
+        pub fn set_jwk_id<T: Into<super::JwkId>>(&mut self, field: T) {
+            self.jwk_id = Some(field.into().into());
+        }
+        ///Sets `jwk_id` with the provided value.
+        pub fn with_jwk_id<T: Into<super::JwkId>>(mut self, field: T) -> Self {
+            self.set_jwk_id(field.into());
+            self
+        }
+    }
     impl super::ZkLoginClaim {
         pub const fn const_default() -> Self {
             Self {
@@ -22937,6 +23208,113 @@ mod _accessor_impls {
         }
         ///Sets `address_seed` with the provided value.
         pub fn with_address_seed<T: Into<String>>(mut self, field: T) -> Self {
+            self.set_address_seed(field.into());
+            self
+        }
+    }
+    impl super::ZkLoginInputsV2 {
+        pub const fn const_default() -> Self {
+            Self {
+                proof_points: None,
+                ext_iss: None,
+                header_base64: None,
+                address_seed: None,
+            }
+        }
+        #[doc(hidden)]
+        pub fn default_instance() -> &'static Self {
+            static DEFAULT: super::ZkLoginInputsV2 = super::ZkLoginInputsV2::const_default();
+            &DEFAULT
+        }
+        ///Returns the value of `proof_points`, or the default value if `proof_points` is unset.
+        pub fn proof_points(&self) -> &super::ZkLoginProof {
+            self.proof_points
+                .as_ref()
+                .map(|field| field as _)
+                .unwrap_or_else(|| super::ZkLoginProof::default_instance() as _)
+        }
+        ///If `proof_points` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn proof_points_opt_mut(&mut self) -> Option<&mut super::ZkLoginProof> {
+            self.proof_points.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `proof_points`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn proof_points_mut(&mut self) -> &mut super::ZkLoginProof {
+            self.proof_points.get_or_insert_default()
+        }
+        ///If `proof_points` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn proof_points_opt(&self) -> Option<&super::ZkLoginProof> {
+            self.proof_points.as_ref().map(|field| field as _)
+        }
+        ///Sets `proof_points` with the provided value.
+        pub fn set_proof_points<T: Into<super::ZkLoginProof>>(&mut self, field: T) {
+            self.proof_points = Some(field.into().into());
+        }
+        ///Sets `proof_points` with the provided value.
+        pub fn with_proof_points<T: Into<super::ZkLoginProof>>(
+            mut self,
+            field: T,
+        ) -> Self {
+            self.set_proof_points(field.into());
+            self
+        }
+        ///If `ext_iss` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn ext_iss_opt_mut(&mut self) -> Option<&mut String> {
+            self.ext_iss.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `ext_iss`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn ext_iss_mut(&mut self) -> &mut String {
+            self.ext_iss.get_or_insert_default()
+        }
+        ///If `ext_iss` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn ext_iss_opt(&self) -> Option<&str> {
+            self.ext_iss.as_ref().map(|field| field as _)
+        }
+        ///Sets `ext_iss` with the provided value.
+        pub fn set_ext_iss<T: Into<String>>(&mut self, field: T) {
+            self.ext_iss = Some(field.into().into());
+        }
+        ///Sets `ext_iss` with the provided value.
+        pub fn with_ext_iss<T: Into<String>>(mut self, field: T) -> Self {
+            self.set_ext_iss(field.into());
+            self
+        }
+        ///If `header_base64` is set, returns [`Some`] with a mutable reference to the value; otherwise returns [`None`].
+        pub fn header_base64_opt_mut(&mut self) -> Option<&mut String> {
+            self.header_base64.as_mut().map(|field| field as _)
+        }
+        ///Returns a mutable reference to `header_base64`.
+        ///If the field is unset, it is first initialized with the default value.
+        pub fn header_base64_mut(&mut self) -> &mut String {
+            self.header_base64.get_or_insert_default()
+        }
+        ///If `header_base64` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn header_base64_opt(&self) -> Option<&str> {
+            self.header_base64.as_ref().map(|field| field as _)
+        }
+        ///Sets `header_base64` with the provided value.
+        pub fn set_header_base64<T: Into<String>>(&mut self, field: T) {
+            self.header_base64 = Some(field.into().into());
+        }
+        ///Sets `header_base64` with the provided value.
+        pub fn with_header_base64<T: Into<String>>(mut self, field: T) -> Self {
+            self.set_header_base64(field.into());
+            self
+        }
+        ///If `address_seed` is set, returns [`Some`] with the value; otherwise returns [`None`].
+        pub fn address_seed_opt(&self) -> Option<&[u8]> {
+            self.address_seed.as_ref().map(|field| field as _)
+        }
+        ///Sets `address_seed` with the provided value.
+        pub fn set_address_seed<T: Into<::prost::bytes::Bytes>>(&mut self, field: T) {
+            self.address_seed = Some(field.into().into());
+        }
+        ///Sets `address_seed` with the provided value.
+        pub fn with_address_seed<T: Into<::prost::bytes::Bytes>>(
+            mut self,
+            field: T,
+        ) -> Self {
             self.set_address_seed(field.into());
             self
         }
